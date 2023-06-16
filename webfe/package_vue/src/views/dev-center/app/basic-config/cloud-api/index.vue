@@ -1,6 +1,6 @@
 <template lang="html">
   <div
-    :class="[{ 'plugin-cloud-box': isPlugin }]"
+    :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']"
   >
     <div class="ps-top-bar">
       <div class="header-title">
@@ -122,6 +122,10 @@
         },
         created () {
             this.isPlugin = this.$route.meta && this.$route.meta.isGetAppInfo;
+            const tabActive = this.$route.params.tabActive;
+            if (tabActive) {
+                this.active = tabActive;
+            }
         },
         methods: {
             toLink (type) {
@@ -182,5 +186,9 @@
                 margin: 0 50px;
             }
         }
+    }
+
+    .cloud-wrapper /deep/ .bk-tab-section {
+        padding: 16px 0 0 0;
     }
 </style>

@@ -25,6 +25,9 @@
           :size="'small'"
           :max-height="250"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column :label="isComponent ? $t('系统') : $t('网关')">
             <template slot-scope="props">
               {{ isComponent ? props.row.system_name : props.row.api_name }}
@@ -38,6 +41,7 @@
           <bk-table-column
             :label="$t('续期前的过期时间')"
             prop="expires"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               {{ getExpiredTime(props.row) }}
@@ -46,6 +50,7 @@
           <bk-table-column
             :label="$t('续期后的过期时间')"
             prop="expires"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               <span
@@ -108,6 +113,7 @@
 <script>
     import { formatDate } from '@/common/tools';
     import PaasngAlert from './paasng-alert';
+    import i18n from '@/language/i18n';
     export default {
         name: '',
         components: {
@@ -120,7 +126,7 @@
             },
             title: {
                 type: String,
-                default: '批量续期权限'
+                default: i18n.t('批量续期权限')
             },
             rows: {
                 type: Array,

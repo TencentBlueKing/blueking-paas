@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-02-02 20:12+0800\n"
+"POT-Creation-Date: 2023-04-23 11:52+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,229 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: paas_wl/cluster/constants.py:35 paasng/engine/constants.py:32
+msgid "普通集群"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:36 paasng/engine/constants.py:33
+msgid "虚拟集群"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:42
+msgid "支持提供出口 IP"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:43
+msgid "允许挂载日志到主机"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:49
+msgid "Ingress路径是否使用正则表达式"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:51
+msgid "支持蓝鲸监控"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:56
+msgid "使用蓝鲸日志平台方案采集日志"
+msgstr ""
+
+#: paas_wl/cluster/constants.py:60
+msgid "支持自动扩容"
+msgstr ""
+
+#: paas_wl/cluster/serializers.py:53
+msgid "`sub_path_domains` 与 `app_root_domains` 不能同时为空"
+msgstr ""
+
+#: paas_wl/cnative/specs/constants.py:53
+msgid "待实施"
+msgstr ""
+
+#: paas_wl/cnative/specs/constants.py:54
+msgid "进行中"
+msgstr ""
+
+#: paas_wl/cnative/specs/constants.py:55
+msgid "已就绪"
+msgstr ""
+
+#: paas_wl/cnative/specs/constants.py:56
+#, fuzzy
+#| msgid "未知错误"
+msgid "错误"
+msgstr "unknown error"
+
+#: paas_wl/cnative/specs/constants.py:57
+#: paasng/platform/operations/models.py:112
+#: paasng/platform/operations/models.py:166
+#: paasng/platform/operations/models.py:216
+#: paasng/platform/operations/models.py:264
+msgid "未知"
+msgstr "Unknown"
+
+#: paas_wl/cnative/specs/models.py:90 paas_wl/cnative/specs/models.py:120
+#: paas_wl/cnative/specs/models.py:170 paas_wl/cnative/specs/serializers.py:29
+#: paas_wl/workloads/images/models.py:69
+msgid "所属应用"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:91 paas_wl/cnative/specs/models.py:121
+#: paas_wl/cnative/specs/models.py:171 paas_wl/cnative/specs/serializers.py:30
+msgid "所属模块"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:125
+msgid "模型版本"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:126
+msgid "应用模型（YAML 格式）"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:128
+msgid "应用模型（JSON 格式）"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:131
+msgid "是否已部署"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:132
+msgid "是否草稿"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:133
+msgid "是否已删除"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:174
+msgid "环境名称"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:178
+msgid "Deploy 名称"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:183 paasng/engine/models/phases.py:60
+#: paasng/engine/models/steps.py:158
+msgid "状态"
+msgstr "status"
+
+#: paas_wl/cnative/specs/models.py:185
+msgid "状态原因"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:186
+msgid "状态描述文字"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:187
+msgid "状态最近变更时间"
+msgstr ""
+
+#: paas_wl/cnative/specs/models.py:189 paas_wl/cnative/specs/serializers.py:59
+msgid "操作者"
+msgstr ""
+
+#: paas_wl/cnative/specs/serializers.py:31
+#: paas_wl/cnative/specs/serializers.py:39
+#: paas_wl/cnative/specs/serializers.py:65
+#, fuzzy
+#| msgid "配置信息"
+msgid "BkApp 配置信息"
+msgstr "config info"
+
+#: paas_wl/cnative/specs/serializers.py:45
+msgid "进程类型"
+msgstr ""
+
+#: paas_wl/cnative/specs/serializers.py:46
+msgid "旧副本数"
+msgstr ""
+
+#: paas_wl/cnative/specs/serializers.py:47
+msgid "新副本数"
+msgstr ""
+
+#: paas_wl/cnative/specs/serializers.py:53
+msgid "进程副本数变化"
+msgstr ""
+
+#: paas_wl/networking/ingress/serializers.py:53
+msgid "内部服务端口列表 ports 不能为空"
+msgstr ""
+
+#: paas_wl/networking/ingress/serializers.py:62
+#, python-brace-format
+msgid "端口列表中发现重复值 {value}"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:60
+msgid "CPU 使用率"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:61
+msgid "内存使用率"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:62
+msgid "CPU 使用量"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:63
+msgid "内存使用量"
+msgstr ""
+
+#: paas_wl/workloads/images/views_enduser.py:57
+msgid "同名凭证已存在"
+msgstr ""
+
+#: paas_wl/workloads/processes/controllers.py:237
+msgid "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:137
+msgid "资源指标值/百分比"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:144
+msgid "最小副本数"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:145
+msgid "最大副本数"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:146
+msgid "扩缩容指标"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:154
+msgid "目标进程副本数"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:155
+msgid "是否开启自动扩缩容"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:156
+msgid "进程扩缩容配置"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:162
+msgid "当启用自动扩缩容时，必须提供有效的 scaling_config"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:164
+msgid "当操作类型为扩缩容时，必须提供有效的 target_replicas"
+msgstr ""
+
+#: paas_wl/workloads/processes/drf_serializers.py:174
+msgid "scaling_config 配置格式有误：{}"
+msgstr ""
 
 #: paasng/accessories/iam/permissions/resources/application.py:38
 msgid "基础信息查看"
@@ -119,7 +342,7 @@ msgid ""
 "理，应用市场管理等。"
 msgstr ""
 
-#: paasng/accessories/paas_analysis/utils.py:53
+#: paasng/accessories/paas_analysis/utils.py:54
 msgid "目前仅支持以 default 命名的自定义站点"
 msgstr "Currently only custom sites named default are supported"
 
@@ -352,20 +575,20 @@ msgstr ""
 "The authorization is successful, the page will be closed automatically after "
 "2 seconds"
 
-#: paasng/cnative/services.py:114
+#: paasng/cnative/services.py:104
 #, fuzzy
 #| msgid "请联系管理员"
 msgid "暂无可用集群, 请联系管理员"
 msgstr "Please contact administrator"
 
-#: paasng/cnative/services.py:121
+#: paasng/cnative/services.py:109
 #, python-brace-format
 msgid "集群 {default_cluster_name} 未就绪, 请联系管理员"
 msgstr ""
 "Cluster {default_cluster_name} is not ready, please contact administrator"
 
 #: paasng/dev_resources/servicehub/local/manager.py:157
-#: paasng/dev_resources/servicehub/remote/manager.py:240
+#: paasng/dev_resources/servicehub/remote/manager.py:235
 #, python-brace-format
 msgid ""
 "配置资源实例异常: unable to provision instance for services<{service_name}>"
@@ -373,7 +596,7 @@ msgstr ""
 "Configuration resource instance exception: unable to provision instance for "
 "services<{service_name}>"
 
-#: paasng/dev_resources/servicehub/remote/manager.py:422
+#: paasng/dev_resources/servicehub/remote/manager.py:417
 #, python-brace-format
 msgid ""
 "绑定实例异常: unable to provision instance for services<{service_obj_name}>"
@@ -447,11 +670,11 @@ msgstr "Access to Git<{fullname}> project error"
 msgid "当前仅支持 base64 编码格式"
 msgstr "Only base64 encoding format is supported"
 
-#: paasng/dev_resources/sourcectl/models.py:234
+#: paasng/dev_resources/sourcectl/models.py:232
 msgid "容器镜像仓库"
 msgstr "Image repository"
 
-#: paasng/dev_resources/sourcectl/models.py:560
+#: paasng/dev_resources/sourcectl/models.py:558
 msgid "服务名称"
 msgstr ""
 
@@ -541,73 +764,73 @@ msgstr ""
 "password is: {password}, please keep it safe"
 
 #: paasng/dev_resources/sourcectl/views.py:178
-#: paasng/platform/applications/views.py:898
+#: paasng/platform/applications/views.py:899
 msgid "验证码错误"
 msgstr "Verification code error"
 
-#: paasng/dev_resources/sourcectl/views.py:207
+#: paasng/dev_resources/sourcectl/views.py:206
 msgid "用户未关联 oauth 授权"
 msgstr "User not associated with oauth authorization"
 
-#: paasng/dev_resources/sourcectl/views.py:234
+#: paasng/dev_resources/sourcectl/views.py:233
 msgid "当前 AccessToken 无法获取到仓库列表，请检查后重试"
 msgstr ""
 "The current AccessToken cannot get the warehouse list, please check and try "
 "again"
 
-#: paasng/dev_resources/sourcectl/views.py:236
+#: paasng/dev_resources/sourcectl/views.py:235
 msgid "访问源码仓库失败，请联系项目管理员"
 msgstr ""
 "Failed to access the source code repository, please contact the administrator"
 
-#: paasng/dev_resources/sourcectl/views.py:287
+#: paasng/dev_resources/sourcectl/views.py:286
 #: paasng/extensions/smart_app/views.py:73
 #: paasng/extensions/smart_app/views.py:203
 msgid "请联系管理员"
 msgstr "Please contact administrator"
 
-#: paasng/dev_resources/sourcectl/views.py:350
+#: paasng/dev_resources/sourcectl/views.py:349
 msgid "无引擎应用不支持切换源码类型"
 msgstr "app do not support switching source code types"
 
-#: paasng/dev_resources/sourcectl/views.py:363
+#: paasng/dev_resources/sourcectl/views.py:362
 msgid "不支持切换到蓝鲸 SVN 仓库"
 msgstr "Switching to Blueking SVN repository is not supported"
 
-#: paasng/dev_resources/sourcectl/views.py:371
+#: paasng/dev_resources/sourcectl/views.py:370
 msgid "请稍候再试"
 msgstr "Please try again later"
 
-#: paasng/dev_resources/sourcectl/views.py:407
-#: paasng/dev_resources/sourcectl/views.py:479
-#: paasng/dev_resources/sourcectl/views.py:543
+#: paasng/dev_resources/sourcectl/views.py:406
+#: paasng/dev_resources/sourcectl/views.py:478
+#: paasng/dev_resources/sourcectl/views.py:542
 msgid "AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"
 msgstr ""
 "AccessToken does not have permission to access the warehouse, please check "
 "the authorization and its corresponding Scope"
 
-#: paasng/dev_resources/sourcectl/views.py:409
+#: paasng/dev_resources/sourcectl/views.py:408
 msgid "无法获取 SVN 分支信息, 请检查仓库地址和鉴权信息"
 msgstr ""
 "Unable to get SVN branch information, please check the warehouse address and "
 "authentication information"
 
-#: paasng/dev_resources/sourcectl/views.py:412
+#: paasng/dev_resources/sourcectl/views.py:411
 #, python-format
 msgid "%s的仓库信息查询异常"
 msgstr "The warehouse information query of %s is abnormal"
 
-#: paasng/dev_resources/sourcectl/views.py:481
+#: paasng/dev_resources/sourcectl/views.py:480
 #, python-brace-format
 msgid "仓库信息查询异常: {e}"
 msgstr "Warehouse information query exception: {e}"
 
-#: paasng/dev_resources/sourcectl/views.py:497
+#: paasng/dev_resources/sourcectl/views.py:496
 #, python-brace-format
 msgid "{source_type} 类型源码暂不支持打包操作"
 msgstr "{source_type} source code does not currently support packaging"
 
-#: paasng/dev_resources/sourcectl/views.py:546
+#: paasng/dev_resources/sourcectl/views.py:545
 #, python-brace-format
 msgid "{module} 的仓库信息查询异常"
 msgstr "The warehouse information query of {module} is abnormal"
@@ -625,7 +848,7 @@ msgid "插件模板"
 msgstr ""
 
 #: paasng/dev_resources/templates/models.py:41
-#: paasng/platform/modules/serializers.py:131
+#: paasng/platform/modules/serializers.py:134
 msgid "模板名称"
 msgstr ""
 
@@ -681,322 +904,236 @@ msgstr ""
 msgid "代码仓库信息"
 msgstr "The current source code repository information is abnormal"
 
-#: paasng/engine/constants.py:42
-msgid "普通集群"
-msgstr ""
-
-#: paasng/engine/constants.py:43
-msgid "虚拟集群"
-msgstr ""
-
-#: paasng/engine/constants.py:49
-msgid "支持提供出口 IP"
-msgstr ""
-
-#: paasng/engine/constants.py:50
-msgid "允许挂载日志到主机"
-msgstr ""
-
-#: paasng/engine/constants.py:51
-msgid "Ingress路径是否使用正则表达式"
-msgstr ""
-
-#: paasng/engine/constants.py:57 paasng/platform/applications/views.py:825
+#: paasng/engine/constants.py:39 paasng/platform/applications/views.py:826
 msgid "预发布环境"
 msgstr " Stag Env "
 
-#: paasng/engine/constants.py:58 paasng/platform/applications/views.py:826
+#: paasng/engine/constants.py:40 paasng/platform/applications/views.py:827
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/engine/constants.py:152 paasng/engine/deploy/protections.py:67
+#: paasng/engine/constants.py:132 paasng/engine/workflow/protections.py:67
 #: paasng/publish/market/protections.py:48
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
 
-#: paasng/engine/constants.py:153
+#: paasng/engine/constants.py:133
 msgid "当前用户无部署该环境的权限"
 msgstr "The current user does not have permission to deploy this environment"
 
-#: paasng/engine/constants.py:154
+#: paasng/engine/constants.py:134
 msgid "当前用户尚未绑定 OAUTH 授权信息"
 msgstr "The current user has not yet bound the OAUTH authorization information"
 
-#: paasng/engine/constants.py:155
+#: paasng/engine/constants.py:135
 msgid "当前用户没有访问源码仓库的权限"
 msgstr "The current user does not have permission to access the repository"
 
-#: paasng/engine/constants.py:156
+#: paasng/engine/constants.py:136
 msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
-#: paasng/engine/constants.py:157 paasng/engine/deploy/protections.py:126
+#: paasng/engine/constants.py:137 paasng/engine/workflow/protections.py:126
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
-#: paasng/engine/constants.py:158
+#: paasng/engine/constants.py:138
 msgid "当前用户未授权 CI 组件访问仓库的权限"
 msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
-#: paasng/engine/constants.py:159 paasng/engine/deploy/protections.py:150
+#: paasng/engine/constants.py:139 paasng/engine/workflow/protections.py:150
 msgid "未设置插件分类"
 msgstr ""
 
-#: paasng/engine/constants.py:177
+#: paasng/engine/constants.py:157
 msgid "蓝鲸应用ID"
 msgstr "BK APP ID"
 
-#: paasng/engine/constants.py:178
+#: paasng/engine/constants.py:158
 msgid "蓝鲸应用密钥"
 msgstr "BK APP Secret"
 
-#: paasng/engine/constants.py:184
+#: paasng/engine/constants.py:164
 msgid "应用当前模块名"
 msgstr "Current Module Name"
 
-#: paasng/engine/constants.py:185
+#: paasng/engine/constants.py:165
 msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
 msgstr ""
 "Current environment, the pre-release environment is stag, and the production "
 "environment is prod"
 
-#: paasng/engine/constants.py:186
+#: paasng/engine/constants.py:166
 msgid "应用当前运行的开发者中心版本，值为 3"
 msgstr "The currently running Dev Center version, the value is 3"
 
-#: paasng/engine/constants.py:187
+#: paasng/engine/constants.py:167
 msgid "应用版本，默认版本为 default"
 msgstr "App version, the default version is default"
 
-#: paasng/engine/constants.py:193
+#: paasng/engine/constants.py:173
 msgid "目标端口号，值为 5000"
 msgstr "Destination port number, the value is 5000"
 
-#: paasng/engine/deploy/building.py:69 paasng/engine/deploy/image.py:51
+#: paasng/engine/deploy/archive.py:82
+msgid "存在正在进行的下架任务"
+msgstr "Ongoing archive tasks exist"
+
+#: paasng/engine/deploy/bg_command/pre_release.py:51
+msgid "The Pre-release command is not configured, skip the Pre-release phase."
+msgstr ""
+
+#: paasng/engine/deploy/bg_command/pre_release.py:56
+#: paasng/engine/deploy/release.py:63
+msgid "更新应用配置"
+msgstr "Update app configuration"
+
+#: paasng/engine/deploy/bg_command/pre_release.py:63
+msgid "初始化指令执行环境"
+msgstr "Initialize the command execution environment"
+
+#: paasng/engine/deploy/bg_command/pre_release.py:102
+#: paasng/engine/deploy/bg_command/pre_release.py:109
+msgid "执行部署前置命令"
+msgstr "Execute the   Pre-release command "
+
+#: paasng/engine/deploy/building.py:82 paasng/engine/deploy/image_release.py:52
 #, fuzzy
 #| msgid "分析应用描述文件异常"
 msgid "应用描述文件解析异常: {}"
 msgstr "Analyzing app Description File Exceptions"
 
-#: paasng/engine/deploy/building.py:75 paasng/engine/deploy/image.py:57
+#: paasng/engine/deploy/building.py:88 paasng/engine/deploy/image_release.py:58
 msgid "处理应用描述文件时出现异常, 请检查应用描述文件"
 msgstr ""
 "An exception occurred while processing the app description file, please "
 "check  app description file "
 
-#: paasng/engine/deploy/building.py:83 paasng/engine/deploy/image.py:61
+#: paasng/engine/deploy/building.py:96 paasng/engine/deploy/image_release.py:62
 msgid "解析应用进程信息"
 msgstr "Parse app process information"
 
-#: paasng/engine/deploy/building.py:87
+#: paasng/engine/deploy/building.py:100
 msgid "上传仓库代码"
 msgstr "Upload repository code"
 
-#: paasng/engine/deploy/building.py:91 paasng/engine/deploy/image.py:71
+#: paasng/engine/deploy/building.py:104
+#: paasng/engine/deploy/image_release.py:72
 msgid "配置资源实例"
 msgstr "Configure resource instance"
 
-#: paasng/engine/deploy/building.py:98
+#: paasng/engine/deploy/building.py:111
 msgid "启动应用构建任务"
 msgstr "Start the app build task"
 
-#: paasng/engine/deploy/building.py:120
+#: paasng/engine/deploy/building.py:133
 #, python-brace-format
 msgid ""
 "The source directory '{source_dir}' is not a legal directory,please check "
 "repository to confirm."
 msgstr ""
 
-#: paasng/engine/deploy/building.py:215
+#: paasng/engine/deploy/building.py:228
 #, python-brace-format
 msgid ""
 "The predefined Add-ons {unbound_service_names} in the initial template are "
 "not enabled, please check if they need to be enabled"
 msgstr ""
 
-#: paasng/engine/deploy/image.py:68
+#: paasng/engine/deploy/image_release.py:69
 msgid "配置镜像访问凭证"
 msgstr "Configure Image Access Credentials"
 
-#: paasng/engine/deploy/infras.py:225
-#, python-brace-format
-msgid "步骤 [{title}] 出错了，原因：{reason}。"
-msgstr "Error in step [{title}], reason: {reason}."
-
-#: paasng/engine/deploy/infras.py:229
-#, python-brace-format
-msgid "步骤 [{title}] 出错了，请稍候重试。"
-msgstr "Error in step [{title}], please try again later"
-
-#: paasng/engine/deploy/pre_release.py:45
-msgid "The Pre-release command is not configured, skip the Pre-release phase."
-msgstr ""
-
-#: paasng/engine/deploy/pre_release.py:50 paasng/engine/deploy/release.py:50
-msgid "更新应用配置"
-msgstr "Update app configuration"
-
-#: paasng/engine/deploy/pre_release.py:57
-msgid "初始化指令执行环境"
-msgstr "Initialize the command execution environment"
-
-#: paasng/engine/deploy/pre_release.py:93
-#: paasng/engine/deploy/pre_release.py:100
-msgid "执行部署前置命令"
-msgstr "Execute the   Pre-release command "
-
-#: paasng/engine/deploy/preparations.py:107
-msgid ""
-"Warning: Process definition conflict, will use the one defined in `Procfile`"
-msgstr ""
-
-#: paasng/engine/deploy/preparations.py:112
-msgid "Missing process definition"
-msgstr ""
-
-#: paasng/engine/deploy/preparations.py:198
-#, python-brace-format
-msgid ""
-"WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请"
-"尝试清理不必要的文件来减小体积。"
-msgstr ""
-"WARNING: The size of app source package is too large (>{warning_threshold}"
-"MB), which will seriously affect the deployment performance. Please try to "
-"clean up unnecessary files to reduce the size."
-
-#: paasng/engine/deploy/protections.py:78
-msgid "当前用户尚未授权访问仓库"
-msgstr "The current user is not authorized to access the repository"
-
-#: paasng/engine/deploy/protections.py:80
-#, python-brace-format
-msgid "当前用户尚未授权访问仓库: {source_type}"
-msgstr ""
-"The current user is not authorized to access the repository: {source_type}"
-
-#: paasng/engine/deploy/protections.py:87
-#, python-brace-format
-msgid "当前用户没有访问源码仓库的权限，请给 {repo} 授权"
-msgstr ""
-"The current user does not have permission to access the source code "
-"repository, please authorize {repo}"
-
-#: paasng/engine/deploy/protections.py:91
-msgid "当前账户没有访问源码仓库的权限，请确保账户名/密码正确"
-msgstr ""
-"The current account does not have permission to access the source code "
-"repository, please make sure the account name/password is correct"
-
-#: paasng/engine/deploy/protections.py:95
-msgid "获取源码仓库信息失败，请确保仓库信息填写正确"
-msgstr ""
-"Failed to obtain source code repository information, please make sure that "
-"the repository information is filled in correctly"
-
-#: paasng/engine/deploy/protections.py:110
-msgid "当前用户无部署该环境的权限, 请联系应用管理员"
-msgstr ""
-"The current user does not have permission to deploy this environment, please "
-"contact the app administrator"
-
-#: paasng/engine/deploy/release.py:46
-msgid "更新进程配置"
-msgstr "update process configuration"
-
-#: paasng/engine/deploy/release.py:57
-msgid "部署应用"
-msgstr "Deploy app"
-
-#: paasng/engine/deploy/release.py:67 paasng/engine/deploy/release.py:85
-msgid "检测部署结果"
-msgstr "detect deployment results"
-
-#: paasng/engine/models/deployment.py:253
+#: paasng/engine/deploy/interruptions.py:27
 msgid "无法中断由他人发起的部署"
 msgstr "Cannot interrupt deployment initiated by others"
 
-#: paasng/engine/models/deployment.py:255
+#: paasng/engine/deploy/interruptions.py:29
 msgid "无法中断，部署已处于结束状态"
 msgstr "cannot be interrupted, deployment has ended"
 
-#: paasng/engine/models/managers.py:86
-msgid "存在正在进行的下架任务"
-msgstr "Ongoing archive tasks exist"
+#: paasng/engine/deploy/release.py:54
+msgid "更新进程配置"
+msgstr "update process configuration"
 
-#: paasng/engine/models/phases.py:41
+#: paasng/engine/deploy/release.py:70
+msgid "部署应用"
+msgstr "Deploy app"
+
+#: paasng/engine/deploy/release.py:80 paasng/engine/deploy/release.py:98
+msgid "检测部署结果"
+msgstr "detect deployment results"
+
+#: paasng/engine/models/phases.py:40
 msgid "准备阶段"
 msgstr "Preparation Phase"
 
-#: paasng/engine/models/phases.py:42
+#: paasng/engine/models/phases.py:41
 msgid "构建阶段"
 msgstr "Build Phase"
 
-#: paasng/engine/models/phases.py:43
+#: paasng/engine/models/phases.py:42
 msgid "部署阶段"
 msgstr "Deploy Phase"
 
-#: paasng/engine/models/phases.py:71
+#: paasng/engine/models/phases.py:57
 msgid "部署阶段类型"
 msgstr "deployment phase type"
 
-#: paasng/engine/models/phases.py:72
+#: paasng/engine/models/phases.py:58
 msgid "关联引擎应用"
 msgstr "engine_app"
 
-#: paasng/engine/models/phases.py:73
+#: paasng/engine/models/phases.py:59
 msgid "关联部署操作"
 msgstr "deployment"
 
-#: paasng/engine/models/phases.py:74 paasng/engine/models/steps.py:194
-msgid "状态"
-msgstr "status"
-
-#: paasng/engine/models/phases.py:75 paasng/engine/models/steps.py:195
+#: paasng/engine/models/phases.py:61 paasng/engine/models/steps.py:159
 msgid "阶段开始时间"
 msgstr "phase start time"
 
-#: paasng/engine/models/phases.py:76 paasng/engine/models/steps.py:196
+#: paasng/engine/models/phases.py:62 paasng/engine/models/steps.py:160
 msgid "阶段完成时间"
 msgstr "phase Completion time"
 
-#: paasng/engine/models/steps.py:92 paasng/engine/models/steps.py:192
+#: paasng/engine/models/steps.py:56 paasng/engine/models/steps.py:156
 msgid "关联阶段"
 msgstr "phase"
 
-#: paasng/engine/models/steps.py:93 paasng/engine/models/steps.py:190
+#: paasng/engine/models/steps.py:57 paasng/engine/models/steps.py:154
 msgid "步骤名称"
 msgstr "step name"
 
-#: paasng/engine/models/steps.py:94 paasng/engine/models/steps.py:191
+#: paasng/engine/models/steps.py:58 paasng/engine/models/steps.py:155
 msgid "步骤名称(展示用)"
 msgstr "display name"
 
-#: paasng/engine/models/steps.py:100
+#: paasng/engine/models/steps.py:64
 msgid "由 BuildPack 提供"
 msgstr "Provided by BuildPack"
 
-#: paasng/engine/models/steps.py:108
+#: paasng/engine/models/steps.py:72
 msgid "由 SlugBuild 提供"
 msgstr "Provided by SlugBuild"
 
-#: paasng/engine/models/steps.py:113 paasng/engine/models/steps.py:114
+#: paasng/engine/models/steps.py:77 paasng/engine/models/steps.py:78
 msgid "匹配规则"
 msgstr "match rules"
 
-#: paasng/engine/models/steps.py:139
+#: paasng/engine/models/steps.py:103
 msgid "步骤集名称"
 msgstr "step set name"
 
-#: paasng/engine/models/steps.py:141
+#: paasng/engine/models/steps.py:105
 msgid "是否为默认步骤集"
 msgstr "is default step set"
 
-#: paasng/engine/models/steps.py:193
+#: paasng/engine/models/steps.py:157
 msgid "是否跳过"
 msgstr "skip"
 
-#: paasng/engine/models/steps.py:199
+#: paasng/engine/models/steps.py:163
 msgid "元信息"
 msgstr "meta"
 
@@ -1006,80 +1143,146 @@ msgstr ""
 "The current runtime image does not support WebConsole functionality, please "
 "try to bundle the latest app Runtime"
 
-#: paasng/engine/serializers.py:179
+#: paasng/engine/serializers.py:184
 #: paasng/plat_admin/admin42/serializers/config_vars.py:33
 msgid "格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。"
 msgstr ""
 "incorrect format, can only start with an uppercase letter, and consist of "
 "uppercase letters, numbers, and underscores."
 
-#: paasng/engine/serializers.py:241
+#: paasng/engine/serializers.py:246
 #, python-brace-format
 msgid "Object with {slug_name}={value} does not exist."
 msgstr ""
 
-#: paasng/engine/serializers.py:242
+#: paasng/engine/serializers.py:247
 msgid "Invalid value."
 msgstr ""
 
-#: paasng/engine/serializers.py:282
+#: paasng/engine/serializers.py:287
 #, python-brace-format
 msgid "该环境下同名变量 {key} 已存在。"
 msgstr "A variable with the same name {key} already exists in this environment"
 
-#: paasng/engine/serializers.py:284
+#: paasng/engine/serializers.py:289
 #, python-brace-format
 msgid "该环境下名称为 {key} 的变量已经存在，不能重复添加。"
 msgstr ""
 "The variable named {key} already exists in this environment and cannot be "
 "added repeatedly."
 
-#: paasng/engine/serializers.py:351
+#: paasng/engine/serializers.py:356
 #, python-format
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
 
-#: paasng/engine/views.py:219
-msgid "engine服务异常"
+#: paasng/engine/utils/source.py:72
+msgid ""
+"Warning: Process definition conflict, will use the one defined in `Procfile`"
+msgstr ""
+
+#: paasng/engine/utils/source.py:77
+msgid "Missing process definition"
+msgstr ""
+
+#: paasng/engine/utils/source.py:157
+#, python-brace-format
+msgid ""
+"WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请"
+"尝试清理不必要的文件来减小体积。"
+msgstr ""
+"WARNING: The size of app source package is too large (>{warning_threshold}"
+"MB), which will seriously affect the deployment performance. Please try to "
+"clean up unnecessary files to reduce the size."
+
+#: paasng/engine/views.py:223
+#, fuzzy
+#| msgid "engine服务异常"
+msgid "服务异常"
 msgstr "engine service exception"
 
-#: paasng/engine/views.py:461
+#: paasng/engine/views.py:465
 #, python-brace-format
 msgid "应用描述文件校验失败：{exception}"
 msgstr "App description file verification failed: {exception}"
 
-#: paasng/engine/views.py:463
+#: paasng/engine/views.py:467
 msgid "对象存储服务异常, 请稍后再试"
 msgstr "Object storage service exception, please try again later"
 
-#: paasng/engine/views.py:464
+#: paasng/engine/views.py:468
 #: paasng/extensions/bk_plugins/pluginscenter_views.py:220
 msgid "部署请求异常，请稍候再试"
 msgstr "Deployment request exception, please try again later"
 
-#: paasng/engine/views.py:572
+#: paasng/engine/views.py:576
 msgid "没有找到对应的部署记录，不允许下架"
 msgstr "No corresponding deployment record found, archive is not allowed"
 
-#: paasng/engine/views.py:575 paasng/extensions/bk_plugins/tasks.py:53
+#: paasng/engine/views.py:579 paasng/extensions/bk_plugins/tasks.py:53
 msgid "存在正在进行的下架任务，请勿重复操作"
 msgstr ""
 "There are ongoing downgrading tasks, please do not repeat the operation"
 
-#: paasng/engine/views.py:598
+#: paasng/engine/views.py:602
 #, python-brace-format
 msgid "{code} 没有id为 {uuid} 的下架记录"
 msgstr "{code} does not have an unlisted record with id {uuid}"
 
-#: paasng/engine/views.py:790
+#: paasng/engine/views.py:780
 #, python-brace-format
 msgid "没有 id 为 {id} 的部署记录"
 msgstr "No deployment record with id {id}"
 
-#: paasng/engine/views.py:794
+#: paasng/engine/views.py:784
 #, python-brace-format
 msgid "模块 {module_name} 下没有 id 为 {id} 的部署记录"
 msgstr "No deployment record with id {id} under module {module_name}"
+
+#: paasng/engine/workflow/flow.py:90
+#, python-brace-format
+msgid "步骤 [{title}] 出错了，原因：{reason}。"
+msgstr "Error in step [{title}], reason: {reason}."
+
+#: paasng/engine/workflow/flow.py:94
+#, python-brace-format
+msgid "步骤 [{title}] 出错了，请稍候重试。"
+msgstr "Error in step [{title}], please try again later"
+
+#: paasng/engine/workflow/protections.py:78
+msgid "当前用户尚未授权访问仓库"
+msgstr "The current user is not authorized to access the repository"
+
+#: paasng/engine/workflow/protections.py:80
+#, python-brace-format
+msgid "当前用户尚未授权访问仓库: {source_type}"
+msgstr ""
+"The current user is not authorized to access the repository: {source_type}"
+
+#: paasng/engine/workflow/protections.py:87
+#, python-brace-format
+msgid "当前用户没有访问源码仓库的权限，请给 {repo} 授权"
+msgstr ""
+"The current user does not have permission to access the source code "
+"repository, please authorize {repo}"
+
+#: paasng/engine/workflow/protections.py:91
+msgid "当前账户没有访问源码仓库的权限，请确保账户名/密码正确"
+msgstr ""
+"The current account does not have permission to access the source code "
+"repository, please make sure the account name/password is correct"
+
+#: paasng/engine/workflow/protections.py:95
+msgid "获取源码仓库信息失败，请确保仓库信息填写正确"
+msgstr ""
+"Failed to obtain source code repository information, please make sure that "
+"the repository information is filled in correctly"
+
+#: paasng/engine/workflow/protections.py:110
+msgid "当前用户无部署该环境的权限, 请联系应用管理员"
+msgstr ""
+"The current user does not have permission to deploy this environment, please "
+"contact the app administrator"
 
 #: paasng/extensions/declarative/application/controller.py:87
 msgid "用户没有权限在 {} 下创建应用"
@@ -1127,7 +1330,7 @@ msgstr "An app must have a default module"
 msgid "提供共享增强服务的模块不存在"
 msgstr "module providing shared Add-ons does not exist"
 
-#: paasng/extensions/declarative/deployment/controller.py:87
+#: paasng/extensions/declarative/deployment/controller.py:96
 #, fuzzy
 #| msgid "处理应用描述文件时出现异常, 请检查应用描述文件"
 msgid "同步进程信息时出现异常，请检查应用描述文件或联系平台管理员"
@@ -1210,19 +1413,18 @@ msgid "应用ID: {appid} 的应用已存在!"
 msgstr "App ID: {appid} of the app already exists!"
 
 #: paasng/extensions/smart_app/views.py:225
-#, fuzzy, python-brace-format
-#| msgid "应用ID: {appid} 的应用已存在!"
+#, python-brace-format
 msgid "应用ID: {appid} 的应用不存在!"
-msgstr "App ID: {appid} of the app already exists!"
+msgstr "App ID: {appid} of the application does not exist!"
 
-#: paasng/monitoring/healthz/probes.py:123
+#: paasng/monitoring/healthz/probes.py:138
 #, python-brace-format
 msgid "远程增强服务「{config_name}」状态异常, 请检查服务可用性。"
 msgstr ""
 "The status of the remote Add-ons '{config_name}' is abnormal, please check "
 "the availability of the service."
 
-#: paasng/monitoring/healthz/probes.py:130
+#: paasng/monitoring/healthz/probes.py:145
 #, python-brace-format
 msgid "探测远程增强服务「{config_name}」时发生未知异常, 请检查配置情况。"
 msgstr ""
@@ -1235,10 +1437,6 @@ msgstr ""
 
 #: paasng/monitoring/monitor/alert_rules/constants.py:32
 msgid "内存使用率过高"
-msgstr ""
-
-#: paasng/monitoring/monitor/alert_rules/constants.py:38
-msgid "应用首页访问异常"
 msgstr ""
 
 #: paasng/plat_admin/admin42/runtime_views.py:99
@@ -1349,10 +1547,14 @@ msgstr ""
 msgid "由于: {reason}, 该功能暂不支持"
 msgstr "Due to: {reason}, this feature is not supported at this time"
 
-#: paasng/plat_admin/admin42/views/services.py:118
+#: paasng/plat_admin/admin42/views/services.py:119
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
+
+#: paasng/plat_admin/admin42/views/services.py:138
+msgid "迁移应用不支持回收增强服务实例"
+msgstr ""
 
 #: paasng/plat_admin/numbers/app.py:525
 msgid "未上线"
@@ -1363,7 +1565,7 @@ msgid "已上线"
 msgstr "Now online"
 
 #: paasng/plat_admin/numbers/app.py:527
-#: paasng/platform/applications/views.py:828
+#: paasng/platform/applications/views.py:829
 msgid "已下架"
 msgstr "archived"
 
@@ -1371,7 +1573,7 @@ msgstr "archived"
 msgid "测试中"
 msgstr "Testing in progress"
 
-#: paasng/plat_admin/system/views.py:140 paasng/plat_admin/system/views.py:191
+#: paasng/plat_admin/system/views.py:154 paasng/plat_admin/system/views.py:205
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
@@ -1391,113 +1593,146 @@ msgstr "S-Mart cannot close the app description file"
 msgid "{} 为 {} 的应用已存在"
 msgstr "{} for {} already exists"
 
-#: paasng/platform/applications/serializers.py:119
+#: paasng/platform/applications/serializers.py:118
 msgid "不支持修改应用 ID"
 msgstr "Modifying app IDs is not supported"
 
+#: paasng/platform/applications/serializers.py:137
 #: paasng/platform/applications/serializers.py:138
-#: paasng/platform/applications/serializers.py:139
 msgid "应用 ID"
 msgstr "App ID"
 
-#: paasng/platform/applications/serializers.py:142
+#: paasng/platform/applications/serializers.py:141
 #: paasng/platform/modules/serializers.py:52
 msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)"
 msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
 "half-corner ligatures (-)"
 
-#: paasng/platform/applications/serializers.py:183
+#: paasng/platform/applications/serializers.py:182
 msgid "模板 {} 不被支持"
 msgstr ""
 
-#: paasng/platform/applications/serializers.py:208
+#: paasng/platform/applications/serializers.py:206
 #, python-brace-format
 msgid "集群名称错误，无法找到名为 {value} 的集群"
 msgstr "Cluster name error, cluster named {value} could not be found"
 
-#: paasng/platform/applications/serializers.py:230
+#: paasng/platform/applications/serializers.py:228
 msgid "应用引擎参数未提供"
 msgstr "App engine parameters not provided"
 
-#: paasng/platform/applications/serializers.py:236
+#: paasng/platform/applications/serializers.py:234
 msgid "已开启引擎，类型不能为 \"enginess_app\""
 msgstr "Engine enabled, type cannot be \"enginess_app"
 
-#: paasng/platform/applications/serializers.py:245
+#: paasng/platform/applications/serializers.py:243
 msgid "engine_params.source_init_template: 必须选择一个应用模板"
 msgstr "engine_params.source_init_template: An app template must be selected"
 
+#: paasng/platform/applications/serializers.py:273
+#, fuzzy
+#| msgid "容器镜像仓库"
+msgid "容器镜像地址"
+msgstr "Image repository"
+
+#: paasng/platform/applications/serializers.py:274
+#, fuzzy
+#| msgid "未完善进程启动命令"
+msgid "启动命令"
+msgstr "Incomplete process start command"
+
 #: paasng/platform/applications/serializers.py:275
+msgid "命令参数"
+msgstr ""
+
+#: paasng/platform/applications/serializers.py:276
+msgid "容器端口"
+msgstr ""
+
+#: paasng/platform/applications/serializers.py:282
 msgid "云原生架构应用参数"
 msgstr ""
 
-#: paasng/platform/applications/serializers.py:299
+#: paasng/platform/applications/serializers.py:306
 msgid "{}已经被占用"
 msgstr "{} is occupied"
 
-#: paasng/platform/applications/serializers.py:372
+#: paasng/platform/applications/serializers.py:379
 #, python-format
 msgid "%s 不是合法选项"
 msgstr "%s is not a legal option"
 
-#: paasng/platform/applications/serializers.py:415
+#: paasng/platform/applications/serializers.py:421
 #, python-format
 msgid "无效的选项: %s"
 msgstr "Invalid option: %s"
 
-#: paasng/platform/applications/serializers.py:448
+#: paasng/platform/applications/serializers.py:454
 #, python-format
 msgid "无效的分类选项: %s"
 msgstr "Invalid classification option: %s"
 
-#: paasng/platform/applications/views.py:284
+#: paasng/platform/applications/views.py:285
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an app, please archive it from the App Market."
 
-#: paasng/platform/applications/views.py:401
-#: paasng/platform/applications/views.py:487
+#: paasng/platform/applications/views.py:402
+#: paasng/platform/applications/views.py:488
 msgid "你无法使用高级创建选项"
 msgstr "You cannot use the advanced creation option"
 
-#: paasng/platform/applications/views.py:409
-#: paasng/platform/applications/views.py:459
+#: paasng/platform/applications/views.py:410
+#: paasng/platform/applications/views.py:460
 #: paasng/platform/modules/views.py:108
 msgid "你无法使用非默认的源码来源"
 msgstr "You cannot use non-default source code sources"
 
-#: paasng/platform/applications/views.py:413
+#: paasng/platform/applications/views.py:414
 msgid "当前版本下无法创建蓝鲸插件应用"
 msgstr "The  bk-plugin app cannot be created under the current version"
 
-#: paasng/platform/applications/views.py:477
+#: paasng/platform/applications/views.py:478
 #, fuzzy
 #| msgid "你无法创建 SMart 应用"
 msgid "你无法创建云原生应用"
 msgstr "You cannot create a S-mart app"
 
-#: paasng/platform/applications/views.py:557
+#: paasng/platform/applications/views.py:558
 #, python-format
 msgid "集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."
 msgstr ""
 
-#: paasng/platform/applications/views.py:824
+#: paasng/platform/applications/views.py:825
 msgid "开发中"
 msgstr "developing"
 
-#: paasng/platform/applications/views.py:827
+#: paasng/platform/applications/views.py:828
 msgid "应用市场"
 msgstr " Market "
 
-#: paasng/platform/log/serializers.py:36
-msgid "自定义 time_range 时需要传入 start_time & end_time"
-msgstr "Pass start_time & end_time to customize time_range"
+#: paasng/platform/core/storages/dbrouter.py:65
+msgid "检测到重命名前的 migration 记录 {}, 跳过执行当前 migration"
+msgstr ""
 
-#: paasng/platform/log/views.py:106
+#: paasng/platform/log/client.py:223 paasng/platform/log/client.py:263
+#: paasng/pluginscenter/log/client.py:168
+msgid "No mappings available, maybe index does not exist or no logs at all"
+msgstr ""
+
+#: paasng/platform/log/models.py:90 paasng/platform/log/models.py:104
+msgid "采集配置ID"
+msgstr ""
+
+#: paasng/platform/log/models.py:143
+msgid "进程类型(名称)"
+msgstr ""
+
+#: paasng/platform/log/views.py:194 paasng/platform/log/views.py:238
 msgid "日志查询失败，请稍后再试。"
 msgstr " Logging  failed, please try again later."
 
-#: paasng/platform/log/views.py:247
+#: paasng/platform/log/views.py:233
 msgid "日志查询快照失效, 请刷新后重试。"
 msgstr "The  Logging  snapshot has failed, please refresh and try again."
 
@@ -1513,62 +1748,74 @@ msgstr "Basic information about the Sync app"
 msgid "变更应用代码"
 msgstr "Change of app code"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:41
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:42
 msgid "部署到预发布环境和生产环境"
 msgstr "Deployment to s'tag and prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:153
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:154
 msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
 msgstr ""
 "Older versions of the test environment are not deployed or have been "
 "archive, skip the test environment deployment"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:157
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:158
 msgid "开始部署预发布环境"
 msgstr "Start deploying a stag e'nv"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:160
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:161
 msgid "预发布环境部署失败"
 msgstr "stag env deployment failure"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:162
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:163
 msgid "预发布环境部署成功"
 msgstr "stag env deployed successfully"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:166
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:167
 msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
 msgstr ""
 "Older versions of the test environment are not deployed or have been "
 "archive, Skip formal environment deployment"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:168
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:169
 msgid "开始部署生产环境"
 msgstr "Start deploying a prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:173
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:174
 msgid "生产环境部署失败"
 msgstr "Failure to deploy to a prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:175
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:176
 msgid "生产环境部署成功"
 msgstr "Successful deployment in prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:44
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:49
 #, python-brace-format
 msgid "{env} 环境绑定出口IP异常, 详情: {detail}"
 msgstr "{env} environment binding exit IP exception, details: {detail}"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:57
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:54
+#, python-brace-format
+msgid "{env} 环境绑定出口IP异常, 详情: 不能重复绑定"
+msgstr ""
+"{env} environment binding exit IP exception, details: cannot be repeatedly "
+"bound"
+
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:56
+#, python-brace-format
+msgid "{env} 环境绑定出口IP异常"
+msgstr "{env} environment binding exit IP exception"
+
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:77
 #, python-brace-format
 msgid "{env} 环境未获取过网关信息"
 msgstr "{env} The environment has not obtained gateway information."
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:60
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:79
 #, python-brace-format
-msgid "{env} 环境解绑出口IP异常, 详情: {detail}"
-msgstr "{env} environment unbinding exit IP exception, details: {detail}"
+msgid "{env} 环境解绑出口IP异常"
+msgstr "{env} environment unbinding exit IP exception"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:64
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:82
 msgid "绑定出口 IP "
 msgstr "Binding Egress IP "
 
@@ -1580,7 +1827,7 @@ msgstr "Change desktop entry"
 msgid "应用接入层已经回滚到 PaaS2.0"
 msgstr "The app access layer has been rolled back to PaaS2.0"
 
-#: paasng/platform/mgrlegacy/app_migrations/envs_base.py:44
+#: paasng/platform/mgrlegacy/app_migrations/envs_base.py:43
 msgid "同步环境变量"
 msgstr "Synchronising environment variables"
 
@@ -1592,19 +1839,19 @@ msgstr "Synchronise Market information"
 msgid "迁移权限管理: 用户白名单及IP白名单"
 msgstr "Relocation  Permissions : user whitelisting and IP whitelisting"
 
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:39
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:38
 msgid "开始迁移白名单"
 msgstr "Start migration whitelist"
 
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:63
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:62
 msgid "白名单迁移成功"
 msgstr "Whitelist migration successful"
 
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:70
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:69
 msgid "开始回滚白名单"
 msgstr "Start rolling back the whitelist"
 
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:92
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:91
 msgid "白名单回滚成功"
 msgstr "Whitelist rollback successful"
 
@@ -1690,57 +1937,64 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "apps that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:270
-#: paasng/platform/modules/manager.py:305
+#: paasng/platform/modules/manager.py:247
+#: paasng/platform/modules/manager.py:285
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:273
-#: paasng/platform/modules/manager.py:320
+#: paasng/platform/modules/manager.py:250
+#: paasng/platform/modules/manager.py:300
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:278
-#: paasng/platform/modules/manager.py:325
+#: paasng/platform/modules/manager.py:255
+#: paasng/platform/modules/manager.py:305
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:311
+#: paasng/platform/modules/manager.py:258
+#: paasng/platform/modules/manager.py:308
+#, fuzzy
+#| msgid "代码初始化过程失败，请稍候再试"
+msgid "日志模块初始化失败, 请稍候再试"
+msgstr "Code initialization process failed, please wait and try again"
+
+#: paasng/platform/modules/manager.py:291
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:317
+#: paasng/platform/modules/manager.py:297
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/protections.py:48
+#: paasng/platform/modules/protections.py:49
 #, python-brace-format
 msgid "{module_name} 模块正在进行部署或下架操作，请操作结束后再尝试删除"
 msgstr ""
 "{module_name} The module is being deployed or archive, please try to delete "
 "it again after the operation is finished."
 
-#: paasng/platform/modules/protections.py:71
+#: paasng/platform/modules/protections.py:72
 msgid "删除模块前，请先将所有部署环境下架"
 msgstr "Before deleting the module, please archive all deployment environments"
 
-#: paasng/platform/modules/protections.py:83
+#: paasng/platform/modules/protections.py:84
 msgid "删除模块前，请先确认所有独立域名已经下线"
 msgstr ""
 "Before deleting the module, please make sure all domains have been archived"
 
-#: paasng/platform/modules/serializers.py:140
+#: paasng/platform/modules/serializers.py:143
 #, fuzzy
 #| msgid "应用名称为 %s 的应用已存在"
 msgid "名称为 {} 的模块已存在"
 msgstr " App name %s already exists "
 
-#: paasng/platform/modules/serializers.py:146
+#: paasng/platform/modules/serializers.py:149
 msgid "模板 {} 不可用"
 msgstr ""
 
-#: paasng/platform/modules/serializers.py:253
-#: paasng/platform/modules/serializers.py:263
+#: paasng/platform/modules/serializers.py:256
+#: paasng/platform/modules/serializers.py:266
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 
@@ -1840,74 +2094,64 @@ msgstr "delete module"
 
 #: paasng/platform/operations/constant.py:68
 msgid "申请网关 API 权限"
-msgstr ""
+msgstr "Apply for Gateway API permissions"
 
 #: paasng/platform/operations/constant.py:69
 msgid "续期网关 API 权限"
-msgstr ""
+msgstr "Renewal Gateway API Permissions"
 
-#: paasng/platform/operations/models.py:99
+#: paasng/platform/operations/models.py:100
 msgid "未知操作类型"
 msgstr "Unknown operation type"
 
-#: paasng/platform/operations/models.py:106
-#, python-brace-format
-msgid "启动 {process_type} 进程"
-msgstr "start {process_type} process"
-
 #: paasng/platform/operations/models.py:107
 #, python-brace-format
-msgid "停止 {process_type} 进程"
-msgstr "stop {process_type} process"
+msgid "启动 {module_name} 模块的 {process_type} 进程"
+msgstr "start {module_name} module's {process_type} process"
 
-#: paasng/platform/operations/models.py:111
-msgid "未知"
-msgstr "Unknown"
+#: paasng/platform/operations/models.py:108
+#, python-brace-format
+msgid "停止 {module_name} 模块的 {process_type} 进程"
+msgstr "stop {module_name} module's {process_type} process"
 
-#: paasng/platform/operations/models.py:130
-msgid "预发布"
-msgstr "stag env"
+#: paasng/platform/operations/models.py:172
+#: paasng/platform/operations/models.py:215
+#, python-brace-format
+msgid "成功部署 {module_name} 模块的{env_name}"
+msgstr "successfully deployed {module_name} module's {env_name}"
 
-#: paasng/platform/operations/models.py:131
-msgid "生产"
-msgstr "prod env"
+#: paasng/platform/operations/models.py:174
+#, python-brace-format
+msgid "中断了 {module_name} 模块的{env_name}的部署过程"
+msgstr "Interrupted deploy of {module_name} module's {env_name}"
 
 #: paasng/platform/operations/models.py:176
+#: paasng/platform/operations/models.py:215
 #, python-brace-format
-msgid "成功部署{env_name}环境"
-msgstr "successfully deployed {env_name}"
+msgid "尝试部署 {module_name} 模块的{env_name}失败"
+msgstr "Failed to deploy {module_name} module's {env_name}"
 
-#: paasng/platform/operations/models.py:178
+#: paasng/platform/operations/models.py:269
 #, python-brace-format
-msgid "中断了{env_name}环境的部署过程"
-msgstr "Interrupted deploy of {env_name}"
+msgid "成功下架 {module_name} 模块的{env_name}"
+msgstr "Successfully archived {env_name} from {module_name} module"
 
-#: paasng/platform/operations/models.py:180
+#: paasng/platform/operations/models.py:271
 #, python-brace-format
-msgid "尝试部署{env_name}环境失败"
-msgstr "Failed to deploy {env_name}"
+msgid "尝试下架 {module_name} 模块的{env_name}"
+msgstr "Try to archive {env_name} from {module_name} module"
 
-#: paasng/platform/operations/models.py:238
-#, python-brace-format
-msgid "成功下架{env_name}环境"
-msgstr "Successfully archive {env_name}"
-
-#: paasng/platform/operations/models.py:240
-#, python-brace-format
-msgid "尝试下架{env_name}环境"
-msgstr "Archive {env_name}"
-
-#: paasng/platform/operations/models.py:249
+#: paasng/platform/operations/models.py:280
 #, python-brace-format
 msgid "创建 {module_name} 模块"
 msgstr "Create {module_name} module"
 
-#: paasng/platform/operations/models.py:256
+#: paasng/platform/operations/models.py:287
 #, python-brace-format
 msgid "申请 {gateway_name} 网关的 API 权限"
 msgstr ""
 
-#: paasng/platform/operations/models.py:257
+#: paasng/platform/operations/models.py:288
 #, python-brace-format
 msgid "续期 {gateway_name} 网关的 API 权限"
 msgstr ""
@@ -2013,7 +2257,7 @@ msgstr "Can't go back to previous step"
 msgid "无法停止发布"
 msgstr "Can't stop publish"
 
-#: paasng/pluginscenter/exceptions.py:33 paasng/pluginscenter/views.py:530
+#: paasng/pluginscenter/exceptions.py:33 paasng/pluginscenter/views.py:531
 msgid "插件不支持终止发布操作"
 msgstr "Plugin does not support abort publish operation"
 
@@ -2068,7 +2312,13 @@ msgstr "Add/delete repository member exception, please try again later"
 msgid "查询代码仓库概览数据异常"
 msgstr "Query code warehouse overview data exception"
 
-#: paasng/pluginscenter/exceptions.py:60 paasng/utils/error_codes.py:160
+#: paasng/pluginscenter/exceptions.py:50
+#, fuzzy
+#| msgid "日志查询失败，请稍后重试"
+msgid "日志系统异常, 请稍后重试"
+msgstr " Logging  failed, please try again later"
+
+#: paasng/pluginscenter/exceptions.py:62 paasng/utils/error_codes.py:161
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
 
@@ -2127,7 +2377,7 @@ msgid ""
 "等。"
 msgstr ""
 
-#: paasng/pluginscenter/iam_adaptor/policy/permissions.py:34
+#: paasng/pluginscenter/iam_adaptor/policy/permissions.py:36
 #, python-brace-format
 msgid "用户无以下权限 {actions}"
 msgstr ""
@@ -2160,7 +2410,7 @@ msgstr "TERMINATED"
 msgid "被撤销"
 msgstr "REVOKED"
 
-#: paasng/pluginscenter/releases/executor.py:39
+#: paasng/pluginscenter/releases/executor.py:40
 #: tests/pluginscenter/release/test_executor.py:92
 #: tests/pluginscenter/test_integration.py:91
 msgid "当前阶段未执行成功, 不允许进入下一阶段"
@@ -2168,103 +2418,117 @@ msgstr ""
 "The current stage has not been executed successfully, and it is not allowed "
 "to enter the next stage"
 
-#: paasng/pluginscenter/releases/executor.py:43
+#: paasng/pluginscenter/releases/executor.py:44
 msgid "不存在下一阶段"
 msgstr "no next stage"
 
-#: paasng/pluginscenter/releases/executor.py:46
+#: paasng/pluginscenter/releases/executor.py:47
 msgid "下一阶段已被执行, 不能重复触发已执行的阶段"
 msgstr ""
 "The next stage has already been executed, and the executed stage cannot be "
 "triggered repeatedly"
 
-#: paasng/pluginscenter/releases/executor.py:61
+#: paasng/pluginscenter/releases/executor.py:62
 msgid "如需发布请创建新的版本"
 msgstr "To publish please create a new version"
 
-#: paasng/pluginscenter/releases/executor.py:73
+#: paasng/pluginscenter/releases/executor.py:74
 #: tests/pluginscenter/release/test_executor.py:134
 msgid "当前阶段已被执行, 不能重复触发已执行的阶段"
 msgstr ""
 "The current phase has been executed, and the executed phase cannot be "
 "triggered repeatedly"
 
-#: paasng/pluginscenter/releases/executor.py:86
+#: paasng/pluginscenter/releases/executor.py:93
 #: tests/pluginscenter/release/test_executor.py:158
 msgid "当前发布流程已结束"
 msgstr "The current publishing process has ended"
 
-#: paasng/pluginscenter/releases/executor.py:89
-#: paasng/pluginscenter/releases/executor.py:123
+#: paasng/pluginscenter/releases/executor.py:96
+#: paasng/pluginscenter/releases/executor.py:130
 msgid "当前插件类型不支持重置历史版本, 如需发布请创建新的版本"
 msgstr ""
 "The current plug-in type does not support resetting the historical version, "
 "please create a new version if you need to publish"
 
-#: paasng/pluginscenter/releases/executor.py:96
+#: paasng/pluginscenter/releases/executor.py:103
 #: tests/pluginscenter/release/test_executor.py:167
 msgid "请先撤回审批单据, 再返回上一步"
 msgstr ""
 "Please withdraw the approval document before returning to the previous step"
 
-#: paasng/pluginscenter/releases/executor.py:101
+#: paasng/pluginscenter/releases/executor.py:108
 msgid "请等待部署完成, 再返回上一步"
 msgstr ""
 "Please wait for the deployment to complete before returning to the previous "
 "step"
 
-#: paasng/pluginscenter/releases/executor.py:120
+#: paasng/pluginscenter/releases/executor.py:127
 #: tests/pluginscenter/release/test_executor.py:193
 msgid "状态异常: {}"
 msgstr "Abnormal state: {}"
 
-#: paasng/pluginscenter/releases/executor.py:131
+#: paasng/pluginscenter/releases/executor.py:138
 msgid "当前状态({})不支持取消发布"
 msgstr "The current state ({}) does not support unpublishing"
 
-#: paasng/pluginscenter/releases/executor.py:138
+#: paasng/pluginscenter/releases/executor.py:145
 msgid "请到 ITSM 撤回审批单据"
 msgstr "Please go to ITSM to withdraw the approval slip"
 
-#: paasng/pluginscenter/releases/executor.py:139
+#: paasng/pluginscenter/releases/executor.py:146
 #: tests/pluginscenter/release/test_executor.py:216
 msgid "用户主动终止发布"
 msgstr "User voluntarily terminates publishing"
 
-#: paasng/pluginscenter/releases/stages.py:76
+#: paasng/pluginscenter/releases/stages.py:82
 msgid "当前阶段并非部署阶段"
 msgstr "The current phase is not a deployment phase"
 
-#: paasng/pluginscenter/releases/stages.py:188
+#: paasng/pluginscenter/releases/stages.py:199
 msgid "插件已发布成功"
 msgstr "The plugin has been published successfully"
 
-#: paasng/pluginscenter/serializers.py:263
+#: paasng/pluginscenter/serializers.py:58
+msgid "context `pd` is required"
+msgstr ""
+
+#: paasng/pluginscenter/serializers.py:85
+#, fuzzy
+#| msgid "{} 为 {} 的应用已存在"
+msgid "{} 为 {} 的插件已存在"
+msgstr "{} for {} already exists"
+
+#: paasng/pluginscenter/serializers.py:88
+msgid "attrs `{}` is required"
+msgstr ""
+
+#: paasng/pluginscenter/serializers.py:347
 #, python-brace-format
 msgid "版本号不符合，下一个 {label} 版本是 {revision}"
 msgstr "Revision numbers do not match, next {label} revision is {revision}"
 
-#: paasng/pluginscenter/serializers.py:276
+#: paasng/pluginscenter/serializers.py:360
 msgid "版本号必须与代码分支一致"
 msgstr "The version number must match the code branch"
 
-#: paasng/pluginscenter/serializers.py:279
+#: paasng/pluginscenter/serializers.py:363
 msgid "版本号必须与提交哈希一致"
 msgstr "The version number must match the commit hash"
 
-#: paasng/pluginscenter/shim.py:103
+#: paasng/pluginscenter/shim.py:108
 msgid "同名仓库已存在"
 msgstr "A repository with the same name already exists"
 
-#: paasng/pluginscenter/views.py:613
+#: paasng/pluginscenter/views.py:614
 msgid "仅支持重试当前阶段"
 msgstr "Only supports retrying the current phase"
 
-#: paasng/pluginscenter/views.py:724
+#: paasng/pluginscenter/views.py:725
 msgid "用户 {} 已存在"
 msgstr ""
 
-#: paasng/pluginscenter/views.py:752
+#: paasng/pluginscenter/views.py:753
 msgid "插件成员 {} 不存在"
 msgstr ""
 
@@ -2272,37 +2536,57 @@ msgstr ""
 msgid "类型错误，只允许修改为子域名类型"
 msgstr "Type error, only allowed to change to sub-domain type"
 
-#: paasng/publish/entrance/views.py:63
+#: paasng/publish/entrance/views.py:60
 msgid "当前模块访问地址已经是子域名类型，无需修改"
 msgstr ""
 "The current module access address is already a sub-domain type, no need to "
 "change it"
 
-#: paasng/publish/entrance/views.py:197
+#: paasng/publish/entrance/views.py:194
 msgid "不支持切换至该域名"
 msgstr "Switching to this domain is not supported"
 
-#: paasng/publish/market/protections.py:69
-msgid "应用已在生产环境下架"
-msgstr "The app has been archive in the prod env"
+#: paasng/publish/market/constant.py:78
+msgid "运维工具"
+msgstr "OpsTools"
 
-#: paasng/publish/market/protections.py:71
+#: paasng/publish/market/constant.py:79
+msgid "监控告警"
+msgstr "MonitorAlarm"
+
+#: paasng/publish/market/constant.py:80
+msgid "配置管理"
+msgstr "ConfManage"
+
+#: paasng/publish/market/constant.py:81
+msgid "开发工具"
+msgstr "DevTools"
+
+#: paasng/publish/market/constant.py:82
+msgid "企业IT"
+msgstr "EnterpriseIT"
+
+#: paasng/publish/market/constant.py:83
+msgid "办公应用"
+msgstr "OfficeApp"
+
+#: paasng/publish/market/constant.py:84
+msgid "其它"
+msgstr "Other"
+
+#: paasng/publish/market/protections.py:67
 msgid "应用未在生产环境成功部署"
 msgstr "app not successfully deployed in prod env"
 
-#: paasng/publish/market/protections.py:84
+#: paasng/publish/market/protections.py:80
 msgid "未设置合法的第三方地址"
 msgstr "No legitimate third party address set"
 
-#: paasng/publish/market/protections.py:86
+#: paasng/publish/market/protections.py:82
 msgid "未设置有效的访问地址"
 msgstr "No valid access address set"
 
-#: paasng/publish/market/protections.py:119
-msgid "模块已在生产环境下架"
-msgstr "The module has been archived in the prod env"
-
-#: paasng/publish/market/protections.py:121
+#: paasng/publish/market/protections.py:113
 msgid "模块未在生产环境成功部署"
 msgstr "Module not successfully deployed in prod env"
 
@@ -2567,139 +2851,145 @@ msgid "未满足应用市场服务开启条件"
 msgstr "The conditions for opening the market service have not been met"
 
 #: paasng/utils/error_codes.py:94
+#, fuzzy
+#| msgid "无法获取应用资源 metrics"
+msgid "应用资源 metrics 暂不支持"
+msgstr "Unable to fetch app resources metrics"
+
+#: paasng/utils/error_codes.py:95
 msgid "无法获取应用资源 metrics"
 msgstr "Unable to fetch app resources metrics"
 
-#: paasng/utils/error_codes.py:96
+#: paasng/utils/error_codes.py:97
 msgid "查询告警失败"
 msgstr ""
 
-#: paasng/utils/error_codes.py:98
+#: paasng/utils/error_codes.py:99
 msgid "无法更新独立域名"
 msgstr "Unable to update domain"
 
-#: paasng/utils/error_codes.py:99
+#: paasng/utils/error_codes.py:100
 msgid "无法添加独立域名"
 msgstr "Unable to add domain"
 
-#: paasng/utils/error_codes.py:100
+#: paasng/utils/error_codes.py:101
 msgid "无法删除独立域名"
 msgstr "Unable to delete domain"
 
-#: paasng/utils/error_codes.py:102
+#: paasng/utils/error_codes.py:103
 msgid "应用引擎未开启"
 msgstr "App engine not turned on"
 
-#: paasng/utils/error_codes.py:104
+#: paasng/utils/error_codes.py:105
 msgid "访问量统计接口异常"
 msgstr "Exceptions to the access statistics interface"
 
-#: paasng/utils/error_codes.py:105
+#: paasng/utils/error_codes.py:106
 msgid "更新统计功能状态失败"
 msgstr "Failure to update the status of the statistics function"
 
-#: paasng/utils/error_codes.py:107
+#: paasng/utils/error_codes.py:108
 msgid "不是yaml文件"
 msgstr "Not a yaml file"
 
-#: paasng/utils/error_codes.py:108
+#: paasng/utils/error_codes.py:109
 msgid "文件格式错误"
 msgstr "Document format error"
 
-#: paasng/utils/error_codes.py:110
+#: paasng/utils/error_codes.py:111
 msgid "文档模板不存在"
 msgstr "Document template does not exist"
 
-#: paasng/utils/error_codes.py:112
+#: paasng/utils/error_codes.py:113
 msgid "没找到任何待创建的 S-mart 应用包"
 msgstr "No S-mart App packages were found to be created"
 
-#: paasng/utils/error_codes.py:113
+#: paasng/utils/error_codes.py:114
 msgid "缺失应用描述文件"
 msgstr "Missing app description file"
 
-#: paasng/utils/error_codes.py:114
+#: paasng/utils/error_codes.py:115
 msgid "分析应用描述文件异常"
 msgstr "Analyzing app Description File Exceptions"
 
-#: paasng/utils/error_codes.py:115
+#: paasng/utils/error_codes.py:116
 msgid "访问容器镜像仓库异常"
 msgstr "Access to container image repository exception"
 
-#: paasng/utils/error_codes.py:117
+#: paasng/utils/error_codes.py:118
 msgid "无法获取用户凭证"
 msgstr "Unable to obtain user credentials"
 
-#: paasng/utils/error_codes.py:119
+#: paasng/utils/error_codes.py:120
 msgid "Oauth 后端类型无效"
 msgstr "Oauth back-end type invalid"
 
-#: paasng/utils/error_codes.py:121
+#: paasng/utils/error_codes.py:122
 msgid "暂不支持该功能"
 msgstr "This feature is not supported at the moment"
 
-#: paasng/utils/error_codes.py:123
+#: paasng/utils/error_codes.py:124
 msgid "请求第三方接口错误"
 msgstr "Request for third party interface error"
 
-#: paasng/utils/error_codes.py:125
+#: paasng/utils/error_codes.py:126
 msgid "云API相关接口路径错误"
 msgstr "Cloud API related interface path error"
 
-#: paasng/utils/error_codes.py:126
+#: paasng/utils/error_codes.py:127
 msgid "云API中Region对应的用户类型未配置"
 msgstr ""
 "The user type corresponding to the Region in the Cloud API is not configured"
 
-#: paasng/utils/error_codes.py:129
+#: paasng/utils/error_codes.py:130
 msgid "应用不是“蓝鲸插件”类型"
 msgstr ""
 
-#: paasng/utils/error_codes.py:130
+#: paasng/utils/error_codes.py:131
 msgid "无法设置插件使用方，请稍候重试"
 msgstr "Unable to set plug-in user, please wait and try again"
 
-#: paasng/utils/error_codes.py:132
+#: paasng/utils/error_codes.py:133
 #, fuzzy
 #| msgid "文档模板不存在"
 msgid "指定的场景模板不存在"
 msgstr "Document template does not exist"
 
-#: paasng/utils/error_codes.py:133
+#: paasng/utils/error_codes.py:134
 #, fuzzy
 #| msgid "分析应用描述文件异常"
 msgid "场景模板应用描述文件异常"
 msgstr "Analyzing app Description File Exceptions"
 
-#: paasng/utils/error_codes.py:136
+#: paasng/utils/error_codes.py:137
 msgid "创建蓝鲸可视化开发平台应用错误"
 msgstr ""
 
-#: paasng/utils/error_codes.py:139
+#: paasng/utils/error_codes.py:140
 msgid "engine 服务错误"
 msgstr "engine service error"
 
-#: paasng/utils/error_codes.py:142
+#: paasng/utils/error_codes.py:143
 #, fuzzy
 #| msgid "初始化应用源码模板失败"
 msgid "初始化应用成员信息失败"
 msgstr "Failed to initialise app source code template"
 
-#: paasng/utils/error_codes.py:143
+#: paasng/utils/error_codes.py:144
 msgid "添加应用成员失败"
 msgstr ""
 
-#: paasng/utils/error_codes.py:144
+#: paasng/utils/error_codes.py:145
 msgid "修改应用成员失败"
 msgstr ""
 
-#: paasng/utils/error_codes.py:145
+#: paasng/utils/error_codes.py:146
 #, fuzzy
 #| msgid "删除应用"
 msgid "删除应用成员失败"
 msgstr "delete app"
 
-#: paasng/utils/error_codes.py:148
+#: paasng/utils/error_codes.py:149
 msgid "因该功能正在升级改造，操作暂不可用。"
 msgstr ""
 "Operation is temporarily unavailable as this function is being upgraded."
@@ -2728,14 +3018,35 @@ msgstr ""
 msgid "参数格式错误"
 msgstr "Parameter format error"
 
-#: tests/pluginscenter/test_serializers.py:85
-#: tests/pluginscenter/test_serializers.py:92
+#: tests/pluginscenter/test_serializers.py:90
+#: tests/pluginscenter/test_serializers.py:102
 msgid "This value does not match the required pattern."
 msgstr ""
 
 #: tests/sourcectl/packages/test_utils.py:47
 msgid "zh-cn"
 msgstr ""
+
+#~ msgid "成功下架{env_name}环境"
+#~ msgstr "Successfully archive {env_name}"
+
+#~ msgid "尝试下架{env_name}环境"
+#~ msgstr "Archive {env_name}"
+
+#~ msgid "自定义 time_range 时需要传入 start_time & end_time"
+#~ msgstr "Pass start_time & end_time to customize time_range"
+
+#~ msgid "预发布"
+#~ msgstr "stag env"
+
+#~ msgid "生产"
+#~ msgstr "prod env"
+
+#~ msgid "应用已在生产环境下架"
+#~ msgstr "The app has been archive in the prod env"
+
+#~ msgid "模块已在生产环境下架"
+#~ msgstr "The module has been archived in the prod env"
 
 #~ msgid "你没有相应资源的访问权限，请申请权限或联系管理员授权"
 #~ msgstr ""
@@ -2797,9 +3108,6 @@ msgstr ""
 #~ msgid "删除应用前，请先确认所有独立域名已经下线"
 #~ msgstr "Please make sure all domains are offline before deleting the app"
 
-#~ msgid "日志查询失败，请稍后重试"
-#~ msgstr " Logging  failed, please try again later"
-
 #~ msgid "{} 已经被占用"
 #~ msgstr "{} already occupied"
 
@@ -2859,21 +3167,6 @@ msgstr ""
 
 #~ msgid "Koa 2.11.0 框架"
 #~ msgstr "Koa 2.11.0 framework"
-
-#~ msgid "运维工具"
-#~ msgstr "OpsTools"
-
-#~ msgid "监控告警"
-#~ msgstr "Alarm"
-
-#~ msgid "开发工具"
-#~ msgstr "DevTools"
-
-#~ msgid "企业IT"
-#~ msgstr "EnterpriseIT"
-
-#~ msgid "办公应用"
-#~ msgstr "OfficeApp"
 
 #~ msgid "其他"
 #~ msgstr "Others"

@@ -51,16 +51,16 @@ class TestPermission:
     @pytest.mark.parametrize(
         "action", [PluginPermissionActions.BASIC_DEVELOPMENT, PluginPermissionActions.MANAGE_CONFIGURATION]
     )
-    def test_single_action(self, plugin, drf_request, iam_policy_client, action):
+    def test_single_action(self, plugin_with_role, drf_request, iam_policy_client, action):
         iam_policy_client.is_action_allowed.return_value = False
-        response = make_view(plugin, [action])(drf_request)
+        response = make_view(plugin_with_role, [action])(drf_request)
         assert response.status_code == 403
-        assert response.data["detail"] == "用户无以下权限 {actions}".format(
+        assert response.data["message"] == "用户无以下权限 {actions}".format(
             actions=[PluginPermissionActions.get_choice_label(action)]
         )
 
         iam_policy_client.is_action_allowed.return_value = True
-        response = make_view(plugin, [action])(drf_request)
+        response = make_view(plugin_with_role, [action])(drf_request)
         assert response.status_code == 200
 
     @pytest.mark.parametrize(
@@ -89,7 +89,7 @@ class TestPermission:
             ),
         ],
     )
-    def test_multi_actions(self, plugin, drf_request, iam_policy_client, actions_permission, status_code):
+    def test_multi_actions(self, plugin_with_role, drf_request, iam_policy_client, actions_permission, status_code):
         iam_policy_client.is_actions_allowed.return_value = actions_permission
-        response = make_view(plugin, list(actions_permission.keys()))(drf_request)
+        response = make_view(plugin_with_role, list(actions_permission.keys()))(drf_request)
         assert response.status_code == status_code

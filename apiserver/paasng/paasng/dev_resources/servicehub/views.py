@@ -47,7 +47,7 @@ from paasng.dev_resources.services.models import ServiceCategory
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import AppEnvName
-from paasng.engine.display_blocks import ServicesInfo
+from paasng.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter

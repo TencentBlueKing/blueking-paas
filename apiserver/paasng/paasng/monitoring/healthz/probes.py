@@ -56,6 +56,11 @@ class PlatformMysqlProbe(MySQLProbe):
     config = transfer_django_db_settings(settings.DATABASES['default'])
 
 
+class WorkloadsMysqlProbe(MySQLProbe):
+    name = "platform-mysql"
+    config = transfer_django_db_settings(settings.DATABASES['workloads'])
+
+
 class ESBProbe(BKHttpProbe):
     name = 'esb'
     url = settings.COMPONENT_SYSTEM_HEALTHZ_URL
@@ -87,6 +92,16 @@ class _BkRepoProbe(HttpProbe):
     if isinstance(settings.BLOBSTORE_BKREPO_CONFIG, dict):
         bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get('ENDPOINT', '')
     url = f"{bkrepo_endpoint}/generic/actuator/info"
+
+
+class BKIAMProbe(HttpProbe):
+    name = "bkiam"
+
+    iam_host = settings.BK_IAM_V3_INNER_URL
+    if getattr(settings, "BK_IAM_USE_APIGATEWAY", False):
+        iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
+    url = f'{iam_host}/ping'
+    is_core = True
 
 
 class ServiceHubProbe(VirtualProbe):

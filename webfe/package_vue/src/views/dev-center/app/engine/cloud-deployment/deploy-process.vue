@@ -75,11 +75,8 @@
               />
               <p class="whole-item-tips">
                 {{ $t('示例镜像：') }}
-                <span v-if="['ce', 'ee'].includes(GLOBAL.APP_VERSION)">
-                  nginx:latest
-                </span>
-                <span v-else>
-                  mirrors.tencent.com/bkpaas/django-helloworld:latest
+                <span>
+                  {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
                 </span>
                 &nbsp;
                 <span
@@ -94,8 +91,6 @@
                   :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
                 >{{ $t('帮助：如何构建镜像') }}</a>
               </p>
-              <!-- <p class="whole-item-tips"> {{ $t('示例镜像：mirrors.tencent.com/foo/bar') }} </p>
-                            <p class="whole-item-tips"> {{ $t('镜像应监听环境变量值$PORT端口，提供HTTP服务') }} </p> -->
             </bk-form-item>
 
             <!-- 镜像凭证 -->
@@ -106,7 +101,7 @@
               :property="'command'"
             >
               <bk-select
-                v-model="voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${panels[panelActive].name}`]"
+                v-model="bkappAnnotations[imageCrdlAnnoKey]"
                 :disabled="false"
                 style="width: 500px;"
                 ext-cls="select-custom"
@@ -114,7 +109,7 @@
                 searchable
               >
                 <bk-option
-                  v-for="option in voucherList"
+                  v-for="option in imageCredentialList"
                   :id="option.name"
                   :key="option.name"
                   :name="option.name"
@@ -122,7 +117,7 @@
                 <div
                   slot="extension"
                   style="cursor: pointer;"
-                  @click="handlerCreateVoucher"
+                  @click="handlerCreateImageCredential"
                 >
                   <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
                 </div>
@@ -215,6 +210,9 @@
             >
               <bk-input
                 v-model="formData.replicas"
+                type="number"
+                :max="5"
+                :min="1"
                 style="width: 150px"
               />
             </bk-form-item>
@@ -224,7 +222,6 @@
               :label="$t('内存')"
               :property="'memory'"
             >
-              <!-- <bk-input style="width: 150px" v-model="formData.memory"></bk-input> -->
               <bk-select
                 v-model="formData.memory"
                 allow-create
@@ -245,7 +242,6 @@
               :label="$t('CPU(核数)')"
               :property="'cpu'"
             >
-              <!-- <bk-input style="width: 150px" v-model="formData.cpu"></bk-input> -->
               <bk-select
                 v-model="formData.cpu"
                 allow-create
@@ -264,75 +260,14 @@
             </bk-form-item>
           </bk-form>
         </div>
-
-        <!-- 部署前置命令 -->
-        <!-- <div class="form-pre" v-if="!panelActive">
-                    <div class="item-title">
-                        {{ $t('钩子命令') }}
-                    </div>
-                    <bk-form :model="preFormData" class="info-special-form form-pre-command" form-type="inline">
-                        <bk-form-item>
-                            <label class="title-label"> {{ $t('部署前置命令') }} </label>
-                        </bk-form-item>
-                        <div class="pt5">
-                            <div class="ps-switcher-wrapper" @click="togglePermission">
-                                <bk-switcher
-                                    v-model="preFormData.loaclEnabled">
-                                </bk-switcher>
-                            </div>
-                            <span class="pl5">{{preFormData.loaclEnabled ? $t('已启用') : $t('未启用')}}</span>
-                        </div>
-                        <bk-form-item v-if="preFormData.loaclEnabled" class="pt20" style="width: 510px; position:relative; margin-left: 15px">
-                            <bk-input
-                                :placeholder="$t('留空使用镜像的默认entrypoint')"
-                                ext-cls="paas-info-app-name-cls"
-                                :clearable="false"
-                                v-model="preFormData.command">
-                                <template slot="prepend">
-                                    <div class="group-text">启动命令</div>
-                                </template>
-                            </bk-input>
-                            <bk-tag-input
-                                style="width: 500px"
-                                ext-cls="tag-extra"
-                                v-model="preFormData.command"
-                                :placeholder="$t('请输入启动命令')"
-                                :allow-create="allowCreate"
-                                :allow-auto-match="true"
-                                :has-delete-icon="hasDeleteIcon">
-                            </bk-tag-input>
-                            <span class="whole-item-tips">{{ $t('该命令使用web进程的配置，在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} ./bin/pre-task.sh</span>
-                        </bk-form-item>
-                        <bk-form-item v-if="preFormData.loaclEnabled" class="pt20" style="width: 510px; position:relative; margin-left: 100px;">
-                            <bk-input
-                                :placeholder="$t('留空使用镜像的默认entrypoint')"
-                                ext-cls="paas-info-app-name-cls"
-                                :clearable="false"
-                                v-model="preFormData.args">
-                                <template slot="prepend">
-                                    <div class="group-text">命令参数</div>
-                                </template>
-                            </bk-input>
-                            <bk-tag-input
-                                style="width: 500px"
-                                ext-cls="tag-extra"
-                                v-model="preFormData.args"
-                                :placeholder="$t('请输入命令参数')"
-                                :allow-create="allowCreate"
-                                :allow-auto-match="true"
-                                :has-delete-icon="hasDeleteIcon">
-                            </bk-tag-input>
-                        </bk-form-item>
-                    </bk-form>
-                </div> -->
       </div>
     </div>
   </paas-content-loader>
 </template>
 
 <script>
-    // import deployAction from './comps/deploy-action';
     import _ from 'lodash';
+    import { bus } from '@/common/bus';
 
     export default {
         components: {
@@ -360,12 +295,12 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: 8080
                 },
-                voucherData: {},
+                bkappAnnotations: {},
                 preFormData: {
                     loaclEnabled: false,
                     command: [],
@@ -384,9 +319,9 @@
                     { key: '1024 Mi', value: '1024Mi' }
                 ],
                 cpuData: [
+                    { key: '500m', value: '500m' },
                     { key: '1000m', value: '1000m' },
-                    { key: '2000m', value: '2000m' },
-                    { key: '4000m', value: '4000m' }
+                    { key: '2000m', value: '2000m' }
                 ],
                 hooks: null,
                 isLoading: true,
@@ -422,8 +357,8 @@
                     ]
                 },
                 isBlur: true,
-                voucher: '',
-                voucherList: [],
+                imageCredential: '',
+                imageCredentialList: [],
                 targetPortErrTips: '',
                 isTargetPortErrTips: false
             };
@@ -435,7 +370,7 @@
             appCode () {
                 return this.$route.params.id;
             },
-            voucherDataKey () {
+            imageCrdlAnnoKey () {
                 return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive].name}`;
             }
         },
@@ -452,7 +387,7 @@
                             this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
                         }
                         this.formData = this.processData[this.panelActive];
-                        this.voucherData = this.localCloudAppData.metadata.annotations;
+                        this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
                     }
                     this.setPanelsData();
                 },
@@ -464,7 +399,7 @@
                     if (this.localCloudAppData.spec) {
                         val.name = this.panels[this.panelActive] && this.panels[this.panelActive].name;
                         val.replicas = val.replicas && Number(val.replicas);
-                        if (val.targetPort) {
+                        if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
                             val.targetPort = Number(val.targetPort);
                         }
                         this.$set(this.localCloudAppData.spec.processes, this.panelActive, val);
@@ -497,13 +432,13 @@
                     this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
                 }
             },
-            voucherData: {
+            bkappAnnotations: {
                 handler (val) {
-                    if (val[this.voucherDataKey]) {
+                    if (val[this.imageCrdlAnnoKey]) {
                         this.$set(this.localCloudAppData.metadata, 'annotations', val);
                         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
                     } else {
-                        delete val[this.voucherDataKey];
+                        delete val[this.imageCrdlAnnoKey];
                     }
                 },
                 deep: true
@@ -526,10 +461,19 @@
                         }
                     }
                 }
+            },
+
+            panels: {
+              handler (val) {
+                if (!val.length) return;
+                const isDisabled = val[this.panelActive].isEdit;
+                bus.$emit('release-disabled', isDisabled);
+              },
+              deep: true
             }
         },
         created () {
-            this.getVoucherList();
+            this.getImageCredentialList();
         },
         mounted () {
             this.$refs.mirrorUrl.focus();
@@ -548,8 +492,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: null
                 };
@@ -621,7 +565,7 @@
                 });
             },
 
-            // 处理重复添加
+            // 处理重复添加和正则
             handleRepeatData (index) {
                 if (!this.isBlur) return;
                 this.isBlur = false; // 处理enter会触发两次的bug
@@ -634,6 +578,16 @@
                     this.$paasMessage({
                         theme: 'error',
                         message: this.$t('不允许添加同名进程')
+                    });
+                    setTimeout(() => {
+                        this.isBlur = true;
+                        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+                    }, 100);
+                    return false;
+                } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
                     });
                     setTimeout(() => {
                         this.isBlur = true;
@@ -680,12 +634,17 @@
                 this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
             },
 
-            formDataValidate (index) {
-                console.log('触发');
-                this.$refs.formResource.validate();
-                this.$refs.formDeploy.validate();
-                if (index) {
-                    this.handlePanelValidateSwitch(index);
+            async formDataValidate (index) {
+                try {
+                  await this.$refs.formResource.validate();
+                  await this.$refs.formDeploy.validate();
+                  if (index) {
+                      this.handlePanelValidateSwitch(index);
+                  }
+                  return true;
+                } catch (error) {
+                  console.error(error);
+                  return false;
                 }
             },
 
@@ -696,8 +655,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: 8080
                 };
@@ -740,25 +699,24 @@
             },
 
             useExample () {
-                if (['ce', 'ee'].includes(this.GLOBAL.APP_VERSION)) {
-                    this.formData.image = 'nginx:latest';
+                this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
+                if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
                     this.formData.command = [];
                     this.formData.args = [];
                     this.formData.targetPort = 80;
                     return;
                 }
-                this.formData.image = 'mirrors.tencent.com/bkpaas/django-helloworld:latest';
                 this.formData.command = ['bash', '/app/start_web.sh'];
                 this.formData.args = [];
                 this.formData.targetPort = 5000;
             },
 
             // 获取凭证列表
-            async getVoucherList () {
+            async getImageCredentialList () {
                 try {
                     const appCode = this.appCode;
-                    const res = await this.$store.dispatch('voucher/getVoucherList', { appCode });
-                    this.voucherList = res;
+                    const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+                    this.imageCredentialList = res;
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -767,8 +725,9 @@
                 }
             },
 
-            handlerCreateVoucher () {
-                this.$router.push({ name: 'appVoucher' });
+            // 前往创建镜像凭证页面
+            handlerCreateImageCredential () {
+                this.$router.push({ name: 'imageCredential' });
             }
         }
     };

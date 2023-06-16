@@ -143,8 +143,11 @@
                       <td :colspan="hasAdminUrl ? 4 : 3">
                         <div class="paas-loading-panel">
                           <div class="text">
-                            <p><i class="paasng-icon paasng-empty" /></p>
-                            <p> {{ $t('暂无增强服务配置信息') }} </p>
+                            <table-empty
+                              class="table-empty-cls"
+                              :empty-title="$t('暂无增强服务配置信息')"
+                              empty
+                            />
                             {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
                             <span
                               class="blue pl27"
@@ -245,7 +248,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`确认删除${name}实例？`"
+      :title="$t('确认删除实例？')"
       :theme="'primary'"
       :mask-close="false"
       :header-position="'left'"
@@ -294,7 +297,7 @@
 </template>
 
 <script>
-    import marked from 'marked';
+    import { marked } from 'marked';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import appTopBar from '@/components/paas-app-bar';
     import ConfigView from './comps/config-view';
@@ -359,6 +362,7 @@
                         $(this).attr('target', '_blank');
                     });
                 });
+                console.log('marked', marked)
                 return marked(this.serviceMarkdown, { sanitize: true });
             },
             hasAdminUrl () {
@@ -1024,5 +1028,8 @@
     }
     .config-width {
         width: 88%;
+    }
+    .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
+        color: #999;
     }
 </style>

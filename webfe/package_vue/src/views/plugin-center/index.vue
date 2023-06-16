@@ -40,41 +40,37 @@
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
-        <div
-          v-if="isSearchClear || pluginList.length || filterKey"
-          slot="empty"
-        >
-          <bk-exception
-            class="exception-wrap-item exception-part"
-            type="search-empty"
-            scene="part"
+        <div slot="empty">
+          <table-empty
+            :keyword="tableEmptyConf.keyword"
+            :abnormal="tableEmptyConf.isAbnormal"
+            @reacquire="fetchPluginsList"
+            @clear-filter="clearFilterKey"
           />
-          <div class="empty-tips">
-            {{ $t('可以尝试调整关键词 或') }}
-            <span
-              class="clear-search"
-              @click="clearFilterKey"
-            >{{ $t('清空搜索条件') }}</span>
-          </div>
         </div>
-        <bk-table-column :label="$t('插件 ID')">
-          <template slot-scope="{ row }">
-            <img
-              :src="row.logo"
-              onerror="this.src='/static/images/plugin-default.svg'"
-              class="plugin-logo-cls"
-            >
-            <bk-button
-              v-bk-tooltips="row.id"
-              text
+        <bk-table-column
+          :label="$t('插件 ID')"
+          :render-header="$renderHeader"
+        >
+          <template #default="{ row }">
+            <span
+              class="plugin-link"
               @click="toPluginSummary(row)"
             >
+              <img
+                :src="row.logo"
+                onerror="this.src='/static/images/plugin-default.svg'"
+                class="plugin-logo-cls"
+              >
               {{ row.id || '--' }}
-            </bk-button>
+            </span>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('插件名称')">
-          <template slot-scope="{ row }">
+        <bk-table-column
+          :label="$t('插件名称')"
+          :render-header="$renderHeader"
+        >
+          <template #default="{ row }">
             <span>{{ row.name_zh_cn }}</span>
           </template>
         </bk-table-column>
@@ -84,8 +80,9 @@
           column-key="pd_name"
           :filters="pluginTypeFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         >
-          <template slot-scope="{ row }">
+          <template #default="{ row }">
             {{ row.pd_name || '--' }}
           </template>
         </bk-table-column>
@@ -93,8 +90,9 @@
           :label="$t('创建时间')"
           prop="created"
           sortable
+          :render-header="$renderHeader"
         >
-          <template slot-scope="{ row }">
+          <template #default="{ row }">
             {{ row.created || '--' }}
           </template>
         </bk-table-column>
@@ -104,11 +102,12 @@
           column-key="language"
           :filters="languageFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         />
         <bk-table-column
           :label="$t('版本')"
         >
-          <template slot-scope="{ row }">
+          <template #default="{ row }">
             <template
               v-if="row.latest_release"
             >
@@ -130,7 +129,7 @@
           :label="$t('操作')"
           :width="localLanguage === 'en' ? 280 : 220"
         >
-          <template slot-scope="{ row }">
+          <template #default="{ row }">
             <div :class="['table-operate-buttons', localLanguage === 'en' ? 'en-operate' : 'zh-operate']">
               <bk-button
                 v-if="row.status === 'waiting-approval' || row.status === 'approval-failed'"
@@ -193,250 +192,269 @@
 </template>
 
 <script>
-    import { PLUGIN_STATUS } from '@/common/constants';
-    export default {
-        data () {
-            return {
-                loading: true,
-                filterKey: '',
-                pluginList: [],
-                pluginStatus: PLUGIN_STATUS,
-                isDataLoading: true,
-                pagination: {
-                    current: 1,
-                    limit: 10,
-                    limitList: [5, 10, 20, 50],
-                    count: 0
-                },
-                isFilter: false,
-                filterLanguage: [],
-                filterPdName: [],
-                languageFilters: [],
-                pluginTypeFilters: [],
-                removePluginDialog: {
-                    visiable: false,
-                    isLoading: false,
-                    selectedPlugin: {}
-                },
-                releaseStatusMap: {
-                    'pending': 'pending',
-                    'initial': 'initial'
-                },
-                isSearchClear: false
-            };
-        },
-        computed: {
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            }
-        },
-        watch: {
-            filterKey (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    if (this.isFilter) {
-                        this.fetchPluginsList();
-                        this.isFilter = false;
-                    }
-                }
-            },
-            filterLanguage () {
-                this.fetchPluginsList();
-            },
-            filterPdName () {
-                this.fetchPluginsList();
-            }
-        },
-        mounted () {
-            this.fetchPluginsList();
-            this.getPluginFilterParams();
-        },
-        methods: {
-            async fetchPluginsList (page = 1) {
-                try {
-                    const curPage = page || this.pagination.current;
-                    const pageParams = {
-                        limit: this.pagination.limit,
-                        offset: this.pagination.limit * (curPage - 1),
-                        order_by: 'id',
-                        search_term: this.filterKey
-                    };
-                    let statusParams = '';
-                    let languageParams = '';
-                    let pdIdParams = '';
-                    if (this.filterLanguage.length) {
-                        // pageParams.language = this.filterLanguage;
-                        let paramsText = '';
-                        this.filterLanguage.forEach(item => {
-                            paramsText += `language=${item}&`;
-                        });
-                        languageParams = paramsText.substring(0, paramsText.length - 1);
-                    }
-                    if (this.filterPdName.length) {
-                        // pageParams.pd__identifier = this.filterPdName;
-                        let paramsText = '';
-                        this.filterPdName.forEach(item => {
-                            paramsText += `pd__identifier=${item}&`;
-                        });
-                        pdIdParams = paramsText.substring(0, paramsText.length - 1);
-                    }
-                    this.isDataLoading = true;
-                    const res = await this.$store.dispatch('plugin/getPlugins', {
-                        pageParams,
-                        statusParams,
-                        languageParams,
-                        pdIdParams
-                    });
-                    this.pluginList = res.results;
-                    this.pagination.count = res.count;
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                } finally {
-                    this.isDataLoading = false;
-                    this.loading = false;
-                    this.isSearchClear = false;
-                }
-            },
-
-            async getPluginFilterParams () {
-                try {
-                    const res = await this.$store.dispatch('plugin/getPluginFilterParams');
-                    for (const key in res) {
-                        res[key].forEach(value => {
-                            if (key === 'languages') {
-                                this.languageFilters.push({
-                                    value: value,
-                                    text: value
-                                });
-                            }
-                            if (key === 'plugin_types') {
-                                this.pluginTypeFilters.push({
-                                    value: value.id,
-                                    text: value.name
-                                });
-                            }
-                        });
-                    }
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
-            },
-
-            deletePlugin (row) {
-                this.removePluginDialog.visiable = true;
-                this.removePluginDialog.selectedPlugin = row;
-            },
-
-            async handlerDeletePlugin () {
-                try {
-                    this.removePluginDialog.isLoading = true;
-                    await this.$store.dispatch('plugin/deletePlugin', {
-                        pdId: this.removePluginDialog.selectedPlugin.pd_id,
-                        pluginId: this.removePluginDialog.selectedPlugin.id
-                    });
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('删除成功！')
-                    });
-                    this.removePluginDialog.visiable = false;
-                    this.fetchPluginsList();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.removePluginDialog.isLoading = false;
-                }
-            },
-
-            handlePageLimitChange (limit) {
-                this.pagination.limit = limit;
-                this.pagination.current = 1;
-                this.fetchPluginsList(this.pagination.current);
-            },
-
-            handlePageChange (newPage) {
-                this.pagination.current = newPage;
-                this.fetchPluginsList(newPage);
-            },
-
-            handleFilterChange (filters) {
-                if (filters.language) {
-                    this.filterLanguage = filters.language.length ? filters.language : [];
-                }
-
-                if (filters.pd_name) {
-                    this.filterPdName = filters.pd_name.length ? filters.pd_name : [];
-                }
-            },
-
-            handleSearch () {
-                // API 发布
-                if (this.filterKey === '') {
-                    return;
-                }
-                this.isFilter = true;
-                this.fetchPluginsList();
-            },
-
-            createPlugin () {
-                this.$router.push({
-                    name: 'createPlugin'
-                });
-            },
-
-            toPluginSummary (data) {
-                this.$router.push({
-                    name: 'pluginSummary',
-                    params: { pluginTypeId: data.pd_id, id: data.id }
-                });
-            },
-
-            toParticulars (data) {
-                if (data.itsm_detail) {
-                    window.open(data.itsm_detail.ticket_url, '_blank');
-                }
-            },
-
-            toNewVersion (data) {
-                if (data.ongoing_release && this.releaseStatusMap[data.ongoing_release.status]) {
-                    this.$router.push({
-                        name: 'pluginVersionRelease',
-                        params: { pluginTypeId: data.pd_id, id: data.id },
-                        query: {
-                            release_id: data.ongoing_release.id
-                        }
-                    });
-                } else {
-                    this.$router.push({
-                        name: 'pluginVersionEditor',
-                        params: { pluginTypeId: data.pd_id, id: data.id }
-                    });
-                }
-            },
-
-            toDetail (data) {
-                this.$router.push({
-                    name: 'pluginVersionManager',
-                    params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
-                });
-            },
-
-            clearFilterKey () {
-                // 防止清空搜索条件时提示抖动
-                this.isSearchClear = true;
-                this.filterKey = '';
-                this.$refs.pluginTable.clearFilter();
-            }
-        }
+import { PLUGIN_STATUS } from '@/common/constants';
+import { clearFilter } from '@/common/utils';
+export default {
+  data() {
+    return {
+      loading: true,
+      filterKey: '',
+      pluginList: [],
+      pluginStatus: PLUGIN_STATUS,
+      isDataLoading: true,
+      pagination: {
+        current: 1,
+        limit: 10,
+        limitList: [5, 10, 20, 50],
+        count: 0,
+      },
+      isFilter: false,
+      filterLanguage: [],
+      filterPdName: [],
+      languageFilters: [],
+      pluginTypeFilters: [],
+      removePluginDialog: {
+        visiable: false,
+        isLoading: false,
+        selectedPlugin: {},
+      },
+      releaseStatusMap: {
+        pending: 'pending',
+        initial: 'initial',
+      },
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  watch: {
+    filterKey(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        if (this.isFilter) {
+          this.fetchPluginsList();
+          this.isFilter = false;
+        }
+      }
+    },
+    filterLanguage() {
+      this.fetchPluginsList();
+    },
+    filterPdName() {
+      this.fetchPluginsList();
+    },
+  },
+  mounted() {
+    this.fetchPluginsList();
+    this.getPluginFilterParams();
+  },
+  methods: {
+    async fetchPluginsList(page = 1) {
+      try {
+        const curPage = page || this.pagination.current;
+        const pageParams = {
+          limit: this.pagination.limit,
+          offset: this.pagination.limit * (curPage - 1),
+          order_by: 'id',
+          search_term: this.filterKey,
+        };
+        const statusParams = '';
+        let languageParams = '';
+        let pdIdParams = '';
+        if (this.filterLanguage.length) {
+          // pageParams.language = this.filterLanguage;
+          let paramsText = '';
+          this.filterLanguage.forEach((item) => {
+            paramsText += `language=${item}&`;
+          });
+          languageParams = paramsText.substring(0, paramsText.length - 1);
+        }
+        if (this.filterPdName.length) {
+          // pageParams.pd__identifier = this.filterPdName;
+          let paramsText = '';
+          this.filterPdName.forEach((item) => {
+            paramsText += `pd__identifier=${item}&`;
+          });
+          pdIdParams = paramsText.substring(0, paramsText.length - 1);
+        }
+        this.isDataLoading = true;
+        const res = await this.$store.dispatch('plugin/getPlugins', {
+          pageParams,
+          statusParams,
+          languageParams,
+          pdIdParams,
+        });
+        this.pluginList = res.results;
+        this.pagination.count = res.count;
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        // 显示异常
+        this.tableEmptyConf.isAbnormal = true;
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        this.isDataLoading = false;
+        this.loading = false;
+      }
+    },
+
+    async getPluginFilterParams() {
+      try {
+        const res = await this.$store.dispatch('plugin/getPluginFilterParams');
+        for (const key in res) {
+          res[key].forEach((value) => {
+            if (key === 'languages') {
+              this.languageFilters.push({
+                value,
+                text: value,
+              });
+            }
+            if (key === 'plugin_types') {
+              this.pluginTypeFilters.push({
+                value: value.id,
+                text: value.name,
+              });
+            }
+          });
+        }
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    deletePlugin(row) {
+      this.removePluginDialog.visiable = true;
+      this.removePluginDialog.selectedPlugin = row;
+    },
+
+    async handlerDeletePlugin() {
+      try {
+        this.removePluginDialog.isLoading = true;
+        await this.$store.dispatch('plugin/deletePlugin', {
+          pdId: this.removePluginDialog.selectedPlugin.pd_id,
+          pluginId: this.removePluginDialog.selectedPlugin.id,
+        });
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('删除成功！'),
+        });
+        this.removePluginDialog.visiable = false;
+        this.fetchPluginsList();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.removePluginDialog.isLoading = false;
+      }
+    },
+
+    handlePageLimitChange(limit) {
+      this.pagination.limit = limit;
+      this.pagination.current = 1;
+      this.fetchPluginsList(this.pagination.current);
+    },
+
+    handlePageChange(newPage) {
+      this.pagination.current = newPage;
+      this.fetchPluginsList(newPage);
+    },
+
+    handleFilterChange(filters) {
+      if (filters.language) {
+        this.filterLanguage = filters.language.length ? filters.language : [];
+      }
+
+      if (filters.pd_name) {
+        this.filterPdName = filters.pd_name.length ? filters.pd_name : [];
+      }
+    },
+
+    handleSearch() {
+      // API 发布
+      if (this.filterKey === '') {
+        return;
+      }
+      this.isFilter = true;
+      this.fetchPluginsList();
+    },
+
+    createPlugin() {
+      this.$router.push({
+        name: 'createPlugin',
+      });
+    },
+
+    toPluginSummary(data) {
+      this.$router.push({
+        name: 'pluginSummary',
+        params: { pluginTypeId: data.pd_id, id: data.id },
+      });
+    },
+
+    toParticulars(data) {
+      if (data.itsm_detail) {
+        window.open(data.itsm_detail.ticket_url, '_blank');
+      }
+    },
+
+    toNewVersion(data) {
+      if (data.ongoing_release && this.releaseStatusMap[data.ongoing_release.status]) {
+        this.$router.push({
+          name: 'pluginVersionRelease',
+          params: { pluginTypeId: data.pd_id, id: data.id },
+          query: {
+            release_id: data.ongoing_release.id,
+          },
+        });
+      } else {
+        this.$router.push({
+          name: 'pluginVersionEditor',
+          params: { pluginTypeId: data.pd_id, id: data.id },
+        });
+      }
+    },
+
+    toDetail(data) {
+      this.$router.push({
+        name: 'pluginVersionManager',
+        params: { pluginTypeId: data.pd_id, id: data.id }, // pluginTypeId插件类型标识 id插件标识
+      });
+    },
+
+    clearFilterKey() {
+      this.filterKey = '';
+      this.$refs.pluginTable.clearFilter();
+      // 手动清空表头筛选
+      if (this.$refs.pluginTable.$refs.tableHeader) {
+        const { tableHeader } = this.$refs.pluginTable.$refs;
+        clearFilter(tableHeader);
+      }
+      this.fetchPluginsList();
+    },
+
+    updateTableEmptyConfig() {
+      if (this.filterKey || this.filterLanguage.length || this.filterPdName.length) {
+        this.tableEmptyConf.keyword = 'placeholder';
+        return;
+      }
+      this.tableEmptyConf.keyword = '';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -533,6 +551,13 @@
         .clear-search {
             cursor: pointer;
             color: #3a84ff;
+        }
+    }
+    .plugin-link {
+        color: #3a84ff;
+        cursor: pointer;
+        &:hover {
+            color: #699df4;
         }
     }
 </style>

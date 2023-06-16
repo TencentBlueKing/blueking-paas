@@ -30,6 +30,9 @@ from .collector import cb_metric_collector
 
 logger = logging.getLogger(__name__)
 
+# register cb_metric_collector to default Metric collector registry
+prometheus_client.REGISTRY.register(cb_metric_collector)
+
 
 class ExportToDjangoView(APIView):
     """参考 django_prometheus.exports.ExportToDjangoView, 增加了鉴权"""

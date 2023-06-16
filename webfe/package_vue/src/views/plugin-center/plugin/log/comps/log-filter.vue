@@ -528,6 +528,7 @@
             },
 
             handleRemove (payload, index) {
+                console.log('icon');
                 this.searchHistoryDisplayList.splice(index, 1);
                 const curIndex = this.searchHistoryList.findIndex(item => item === payload);
                 this.searchHistoryList.splice(curIndex, 1);
@@ -669,6 +670,10 @@
 
             handleClickOutSide () {
                 this.isAutoPanelShow = false;
+            },
+
+            clearKeyword () {
+                this.keyword = '';
             }
         }
     };

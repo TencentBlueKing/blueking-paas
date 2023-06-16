@@ -18,163 +18,114 @@ to the current version of the project delivered to anyone in the future.
 """
 """Engine services module
 """
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+import datetime
+from typing import Dict, List, Optional, TypedDict
 
-from paasng.engine.controller.client import ControllerClient
-from paasng.engine.controller.shortcuts import make_internal_client
-from paasng.engine.helpers import SlugbuilderInfo
+from django.utils.functional import cached_property
 
-if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import VersionInfo
+from paas_wl.platform.applications.constants import ArtifactType
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.models.build import Build, BuildProcess
+from paas_wl.platform.applications.models.release import Release
+from paas_wl.resources.actions.deploy import AppDeploy
+from paas_wl.resources.base.exceptions import KubeException
+from paas_wl.workloads.images.models import AppImageCredential
+from paasng.engine.models.deployment import Deployment
+
+
+class LogLine(TypedDict):
+    stream: str
+    line: str
+    created: datetime.datetime
+
+
+def polish_line(line: str) -> str:
+    """Return the line with special characters removed"""
+    return line.replace('\x1b[1G', '')
+
+
+def get_all_logs(d: Deployment) -> str:
+    """Get all logs of current deployment, command and error detail are included.
+
+    :param d: The Deployment object
+    :return: All logs of the current deployment
+    """
+    logs = []
+    engine_app = d.get_engine_app()
+    client = EngineDeployClient(engine_app)
+    # NOTE: 当前暂不包含“准备阶段”和“检测部署结果”这两个步骤的日志，将在未来版本添加
+    if d.build_process_id:
+        logs.extend([polish_line(obj['line']) for obj in client.list_build_proc_logs(d.build_process_id)])
+    if d.pre_release_id:
+        logs.extend([polish_line(obj['line']) for obj in client.list_command_logs(d.pre_release_id)])
+    return "".join(logs) + "\n" + (d.err_detail or '')
 
 
 class EngineDeployClient:
-    """A high level client for engine"""
+    """A high level client for engine, provides functions related with deployments"""
 
-    def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
+    def __init__(self, engine_app):
         self.engine_app = engine_app
-        self.ctl_client = controller_client or make_internal_client()
 
-    def start_build_process(
-        self,
-        version: 'VersionInfo',
-        stream_channel_id: str,
-        source_tar_path: str,
-        procfile: dict,
-        extra_envs: Dict[str, str],
-    ) -> str:
-        """Start a new build process"""
-        # get slugbuilder and buildpacks from engine_app
-        build_info = SlugbuilderInfo.from_engine_app(self.engine_app)
-        # 注入构建环境所需环境变量
-        extra_envs = {**extra_envs, **build_info.environments}
+    @cached_property
+    def wl_app(self) -> WlApp:
+        """Make 'wl_app' a property so tests using current class won't panic when
+        initializing because not data can be found in workloads module.
+        """
+        return self.engine_app.to_wl_obj()
 
-        resp = self.ctl_client.app__build_processes(
-            app_name=self.engine_app.name,
-            region=self.engine_app.region,
-            image=build_info.build_image,
-            buildpacks=build_info.buildpacks_info,
-            revision=version.revision,
-            branch=version.version_name,
-            stream_channel_id=stream_channel_id,
-            source_tar_path=source_tar_path,
-            procfile=procfile,
-            extra_envs=extra_envs,
-        )
-        build_process_id = resp.get('uuid')
-        return build_process_id
-
-    def run_command(
-        self, build_id: str, command: str, stream_channel_id: str, operator: str, type_: str, extra_envs: Dict
-    ) -> str:
-        """run a command in a built slug."""
-        resp = self.ctl_client.app__run_command(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            build_id=build_id,
-            command=command,
-            stream_channel_id=stream_channel_id,
-            operator=operator,
-            type_=type_,
-            extra_envs=extra_envs,
-        )
-        command_id = resp.get("uuid")
-        return command_id
-
-    def get_command_status(self, command_id: str) -> Dict[str, Any]:
-        """Get current status of command"""
-        resp = self.ctl_client.command__retrieve(
-            region=self.engine_app.region, app_name=self.engine_app.name, command_id=command_id
-        )
-        return resp
-
-    def update_config(self, runtime: Dict[str, Any]):
-        """Update engine-app's config"""
-        payload = {"runtime": runtime}
-
-        return self.ctl_client.update_app_config(
-            app_name=self.engine_app.name,
-            region=self.engine_app.region,
-            payload=payload,
-        )
+    def list_command_logs(self, command_id: str) -> List[LogLine]:
+        """List all logs of command"""
+        command = self.wl_app.command_set.get(pk=command_id)
+        return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
 
     def create_release(
         self, build_id: str, deployment_id: Optional[str], extra_envs: Dict[str, str], procfile: Dict[str, str]
-    ) -> str:
-        """Create a new release"""
-        resp = self.ctl_client.app__release(
-            app_name=self.engine_app.name,
-            region=self.engine_app.region,
-            build_id=build_id,
-            deployment_id=deployment_id,
-            extra_envs=extra_envs,
-            procfile=procfile,
-        )
-        return resp['uuid']
+    ) -> Release:
+        """Create a new release
 
-    def get_release(self, release_id: str) -> dict:
-        """Get the release object by id"""
-        return self.ctl_client.get_app_release(
-            region=self.engine_app.region, app_name=self.engine_app.name, release_id=release_id
-        )
-
-    def create_build(self, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
-        """Create the **fake** build for Image Type App"""
-        resp = self.ctl_client.create_build(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            procfile=procfile,
-            env_variables=extra_envs,
-        )
-        return resp["uuid"]
-
-    def get_build(self, build_id: str) -> dict:
-        """Get the build object by id"""
-        return self.ctl_client.get_app_build(
-            region=self.engine_app.region, app_name=self.engine_app.name, build_id=build_id
-        )
-
-    def get_build_process_status(self, build_process_id: str) -> Dict[str, Any]:
-        """Get current status of build process"""
-        resp = self.ctl_client.read_build_process_result(
-            app_name=self.engine_app.name, region=self.engine_app.region, build_process_id=build_process_id
-        )
-        return resp
-
-    def update_domains(self, domains: List[Dict]):
-        """Update an engine app's domains"""
-        self.ctl_client.app_domains__update(
-            region=self.engine_app.region, app_name=self.engine_app.name, domains=domains
-        )
-
-    def update_subpaths(self, subpaths: List[Dict]):
-        """Update an engine app's subpaths"""
-        self.ctl_client.update_app_subpaths(
-            region=self.engine_app.region, app_name=self.engine_app.name, subpaths=subpaths
-        )
-
-    def get_metadata(self) -> Dict[str, Any]:
-        """Get an engine app's metadata"""
-        config = self.ctl_client.retrieve_app_config(region=self.engine_app.region, app_name=self.engine_app.name)
-        return config['metadata'] or {}
-
-    def update_metadata(self, metadata_part: Dict[str, Union[str, bool]]):
-        """Update an engine app's metadata, works like python's dict.update()
-
-        :param metadata_part: An dict object which will be merged into app's metadata
+        :return: The created release object.
         """
-        self.ctl_client.update_app_metadata(
-            region=self.engine_app.region, app_name=self.engine_app.name, payload={'metadata': metadata_part}
+        build = Build.objects.get(pk=build_id)
+        release = build.app.release_set.new(
+            # TODO: Set the correct owner value
+            owner='',
+            build=build,
+            procfile=procfile,
         )
+
+        try:
+            wl_app = release.app
+            AppDeploy(app=wl_app, release=release, extra_envs=extra_envs).perform()
+        except KubeException:
+            # TODO: Wrap exception and re-raise
+            raise
+        return release
+
+    def create_build(self, image: str, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
+        """Create the **fake** build for Image Type App"""
+        build = Build.objects.create(
+            app=self.wl_app,
+            env_variables=extra_envs,
+            procfile=procfile,
+            image=image,
+            artifact_type=ArtifactType.NONE,
+        )
+        return str(build.uuid)
+
+    def list_build_proc_logs(self, build_process_id: str) -> List[LogLine]:
+        """Get current status of build process"""
+        build_proc = BuildProcess.objects.get(pk=build_process_id)
+
+        lines: List[LogLine] = []
+        for line in build_proc.output_stream.lines.all().order_by('created'):
+            lines.append({'stream': line.stream, 'line': line.line, 'created': line.created})
+        return lines
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""
-        self.ctl_client.upsert_image_credentials(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            credentials={"registry": registry, "username": username, "password": password},
+        AppImageCredential.objects.update_or_create(
+            app=self.wl_app,
+            registry=registry,
+            defaults={"username": username, "password": password},
         )
-
-    def sync_proc_ingresses(self):
-        """Sync ingresses configs with engine"""
-        self.ctl_client.app_proc_ingress_actions__sync(region=self.engine_app.region, app_name=self.engine_app.name)

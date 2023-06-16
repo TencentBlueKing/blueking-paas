@@ -130,7 +130,16 @@ export const PLATFORM_CONFIG = {
         BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',
 
         // 开源社区
-        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas'
+        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas',
+
+        // 技术支持
+        BK_TECHNICAL_SUPPORT: 'https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true',
+
+        // 社区论坛
+        BK_COMMUNITY: 'https://bk.tencent.com/s-mart/community/',
+
+        // 产品官网
+        BK_OFFICIAL_WEBSITE: 'https://bk.tencent.com/'
     },
 
     // 文档
@@ -264,6 +273,24 @@ export const PLATFORM_CONFIG = {
         BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置'
+    },
+
+    CONFIG: {
+        IFRAME_CLASS: 'small',
+        // 版本日志
+        RELEASE_LOG: 'TRUE',
+        // 镜像地址
+        MIRROR_PREFIX: '',
+        // 镜像示例
+        MIRROR_EXAMPLE: 'nginx:latest',
+        // region
+        REGION_CHOOSE: 'default',
+        // 市场信息
+        MARKET_INFO: '',
+        // 应用提示
+        MARKET_TIPS: staticI18n.$t('蓝鲸桌面'),
+        // 框架
+        GO_FRAME: ''
     }
 }
 
@@ -531,11 +558,21 @@ export const PAAS_STATIC_CONFIG = {
         "message": staticI18n.$t("应用左侧导航"),
         "cloudList": [
             {
+                "name": "appSummary",
+                "label": staticI18n.$t("概览"),
+                "matchRouters": ["appSummaryEmpty", "appSummary"],
+                "iconfontName": "metrics",
+                "supportModule": true,
+                "destRoute": {
+                  "name": "appSummary"
+                },
+                "children": []
+            },
+            {
                 "name": "cloudAppDeployForProcess",
                 "label": staticI18n.$t("应用编排"),
                 "matchRouters": [
                     "cloudAppDeploy",
-                    "cloudAppDeployHistory",
                     "cloudAppDeployForProcess",
                     "cloudAppDeployForEnv",
                     "cloudAppDeployForYaml",
@@ -604,15 +641,34 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
             {
-                "name": "appVoucher",
+                "name": "imageCredential",
                 "label": staticI18n.$t("镜像凭证"),
-                "matchRouters": ["appVoucher"],
+                "matchRouters": ["imageCredential"],
                 "iconfontName": "key-2",
                 "supportModule": false,
                 "destRoute": {
-                  "name": "appVoucher"
+                  "name": "imageCredential"
                 },
                 "children": []
+            },
+            {
+                "name": "appMarketing",
+                "label": staticI18n.$t("应用推广"),
+                "iconfontName": "volumn",
+                "children": [
+                    {
+                        "name": staticI18n.$t("应用市场"),
+                        "destRoute": {
+                          "name": "appMarket"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("应用市场 (移动端)"),
+                        "destRoute": {
+                          "name": "appMobileMarket"
+                        }
+                    }
+                ]
             },
             {
                 "name": "appConfigs",
@@ -633,6 +689,19 @@ export const PAAS_STATIC_CONFIG = {
                     }
                 ]
             },
+            {
+                "name": "docuManagement",
+                "label": staticI18n.$t("文档管理"),
+                "matchRouters": [
+                    "docuManagement"
+                ],
+                "iconfontName": "page-fill",
+                "supportModule": false,
+                "destRoute": {
+                    "name": "docuManagement"
+                },
+                "children": []
+            }
         ],
         "pluginList": [
             {

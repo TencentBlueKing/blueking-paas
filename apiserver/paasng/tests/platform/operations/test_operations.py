@@ -20,14 +20,21 @@ import logging
 
 import pytest
 
+from paas_wl.cnative.specs.constants import DeployStatus
 from paasng.engine.constants import JobStatus
 from paasng.platform.operations.constant import OperationType
-from paasng.platform.operations.models import AppDeploymentOperationObj, ApplicationLatestOp, Operation
+from paasng.platform.operations.models import (
+    AppDeploymentOperationObj,
+    ApplicationLatestOp,
+    CNativeAppDeployOperationObj,
+    Operation,
+)
 from tests.engine.setup_utils import create_fake_deployment
+from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
 logger = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppLatestOp:
@@ -63,9 +70,9 @@ class TestProcessOperationObj:
     @pytest.mark.parametrize(
         'type_,extra_values,expected_text',
         [
-            (OperationType.PROCESS_START, {'process_type': 'web'}, '启动 web 进程'),
-            (OperationType.PROCESS_STOP, {'process_type': 'web'}, '停止 web 进程'),
-            (OperationType.PROCESS_STOP, {}, '停止 未知 进程'),
+            (OperationType.PROCESS_START, {'process_type': 'web'}, '启动 default 模块的 web 进程'),
+            (OperationType.PROCESS_STOP, {'process_type': 'web'}, '停止 default 模块的 web 进程'),
+            (OperationType.PROCESS_STOP, {}, '停止 default 模块的 未知 进程'),
         ],
     )
     def test_normal(self, type_, extra_values, expected_text, bk_app, bk_user):
@@ -76,6 +83,7 @@ class TestProcessOperationObj:
             region=bk_app.region,
             source_object_id=bk_app.id.hex,
             extra_values=extra_values,
+            module_name='default',
         )
         assert operation.get_operate_display() == expected_text
 
@@ -84,15 +92,30 @@ class TestAppDeploymentOperationObj:
     @pytest.mark.parametrize(
         'status,expected_text',
         [
-            (JobStatus.SUCCESSFUL, '成功部署生产环境'),
-            (JobStatus.FAILED, '尝试部署生产环境失败'),
-            (JobStatus.INTERRUPTED, '中断了生产环境的部署过程'),
+            (JobStatus.SUCCESSFUL, '成功部署 default 模块的生产环境'),
+            (JobStatus.FAILED, '尝试部署 default 模块的生产环境失败'),
+            (JobStatus.INTERRUPTED, '中断了 default 模块的生产环境的部署过程'),
         ],
     )
-    def test_failed_deployment(self, status, expected_text, bk_module):
+    def test_create_from_deployment(self, status, expected_text, bk_module):
         deployment = create_fake_deployment(bk_module)
         deployment.status = status
         deployment.save(update_fields=['status'])
 
-        operation = AppDeploymentOperationObj.create_operation_from_deployment(deployment)
+        operation = AppDeploymentOperationObj.create_from_deployment(deployment)
+        assert operation.get_operate_display() == expected_text
+
+
+class TestCNativeAppDeployOperationObj:
+    @pytest.mark.parametrize(
+        'status,expected_text',
+        [
+            (DeployStatus.READY, '成功部署 default 模块的预发布环境'),
+            (DeployStatus.ERROR, '尝试部署 default 模块的预发布环境失败'),
+            (DeployStatus.PENDING, '尝试部署 default 模块的预发布环境失败'),
+        ],
+    )
+    def test_create_from_deploy(self, bk_stag_env, bk_user, status, expected_text):
+        deploy = create_cnative_deploy(bk_stag_env, bk_user, status)
+        operation = CNativeAppDeployOperationObj.create_from_deploy(deploy)
         assert operation.get_operate_display() == expected_text

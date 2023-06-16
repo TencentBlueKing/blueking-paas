@@ -21,14 +21,14 @@ package fake
 import (
 	"fmt"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
 
 // FakeDomainsRetriever build domain groups data by simple rules, only meaningful
 // for testing purpose, don't use in production.
 type FakeDomainsRetriever struct {
-	Bkapp *v1alpha1.BkApp
+	Bkapp *paasv1alpha2.BkApp
 }
 
 // Retrieve builds all types of example Domain groups

@@ -107,7 +107,7 @@
                     </router-link>
                   </template>
                   <template v-else>
-                    <router-link :to="{ name: 'appBaseInfo', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                    <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
                       <img
                         :src="recordItem.applogo"
                         width="38px"
@@ -125,10 +125,6 @@
                   <em v-bk-tooltips="recordItem.time">{{ smartTime(recordItem.time,'fromNow') }}</em>
                 </div>
                 <div class="paas-operation-section section2 section-wrapper">
-                  <span
-                    v-if="recordItem.represent_info.props.display_module && recordItem.represent_info.props.provide_links"
-                    class="module-name"
-                  >{{ recordItem.represent_info.module_name + $t('模块') }}</span>
                   <span
                     v-bk-tooltips.bottom="recordItem.type"
                     class="bottom-middle text-style"
@@ -227,10 +223,10 @@
               data-test-id="developer_list_empty"
             >
               <div class="ps-no-result">
-                <div class="text">
-                  <p><i class="paasng-icon paasng-empty" /></p>
-                  <p> {{ $t('暂无应用') }} </p>
-                </div>
+                <table-empty
+                  :empty-title="$t('暂无应用')"
+                  empty
+                />
               </div>
             </div>
             <router-link
@@ -277,10 +273,7 @@
                     class="ps-no-result"
                     style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
                   >
-                    <div class="text">
-                      <p><i class="paasng-icon paasng-empty" /></p>
-                      <p> {{ $t('暂无数据') }} </p>
-                    </div>
+                    <table-empty empty />
                   </div>
                 </div>
               </paas-content-loader>
@@ -301,10 +294,7 @@
                     class="ps-no-result"
                     style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
                   >
-                    <div class="text">
-                      <p><i class="paasng-icon paasng-empty" /></p>
-                      <p> {{ $t('暂无数据') }} </p>
-                    </div>
+                    <table-empty empty />
                   </div>
                 </div>
               </paas-content-loader>
@@ -815,6 +805,7 @@
     };
 </script>
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .paas-highcharts {
         width: 50%;
         position: relative;
@@ -866,6 +857,7 @@
         &.time-section {
             padding: 0;
             width: 100px;
+            @include ellipsis;
         }
         &.section1 {
             width: 210px;

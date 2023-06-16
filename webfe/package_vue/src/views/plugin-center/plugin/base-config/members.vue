@@ -37,30 +37,28 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <div
-            v-if="memberList.length"
-            slot="empty"
-          >
-            <bk-exception
-              class="exception-wrap-item exception-part"
-              type="search-empty"
-              scene="part"
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMemberList"
+              @clear-filter="clearFilterKey"
             />
-            <div class="empty-tips">
-              {{ $t('可以尝试调整关键词 或') }}
-              <span
-                class="clear-search"
-                @click="clearFilterKey"
-              >{{ $t('清空搜索条件') }}</span>
-            </div>
           </div>
-          <bk-table-column :label="$t('成员姓名')">
+          <bk-table-column
+            :label="$t('成员姓名')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
-              <span
-                v-if="props.row.avatar"
-                class="user-photo"
-              ><img :src="props.row.avatar"></span>
-              <span class="user-name">{{ props.row.username }}</span>
+              <div v-bk-overflow-tips>
+                <span
+                  v-if="props.row.avatar"
+                  class="user-photo"
+                >
+                  <img :src="props.row.avatar">
+                </span>
+                {{ props.row.username }}
+              </div>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('角色')">
@@ -147,7 +145,11 @@
             :required="true"
           >
             <template v-if="memberMgrConfig.userEditable">
-              <user v-model="personnelSelectorList" />
+              <user
+                v-model="personnelSelectorList"
+                :placeholder="$t('请输入用户')"
+                :empty-text="$t('无匹配人员')"
+              />
               <!-- <bk-member-selector
                                 @change="updateValue"
                                 v-model="personnelSelectorList"
@@ -289,7 +291,11 @@
                 keyword: '',
                 memberListClone: [],
                 isTableLoading: false,
-                isDelLoading: false
+                isDelLoading: false,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -373,7 +379,10 @@
                     const end = start + this.pagination.limit;
                     this.memberList.splice(0, this.memberList.length, ...(res || []));
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -588,12 +597,16 @@
                         const end = start + this.pagination.limit;
                         this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
                     }
+                    this.updateTableEmptyConfig();
                 } else {
                     this.fetchMemberList();
                 }
             },
             clearFilterKey () {
                 this.keyword = '';
+            },
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

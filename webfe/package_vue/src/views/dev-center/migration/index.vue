@@ -205,11 +205,11 @@
             <a
               :class="{ 'active': currentEnv === 'todoMigrate' }"
               @click="changeTabList('todoMigrate')"
-            > {{ $t('未完成迁移应用') }} ( {{ todoAppList.length }})</a>
+            > {{ $t('未完成迁移应用') }} ({{ todoAppList.length }})</a>
             <a
               :class="{ 'active': currentEnv === 'doneMigrate' }"
               @click="changeTabList('doneMigrate')"
-            > {{ $t('已迁移应用') }} ( {{ doneAppList.length }})</a>
+            > {{ $t('已迁移应用') }} ({{ doneAppList.length }})</a>
             <a
               :class="{ 'active': currentEnv === 'cannotMigrate' }"
               @click="changeTabList('cannotMigrate')"
@@ -301,8 +301,10 @@
                   >
                     <div class="ps-no-result">
                       <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无应用') }} </p>
+                        <table-empty
+                          :empty-title="$t('暂无应用')"
+                          empty
+                        />
                       </div>
                     </div>
                   </td>
@@ -378,8 +380,10 @@
                   >
                     <div class="ps-no-result">
                       <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无应用') }} </p>
+                        <table-empty
+                          :empty-title="$t('暂无应用')"
+                          empty
+                        />
                       </div>
                     </div>
                   </td>
@@ -451,8 +455,10 @@
                   >
                     <div class="ps-no-result">
                       <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无应用') }} </p>
+                        <table-empty
+                          :empty-title="$t('暂无应用')"
+                          empty
+                        />
                       </div>
                     </div>
                   </td>
@@ -466,7 +472,7 @@
         <bk-dialog
           v-model="confirmDialog.visiable"
           width="800"
-          :title="`迁移应用【${ currentApp.name }】到新版开发者中心`"
+          :title="$t(`迁移应用【{name}】到新版开发者中心`, { name: currentApp.name })"
           :theme="'primary'"
           :mask-close="false"
           :loading="confirmDialog.isLoading"

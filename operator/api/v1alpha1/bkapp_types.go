@@ -25,14 +25,16 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // BkApp is the Schema for the bkapps API
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -66,8 +68,14 @@ type BkAppList struct {
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
-	Processes     []Process `json:"processes"`
-	Configuration AppConfig `json:"configuration"`
+	// +optional
+	Build         BuildConfig `json:"build"`
+	Processes     []Process   `json:"processes"`
+	Configuration AppConfig   `json:"configuration"`
+
+	// Addons is a list of add-on service
+	// +optional
+	Addons []paasv1alpha2.Addon `json:"addons,omitempty"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -94,6 +102,39 @@ func (spec *AppSpec) FindProcess(name string) *Process {
 	return nil
 }
 
+// BuildConfig is the configuration related with application building, the platform
+// support 3 types of build config currently: image, remote build by Dockerfile and
+// remote build by buildpack.
+type BuildConfig struct {
+	// *1. Build by image*
+	// Image is the container image name of current application, tag and container
+	// registry address can be included.
+	// +optional
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is the image pull policy of given image.
+	// +optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImageCredentialsName is the name of image credentials, required for pulling
+	// images stores in private registry.
+	// +optional
+	ImageCredentialsName string `json:"imageCredentialsName,omitempty"`
+
+	// *2. Remote build by Dockerfile*
+	// Dockerfile is the name of target Dockerfile, it will be used to build.
+	// +optional
+	Dockerfile string `json:"dockerfile,omitempty"`
+	// BuildTarget, when multiple stages are defined in Dockerfile, this field is used
+	// to specify the target stage.
+	// +optional
+	BuildTarget string `json:"buildTarget,omitempty"`
+	// Args is the additional build arguments, it will be used to build image by Dockerfile
+	// +optional
+	Args map[string]string `json:"args,omitempty"`
+
+	// *3. Remote build by buildpack*
+	// TODO
+}
+
 // Process defines the process of BkApp
 type Process struct {
 	// Name of process
@@ -107,6 +148,10 @@ type Process struct {
 
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
+
+	// ResQuotaPlan is the name of plan which defines how much resources current process
+	// can consume.
+	ResQuotaPlan paasv1alpha2.ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
@@ -122,7 +167,37 @@ type Process struct {
 
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
+
+	// Autoscaling specifies the autoscaling configuration
+	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
+
+// AutoscalingSpec is bkapp autoscaling config
+type AutoscalingSpec struct {
+	// Enabled indicates whether autoscaling is enabled
+	Enabled bool `json:"enabled"`
+
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
+	// at least one metric value is available
+	MinReplicas int32 `json:"minReplicas"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	MaxReplicas int32 `json:"maxReplicas"`
+
+	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
+	Policy ScalingPolicy `json:"policy"`
+}
+
+// ScalingPolicy is used to specify which policy should be used while scaling
+type ScalingPolicy string
+
+const (
+	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
+	ScalingPolicyDefault ScalingPolicy = "default"
+)
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {
@@ -155,7 +230,7 @@ type AppEnvVar struct {
 
 // AppEnvOverlay defines environment specified configs.
 type AppEnvOverlay struct {
-	// Replicas overwrite processes's replicas count
+	// Replicas overwrite process's replicas count
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
 
@@ -168,8 +243,13 @@ type AppEnvOverlay struct {
 type EnvName string
 
 // IsEmpty checks if current environment is empty(absent)
-func (r EnvName) IsEmpty() bool {
-	return string(r) == ""
+func (n EnvName) IsEmpty() bool {
+	return string(n) == ""
+}
+
+// IsValid checks if a given string is valid as environment name
+func (n EnvName) IsValid() bool {
+	return n == StagEnv || n == ProdEnv
 }
 
 const (
@@ -178,11 +258,6 @@ const (
 	// ProdEnv refers to "production" env
 	ProdEnv EnvName = "prod"
 )
-
-// CheckEnvName checks if a given string is valid as environment name
-func CheckEnvName(n EnvName) bool {
-	return n == StagEnv || n == ProdEnv
-}
 
 // ReplicasOverlay overwrite process's replicas by environment.
 type ReplicasOverlay struct {
@@ -233,6 +308,10 @@ type AppStatus struct {
 	// .metadata.generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// AddonStatuses is the status of add-on service include specifications
+	// +optional
+	AddonStatuses []paasv1alpha2.AddonStatus `json:"addonStatuses,omitempty"`
 }
 
 // Addressable includes URL and other related properties
@@ -336,8 +415,9 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 
 // HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+//
+//	unhealthy is meaning that the Pod is restarting or is Failed
+//	progressing is meaning that the Pod is still running and condition `PodReady` is False.
 type HealthPhase string
 
 const (

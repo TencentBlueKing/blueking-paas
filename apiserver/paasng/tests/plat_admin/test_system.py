@@ -16,13 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
+from operator import attrgetter
 from unittest import mock
 
 import arrow
 import pytest
 from django.conf import settings
+from django.utils import translation
+from django_dynamic_fixture import G
 
+from paasng.dev_resources.servicehub.constants import Category
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound
+from paasng.dev_resources.services.models import Plan, Service, ServiceCategory
 from paasng.engine.constants import OperationTypes
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.plat_admin.system.applications import (
@@ -30,6 +36,7 @@ from paasng.plat_admin.system.applications import (
     query_default_apps_by_ids,
     query_legacy_apps_by_ids,
     query_uni_apps_by_ids,
+    query_uni_apps_by_keyword,
     str_username,
 )
 from tests.engine.setup_utils import create_fake_deployment
@@ -70,6 +77,32 @@ class TestQueryUniApps:
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
         assert results[legacy_app.code].name == legacy_app.name
+
+    @pytest.mark.parametrize(
+        "keyword, expected_count, language,name_field",
+        [
+            ("", 2, "", "name"),
+            ("bk_app", 1, "en", "name_en"),
+            ("legacy_app", 1, "en", "name"),
+        ],
+    )
+    def test_query_by_keyword(self, bk_app, keyword, expected_count, language, name_field):
+        keyword_app = bk_app
+        legacy_app = create_legacy_application()
+
+        if keyword == "bk_app":
+            keyword = bk_app.code
+        elif keyword == "legacy_app":
+            keyword_app = legacy_app
+            keyword = legacy_app.name
+
+        translation.activate(language)
+
+        uni_apps_list = query_uni_apps_by_keyword(keyword, offset=0, limit=10)
+        assert len(uni_apps_list) == expected_count
+
+        uni_apps_dict = {app.code: app.name for app in uni_apps_list}
+        uni_apps_dict[keyword_app.code] = attrgetter(name_field)(keyword_app)
 
 
 class TestGetContactInfo:
@@ -159,6 +192,38 @@ class TestSysAddonsAPIViewSet:
         return generate_random_string()
 
     @pytest.fixture
+    def service(self, bk_app):
+        # Add a service in database
+        category = G(ServiceCategory, id=Category.DATA_STORAGE)
+        svc = G(
+            Service,
+            name='mysql',
+            category=category,
+            region=bk_app.region,
+            logo_b64="dummy",
+            config={
+                'specifications': [
+                    {'name': 'instance_type', 'description': '', 'recommended_value': 'ha'},
+                    {'name': 'version', 'description': '', 'recommended_value': '5.0.0'},
+                ]
+            },
+        )
+        # Create default plans
+        G(
+            Plan,
+            name='no-ha',
+            service=svc,
+            config=json.dumps({'specifications': {'instance_type': 'no-ha'}}),
+        )
+        G(
+            Plan,
+            name='ha',
+            service=svc,
+            config=json.dumps({'specifications': {'instance_type': 'ha'}}),
+        )
+        return svc
+
+    @pytest.fixture
     def url(self, bk_app, bk_module, bk_stag_env, service_name):
         url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service_name}/'
         return url
@@ -175,3 +240,21 @@ class TestSysAddonsAPIViewSet:
 
         response = sys_api_client.get(url)
         assert response.status_code == 404
+
+    @pytest.mark.parametrize(
+        "specs, expected_code",
+        [
+            ({}, 200),
+            ({'instance_type': 'no-ha'}, 200),
+            ({'instance_type': 'test'}, 400),
+            ({'instance_type': 'no-ha', 'version': '3.5'}, 400),
+            ({'unknown_spec_name': ''}, 400),
+        ],
+    )
+    @mock.patch('paasng.dev_resources.servicehub.local.manager.LocalEngineAppInstanceRel.provision', return_value=None)
+    def test_validate_specs_for_provision_service(
+        self, provision, bk_app, bk_module, bk_stag_env, sys_api_client, service, specs, expected_code
+    ):
+        url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service.name}/'
+        response = sys_api_client.post(url, data={'specs': specs})
+        assert response.status_code == expected_code

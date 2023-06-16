@@ -16,11 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import atexit
 import logging
-import os
 import urllib.parse
 from contextlib import suppress
 from dataclasses import asdict
+from pathlib import Path
 
 import pymysql
 import pytest
@@ -29,7 +30,9 @@ from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
 from django.core.management import call_command
 from django.test.utils import override_settings
+from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
+from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -41,7 +44,7 @@ from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient,
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.extensions.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.platform.core.storages.utils import SADBManager
@@ -50,18 +53,34 @@ from paasng.platform.modules.manager import make_app_metadata as make_app_metada
 from paasng.platform.modules.models.module import Module
 from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
+from paasng.publish.sync_market.managers import AppManger
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, generate_random_string
+from tests.utils.helpers import configure_regions, create_pending_wl_apps, generate_random_string
 
 from .utils.auth import create_user
-from .utils.helpers import _mock_current_engine_client, create_app, create_cnative_app, initialize_module
+from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
 
 logger = logging.getLogger(__file__)
 
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+svn_lock_fn = Path(__file__).parent / ".svn"
+# A random cluster name for running unittests
+cluster_name_fn = Path(__file__).parent / ".random"
+with FileLock(str(cluster_name_fn.absolute()) + ".lock"):
+    if cluster_name_fn.is_file():
+        CLUSTER_NAME_FOR_TESTING = cluster_name_fn.read_text().strip()
+    else:
+        CLUSTER_NAME_FOR_TESTING = get_random_string(6)
+        cluster_name_fn.write_text(CLUSTER_NAME_FOR_TESTING)
+
+
+@atexit.register
+def clear_filelock():
+    cluster_name_fn.unlink(missing_ok=True)
+    svn_lock_fn.unlink(missing_ok=True)
 
 
 def pytest_addoption(parser):
@@ -75,6 +94,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--init-s3-bucket", dest="init_s3_bucket", action="store_true", default=False, help="是否需要执行 s3 初始化流程"
     )
+    parser.addoption("--run-e2e-test", dest="run_e2e_test", action="store_true", default=False, help="是否执行 e2e 测试")
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -131,9 +151,17 @@ def legacy_app_code():
 @pytest.fixture(autouse=True)
 def auto_init_legacy_app(request):
     if "legacy_app_code" not in request.fixturenames:
+        yield
         return
+
     legacy_app_code = request.getfixturevalue("legacy_app_code")
     call_command("make_legacy_app_for_test", f"--code={legacy_app_code}", "--username=nobody", "--silence")
+
+    yield
+
+    # Clean the legacy app data after test
+    with legacy_db.session_scope() as session:
+        AppManger(session).delete_by_code(legacy_app_code)
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -225,6 +253,13 @@ def init_test_app_repo(request):
         repo_config = settings.FOR_TESTS_SVN_SERVER_CONF
     except Exception:
         return
+
+    # use filelock to ensure svn initial will only run once
+    with FileLock(str(svn_lock_fn) + ".lock"):
+        if svn_lock_fn.exists():
+            return
+        svn_lock_fn.write_text("")
+
     provider = RepoProvider(
         base_url=repo_config["base_url"], username=repo_config["su_name"], password=repo_config["su_pass"]
     )
@@ -236,13 +271,16 @@ def init_test_app_repo(request):
     )
     with generate_temp_dir() as working_dir:
         # step 1. checkout
-        rclient.checkout(working_dir, depth='empty')
+        rclient.checkout(working_dir)
+        procfile_path = working_dir / "Procfile"
         # step 2. 创建 Procfile
-        lclient = LocalClient(working_dir, username=repo_config["su_name"], password=repo_config["su_pass"])
-        with open(os.path.join(working_dir, "Procfile"), "w") as fh:
-            fh.write("web: echo 'test'")
+        procfile_path.write_text("web: echo 'test'")
         # ste[ 3. 推送 Procfile 至服务器
-        lclient.add(os.path.join(working_dir, "Procfile"))
+        lclient = LocalClient(working_dir, username=repo_config["su_name"], password=repo_config["su_pass"])
+        if not procfile_path.exists():
+            lclient.add(str(procfile_path))
+        else:
+            lclient.update(str(procfile_path))
         lclient.commit("for test", rel_filepaths=[working_dir])
 
 
@@ -342,7 +380,7 @@ def bk_app(request, bk_user) -> Application:
 @pytest.fixture
 def bk_cnative_app(request, bk_user):
     """Generate a random cloud-native application owned by current user fixture"""
-    return create_cnative_app(owner_username=bk_user.username)
+    return create_cnative_app(owner_username=bk_user.username, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 
 @pytest.fixture
@@ -362,8 +400,12 @@ def bk_app_full(request, bk_user) -> Application:
 
 
 @pytest.fixture
-def bk_module(request, bk_app) -> Module:
+def bk_module(request) -> Module:
     """Return the default module if current application fixture"""
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app")
     return bk_app.get_default_module()
 
 
@@ -374,12 +416,12 @@ def bk_module_full(bk_app_full) -> Module:
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_module) -> ApplicationEnvironment:
+def bk_stag_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='stag')
 
 
 @pytest.fixture
-def bk_prod_env(request, bk_module) -> ApplicationEnvironment:
+def bk_prod_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='prod')
 
 
@@ -665,7 +707,7 @@ def _mock_paas_analysis_client():
 
 
 mock_paas_analysis_client = pytest.fixture(_mock_paas_analysis_client)
-mock_current_engine_client = pytest.fixture(_mock_current_engine_client)
+mock_wl_services_in_creation = pytest.fixture(_mock_wl_services_in_creation)
 
 
 def check_legacy_enabled():
@@ -725,4 +767,25 @@ def with_live_addrs():
                 },
             ]
         )
+        yield
+
+
+@pytest.fixture
+def with_wl_apps(request):
+    """Create all pending WlApp objects related with current bk_app, useful
+    for tests which want to use `bk_app`, `bk_stag_env` fixtures.
+    """
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app")
+    create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_sync_developers_to_sentry():
+    # 避免单元测试时会往 celery 推送任务
+    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
+        "paasng.extensions.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
+    ):
         yield

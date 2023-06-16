@@ -1,0 +1,6 @@
+@mixin dashed ($size: 10px) {
+	background: linear-gradient(to left, transparent 0%, transparent 50%, #979ba5 50%, #979ba5 100%);
+  background-size: $size 1px;
+  background-repeat: repeat-x;
+  background-position-y: 100%;
+}

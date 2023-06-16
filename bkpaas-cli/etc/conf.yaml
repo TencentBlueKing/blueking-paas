@@ -1,0 +1,14 @@
+# PaaS 平台注册的蓝鲸网关访问地址
+paasApigwUrl: http://bkapi.example.com/api/bkpaas3
+
+# PaaS 平台访问地址，会用于拼接 access_token 请求链接等
+paasUrl: https://bkpaas3.example.com
+
+# 验证 AccessToken 合法性的 API
+checkTokenUrl: https://apigw.example.com/auth/check_token/
+
+# 用户名（英文名）
+username: admin
+
+# AccessToken 访问 apigw 的身份凭证
+accessToken: ""

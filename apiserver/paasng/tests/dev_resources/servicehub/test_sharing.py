@@ -34,7 +34,7 @@ from tests.utils.helpers import create_app, generate_random_string, initialize_m
 
 from . import data_mocks
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
 _region_name = 'r1'

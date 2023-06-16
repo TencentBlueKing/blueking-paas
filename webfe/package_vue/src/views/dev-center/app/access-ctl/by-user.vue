@@ -89,7 +89,7 @@
             </bk-button>
             <div
               v-if="curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE"
-              class="path-exempt"
+              :class="['path-exempt', localLanguage === 'en' ? 'en-path': '']"
             >
               <bk-button
                 text
@@ -121,6 +121,14 @@
             @select="handlerChange"
             @select-all="handlerAllChange"
           >
+            <div slot="empty">
+              <table-empty
+                :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="fetchUserPermissionList(true)"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="selection"
               width="60"
@@ -130,7 +138,10 @@
               :label="userTypeMap[userType]"
               prop="content"
             />
-            <bk-table-column :label="$t('添加者')">
+            <bk-table-column
+              :label="$t('添加者')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <span>{{ props.row.owner.username || '--' }}</span>
               </template>
@@ -138,34 +149,33 @@
             <bk-table-column
               :label="$t('添加时间')"
               :render-header="renderHeader"
+              :show-overflow-tooltip="false"
             >
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('更新时间')">
+            <bk-table-column
+              :label="$t('更新时间')"
+              :render-header="$renderHeader"
+              :show-overflow-tooltip="false"
+            >
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('添加原因')">
+            <bk-table-column
+              :label="$t('添加原因')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
-                <bk-popover>
-                  <div class="reason">
-                    {{ props.row.desc ? props.row.desc : '--' }}
-                  </div>
-                  <div
-                    slot="content"
-                    style="white-space: normal;"
-                  >
-                    {{ props.row.desc ? props.row.desc : '--' }}
-                  </div>
-                </bk-popover>
+                {{ props.row.desc ? props.row.desc : '--' }}
               </template>
             </bk-table-column>
             <bk-table-column
               :label="$t('到期时间')"
               width="100"
+              :render-header="$renderHeader"
             >
               <template slot-scope="{ row }">
                 <template v-if="row.is_expired">
@@ -600,7 +610,11 @@
                     loading: false
                 },
                 curFile: {},
-                isFileTypeError: false
+                isFileTypeError: false,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -616,6 +630,9 @@
             },
             curModule () {
                 return this.curAppModuleList.find(item => item.is_default);
+            },
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -1155,7 +1172,10 @@
                     const res = await this.$store.dispatch('user/getUserPermissionList', params);
                     this.pagination.count = res.count;
                     this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -1410,6 +1430,14 @@
                 await this.setUserType();
                 this.checkUserPermissin();
                 this.fetchUserPermissionList();
+            },
+
+            clearFilterKey () {
+                this.keyword = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };
@@ -1479,7 +1507,11 @@
             position: absolute;
             top: 20px;
             left: 336px;
+            &.en-path {
+                left: 382px;
+            }
         }
+
     }
 
     .middle {

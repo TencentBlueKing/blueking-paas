@@ -414,6 +414,37 @@ class DiffChange(tuple):
 
 @dataclass
 class VersionInfo:
+    """VersionInfo 是对代码版本的一种通用抽象
+
+    对于 SVN 仓库而言:
+        revision 是当前的 commit id(自增的 int 数字)
+        version_name 是 humanized 的名称
+        version_type 是 Literal[branch, trunk]
+
+        样例数据: VersionInfo(revision="10086", version_name="v1", version_type="branch")
+
+    对于 Git 仓库而言:
+        revision 是当前的 commit id(hash)
+        version_name 是 branch/tag 的名称, 例如 main, master 等
+        version_type 是 Literal[branch, tag]
+
+        样例数据: VersionInfo(revision="1304382d8c60220869624cc6b", version_name="main", version_type="branch")
+
+    对于源码包仓库而言(lesscode应用和S-Mart应用):
+        revision 是当前包的 semver
+        version_name 是包的全名
+        version_type 是 Literal[package]
+
+        样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="package")
+
+    对于镜像仓库而言(旧的镜像应用)
+        revision 是镜像的 tag *注: 这里没有实现成 存储镜像hash 是因为暂时没有地方用到*
+        version_name 是镜像的 tag
+        version_type 是 Literal[tag]
+
+        样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="tag")
+    """
+
     revision: str
     version_name: str
     version_type: str

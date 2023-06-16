@@ -101,7 +101,7 @@
                     <tooltip-confirm
                       ref="deleteTooltip"
                       :ok-text="$t('确定')"
-                      :cancel-text="'取消'"
+                      :cancel-text="$t('取消')"
                       :theme="'ps-tooltip'"
                       @ok="deleteConfigVar(varItem.__id__)"
                     >

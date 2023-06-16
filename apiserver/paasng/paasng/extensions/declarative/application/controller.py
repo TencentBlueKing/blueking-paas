@@ -234,7 +234,7 @@ class AppDeclarativeController:
             dict(
                 code=application.code,
                 name_zh_cn=application.name,
-                name_en=application.name,
+                name_en=application.name_en,
                 type=AppType.PAAS_APP.value,
                 description_en=market_desc.description_en,
                 description_zh_cn=market_desc.description_zh_cn,

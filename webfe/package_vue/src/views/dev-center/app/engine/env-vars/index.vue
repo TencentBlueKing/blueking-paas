@@ -328,19 +328,27 @@
                 <bk-form-item
                   :rules="varRules.key"
                   :property="'key'"
-                  style="flex: 1 1 25%;"
+                  style="flex: 1 1 25%; width: 0;"
                 >
-                  <bk-input
-                    v-model="varItem.key"
-                    placeholder="KEY"
-                    :clearable="false"
-                    :readonly="isReadOnlyRow(index)"
-                  />
+                  <template v-if="isReadOnlyRow(index)">
+                    <div
+                      v-bk-tooltips="{ content: varItem.key, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      class="desc-form-content"
+                    >{{ varItem.key }}</div>
+                  </template>
+                  <template v-else>
+                    <bk-input
+                      v-model="varItem.key"
+                      placeholder="KEY"
+                      :clearable="false"
+                      :readonly="isReadOnlyRow(index)"
+                    />
+                  </template>
                 </bk-form-item>
                 <bk-form-item
                   :rules="varRules.value"
                   :property="'value'"
-                  style="flex: 1 1 25%;"
+                  style="flex: 1 1 25%; width: 0;"
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
@@ -362,7 +370,7 @@
                 <bk-form-item
                   :rules="varRules.description"
                   :property="'description'"
-                  style="flex: 1 1 25%;"
+                  style="flex: 1 1 25%; width: 0;"
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
@@ -414,7 +422,7 @@
                     <tooltip-confirm
                       ref="deleteTooltip"
                       :ok-text="$t('确定')"
-                      :cancel-text="'取消'"
+                      :cancel-text="$t('取消')"
                       :theme="'ps-tooltip'"
                       @ok="deleteConfigVar(varItem.id)"
                     >
@@ -477,7 +485,7 @@
                 >
                   <bk-input
                     v-model="newVarConfig.description"
-                    placeholder="描述"
+                    :placeholder="$t('描述')"
                     :clearable="false"
                   />
                 </bk-form-item>
@@ -773,845 +781,833 @@
   </div>
 </template>
 
-<script>
-    import _ from 'lodash';
-    import dropdown from '@/components/ui/Dropdown';
-    import tooltipConfirm from '@/components/ui/TooltipConfirm';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
+<script> import _ from 'lodash';
+import dropdown from '@/components/ui/Dropdown';
+import tooltipConfirm from '@/components/ui/TooltipConfirm';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
 
-    export default {
-        components: {
-            dropdown,
-            tooltipConfirm,
-            appTopBar
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                envVarList: [],
-                envVarListBackup: [],
-                runtimeImageList: [],
-                buildpackValueList: [],
-                runtimeImage: '',
-                runtimeBuild: [],
-                isRuntimeUpdaing: false,
-                availableEnv: [],
-                isEdited: false,
-                isReleased: false,
-                deleteToolTipShow: false,
-                newVarConfig: {
-                    key: '',
-                    value: '',
-                    env: 'stag',
-                    description: ''
-                },
-                varRules: {
-                    key: [
-                        {
-                            required: true,
-                            message: this.$t('KEY是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 64,
-                            message: this.$t('不能超过64个字符'),
-                            trigger: 'blur'
-                        },
-                        {
-                            regex: /^[A-Z][A-Z0-9_]*$/,
-                            message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    value: [
-                        {
-                            required: true,
-                            message: this.$t('VALUE是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 2048,
-                            message: this.$t('不能超过2048个字符'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    description: [
-                        {
-                            validator: value => {
-                                if (value === '') {
-                                    return true;
-                                }
-                                return value.trim().length <= 200;
-                            },
-                            message: this.$t('不能超过200个字符'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                newConfigVarKey: '',
-                newConfigVarValue: '',
-                addingConfigVarEnv: 'stag',
-                envSelectList: [
-                    { id: 'stag', text: this.$t('预发布环境') },
-                    { id: 'prod', text: this.$t('生产环境') },
-                    { id: '_global_', text: this.$t('所有环境') }
-                ],
-                editRowList: [],
-                isLoading: true,
-                isVarLoading: true,
-                activeEnvTab: '',
-                updateFormList: [],
-                runtimeDialogConf: {
-                    visiable: false,
-                    image: '',
-                    buildpacks: [],
-                    buildpackValueList: []
-                },
-
-                isDropdownShow: false,
-                curSortKey: '-created',
-
-                exportDialog: {
-                    visiable: false,
-                    width: 480,
-                    headerPosition: 'center',
-                    loading: false,
-                    isLoading: false,
-                    count: 0
-                },
-                importFileDialog: {
-                    visiable: false,
-                    width: 540,
-                    headerPosition: 'center',
-                    loading: false
-                },
-                moduleValue: '',
-                curSelectModuleName: '',
-                exportLoading: false,
-                curFile: {},
-                isFileTypeError: false,
-                envSidesliderConf: {
-                    visiable: false
-                },
-                basicInfo: [],
-                appRuntimeInfo: [],
-                bkPlatformInfo: [],
-                loadingConf: {
-                    basicLoading: false,
-                    appRuntimeLoading: false,
-                    bkPlatformLoading: false
-                }
-            };
-        },
-        computed: {
-            runtimeBuildpacks () {
-                let result = [];
-                const image = this.runtimeImageList.find(item => {
-                    return item.image === this.runtimeDialogConf.image;
-                });
-                const buildpacks = image ? [...image.buildpacks] : [];
-
-                // 兼容穿梭框右侧排序问题，后续调整组件
-                this.runtimeBuild.forEach(id => {
-                    buildpacks.forEach((item, index) => {
-                        if (item.id === id) {
-                            result.push(item);
-                            buildpacks.splice(index, 1);
-                        }
-                    });
-                });
-                result = result.concat(buildpacks);
-
-                return result;
-            },
-            runtimeBuildpacksId () {
-                return this.runtimeBuildpacks.map(item => {
-                    return item.id;
-                });
-            },
-            runtimeImageText () {
-                const result = this.runtimeImageList.find(item => {
-                    return item.image === this.runtimeImage;
-                });
-                if (result) {
-                    return result.name || result.image;
-                } else {
-                    return '';
-                }
-            },
-            runtimeBuildTexts () {
-                const builds = [];
-                const image = this.runtimeImageList.find(item => {
-                    return item.image === this.runtimeImage;
-                });
-                const buildpacks = image ? image.buildpacks : [];
-                this.runtimeBuild.forEach(item => {
-                    buildpacks.forEach(pack => {
-                        if (pack.id === item) {
-                            builds.push(pack);
-                        }
-                    });
-                });
-                return builds;
-            },
-            globalEnvName () {
-                if (_.includes(this.availableEnv, 'stag') && _.includes(this.availableEnv, 'prod')) {
-                    return '_global_';
-                } else {
-                    return this.availableEnv[0];
-                }
-            },
-            curModuleList () {
-                return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
-            },
-            envLoading () {
-                return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
-            },
-            canModifyEnvVariable () {
-                console.log(this);
-                return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
-            }
-        },
-        watch: {
-            '$route' () {
-                this.init();
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            handleImportFromFile () {
-              if (!this.canModifyEnvVariable) {
-                return;
+export default {
+  components: {
+    dropdown,
+    tooltipConfirm,
+    appTopBar,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      envVarList: [],
+      envVarListBackup: [],
+      runtimeImageList: [],
+      buildpackValueList: [],
+      runtimeImage: '',
+      runtimeBuild: [],
+      isRuntimeUpdaing: false,
+      availableEnv: [],
+      isEdited: false,
+      isReleased: false,
+      deleteToolTipShow: false,
+      newVarConfig: {
+        key: '',
+        value: '',
+        env: 'stag',
+        description: '',
+      },
+      varRules: {
+        key: [
+          {
+            required: true,
+            message: this.$t('KEY是必填项'),
+            trigger: 'blur',
+          },
+          {
+            max: 64,
+            message: this.$t('不能超过64个字符'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[A-Z][A-Z0-9_]*$/,
+            message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
+            trigger: 'blur',
+          },
+        ],
+        value: [
+          {
+            required: true,
+            message: this.$t('VALUE是必填项'),
+            trigger: 'blur',
+          },
+          {
+            max: 2048,
+            message: this.$t('不能超过2048个字符'),
+            trigger: 'blur',
+          },
+        ],
+        description: [
+          {
+            validator: (value) => {
+              if (value === '') {
+                return true;
               }
-              this.importFileDialog.visiable = true;
+              return value.trim().length <= 200;
             },
-            handleCloneFromModule () {
-              if (!this.canModifyEnvVariable) {
-                return;
-              }
-              if (this.curModuleList.length <= 1) {
-                return;
-              }
-              this.exportDialog.visiable = true;
-              this.moduleValue = this.curModuleList[0].id;
-              this.curSelectModuleName = this.curModuleList[0].name;
-              this.handleModuleSelected('', { name: this.curSelectModuleName });
-            },
-            handleExportToFile () {
-              this.exportLoading = true;
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
-                this.$http.get(url).then((response) => {
-                    this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
-                }, (errRes) => {
-                    const errorMsg = errRes.detail;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('获取环境变量失败')}，${errorMsg}`
-                    });
-                }).finally(() => {
-                    this.exportLoading = false;
-                });
-            },
+            message: this.$t('不能超过200个字符'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      newConfigVarKey: '',
+      newConfigVarValue: '',
+      addingConfigVarEnv: 'stag',
+      envSelectList: [
+        { id: 'stag', text: this.$t('预发布环境') },
+        { id: 'prod', text: this.$t('生产环境') },
+        { id: '_global_', text: this.$t('所有环境') },
+      ],
+      editRowList: [],
+      isLoading: true,
+      isVarLoading: true,
+      activeEnvTab: '',
+      updateFormList: [],
+      runtimeDialogConf: {
+        visiable: false,
+        image: '',
+        buildpacks: [],
+        buildpackValueList: [],
+      },
 
-            invokeBrowserDownload (content, filename) {
-              const a = document.createElement('a');
-              const blob = new Blob([content], { type: 'text/plain' });
-              a.download = filename;
-              a.href = URL.createObjectURL(blob);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(blob);
-            },
-            handleTriggerUpload () {
-                this.$refs.upload.click();
-            },
+      isDropdownShow: false,
+      curSortKey: '-created',
 
-            handleStartUpload (payload) {
-                const files = Array.from(payload.target.files);
-                const curFile = files[0];
-                const fileExtension = curFile.name.substring(curFile.name.lastIndexOf('.') + 1);
-                if (fileExtension !== 'yaml') {
-                    this.isFileTypeError = true;
-                    return;
-                }
-                this.isFileTypeError = false;
-                this.curFile = curFile;
-                this.$refs.upload.value = '';
-            },
-
-            handleImportFileConfirm () {
-                this.importFileDialog.loading = true;
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/import/`;
-                const params = new FormData();
-                params.append('file', this.curFile);
-                this.$http.post(url, params).then((response) => {
-                    const createNum = response.create_num;
-                    const overwritedNum = response.overwrited_num;
-                    const ignoreNum = response.ignore_num;
-                    this.isEdited = createNum > 0 || overwritedNum > 0;
-                    const message = (
-                        () => {
-                            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
-                            let messageText = '';
-                            switch (numStr) {
-                                case '111':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '110':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '100':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '101':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '011':
-                                    messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '010':
-                                    messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '001':
-                                    messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
-                                    break;
-                                default:
-                                    messageText = `${this.$t('导入成功')}`;
-                            }
-                            return messageText;
-                        }
-                    )();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: message
-                    });
-                    this.loadConfigVar();
-                }, (errRes) => {
-                    const errorMsg = errRes.detail;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`
-                    });
-                }).finally(() => {
-                    this.importFileDialog.loading = false;
-                    this.importFileDialog.visiable = false;
-                });
-            },
-
-            handleDownloadTemplate () {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/template/`;
-                this.$http.get(url).then((response) => {
-                    this.invokeBrowserDownload(response, `bk_paas3_env_vars_import_template.yaml`);
-                }, (errRes) => {
-                    const errorMsg = errRes.detail;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('获取yaml模板失败')}，${errorMsg}`
-                    });
-                });
-            },
-
-            handleModuleSelected (value, { name }) {
-                this.curSelectModuleName = name;
-                this.exportDialog.isLoading = true;
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curSelectModuleName + `/config_vars/?order_by=-created`).then((response) => {
-                    this.exportDialog.count = (response || []).length;
-                }, (errRes) => {
-                    const errorMsg = errRes.detail;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('获取环境变量失败')}，${errorMsg}`
-                    });
-                }).finally(() => {
-                    this.exportDialog.isLoading = false;
-                });
-            },
-
-            dropdownShow () {
-                this.isDropdownShow = true;
-            },
-            dropdownHide () {
-                this.isDropdownShow = false;
-            },
-            handleSort (key) {
-                this.curSortKey = key;
-                this.editRowList = [];
-                this.$refs.dropdown.hide();
-                this.loadConfigVar();
-            },
-            handleReset () {
-                this.activeEnvTab = '';
-                this.newVarConfig.env = 'stag';
-                this.loadConfigVar();
-            },
-            async handleExportConfirm () {
-                this.exportDialog.loading = true;
-                try {
-                    const res = await this.$store.dispatch('envVar/exportModuleEnv', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        sourceModuleName: this.curSelectModuleName
-                    });
-                    const createNum = res.create_num;
-                    const overwritedNum = res.overwrited_num;
-                    const ignoreNum = res.ignore_num;
-                    this.isEdited = createNum > 0 || overwritedNum > 0;
-                    const message = (
-                        () => {
-                            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
-                            let messageText = '';
-                            switch (numStr) {
-                                case '111':
-                                    messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '110':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '100':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '101':
-                                    messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '011':
-                                    messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '010':
-                                    messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                                    break;
-                                case '001':
-                                    messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
-                                    break;
-                                default:
-                                    messageText = `${this.$t('导入成功')}`;
-                            }
-                            return messageText;
-                        }
-                    )();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: message
-                    });
-                    this.handleExportCancel();
-                    this.loadConfigVar();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.exportDialog.loading = false;
-                }
-            },
-            handleExportCancel () {
-                this.exportDialog.visiable = false;
-            },
-            handleImportFileCancel () {
-                this.importFileDialog.visiable = false;
-            },
-            handleAfterLeave () {
-                this.moduleValue = '';
-                this.curSelectModuleName = '';
-                this.exportDialog.count = 0;
-            },
-            handleImportFileLeave () {
-                this.curFile = {};
-                this.isFileTypeError = false;
-            },
-            init () {
-                this.isLoading = true;
-                this.isEdited = false;
-                this.curSortKey = '-created';
-                this.loadConfigVar();
-                this.fetchReleaseInfo();
-                this.getAllImages();
-                this.getRuntimeInfo();
-            },
-            fetchReleaseInfo () {
-                // 这里分别调用预发布环境 和 生产环境的 API，只要有一个返回 200，isReleased 就要设置为 True
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/envs/stag' + '/released_state/?with_processes=true').then((response) => {
-                    this.isReleased = true;
-                    this.availableEnv.push('stag');
-                }, (errRes) => {
-                    console.error(errRes);
-                });
-
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/envs/prod' + '/released_state/?with_processes=true').then((response) => {
-                    this.isReleased = true;
-                    this.availableEnv.push('prod');
-                }, (errRes) => {
-                    console.error(errRes);
-                });
-            },
-            async getAllImages () {
-                try {
-                    const res = await this.$store.dispatch('envVar/getAllImages', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId
-                    });
-
-                    if (res.results) {
-                        res.results.forEach(item => {
-                            item.name = `${item.slugbuilder.display_name || item.image} (${item.slugbuilder.description || '--'})`;
-
-                            item.buildpacks.forEach(item => {
-                                item.name = `${item.display_name || item.name} (${item.description || '--'})`;
-                            });
-                        });
-                        this.runtimeImageList = res.results;
-                    }
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-            async getRuntimeInfo () {
-                try {
-                    const res = await this.$store.dispatch('envVar/getRuntimeInfo', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId
-                    });
-                    this.runtimeBuild = [];
-                    this.runtimeImage = res.image ? res.image : '';
-                    if (res.buildpacks) {
-                        this.runtimeBuild = res.buildpacks.map(item => {
-                            return item.id;
-                        });
-                    }
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-            async updateRuntimeInfo () {
-                try {
-                    this.isRuntimeUpdaing = true;
-
-                    if (!this.runtimeDialogConf.image) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('请选择基础镜像！')
-                        });
-                        this.$nextTick(() => {
-                            this.isRuntimeUpdaing = false;
-                        });
-                        return false;
-                    }
-                    // 如果左边有列表，必须要选择一个
-                    if (this.runtimeBuildpacks.length && !this.runtimeDialogConf.buildpacks.length) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('请选择构建工具！')
-                        });
-                        this.$nextTick(() => {
-                            this.isRuntimeUpdaing = false;
-                        });
-                        return false;
-                    }
-
-                    await this.$store.dispatch('envVar/updateRuntimeInfo', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        data: {
-                            image: this.runtimeDialogConf.image,
-                            buildpacks_id: this.runtimeDialogConf.buildpacks
-                        }
-                    });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('保存成功')
-                    });
-                    this.runtimeImage = this.runtimeDialogConf.image;
-                    this.runtimeBuild = this.runtimeDialogConf.buildpacks;
-                    this.runtimeDialogConf.visiable = false;
-                    this.isRuntimeUpdaing = false;
-                } catch (e) {
-                    this.isRuntimeUpdaing = false;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-            // Load all env vars for current selected tab
-            loadConfigVar () {
-                this.isVarLoading = true;
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + `/config_vars/?order_by=${this.curSortKey}`).then((response) => {
-                    if (this.activeEnvTab === '') {
-                        this.envVarList = [...response];
-                    } else {
-                        this.envVarList = response.filter(envVar => {
-                            return envVar.environment_name === this.activeEnvTab;
-                        });
-                    }
-                    this.envVarListBackup = JSON.parse(JSON.stringify(this.envVarList));
-                }, (errRes) => {
-                    const errorMsg = errRes.message;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('获取环境变量失败')}，${errorMsg}`
-                    });
-                }).finally(() => {
-                    this.isVarLoading = false;
-                    this.isLoading = false;
-                });
-            },
-            isReadOnlyRow (rowIndex) {
-                return !_.includes(this.editRowList, rowIndex);
-            },
-            isEnvAvailable (envName) {
-                return _.includes(this.availableEnv, envName);
-            },
-            editingRowToggle (rowItem = {}, rowIndex, type = '') {
-                if (type === 'cancel') {
-                    const currentItem = this.envVarListBackup.find(envItem => envItem.id === rowItem.id);
-                    rowItem.key = currentItem.key;
-                    rowItem.value = currentItem.value;
-                    rowItem.description = currentItem.description;
-                    rowItem.environment_name = currentItem.environment_name;
-                    if (this.$refs[`${rowItem.id}`] && this.$refs[`${rowItem.id}`].length) {
-                        this.$refs[`${rowItem.id}`][0].formItems.forEach(item => {
-                            item.validator.content = '';
-                            item.validator.state = '';
-                        });
-                    }
-                }
-                if (_.includes(this.editRowList, rowIndex)) {
-                    this.editRowList.pop(rowIndex);
-                } else {
-                    this.editRowList.push(rowIndex);
-                }
-            },
-            updateConfigVar (configVarID, index, varItem) {
-                const updateEnv = varItem.environment_name;
-                const updateKey = varItem.key;
-                const updateValue = varItem.value;
-                const description = varItem.description;
-                const updateForm = {
-                    environment_name: updateEnv,
-                    key: updateKey,
-                    value: updateValue,
-                    description
-                };
-                this.$refs[configVarID][0].validate().then(validator => {
-                    if (updateEnv === '_global_') {
-                        updateForm['is_global'] = true;
-                    }
-                    const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/${configVarID}/`;
-                    this.$http.put(url, updateForm).then((response) => {
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('修改环境变量成功')
-                        });
-
-                        this.loadConfigVar();
-                        // this.editingRowToggle({}, index)
-                        this.editRowList = [];
-                        this.isEdited = true;
-                    }, (errRes) => {
-                        const errorMsg = errRes.message;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: `${this.$t('修改环境变量失败')}，${errorMsg}`
-                        });
-                    });
-                });
-            },
-            filterConfigVarByEnv (env) {
-                this.envVarList = [];
-                this.envVarListBackup = [];
-                if (this.addingConfigVarEnv === env) {
-                    this.activeEnvTab = this.activeEnvTab === '' ? env : '';
-                    this.newVarConfig.env = this.activeEnvTab === '' ? 'stag' : env;
-                } else {
-                    this.activeEnvTab = env;
-                    this.addingConfigVarEnv = env;
-                    this.newVarConfig.env = env;
-                }
-                this.loadConfigVar();
-            },
-            createConfigVar () {
-                const createForm = {
-                    key: this.newVarConfig.key,
-                    value: this.newVarConfig.value,
-                    environment_name: this.newVarConfig.env,
-                    description: this.newVarConfig.description
-                };
-                this.$refs.newVarForm.validate().then(validator => {
-                    const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/`;
-                    this.$http.post(url, createForm).then((response) => {
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('添加环境变量成功')
-                        });
-                        this.loadConfigVar();
-                        this.newVarConfig = {
-                            key: '',
-                            value: '',
-                            env: this.newVarConfig.env,
-                            description: ''
-                        };
-                        this.isEdited = true;
-                    }, (errRes) => {
-                        const errorMsg = errRes.message;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: `${this.$t('添加环境变量失败')}，${errorMsg}`
-                        });
-                    });
-                });
-            },
-            deleteConfigVar (configVarID) {
-                this.$http.delete(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/config_vars/' + configVarID + '/').then((response) => {
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('删除环境变量成功')
-                    });
-                    this.editRowList = [];
-                    this.loadConfigVar();
-                    this.isEdited = true;
-                }, (errRes) => {
-                    const errorMsg = errRes.message;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('删除环境变量失败')}，${errorMsg}`
-                    });
-                });
-            },
-            cancelDelete () {
-                this.$refs.deleteTooltip[0].close();
-            },
-            releaseEnv (envName) {
-                this.$refs.releaseDropDown.close();
-                this.$http.post(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/envs/' + envName + '/releases/').then((response) => {
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('发布提交成功，请在进程管理查看发布情况')
-                    });
-                }, (errRes) => {
-                    const errorMsg = errRes.message;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: errorMsg
-                    });
-                });
-                this.isEdited = false;
-            },
-            skipRelease () {
-                this.isEdited = false;
-            },
-            handleShowRuntimeDialog () {
-                this.runtimeDialogConf.visiable = true;
-                this.runtimeDialogConf.image = this.runtimeImage;
-                this.runtimeDialogConf.buildpacks = this.runtimeBuild;
-                this.runtimeDialogConf.buildpackValueList = this.runtimeBuild;
-            },
-            handleHideRuntimeDialog () {},
-
-            handleBuildpackChange (sourceList, targetList, targetValueList) {
-                this.runtimeDialogConf.buildpacks = targetValueList;
-            },
-
-            handleImageChange () {
-                this.runtimeDialogConf.buildpacks = [];
-                this.runtimeDialogConf.buildpackValueList = [];
-            },
-
-            handleShoEnvDialog () {
-                this.envSidesliderConf.visiable = true;
-            },
-
-            showEnvVariable () {
-                this.getBasicInfo();
-                this.getAppRuntimeInfo();
-                this.getBkPlatformInfo();
-            },
-
-            async getBasicInfo () {
-                try {
-                    this.loadingConf.basicLoading = true;
-                    const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
-                    this.basicInfo = this.convertArray(data);
-                    this.$nextTick(() => {
-                        this.contrastTextWitch('basicInfoWrapper', 'basicText', this.basicInfo);
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.loadingConf.basicLoading = false;
-                }
-            },
-
-            async getAppRuntimeInfo () {
-                try {
-                    this.loadingConf.appRuntimeLoading = true;
-                    const data = await this.$store.dispatch('envVar/getAppRuntimeInfo', { appCode: this.appCode });
-                    this.appRuntimeInfo = this.convertArray(data);
-                    this.$nextTick(() => {
-                        this.contrastTextWitch('appRuntimeInfoWrapper', 'appRuntimeText', this.appRuntimeInfo);
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.loadingConf.appRuntimeLoading = false;
-                }
-            },
-
-            async getBkPlatformInfo () {
-                try {
-                    this.loadingConf.bkPlatformLoading = true;
-                    const data = await this.$store.dispatch('envVar/getBkPlatformInfo', { appCode: this.appCode });
-                    this.bkPlatformInfo = this.convertArray(data);
-                    this.$nextTick(() => {
-                        this.contrastTextWitch('bkPlatformInfoWrapper', 'bkPlatformText', this.bkPlatformInfo);
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.loadingConf.bkPlatformLoading = false;
-                    }, 300);
-                }
-            },
-
-            convertArray (data) {
-                const list = [];
-                for (const key in data) {
-                    list.push({
-                        label: key,
-                        value: data[key],
-                        isTips: true
-                    });
-                }
-                return list;
-            },
-
-            contrastTextWitch (parentRef, childRef, data) {
-                const containerWitch = this.$refs[parentRef].offsetWidth;
-                this.$refs[childRef].forEach((item, index) => {
-                    if (item.offsetWidth > containerWitch) {
-                        this.$set(data[index], 'isTips', false);
-                    }
-                });
-            }
-        }
+      exportDialog: {
+        visiable: false,
+        width: 480,
+        headerPosition: 'center',
+        loading: false,
+        isLoading: false,
+        count: 0,
+      },
+      importFileDialog: {
+        visiable: false,
+        width: 540,
+        headerPosition: 'center',
+        loading: false,
+      },
+      moduleValue: '',
+      curSelectModuleName: '',
+      exportLoading: false,
+      curFile: {},
+      isFileTypeError: false,
+      envSidesliderConf: {
+        visiable: false,
+      },
+      basicInfo: [],
+      appRuntimeInfo: [],
+      bkPlatformInfo: [],
+      loadingConf: {
+        basicLoading: false,
+        appRuntimeLoading: false,
+        bkPlatformLoading: false,
+      },
     };
+  },
+  computed: {
+    runtimeBuildpacks() {
+      let result = [];
+      const image = this.runtimeImageList.find(item => item.image === this.runtimeDialogConf.image);
+      const buildpacks = image ? [...image.buildpacks] : [];
+
+      // 兼容穿梭框右侧排序问题，后续调整组件
+      this.runtimeBuild.forEach((id) => {
+        buildpacks.forEach((item, index) => {
+          if (item.id === id) {
+            result.push(item);
+            buildpacks.splice(index, 1);
+          }
+        });
+      });
+      result = result.concat(buildpacks);
+
+      return result;
+    },
+    runtimeBuildpacksId() {
+      return this.runtimeBuildpacks.map(item => item.id);
+    },
+    runtimeImageText() {
+      const result = this.runtimeImageList.find(item => item.image === this.runtimeImage);
+      if (result) {
+        return result.name || result.image;
+      }
+      return '';
+    },
+    runtimeBuildTexts() {
+      const builds = [];
+      const image = this.runtimeImageList.find(item => item.image === this.runtimeImage);
+      const buildpacks = image ? image.buildpacks : [];
+      this.runtimeBuild.forEach((item) => {
+        buildpacks.forEach((pack) => {
+          if (pack.id === item) {
+            builds.push(pack);
+          }
+        });
+      });
+      return builds;
+    },
+    globalEnvName() {
+      if (_.includes(this.availableEnv, 'stag') && _.includes(this.availableEnv, 'prod')) {
+        return '_global_';
+      }
+      return this.availableEnv[0];
+    },
+    curModuleList() {
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
+    },
+    envLoading() {
+      return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
+    },
+    canModifyEnvVariable() {
+      return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    handleImportFromFile() {
+      if (!this.canModifyEnvVariable) {
+        return;
+      }
+      this.importFileDialog.visiable = true;
+    },
+    handleCloneFromModule() {
+      if (!this.canModifyEnvVariable) {
+        return;
+      }
+      if (this.curModuleList.length < 1) {
+        return;
+      }
+      this.exportDialog.visiable = true;
+      this.moduleValue = this.curModuleList[0].id;
+      this.curSelectModuleName = this.curModuleList[0].name;
+      this.handleModuleSelected('', { name: this.curSelectModuleName });
+    },
+    handleExportToFile() {
+      this.exportLoading = true;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
+      this.$http.get(url).then((response) => {
+        this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.exportLoading = false;
+        });
+    },
+
+    invokeBrowserDownload(content, filename) {
+      const a = document.createElement('a');
+      const blob = new Blob([content], { type: 'text/plain' });
+      a.download = filename;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blob);
+    },
+    handleTriggerUpload() {
+      this.$refs.upload.click();
+    },
+
+    handleStartUpload(payload) {
+      const files = Array.from(payload.target.files);
+      const curFile = files[0];
+      const fileExtension = curFile.name.substring(curFile.name.lastIndexOf('.') + 1);
+      if (fileExtension !== 'yaml') {
+        this.isFileTypeError = true;
+        return;
+      }
+      this.isFileTypeError = false;
+      this.curFile = curFile;
+      this.$refs.upload.value = '';
+    },
+
+    handleImportFileConfirm() {
+      this.importFileDialog.loading = true;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/import/`;
+      const params = new FormData();
+      params.append('file', this.curFile);
+      this.$http.post(url, params).then((response) => {
+        const createNum = response.create_num;
+        const overwritedNum = response.overwrited_num;
+        const ignoreNum = response.ignore_num;
+        this.isEdited = createNum > 0 || overwritedNum > 0;
+        const message = (
+          () => {
+            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+            let messageText = '';
+            switch (numStr) {
+              case '111':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '110':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '100':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
+                break;
+              case '101':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '011':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '010':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '001':
+                messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
+                break;
+              default:
+                messageText = `${this.$t('导入成功')}`;
+            }
+            return messageText;
+          }
+        )();
+        this.$paasMessage({
+          theme: 'success',
+          message,
+        });
+        this.loadConfigVar();
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.importFileDialog.loading = false;
+          this.importFileDialog.visiable = false;
+        });
+    },
+
+    handleDownloadTemplate() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/template/`;
+      this.$http.get(url).then((response) => {
+        this.invokeBrowserDownload(response, 'bk_paas3_env_vars_import_template.yaml');
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
+        });
+      });
+    },
+
+    handleModuleSelected(value, { name }) {
+      this.curSelectModuleName = name;
+      this.exportDialog.isLoading = true;
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`).then((response) => {
+        this.exportDialog.count = (response || []).length;
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.exportDialog.isLoading = false;
+        });
+    },
+
+    dropdownShow() {
+      this.isDropdownShow = true;
+    },
+    dropdownHide() {
+      this.isDropdownShow = false;
+    },
+    handleSort(key) {
+      this.curSortKey = key;
+      this.editRowList = [];
+      this.$refs.dropdown.hide();
+      this.loadConfigVar();
+    },
+    handleReset() {
+      this.activeEnvTab = '';
+      this.newVarConfig.env = 'stag';
+      this.loadConfigVar();
+    },
+    async handleExportConfirm() {
+      this.exportDialog.loading = true;
+      try {
+        const res = await this.$store.dispatch('envVar/exportModuleEnv', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          sourceModuleName: this.curSelectModuleName,
+        });
+        const createNum = res.create_num;
+        const overwritedNum = res.overwrited_num;
+        const ignoreNum = res.ignore_num;
+        this.isEdited = createNum > 0 || overwritedNum > 0;
+        const message = (
+          () => {
+            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+            let messageText = '';
+            switch (numStr) {
+              case '111':
+                messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '110':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '100':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
+                break;
+              case '101':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '011':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '010':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '001':
+                messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
+                break;
+              default:
+                messageText = `${this.$t('导入成功')}`;
+            }
+            return messageText;
+          }
+        )();
+        this.$paasMessage({
+          theme: 'success',
+          message,
+        });
+        this.handleExportCancel();
+        this.loadConfigVar();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.exportDialog.loading = false;
+      }
+    },
+    handleExportCancel() {
+      this.exportDialog.visiable = false;
+    },
+    handleImportFileCancel() {
+      this.importFileDialog.visiable = false;
+    },
+    handleAfterLeave() {
+      this.moduleValue = '';
+      this.curSelectModuleName = '';
+      this.exportDialog.count = 0;
+    },
+    handleImportFileLeave() {
+      this.curFile = {};
+      this.isFileTypeError = false;
+    },
+    init() {
+      this.isLoading = true;
+      this.isEdited = false;
+      this.curSortKey = '-created';
+      this.loadConfigVar();
+      this.fetchReleaseInfo();
+      this.getAllImages();
+      this.getRuntimeInfo();
+    },
+    fetchReleaseInfo() {
+      // 这里分别调用预发布环境 和 生产环境的 API，只要有一个返回 200，isReleased 就要设置为 True
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag` + '/released_state/?with_processes=true').then((response) => {
+        this.isReleased = true;
+        this.availableEnv.push('stag');
+      }, (errRes) => {
+        console.error(errRes);
+      });
+
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod` + '/released_state/?with_processes=true').then((response) => {
+        this.isReleased = true;
+        this.availableEnv.push('prod');
+      }, (errRes) => {
+        console.error(errRes);
+      });
+    },
+    async getAllImages() {
+      try {
+        const res = await this.$store.dispatch('envVar/getAllImages', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+
+        if (res.results) {
+          res.results.forEach((item) => {
+            item.name = `${item.slugbuilder.display_name || item.image} (${item.slugbuilder.description || '--'})`;
+
+            item.buildpacks.forEach((item) => {
+              item.name = `${item.display_name || item.name} (${item.description || '--'})`;
+            });
+          });
+          this.runtimeImageList = res.results;
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+    async getRuntimeInfo() {
+      try {
+        const res = await this.$store.dispatch('envVar/getRuntimeInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.runtimeBuild = [];
+        this.runtimeImage = res.image ? res.image : '';
+        if (res.buildpacks) {
+          this.runtimeBuild = res.buildpacks.map(item => item.id);
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+    async updateRuntimeInfo() {
+      try {
+        this.isRuntimeUpdaing = true;
+
+        if (!this.runtimeDialogConf.image) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请选择基础镜像！'),
+          });
+          this.$nextTick(() => {
+            this.isRuntimeUpdaing = false;
+          });
+          return false;
+        }
+        // 如果左边有列表，必须要选择一个
+        if (this.runtimeBuildpacks.length && !this.runtimeDialogConf.buildpacks.length) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请选择构建工具！'),
+          });
+          this.$nextTick(() => {
+            this.isRuntimeUpdaing = false;
+          });
+          return false;
+        }
+
+        await this.$store.dispatch('envVar/updateRuntimeInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data: {
+            image: this.runtimeDialogConf.image,
+            buildpacks_id: this.runtimeDialogConf.buildpacks,
+          },
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('保存成功'),
+        });
+        this.runtimeImage = this.runtimeDialogConf.image;
+        this.runtimeBuild = this.runtimeDialogConf.buildpacks;
+        this.runtimeDialogConf.visiable = false;
+        this.isRuntimeUpdaing = false;
+      } catch (e) {
+        this.isRuntimeUpdaing = false;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+    // Load all env vars for current selected tab
+    loadConfigVar() {
+      this.isVarLoading = true;
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
+        if (this.activeEnvTab === '') {
+          this.envVarList = [...response];
+        } else {
+          this.envVarList = response.filter(envVar => envVar.environment_name === this.activeEnvTab);
+        }
+        this.envVarListBackup = JSON.parse(JSON.stringify(this.envVarList));
+      }, (errRes) => {
+        const errorMsg = errRes.message;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.isVarLoading = false;
+          this.isLoading = false;
+        });
+    },
+    isReadOnlyRow(rowIndex) {
+      return !_.includes(this.editRowList, rowIndex);
+    },
+    isEnvAvailable(envName) {
+      return _.includes(this.availableEnv, envName);
+    },
+    editingRowToggle(rowItem = {}, rowIndex, type = '') {
+      if (type === 'cancel') {
+        const currentItem = this.envVarListBackup.find(envItem => envItem.id === rowItem.id);
+        rowItem.key = currentItem.key;
+        rowItem.value = currentItem.value;
+        rowItem.description = currentItem.description;
+        rowItem.environment_name = currentItem.environment_name;
+        if (this.$refs[`${rowItem.id}`] && this.$refs[`${rowItem.id}`].length) {
+          this.$refs[`${rowItem.id}`][0].formItems.forEach((item) => {
+            item.validator.content = '';
+            item.validator.state = '';
+          });
+        }
+      }
+      if (_.includes(this.editRowList, rowIndex)) {
+        this.editRowList.pop(rowIndex);
+      } else {
+        this.editRowList.push(rowIndex);
+      }
+    },
+    updateConfigVar(configVarID, index, varItem) {
+      const updateEnv = varItem.environment_name;
+      const updateKey = varItem.key;
+      const updateValue = varItem.value;
+      const { description } = varItem;
+      const updateForm = {
+        environment_name: updateEnv,
+        key: updateKey,
+        value: updateValue,
+        description,
+      };
+      this.$refs[configVarID][0].validate().then((validator) => {
+        if (updateEnv === '_global_') {
+          updateForm.is_global = true;
+        }
+        const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/${configVarID}/`;
+        this.$http.put(url, updateForm).then((response) => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('修改环境变量成功'),
+          });
+
+          this.loadConfigVar();
+          // this.editingRowToggle({}, index)
+          this.editRowList = [];
+          this.isEdited = true;
+        }, (errRes) => {
+          const errorMsg = errRes.message;
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('修改环境变量失败')}，${errorMsg}`,
+          });
+        });
+      });
+    },
+    filterConfigVarByEnv(env) {
+      this.envVarList = [];
+      this.envVarListBackup = [];
+      if (this.addingConfigVarEnv === env) {
+        this.activeEnvTab = this.activeEnvTab === '' ? env : '';
+        this.newVarConfig.env = this.activeEnvTab === '' ? 'stag' : env;
+      } else {
+        this.activeEnvTab = env;
+        this.addingConfigVarEnv = env;
+        this.newVarConfig.env = env;
+      }
+      this.loadConfigVar();
+    },
+    createConfigVar() {
+      const createForm = {
+        key: this.newVarConfig.key,
+        value: this.newVarConfig.value,
+        environment_name: this.newVarConfig.env,
+        description: this.newVarConfig.description,
+      };
+      this.$refs.newVarForm.validate().then((validator) => {
+        const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/`;
+        this.$http.post(url, createForm).then((response) => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('添加环境变量成功'),
+          });
+          this.loadConfigVar();
+          this.newVarConfig = {
+            key: '',
+            value: '',
+            env: this.newVarConfig.env,
+            description: '',
+          };
+          this.isEdited = true;
+        }, (errRes) => {
+          const errorMsg = errRes.message;
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
+          });
+        });
+      });
+    },
+    deleteConfigVar(configVarID) {
+      this.$http.delete(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/${configVarID}/`).then((response) => {
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除环境变量成功'),
+        });
+        this.editRowList = [];
+        this.loadConfigVar();
+        this.isEdited = true;
+      }, (errRes) => {
+        const errorMsg = errRes.message;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('删除环境变量失败')}，${errorMsg}`,
+        });
+      });
+    },
+    cancelDelete() {
+      this.$refs.deleteTooltip[0].close();
+    },
+    releaseEnv(envName) {
+      this.$refs.releaseDropDown.close();
+      this.$http.post(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${envName}/releases/`).then((response) => {
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('发布提交成功，请在进程管理查看发布情况'),
+        });
+      }, (errRes) => {
+        const errorMsg = errRes.message;
+        this.$paasMessage({
+          theme: 'error',
+          message: errorMsg,
+        });
+      });
+      this.isEdited = false;
+    },
+    skipRelease() {
+      this.isEdited = false;
+    },
+    handleShowRuntimeDialog() {
+      this.runtimeDialogConf.visiable = true;
+      this.runtimeDialogConf.image = this.runtimeImage;
+      this.runtimeDialogConf.buildpacks = this.runtimeBuild;
+      this.runtimeDialogConf.buildpackValueList = this.runtimeBuild;
+    },
+    handleHideRuntimeDialog() {},
+
+    handleBuildpackChange(sourceList, targetList, targetValueList) {
+      this.runtimeDialogConf.buildpacks = targetValueList;
+    },
+
+    handleImageChange() {
+      this.runtimeDialogConf.buildpacks = [];
+      this.runtimeDialogConf.buildpackValueList = [];
+    },
+
+    handleShoEnvDialog() {
+      this.envSidesliderConf.visiable = true;
+    },
+
+    showEnvVariable() {
+      this.getBasicInfo();
+      this.getAppRuntimeInfo();
+      this.getBkPlatformInfo();
+    },
+
+    async getBasicInfo() {
+      try {
+        this.loadingConf.basicLoading = true;
+        const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
+        this.basicInfo = this.convertArray(data);
+        this.$nextTick(() => {
+          this.contrastTextWitch('basicInfoWrapper', 'basicText', this.basicInfo);
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.loadingConf.basicLoading = false;
+      }
+    },
+
+    async getAppRuntimeInfo() {
+      try {
+        this.loadingConf.appRuntimeLoading = true;
+        const data = await this.$store.dispatch('envVar/getAppRuntimeInfo', { appCode: this.appCode });
+        this.appRuntimeInfo = this.convertArray(data);
+        this.$nextTick(() => {
+          this.contrastTextWitch('appRuntimeInfoWrapper', 'appRuntimeText', this.appRuntimeInfo);
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.loadingConf.appRuntimeLoading = false;
+      }
+    },
+
+    async getBkPlatformInfo() {
+      try {
+        this.loadingConf.bkPlatformLoading = true;
+        const data = await this.$store.dispatch('envVar/getBkPlatformInfo', { appCode: this.appCode });
+        this.bkPlatformInfo = this.convertArray(data);
+        this.$nextTick(() => {
+          this.contrastTextWitch('bkPlatformInfoWrapper', 'bkPlatformText', this.bkPlatformInfo);
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.loadingConf.bkPlatformLoading = false;
+        }, 300);
+      }
+    },
+
+    convertArray(data) {
+      const list = [];
+      for (const key in data) {
+        list.push({
+          label: key,
+          value: data[key],
+          isTips: true,
+        });
+      }
+      return list;
+    },
+
+    contrastTextWitch(parentRef, childRef, data) {
+      const containerWitch = this.$refs[parentRef].offsetWidth;
+      this.$refs[childRef].forEach((item, index) => {
+        if (item.offsetWidth > containerWitch) {
+          this.$set(data[index], 'isTips', false);
+        }
+      });
+    },
+  },
+};
 </script>
 
 <style media="screen">
@@ -1634,6 +1630,7 @@
 </style>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .variable-instruction {
         font-size: 14px;
         color: #7b7d8a;
@@ -1716,10 +1713,10 @@
             text-align: left;
             font-size: 12px;
             color: #63656e;
-            overflow: hidden;
             background-color: #fafbfd;
             vertical-align: middle;
             cursor: default;
+            @include ellipsis;
         }
         .bk-inline-form {
             display: flex;

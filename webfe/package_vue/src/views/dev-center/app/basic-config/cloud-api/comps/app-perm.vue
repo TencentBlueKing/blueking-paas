@@ -9,7 +9,7 @@
         {{ $t('批量续期') }}
       </bk-button>
       <section class="fr">
-        <div class="label">
+        <div class="label mr15">
           {{ $t('类型') }}
         </div>
         <div class="select-wrapper">
@@ -68,6 +68,7 @@
           style="margin-bottom: 16px;width: 100%"
         />
         <bk-table
+          ref="permRef"
           :key="tableKey"
           :data="tableList"
           :size="'small'"
@@ -75,9 +76,18 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
           <bk-table-column
             label="id"
             :render-header="renderHeader"
@@ -93,7 +103,10 @@
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('API类型')">
+          <bk-table-column
+            :label="$t('API类型')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ typeMap[props.row.type] }}
             </template>
@@ -103,6 +116,7 @@
               :label="isComponentApi ? $t('系统') : $t('网关')"
               min-width="100"
               :prop="isComponentApi ? 'system_name' : 'api_name'"
+              :column-key="isComponentApi ? 'system_name' : 'api_name'"
               :filters="nameFilters"
               :filter-method="nameFilterMethod"
               :filter-multiple="true"
@@ -165,17 +179,23 @@
           >
             <template slot-scope="props">
               <span
-                v-bk-tooltips="props.row.description"
+                v-bk-tooltips="{ content: props.row.description, disabled: props.row.description === '' }"
                 v-html="highlightDesc(props.row)"
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -184,9 +204,11 @@
             <bk-table-column
               :label="$t('状态')"
               prop="permission_status"
+              column-key="status"
               :filters="statusFilters"
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -208,7 +230,10 @@
             </bk-table-column>
           </template>
           <template v-else>
-            <bk-table-column :label="$t('状态')">
+            <bk-table-column
+              :label="$t('状态')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
@@ -270,6 +295,7 @@
 <script>
     import RenewalDialog from './batch-renewal-dialog';
     import PaasngAlert from './paasng-alert';
+    import { clearFilter } from '@/common/utils';
     export default {
         name: '',
         components: {
@@ -329,7 +355,12 @@
                 ],
                 is_up: true,
                 nameFilters: [],
-                tableKey: -1
+                tableKey: -1,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                },
+                allFilterData: {}
             };
         },
         computed: {
@@ -359,6 +390,9 @@
                     const end = start + this.pagination.limit;
                     this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
                     this.isFilter = false;
+                }
+                if (newVal === '') {
+                    this.updateTableEmptyConfig();
                 }
             },
             allData (value) {
@@ -410,6 +444,14 @@
             statusFilterMethod (value, row, column) {
                 const property = column.property;
                 return row[property] === value;
+            },
+
+            filterChange (filters) {
+                Object.entries(filters).forEach(item => {
+                    const [name, value] = item;
+                    this.allFilterData[name] = value;
+                });
+                this.updateTableEmptyConfig();
             },
 
             handleSelect (value, option) {
@@ -485,6 +527,7 @@
                 }
                 this.initPageConf();
                 this.tableList = this.getDataByPage();
+                this.updateTableEmptyConfig();
             },
 
             /**
@@ -647,6 +690,7 @@
                 const start = this.pagination.limit * (this.pagination.current - 1);
                 const end = start + this.pagination.limit;
                 this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+                this.updateTableEmptyConfig();
             },
 
             init () {
@@ -689,10 +733,14 @@
                     this.indeterminate = false;
                     this.allChecked = false;
                     this.tableKey = +new Date();
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
+                    this.$emit('data-ready');
                 }
             },
 
@@ -727,6 +775,38 @@
                     return '--';
                 }
                 return description || '--';
+            },
+            clearFilterKey () {
+                this.searchValue = '';
+                this.isRenewalPerm = false;
+                this.allFilterData = {};
+                this.$refs.permRef.clearFilter();
+                if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
+                    const tableHeader = this.$refs.permRef.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
+                this.fetchList();
+            },
+
+            updateTableEmptyConfig () {
+                let isTableFilter = this.isFilterCriteria();
+
+                if (this.searchValue || this.isRenewalPerm || isTableFilter) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '$CONSTANT';
+            },
+
+            // 表头是否存在筛选条件
+            isFilterCriteria () {
+                let isFilter = false;
+                for (const key in this.allFilterData) {
+                    if (this.allFilterData[key].length) {
+                        isFilter = true;
+                    }
+                };
+                return isFilter;
             }
         }
     };

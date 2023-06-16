@@ -26,29 +26,11 @@ from paasng.utils.basic import ChoicesEnum
 PROC_DEFAULT_REPLICAS = 1
 
 
-class EngineAppType(str, StructuredEnum):
-    """type of engine app"""
-
-    DEFAULT = EnumField('default')  # 默认类型：无任何定制逻辑
-
-    # 云原生架构应用：完全基于 YAML 模型的应用，当前作为一个独立应用类型存在，但未来它也许会成为所有应用
-    # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
-    CLOUD_NATIVE = EnumField('cloud_native')
-
-
 class ClusterType(str, StructuredEnum):
     """集群类别"""
 
     NORMAL = EnumField('normal', label=_('普通集群'))
     VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
-
-
-class ClusterFeatureFlag(str, StructuredEnum):
-    """集群特性标志"""
-
-    ENABLE_EGRESS_IP = EnumField('ENABLE_EGRESS_IP', label=_('支持提供出口 IP'))
-    ENABLE_MOUNT_LOG_TO_HOST = EnumField('ENABLE_MOUNT_LOG_TO_HOST', label=_('允许挂载日志到主机'))
-    INGRESS_USE_REGEX = EnumField('INGRESS_USE_REGEX', label=_('Ingress路径是否使用正则表达式'))
 
 
 class AppEnvName(str, StructuredEnum):
@@ -71,7 +53,7 @@ class JobStatus(str, StructuredEnum):
 
 
 class BuildStatus(str, StructuredEnum):
-    """While `BuildStatus` has same members with `JobStatus`, differnet statuses might be added in the future"""
+    """While `BuildStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = 'successful'
     FAILED = 'failed'
@@ -84,21 +66,19 @@ class BuildStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class DeployEventStatus(ChoicesEnum):
-    """部署事件状态"""
+class ReleaseStatus(str, StructuredEnum):
+    """While `ReleaseStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
-    STARTED = 'started'
-    FINISHED = 'finished'
-    ABORTED = 'aborted'
+    SUCCESSFUL = 'successful'
+    FAILED = 'failed'
+    PENDING = 'pending'
+    INTERRUPTED = 'interrupted'
 
-    @classmethod
-    def get_job_status(cls, event_status: 'DeployEventStatus') -> 'JobStatus':
-        """通过 Event Status 映射到 Job Status"""
-        return JobStatus(
-            {cls.STARTED: JobStatus.PENDING, cls.FINISHED: JobStatus.SUCCESSFUL, cls.ABORTED: JobStatus.FAILED}[
-                event_status
-            ]
-        )
+    def to_job_status(self) -> JobStatus:
+        """Transform to `JobStatus`"""
+        # Do type transformation directly because two types are sharing the same
+        # members currently.
+        return JobStatus(self.value)
 
 
 class OperationTypes(ChoicesEnum):
@@ -161,7 +141,8 @@ class DeployConditions(ChoicesEnum):
 
 
 class RuntimeType(str, StructuredEnum):
-    BUILDPACK = EnumField("buildpack", label="Runtime for buildpack")
+    BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
+    DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image")
 
 

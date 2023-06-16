@@ -60,9 +60,18 @@
       @page-limit-change="handlePageLimitChange"
       @page-change="handlePageChange"
     >
+      <div slot="empty">
+        <table-empty
+          :keyword="tableEmptyConf.keyword"
+          :abnormal="tableEmptyConf.isAbnormal"
+          @reacquire="getDeployHistory"
+          @clear-filter="clearFilter"
+        />
+      </div>
       <bk-table-column
         :label="$t('部署环境')"
         prop="name"
+        :render-header="$renderHeader"
       >
         <template slot-scope="props">
           <span v-if="props.row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
@@ -102,12 +111,17 @@
       <bk-table-column
         :label="$t('操作人')"
         prop="operator.username"
+        :render-header="$renderHeader"
       />
       <bk-table-column
         :label="$t('类型')"
         prop="operation_act"
+        :render-header="$renderHeader"
       />
-      <bk-table-column :label="$t('耗时')">
+      <bk-table-column
+        :label="$t('耗时')"
+        :render-header="$renderHeader"
+      >
         <template slot-scope="{ row }">
           {{ computedDeployTime(row) }}
         </template>
@@ -249,7 +263,11 @@
                     title: '',
                     isShow: false
                 },
-                errorTips: {}
+                errorTips: {},
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -411,7 +429,10 @@
                             this.handleShowLog(recordItem);
                         }
                     }
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || e.message
@@ -479,7 +500,7 @@
 
                         stageItem.steps.forEach(stepItem => {
                             timeLineList.push({
-                                tag: stepItem.name,
+                                tag: stepItem.display_name,
                                 content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
                                 status: stepItem.status || 'default',
                                 parentStage: stageItem.type
@@ -518,6 +539,20 @@
                 } finally {
                     this.isLogLoading = false;
                 }
+            },
+
+            clearFilter () {
+                this.choosedEnv = 'all';
+                this.personnelSelectorList = [];
+                this.getDeployHistory();
+            },
+
+            updateTableEmptyConfig () {
+                if (this.personnelSelectorList.length || this.choosedEnv !== 'all') {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

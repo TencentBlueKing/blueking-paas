@@ -8,7 +8,7 @@
           class="link fr"
           :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
           target="_blank"
-        > {{ $t('蓝鲸SaaS研发管理参考规范') }} </a>
+        > {{ $t('蓝鲸 SaaS 研发管理参考规范') }} </a>
       </h2>
     </div>
     <paas-content-loader
@@ -91,13 +91,7 @@
                             <div slot="content">
                               {{ row.instance.url }}
                             </div>
-                            <span
-                              style="display: inline-block;
-                                                            max-width: 220px;
-                                                            overflow: hidden;
-                                                            text-overflow: ellipsis;
-                                                            white-space: nowrap;"
-                            >
+                            <span style="display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
                               {{ row.instance.url }}
                             </span>
                           </bk-popconfirm>
@@ -232,13 +226,7 @@
                                     <div slot="content">
                                       {{ subRow.instance.url }}
                                     </div>
-                                    <span
-                                      style="display: inline-block;
-                                                                            max-width: 220px;
-                                                                            overflow: hidden;
-                                                                            text-overflow: ellipsis;
-                                                                            white-space: nowrap;"
-                                    >
+                                    <span style="display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
                                       {{ subRow.instance.url }}
                                     </span>
                                   </bk-popconfirm>
@@ -263,10 +251,16 @@
                               </template>
                             </template>
                           </td>
-                          <td>
+                          <td
+                            v-bk-overflow-tips
+                            class="text-ellipsis"
+                          >
                             {{ subRow.instance ? subRow.instance.latest_operator || '--' : '--' }}
                           </td>
-                          <td>
+                          <td
+                            v-bk-overflow-tips
+                            class="text-ellipsis"
+                          >
                             {{ subRow.instance ? subRow.instance.updated ? smartTime(subRow.instance.updated, 'fromNow') : '--' : '--' }}
                           </td>
                           <td>
@@ -312,10 +306,7 @@
         v-if="!isLoading && tableList.length < 1"
         class="empty-wrapper"
       >
-        <i class="bk-icon icon-empty" />
-        <div class="empty-text">
-          {{ $t('暂无数据') }}
-        </div>
+        <table-empty empty />
       </div>
     </paas-content-loader>
   </div>
@@ -335,7 +326,7 @@
         },
         computed: {
             curTitle () {
-                return `${this.$t('文档中有 ')}${this.notCompletedCount}${this.$t('项必填未填写，请继续完善。')}`;
+                return `${this.$t('文档中有')} ${this.notCompletedCount} ${this.$t('项必填未填写，请继续完善。')}`;
             }
         },
         watch: {
@@ -492,6 +483,7 @@
     };
 </script>
 <style lang="scss">
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .paas-docu-manager-wrapper {
         .link {
             font-size: 12px;
@@ -546,7 +538,7 @@
                     }
                     .children-td {
                         padding: 0;
-                        border-bottom: none;
+                        border-bottom: 1px solid #dcdee5;
                     }
                 }
                 .active {
@@ -581,7 +573,7 @@
                 }
                 tr:last-child {
                     td {
-                        border-bottom: none !important;
+                        border-bottom: 1px solid #dcdee5 !important;
                     }
                 }
                 .name {

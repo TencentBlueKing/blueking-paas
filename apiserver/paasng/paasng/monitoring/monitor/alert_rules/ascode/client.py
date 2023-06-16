@@ -88,6 +88,10 @@ class AsCodeClient:
                     notice_group_name=ctx['notice_group_name'], receivers=conf.receivers
                 )
 
+            # 涉及到 rabbitmq 的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
+            if 'rabbitmq' in conf.alert_code:
+                ctx['rabbitmq_metric_name_prefix'] = settings.RABBITMQ_MONITOR_CONF.get('metric_name_prefix', '')
+
             configs[f'rule/{conf.alert_rule_name}.yaml'] = j2_env.get_template(f'{conf.alert_code}.yaml.j2').render(
                 **ctx
             )
@@ -101,8 +105,10 @@ class AsCodeClient:
 
     def _apply_rule_configs(self, configs: Dict):
         """同步告警配置到 bkmonitor"""
+        # TODO import_config 接口接入网关后, 调整为通过 apigw 访问
+        http_schema_url = settings.BK_MONITORV3_URL.replace('https', 'http', 1)
         resp = requests.post(
-            url=f'{settings.BK_MONITORV3_URL}/rest/v2/as_code/import_config/',
+            url=f'{http_schema_url}/rest/v2/as_code/import_config/',
             json={
                 'bk_biz_id': settings.MONITOR_AS_CODE_CONF.get('bk_biz_id'),
                 'app': self.app_code,

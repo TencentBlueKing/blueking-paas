@@ -21,22 +21,27 @@ import pytest
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
 from paasng.monitoring.monitor.models import AppAlertRule
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestAlertRuleManager:
-    def test_init_rules(self, bk_app, mock_import_configs, bk_app_init_rule_configs):
+    def test_init_rules(
+        self,
+        bk_app,
+        mock_import_configs,
+        bk_app_init_rule_configs,
+    ):
         manager = AlertRuleManager(bk_app)
         manager.init_rules()
         mock_import_configs.assert_called_with(bk_app_init_rule_configs)
         assert AppAlertRule.objects.filter(alert_code='high_cpu_usage').count() == 2
 
-    def test_create_module_rules(self, bk_app, create_module):
+    def test_create_module_rules(self, bk_app, create_module_for_alert):
         manager = AlertRuleManager(bk_app)
-        manager.create_module_rules(create_module.name)
-        assert AppAlertRule.objects.filter(module=create_module, alert_code='high_cpu_usage').count() == 2
+        manager.create_module_rules(create_module_for_alert.name)
+        assert AppAlertRule.objects.filter(module=create_module_for_alert, alert_code='high_cpu_usage').count() == 2
 
-    def test_update(self, bk_app, cpu_usage_alert_rule_obj):
+    def test_update(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
         from tests.utils.helpers import generate_random_string
 
         receivers = [generate_random_string(6)]

@@ -22,9 +22,9 @@ from celery import shared_task
 from django.utils.translation import gettext_lazy as _
 
 from paasng.engine.constants import AppEnvName
+from paasng.engine.deploy.archive import OfflineManager
 from paasng.engine.exceptions import OfflineOperationExistError
 from paasng.engine.models import Deployment
-from paasng.engine.models.managers import OfflineManager
 from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)

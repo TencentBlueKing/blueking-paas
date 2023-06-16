@@ -23,12 +23,12 @@ from typing import TYPE_CHECKING, Optional
 from django.db import models
 from django.utils import timezone
 
+from paas_wl.platform.applications.models import WlApp
 from paasng.engine.constants import JobStatus
-from paasng.engine.controller.state import controller_client
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
 if TYPE_CHECKING:
-    from paasng.engine.deploy.infras import DeployStream
+    from paasng.engine.utils.output import DeployStream
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +62,9 @@ class EngineApp(OwnerTimestampedModel):
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
 
-    def get_latest_build(self):
-        ret = controller_client.builds__retrieve(app_name=self.name, region=self.region, limit=1)
-        if ret['results']:
-            return ret['results'][0]
-        return
+    def to_wl_obj(self) -> 'WlApp':
+        """Return the corresponding WlApp object in the workloads module"""
+        return WlApp.objects.get(region=self.region, name=self.name)
 
 
 class MarkStatusMixin:
@@ -98,7 +96,7 @@ class MarkStatusMixin:
         self.status = status.value
         self.save(update_fields=update_fields)  # type: ignore
 
-    def mark_and_write_to_steam(self, stream: 'DeployStream', status: 'JobStatus', extra_info: Optional[dict] = None):
+    def mark_and_write_to_stream(self, stream: 'DeployStream', status: 'JobStatus', extra_info: Optional[dict] = None):
         """标记状态，并写到 stream"""
         self.mark_procedure_status(status)
         detail = self.to_dict()

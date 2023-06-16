@@ -343,9 +343,11 @@
                 class="ps-no-result"
               >
                 <div class="text">
-                  <p>
-                    <i class="paasng-icon paasng-empty" />
-                  </p>
+                  <table-empty
+                    class="table-empty-cls"
+                    :is-empty-title="false"
+                    empty
+                  />
                   <p class="f13">
                     {{ $t('未找到进程服务，请尝试') }}
                     <router-link
@@ -631,7 +633,7 @@
                 if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
                     return;
                 }
-                this.changeEntryDialog.title = `确认设置${service.process_type}进程的${port.name}端口为主入口？`;
+                this.changeEntryDialog.title = this.$t(`确认设置{type}进程的{name}端口为主入口？`, { type: service.process_type, name: port.name });
                 this.curService = service;
                 this.curPort = port;
                 this.curServiceIndex = serviceIndex;

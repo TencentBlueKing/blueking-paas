@@ -70,8 +70,10 @@
               </ul>
               <div v-if="serviceListBound.length === 0">
                 <div class="ps-no-result multiNotes">
-                  <div><i class="paasng-icon paasng-empty" /></div>
-                  <p> {{ $t('暂未启用任何服务，请从下方选择开启。') }} </p>
+                  <table-empty
+                    :empty-title="$t('暂未启用任何服务，请从下方选择开启。')"
+                    empty
+                  />
                 </div>
               </div>
             </div>
@@ -116,11 +118,11 @@
                       class="ps-btn ps-btn-default ps-btn-disabled"
                     >
                       <template v-if="item.specifications.length">
-                        <span> {{ $t('配置并启用服务') }} </span>
+                        <span v-dashed> {{ $t('配置并启用服务') }} </span>
                       </template>
                       <template v-else>
                         <section>
-                          <span> {{ $t('启用服务') }} </span>
+                          <span v-dashed> {{ $t('启用服务') }} </span>
                         </section>
                       </template>
                     </a>
@@ -164,13 +166,12 @@
                 </li>
               </ul>
 
-              <div
-                v-if="serviceListUnbound.length === 0"
-                class=""
-              >
+              <div v-if="serviceListUnbound.length === 0">
                 <div class="ps-no-result">
-                  <p><i class="paasng-icon paasng-empty" /></p>
-                  <p> {{ $t('暂无未启用服务') }} </p>
+                  <table-empty
+                    :empty-title="$t('暂无未启用服务')"
+                    empty
+                  />
                 </div>
               </div>
             </div>

@@ -21,9 +21,9 @@
       >
         <div
           class="config-label"
-          :title="item.display_name"
+          :title="$t(item.display_name)"
         >
-          <span>{{ item.display_name }}</span>
+          <span>{{ $t(item.display_name) }}</span>
         </div>
         <div class="bk-button-group">
           <bk-button
@@ -33,14 +33,14 @@
             :disabled="computedDisabled(item, index, subItem)"
             @click="handleSelected(item, index, subItem)"
           >
-            {{ subItem }}
+            {{ $t(subItem) }}
           </bk-button>
         </div>
         <p
           v-if="item.showError"
           class="error"
         >
-          {{ $t('请选择') + item.display_name }}
+          {{ $t('请选择') + $t(item.display_name) }}
         </p>
       </section>
       <p
@@ -97,7 +97,7 @@
 </template>
 
 <script>
-    import marked from 'marked';
+    import { marked } from 'marked';
 
     export default {
         name: '',
@@ -154,6 +154,7 @@
                         $(this).attr('target', '_blank');
                     });
                 });
+                console.log('marked', marked, this.guide)
                 return marked(this.guide, { sanitize: true });
             }
         },

@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Tuple
 
+import cattr
 from django.db.transaction import atomic
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
@@ -117,16 +118,23 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginLogsViewset(viewsets.ViewSet):
     """Viewset for querying bk_plugin's logs"""
 
+    # 该接口已注册到 APIGW
+    # 网关名称 list_bk_plugin_logs
+    # 请勿随意修改该接口协议
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
-        serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
+        if request.method == "GET":
+            # 该接口首次注册到网关时是 GET 协议, 因此需要保留对 GET 的兼容
+            serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
+        else:
+            serializer = serializers.ListBkPluginLogsSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
         client = PluginLoggingClient(get_plugin_or_404(code))
         logs = client.query(data['trace_id'], data.get('scroll_id'))
-        return Response(logs.dict())
+        return Response(data=cattr.unstructure(logs))
 
 
 def get_plugin_or_404(code: str) -> BkPlugin:

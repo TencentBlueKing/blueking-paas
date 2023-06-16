@@ -1,6 +1,9 @@
 <template lang="html">
   <div class="paas-content white">
-    <div class="wrap">
+    <div
+      v-en-class="'en-label'"
+      class="wrap"
+    >
       <div class="paas-application-tit establish-title mt30">
         <span> {{ $t('创建模块') }} </span>
       </div>
@@ -138,11 +141,11 @@
                       :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
                     >
                       <template
-                        v-if="GLOBAL.APP_VERSION === 'te'"
+                        v-if="GLOBAL.CONFIG.MIRROR_PREFIX"
                         slot="prepend"
                       >
                         <div class="group-text">
-                          mirrors.tencent.com/
+                          {{ GLOBAL.CONFIG.MIRROR_PREFIX }}
                         </div>
                       </template>
                     </bk-input>
@@ -162,17 +165,17 @@
             </div>
             <div class="establish-tab">
               <section class="code-type">
-                <label class="form-label"> {{ $t('模板来源') }} </label>
+                <label class="form-label template"> {{ $t('模板来源') }} </label>
                 <div class="tab-box">
                   <li
-                    :class="['tab-item', { 'active': localSourceOrigin === 1 }]"
+                    :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
                     @click="handleCodeTypeChange(1)"
                   >
                     {{ $t('蓝鲸开发框架') }}
                   </li>
                   <li
                     v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
-                    :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
+                    :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
                     @click="handleCodeTypeChange(2)"
                   >
                     {{ $t('蓝鲸可视化开发平台') }}
@@ -252,11 +255,11 @@
                 style="color: #3A84FF;"
                 class="paasng-icon paasng-info-circle"
               />
-              {{ $t('默认模块需要') }} <a
+              {{ $t('默认模块需要在') }} <a
                 target="_blank"
                 :href="GLOBAL.LINK.LESSCODE_INDEX"
                 style="color: #3a84ff"
-              > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
+              > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
             </div>
             <div
               v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
@@ -320,10 +323,9 @@
                     />
                   </label>
                   <div class="form-group-flex">
-                    <p class="mt10">
+                    <p>
                       <bk-input
                         v-model="sourceDirVal"
-                        size="large"
                         class="source-dir"
                         :class="sourceDirError ? 'error' : ''"
                         :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
@@ -378,6 +380,7 @@
               v-else
               v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
               class="ps-btn-disabled"
+              style="text-align: center;"
             >
               {{ $t('创建模块') }}
             </div>
@@ -880,7 +883,7 @@
                 if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
                     params.type = 'default';
                     params.source_control_type = 'tc_docker';
-                    params.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                    params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                     params.source_repo_auth_info = {
                         username: '',
                         password: ''

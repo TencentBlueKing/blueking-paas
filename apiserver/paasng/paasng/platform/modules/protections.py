@@ -19,8 +19,9 @@ to the current version of the project delivered to anyone in the future.
 """Preconditions for publish Application/Module"""
 from django.utils.translation import gettext as _
 
+from paasng.engine.deploy.archive import OfflineManager
 from paasng.engine.models import Deployment
-from paasng.engine.models.managers import DeployOperationManager, OfflineManager
+from paasng.engine.models.managers import DeployOperationManager
 from paasng.platform.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.platform.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.modules.models import Module

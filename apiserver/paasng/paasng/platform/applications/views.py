@@ -27,6 +27,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -37,6 +38,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.shim import RegionClusterService
+from paas_wl.cluster.utils import get_cluster_by_app
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
@@ -60,7 +64,6 @@ from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.extensions.bk_plugins.config import get_bk_plugin_config
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.scene_app.initializer import SceneAPPInitializer
@@ -112,7 +115,6 @@ from paasng.publish.market.models import MarketConfig, Product
 from paasng.publish.sync_market.managers import AppDeveloperManger
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-from paasng.utils.error_message import wrap_validation_error
 from paasng.utils.views import permission_classes as perm_classes
 
 try:
@@ -173,7 +175,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 'product': application.product if hasattr(application, "product") else None,
                 'marked': application.id in marked_application_ids,
                 # 应用市场访问地址信息
-                'market_config': application.market_config,
+                'market_config': MarketConfig.objects.get_or_create_by_app(application)[0],
             }
             for application in page_applications
         ]
@@ -202,7 +204,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         params = serializer.data
 
         applications = UserApplicationFilter(request.user).filter(
-            order_by=['code'],
+            order_by=['name'],
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
@@ -211,10 +213,8 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
 
-        results = [
-            {'application': application, 'product': application.product if hasattr(application, "product") else None}
-            for application in applications
-        ]
+        # 目前应用在市场的 name 和 Application 中的 name 一致
+        results = [{'application': application, 'product': {'name': application.name}} for application in applications]
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
 
@@ -256,7 +256,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         keyword = params.get('keyword')
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params['include_inactive'], order_by=['code', 'name'], search_term=keyword
+            include_inactive=params['include_inactive'], order_by=['name'], search_term=keyword
         )
 
         if params.get("prefer_marked"):
@@ -266,7 +266,7 @@ class ApplicationViewSet(viewsets.ViewSet):
             # then sort it
             applications = sorted(applications, key=lambda app: app.id in marked_application_ids, reverse=True)
 
-        serializer = slzs.AppMinimalWithModuleSLZ(applications, many=True)
+        serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
         return Response({'count': len(applications), 'results': serializer.data})
 
     def destroy(self, request, code):
@@ -334,7 +334,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         try:
             make_bk_monitor_client().update_space(application.code, application.name, request.user.username)
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
-            logger.error(f'Failed to update app space on BK Monitor, {e}')
+            logger.info(f'Failed to update app space on BK Monitor, {e}')
         except Exception:
             logger.exception('Failed to update app space on BK Monitor')
 
@@ -367,12 +367,16 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         market_params = data['market_params']
         operator = request.user.pk
 
-        if data["engine_enabled"]:
-            raise ValidationError("该接口只支持创建外链应用")
-
-        application = create_third_app(
-            data['region'], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
-        )
+        try:
+            application = create_third_app(
+                data['region'], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
+            )
+        except DbIntegrityError as e:
+            # 并发创建时, 可能会绕过 CreateThirdPartyApplicationSLZ 中 code 和 name 的存在性校验
+            if 'Duplicate entry' in str(e):
+                err_msg = _("code 为 {} 或 name 为 {} 的应用已存在").format(data['code'], data["name_zh_cn"])
+                raise error_codes.CANNOT_CREATE_APP.f(err_msg)
+            raise e
 
         return Response(
             data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': None},
@@ -497,11 +501,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
         create_default_module(application)
 
-        # Initialize by calling "workloads" service
-        try:
-            initialize_simple(application.default_module, params['cloud_native_params'], cluster_name)
-        except ValidationError as exc:
-            raise wrap_validation_error(exc, parent='cloud_native_params')
+        initialize_simple(
+            module=application.default_module, cluster_name=cluster_name, **params['cloud_native_params']
+        )
 
         post_create_application.send(sender=self.__class__, application=application)
         create_market_config(
@@ -519,9 +521,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
         adv_region_clusters = []
         if allow_advanced:
-            for name in get_all_regions().keys():
-                clusters = get_region_cluster_helper(name).list_clusters()
-                adv_region_clusters.append({'region': name, 'cluster_names': [cluster.name for cluster in clusters]})
+            for region_name in get_all_regions().keys():
+                clusters = RegionClusterService(region_name).list_clusters()
+                adv_region_clusters.append(
+                    {'region': region_name, 'cluster_names': [cluster.name for cluster in clusters]}
+                )
 
         options = {
             # configs related with "bk_plugin"
@@ -542,9 +546,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self, region: str, cluster_name: Optional[str], exposed_url_type: ExposedURLType
     ) -> bool:
         if not cluster_name:
-            cluster = get_region_cluster_helper(region).get_default_cluster()
+            cluster = RegionClusterService(region).get_default_cluster()
         else:
-            cluster = get_region_cluster_helper(region).get_cluster(cluster_name)
+            cluster = RegionClusterService(region).get_cluster_by_name(cluster_name)
 
         try:
             if exposed_url_type == ExposedURLType.SUBDOMAIN:
@@ -909,6 +913,14 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
     def list(self, request, code):
         application = self.get_application()
         return Response(application.feature_flag.get_application_features())
+
+    @swagger_auto_schema(tags=["特性标记"])
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    def list_with_env(self, request, code, module_name, environment):
+        """根据应用部署环境获取 FeatureFlag 信息，适用于需要区分环境的场景"""
+        cluster = get_cluster_by_app(self.get_wl_app_via_path())
+        response_data = {ff: cluster.has_feature_flag(ff) for ff in [ClusterFeatureFlag.ENABLE_AUTOSCALING]}
+        return Response(response_data)
 
     @swagger_auto_schema(tags=["特性标记"])
     @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')

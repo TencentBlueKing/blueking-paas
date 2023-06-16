@@ -19,8 +19,11 @@
 package reconcilers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,35 +32,35 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Test AddonReconciler", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var r *AddonReconciler
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var ctx context.Context
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "bkapp-sample",
 				Namespace:   "default",
 				Annotations: map[string]string{},
 			},
+			Spec: paasv1alpha2.AppSpec{Addons: []paasv1alpha2.Addon{{Name: "foo-service"}}},
 		}
-		testing.WithAddons(bkapp, "foo-service")
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 		ctx = context.Background()
 	})
@@ -70,16 +73,48 @@ var _ = Describe("Test AddonReconciler", func() {
 		testing.WithAppInfoAnnotations(bkapp)
 
 		r = &AddonReconciler{
-			Client:         builder.WithObjects(bkapp).Build(),
-			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 200}),
+			Client: builder.WithObjects(bkapp).Build(),
+			ExternalClient: external.NewTestClient(
+				"", "", external.RoundTripFunc(func(req *http.Request) *http.Response {
+					switch req.Method {
+					case http.MethodGet:
+						// mock QueryAddonSpecs
+						return &http.Response{
+							StatusCode: 200,
+							Body: ioutil.NopCloser(
+								bytes.NewBufferString(`{"results": {"version": "5.0.0"}}`),
+							),
+							Header: make(http.Header),
+						}
+					case http.MethodPost:
+						// mock ProvisionAddonInstance
+						return &http.Response{
+							StatusCode: 200,
+							Body:       ioutil.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
+							Header:     make(http.Header),
+						}
+					default:
+						return &http.Response{
+							StatusCode: 400,
+							Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+							Header:     make(http.Header),
+						}
+					}
+				}),
+			),
 		}
 		ret := r.Reconcile(ctx, bkapp)
 
 		Expect(ret.err).NotTo(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeFalse())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+		Expect(bkapp.Status.AddonStatuses[0].Name).To(Equal("foo-service"))
+		Expect(bkapp.Status.AddonStatuses[0].State).To(Equal(paasv1alpha2.AddonProvisioned))
+		Expect(
+			bkapp.Status.AddonStatuses[0].Specs[0],
+		).To(Equal(paasv1alpha2.AddonSpec{Name: "version", Value: "5.0.0"}))
 	})
 
 	It("when not metadata", func() {
@@ -91,52 +126,45 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("InvalidAnnotations"))
-		Expect(cond.Message).To(Equal("InvalidAnnotations: missing bkapp info"))
-	})
-
-	It("when extract addons failed", func() {
-		testing.WithAppInfoAnnotations(bkapp)
-		By("set a invalid addon list", func() {
-			bkapp.Annotations[v1alpha1.AddonsAnnoKey] = "['foo-service']"
-		})
-
-		r = &AddonReconciler{
-			Client:         builder.WithObjects(bkapp).Build(),
-			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 200}),
-		}
-		ret := r.Reconcile(ctx, bkapp)
-
-		Expect(ret.err).To(HaveOccurred())
-		Expect(ret.ShouldAbort()).To(BeTrue())
-
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
-		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("InvalidAnnotations"))
-		Expect(cond.Message).To(Equal("InvalidAnnotations: invalid value for 'bkapp.paas.bk.tencent.com/addons'"))
+		Expect(cond.Reason).To(Equal("InternalServerError"))
+		Expect(cond.Message).To(Equal(
+			"InvalidAnnotations: missing bkapp info, detail: " +
+				"for missing bkapp.paas.bk.tencent.com/region: unable to parse app metadata",
+		))
 	})
 
 	It("when provision addon failed", func() {
 		testing.WithAppInfoAnnotations(bkapp)
+
+		failMessage := "no available resource can provide"
 		By("set a failed external client", func() {
 			r = &AddonReconciler{
-				Client:         builder.WithObjects(bkapp).Build(),
-				ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 400, Body: "bar"}),
+				Client: builder.WithObjects(bkapp).Build(),
+				ExternalClient: external.NewTestClient(
+					"",
+					"",
+					&external.SimpleResponse{
+						StatusCode: 400,
+						Body:       failMessage,
+						Header:     http.Header{"Content-Type": []string{"application/json"}},
+					},
+				),
 			}
 		})
 
 		ret := r.Reconcile(ctx, bkapp)
 
-		Expect(ret.err).To(HaveOccurred())
+		Expect(ret.err).ShouldNot(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("ProvisionFailed"))
-		Expect(
-			cond.Message,
-		).To(Equal(fmt.Sprintf("ProvisionFailed: failed to provision '%s' instance", "foo-service")))
+		Expect(cond.Reason).To(Equal("InternalServerError"))
+		Expect(cond.Message).To(Equal(
+			fmt.Sprintf("Addon 'foo-service' provision failed, detail: %s: response not ok", failMessage),
+		))
+		Expect(bkapp.Status.AddonStatuses[0].State).To(Equal(paasv1alpha2.AddonFailed))
 	})
 })

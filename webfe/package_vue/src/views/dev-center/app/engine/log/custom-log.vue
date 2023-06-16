@@ -69,10 +69,7 @@
             class="bk-table-empty-block"
             style="margin-top: -40px;"
           >
-            <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
-            </span>
+            <table-empty empty />
           </div>
         </template>
       </div>
@@ -203,7 +200,7 @@
                   >
                     <td class="log-time">
                       <i :class="['paasng-icon ps-toggle-btn', { 'paasng-right-shape': !log.isToggled, 'paasng-down-shape': log.isToggled }]" />
-                      {{ log.ts }}
+                      {{ formatTime(log.timestamp) }}
                     </td>
                     <td class="log-message">
                       <div v-html="log.message || '--'" />
@@ -219,7 +216,7 @@
                   </tr>
                   <tr
                     v-if="log.isToggled"
-                    :key="index"
+                    :key="index + 'child'"
                   >
                     <td
                       :colspan="fieldSelectedList.length + 2"
@@ -246,12 +243,15 @@
                   <td :colspan="fieldSelectedList.length + 2">
                     <div class="ps-no-result">
                       <div class="text">
-                        <p>
-                          <i class="paasng-icon paasng-empty" />
-                        </p>
-                        <p> {{ $t('暂无数据') }} </p>
+                        <table-empty
+                          :is-content-text="false"
+                          :keyword="tableEmptyConf.keyword"
+                          :abnormal="tableEmptyConf.isAbnormal"
+                          @reacquire="getLogList"
+                          @clear-filter="clearFilterKey"
+                        />
                         <section class="search-tips">
-                          <p style="color: #c4c6cc;">
+                          <p style="color: #63656E;">
                             {{ $t('您可以按照以下方式优化查询结果：') }}
                           </p>
                           <p
@@ -301,6 +301,7 @@
     import xss from 'xss';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -380,7 +381,11 @@
                         link: this.$t('为什么日志查询为空'),
                         url: this.GLOBAL.DOC.LOG_QUERY_EMPTY
                     }
-                ]
+                ],
+                tableEmptyConf: {
+                    isAbnormal: false,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -413,7 +418,7 @@
                     options[field.name] = [];
                     field.list.forEach(item => {
                         options[field.name].push({
-                            text: item.text,
+                            text: String(item.text),
                             value: item.id
                         });
                     });
@@ -469,7 +474,6 @@
                 });
                 this.renderIndex++;
                 this.hideAllFilterPopover();
-                this.loadData(false);
             }
         },
         beforeRouteLeave (to, from, next) {
@@ -552,7 +556,7 @@
                     start_time: this.logParams.start_time,
                     end_time: this.logParams.end_time,
                     time_range: this.logParams.time_range,
-                    log_type: this.tabActive === 'customLog' ? 'STRUCTURED' : 'STANDARD_OUTPUT'
+                    log_type: 'STRUCTURED'
                 };
             },
 
@@ -687,6 +691,7 @@
                         filter
                     });
                 } catch (res) {
+                    console.log('getChartData', res);
                     this.$store.commit('log/updateChartData', {
                         series: [],
                         timeline: []
@@ -743,7 +748,7 @@
                         pageSize,
                         filter
                     });
-                    const data = res.data.logs;
+                    const data = res.logs;
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
                         if (item.detail) {
@@ -756,9 +761,12 @@
 
                     this.logList.splice(0, this.logList.length, ...data);
 
-                    this.pagination.count = res.data.page.total;
+                    this.pagination.count = res.total;
                     this.pagination.current = page;
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (res) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
@@ -782,7 +790,7 @@
                     const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
                     const filters = [];
                     const fieldList = [];
-                    const data = res.data;
+                    const data = res;
 
                     data.forEach(item => {
                         const condition = {
@@ -797,11 +805,11 @@
                                 text: option[0]
                             });
                         });
-                        if (condition.id === 'environment') {
+                        if (condition.name === 'environment') {
                             this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
+                        } else if (condition.name === 'process_id') {
                             this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
+                        } else if (condition.name === 'stream') {
                             this.streamList = condition.list;
                         } else {
                             fieldList.push(condition);
@@ -911,6 +919,18 @@
 
             handleHideFilter (field) {
                 this.fieldPopoverShow[field] = false;
+            },
+
+            clearFilterKey () {
+                this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.logParams.keyword;
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

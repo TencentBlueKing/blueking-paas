@@ -55,7 +55,6 @@ from environ import Env
 from .utils import (
     get_database_conf,
     get_default_keepalive_options,
-    get_internal_services_jwt_auth_conf,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
     is_redis_backend,
@@ -94,7 +93,7 @@ DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
 
-RUNNING_TESTS = sys.argv[0].endswith('pytest')
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ
 
 INSTALLED_APPS = [
     # WARNING: never enable django.contrib.admin here
@@ -152,6 +151,18 @@ INSTALLED_APPS = [
     # Put "scheduler" in the last position so models in other apps can be ready
     'paasng.platform.scheduler',
     'revproxy',
+    # workloads apps
+    'paas_wl.platform.applications',
+    'paas_wl.cluster',
+    'paas_wl.monitoring.metrics',
+    'paas_wl.networking.egress',
+    'paas_wl.networking.ingress',
+    'paas_wl.workloads.resource_templates',
+    'paas_wl.release_controller.hooks',
+    'paas_wl.workloads.processes',
+    'paas_wl.workloads.images',
+    'paas_wl.monitoring.app_monitor',
+    'paas_wl.cnative.specs',
 ]
 
 # Allow extending installed apps
@@ -186,6 +197,7 @@ MIDDLEWARE = [
     'paasng.accounts.internal.user.SysUserFromVerifiedClientMiddleware',
     # Other utilities middlewares
     'paasng.utils.middlewares.AutoDisableCSRFMiddleware',
+    'paasng.utils.middlewares.APILanguageMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
@@ -285,6 +297,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 )
 
 TEMPLATE_DIRS = [str(BASE_DIR / 'templates')]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -346,7 +359,9 @@ LOGGING = {
         },
         'simple': {'format': '%(levelname)s %(message)s'},
     },
-    'filters': {'request_id': {'()': 'paasng.utils.log.RequestIDFilter'}},
+    'filters': {
+        'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'},
+    },
     'handlers': {
         'null': {'level': LOG_LEVEL, 'class': 'logging.NullHandler'},
         'mail_admins': {'level': LOG_LEVEL, 'class': 'django.utils.log.AdminEmailHandler'},
@@ -373,6 +388,7 @@ LOGGING = {
         "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
         "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "iam": {"level": settings.get('IAM_LOG_LEVEL', "ERROR"), "handlers": _default_handlers, "propagate": False},
     },
 }
@@ -400,7 +416,11 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {"default": get_database_conf(settings)}
+DATABASES = {
+    "default": get_database_conf(settings),
+    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
+}
+DATABASE_ROUTERS = ["paasng.platform.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存
 
@@ -516,6 +536,9 @@ IAM_APP_SECRET = settings.get('IAM_APP_SECRET', default=BK_APP_SECRET)
 # https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#21-django-migration
 BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 
+# 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
+BK_IAM_SKIP = settings.get('BK_IAM_SKIP', False)
+
 BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get('BKAUTH_DEFAULT_PROVIDER_TYPE', 'BK')
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
@@ -565,6 +588,7 @@ HEALTHZ_PROBES = settings.get(
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
+        'paasng.monitoring.healthz.probes.BKIAMProbe',
     ],
 )
 
@@ -590,7 +614,9 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 # 旧版本 PaaS 数据库，敏感字段所使用的加密 key
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get('PAAS_LEGACY_DB_ENCRYPT_KEY')
 
-# == 对象存储相关
+# ---------------
+# 对象存储配置
+# ---------------
 
 BLOBSTORE_TYPE = settings.get('BLOBSTORE_TYPE')
 
@@ -656,11 +682,15 @@ BK_IAM_APIGATEWAY_URL = settings.get(
 )
 
 # 权限中心回调地址（provider api）
+# 会存在开发者中心访问地址是 https 协议，但是 API 只能用 http 协议的情况，所以不能直接用 BKPAAS_URL
+# ITSM 回调地址也复用了这个变量，修改变量名会涉及到 helm values 等多个地方同时修改，暂时先保留这个变量名
 BK_IAM_RESOURCE_API_HOST = settings.get('BK_IAM_RESOURCE_API_HOST', BKPAAS_URL)
 
 # 权限中心应用ID，用于拼接权限中心的在桌面的访问地址
 BK_IAM_V3_APP_CODE = "bk_iam"
 
+# 蓝鲸根域名
+BK_DOMAIN = settings.get('BK_DOMAIN', '')
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get('BK_CC_URL', '')
 BK_JOB_URL = settings.get('BK_JOB_URL', '')
@@ -685,6 +715,9 @@ BK_PLATFORM_URLS = settings.get(
         'BK_JOB_HOST': BK_JOB_URL,
     },
 )
+
+# 权限中心用户组申请链接
+BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_URL + "/apply-join-user-group?id={user_group_id}"
 
 # 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 BKPAAS_WEIXIN_URL_MAP = settings.get(
@@ -828,12 +861,6 @@ CONFIGVAR_PROTECTED_NAMES = (
 # 环境变量保留前缀列表
 CONFIGVAR_PROTECTED_PREFIXES = settings.get('CONFIGVAR_PROTECTED_PREFIXES', ["BKPAAS_", "KUBERNETES_"])
 
-# 后端引擎 API 服务地址
-ENGINE_CONTROLLER_HOST = settings.get('ENGINE_CONTROLLER_URL', 'http://localhost:8080')
-
-# 微服务（后端引擎 API、增强服务 API）通用的默认 JWT 鉴权信息，用于请求其他服务
-INTERNAL_SERVICES_JWT_AUTH_CONF = get_internal_services_jwt_auth_conf(settings)
-
 # 用于校验内部服务间请求的 JWT 配置，携带用以下任何一个 key 签名的 JWT 的请求会被认为有效
 PAAS_SERVICE_JWT_CLIENTS = get_paas_service_jwt_clients(settings)
 
@@ -955,6 +982,15 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # --------------
 # 应用日志相关配置
 # --------------
+# 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
+# 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
+LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
+# 蓝鲸日志平台的API是否已经注册在 APIGW
+ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
+# 蓝鲸日志平台网关的环境
+BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
+# 蓝鲸日志平台相关的配置项
+BKLOG_CONFIG = settings.get("BKLOG_CONFIG", {})
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get('ELASTICSEARCH_HOSTS', [{'host': 'localhost', 'port': "9200"}])
@@ -1084,6 +1120,20 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get('SMART_DOCKER_PASSWORD', 'blueking
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
 
+
+# ------------------
+# App 应用镜像仓库配置
+# ------------------
+# App 镜像仓库的 Registry 的域名
+APP_DOCKER_REGISTRY_HOST = settings.get('APP_DOCKER_REGISTRY_ADDR', 'registry.hub.docker.com')
+# App 镜像仓库的命名空间, 即在 Registry 中的项目名
+APP_DOCKER_REGISTRY_NAMESPACE = settings.get('APP_DOCKER_NAMESPACE', 'bkpaas/docker')
+# 用于访问 Registry 的账号
+APP_DOCKER_REGISTRY_USERNAME = settings.get('APP_DOCKER_USERNAME', 'bkpaas')
+# 用于访问 Registry 的密码
+APP_DOCKER_REGISTRY_PASSWORD = settings.get('APP_DOCKER_PASSWORD', 'blueking')
+
+
 # ------------------
 # bk-lesscode 相关配置
 # ------------------
@@ -1118,10 +1168,16 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 # -----------------
 # 蓝鲸监控配置项
 # -----------------
+# 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
+ENABLE_BK_MONITOR = settings.get('ENABLE_BK_MONITOR', False)
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # 同步告警策略到监控的配置
 MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})
+# Rabbitmq 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'rabbitmq'}
+RABBITMQ_MONITOR_CONF = settings.get('RABBITMQ_MONITOR_CONF', {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 'stage')
 
@@ -1167,3 +1223,15 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
+
+# 引入 workloads 相关配置
+# fmt: off
+from . import workloads as workloads_settings
+
+for key in dir(workloads_settings):
+    if key in ["BASE_DIR", "SETTINGS_FILES_GLOB", "LOCAL_SETTINGS"] or not key.isupper():
+        continue
+    if key in locals() and getattr(workloads_settings, key) != locals()[key]:
+        raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
+    locals()[key] = getattr(workloads_settings, key)
+# fmt: on

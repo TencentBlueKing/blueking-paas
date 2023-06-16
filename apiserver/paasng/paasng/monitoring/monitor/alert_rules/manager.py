@@ -42,12 +42,12 @@ class AlertRuleManager:
         - app 迁移告警规则(从 bcs 迁移至 bkmonitor)
         """
         # init app scoped alert rule configs
-        rule_configs = self.config_generator.gen_initial_app_rule_configs()
+        rule_configs = self.config_generator.gen_app_scoped_rule_configs()
 
         # extend app module scoped alert rule configs
         module_names = self.application.modules.values_list('name', flat=True)
         for module_name in module_names:
-            rule_configs.extend(self.config_generator.gen_initial_module_rule_configs(module_name))
+            rule_configs.extend(self.config_generator.gen_module_scoped_rule_configs(module_name))
 
         self._apply_rule_configs(rule_configs)
         self._save_rule_configs(rule_configs)
@@ -57,7 +57,7 @@ class AlertRuleManager:
 
         :param module_name: 新模块名
         """
-        module_rule_configs = self.config_generator.gen_initial_module_rule_configs(module_name)
+        module_rule_configs = self.config_generator.gen_module_scoped_rule_configs(module_name)
 
         rule_configs = self.config_generator.gen_rule_configs_from_qs(
             AppAlertRule.objects.filter(application=self.application)
@@ -102,4 +102,16 @@ class AlertRuleManager:
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""
         rules: List[AppAlertRule] = [config.to_alert_rule_obj() for config in rule_configs]
-        AppAlertRule.objects.bulk_create(rules)
+        for r in rules:
+            AppAlertRule.objects.update_or_create(
+                alert_code=r.alert_code,
+                application=r.application,
+                module=r.module,
+                environment=r.environment,
+                defaults={
+                    'display_name': r.display_name,
+                    'enabled': r.enabled,
+                    'threshold_expr': r.threshold_expr,
+                    'receivers': r.receivers,
+                },
+            )

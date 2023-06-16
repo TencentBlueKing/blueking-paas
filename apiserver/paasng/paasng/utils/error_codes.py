@@ -75,6 +75,8 @@ class ErrorCodes:
     PACKAGE_ALREADY_EXISTS = ErrorCode(_('源码包已存在'), code_num=4312009)
     MISSING_VERSION_INFO = ErrorCode(_('缺失版本信息'), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_('对象存储服务异常'), code_num=4312011)
+    # 部署配置
+    BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
     QUERY_LOG_FAILED = ErrorCode(_('查询日志失败'))
     QUERY_REQUEST_ERROR = ErrorCode(_('查询日志失败，请检查查询条件'))
@@ -91,8 +93,10 @@ class ErrorCodes:
     # 市场上架
     RELEASED_MARKET_CONDITION_NOT_MET = ErrorCode(_('未满足应用市场服务开启条件'))
     # 资源 Metrics
+    APP_METRICS_UNSUPPORTED = ErrorCode(_('应用资源 metrics 暂不支持'))
     CANNOT_FETCH_RESOURCE_METRICS = ErrorCode(_('无法获取应用资源 metrics'))
     # Monitor
+    INIT_ALERT_RULES_FAILED = ErrorCode(_('初始化告警规则失败'))
     QUERY_ALERTS_FAILED = ErrorCode(_('查询告警失败'))
     # 独立域名
     CANNOT_UPDATE_DOMAIN = ErrorCode(_('无法更新独立域名'))
@@ -144,8 +148,12 @@ class ErrorCodes:
     UPDATE_APP_MEMBERS_ERROR = ErrorCode(_('修改应用成员失败'))
     DELETE_APP_MEMBERS_ERROR = ErrorCode(_('删除应用成员失败'))
 
+    # BCS 组件相关
+    EGRESS_SPEC_NOT_FOUND = ErrorCode(_('指定环境的 Egress 配置不存在'))
+
     # 平台升级提醒
     ACTION_NOT_AVAILABLE = ErrorCode(_('因该功能正在升级改造，操作暂不可用。'), status_code=503)
+    MODIFY_UNSUPPORTED = ErrorCode(_("暂不支持修改该配置"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

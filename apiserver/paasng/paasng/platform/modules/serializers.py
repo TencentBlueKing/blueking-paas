@@ -16,24 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict
+import string
+from typing import Dict, Optional
 
-import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.cluster.serializers import ClusterSLZ
+from paas_wl.cluster.shim import EnvClusterService
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
 from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_engine_app_cluster
+from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
@@ -89,11 +91,14 @@ class ModuleSLZ(serializers.ModelSerializer):
             # 可能存在远古模版，并不在当前模版配置中
             return ""
 
-    def get_clusters(self, obj) -> Dict:
+    def get_clusters(self, obj: Module) -> Dict:
         env_clusters = {}
         for env in obj.envs.all():
-            cluster = get_engine_app_cluster(obj.region, env.engine_app.name)
-            env_clusters[env.environment] = cattr.unstructure(cluster) if cluster else None
+            try:
+                cluster = EnvClusterService(env).get_cluster()
+                env_clusters[env.environment] = ClusterSLZ(cluster).data
+            except ObjectDoesNotExist:
+                env_clusters[env.environment] = None
         return env_clusters
 
     class Meta:
@@ -164,7 +169,7 @@ class AppSlugBuilderMinimalSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugBuilder
-        exclude = ["buildpacks", "modules", "environments"]
+        fields = ['id', 'name', 'display_name', 'description', 'image', 'tag']
 
 
 class AppSlugRunnerMinimalSLZ(serializers.ModelSerializer):
@@ -173,16 +178,15 @@ class AppSlugRunnerMinimalSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugRunner
-        exclude = ["modules", "environments"]
+        fields = ['id', 'name', 'display_name', 'description', 'image', 'tag']
 
 
-class AppBuildPackMinimalSLZ(serializers.ModelSerializer):
-    display_name = TranslatedCharField()
-    description = TranslatedCharField()
-
-    class Meta:
-        model = AppBuildPack
-        exclude = ["modules", "environments"]
+class AppBuildPackMinimalSLZ(serializers.Serializer):
+    id = serializers.IntegerField()
+    language = serializers.CharField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    display_name = TranslatedCharField(read_only=True)
+    description = TranslatedCharField(read_only=True)
 
 
 class ModuleRuntimeSLZ(serializers.Serializer):
@@ -196,11 +200,6 @@ class ModuleRuntimeBindSLZ(serializers.Serializer):
     image = serializers.CharField(max_length=64, required=True)
     buildpacks_id = serializers.ListField(child=serializers.IntegerField(), required=False, default=list, min_length=0)
 
-    def validate_buildpack_id(self, buildpack_id):
-        if buildpack_id is not None:
-            self.initial_data.setdefault("buildpacks_id", [buildpack_id])
-        return buildpack_id
-
 
 class RepositoryWithPermissionSLZ(RepositorySLZ):
     authorized = serializers.SerializerMethodField(default=False, help_text="是否已授权")
@@ -210,6 +209,54 @@ class RepositoryWithPermissionSLZ(RepositorySLZ):
             return get_version_service(self.context["module"], self.context["user"]).touch()
         except Exception:
             return False
+
+
+class ImageTagOptionsSLZ(serializers.Serializer):
+    prefix = serializers.CharField(help_text="自定义前缀", allow_blank=False, allow_null=True, max_length=24)
+    with_version = serializers.BooleanField(help_text="镜像Tag 是否带有分支/标签")
+    with_build_time = serializers.BooleanField(help_text="镜像 Tag 是否带有构建时间")
+    with_commit_id = serializers.BooleanField(help_text="镜像 Tag 是否带有提交ID(hash)")
+
+    def validate_prefix(self, prefix: Optional[str]):
+        charset = {*string.digits, *string.ascii_letters}
+        if prefix is None:
+            return None
+        if prefix.startswith(".") or prefix.startswith("-"):
+            raise ValidationError("Tag can not startswith '.' or '-'")
+        if forbidden_chars := set(prefix) - charset:
+            raise ValidationError(f"Tag can not contain {sorted(forbidden_chars)}")
+        return prefix
+
+
+class ModuleBuildConfigSLZ(serializers.Serializer):
+    """模块镜像构建信息"""
+
+    image_repository = serializers.CharField(help_text="镜像仓库", read_only=True)
+    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
+    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=True)
+
+    # buildpack build 相关字段
+    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", allow_null=True, required=False)
+    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), allow_null=True, required=False)
+
+    # docker build 相关字段
+    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
+    docker_build_args = serializers.DictField(
+        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
+    )
+
+    def validate(self, attrs):
+        build_method = RuntimeType(attrs["build_method"])
+        missed_params = []
+        if build_method == RuntimeType.BUILDPACK:
+            missed_params = [k for k in ['buildpacks', 'bp_stack_name'] if not attrs.get(k)]
+        elif build_method == RuntimeType.DOCKERFILE:
+            missed_params = [k for k in ['dockerfile_path', 'docker_build_args'] if not attrs.get(k)]
+        if missed_params:
+            raise ValidationError(
+                detail={param: _('This field is required.') for param in missed_params}, code="required"
+            )
+        return attrs
 
 
 class ModuleRuntimeOverviewSLZ(serializers.Serializer):

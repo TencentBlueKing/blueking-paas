@@ -20,15 +20,13 @@ from collections import namedtuple
 from typing import List
 
 from django.conf import settings
-from rest_framework import status, viewsets
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
@@ -38,7 +36,7 @@ from paasng.publish.entrance.exposer import get_module_exposed_links
 
 from .constant import OperationType as OT
 from .models import ApplicationLatestOp, Operation
-from .serializers import QueryRecentOperatedApplications, SysOperationSLZ
+from .serializers import QueryRecentOperatedApplications
 
 EventRepresentProps = namedtuple('EventRepresentProps', 'display_module provide_links provide_actions')
 
@@ -170,34 +168,8 @@ class ApplicationOperationsViewSet(viewsets.ModelViewSet, ApplicationCodeInPathM
 
     def list(self, request, *args, **kwargs):
         application = self.get_application()
-        self.queryset = Operation.objects.filter(
-            application=application, module_name=kwargs.get('module_name', application.get_default_module().name)
-        )
+        self.queryset = Operation.objects.filter(application=application)
+        # 路径参数中指定了模块才查询模块的操作记录，否则查询应用所有的操作记录
+        if module_name := kwargs.get('module_name'):
+            self.queryset = self.queryset.filter(module_name=module_name)
         return super().list(request, *args, **kwargs)
-
-
-# System APIs start
-
-
-class SysOperationsViewSet(viewsets.ViewSet):
-    """操作记录相关 API，供内部系统使用"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def create(self, request):
-        slz = SysOperationSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-
-        Operation.objects.create(
-            application=data['application'],
-            type=data['operate_type'],
-            user=data['operator'],
-            region=data['application'].region,
-            source_object_id=data.get('source_object_id'),
-            module_name=data.get('module_name'),
-            extra_values=data.get('extra_values', {}),
-        )
-        return Response(status=status.HTTP_201_CREATED)
-
-
-# System APIs end

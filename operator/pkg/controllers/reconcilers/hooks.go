@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
@@ -51,7 +51,7 @@ type HookReconciler struct {
 }
 
 // Reconcile ...
-func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
+func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
 	current := r.getCurrentState(ctx, bkapp)
 
@@ -71,7 +71,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 			}
 			return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
 		case current.Progressing():
-			return r.Result.requeue(v1alpha1.DefaultRequeueAfter)
+			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 		case current.Succeeded():
 			return r.Result
 		default:
@@ -81,7 +81,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		}
 	}
 
-	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)); hook != nil {
+	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)); hook != nil {
 		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
 			return r.Result.withError(err)
 		}
@@ -90,7 +90,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	}
 
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-		Type:               v1alpha1.HooksFinished,
+		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Disabled",
 		Message:            "Pre-Release-Hook feature not turned on",
@@ -103,8 +103,8 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 }
 
 // 获取应用当前在集群中的状态
-func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.BkApp) resources.HookInstance {
-	currentStatus := bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)
+func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha2.BkApp) resources.HookInstance {
+	currentStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
 	pod := corev1.Pod{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
 	if err != nil {
@@ -116,13 +116,13 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.Bk
 
 	// 如果创建 Pod 后未正常写入 Phase, 这里则重新写这个状态
 	if currentStatus == nil {
-		currentStatus = &v1alpha1.HookStatus{
-			Type:      v1alpha1.HookPreRelease,
+		currentStatus = &paasv1alpha2.HookStatus{
+			Type:      paasv1alpha2.HookPreRelease,
 			Started:   lo.ToPtr(true),
 			StartTime: lo.ToPtr(pod.GetCreationTimestamp()),
 		}
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.HooksFinished,
+			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionFalse,
 			Reason:             "Progressing",
 			Message:            "The pre-release hook is executing.",
@@ -133,8 +133,8 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.Bk
 	healthStatus := kubestatus.CheckPodHealthStatus(&pod)
 	return resources.HookInstance{
 		Pod: &pod,
-		Status: &v1alpha1.HookStatus{
-			Type:      v1alpha1.HookPreRelease,
+		Status: &paasv1alpha2.HookStatus{
+			Type:      paasv1alpha2.HookPreRelease,
 			Started:   currentStatus.Started,
 			StartTime: currentStatus.StartTime,
 			Phase:     healthStatus.Phase,
@@ -146,7 +146,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.Bk
 
 // ExecuteHook 执行 Hook
 func (r *HookReconciler) ExecuteHook(
-	ctx context.Context, bkapp *v1alpha1.BkApp, instance *resources.HookInstance,
+	ctx context.Context, bkapp *paasv1alpha2.BkApp, instance *resources.HookInstance,
 ) error {
 	pod := corev1.Pod{}
 	// Only proceed when Pod resource is not found
@@ -160,14 +160,14 @@ func (r *HookReconciler) ExecuteHook(
 		return err
 	}
 
-	bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
-		Type:      v1alpha1.HookPreRelease,
+	bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+		Type:      paasv1alpha2.HookPreRelease,
 		Started:   lo.ToPtr(true),
 		StartTime: lo.ToPtr(metav1.Now()),
-		Phase:     v1alpha1.HealthProgressing,
+		Phase:     paasv1alpha2.HealthProgressing,
 	})
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-		Type:               v1alpha1.HooksFinished,
+		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionFalse,
 		Reason:             "Progressing",
 		Message:            "The pre-release hook is executing.",
@@ -179,16 +179,16 @@ func (r *HookReconciler) ExecuteHook(
 // UpdateStatus will update bkapp hook status from the given instance status
 func (r *HookReconciler) UpdateStatus(
 	ctx context.Context,
-	bkapp *v1alpha1.BkApp,
+	bkapp *paasv1alpha2.BkApp,
 	instance resources.HookInstance,
 	timeoutThreshold time.Duration,
 ) error {
 	bkapp.Status.SetHookStatus(*instance.Status)
 	switch {
 	case instance.Timeout(timeoutThreshold):
-		bkapp.Status.Phase = v1alpha1.AppFailed
+		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:   v1alpha1.HooksFinished,
+			Type:   paasv1alpha2.HooksFinished,
 			Status: metav1.ConditionFalse,
 			Reason: "Failed",
 			Message: fmt.Sprintf(
@@ -199,15 +199,15 @@ func (r *HookReconciler) UpdateStatus(
 		})
 	case instance.Succeeded():
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.HooksFinished,
+			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Finished",
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
 	case instance.Failed():
-		bkapp.Status.Phase = v1alpha1.AppFailed
+		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.HooksFinished,
+			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionFalse,
 			Reason:             "Failed",
 			Message:            fmt.Sprintf("PreReleaseHook fail to succeed: %s", instance.Status.Message),
@@ -219,7 +219,7 @@ func (r *HookReconciler) UpdateStatus(
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态
 func CheckAndUpdatePreReleaseHookStatus(
-	ctx context.Context, cli client.Client, bkapp *v1alpha1.BkApp, timeout time.Duration,
+	ctx context.Context, cli client.Client, bkapp *paasv1alpha2.BkApp, timeout time.Duration,
 ) (succeed bool, err error) {
 	r := NewHookReconciler(cli)
 	instance := r.getCurrentState(ctx, bkapp)

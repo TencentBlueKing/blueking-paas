@@ -25,7 +25,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
-from paasng.engine.constants import JobStatus
+from paas_wl.cnative.specs.models import AppModelDeploy
+from paasng.engine.constants import AppEnvName, JobStatus
 from paasng.engine.models import Deployment
 from paasng.platform.applications.models import Application
 from paasng.platform.operations.constant import OperationType as OP
@@ -103,13 +104,13 @@ class ProcessOperationObj(OperationObj):
     """Operation object: processs start/stop"""
 
     _text_tmpls = {
-        OP.PROCESS_START: _('启动 {process_type} 进程'),
-        OP.PROCESS_STOP: _('停止 {process_type} 进程'),
+        OP.PROCESS_START: _('启动 {module_name} 模块的 {process_type} 进程'),
+        OP.PROCESS_STOP: _('停止 {module_name} 模块的 {process_type} 进程'),
     }
 
     def get_text_display(self):
         process_type = self.operation.extra_values.get('process_type', _('未知'))
-        return self._text_tmpls[self.op_type].format(process_type=process_type)
+        return self._text_tmpls[self.op_type].format(module_name=self.operation.module_name, process_type=process_type)
 
 
 @dataclass
@@ -126,11 +127,6 @@ class AppDeploymentOperationObj(OperationObj):
     default_op_type = OP.DEPLOY_APPLICATION
     values_type = DeployOpValues
 
-    _env_name_map = {
-        'stag': _('预发布'),
-        'prod': _('生产'),
-    }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
@@ -139,7 +135,7 @@ class AppDeploymentOperationObj(OperationObj):
             self.extra_values = self.values_type(env_name='', has_succeeded=False)
 
     @classmethod
-    def create_operation_from_deployment(cls, deployment: Deployment):
+    def create_from_deployment(cls, deployment: Deployment):
         """Construct an operation object by deployment"""
         application = deployment.app_environment.application
         operation = Operation(
@@ -167,26 +163,66 @@ class AppDeploymentOperationObj(OperationObj):
             status = JobStatus.SUCCESSFUL if self.extra_values.has_succeeded else JobStatus.FAILED
 
         text_tmpl = self.get_tmpl_from_status(status)
-        env_name = _(self._env_name_map.get(self.extra_values.env_name, '未知'))
-        return text_tmpl.format(env_name=env_name)
+        env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
+        return text_tmpl.format(module_name=self.operation.module_name, env_name=env_name)
 
     @staticmethod
     def get_tmpl_from_status(status: JobStatus):
         if status == JobStatus.SUCCESSFUL:
-            return _('成功部署{env_name}环境')
+            return _('成功部署 {module_name} 模块的{env_name}')
         elif status == JobStatus.INTERRUPTED:
-            return _('中断了{env_name}环境的部署过程')
+            return _('中断了 {module_name} 模块的{env_name}的部署过程')
         else:
-            return _('尝试部署{env_name}环境失败')
+            return _('尝试部署 {module_name} 模块的{env_name}失败')
+
+
+class CNativeAppDeployOperationObj(OperationObj):
+    """Operation object: paas_wl.cnative.specs.models.AppModelDeploy"""
+
+    default_op_type = OP.DEPLOY_CNATIVE_APP
+    values_type = DeployOpValues
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            self.extra_values = self.values_type(**self.operation.extra_values)
+        except TypeError:
+            self.extra_values = self.values_type(env_name='', has_succeeded=False)
+
+    @classmethod
+    def create_from_deploy(cls, deploy: AppModelDeploy):
+        """Construct an operation object by deployment"""
+        application = Application.objects.get(id=deploy.application_id)
+        operation = Operation(
+            region=deploy.region,
+            type=cls.default_op_type.value,
+            application=application,
+            user=deploy.operator,
+            source_object_id=deploy.pk,
+            module_name=deploy.module.name,
+            extra_values=asdict(
+                cls.values_type(
+                    env_name=deploy.environment_name,
+                    has_succeeded=deploy.has_succeeded(),
+                    status=deploy.status,
+                )
+            ),
+        )
+        operation.save()
+        return operation
+
+    def get_text_display(self) -> str:
+        text_tmpl = (
+            _('成功部署 {module_name} 模块的{env_name}')
+            if self.extra_values.has_succeeded
+            else _('尝试部署 {module_name} 模块的{env_name}失败')
+        )
+        env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
+        return text_tmpl.format(module_name=self.operation.module_name, env_name=env_name)
 
 
 class AppOfflineOperationObj(OperationObj):
     values_type = namedtuple('values_type', "env_name has_succeeded")
-
-    _env_name_map = {
-        'stag': '预发布',
-        'prod': '生产',
-    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -229,17 +265,16 @@ class AppOfflineOperationObj(OperationObj):
         Operation.objects.create(**cls.assemble_operation_params(offline_instance))
 
     def get_text_display(self):
-        # 未知 env_name 或 未指定都直接返回原来定义的内容
-        env_name = _(self._env_name_map.get(self.extra_values.env_name, ""))
+        env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
         if not env_name:
             return super().get_text_display()
 
         if self.extra_values.has_succeeded:
-            text_tmpl = _('成功下架{env_name}环境')
+            text_tmpl = _('成功下架 {module_name} 模块的{env_name}')
         else:
-            text_tmpl = _('尝试下架{env_name}环境')
+            text_tmpl = _('尝试下架 {module_name} 模块的{env_name}')
 
-        return text_tmpl.format(env_name=env_name)
+        return text_tmpl.format(module_name=self.operation.module_name, env_name=env_name)
 
 
 class CreateModuleOperationObj(OperationObj):
@@ -264,6 +299,7 @@ class ApplyCloudApiOperationObj(OperationObj):
 
 _operation_cls_map = {
     OP.DEPLOY_APPLICATION: AppDeploymentOperationObj,
+    OP.DEPLOY_CNATIVE_APP: CNativeAppDeployOperationObj,
     OP.PROCESS_START: ProcessOperationObj,
     OP.PROCESS_STOP: ProcessOperationObj,
     OP.CREATE_MODULE: CreateModuleOperationObj,

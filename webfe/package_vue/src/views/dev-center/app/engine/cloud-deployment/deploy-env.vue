@@ -151,7 +151,7 @@
                     <tooltip-confirm
                       ref="deleteTooltip"
                       :ok-text="$t('确定')"
-                      :cancel-text="'取消'"
+                      :cancel-text="$t('取消')"
                       :theme="'ps-tooltip'"
                       @ok="deleteEnvData(index, varItem)"
                     >
@@ -183,16 +183,7 @@
           v-else
           class="ps-no-result"
         >
-          <div class="text">
-            <img
-              class="img-exception"
-              src="/static/images/empty.png"
-              alt=""
-            >
-            <p class="text-exception">
-              {{ $t('暂无数据') }}
-            </p>
-          </div>
+          <table-empty empty />
         </div>
         <bk-button
           theme="primary"
@@ -280,6 +271,7 @@
     // import dropdown from '@/components/ui/Dropdown';
     import tooltipConfirm from '@/components/ui/TooltipConfirm';
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import i18n from '@/language/i18n.js';
 
     export default {
         components: {
@@ -316,24 +308,24 @@
                     name: [
                         {
                             required: true,
-                            message: this.$t('NAME是必填项'),
+                            message: i18n.t('NAME是必填项'),
                             trigger: 'blur'
                         },
                         {
                             regex: /^[-._a-zA-Z][-._a-zA-Z0-9]*$/,
-                            message: this.$t('环境变量名称必须由字母字符、数字、下划线（_）、连接符（-）、点（.）组成，并且不得以数字开头（例如“my.env-name”或“MY_ENV.NAME”, 或 “MyEnvName1”）'),
+                            message: i18n.t('环境变量名称必须由字母字符、数字、下划线（_）、连接符（-）、点（.）组成，并且不得以数字开头（例如“my.env-name”或“MY_ENV.NAME”, 或 “MyEnvName1”）'),
                             trigger: 'blur'
                         }
                     ],
                     value: [
                         {
                             required: true,
-                            message: this.$t('VALUE是必填项'),
+                            message: i18n.t('VALUE是必填项'),
                             trigger: 'blur'
                         },
                         {
                             max: 2048,
-                            message: this.$t('不能超过2048个字符'),
+                            message: i18n.t('不能超过2048个字符'),
                             trigger: 'blur'
                         }
                     ],
@@ -345,7 +337,7 @@
                                 }
                                 return value.trim().length <= 200;
                             },
-                            message: this.$t('不能超过200个字符'),
+                            message: i18n.t('不能超过200个字符'),
                             trigger: 'blur'
                         }
                     ]

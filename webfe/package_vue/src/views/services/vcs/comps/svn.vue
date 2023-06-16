@@ -43,7 +43,7 @@
                   href="javascript:"
                   @click="openPassword"
                 >
-                  {{ $t('忘记密码') }}
+                  <span v-dashed>{{ $t('忘记密码') }}</span>
                 </a>
               </div>
               <div
@@ -95,18 +95,6 @@
           </ul>
         </div>
       </div>
-      <!-- <div class="middle" v-else>
-                <div class="coding" v-if="GLOBAL.APP_VERSION !== 'ee'">
-                    <h2> {{ $t('蓝鲸为开发者提供SVN服务作为应用代码仓库！') }} </h2>
-                    <p> {{ $t('初始化账号后，你可以使用SVN客户端访问你的项目代码；蓝鲸会给每个蓝鲸应用默认分配一个代码仓库！') }} </p>
-                    <p><a href="https://tortoisesvn.net/downloads.html" class="code-a" target="_blank"> {{ $t('安装SVN客户端') }} <i class="paasng-icon paasng-angle-double-right"></i></a></p>
-                    <p v-if="!formLoading"><a href="javascript:" class="checkout code-btn" @click="initialize()"> {{ $t('初始化蓝鲸SVN账号') }} </a></p>
-                    <p v-if="formLoading" class="form-loading">
-                        <span> {{ $t('初始化蓝鲸SVN账号中，请稍候') }} </span>
-                        <img src="/static/images/loading_2_16x16.gif" />
-                    </p>
-                </div>
-            </div> -->
     </div>
   </div>
 </template>

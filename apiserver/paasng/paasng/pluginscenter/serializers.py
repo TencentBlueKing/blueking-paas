@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Optional, Type
 
 import arrow
+import cattr
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
@@ -31,7 +32,6 @@ from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionR
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
     OperationRecord,
     PluginDefinition,
@@ -40,6 +40,7 @@ from paasng.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
+from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
 
 
@@ -96,6 +97,12 @@ class PluginUniqueValidator:
         return queryset
 
 
+class ItsmDetailSLZ(serializers.Serializer):
+    ticket_url = serializers.CharField(default=None)
+    sn = serializers.CharField(help_text="ITSM 单据单号")
+    fields = serializers.ListField(child=serializers.DictField())
+
+
 class PluginRoleSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="角色名称")
     id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
@@ -142,6 +149,8 @@ class PlainReleaseStageSLZ(serializers.Serializer):
 
 
 class PluginReleaseStageSLZ(serializers.ModelSerializer):
+    itsm_detail = ItsmDetailSLZ()
+
     class Meta:
         model = PluginReleaseStage
         exclude = ("id", "release", "created", "updated", "next_stage")
@@ -171,12 +180,6 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     class Meta:
         model = PluginRelease
         exclude = ("plugin", "stages_shortcut")
-
-
-class ItsmDetailSLZ(serializers.Serializer):
-    ticket_url = serializers.CharField(default=None)
-    sn = serializers.CharField(help_text="ITSM 单据单号")
-    fields = serializers.ListField(child=serializers.DictField())
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):
@@ -251,19 +254,36 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
     return serializers.CharField(**init_kwargs)
 
 
+def make_array_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate a Field for verifying a array according to the given field_schema"""
+    child_field_schema = cattr.structure(field_schema.items, FieldSchema)
+    child_field = make_json_schema_field(child_field_schema)
+    return serializers.ListField(child=child_field)
+
+
+def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate fields for validating data according to the given field_schema"""
+    type_ = field_schema.type
+    if type_ == "array":
+        return make_array_field(field_schema)
+    elif type_ == "string":
+        return make_string_field(field_schema)
+    raise NotImplementedError(f"NotImplemented field type: {type_} for plugin's extraFields")
+
+
 def make_extra_fields_slz(extra_fields: Dict[str, FieldSchema]) -> Type[serializers.Serializer]:
     """generate a Serializer for verifying the fields of ExtraFields"""
     return type(
         "ExtraFieldSLZ",
         (serializers.Serializer,),
-        {key: make_string_field(field) for key, field in extra_fields.items()},
+        {key: make_json_schema_field(field) for key, field in extra_fields.items()},
     )
 
 
 def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[serializers.Serializer]:
     """generate a SLZ for verifying the creation/update of "Plugin" according to the PluginDefinition definition"""
     fields = {
-        "name": I18NExtend(make_string_field(pd.basic_info_definition.name_schema)),
+        "name": I18NExtend(make_json_schema_field(pd.basic_info_definition.name_schema)),
         "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
         "Meta": type(
             "Meta",
@@ -279,7 +299,7 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
         ),
     }
     if creation:
-        fields["id"] = make_string_field(pd.basic_info_definition.id_schema)
+        fields["id"] = make_json_schema_field(pd.basic_info_definition.id_schema)
         fields["template"] = TemplateChoiceField(
             choices=[(template.id, template) for template in pd.basic_info_definition.init_templates]
         )

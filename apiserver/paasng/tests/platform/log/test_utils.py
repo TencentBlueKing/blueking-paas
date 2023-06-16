@@ -16,153 +16,124 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import datetime
 from typing import Dict, List
-from unittest import mock
 
 import pytest
 
-from paasng.platform.log.utils import detect_indexes, get_es_term
+from paasng.platform.log.dsl import SearchRequestSchema
+from paasng.platform.log.utils import get_es_term, parse_request_to_es_dsl
+from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.es_log.misc import format_timestamp
 
 
-class TestUtils:
-    @pytest.fixture
-    def make_stats_indexes_fake_resp(self):
-        def _make_stats_indexes_fake_resp(indexes: List[str]):
-            def _wrapper(*args, **kwargs):
-                results: Dict[str, Dict] = {}
-                for index in indexes:
-                    results[index] = {}
+@pytest.fixture
+def make_stats_indexes_fake_resp():
+    def _make_stats_indexes_fake_resp(indexes: List[str]):
+        def _wrapper(*args, **kwargs):
+            results: Dict[str, Dict] = {}
+            for index in indexes:
+                results[index] = {}
 
-                return {"indices": results}
+            return {"indices": results}
 
-            return _wrapper
+        return _wrapper
 
-        return _make_stats_indexes_fake_resp
+    return _make_stats_indexes_fake_resp
 
-    @pytest.mark.parametrize(
-        "pattern, expected, start_time, end_time, indexes",
-        [
-            # 正常匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.01"],
-                "2020-12-30 00:00:00",
-                "2021-01-01 08:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 时区问题, 导致无匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2021-01-01 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # pattern 不匹配
-            (
-                "k8s_app_log_sz-(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2021-01-01 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 时间范围不匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2020-12-31 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 未填写必须部分
-            (
-                "k8s_app_log_szp-",
-                ValueError,
-                "2020-12-30 00:00:00",
-                "2020-12-31 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 未填写具体的 pattern 主体
-            (
-                "(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2021-01-02 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 匹配多个
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02"],
-                "2020-12-30 00:00:00",
-                "2021-01-02 08:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 时区问题, 导致仅到匹配一个
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.01"],
-                "2020-12-30 00:00:00",
-                "2021-01-02 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 包含 grokfailure 情况下匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.02"],
-                "2020-12-30 00:00:00",
-                "2021-01-02 08:00:00",
-                [
-                    "k8s_app_log_szp-grokfailure-2021.01.01",
-                    "k8s_app_log_szp-grokfailure-2021.01.02",
-                    "k8s_app_log_szp-2021.01.02",
-                    "k8s_app_log_szp-2021.01.03",
-                ],
-            ),
-        ],
-    )
-    def test_detect_indexes(self, pattern, expected, start_time, end_time, indexes, make_stats_indexes_fake_resp):
-        """探测 indexes"""
-        with mock.patch('elasticsearch.client.Transport.perform_request') as perform_request:
-            perform_request.side_effect = make_stats_indexes_fake_resp(indexes)
 
-            if type(expected) is type and issubclass(expected, Exception):
-                with pytest.raises(expected):
-                    detect_indexes(
-                        datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S"),
-                        datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S"),
-                        pattern,
-                    )
-            else:
-                assert set(expected) == set(
-                    detect_indexes(
-                        datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S"),
-                        datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S"),
-                        pattern,
-                    )
-                )
+@pytest.mark.parametrize(
+    "query_term,mappings,expected",
+    [
+        ("dd", {"dd": {"type": "text"}}, "dd.keyword"),
+        ("dd", {"dd": {"type": "int"}}, "dd"),
+        ("dd", {"dd": {"type": "keyword"}}, "dd"),
+        ("dd", {"xxx": {"type": "keyword"}}, "dd"),
+        ("json.levelname", {"json": {"properties": {"levelname": {"type": "text"}}}}, "json.levelname.keyword"),
+        ("json.levelname", {"json": {"properties": {"levelname": {"type": "keyword"}}}}, "json.levelname"),
+        (
+            "json.levelname.no",
+            {"json": {"properties": {"levelname": {"properties": {"no": {"type": "keyword"}}}}}},
+            "json.levelname.no",
+        ),
+        (
+            "json.levelname.no",
+            {"json": {"properties": {"levelname": {"properties": {"no": {"type": "text"}}}}}},
+            "json.levelname.no.keyword",
+        ),
+    ],
+)
+def test_get_es_term(query_term, mappings, expected):
+    assert get_es_term(query_term, mappings) == expected
 
-    @pytest.mark.parametrize(
-        "query_term,mappings,expected",
-        [
-            ("dd", {"dd": {"type": "text"}}, "dd.keyword"),
-            ("dd", {"dd": {"type": "int"}}, "dd"),
-            ("dd", {"dd": {"type": "keyword"}}, "dd"),
-            ("dd", {"xxx": {"type": "keyword"}}, "dd"),
-            ("json.levelname", {"json": {"properties": {"levelname": {"type": "text"}}}}, "json.levelname.keyword"),
-            ("json.levelname", {"json": {"properties": {"levelname": {"type": "keyword"}}}}, "json.levelname"),
-            (
-                "json.levelname.no",
-                {"json": {"properties": {"levelname": {"properties": {"no": {"type": "keyword"}}}}}},
-                "json.levelname.no",
+
+@pytest.mark.parametrize(
+    "query_conditions, mappings, expected",
+    [
+        (
+            SearchRequestSchema(query={"query_string": "foo"}),
+            {},
+            {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+        ),
+        (
+            SearchRequestSchema(query={"query_string": "foo", "terms": {"app_code": {"foo"}}}),
+            {},
+            {
+                'bool': {
+                    'must': [
+                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+                        {'terms': {'app_code': ['foo']}},
+                    ]
+                }
+            },
+        ),
+        (
+            SearchRequestSchema(query={"query_string": "foo", "terms": {"app_code": ["foo"]}}),
+            {"app_code": {"type": "text"}},
+            {
+                'bool': {
+                    'must': [
+                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+                        {'terms': {'app_code.keyword': ['foo']}},
+                    ]
+                }
+            },
+        ),
+        (
+            SearchRequestSchema(
+                query={
+                    "query_string": "foo",
+                    "terms": {"app_code": ["foo"]},
+                    "exclude": {"module_name": ["bar"]},
+                },
+                sort={"response_time": "desc"},
             ),
-            (
-                "json.levelname.no",
-                {"json": {"properties": {"levelname": {"properties": {"no": {"type": "text"}}}}}},
-                "json.levelname.no.keyword",
-            ),
-        ],
-    )
-    def test_get_es_term(self, query_term, mappings, expected):
-        assert get_es_term(query_term, mappings) == expected
+            {"app_code": {"type": "text"}},
+            {
+                'bool': {
+                    'must': [
+                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+                        {'terms': {'app_code.keyword': ['foo']}},
+                    ],
+                    'must_not': [{'terms': {'module_name': ['bar']}}],
+                }
+            },
+        ),
+    ],
+)
+def test_parse_request_to_es_dsl(query_conditions, mappings, expected):
+    assert parse_request_to_es_dsl(query_conditions, mappings).to_dict() == expected
+
+
+# 新的日志只返回 timestamp(时间戳)
+# 测试将 timestamp(时间戳) 转换成旧的 ts 字段的格式是否符合预期
+@pytest.mark.parametrize(
+    # es_timestamp 即 @timestamp 字段, 实际上这个字段存的是 datetime
+    "es_timestamp, expected_ts",
+    [
+        ("2023-04-11T11:13:58.102Z", "2023-04-11 19:13:58"),
+        ("2023-04-11T11:13:57.958Z", "2023-04-11 19:13:57"),
+    ],
+)
+def test_legacy_ts_field(es_timestamp: str, expected_ts):
+    timestamp = format_timestamp(es_timestamp, input_format="datetime")
+    assert convert_timestamp_to_str(timestamp) == expected_ts

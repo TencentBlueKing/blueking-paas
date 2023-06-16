@@ -18,15 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf.urls import url
 
-from paasng.plat_admin.system.views import (
-    ApplicationAddressViewSet,
-    ApplicationBuiltinEnvViewSet,
-    LessCodeSystemAPIViewSet,
-    SysAddonsAPIViewSet,
-    SysApplicationViewSet,
-    SysMarketViewSet,
-    SysUniApplicationViewSet,
-)
+from paasng.plat_admin.system.views import LessCodeSystemAPIViewSet, SysAddonsAPIViewSet, SysUniApplicationViewSet
 from paasng.utils.basic import make_app_pattern, re_path
 
 urlpatterns = [
@@ -40,6 +32,12 @@ urlpatterns = [
         'sys/api/uni_applications/query/by_username/$',
         SysUniApplicationViewSet.as_view({'get': 'query_by_username'}),
         name='sys.api.uni_applications.list_by_username',
+    ),
+    # 分页查询应用基本信息
+    url(
+        'sys/api/uni_applications/list/minimal/$',
+        SysUniApplicationViewSet.as_view({'get': 'list_minimal_app'}),
+        name='sys.api.uni_applications.list_minimal_app',
     ),
     re_path(
         make_app_pattern(suffix="/lesscode/query_db_credentials", prefix='sys/api/bkapps/applications/'),
@@ -63,25 +61,13 @@ urlpatterns = [
         SysAddonsAPIViewSet.as_view({"get": "list_services"}),
         name="sys.api.applications.list_addons",
     ),
-    # Query application's modules and envs
-    url(
-        'sys/api/applications/query/$',
-        SysApplicationViewSet.as_view({'get': 'query'}),
-        name='sys.api.applications.query',
-    ),
-    url(
-        'sys/api/market/applications/(?P<code>[^/]+)/entrance/$',
-        SysMarketViewSet.as_view({'get': 'get_entrance'}),
-        name='sys.api.market.entrance',
-    ),
     re_path(
-        make_app_pattern("/preallocated_addresses/", prefix='sys/api/bkapps/applications/', include_envs=True),
-        ApplicationAddressViewSet.as_view({"get": "list_preallocated_addresses"}),
-        name="sys.api.preallocated_addresses",
-    ),
-    re_path(
-        make_app_pattern("/builtin_envs/", prefix='sys/api/bkapps/applications/', include_envs=True),
-        ApplicationBuiltinEnvViewSet.as_view({"get": "list_builtin_envs"}),
-        name="sys.api.builtin_envs",
+        make_app_pattern(
+            suffix="/services/(?P<service_id>[0-9a-f-]{32,36})/specs/",
+            include_envs=False,
+            prefix="sys/api/bkapps/applications/",
+        ),
+        SysAddonsAPIViewSet.as_view({"get": "retrieve_specs"}),
+        name="sys.api.applications.retrieve_specs",
     ),
 ]

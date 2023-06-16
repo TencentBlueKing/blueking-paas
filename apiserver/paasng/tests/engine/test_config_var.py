@@ -21,23 +21,21 @@ from textwrap import dedent
 from typing import List
 
 import pytest
-from django.conf import settings
 from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
 from rest_framework.exceptions import ValidationError
 
-from paasng.engine.constants import AppRunTimeBuiltinEnv, ConfigVarEnvName
+from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.config_var import (
     ENVIRONMENT_ID_FOR_GLOBAL,
     ENVIRONMENT_NAME_FOR_GLOBAL,
     ConfigVar,
-    generate_builtin_env_vars,
     get_config_vars,
 )
 from paasng.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.engine.serializers import ConfigVarFormatSLZ
 from paasng.platform.modules.models import Module
-from tests.utils.helpers import initialize_module, override_region_configs
+from tests.utils.helpers import initialize_module
 
 pytestmark = pytest.mark.django_db
 
@@ -360,39 +358,3 @@ class TestExportedConfigVars:
     )
     def test_to_file_content(self, env_variables, expected):
         assert ExportedConfigVars(env_variables=env_variables).to_file_content() == expected
-
-
-class TestBuiltInEnvVars:
-    @pytest.mark.parametrize("provide_env_vars_platform, contain_bk_envs", [(True, True), (False, True)])
-    def test_bk_platform_envs(self, bk_app, provide_env_vars_platform, contain_bk_envs):
-        def update_region_hook(config):
-            config['provide_env_vars_platform'] = provide_env_vars_platform
-
-        with override_region_configs(bk_app.region, update_region_hook):
-            bk_module = bk_app.get_default_module()
-            bk_stag_env = bk_module.envs.get(environment='stag')
-            config_vars = generate_builtin_env_vars(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
-
-            # 这些环境变量在所有版本都有
-            assert ('BK_COMPONENT_API_URL' in config_vars) == contain_bk_envs
-            assert ('BK_PAAS2_URL' in config_vars) == contain_bk_envs
-            assert ('BK_API_URL_TMPL' in config_vars) == contain_bk_envs
-
-            # BK_LOGIN_URL 只在特殊开启的版本才写入
-            assert ('BK_LOGIN_URL' in config_vars) == provide_env_vars_platform
-            # 应用是需要写入蓝鲸体系其他系统访问地址的环境变量
-            if provide_env_vars_platform:
-                assert set(settings.BK_PLATFORM_URLS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
-
-    def test_builtin_env_keys(self, bk_app):
-        bk_module = bk_app.get_default_module()
-        bk_stag_env = bk_module.envs.get(environment='stag')
-        config_vars = generate_builtin_env_vars(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
-
-        assert {'BKPAAS_LOGIN_URL', 'BKPAAS_APP_CODE', 'BKPAAS_APP_ID', 'BKPAAS_APP_SECRET'}.issubset(
-            config_vars.keys()
-        )
-
-        # 运行时相关的环境变量
-        runtime_env_keys = [f'{settings.CONFIGVAR_SYSTEM_PREFIX}{key}' for key in AppRunTimeBuiltinEnv.get_values()]
-        assert set(runtime_env_keys).issubset(config_vars.keys())

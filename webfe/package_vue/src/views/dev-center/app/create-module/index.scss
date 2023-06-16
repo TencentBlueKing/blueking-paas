@@ -1,3 +1,4 @@
+@import '~@/assets/css/mixins/border-active-logo.scss';
 .create-item {
     padding: 27px 30px;
     margin-top: 22px;
@@ -76,7 +77,7 @@
 
 p.app-name {
     padding-left: 10px;
-    line-height: 40px;
+    line-height: 32px;
     color: #63656e;
     border: 1px solid #dcdee5;
     border-radius: 2px;
@@ -105,11 +106,14 @@ p.app-name {
 
 .form-label {
     color: #63656e;
-    line-height: 36px;
+    line-height: 32px;
     font-size: 14px;
     padding-top: 10px;
     width: 90px;
     text-align: right;
+    &.template {
+        line-height: 48px;
+    }
 }
 
 .card-container {
@@ -175,10 +179,6 @@ p.app-name {
     left: -600px;
 }
 
-input.ps-form-control {
-    padding: 4px 10px;
-}
-
 .form-group{
     display: flex;
     &-flex{
@@ -208,13 +208,11 @@ input.ps-form-control {
             font-size: 12px;
             display: inline-block;
             vertical-align: middle;
-            padding-left: 5px;
         }
     }
 }
 
 .form-actions {
-    text-align: center;
     margin: 24px 0 18px;
 }
 
@@ -315,7 +313,7 @@ input.ps-form-control {
         .tab-box {
             display: flex;
             list-style: none;
-    
+            
             .tab-item {
                 margin-right: 10px;
                 width: 144px;
@@ -328,29 +326,20 @@ input.ps-form-control {
                 color: #63656e;
                 cursor: pointer;
                 position: relative;
+
+                &.template {
+                    width: 200px;
+                    height: 48px;
+                    line-height: 48px;
+                }
     
                 &.active {
                     background: #fff;
-                    border: 1px solid #3a84ff;
+                    border: 2px solid #3a84ff;
                     border-radius: 2px;
                     color: #3a84ff;
     
-                    &::after {
-                        width: 16px;
-                        height: 16px;
-                        border: 2px solid #fff;
-                        border-radius: 50%;
-                        content: "\e157";
-                        font-family: 'paasng' !important;
-                        font-size: 12px;
-                        position: absolute;
-                        right: -8px;
-                        top: -8px;
-                        line-height: 1;
-                        display: inline-block;
-                        z-index: 10;
-                        background: #fff;
-                    }
+                    @include border-active-logo;
                 }
             }
         }
@@ -583,23 +572,13 @@ input::-webkit-input-placeholder {
         padding: 0 16px 0 14px;
         background-color: #fff;
         color: #3A84FF;
-        &::after {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            content: "\e157";
-            font-family: 'paasng' !important;
-            font-size: 12px;
-            position: absolute;
-            right: -8px;
-            top: -8px;
-            line-height: 1;
-            display: inline-block;
-            z-index: 10;
-            background: #fff;
-        }
+
+        @include border-active-logo;
     }
+}
+
+.en-label.wrap .form-label {
+    width: 100px;
 }
 
 .form-group-dir{
@@ -662,8 +641,15 @@ input::-webkit-input-placeholder {
 
 .form-actions{
     .ps-btn-primary{
-        background: #1768EF;
         font-size: 14px;
+        background: #3a84ff;
+        margin-left: 0 !important;
+        &:hover {
+            
+            background-color: #699df4;
+            border-color: #699df4;
+            opacity: 1;
+        }
     }
     .ps-btn-isdisabled{
         background-color: #dcdee5 !important;

@@ -20,6 +20,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
@@ -30,9 +31,6 @@ from paasng.accessories.iam.helpers import (
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import ClusterType
-from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.shortcuts import make_internal_client
-from paasng.engine.controller.state import controller_client
 from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -41,7 +39,8 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
-from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
+from paasng.platform.core.storages.redisdb import DefaultRediStore
 from paasng.utils.error_codes import error_codes
 
 
@@ -60,8 +59,44 @@ class ApplicationListView(GenericTemplateView):
         if 'view' not in kwargs:
             kwargs['view'] = self
 
+        # 获取所有应用的资源使用总量
+        store = DefaultRediStore(rkey='quotas::app')
+        app_resource_quotas = store.get()
+        # 未获取到，则在在后台计算
+        if not app_resource_quotas:
+            cal_app_resource_quotas.delay()
+        else:
+            # 以获取到所有应用的资源使用量，则按资源使用率排序分页
+            return self.get_app_resource_context_data(app_resource_quotas, **kwargs)
+
         data = self.list(self.request, *self.args, **self.kwargs)
         kwargs['application_list'] = data
+        kwargs['pagination'] = self.get_pagination_context(self.request)
+        return kwargs
+
+    def get_app_resource_context_data(self, app_resource_quotas, **kwargs):
+        # 手动按资源的使用量排序分页
+        offset = self.paginator.get_offset(self.request)
+        limit = self.paginator.get_limit(self.request)
+        queryset = self.filter_queryset(self.get_queryset())
+
+        if self.request.query_params.get('search_term'):
+            # 有查询参数则不按资源用量排序
+            page = queryset[offset : offset + limit]
+        else:
+            # 应用资源排序后的信息
+            page_app_code_list = list(app_resource_quotas.keys())[offset : offset + limit]
+            page = queryset.filter(code__in=page_app_code_list)
+
+        data = self.get_serializer(page, many=True, context={"app_resource_quotas": app_resource_quotas}).data
+        data = sorted(data, key=lambda item: item['resource_quotas']['memory'], reverse=True)
+        kwargs['application_list'] = data
+
+        # 没有调用默认的 paginate_queryset 方法，需要手动给 paginator 的参数赋值
+        self.paginator.count = self.paginator.get_count(queryset)
+        self.paginator.limit = limit
+        self.paginator.offset = offset
+        self.paginator.request = self.request
         kwargs['pagination'] = self.get_pagination_context(self.request)
         return kwargs
 
@@ -83,8 +118,8 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs['application'] = application
         kwargs['cluster_choices'] = [
-            {'id': cluster['name'], 'name': f"{cluster['name']} -- {ClusterType.get_choice_label(cluster['type'])}"}
-            for cluster in make_internal_client().list_region_clusters(application['region'])
+            {'id': cluster.name, 'name': f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
+            for cluster in RegionClusterService(application['region']).list_clusters()
         ]
         return kwargs
 
@@ -117,12 +152,7 @@ class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
         slz = BindEnvClusterSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        engine_app = self.get_engine_app_via_path()
-        controller_client.bind_app_cluster(
-            engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
-        )
-        # 清理 engine_app 集群信息缓存
-        get_engine_app_cluster.invalidate(engine_app.region, engine_app.name)
+        EnvClusterService(env=self.get_env_via_path()).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

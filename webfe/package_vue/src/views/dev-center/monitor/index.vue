@@ -28,7 +28,7 @@
             >
               <div
                 slot="trigger"
-                style="width: 310px;"
+                style="width: 310px;display: flex;justify-content: end;"
                 @click="toggleDatePicker"
               >
                 <button class="action-btn timer">
@@ -119,9 +119,13 @@
                   :outer-border="false"
                   :header-border="false"
                 >
+                  <div slot="empty">
+                    <table-empty empty />
+                  </div>
                   <bk-table-column
                     :label="$t('告警模块')"
                     width="180"
+                    :render-header="$renderHeader"
                   >
                     <template slot-scope="{ row }">
                       <span>{{ row.module }}</span>
@@ -130,6 +134,7 @@
                   <bk-table-column
                     :label="$t('告警环境')"
                     width="90"
+                    :render-header="$renderHeader"
                   >
                     <template slot-scope="{ row }">
                       <span>{{ row.env === 'prod' ? $t('生产环境') : $t('预发布环境') }}</span>
@@ -138,6 +143,7 @@
                   <bk-table-column
                     :label="$t('告警类型')"
                     width="200"
+                    :render-header="$renderHeader"
                   >
                     <template slot-scope="{ row }">
                       <span v-bk-tooltips="row.genre.name">{{ row.genre.name || '--' }}</span>
@@ -147,13 +153,18 @@
                     :label="$t('告警次数')"
                     prop="count"
                     width="80"
+                    :render-header="$renderHeader"
                   />
                   <bk-table-column
                     :label="$t('最近一次告警开始时间')"
                     prop="start"
                     width="150"
+                    :render-header="$renderHeader"
                   />
-                  <bk-table-column :label="$t('最近一次告警内容')">
+                  <bk-table-column
+                    :label="$t('最近一次告警内容')"
+                    :render-header="$renderHeader"
+                  >
                     <template slot-scope="{ row }">
                       <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
                     </template>
@@ -165,12 +176,12 @@
         </template>
         <template v-if="!isLoading && !curPageData.length">
           <div class="ps-no-result">
-            <div class="text">
-              <p>
-                <i class="paasng-icon paasng-empty" />
-              </p>
-              <p> {{ $t('暂无数据') }} </p>
-            </div>
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMonitorList"
+              @clear-filter="clearFilterKey"
+            />
           </div>
         </template>
       </div>
@@ -315,7 +326,11 @@
                 },
                 timerDisplay: this.$t('最近1天'),
                 isDatePickerOpen: false,
-                curDateType: 'custom'
+                curDateType: 'custom',
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         watch: {
@@ -509,6 +524,7 @@
                 }
 
                 this.curPageData = this.curSearchData.slice(startIndex, endIndex);
+                this.updateTableEmptyConfig();
             },
 
             async fetchMonitorList (page = 1) {
@@ -527,7 +543,10 @@
                     this.dataList.splice(0, this.dataList.length, ...(res.results || []));
                     this.initPageConf();
                     this.curPageData = this.getDataByPage(this.pageConf.current);
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -535,6 +554,14 @@
                 } finally {
                     this.isLoading = false;
                 }
+            },
+
+            clearFilterKey () {
+                this.filterKey = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.filterKey;
             }
         }
     };
@@ -549,11 +576,7 @@
     .data-search {
         display: inline-block;
         position: relative;
-        top: 3px;
-        left: 183px;
-        &.reset-left {
-            left: 40px;
-        }
+        top: 1px;
     }
 
     .paas-search {

@@ -66,18 +66,6 @@ def get_database_conf(
 NAME_FOR_SIMPLE_JWT = 'ONE_SIMPLE_JWT_AUTH_KEY'
 
 
-def get_internal_services_jwt_auth_conf(settings: LazySettings) -> Optional[Dict]:
-    """Get INTERNAL_SERVICES_JWT_AUTH_CONF from LazySettings object"""
-    result = settings.get('INTERNAL_SERVICES_JWT_AUTH_CONF')
-    if result:
-        return result
-
-    key = settings.get(NAME_FOR_SIMPLE_JWT)
-    if key:
-        return {'iss': 'paas-v3', 'key': key}
-    return None
-
-
 def get_paas_service_jwt_clients(settings: LazySettings) -> List:
     """Get PAAS_SERVICE_JWT_CLIENTS from LazySettings object"""
     jwt_clients = settings.get('PAAS_SERVICE_JWT_CLIENTS') or []

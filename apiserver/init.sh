@@ -53,11 +53,6 @@ ensure-apigw() {
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml
     
-    # 同步网关策略
-    python manage.py sync_apigw_strategies \
-    --api-name "${api_name}" \
-    -f support-files/apigw/definition.yaml
-    
     # 为应用主动授权
     python manage.py grant_apigw_permissions \
     --api-name "${api_name}" \
@@ -65,6 +60,7 @@ ensure-apigw() {
     
     # 同步网关资源
     python manage.py sync_apigw_resources \
+    --delete \
     --api-name "${api_name}" \
     -f support-files/apigw/resources.yaml
     
@@ -132,6 +128,7 @@ ensure-python-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${python_buildpack_version}.tar" \
     --environment \
+    "BUILDPACK_S3_BASE_URL=${vendor_url}/python" \
     "BUILDPACK_VENDOR_URL=${vendor_url}/python" \
     "PIP_INDEX_URL=${pip_index_url}" \
     "PIP_EXTRA_INDEX_URL=${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/" \
@@ -176,14 +173,14 @@ ensure-golang-buildpack() {
     buildpack_name="$6"
     
     # golang
-    go_buildpack_version=v153
+    go_buildpack_version=v168
     python manage.py manage_buildpack \
     --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Golang" \
     --display_name_en "Golang" \
-    --description_zh_cn "默认 Go 版本为1.12，支持 GoModules/Vendor 环境" \
-    --description_en "Default Go version is 1.12 and supports GoModules/Vendor environment" \
+    --description_zh_cn "默认 Go 版本为1.12.17，最大支持版本1.19.1" \
+    --description_en "Default Go Version: 1.12.17, Highest supported version: 1.19.1" \
     --tag "${go_buildpack_version}" \
     --language Go \
     --type tar \

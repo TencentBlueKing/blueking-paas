@@ -110,7 +110,7 @@ le<template lang="html">
                       :key="i"
                       class="pl15 message-container"
                     >
-                      {{ item.type }}: {{ item.reason }}, {{ item.message || '无' }}
+                      {{ item.type }}: {{ item.reason }}, {{ item.message || $t('无') }}
                       <i
                         v-if="item.status === 'True'"
                         class="paasng-icon paasng-correct success-icon"
@@ -275,9 +275,11 @@ le<template lang="html">
             if (this.environment === 'prod') {
                 this.activeIndex = 1;
             }
+            this.$store.commit('updataEnvEventData', []);
             this.init();
         },
         beforeDestroy () {
+            this.$store.commit('updataEnvEventData', ['stag', 'prod']);
             clearInterval(this.intervalTimer);
         },
         methods: {
@@ -373,6 +375,8 @@ le<template lang="html">
         color: #FF9C01;
         font-size: 12px;
         padding-top: 2px;
+        height: 24px;
+        line-height: 24px;
     }
     .message-container{
         display: flex;
@@ -447,6 +451,5 @@ le<template lang="html">
     .status-tab-cls{
         border: 1px solid #e6e9ea;
         border-top: none;
-        margin-bottom: 20px;
     }
 </style>

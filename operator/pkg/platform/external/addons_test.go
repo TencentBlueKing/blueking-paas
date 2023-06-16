@@ -21,9 +21,11 @@ package external
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -82,13 +84,56 @@ var _ = Describe("TestClient", func() {
 		}, AddonInstance{}, ErrStatusNotOk),
 	)
 
-	DescribeTable("test ProvisionAddonInstance", func(handler http.RoundTripper, errMatcher types.GomegaMatcher) {
-		client := NewTestClient("", "", handler)
-		err := client.ProvisionAddonInstance(context.Background(), "", "", "", "")
-		Expect(err).To(errMatcher)
-	}, Entry("200 for provision successfully", &SimpleResponse{StatusCode: 200}, BeNil()),
-		Entry("204 for no need provision", &SimpleResponse{StatusCode: 204}, BeNil()),
-		Entry("404 for addon not found", &SimpleResponse{StatusCode: 404}, HaveOccurred()),
-		Entry("500 for provision failed", &SimpleResponse{StatusCode: 500}, HaveOccurred()),
+	DescribeTable(
+		"test QueryAddonSpecs",
+		func(handler http.RoundTripper, expectedSpecs AddonSpecsResult) {
+			client := NewTestClient("", "", handler)
+			result, err := client.QueryAddonSpecs(context.Background(), "", "", uuid.New().String())
+			Expect(err).To(BeNil())
+			Expect(*result).To(Equal(expectedSpecs))
+		},
+		Entry(
+			"return valid specs",
+			&SimpleResponse{StatusCode: 200, Body: `{"results": {"version": "5.0.0"}}`},
+			AddonSpecsResult{Data: map[string]string{"version": "5.0.0"}},
+		),
+		Entry(
+			"return empty list",
+			&SimpleResponse{StatusCode: 200, Body: `{"results": {}}`},
+			AddonSpecsResult{Data: make(map[string]string)},
+		),
+	)
+
+	fakeSvcID := uuid.New().String()
+	DescribeTable(
+		"test ProvisionAddonInstance",
+		func(handler http.RoundTripper, specs AddonSpecs, errMatcher types.GomegaMatcher) {
+			client := NewTestClient("", "", handler)
+			svcID, err := client.ProvisionAddonInstance(context.Background(), "", "", "", "", specs)
+			Expect(err).To(errMatcher)
+
+			if err == nil {
+				Expect(svcID).To(Equal(fakeSvcID))
+			}
+		},
+		Entry(
+			"200 for provision successfully",
+			&SimpleResponse{StatusCode: 200, Body: toJsonString(ProvisionAddonResult{ServiceID: fakeSvcID})},
+			AddonSpecs{Specs: map[string]string{"version": "5.0.0"}},
+			BeNil(),
+		),
+		Entry(
+			"204 for no need provision",
+			&SimpleResponse{StatusCode: 204, Body: toJsonString(ProvisionAddonResult{ServiceID: fakeSvcID})},
+			AddonSpecs{},
+			BeNil(),
+		),
+		Entry("404 for addon not found", &SimpleResponse{StatusCode: 404}, AddonSpecs{}, HaveOccurred()),
+		Entry("500 for provision failed", &SimpleResponse{StatusCode: 500}, AddonSpecs{}, HaveOccurred()),
 	)
 })
+
+func toJsonString(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}

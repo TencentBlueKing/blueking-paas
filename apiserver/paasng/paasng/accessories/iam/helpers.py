@@ -178,3 +178,17 @@ def delete_grade_manager(app_code: str):
 
     IAM_CLI.delete_grade_manager(grade_manager.grade_manager_id)
     grade_manager.delete()
+
+
+def user_group_apply_url(app_code: str) -> dict:
+    """应用用户组权限申请链接"""
+    ops_user_group_id = ApplicationUserGroup.objects.get(
+        app_code=app_code, role=ApplicationRole.OPERATOR
+    ).user_group_id
+    dev_user_group_id = ApplicationUserGroup.objects.get(
+        app_code=app_code, role=ApplicationRole.DEVELOPER
+    ).user_group_id
+    return {
+        "apply_url_for_ops": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=ops_user_group_id),
+        "apply_url_for_dev": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=dev_user_group_id),
+    }

@@ -21,6 +21,8 @@ from typing import List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+DEFAULT_ENGINE_APP_PREFIX = 'bkapp'
+
 
 class ModuleName(str, Enum):
     DEFAULT = 'default'
@@ -63,6 +65,12 @@ class DeployHookType(str, StructuredEnum):
 
     @classmethod
     def _missing_(cls, value):
+        # 兼容 value = pre_release_hook 的场景
         if value == "pre_release_hook":
             return cls.PRE_RELEASE_HOOK
         return super()._missing_(value)
+
+
+class BuildPackType(str, StructuredEnum):
+    GIT = EnumField("git", label="git")
+    TAR = EnumField("tar", label="tar")

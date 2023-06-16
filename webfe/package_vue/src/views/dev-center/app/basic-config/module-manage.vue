@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="right-main">
+  <div
+    v-en-class="'en-label'"
+    class="right-main"
+  >
     <app-top-bar
       :title="$t('模块管理')"
       :can-create="canCreateModule"
@@ -15,7 +18,7 @@
       <section v-if="!isLoading">
         <div class="module-info-item mt15">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div class="info">
             {{ $t('模块的基本信息') }}
@@ -191,7 +194,6 @@
                   <p class="mt10">
                     <bk-input
                       v-model="sourceControlChangeForm.sourceDir"
-                      size="large"
                       class="source-dir"
                       :class="isSourceDirInvalid ? 'error' : ''"
                       :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
@@ -311,11 +313,11 @@
                 clearable
               >
                 <template
-                  v-if="GLOBAL.APP_VERSION === 'te'"
+                  v-if="GLOBAL.CONFIG.MIRROR_PREFIX"
                   slot="prepend"
                 >
                   <div class="group-text">
-                    mirrors.tencent.com/
+                    {{ GLOBAL.CONFIG.MIRROR_PREFIX }}
                   </div>
                 </template>
               </bk-input>
@@ -385,7 +387,7 @@
                   class="has-right-border"
                   style="width: 150px;"
                 >
-                  {{ $t('生产环境') }}
+                  {{ $t('生产环境-label') }}
                 </td>
                 <td>
                   <div class="">
@@ -460,7 +462,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('点击开关获取列表') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -512,7 +514,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('点击开关获取列表') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -947,10 +949,12 @@
                 return !this.displaySwitchDisabled;
             },
             curStagDisabled () {
-                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+                // 测试环境，没有启用 egress 的，也不再允许用户自己启用
+                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.stag.node_ip_addresses.length || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
             },
             curProdDisabled () {
-                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+                // 证书环境，没有启用 egress 的，也不再允许用户自己启用
+                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.prod.node_ip_addresses.length || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
             },
             entranceConfig () {
                 return this.$store.state.region.entrance_config;
@@ -964,14 +968,24 @@
         },
         watch: {
             appInfo () {
-                this.init();
+                // 云原生应用无需请求模块接口
+                if (this.curAppModule.repo && this.curAppModule.repo.type) {
+                    this.init();
+                }
             },
             '$route' () {
                 this.resetParams();
-                this.init();
+                if (this.curAppModule.repo && this.curAppModule.repo.type) {
+                    this.init();
+                }
             },
             'curAppModule.name' (val) {
                 this.getLessCode();
+            },
+            'curAppModule.repo' (repo) {
+                if (!repo) {
+                    this.curAppModule.repo = {};
+                }
             }
         },
         created () {
@@ -1076,7 +1090,7 @@
 
                     if (this.curAppModule.repo.type !== 'bk_svn') {
                         const match = this.gitExtendConfig[this.selectedSourceControlType];
-                        match.selectedRepoUrl = this.curAppModule.repo.trunk_url;
+                        match.selectedRepoUrl = this.curAppModule.repo.trunk_url || '';
                         match.sourceDir = this.curAppModule.repo.source_dir || '';
                         if (match.authInfo) {
                             match.authInfo.account = this.curAppModule.repo_auth_info.username;
@@ -1195,7 +1209,6 @@
                         }
                     };
 
-                    console.log('config', config);
                     if (config && config.authInfo) {
                         params.data.source_repo_auth_info = {
                             username: config.authInfo.account,
@@ -1205,7 +1218,7 @@
 
                     if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
                         params.data.source_control_type = 'tc_docker';
-                        params.data.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                        params.data.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                         params.data.source_repo_auth_info = {
                             username: '',
                             password: ''
@@ -1356,7 +1369,7 @@
                         this.selectedSourceControlType = this.curAppModule.repo.type;
                         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
                         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
-                        if (this.curAppModule.repo.type !== 'bk_svn') {
+                        if (this.curAppModule.repo.type !== 'bk_svn' && this.gitExtendConfig[this.curAppModule.repo.type]) {
                             this.gitExtendConfig[this.curAppModule.repo.type].selectedRepoUrl = this.curAppModule.repo.trunk_url;
                             this.gitExtendConfig[this.curAppModule.repo.type].sourceDir = this.curAppModule.repo.source_dir || '';
                         }
@@ -1683,7 +1696,7 @@
             // 编辑镜像地址
             editDockerUrl () {
                 this.isText = false;
-                this.mirrorData.url = this.GLOBAL.APP_VERSION === 'te' ? this.curAppModule.repo.repo_url.split('.com/')[1] : this.curAppModule.repo.repo_url;
+                this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_PREFIX ? this.curAppModule.repo.repo_url.split('.com/')[1] : this.curAppModule.repo.repo_url;
             },
 
             async getLessCode () {
@@ -1726,6 +1739,7 @@
 </script>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/border-active-logo.scss';
     .module-info-item {
         margin-bottom: 35px;
         .title {
@@ -2020,22 +2034,7 @@
         padding: 0 16px 0 14px;
         background-color: #fff;
         color: #3A84FF;
-        &::after {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            content: "\e157";
-            font-family: 'paasng' !important;
-            font-size: 12px;
-            position: absolute;
-            right: -8px;
-            top: -8px;
-            line-height: 1;
-            display: inline-block;
-            z-index: 10;
-            background: #fff;
-        }
+        @include border-active-logo;
     }
     .disabled{
         color: #c4c6cc;
@@ -2055,6 +2054,11 @@
     text-align: right;
     margin-right: 10px;
 }
+
+.en-label .form-label {
+    width: 100px;
+}
+
 .form-group{
     display: flex;
     &-flex{
@@ -2083,5 +2087,12 @@
 }
 .bk-form-item+.bk-form-item {
     margin-top: 13px;
+}
+</style>
+<style lang="scss">
+.form-group-flex .source-dir.error .bk-input-text {
+    input {
+       border-color: #ff3737 !important;
+    }
 }
 </style>

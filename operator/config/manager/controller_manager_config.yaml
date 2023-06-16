@@ -20,6 +20,10 @@ platformConfig:
 ingressPluginConfig:
   accessControlConfig:
     redisConfigKey: ""
+  paasAnalysisConfig:
+    enabled: false
+autoscalingConfig:
+  enabled: false
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume
 ## when the Manager ends. This requires the binary to immediately end when the

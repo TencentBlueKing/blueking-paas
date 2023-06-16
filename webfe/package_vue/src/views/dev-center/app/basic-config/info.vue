@@ -11,7 +11,7 @@
       <section>
         <div class="basic-info-item mt15">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div
             v-if="isSmartApp"
@@ -193,14 +193,16 @@
                 <label class="title-label"> {{ $t('插件简介') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <bk-input
-                  ref="pluginInput"
-                  v-model="localeAppInfo.introduction"
-                  :placeholder="pluginPlaceholder"
-                  :readonly="!pluginIntroDuction"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                />
+                <div v-bk-tooltips="{ content: localeAppInfo.introduction, disabled: pluginIntroDuction }">
+                  <bk-input
+                    ref="pluginInput"
+                    v-model="localeAppInfo.introduction"
+                    :placeholder="pluginPlaceholder"
+                    :readonly="!pluginIntroDuction"
+                    ext-cls="paas-info-app-name-cls plugin-name"
+                    :clearable="false"
+                  />
+                </div>
 
                 <div class="action-box">
                   <template v-if="!pluginIntroDuction">
@@ -239,23 +241,6 @@
                 <label class="title-label"> {{ $t('联系人员') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <!-- <bk-member-selector
-                  v-if="GLOBAL.APP_VERSION === 'te'"
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                />
-                <blueking-user-selector
-                  v-else
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  display-list-tips
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                /> -->
                 <user
                   ref="member_selector"
                   v-model="localeAppInfo.contact"
@@ -384,7 +369,10 @@
                     class="bottom-middle"
                   >
                     <!-- <a href="#"> {{ $t('功能说明') }} </a> 待确定路径-->
-                    <p style="color: #3a84ff;height: 30px;"> {{ $t('功能说明') }} </p>
+                    <span
+                      v-dashed
+                      style="color: #3a84ff;height: 30px;"
+                    > {{ $t('功能说明') }} </span>
                   </span>
                 </label>
               </bk-form-item>
@@ -397,7 +385,7 @@
                   :source-list="pluginList"
                   :display-key="'name'"
                   :setting-key="'code_name'"
-                  :show-overflow-tips="true"
+                  :show-overflow-tips="false"
                   :empty-content="promptContent"
                   :title="titleArr"
                   @change="transferChange"
@@ -430,7 +418,7 @@
           </div>
         </div>
         <!-- 鉴权信息 -->
-        <authentication-info />
+        <authentication-info ref="authenticationRef" />
         <!-- <div
           v-if="canViewSecret"
           class="basic-info-item"
@@ -551,7 +539,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`确认删除应用【${curAppInfo.application.name}】？`"
+      :title="$t(`确认删除应用【{name}】？`, { name: curAppInfo.application.name })"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -722,6 +710,7 @@
                 if (value.application.type === 'bk_plugin') {
                     this.getProfile();
                 }
+                this.$refs.authenticationRef?.resetAppSecret();
                 setTimeout(() => {
                     this.isLoading = false;
                 }, 300);
@@ -1580,6 +1569,7 @@
     .pluginEmploy {
         height: 460px;padding: 20px 24px 0;
         border: 1px solid #dcdee5;
+        border-left: transparent;
     }
 
     .logo-uploader {
@@ -1634,6 +1624,7 @@
     }
 </style>
 <style lang="scss">
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
         height: 32px;
         line-height: 32px;
@@ -1641,6 +1632,10 @@
     }
     .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-angle {
         top: 4px;
+    }
+    .paas-info-app-name-cls.plugin-name .bk-form-input {
+        padding-right: 130px !important;
+        @include ellipsis;
     }
     .info-member-cls{
         height: 41px;

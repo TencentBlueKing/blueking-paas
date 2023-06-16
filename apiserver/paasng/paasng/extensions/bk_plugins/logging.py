@@ -17,17 +17,51 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Logging facilities for bk-plugins"""
-from typing import Dict, List, Optional
+import json
+from typing import Any, Dict, Optional, Tuple
 
+import cattr
+from attrs import converters, define, field
 from django.conf import settings
-from elasticsearch_dsl.response import Response as ESResponse
-from pydantic import BaseModel, Field
 
-from paasng.platform.log.client import LogClient, SmartTimeRange
-from paasng.platform.log.filters import AppLogFilter
-from paasng.platform.log.models import LogLine, LogPage, SimpleDomainSpecialLanguage
+from paasng.extensions.bk_plugins.models import BkPlugin
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.log.client import LogClientProtocol, instantiate_log_client
+from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
+from paasng.platform.log.filters import EnvFilter
+from paasng.platform.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
+from paasng.platform.log.utils import clean_logs, get_es_term
+from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.es_log.models import LogLine, Logs, extra_field
+from paasng.utils.es_log.search import SmartSearch
+from paasng.utils.es_log.time_range import SmartTimeRange
 
-from .models import BkPlugin
+
+@define
+class StructureLogLine(LogLine):
+    """结构化日志结构
+
+    :param detail: alias of raw. This is the field before refactoring. It is kept for compatibility purposes.
+    :param region: [deprecated] app region
+    :param plugin_code: alais of app_code.
+    :param environment: [deprecated] runtime environment(stag/prod), plugin app should on be "prod"
+    :param process_id: process_id
+    :param stream: stream, such as "django", "celery", "stdout"
+    :param ts: [deprecated]datetime string, use timestamp(utc) instead
+    """
+
+    # extra useful field, will be extracted from the same field in raw
+    detail: Dict[str, Any] = field(init=False)
+    plugin_code: str = extra_field(source="app_code", converter=converters.optional(str))
+    environment: str = extra_field(converter=converters.optional(str))
+    process_id: Optional[str] = extra_field(converter=converters.optional(str))
+    stream: str = extra_field(converter=converters.optional(str))
+    ts: str = extra_field(converter=converters.optional(str))
+
+    def __attrs_post_init__(self):
+        self.detail = self.raw
+        self.raw["ts"] = convert_timestamp_to_str(self.timestamp)
+        super().__attrs_post_init__()
 
 
 class PluginLoggingClient:
@@ -44,66 +78,77 @@ class PluginLoggingClient:
         """
         self.application = bk_plugin.get_application()
 
-    def query(self, trace_id: str, scroll_id: Optional[str] = None) -> 'BkPluginLogs':
+    def query(self, trace_id: str, scroll_id: Optional[str] = None) -> Logs[StructureLogLine]:
         """Query logs
 
         :param trace_id: "trace_id" is an identifier for filtering logs
         :param scroll_id: id for scrolling logs
         """
-        client = self.make_client()
-        # The `trace_id` must be wrapped with a list to make LogClient's API happy
-        client.query_conditions.add_terms_conditions(**{'json.trace_id': [trace_id]})
-        return client.query_scrollable_logs(scroll_id, result_type=BkPluginLogs.new)
-
-    def make_client(self) -> LogClient:
-        """Make a LogClient object for making queries"""
-        app_filter = self._make_app_filter()
-        client = LogClient(
-            app_filter=app_filter,
-            query_conditions=SimpleDomainSpecialLanguage(query={}),
-            smart_time_range=SmartTimeRange(time_range=self._default_time_range),
-            index_pattern=settings.ES_K8S_LOG_INDEX_PATTERNS,
-            log_page_class=LogPage,
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search(
+            mappings=log_client.get_mappings(
+                index=log_config.search_params.indexPattern,
+                time_range=SmartTimeRange(time_range=self._default_time_range),
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+            ),
+            trace_id=trace_id,
         )
 
-        # Ignore stdout/stderr logs
-        client.query_conditions.add_exclude_conditions(stream=["stderr", "stdout"])
-        return client
-
-    def _make_app_filter(self) -> AppLogFilter:
-        """Make filter object for query"""
-        app_filter = AppLogFilter(
-            region=self.application.region, app_code=self.application.code, module_name=self._module_name
+        response, total = log_client.execute_scroll_search(
+            index=log_config.search_params.indexPattern,
+            search=search,
+            timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+            scroll_id=scroll_id,
         )
-        return app_filter
+        logs = cattr.structure(
+            {
+                "logs": clean_logs(list(response), log_config.search_params),
+                "total": total,
+                "dsl": json.dumps(search.to_dict()),
+                "scroll_id": response._scroll_id,
+            },
+            Logs[StructureLogLine],
+        )
+        return logs
 
+    def instantiate_log_client(self) -> Tuple[LogClientProtocol, ElasticSearchConfig]:
+        """初始化日志查询客户端"""
+        # TODO: 统计 LOG_SEARCH_COUNTER 指标
+        # LOG_SEARCH_COUNTER.labels(
+        #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
+        # ).inc()
+        module = self.application.get_module(module_name=self._module_name)
+        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module.get_envs("prod")).json
+        return instantiate_log_client(log_config=log_config, bk_username="blueking"), log_config
 
-class LogEntry(BaseModel):
-    """A bk_plugin log entry object. Similar with `LogLine`, some fields were removed."""
+    def make_search(self, mappings: dict, trace_id: str) -> SmartSearch:
+        """构造日志查询语句
 
-    # Adapts the field name in raw log data because bk_plugin only have "code"， not "app_code"
-    plugin_code: str = Field(..., alias='app_code')
-    environment: str
-    process_id: str
-    stream: str
-    message: str
-    detail: Dict
-    ts: str
+        :param trace_id: "trace_id" is an identifier for filtering logs
+        """
+        module = self.application.get_module(module_name=self._module_name)
+        # 插件应用只部署 prod 环境
+        env = module.get_envs(environment="prod")
+        smart_time_range = SmartTimeRange(time_range=self._default_time_range)
+        query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).json
+        search = self._make_base_search(
+            env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
+        )
+        return search.filter("term", **{get_es_term(query_term='json.trace_id', mappings=mappings): trace_id})
 
-
-class BkPluginLogs(BaseModel):
-    """A collection type for storing bk_plugin's structured logs"""
-
-    scroll_id: str
-    logs: List[LogEntry]
-    total: int = 0
-
-    @classmethod
-    def new(cls, scroll_id: str, logs: ESResponse, total: int) -> 'BkPluginLogs':
-        """A factory method for handling data from LogClient"""
-        log_items = []
-        for log in logs:
-            # Parsed with original structured parse first, then transform to LogEntry
-            _log = LogLine.parse_from_es_log(log)
-            log_items.append(LogEntry.parse_obj(_log))
-        return BkPluginLogs(scroll_id=scroll_id, logs=log_items, total=total)
+    def _make_base_search(
+        self,
+        env: ModuleEnvironment,
+        search_params: ElasticSearchParams,
+        mappings: dict,
+        time_range: SmartTimeRange,
+        limit: int = DEFAULT_LOG_BATCH_SIZE,
+        offset: int = 0,
+    ) -> SmartSearch:
+        """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
+        plugin_filter = EnvFilter(env=env, search_params=search_params, mappings=mappings)
+        search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
+        search = plugin_filter.filter_by_env(search)
+        search = plugin_filter.filter_by_builtin_filters(search)
+        search = plugin_filter.filter_by_builtin_excludes(search)
+        return search.limit_offset(limit=limit, offset=offset)

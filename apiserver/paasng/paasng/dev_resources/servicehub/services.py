@@ -30,7 +30,7 @@ from django.conf import settings
 from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
 
-from paasng.engine.helpers import get_application_cluster
+from paas_wl.cluster.shim import get_application_cluster
 from paasng.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
@@ -359,9 +359,9 @@ class ServiceSpecificationHelper:
             return plans
 
         results = []
-        target_specs = self._validate_specs(specifications)
+        target_specs = self._sanitize_specs(specifications)
         for plan in plans:
-            plan_specs = self._validate_specs(plan.specifications)
+            plan_specs = self._sanitize_specs(plan.specifications)
             for k, v in target_specs.items():
                 if v is not None and plan_specs[k] != v:
                     break
@@ -382,7 +382,7 @@ class ServiceSpecificationHelper:
             else:
                 value = grouped_spec_values = None
             recommended_spec[definition.name] = value
-        return self._validate_specs(recommended_spec)
+        return self._sanitize_specs(recommended_spec)
 
     def list_plans_spec_value(self) -> List[List[Optional[str]]]:
         """List spec_value from plans.
@@ -394,14 +394,14 @@ class ServiceSpecificationHelper:
 
         plan_spec_values = []
         for plan in self.plans:
-            plan_spec_values.append(list(self._validate_specs(plan.specifications).values()))
+            plan_spec_values.append(list(self._sanitize_specs(plan.specifications).values()))
         return plan_spec_values
 
     def get_grouped_spec_values(self) -> Dict:
         """Get grouped spec_values from plan."""
         return self.parse_spec_values_tree(self.list_plans_spec_value())
 
-    def _validate_specs(self, specs: Mapping[str, Optional[str]]) -> Dict[str, Optional[str]]:
+    def _sanitize_specs(self, specs: Mapping[str, Optional[str]]) -> Dict[str, Optional[str]]:
         """Order given specs by service definitions, and ignored those undefined specs."""
         return OrderedDict((definition.name, specs.get(definition.name)) for definition in self.definitions)
 

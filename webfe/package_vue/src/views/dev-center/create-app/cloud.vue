@@ -34,12 +34,13 @@
                 name="code"
                 data-parsley-required="true"
                 :data-parsley-required-message="$t('该字段是必填项')"
+                data-parsley-minlength="3"
                 data-parsley-maxlength="16"
                 data-parsley-pattern="[a-z][a-z0-9-]+"
-                :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
+                :data-parsley-pattern-message="$t('格式不正确，只能包含：3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
                 data-parsley-trigger="input blur"
                 class="ps-form-control"
-                :placeholder="$t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')"
+                :placeholder="$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               >
             </p>
             <p class="whole-item-tips">
@@ -137,11 +138,8 @@
             </p>
             <p class="whole-item-tips">
               {{ $t('示例镜像：') }}
-              <span v-if="['ce', 'ee'].includes(GLOBAL.APP_VERSION)">
-                nginx:latest
-              </span>
-              <span v-else>
-                mirrors.tencent.com/bkpaas/django-helloworld:latest
+              <span>
+                {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
               </span>
               &nbsp;
               <span
@@ -486,14 +484,13 @@
 
             // 使用示例参数
             useExample () {
-              if (['ce', 'ee'].includes(this.GLOBAL.APP_VERSION)) {
-                this.$refs.imageUrl.value = 'nginx:latest';
+              this.$refs.imageUrl.value = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
+              if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
                 this.command = [];
                 this.args = [];
                 this.$refs.targetPort.value = 80;
                 return;
               }
-              this.$refs.imageUrl.value = 'mirrors.tencent.com/bkpaas/django-helloworld:latest';
               this.command = ['bash', '/app/start_web.sh'];
               this.args = [];
               this.$refs.targetPort.value = 5000;
@@ -503,10 +500,10 @@
 </script>
 <style lang="scss">
     .tag-extra, .tag-extra .bk-tag-input {
-        min-height: 40px;
+        min-height: 34px;
     }
     .tag-extra .bk-tag-input .placeholder {
-        line-height: 38px;
+        line-height: 32px;
     }
     .paas-info-command-cls .bk-form-input{
         padding: 20px 10px;

@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 )
@@ -33,7 +33,7 @@ import (
 // - user defined Configuration in Spec
 // - env vars from addons
 // - TODO: built-in env vars
-func GetAppEnvs(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
+func GetAppEnvs(bkapp *paasv1alpha2.BkApp) []corev1.EnvVar {
 	// 应用声明的环境变量(优先级最低)
 	envs := NewEnvVarsGetter(bkapp).Get()
 	// 增强服务的环境变量
@@ -42,15 +42,15 @@ func GetAppEnvs(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
 }
 
 // retrieveAddonEnvVar 获取增强服务的环境变量
-func retrieveAddonEnvVar(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
+func retrieveAddonEnvVar(bkapp *paasv1alpha2.BkApp) []corev1.EnvVar {
 	envs := []corev1.EnvVar{}
 	metadata, err := applications.GetBkAppInfo(bkapp)
 	if err != nil {
 		return envs
 	}
 
-	var addons []string
-	if addons, err = bkapp.ExtractAddons(); err != nil {
+	addons := bkapp.Spec.Addons
+	if addons == nil {
 		return envs
 	}
 
@@ -60,7 +60,7 @@ func retrieveAddonEnvVar(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
 	}
 
 	// TODO: 处理获取环境变量报错的情景, 将错误逐层往上传递
-	for _, addonName := range addons {
+	for _, addon := range addons {
 		ctx, cancel := context.WithTimeout(context.Background(), external.DefaultTimeout)
 		defer cancel()
 
@@ -69,7 +69,7 @@ func retrieveAddonEnvVar(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
 			metadata.AppCode,
 			metadata.ModuleName,
 			metadata.Environment,
-			addonName,
+			addon.Name,
 		)
 		if err != nil {
 			logf.Log.Error(err, "An err occur when QueryAddonInstance")

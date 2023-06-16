@@ -38,10 +38,12 @@ def wrap_multiline_str(space_num: int, m_string: str) -> str:
 # 目标文件 与 原始文件集合的映射关系，如果存在多个原始文件，则进行合并
 filepath_conf = {
     '_helpers.tpl': ['_helpers.tpl'],
+
     # crd
-    'crds/paas.bk.tencent.com_bkapps.yaml': ['bkapp-crd.yaml'],
+    'crds/paas.bk.tencent.com_bkapps.tpl': ['bkapp-crd.yaml'],
     'crds/paas.bk.tencent.com_domaingroupmappings.yaml': ['domaingroupmapping-crd.yaml'],
     'crds/paas.bk.tencent.com_projectconfigs.yaml': ['projectconfig-crd.yaml'],
+
     # controller
     'controller/deployment.yaml': ['deployment.yaml'],
     'controller/config.yaml': ['manager-config.yaml'],
@@ -50,15 +52,18 @@ filepath_conf = {
     'controller/manager-rbac.yaml': ['manager-rbac.yaml'],
     'controller/metrics-reader-rbac.yaml': ['metrics-reader-rbac.yaml'],
     'controller/proxy-rbac.yaml': ['proxy-rbac.yaml'],
+
     # webhooks
-    'webhooks/selfsigned-issuer.yaml': ['selfsigned-issuer.yaml'],
-    'webhooks/serving-cert.yaml': ['serving-cert.yaml'],
-    'webhooks/webhook-configuration.yaml': [
-        'webhook-cert-secret.yaml',
-        'mutating-webhook-configuration.yaml',
-        'validating-webhook-configuration.yaml',
-    ],
+    'webhooks/mutating-webhook.tpl': ['mutating-webhook-configuration.yaml'],
+    'webhooks/validating-webhook.tpl': ['validating-webhook-configuration.yaml'],
+    'webhooks/webhook-cert-secret.tpl': ["webhook-cert-secret.yaml"],
     'webhooks/webhook-service.yaml': ['webhook-service.yaml'],
+
+    # certificate
+    'certificate/selfsigned-issuer.yaml': ['selfsigned-issuer.yaml'],
+    'certificate/serving-cert.yaml': ['serving-cert.yaml'],
+    # 包含需要使用自动生成的证书的模板，统一渲染避免重复调用 genCA 导致的证书不一致问题
+    'certificate/certificate.yaml': ['certificate.yaml'],
 }
 
 # 格式：文件路径: [(src_str1, dst_str1), (src_str2, dst_str2)]
@@ -68,45 +73,45 @@ content_patch_conf = {
         (
             wrap_multiline_str(
                 8,
-                """
+                '''
                 image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
-                """,
+                ''',  # noqa E501
             ),
             wrap_multiline_str(
                 8,
-                """
+                '''
                 image: {{ include "bkpaas-app-operator.proxyImage" . }}
                 imagePullPolicy: {{ .Values.image.pullPolicy }}
-                """,
+                ''',
             ),
         ),
         # 替换 operator 镜像
         (
             wrap_multiline_str(
                 8,
-                """
+                '''
                 image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag | default .Chart.AppVersion }}
-                """,
+                ''',  # noqa E501
             ),
             wrap_multiline_str(
                 8,
-                """
+                '''
                 image: {{ include "bkpaas-app-operator.image" . }}
                 imagePullPolicy: {{ .Values.image.pullPolicy }}
-                """,
+                ''',
             ),
         ),
         # 替换 rbac-proxy resources 为固定值
         (
             wrap_multiline_str(
                 8,
-                """
+                '''
                 resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent 10 }}
-                """,
+                ''',
             ),
             wrap_multiline_str(
                 8,
-                """
+                '''
                 resources:
                   limits:
                     cpu: 500m
@@ -114,7 +119,7 @@ content_patch_conf = {
                   requests:
                     cpu: 5m
                     memory: 64Mi
-                """,
+                ''',
             ),
         ),
         # 替换 operator 资源配额
@@ -126,19 +131,19 @@ content_patch_conf = {
         (
             wrap_multiline_str(
                 6,
-                """
+                '''
                 imagePullSecrets:
                 - name: {{ include "bkpaas-app-operator.fullname" . }}-docker-registry
-                """,
+                ''',
             ),
             wrap_multiline_str(
                 6,
-                """
+                '''
                 {{- with .Values.imagePullSecrets }}
                 imagePullSecrets:
                   {{- toYaml . | nindent 8 }}
                 {{- end }}
-                """,
+                ''',
             ),
         ),
         # 替换副本数量引用
@@ -161,12 +166,12 @@ content_patch_conf = {
         # 移除 fullname 渲染
         (
             '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc',
-            'bkpaas-app-operator-webhook-service.{{ .Release.Namespace }}.svc'
+            'bkpaas-app-operator-webhook-service.{{ .Release.Namespace }}.svc',
         ),
         (
-            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.{{ .Values.kubernetesClusterDomain }}',
-            'bkpaas-app-operator-webhook-service.{{ .Release.Namespace }}.svc.{{ .Values.kubernetesClusterDomain }}'
-        )
+            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.{{ .Values.kubernetesClusterDomain }}',  # noqa: E501
+            'bkpaas-app-operator-webhook-service.{{ .Release.Namespace }}.svc.{{ .Values.kubernetesClusterDomain }}',
+        ),
     ],
     'manager-config.yaml': [
         ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controllerConfig'),
@@ -174,24 +179,37 @@ content_patch_conf = {
             # 白名单控制支持 enabled & 挪到 values 顶层
             wrap_multiline_str(
                 4,
-                """
+                '''
                 ingressPluginConfig:
                   accessControlConfig:
                     redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
-                """,
+                  paasAnalysisConfig:
+                    enabled: {{ .Values.controllerConfig.ingressPluginConfig.paasAnalysisConfig.enabled }}
+                ''',  # noqa: E501
             ),
             wrap_multiline_str(
                 4,
-                """
-                {{ if .Values.accessControl.enabled -}}
+                '''
+                {{- if or .Values.accessControl.enabled .Values.paasAnalysis.enabled }}
                 ingressPluginConfig:
+                  {{- if .Values.accessControl.enabled }}
                   accessControlConfig:
                     redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
+                  {{- end }}
+                  {{- if .Values.paasAnalysis.enabled }}
+                  paasAnalysisConfig:
+                    enabled: {{ .Values.paasAnalysis.enabled }}
+                  {{- end }}
                 {{- else -}}
                 ingressPluginConfig: {}
                 {{- end }}
-                """,
+                ''',
             ),
+        ),
+        (
+            # 自动扩缩容配置挪到 values 顶层
+            '.Values.controllerConfig.autoscalingConfig',
+            '.Values.autoscaling',
         ),
         (
             # 平台配置挪到 values 顶层
@@ -203,90 +221,133 @@ content_patch_conf = {
         (
             wrap_multiline_str(
                 2,
-                """
+                '''
                 annotations:
                   cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
-                """,
+                ''',  # noqa: E501
             ),
             wrap_multiline_str(
                 2,
-                """
+                '''
                 {{- if .Values.cert.managerEnabled }}
                 annotations:
                   cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
                 {{- end }}
-                """,
+                ''',  # noqa: E501
             ),
         ),
         (
             wrap_multiline_str(
                 2,
-                """
+                '''
                 clientConfig:
-                """,
+                ''',
             ),
             wrap_multiline_str(
                 2,
-                """
+                '''
                 clientConfig:
                   {{- if not .Values.cert.managerEnabled }}
-                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" $ca) }}
+                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" .ca) }}
                   {{- end }}
-                """,
+                ''',
             ),
         ),
-        (
-            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
-            'bkpaas-app-operator-webhook-service'
-        )
+        ('{{ include "bkpaas-app-operator.fullname" . }}-webhook-service', 'bkpaas-app-operator-webhook-service'),
     ],
     'mutating-webhook-configuration.yaml': [
         (
             wrap_multiline_str(
                 2,
-                """
+                '''
                 annotations:
                   cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
-                """,
+                ''',  # noqa: E501
             ),
             wrap_multiline_str(
                 2,
-                """
+                '''
                 {{- if .Values.cert.managerEnabled }}
                 annotations:
                   cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
                 {{- end }}
-                """,
+                ''',  # noqa: E501
             ),
         ),
         (
             wrap_multiline_str(
                 2,
-                """
+                '''
                 clientConfig:
-                """,
+                ''',
             ),
             wrap_multiline_str(
                 2,
-                """
+                '''
                 clientConfig:
                   {{- if not .Values.cert.managerEnabled }}
-                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" $ca) }}
+                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" .ca) }}
                   {{- end }}
-                """,
+                ''',
+            ),
+        ),
+        ('{{ include "bkpaas-app-operator.fullname" . }}-webhook-service', 'bkpaas-app-operator-webhook-service'),
+    ],
+    'webhook-service.yaml': [
+        ('{{ include "bkpaas-app-operator.fullname" . }}-webhook-service', 'bkpaas-app-operator-webhook-service')
+    ],
+    # 为 Helm Charts 中的 CRD 统一添加删除保护注解
+    'bkapp-crd.yaml': [
+        (
+            'controller-gen.kubebuilder.io/version: v0.9.0',
+            'controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep',
+        ),
+        (
+            wrap_multiline_str(
+                4,
+                '''
+                cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert'
+                ''',  # noqa: E501
+            ),
+            wrap_multiline_str(
+                4,
+                '''
+                {{- if .Values.cert.managerEnabled }}
+                cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert'
+                {{- end }}
+                ''',  # noqa: E501
             ),
         ),
         (
-            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
-            'bkpaas-app-operator-webhook-service'
+            wrap_multiline_str(
+                6,
+                '''
+                clientConfig:
+                ''',
+            ),
+            wrap_multiline_str(
+                6,
+                '''
+                clientConfig:
+                  {{- if not .Values.cert.managerEnabled }}
+                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" .ca) }}
+                  {{- end }}
+                ''',
+            ),
+        ),
+    ],
+    'domaingroupmapping-crd.yaml': [
+        (
+            'controller-gen.kubebuilder.io/version: v0.9.0',
+            'controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep',
         )
     ],
-    'webhook-service.yaml': [
+    'projectconfig-crd.yaml': [
         (
-            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
-            'bkpaas-app-operator-webhook-service'
+            'controller-gen.kubebuilder.io/version: v0.9.0',
+            'controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep',
         )
-    ]
+    ],
 }
 
 # 对模板内容的包装，front 即需要添加到文件头的内容，back 即文件尾需要添加的内容
@@ -295,7 +356,7 @@ WrapContent = namedtuple('WrapContent', 'front, back')
 content_wrap_conf = {
     '_helpers.tpl': WrapContent(
         '',
-        """
+        '''
 {{/*
 Image Tag
 */}}
@@ -342,17 +403,31 @@ Webhook CaBundle
 {{- .cert.webhookCaBundle | required "cert.webhookCaBundle is required" }}
 {{- end }}
 {{- end -}}
-""",
+''',
     ),
     'selfsigned-issuer.yaml': WrapContent('{{- if .Values.cert.managerEnabled }}\n', '{{- end }}\n'),
     'serving-cert.yaml': WrapContent('{{- if .Values.cert.managerEnabled }}\n', '{{- end }}\n'),
-    'webhook-cert-secret.yaml': WrapContent(
+    'certificate.yaml': WrapContent(
         '',
-        """
+        '''
 {{- $dnsNames := list ( printf "bkpaas-app-operator-webhook-service.%s.svc" .Release.Namespace ) ( printf "bkpaas-app-operator-webhook-service.%s.svc.%s" .Release.Namespace .Values.kubernetesClusterDomain ) -}}
 {{- $ca := genCA "bkpaas-app-operator-ca" 3650 -}}
 {{- $cert := genSignedCert "bkpaas-app-operator-ca" nil $dnsNames 3650 $ca -}}
 ---
+{{ include "bkpaas-app-operator.webhookCertSecret" (dict "Chart" .Chart "Release" .Release "Values" .Values "cert" $cert "ca" $ca) }}
+---
+{{ include "bkpaas-app-operator.mutatingWebhook" (dict "Chart" .Chart "Release" .Release "Values" .Values "cert" $cert "ca" $ca) }}
+---
+{{ include "bkpaas-app-operator.validatingWebhook" (dict "Chart" .Chart "Release" .Release "Values" .Values "cert" $cert "ca" $ca) }}
+---
+{{ include "bkpaas-app-operator.bkappCRD" (dict "Chart" .Chart "Release" .Release "Values" .Values "cert" $cert "ca" $ca) }}
+        '''.lstrip(),  # noqa E501
+    ),
+    'bkapp-crd.yaml': WrapContent('{{ define "bkpaas-app-operator.bkappCRD" -}}\n', '{{- end -}}\n'),
+    'webhook-cert-secret.yaml': WrapContent(
+        '',
+        '''
+{{ define "bkpaas-app-operator.webhookCertSecret" -}}
 {{- if not .Values.cert.managerEnabled }}
 apiVersion: v1
 kind: Secret
@@ -361,11 +436,18 @@ metadata:
   namespace: {{ .Release.Namespace }}
 type: kubernetes.io/tls
 data:
-  ca.crt: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" $ca) }}
-  tls.crt: {{ include "bkpaas-app-operator.webhookCert" (dict "cert" .Values.cert "genCert" $cert) }}
-  tls.key: {{ include "bkpaas-app-operator.webhookKey" (dict "cert" .Values.cert "genCert" $cert) }}
+  ca.crt: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" .ca) }}
+  tls.crt: {{ include "bkpaas-app-operator.webhookCert" (dict "cert" .Values.cert "genCert" .cert) }}
+  tls.key: {{ include "bkpaas-app-operator.webhookKey" (dict "cert" .Values.cert "genCert" .cert) }}
 {{- end }}
-""".lstrip(),
+{{- end -}}
+'''.lstrip(),  # noqa: E501
+    ),
+    'mutating-webhook-configuration.yaml': WrapContent(
+        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n', '{{- end -}}\n',
+    ),
+    'validating-webhook-configuration.yaml': WrapContent(
+        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n', '{{- end -}}\n',
     ),
 }
 
@@ -471,7 +553,7 @@ class HelmChartUpdater:
     def _replace_chart_yaml_files(self):
         """使用新的 Charts 中的文件，替换原有的文件"""
         for dst, src_files in filepath_conf.items():
-            print(f'replace [{dst}] with merged [{src_files}]')
+            print(f'replace {dst} with merged {src_files}')
             contents = []
             for src in src_files:
                 src_fp = self.chart_source_dir / TMPL_DIR / src
@@ -487,12 +569,12 @@ class HelmChartUpdater:
         # 有些文件是开发用的，不需要放到 chart 中，在检查时候跳过
         not_chart_required_files = ['docker-registry.yaml']
 
-        dir = self.chart_source_dir / TMPL_DIR
-        for root, _, files in walk(dir):
+        tmpl_dir = self.chart_source_dir / TMPL_DIR
+        for root, _, files in walk(tmpl_dir):
             for file in files:
                 if file in not_chart_required_files:
                     continue
-                raise Exception(f"Some files are left in the directory ({dir}), please check if they are needed")
+                raise Exception(f"Some files are left in the directory ({tmpl_dir}), please check if they are needed")
 
     def _patch_values_file(self):
         """对 values 中的部分配置进行调整"""
@@ -531,7 +613,12 @@ class HelmChartUpdater:
 
         # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
+        # PA 访问日志统计挪到顶层
+        values['paasAnalysis'] = {'enabled': False}
         del values['controllerConfig']['ingressPluginConfig']
+
+        values['autoscaling'] = {'enabled': False}
+        del values['controllerConfig']['autoscalingConfig']
 
         # 平台配置挪到顶层
         values['platformConfig'] = values['controllerConfig']['platformConfig']

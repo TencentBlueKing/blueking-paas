@@ -17,45 +17,39 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import asdict
-from typing import Dict, List, Union, cast
+from typing import Dict, List, Optional, Union, cast
 
-from django.conf import settings
 from django.http.response import Http404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
-from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
-from paasng.engine.display_blocks import ServicesInfo
-from paasng.engine.models.config_var import generate_builtin_env_vars
+from paasng.dev_resources.servicehub.services import ServiceObj, ServiceSpecificationHelper
+from paasng.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
     get_contact_info,
     query_uni_apps_by_ids,
+    query_uni_apps_by_keyword,
     query_uni_apps_by_username,
 )
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
-    AppBasicSLZ,
+    AddonSpecsSLZ,
     ContactInfo,
-    ModuleBasicSLZ,
-    ModuleEnvBasicSLZ,
-    QueryApplicationsSLZ,
+    MinimalAppSLZ,
     QueryUniApplicationsByID,
     QueryUniApplicationsByUserName,
+    SearchApplicationSLZ,
     UniversalAppSLZ,
 )
+from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.modules.models import Module
-from paasng.publish.market.models import MarketConfig
-from paasng.publish.market.utils import MarketAvailableAddressHelper
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -119,6 +113,28 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         uni_apps = query_uni_apps_by_username(username)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
 
+    @swagger_auto_schema(
+        tags=['SYSTEMAPI'], responses={200: MinimalAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
+    )
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    def list_minimal_app(self, request):
+        """查询多平台应用基本信息，可根据 id 或者 name 模糊搜索, 最多只返回 1000 条数据"""
+        serializer = SearchApplicationSLZ(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        paginator = MaxLimitOffsetPagination()
+        offset = paginator.get_offset(request)
+        limit = paginator.get_limit(request)
+
+        keyword = data.get('keyword')
+        applications = query_uni_apps_by_keyword(keyword, offset, limit)
+
+        # Paginate results
+        applications = paginator.paginate_queryset(applications, request, self)
+        serializer = MinimalAppSLZ(applications, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
 
 class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     """System api for managing Application Addons"""
@@ -140,7 +156,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             raise error_codes.CANNOT_READ_INSTANCE_INFO.f(_("无法获取到有效的配置信息."))
         return Response(data=AddonCredentialsSLZ({"credentials": credentials}).data)
 
-    @swagger_auto_schema(tags=["SYSTEMAPI"])
+    @swagger_auto_schema(tags=["SYSTEMAPI"], request_body=AddonSpecsSLZ)
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def provision_service(self, request, code, module_name, environment, service_name):
         """分配增强服务实例"""
@@ -153,19 +169,26 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         except ServiceObjNotFound:
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(f"addon named '{service_name}' not found")
 
-        # 如果未启用增强服务, 则静默启用
         try:
             mixed_service_mgr.get_module_rel(service_id=svc.uuid, module_id=module.id)
         except SvcAttachmentDoesNotExist:
-            raise error_codes.CANNOT_PROVISION_INSTANCE.f("addon is unbound")
+            # 如果未启用增强服务, 则静默启用
+            serializer = AddonSpecsSLZ(data=request.data, context={'svc': svc})
+            serializer.is_valid(raise_exception=True)
+            specs = serializer.validated_data['specs'] or self._get_pub_recommended_specs(svc)
+            try:
+                mixed_service_mgr.bind_service(svc, module, specs)
+            except Exception as e:
+                logger.exception("bind service %s to module %s error %s", svc.uuid, module.name, e)
+                raise error_codes.CANNOT_BIND_SERVICE.f(str(e))
 
         # 如果未分配增强服务实例, 则进行分配
         rel = next(mixed_service_mgr.list_unprovisioned_rels(engine_app, service=svc), None)
         if not rel:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
 
         rel.provision()
-        return Response(status=status.HTTP_200_OK)
+        return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
@@ -174,6 +197,40 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         engine_app = self.get_engine_app_via_path()
         service_info = ServicesInfo.get_detail(engine_app)['services_info']
         return Response(data=service_info)
+
+    @swagger_auto_schema(tags=["SYSTEMAPI"])
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    def retrieve_specs(self, request, code, module_name, service_id):
+        """获取应用已绑定的服务规格.
+        接口实现逻辑参考 paasng.dev_resources.servicehub.views.ModuleServicesViewSet.retrieve_specs
+        """
+        application = self.get_application()
+        module = self.get_module_via_path()
+        service = mixed_service_mgr.get_or_404(service_id, region=application.region)
+
+        # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
+        if not mixed_service_mgr.module_is_bound_with(service, module):
+            raise Http404
+
+        specs = {}
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service_id):
+                plan = rel.get_plan()
+                specs = plan.specifications
+                break  # 现阶段所有环境的服务规格一致，因此只需要拿一个
+
+        spec_data: Dict[str, Optional[str]] = {
+            definition.name: specs.get(definition.name) for definition in service.specifications
+        }
+        return Response({'results': spec_data})
+
+    @staticmethod
+    def _get_pub_recommended_specs(svc: ServiceObj) -> Optional[dict]:
+        """获取增强服务的推荐 specs"""
+        if not svc.public_specifications:
+            return None
+        # get_recommended_spec 可能会生成 value 是 None 的 spec
+        return ServiceSpecificationHelper.from_service_public_specifications(svc).get_recommended_spec()
 
 
 class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
@@ -218,101 +275,3 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         if svc is None:
             raise Http404("DB Service Not Found!")
         return svc
-
-
-class SysApplicationViewSet(viewsets.ViewSet):
-    """System application view sets"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def query(self, request):  # noqa: C901
-        """查询应用的模块、环境等信息"""
-        serializer = QueryApplicationsSLZ(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        if data['code']:
-            indexes = data['code']
-            apps_map = {app.code: app for app in Application.default_objects.filter(code__in=data['code'])}
-        elif data['uuid']:
-            indexes = data['uuid']
-            apps_map = {app.id: app for app in Application.default_objects.filter(id__in=data['uuid'])}
-        # Below conditions only allows a single query term
-        elif module_id := data.get('module_id'):
-            indexes = [module_id]
-            try:
-                apps_map = {module_id: Module.objects.get(pk=module_id).application}
-            except Module.DoesNotExist:
-                apps_map = {}
-        elif env_id := data.get('env_id'):
-            indexes = [env_id]
-            try:
-                apps_map = {env_id: ModuleEnvironment.objects.get(pk=env_id).application}
-            except ModuleEnvironment.DoesNotExist:
-                apps_map = {}
-        elif engine_app_id := data.get('engine_app_id'):
-            indexes = [engine_app_id]
-            try:
-                apps_map = {engine_app_id: ModuleEnvironment.objects.get(engine_app_id=engine_app_id).application}
-            except ModuleEnvironment.DoesNotExist:
-                apps_map = {}
-        else:
-            raise ValidationError('params invalid')
-
-        results: List[Union[None, Dict]] = []
-        for idx in indexes:
-            app = apps_map.get(idx)
-            if not app:
-                results.append(None)
-                continue
-
-            item = {'application': AppBasicSLZ(app).data}
-
-            modules = Module.objects.filter(application=app)
-            item['modules'] = ModuleBasicSLZ(modules, many=True).data
-
-            envs = ModuleEnvironment.objects.filter(module__in=modules)
-            item['envs'] = ModuleEnvBasicSLZ(envs, many=True).data
-            results.append(item)
-        return Response(results)
-
-
-class SysMarketViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
-    """System Market view sets"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def get_entrance(self, request, code):
-        """获取某应用的蓝鲸市场访问入口地址"""
-        application = self.get_application()
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-        entrance = MarketAvailableAddressHelper(market_config).access_entrance
-        if not entrance:
-            return Response({'entrance': None})
-        else:
-            return Response({'entrance': asdict(entrance)})
-
-
-class ApplicationAddressViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
-    """本视图提供应用访问地址相关的接口
-    TODO: Remove this ViewSet, move the algorithm to workloads
-    """
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def list_preallocated_addresses(self, request, code, module_name, environment):
-        """获取给应用预分配的子域名和子路径
-        Preallocated addresses contains sub-domains and sub-paths generated via platform's
-        algorithm. The algorithm depends on application's cluster configs, such as
-        "sub_path_domains" and "app_root_domains" properties in "ingress_config" field.
-        """
-        env = self.get_env_via_path()
-        subdomains = [d.as_dict() for d in AppDefaultDomains(env).domains]
-        subpaths = [d.as_dict() for d in AppDefaultSubpaths(env).subpaths]
-        return Response({"subdomains": subdomains, "subpaths": subpaths})
-
-
-class ApplicationBuiltinEnvViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
-    """本视图提供应用内置环境变量相关的接口"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def list_builtin_envs(self, request, code, module_name, environment):
-        engine_app = self.get_engine_app_via_path()
-        return Response({"data": generate_builtin_env_vars(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)})

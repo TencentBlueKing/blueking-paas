@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from contextlib import suppress
-from typing import TYPE_CHECKING, Dict, List, Type
+from typing import TYPE_CHECKING, Dict, List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
@@ -25,7 +25,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import CharField, DateTimeField, Serializer
 
-from paasng.engine import display_blocks
 from paasng.engine.constants import JobStatus
 from paasng.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.engine.models import Deployment, EngineApp, MarkStatusMixin
@@ -41,19 +40,6 @@ class DeployPhaseTypes(str, StructuredEnum):
     PREPARATION = EnumField("preparation", label=_("准备阶段"))
     BUILD = EnumField("build", label=_("构建阶段"))
     RELEASE = EnumField("release", label=_("部署阶段"))
-
-    @classmethod
-    def get_display_blocks(cls, phase_type: 'DeployPhaseTypes') -> List[Type[display_blocks.DisplayBlock]]:
-        map_: Dict[DeployPhaseTypes, List[Type[display_blocks.DisplayBlock]]] = {
-            cls.PREPARATION: [display_blocks.SourceInfo, display_blocks.ServicesInfo, display_blocks.PrepareHelpDocs],
-            cls.BUILD: [display_blocks.RuntimeInfo, display_blocks.BuildHelpDocs],
-            cls.RELEASE: [
-                display_blocks.AccessInfo,
-                display_blocks.CustomDomainInfo,
-                display_blocks.ReleaseHelpDocs,
-            ],
-        }
-        return map_[phase_type]
 
 
 class DeployPhaseEventSLZ(Serializer):
@@ -115,7 +101,7 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
             raise DuplicateNameInSamePhaseError(name)
 
     def get_sorted_steps(self) -> List['DeployStep']:
-        from paasng.engine.models.steps import DeployStepPicker
+        from paasng.engine.phases_steps.steps import DeployStepPicker
 
         names = list(
             DeployStepPicker.pick(engine_app=self.engine_app).list_sorted_step_names(DeployPhaseTypes(self.type))

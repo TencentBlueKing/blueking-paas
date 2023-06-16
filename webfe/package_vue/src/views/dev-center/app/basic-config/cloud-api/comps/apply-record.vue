@@ -27,8 +27,10 @@
         <div class="member-wrapper">
           <user
             v-model="applicants"
+            :placeholder="$t('请输入用户')"
             style="width: 142px;"
             :multiple="false"
+            :empty-text="$t('无匹配人员')"
             @change="handleMemberSelect"
           />
         </div>
@@ -60,6 +62,7 @@
         <div class="date-wrapper">
           <bk-date-picker
             v-model="initDateTimeRange"
+            ext-cls="application-time"
             style="width: 195px;"
             :placeholder="$t('选择日期范围')"
             :type="'daterange'"
@@ -106,7 +109,18 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <bk-table-column :label="$t('申请人')">
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
+          <bk-table-column
+            :label="$t('申请人')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ props.row.applied_by }}
             </template>
@@ -115,8 +129,12 @@
             prop="applied_time"
             :label="$t('申请时间')"
             :show-overflow-tooltip="true"
+            :render-header="$renderHeader"
           />
-          <bk-table-column :label="$t('API类型')">
+          <bk-table-column
+            :label="$t('API类型')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ typeMap[props.row.type] }}
             </template>
@@ -136,7 +154,10 @@
               </template>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('审批人')">
+          <bk-table-column
+            :label="$t('审批人')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <template v-if="getHandleBy(props.row.handled_by) === '--'">
                 --
@@ -147,7 +168,10 @@
               >{{ getHandleBy(props.row.handled_by) }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('审批状态')">
+          <bk-table-column
+            :label="$t('审批状态')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <template v-if="props.row.apply_status === 'approved'">
                 <span class="paasng-icon paasng-pass" /> {{ getStatusDisplay(props.row.apply_status) }}
@@ -163,7 +187,10 @@
               </template>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('审批时间')">
+          <bk-table-column
+            :label="$t('审批时间')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ props.row.handled_time || '--' }}
             </template>
@@ -307,6 +334,9 @@
                 :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
                 ext-cls="paasng-expand-table"
               >
+                <div slot="empty">
+                  <table-empty empty />
+                </div>
                 <bk-table-column
                   prop="name"
                   :label="$t('API名称')"
@@ -348,6 +378,9 @@
                 :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
                 ext-cls="paasng-expand-table"
               >
+                <div slot="empty">
+                  <table-empty empty />
+                </div>
                 <bk-table-column
                   prop="name"
                   :label="$t('API名称')"
@@ -489,7 +522,11 @@
                     startTime: '',
                     endTime: ''
                 },
-                searchValue: ''
+                searchValue: '',
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -658,13 +695,16 @@
                     query: this.searchValue
                 };
                 try {
-                    const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params)
-                    ;(res.data.results || []).forEach(item => {
+                    const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
+                    (res.data.results || []).forEach(item => {
                         item.type = this.typeValue;
                     });
                     this.pagination.count = res.data.count;
                     this.tableList = res.data.results;
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
@@ -685,6 +725,21 @@
                 } finally {
                     this.detailLoading = false;
                 }
+            },
+
+            clearFilterKey () {
+                this.searchValue = '';
+                this.applicants = [];
+                this.handleClear();
+            },
+
+            updateTableEmptyConfig () {
+                if (this.searchValue || this.statusValue || this.applicants.length) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                // 恒定条件不展示清空交互
+                this.tableEmptyConf.keyword = '$CONSTANT';
             }
         }
     };
@@ -725,7 +780,7 @@
             line-height: 32px;
         }
         .select-wrapper {
-            width: 85px;
+            width: 98px;
         }
         .set-ml {
             margin-left: 18px;
@@ -815,5 +870,9 @@
             height: 42px !important;
             cursor: default !important;
         }
+    }
+
+    /deep/ .application-time .bk-date-picker-rel .bk-date-picker-editor {
+        padding: 0 40px 0 10px;
     }
 </style>

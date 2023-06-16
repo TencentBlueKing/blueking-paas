@@ -23,42 +23,41 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 )
 
 var _ = Describe("test build expect service", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 					{
-						Name:       "hi",
-						Image:      "busybox:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 5000,
-						Command:    []string{"/bin/sh"},
-						Args:       []string{"-c", "echo hi"},
-						CPU:        "50m",
-						Memory:     "50Mi",
+						Name:         "hi",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   5000,
+						Command:      []string{"/bin/sh"},
+						Args:         []string{"-c", "echo hi"},
 					},
 				},
 			},

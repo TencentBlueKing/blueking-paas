@@ -1,8 +1,8 @@
 - model: templates.template
   pk: 1
   fields:
-    created: !!timestamp '2022-09-08 12:00:00.000000+00:00'
-    updated: !!timestamp '2022-09-08 12:00:00.000000+00:00'
+    created: !!timestamp '2022-09-02 12:00:00.000000+00:00'
+    updated: !!timestamp '2022-09-02 12:00:00.000000+00:00'
     name: dj2_hello_world
     type: 'normal'
     display_name_zh_cn: Django3.x 框架
@@ -23,8 +23,8 @@
 - model: templates.template
   pk: 2
   fields:
-    created: !!timestamp '2022-09-08 12:00:00.000000+00:00'
-    updated: !!timestamp '2022-09-08 12:00:00.000000+00:00'
+    created: !!timestamp '2022-09-01 12:00:00.000000+00:00'
+    updated: !!timestamp '2022-09-01 12:00:00.000000+00:00'
     name: dj2_with_auth
     type: 'normal'
     display_name_zh_cn: 蓝鲸应用开发框架（Django3.x）

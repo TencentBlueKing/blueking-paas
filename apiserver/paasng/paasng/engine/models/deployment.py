@@ -16,33 +16,33 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
+import cattr
 from attrs import define
-from bkpaas_auth.models import User
 from django.db import models
-from django.utils import timezone
-from django.utils.translation import gettext as _
 from jsonfield import JSONField
 
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
-from paasng.engine.controller.exceptions import BadResponse
-from paasng.engine.controller.state import controller_client
-from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.base import OperationVersionBase
 from paasng.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
-from paasng.utils.models import make_legacy_json_field
+from paasng.utils.models import make_json_field, make_legacy_json_field
 
 logger = logging.getLogger(__name__)
 
 
 class DeploymentQuerySet(models.QuerySet):
     """Custom QuerySet for Deployment model"""
+
+    def filter_by_env(self, env: ModuleEnvironment):
+        """Get all deploys under an env"""
+        return self.filter(app_environment=env)
 
     def owned_by_module(self, module, environment=None):
         """Return deployments owned by module"""
@@ -59,9 +59,14 @@ class AdvancedOptions:
     dev_hours_spent: Optional[float] = None
     source_dir: str = ""
     image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT
+    # 只构建, 不发布
+    build_only: bool = False
+    # 直接发布历史 build
+    build_id: Optional[str] = None
 
 
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)
+DeclarativeProcessField = make_json_field("DeclarativeProcessField", Dict[str, ProcessTmpl])
 
 
 class Deployment(OperationVersionBase):
@@ -90,9 +95,13 @@ class Deployment(OperationVersionBase):
     advanced_options: AdvancedOptions = AdvancedOptionsField("高级选项", null=True)
 
     procfile = JSONField(
-        default=dict, help_text="启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile"
+        default=dict, help_text="[deprecated] 启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile"
+    )
+    processes = DeclarativeProcessField(
+        default=dict, help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec"
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
+    bkapp_revision_id = models.IntegerField(help_text="BkApp Revision id", null=True)
 
     objects = DeploymentQuerySet().as_manager()
 
@@ -105,10 +114,10 @@ class Deployment(OperationVersionBase):
         )
 
     def update_fields(self, **u_fields):
-        logger.info('update_fields, deployment_id: {} , fields: {}'.format(self.id, json.dumps(u_fields)))
+        logger.info('update_fields, deployment_id: %s, fields: %s', self.id, u_fields)
         before_time = self.updated
         kind: Optional[str]
-        status: Optional[str]
+        status: Optional[JobStatus]
         if 'release_status' in u_fields:
             kind = 'release'
             status = JobStatus(u_fields['release_status'])
@@ -118,6 +127,7 @@ class Deployment(OperationVersionBase):
         else:
             kind = None
             status = None
+
         for key, value in u_fields.items():
             setattr(self, key, value)
         self.save()
@@ -148,25 +158,6 @@ class Deployment(OperationVersionBase):
             logger.warning("Unsupported absolute path<%s>, force transform to relative_to path.", path)
             path = path.relative_to("/")
         return path
-
-    @property
-    def logs(self):
-        logs_ = []
-        if self.build_process_id:
-            resp = controller_client.read_build_process_result(
-                app_name=self.get_engine_app().name, region=self.region, build_process_id=self.build_process_id
-            )
-            for item in resp['lines']:
-                logs_.append(item["line"].replace('\x1b[1G', ''))
-
-        if self.pre_release_id:
-            resp = controller_client.command__retrieve(
-                region=self.region, app_name=self.get_engine_app().name, command_id=self.pre_release_id
-            )
-            for item in resp["lines"]:
-                logs_.append(item["line"].replace('\x1b[1G', ''))
-
-        return "".join(logs_) + "\n" + (self.err_detail or '')
 
     def has_succeeded(self):
         return self.status == JobStatus.SUCCESSFUL.value
@@ -233,38 +224,14 @@ class Deployment(OperationVersionBase):
                 hooks.upsert(hook.type, hook.command)
         return hooks
 
-
-def interrupt_deployment(deployment: Deployment, user: User):
-    """Interrupt a deployment, this method does not guarantee that the deployment will be interrupted
-    immediately(or in a few seconds). It will try to do following things:
-
-    - When in "build" phase: this method will try to stop the build process by calling engine service
-    - When in "release" phase: this method will set a flag value and abort the polling process of
-      current release
-
-    After finished doing above things, the deployment process MIGHT be stopped if anything goes OK, while
-    the interruption may have no effects at all if the deployment was not in the right status.
-
-    :param deployment: Deployment object to interrupt
-    :param user: User who invoked interruption
-    :raises: DeployInterruptionFailed
-    """
-    if deployment.operator != user.pk:
-        raise DeployInterruptionFailed(_('无法中断由他人发起的部署'))
-    if deployment.status in JobStatus.get_finished_states():
-        raise DeployInterruptionFailed(_('无法中断，部署已处于结束状态'))
-
-    now = timezone.now()
-    deployment.build_int_requested_at = now
-    deployment.release_int_requested_at = now
-    deployment.save(update_fields=['build_int_requested_at', 'release_int_requested_at', 'updated'])
-
-    if deployment.build_process_id:
-        engine_app = deployment.get_engine_app()
-        try:
-            controller_client.interrupt_build_process(engine_app.region, engine_app.name, deployment.build_process_id)
-        except BadResponse as e:
-            # This error code means that build has not been started yet
-            if e.get_error_code() == 'INTERRUPTION_NOT_ALLOWED':
-                raise DeployInterruptionFailed(e.get_error_message())
-            # Ignore other BadResponse errors
+    def get_processes(self) -> List[ProcessTmpl]:
+        if self.processes:
+            return list(self.processes.values())
+        # 兼容旧字段 procfile
+        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas
+        elif self.procfile:
+            return cattr.structure(
+                [{"name": name, "command": command} for name, command in self.procfile.items()],
+                List[ProcessTmpl],
+            )
+        return []

@@ -21,6 +21,7 @@ import logging
 from dataclasses import asdict
 from typing import Optional
 
+from django.utils.translation import get_language
 from sqlalchemy import func
 
 from paasng.publish.market.models import Tag
@@ -141,7 +142,7 @@ class AppUseRecordManger(AppUseRecordAdaptor):
         dt_before = datetime.date.today() - datetime.timedelta(days=days_before)
         app_mode = AppAdaptor(self.session).model
         result = (
-            self.session.query(app_mode.code, app_mode.name, func.count(app_mode.code))
+            self.session.query(app_mode.code, app_mode.name, app_mode.name_en, func.count(app_mode.code))
             .join(self.model)
             .filter(app_mode.code.in_(application_codes))
             .filter(self.model.use_time >= dt_before)
@@ -149,8 +150,10 @@ class AppUseRecordManger(AppUseRecordAdaptor):
             .limit(limit)
             .all()
         )
-
-        data = [{"application_code": item[0], "application_name": item[1], "pv": item[2]} for item in result]
+        if get_language() == "en":
+            data = [{"application_code": item[0], "application_name": item[2], "pv": item[3]} for item in result]
+        else:
+            data = [{"application_code": item[0], "application_name": item[1], "pv": item[3]} for item in result]
         return data
 
 

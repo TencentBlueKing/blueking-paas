@@ -33,9 +33,9 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 - The development model of the front-end and back-end separation makes the R&D collaboration of SaaS more efficient
 - Support custom background process and start command, more flexible developer perspective
 - Provides enhanced services such as MySQL, RabbitMQ, object storage (bk-repo)
-- Through container image deployment, it becomes easier to develop Blue Whale SaaS
+- Through container image deployment, it becomes easier to develop BlueKing SaaS
 - Fully upgrade the Python development framework to keep up with the latest Django official technical solutions
-- Added Node.js development framework, immediately enjoy the low-code R&D mode of Blue Whale visualization platform
+- Added Node.js development framework, immediately enjoy the low-code R&D mode of BlueKing visualization platform
 
 ## Code Directory Description
 
@@ -79,7 +79,7 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 
 ## Contributing
 
-If you have good ideas or suggestions, please let us know by Issues or Pull Requests and contribute to the Blue Whale
+If you have good ideas or suggestions, please let us know by Issues or Pull Requests and contribute to the BlueKing
 Open Source Community. For bk-PaaS branch management, issues, and pr specifications, read
 the [CONTRIBUTING(In Chinese)](docs/CONTRIBUTING.md)
 

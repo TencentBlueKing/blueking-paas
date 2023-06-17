@@ -383,7 +383,7 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": "Bamboo",
                             "url": "bamboo",
-                            "explain": staticI18n.$t(" 标准运维V3使用的分布式的流程定义、管理、调度引擎")
+                            "explain": staticI18n.$t("标准运维V3使用的分布式的流程定义、管理、调度引擎")
                         }
                     ]
                 },

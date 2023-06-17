@@ -338,7 +338,7 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": staticI18n.$t("代码库管理"),
                             "url": "code",
-                            "explain": staticI18n.$t("蓝鲸代码托管服务")
+                            "explain": staticI18n.$t("支持代码仓库 OAuth 授权")
                         },
                         {
                             "text": staticI18n.$t("API 网关"),
@@ -392,7 +392,7 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": "Bamboo",
                             "url": "bamboo",
-                            "explain": staticI18n.$t(" 标准运维V3使用的分布式的流程定义、管理、调度引擎")
+                            "explain": staticI18n.$t("标准运维V3使用的分布式的流程定义、管理、调度引擎")
                         }
                     ]
                 },

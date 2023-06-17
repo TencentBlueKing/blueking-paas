@@ -25,7 +25,7 @@ from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.utils import timezone
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError as SqlIntegrityError
 from sqlalchemy.orm import Session
 
@@ -389,6 +389,19 @@ class AppUseRecordAdaptor:
     def __init__(self, session: Session):
         self.session = session
         self.model = legacy_models.LApplicationUseRecord
+
+    def get_records(self, application_codes: list, dt_before: datetime.date, limit: int) -> list:
+        app_mode = AppAdaptor(self.session).model
+        result = (
+            self.session.query(app_mode.code, app_mode.name, app_mode.name_en, func.count(app_mode.code))
+            .join(self.model)
+            .filter(app_mode.code.in_(application_codes))
+            .filter(self.model.use_time >= dt_before)
+            .group_by(app_mode.code)
+            .limit(limit)
+            .all()
+        )
+        return result
 
 
 class AppReleaseRecordAdaptor:

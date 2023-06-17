@@ -64,6 +64,7 @@ class ModuleSLZ(serializers.ModelSerializer):
     template_display_name = serializers.SerializerMethodField(help_text='初始化时使用的模板名称')
     source_origin = serializers.IntegerField(help_text='模块源码来源，例如 1 表示 Git 等代码仓库', source='get_source_origin')
     clusters = serializers.SerializerMethodField(help_text="模块下属各环境部署的集群信息")
+    build_method = serializers.SerializerMethodField(help_text="镜像构建方式")
 
     def get_repo_auth_info(self, instance):
         if not isinstance(instance.get_source_obj(), (SvnRepository, GitRepository)):
@@ -100,6 +101,9 @@ class ModuleSLZ(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 env_clusters[env.environment] = None
         return env_clusters
+
+    def get_build_method(self, obj: Module):
+        return obj.build_config.build_method
 
     class Meta:
         model = Module

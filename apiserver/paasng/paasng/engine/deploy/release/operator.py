@@ -66,6 +66,7 @@ def release_by_k8s_operator(
     :param env: The environment to create the release for.
     :param revision: The revision to be released.
     :param operator: current operator's user_id
+    :param deployment_id: the deployment id of the release
 
     :raises: ValueError when image credential_refs is invalid  TODO: 抛更具体的异常
     :raises: UnprocessibleEntityError when k8s can not process this manifest
@@ -95,7 +96,7 @@ def release_by_k8s_operator(
             operator=operator,
         )
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest_v1alpha1(credential_refs=credential_refs)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(credential_refs=credential_refs)
         )
     except Exception as e:
         if app_model_deploy is not None:

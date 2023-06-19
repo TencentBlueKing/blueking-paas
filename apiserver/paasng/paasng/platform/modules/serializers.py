@@ -35,7 +35,7 @@ from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
-from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
@@ -103,7 +103,9 @@ class ModuleSLZ(serializers.ModelSerializer):
         return env_clusters
 
     def get_build_method(self, obj: Module):
-        return obj.build_config.build_method
+        # 防止出现历史数据未绑定 BuildConfig 的情况
+        build_config = BuildConfig.objects.get_or_create_by_module(obj)
+        return build_config.build_method
 
     class Meta:
         model = Module

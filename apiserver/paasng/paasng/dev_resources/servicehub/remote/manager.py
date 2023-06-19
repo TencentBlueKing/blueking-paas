@@ -508,11 +508,11 @@ class RemoteServiceMgr(BaseServiceMgr):
         """query a list of services by region"""
         items = self.store.filter(region)
         for svc in items:
-            obj = RemoteServiceObj.from_data(svc, region=region)
             # Ignore services which is_visible field is False
             if not include_hidden and not svc['is_visible']:
                 continue
-            yield obj
+
+            yield RemoteServiceObj.from_data(svc, region=region)
 
     def list(self) -> Generator[ServiceObj, None, None]:
         """query all list of services"""

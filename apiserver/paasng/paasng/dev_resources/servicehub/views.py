@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -73,7 +73,7 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
 
     @swagger_auto_schema(response_serializer=slzs.EnvServiceAttachmentSLZ(many=True))
     def list(self, request, code, module_name, environment):
-        """获取附件列表"""
+        """获取增强服务附件列表"""
 
         env = self.get_env_via_path()
         engine_app = env.get_engine_app()
@@ -315,7 +315,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def list_by_category(self, request, code, module_name, category_id):
         """
-        获取应用的服务(已安装&未安装)
+        获取应用的服务(已启用&未启用)
         [Deprecated] use list_by_module instead
         """
         application = self.get_application()
@@ -350,7 +350,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
     def list_by_module(self, request, code, module_name):
-        """获取指定模块所有分类的应用增强服务(已安装&未安装)"""
+        """获取指定模块所有分类的应用增强服务(已启用&未启用)"""
         application = self.get_application()
         module = self.get_module_via_path()
 
@@ -368,15 +368,20 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         total = len(bound_services) + len(shared_services) + len(unbound_services)
 
-        bound_info_map = {
+        svc_bound_info_map: Dict[str, Dict[str, Any]] = {
             svc.uuid: {'service': svc, 'provision_info': {}, 'specifications': []} for svc in bound_services
         }
         for env in module.get_envs():
             list_provisioned_rels = mixed_service_mgr.list_provisioned_rels(env.engine_app)
             for rel in list_provisioned_rels:
-                bound_info = bound_info_map[rel.get_service().uuid]
+                bound_info = svc_bound_info_map[rel.get_service().uuid]
                 # 补充实例分配信息
                 bound_info['provision_info'][env.environment] = rel.is_provisioned()  # type: ignore
+
+                # 现阶段所有环境的服务规格一致，若某环境已经获取到配置参数信息，则跳过以免重复
+                if len(bound_info['specifications']):
+                    continue
+
                 # 补充配置参数信息
                 specs = rel.get_plan().specifications
                 for definition in bound_info['service'].specifications:  # type: ignore
@@ -388,7 +393,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             {
                 'count': total,
                 'results': {
-                    'bound': slzs.BoundServiceInfoSLZ(bound_info_map.values(), many=True).data,
+                    'bound': slzs.BoundServiceInfoSLZ(svc_bound_info_map.values(), many=True).data,
                     'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
                     'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
                 },

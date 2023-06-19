@@ -34,7 +34,7 @@ from paasng.engine.configurations.provider import env_vars_providers
 from paasng.extensions.bk_plugins.constants import PluginTagIdType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
-from paasng.publish.entrance.exposer import get_deployed_status
+from paasng.publish.entrance.exposer import env_is_deployed
 from paasng.publish.market.utils import ModuleEnvAvailableAddressHelper
 from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
 
@@ -256,16 +256,15 @@ def get_deployed_statuses(bk_plugin: BkPlugin) -> DeployedStatuses:
     for each environments.
     """
     module = bk_plugin.get_application().default_module
-    statuses = get_deployed_status(module)
     result = {}
     for env in module.get_envs():
-        status = statuses[env.environment]
-        if status:
+        deployed = env_is_deployed(env)
+        if deployed:
             # Transform dataclass to raw dict for convenience, ignore empty address also
             addrs = [asdict(obj) for obj in ModuleEnvAvailableAddressHelper(env).addresses if obj.address]
         else:
             addrs = []
-        result[env.environment] = DeployedStatus(deployed=status, addresses=addrs)
+        result[env.environment] = DeployedStatus(deployed=deployed, addresses=addrs)
     return result
 
 
@@ -273,7 +272,7 @@ def get_deployed_statuses_without_addresses(bk_plugin: BkPlugin) -> DeployedStat
     """Get the deployed statuses of given bk_plugin, result include only `deployed` field."""
     module = bk_plugin.get_application().default_module
     result: Dict[str, DeployedStatusNoAddresses] = {
-        env: DeployedStatusNoAddresses(deployed=val) for env, val in get_deployed_status(module).items()
+        env.environment: DeployedStatusNoAddresses(deployed=env_is_deployed(env)) for env in module.get_envs()
     }
     return result
 

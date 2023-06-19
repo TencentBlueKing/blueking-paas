@@ -20,7 +20,7 @@ import pytest
 
 from paas_wl.cluster.models import Domain as ClusterDomain
 from paas_wl.cluster.models import PortMap
-from paas_wl.networking.ingress.addrs import Address, AddressType, EnvAddresses
+from paas_wl.networking.entrance.addrs import Address, AddressType, EnvAddresses
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from tests.paas_wl.utils.release import create_release
@@ -70,5 +70,10 @@ class TestEnvAddresses:
             Address(AddressType.SUBDOMAIN, 'http://foo.example.com:8080/', True),
             Address(AddressType.SUBPATH, 'http://p2.example.com:8080/foo/', False),
             Address(AddressType.SUBPATH, 'https://p1.example.com/foo/', True),
-            Address(AddressType.CUSTOM, 'http://foo-custom.example.com:8080/', False),
+            Address(
+                AddressType.CUSTOM,
+                'http://foo-custom.example.com:8080/',
+                False,
+                id=Domain.objects.get(environment_id=bk_stag_env.id).id,
+            ),
         ]

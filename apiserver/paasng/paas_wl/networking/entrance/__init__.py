@@ -16,11 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
-
-
-class EntranceConfig(AppConfig):
-    name = 'paasng.publish.entrance'
-
-    def ready(self):
-        from . import triggers  # noqa

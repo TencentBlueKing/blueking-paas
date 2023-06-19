@@ -24,10 +24,8 @@ from django.test.utils import override_settings
 
 from paas_wl.cluster.models import Domain as DomainCfg
 from paas_wl.cluster.models import IngressConfig, PortMap
+from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, SubPathAllocator, SubpathPriorityType
 from paasng.publish.entrance.subpaths import (
-    ModuleEnvSubpaths,
-    SubPathAllocator,
-    SubpathPriorityType,
     get_legacy_compatible_path,
     get_preallocated_path,
     get_preallocated_paths_by_env,

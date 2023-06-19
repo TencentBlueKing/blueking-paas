@@ -5,6 +5,7 @@ from typing import Dict, List, NamedTuple, Optional
 from django.conf import settings
 
 from paas_wl.cluster.shim import Cluster, RegionClusterService
+from paas_wl.networking.entrance.addrs import URL, EnvExposedURL
 from paasng.engine.configurations.provider import env_vars_providers
 from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
@@ -12,7 +13,7 @@ from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
-from paasng.publish.entrance.utils import URL, EnvExposedURL, get_legacy_url
+from paasng.publish.entrance.utils import get_legacy_url
 
 logger = logging.getLogger(__name__)
 

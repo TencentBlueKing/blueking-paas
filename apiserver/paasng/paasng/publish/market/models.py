@@ -262,13 +262,6 @@ class MarketConfig(TimestampedModel):
 
     objects = MarketConfigManager()
 
-    @property
-    def market_address(self):
-        """获取应用在市场里的唯一访问地址"""
-        from paasng.publish.entrance.exposer import get_market_address
-
-        return get_market_address(self.application)
-
     def on_release(self):
         """应用主模块正式环境上线 handler (尝试开启应用市场)
         如果 auto_enable_when_deploy == True 则开启市场, 并设置 auto_enable_when_deploy = False

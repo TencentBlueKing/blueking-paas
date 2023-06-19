@@ -16,3 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Optional
+
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.region.models import get_region
+
+
+def to_dns_safe(s: str) -> str:
+    """Transform some string to dns safe"""
+    return s.replace('_', '--').lower()
+
+
+def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
+    """Deprecated: Get legacy URL address which is a hard-coded value generated
+    y region configuration.
+
+    :return: None if not configured.
+    """
+    app = env.application
+    if tmpl := get_region(app.region).basic_info.link_engine_app:
+        return tmpl.format(code=app.code, region=app.region, name=env.engine_app.name)
+    return None

@@ -22,18 +22,17 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.networking.entrance.constants import AddressType
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import (
     Address,
-    ModuleLiveAddrs,
     env_is_deployed,
     get_addresses,
     get_exposed_url,
-    get_market_address,
     list_custom_addresses,
     list_module_custom_addresses,
 )
-from paasng.publish.market.models import MarketConfig
+from tests.publish.utils import ModuleLiveAddrs
 from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db
@@ -74,8 +73,8 @@ class TestModuleLiveAddrs:
     def test_get_addresses_with_type(self):
         addrs = ModuleLiveAddrs(self.module_addrs_data)
         assert addrs.get_addresses('stag', addr_type='subpath') == [
-            Address("subpath", "http://bar.example.com/bar/"),
-            Address("subpath", "http://bar.example.com/bar-2/", True),
+            Address(AddressType.SUBPATH, "http://bar.example.com/bar/"),
+            Address(AddressType.SUBPATH, "http://bar.example.com/bar-2/", True),
         ]
 
 
@@ -203,21 +202,14 @@ class TestGetExposedUrl:
         assert url.address == expected
 
 
-def test_get_market_address(bk_app):
-    MarketConfig.objects.enable_app(bk_app)
-    addr = get_market_address(bk_app)
-    assert addr is not None
-    assert len(addr) > 0
-
-
 def test_list_custom_addresses(bk_stag_env, bk_prod_env, setup_addrs):
     assert list_custom_addresses(bk_prod_env) == []
     assert list_custom_addresses(bk_stag_env) == [
-        Address("custom", "http://custom.example.com/"),
+        Address(AddressType.CUSTOM, "http://custom.example.com/"),
     ]
 
 
 def test_list_module_custom_addresses(bk_module, setup_addrs):
     assert list_module_custom_addresses(bk_module) == [
-        Address("custom", "http://custom.example.com/"),
+        Address(AddressType.CUSTOM, "http://custom.example.com/"),
     ]

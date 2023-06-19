@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from typing import List, Optional
 from urllib.parse import urlparse
 
+from paas_wl.networking.entrance.addrs import EnvExposedURL, default_port_map
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.publish.entrance.exposer import get_addresses, get_exposed_url, list_custom_addresses
-from paasng.publish.entrance.utils import EnvExposedURL, default_port_map
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 

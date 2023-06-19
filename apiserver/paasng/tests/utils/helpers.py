@@ -40,6 +40,7 @@ from paasng.platform.core.region import load_regions_from_settings
 from paasng.platform.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.oauth2.utils import create_oauth2_client
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
@@ -186,6 +187,8 @@ def create_app(
         application, repo_type=sourcectl_name, repo_url=default_repo_url, additional_modules=additional_modules
     )
     module = application.get_default_module()
+    # bind build_config
+    BuildConfig.objects.get_or_create_by_module(module)
 
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)
@@ -417,6 +420,8 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
                 region, name, type_ = args
+                if WlApp.objects.filter(name=name).exists():
+                    continue
                 wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
                 latest_config = wl_app.latest_config
                 latest_config.cluster = cluster_name

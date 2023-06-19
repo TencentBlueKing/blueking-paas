@@ -25,8 +25,8 @@ from paas_wl.networking.ingress.domains.manager import CNativeCustomDomainManage
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.utils.error_codes import APIError
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
+from tests.publish.utils import ModuleLiveAddrs
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

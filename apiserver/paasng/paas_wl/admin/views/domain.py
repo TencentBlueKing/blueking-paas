@@ -24,9 +24,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr, validate_domain_payload
+from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
+from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ
 from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application

@@ -79,4 +79,5 @@ urlpatterns = [
     # switch language
     url(r'^i18n/setlang/$', django_i18n_views.set_language, name="set_language"),
     path('', include('paasng.accessories.changelog.urls')),
+    path('', include('paas_wl.networking.entrance.urls')),
 ]

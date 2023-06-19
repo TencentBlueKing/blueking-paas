@@ -99,7 +99,7 @@
         class="ps-head-right"
       >
         <template>
-          <li class="mr20" v-if="curAppInfo.feature.AGGREGATE_SEARCH">
+          <li class="mr20" v-if="userFeature.AGGREGATE_SEARCH">
             <dropdown
               ref="dropdown"
               :options="{

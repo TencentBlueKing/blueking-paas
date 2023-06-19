@@ -25,6 +25,7 @@ urlpatterns = [
     # TODO: 在 workloads 项目代码完全迁移后, 路由重新注册到各自的 urls.py
     re_path(r"^api/scheduling/", include("paas_wl.networking.egress.urls_enduser")),
     re_path("^api/services/", include("paas_wl.networking.ingress.urls_enduser")),
+    re_path("^api/services/", include("paas_wl.networking.entrance.urls_enduser")),
     re_path(r"^api/processes/", include("paas_wl.workloads.processes.urls_enduser")),
     re_path("^api/cnative/specs/", include("paas_wl.cnative.specs.urls_enduser")),
     re_path(r"^api/credentials/", include("paas_wl.workloads.images.urls_enduser")),

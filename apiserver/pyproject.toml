@@ -165,6 +165,7 @@ exclude = [
   '^paasng/paas_settings_ee/.*$',
   '^paasng/paasng/platform/mgrlegacy/data/.*$',
   '^paasng/tests/platform/mgrlegacy/.*$',
+  '^paasng/paasng/plat_admin/bk_data/management/commands/report_user_app_relationships.py$',
 ]
 
 [[tool.mypy.overrides]]

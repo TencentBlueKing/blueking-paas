@@ -50,8 +50,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.region.models import get_region
-from paasng.publish.entrance.exposer import get_market_address
-from paasng.publish.market.models import Tag
+from paasng.publish.market.models import MarketConfig, Tag
 
 try:
     from paasng.platform.legacydb_te.models import LApplication, LApplicationUseRecord
@@ -203,6 +202,20 @@ class DefaultAppDataBuilder(AppDataBuilder):
             return "--"
         return product.tag.get_name_display()
 
+    @staticmethod
+    def get_market_address(application: Application) -> Optional[str]:
+        """获取市场访问地址，兼容精简版应用。普通应用如未打开市场开关，返回 None"""
+        region = get_region(application.region)
+        addr = region.basic_info.link_production_app.format(code=application.code, region=application.region)
+        if not application.engine_enabled:
+            return addr
+
+        # Only works for apps whose market config is enabled
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+        if not market_config.enabled:
+            return None
+        return addr
+
     def set_filter_developers(self, filter_developers: Collection[str]):
         """Set filter by developers"""
         app_filters, app_ids = [], []
@@ -258,7 +271,7 @@ class DefaultAppDataBuilder(AppDataBuilder):
 
             market_address = market_tag = None
             if self.include_market_info:
-                market_address = get_market_address(app)
+                market_address = self.get_market_address(app)
                 market_tag = self.get_tag_display_name(app)
 
             default_module = app.get_default_module()

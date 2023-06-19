@@ -201,6 +201,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    # [deprecated] use `api.applications.entrances.set_default_entrance` instead
     @transaction.atomic
     @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
     def set_as_default(self, request, code, module_name):

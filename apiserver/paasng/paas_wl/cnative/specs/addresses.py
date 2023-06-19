@@ -30,7 +30,7 @@ from paas_wl.cnative.specs.crd.domain_group_mapping import (
     ObjectMetadata,
 )
 from paas_wl.cnative.specs.models import generate_bkapp_name
-from paas_wl.networking.ingress.addrs import EnvAddresses
+from paas_wl.networking.entrance.addrs import EnvAddresses
 from paas_wl.networking.ingress.certs.utils import DomainWithCert, pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.managers.domain import save_subdomains

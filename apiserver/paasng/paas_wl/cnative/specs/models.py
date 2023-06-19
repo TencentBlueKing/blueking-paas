@@ -240,7 +240,7 @@ def update_app_resource(app: Application, module: Module, payload: Dict):
 
 
 def to_error_string(exc: PDValidationError) -> str:
-    """Transform a pydantic Exception object to an one-line string"""
+    """Transform a pydantic Exception object to a one-line string"""
     # TODO: Improve error message format
     return display_errors(exc.errors()).replace('\n', ' ')
 

@@ -35,7 +35,7 @@ from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
-from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
@@ -64,6 +64,7 @@ class ModuleSLZ(serializers.ModelSerializer):
     template_display_name = serializers.SerializerMethodField(help_text='初始化时使用的模板名称')
     source_origin = serializers.IntegerField(help_text='模块源码来源，例如 1 表示 Git 等代码仓库', source='get_source_origin')
     clusters = serializers.SerializerMethodField(help_text="模块下属各环境部署的集群信息")
+    build_method = serializers.SerializerMethodField(help_text="镜像构建方式")
 
     def get_repo_auth_info(self, instance):
         if not isinstance(instance.get_source_obj(), (SvnRepository, GitRepository)):
@@ -100,6 +101,11 @@ class ModuleSLZ(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 env_clusters[env.environment] = None
         return env_clusters
+
+    def get_build_method(self, obj: Module):
+        # 防止出现历史数据未绑定 BuildConfig 的情况
+        build_config = BuildConfig.objects.get_or_create_by_module(obj)
+        return build_config.build_method
 
     class Meta:
         model = Module

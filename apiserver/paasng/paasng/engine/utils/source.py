@@ -160,7 +160,10 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
     """
     # Note: 对于非源码包类型的应用, 只有产品上配置的部署目录会生效
     if not ModuleSpecs(module).deploy_via_package:
-        return module.get_source_obj().get_source_dir()
+        if source_obj := module.get_source_obj():
+            return source_obj.get_source_dir()
+        # 模块未绑定 source_obj, 可能是仅托管镜像的云原生应用
+        return ""
 
     # Note: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
     handler = get_app_description_handler(module, operator, version_info)

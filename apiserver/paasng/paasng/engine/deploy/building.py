@@ -256,9 +256,7 @@ class BaseBuilder(DeployStep):
 
 
 class ApplicationBuilder(BaseBuilder):
-    """The main controller for building an application"""
-
-    PHASE_TYPE = DeployPhaseTypes.BUILD
+    """The main controller for building an application via Buildpack"""
 
     @DeployStep.procedures
     def start(self):

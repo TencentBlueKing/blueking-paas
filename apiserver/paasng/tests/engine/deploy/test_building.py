@@ -22,9 +22,11 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetProcfileError
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler
+from paasng.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
 from paasng.engine.handlers import attach_all_phases
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
@@ -40,7 +42,8 @@ def setup_cluster():
         yield
 
 
-class TestApplicationBuilder:
+@pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
+class TestNormalApp:
     """Tests for ApplicationBuilder"""
 
     @pytest.fixture
@@ -51,13 +54,13 @@ class TestApplicationBuilder:
             mocked_get_app_yaml.side_effect = GetAppYamlError('')
             yield
 
-    def test_failed_when_parsing_processes(self, init_tmpls, bk_deployment_full, mock_get_app_yaml):
+    def test_failed_when_parsing_processes(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
             'paasng.engine.configurations.source_file.MetaDataFileReader.get_procfile'
         ) as mocked_get_procfile, mock.patch('paasng.engine.utils.output.RedisChannelStream') as mocked_stream:
             mocked_get_procfile.side_effect = GetProcfileError('Invalid Procfile format')
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
-            builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
+            builder = builder_class.from_deployment_id(bk_deployment_full.id)
             builder.start()
 
             deployment = Deployment.objects.get(pk=bk_deployment_full.id)
@@ -72,11 +75,11 @@ class TestApplicationBuilder:
                 == '步骤 [解析应用进程信息] 出错了，原因：Procfile error: Invalid Procfile format。'
             )
 
-    def test_failed_when_upload_source(self, init_tmpls, bk_deployment_full, mock_get_app_yaml):
+    def test_failed_when_upload_source(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
             'paasng.engine.configurations.source_file.MetaDataFileReader.get_procfile'
         ) as mocked_get_procfile, mock.patch(
-            'paasng.engine.deploy.building.ApplicationBuilder.compress_and_upload'
+            'paasng.engine.deploy.building.{}.compress_and_upload'.format(builder_class.__name__)
         ) as mocked_c_and_upload, mock.patch(
             'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream:
@@ -84,7 +87,7 @@ class TestApplicationBuilder:
             mocked_c_and_upload.side_effect = RuntimeError("Unable to upload")
 
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
-            builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
+            builder = builder_class.from_deployment_id(bk_deployment_full.id)
             builder.start()
 
             deployment = Deployment.objects.get(pk=bk_deployment_full.id)
@@ -96,17 +99,17 @@ class TestApplicationBuilder:
             assert mocked_stream().write_message.called
             assert mocked_stream().write_message.call_args[0][0] == '步骤 [上传仓库代码] 出错了，请稍候重试。'
 
-    def test_start_normal(self, init_tmpls, bk_deployment_full, mock_get_app_yaml):
+    def test_start_normal(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
             'paasng.engine.configurations.source_file.MetaDataFileReader.get_procfile'
         ) as mocked_get_procfile, mock.patch(
-            'paasng.engine.deploy.building.ApplicationBuilder.compress_and_upload'
+            'paasng.engine.deploy.building.{}.compress_and_upload'.format(builder_class.__name__)
         ), mock.patch(
             'paasng.engine.deploy.building.BuildProcessPoller'
         ) as mocked_poller, mock.patch(
             'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream, mock.patch(
-            'paasng.engine.deploy.building.ApplicationBuilder.launch_build_processes'
+            'paasng.engine.deploy.building.{}.launch_build_processes'.format(builder_class.__name__)
         ) as launch_build_processes:
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             # Return a fake build_process ID
@@ -114,7 +117,7 @@ class TestApplicationBuilder:
             launch_build_processes.return_value = faked_build_process_id
 
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
-            builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
+            builder = builder_class.from_deployment_id(bk_deployment_full.id)
             builder.start()
 
             # Validate deployment data
@@ -133,6 +136,72 @@ class TestApplicationBuilder:
             assert source_tar_path != ''
             assert procfile == {'web': 'gunicorn'}
             assert bkapp_revision_id is None
+
+            # Validate other arguments
+            assert mocked_stream().write_title.called
+            assert mocked_poller.start.called
+            assert mocked_poller.start.call_args[0][0] == {
+                "build_process_id": deployment.build_process_id.hex,
+                "deployment_id": deployment.id,
+            }
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+@pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
+class TestCloudNative:
+    @pytest.fixture
+    def model_resource(self, bk_cnative_app, bk_module_full):
+        """Initialize the app model resource"""
+        resource = create_app_resource(
+            # Use Application code as default resource name
+            name=generate_bkapp_name(bk_module_full),
+            image='nginx:latest',
+            command=None,
+            args=None,
+            target_port=None,
+        )
+        return AppModelResource.objects.create_from_resource(
+            bk_cnative_app.region, bk_cnative_app.id, bk_module_full.id, resource
+        )
+
+    def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full, model_resource):
+        res = BkAppResource(**model_resource.revision.json_value)
+        with mock.patch(
+            'paasng.engine.configurations.source_file.MetaDataFileReader.get_bkapp_manifests'
+        ) as mocked_get_bkapp_manifests, mock.patch(
+            'paasng.engine.deploy.building.{}.compress_and_upload'.format(builder_class.__name__)
+        ), mock.patch(
+            'paasng.engine.deploy.building.BuildProcessPoller'
+        ) as mocked_poller, mock.patch(
+            'paasng.engine.utils.output.RedisChannelStream'
+        ) as mocked_stream, mock.patch(
+            'paasng.engine.deploy.building.{}.launch_build_processes'.format(builder_class.__name__)
+        ) as launch_build_processes:
+            mocked_get_bkapp_manifests.return_value = {res.metadata.name: res}
+            # Return a fake build_process ID
+            faked_build_process_id = uuid.uuid4().hex
+            launch_build_processes.return_value = faked_build_process_id
+
+            attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
+            builder = builder_class.from_deployment_id(bk_deployment_full.id)
+            builder.start()
+
+            # Validate deployment data
+            deployment = Deployment.objects.get(pk=bk_deployment_full.id)
+            assert deployment.status == JobStatus.PENDING.value
+            assert deployment.build_process_id.hex == faked_build_process_id
+            assert deployment.err_detail is None
+
+            # Validate "start_build_process" arguments
+            assert launch_build_processes.called
+            (
+                source_tar_path,
+                procfile,
+                bkapp_revision_id,
+            ) = launch_build_processes.call_args[0]
+            assert source_tar_path != ''
+            assert procfile == {}
+            assert bkapp_revision_id is not None
 
             # Validate other arguments
             assert mocked_stream().write_title.called

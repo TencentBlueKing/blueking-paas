@@ -105,12 +105,16 @@ class DeployStatusHandler(CallbackHandler):
             state_mgr = DeploymentStateMgr.from_deployment_id(
                 deployment_id=deployment_id, phase_type=DeployPhaseTypes.RELEASE
             )
+            job_status = deploy_status_to_job_status(dp.status)
             try:
                 step_obj = state_mgr.get_step_by_name(name="检测部署结果")
-                step_obj.mark_and_write_to_stream(state_mgr.stream, deploy_status_to_job_status(dp.status))
+                step_obj.mark_and_write_to_stream(state_mgr.stream, job_status)
             except StepNotInPresetListError:
                 logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
-        # 在部署流程结束后，发送信号触发操作审计等后续步骤
+            state_mgr.update(release_status=job_status)
+            state_mgr.finish(job_status, err_detail=dp.message or '', write_to_stream=True)
+
+        # 在部署流程结束后，发送信号触发操作审计等后续步骤(不支持创建监控告警规则)
         post_cnative_env_deploy.send(dp.environment, deploy=dp)
 
 

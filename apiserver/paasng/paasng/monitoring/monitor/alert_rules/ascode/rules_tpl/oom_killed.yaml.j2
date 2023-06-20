@@ -11,7 +11,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum (increase(kube_pod_container_status_terminated_reason{reason="OOMKilled", namespace="{{ metric_labels['namespace'] }}", bcs_cluster_id="{{ metric_labels['bcs_cluster_id'] }}"}[5m])) by (namespace, pod_name)'
+  - metric: 'sum (increase(kube_pod_container_status_terminated_reason{reason="OOMKilled", namespace="{{ metric_labels['namespace'] }}", bcs_cluster_id="{{ metric_labels['bcs_cluster_id'] }}"}[2m])) by (namespace, pod_name)'
     interval: 60 # 单位 s
 
 detect: # 检测配置
@@ -20,7 +20,7 @@ detect: # 检测配置
     - type: Threshold # 算法类型
       config: "{{ threshold_expr }}" # 算法配置
 
-  trigger: 2/15/15 # 触发条件. 异常次数/检测周期数/恢复周期数
+  trigger: 1/5/5 # 触发条件. 异常次数/检测周期数/恢复周期数
 
 notice: # 通知配置
   interval: 120 # 通知收敛间隔(分钟)

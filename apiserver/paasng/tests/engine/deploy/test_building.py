@@ -106,12 +106,12 @@ class TestApplicationBuilder:
         ) as mocked_poller, mock.patch(
             'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream, mock.patch(
-            'paasng.engine.deploy.building.start_buildpacks_build'
-        ) as mocker_start_buildpacks_build:
+            'paasng.engine.deploy.building.ApplicationBuilder.launch_build_processes'
+        ) as launch_build_processes:
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
-            mocker_start_buildpacks_build.return_value = faked_build_process_id
+            launch_build_processes.return_value = faked_build_process_id
 
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
             builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
@@ -124,19 +124,15 @@ class TestApplicationBuilder:
             assert deployment.err_detail is None
 
             # Validate "start_build_process" arguments
-            assert mocker_start_buildpacks_build.called
+            assert launch_build_processes.called
             (
-                _,
-                version,
-                stream_channel_id,
                 source_tar_path,
                 procfile,
-                env_vars,
-            ) = mocker_start_buildpacks_build.call_args[0]
-            assert version.revision == deployment.source_revision
-            assert stream_channel_id == str(bk_deployment_full.id)
+                bkapp_revision_id,
+            ) = launch_build_processes.call_args[0]
             assert source_tar_path != ''
             assert procfile == {'web': 'gunicorn'}
+            assert bkapp_revision_id is None
 
             # Validate other arguments
             assert mocked_stream().write_title.called

@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import yaml
 from typing_extensions import Protocol
 
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paasng.dev_resources.sourcectl import exceptions
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.package.client import BasePackageClient, get_client
@@ -50,6 +51,12 @@ class MetaDataReader(Protocol):
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
         """Read app.yaml/app_desc.yaml from repository
+
+        :raises: exceptions.GetAppYamlError
+        """
+
+    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, BkAppResource]:
+        """Read bkapp.yaml from repository
 
         :raises: exceptions.GetAppYamlError
         """
@@ -140,6 +147,47 @@ class MetaDataFileReader:
             raise exceptions.GetAppYamlError('file "app.yaml" must be dict type')
         return app_description
 
+    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, BkAppResource]:
+        """Read bkapp.yaml from repository
+
+        :raises: exceptions.GetAppYamlError
+        """
+        possible_keys = ["bkapp.yaml", "bkapp.yml"]
+        if self.source_dir != Path("."):
+            # Note: 为了保证不影响源码包部署的应用, 优先从根目录读取 bkapp.yaml, 随后再尝试从 source_dir 目录读取
+            possible_keys = [
+                "bkapp.yaml",
+                "bkapp.yml",
+                str(self.source_dir / "bkapp.yaml"),
+                str(self.source_dir / "bkapp.yml"),
+            ]
+
+        content = None
+        for possible_key in possible_keys:
+            try:
+                content = self.read_file(possible_key, version_info)
+                break
+            except exceptions.DoesNotExistsOnServer:
+                continue
+        if content is None:
+            error_msg = 'Can not read bkapp manifest file from repository'
+            if self.error_tips:
+                error_msg += f', {self.error_tips}'
+            raise exceptions.GetAppYamlError(error_msg)
+
+        try:
+            manifest_list = list(yaml.safe_load_all(content))
+        except Exception as e:
+            raise exceptions.GetAppYamlError('file "bkapp.yaml"\'s format is not YAML') from e
+        manifest_dict = {}
+        for manifest in manifest_list:
+            try:
+                res = BkAppResource(**manifest)
+                manifest_dict[res.metadata.name] = res
+            except Exception as e:
+                raise exceptions.GetAppYamlError('file "bkapp.yaml" is invalid bkapp') from e
+        return manifest_dict
+
     def get_dockerignore(self, version_info: VersionInfo) -> str:
         """Read .dockerignore config from repository
 
@@ -228,6 +276,14 @@ class PackageMetaDataReader(MetaDataFileReader):
         if package_storage.meta_info:
             return package_storage.meta_info
         return super().get_app_desc(version_info)
+
+    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, BkAppResource]:
+        """Read bkapp.yaml from SourcePackage.meta_data(the field stored app_desc) or repository"""
+        _, version = self.extract_version_info(version_info)
+        package_storage = self.module.packages.get(version=version)
+        if package_storage.meta_info:
+            return package_storage.meta_info
+        return super().get_bkapp_manifests(version_info)
 
 
 def get_metadata_reader(

@@ -39,7 +39,7 @@ from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 logger = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ class TestApplicationCreateWithEngine:
                 assert response.json()['application']['type'] == desired_type
             else:
                 assert response.status_code == 400
-                assert response.json()["detail"] == '已开启引擎，类型不能为 "enginess_app"'
+                assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
 
     @pytest.mark.parametrize(
         'source_origin, source_repo_url, source_control_type, with_feature_flag, is_success',
@@ -461,9 +461,13 @@ class TestCreateBkPlugin:
 class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
-    def test_normal(self, bk_user, api_client, mock_wl_services_in_creation, settings):
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_wl_services_in_creation, mock_initialize_with_template, init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
+        settings.IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = True
+
+    def test_legacy(self, api_client):
+        """现存的云原生应用创建（cloud_native_params）"""
 
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -479,3 +483,36 @@ class TestCreateCloudNativeApp:
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         assert response.json()['application']['type'] == 'cloud_native'
+
+    def test_create_with_manifest(self, api_client):
+        """托管方式：仅镜像（提供 manifest）"""
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f'uta-{random_suffix}',
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.IMAGE_REGISTRY,
+                    "source_repo_url": "strm/helloworld-http",
+                },
+                "build_config": {"build_method": "custom_image"},
+                "manifest": {
+                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
+                    "kind": "BkApp",
+                    "metadata": {"name": "csu230202", "generation": 0, "annotations": {}},
+                    "spec": {
+                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
+                        "processes": [{"name": "web", "replicas": 1}],
+                        "configuration": {"env": []},
+                    },
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.json()['application']['type'] == 'cloud_native'
+
+    # TODO 补充云原生应用其他场景：
+    #  - 源码 & 镜像（buildpack）
+    #  - 源码 & 镜像（dockerfile）

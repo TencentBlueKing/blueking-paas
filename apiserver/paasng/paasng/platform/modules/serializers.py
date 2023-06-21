@@ -252,8 +252,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         if not tmpl_name:
             return tmpl_name
 
-        # 创建模块的时候，只能使用普通应用模板
-        if not Template.objects.filter(name=tmpl_name, type=TemplateType.NORMAL).exists():
+        if not Template.objects.filter(name=tmpl_name).exists():
             raise ValidationError(_('模板 {} 不可用').format(tmpl_name))
         return tmpl_name
 

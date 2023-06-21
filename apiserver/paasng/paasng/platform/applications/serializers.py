@@ -273,7 +273,7 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     cloud_native_params = CloudNativeParamsSLZ(label=_('云原生应用参数'), required=False)
     advanced_options = AdvancedCreationParamsMixin(required=False)
 
-    source_config = ModuleSourceConfigSLZ(required=False, help_text=_('源代码配置'))
+    source_config = ModuleSourceConfigSLZ(required=False, help_text=_('源码配置'))
     build_config = ModuleBuildConfigSLZ(required=False, help_text=_('构建配置'))
     image_credentials = ImageCredentialsParamsMixin(required=False, help_text=_('镜像凭证信息'))
     manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
@@ -288,7 +288,7 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
         source_cfg = attrs.get('source_config')
         build_cfg = attrs.get('build_config')
         if not (source_cfg and build_cfg):
-            raise ValidationError(_('需要指定 源代码配置 以及 构建配置'))
+            raise ValidationError(_('需要指定 源码配置 以及 构建配置'))
 
         if build_cfg['build_method'] == RuntimeType.CUSTOM_IMAGE:
             if not attrs.get('manifest'):

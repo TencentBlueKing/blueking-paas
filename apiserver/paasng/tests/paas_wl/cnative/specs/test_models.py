@@ -38,7 +38,14 @@ def test_create_app_resource():
         'kind': 'BkApp',
         'metadata': {'name': 'foo-app', 'annotations': {}, 'generation': 0},
         'spec': {
-            'build': None,
+            'build': {
+                'args': None,
+                'buildTarget': None,
+                'dockerfile': None,
+                'image': 'nginx:latest',
+                'imageCredentialsName': None,
+                'imagePullPolicy': 'IfNotPresent',
+            },
             'processes': [
                 {
                     'name': 'web',
@@ -50,7 +57,7 @@ def test_create_app_resource():
                     'autoscaling': None,
                     'cpu': '500m',
                     'memory': '256Mi',
-                    'image': 'nginx:latest',
+                    'image': None,
                     'imagePullPolicy': 'IfNotPresent',
                 }
             ],

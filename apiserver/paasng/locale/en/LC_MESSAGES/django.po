@@ -126,7 +126,7 @@ msgstr ""
 #: paas_wl/cnative/specs/models.py:185 paasng/engine/models/phases.py:60
 #: paasng/engine/models/steps.py:158
 msgid "状态"
-msgstr "status"
+msgstr "Status"
 
 #: paas_wl/cnative/specs/models.py:187
 msgid "状态原因"
@@ -253,7 +253,7 @@ msgstr ""
 #, fuzzy
 #| msgid "应用删除失败"
 msgid "应用删除"
-msgstr "app deletion failed"
+msgstr "APP deletion failed"
 
 #: paasng/accessories/iam/permissions/resources/application.py:49
 #: paasng/pluginscenter/iam_adaptor/constants.py:52
@@ -368,11 +368,11 @@ msgstr "Solution found"
 
 #: paasng/accounts/constants.py:46
 msgid "没有特定角色的用户"
-msgstr "users without specific roles"
+msgstr "Users without specific roles"
 
 #: paasng/accounts/constants.py:47
 msgid "普通用户"
-msgstr "general user"
+msgstr "General user"
 
 #: paasng/accounts/constants.py:48
 msgid "管理员"
@@ -380,7 +380,7 @@ msgstr "Admin"
 
 #: paasng/accounts/constants.py:49
 msgid "超级用户"
-msgstr "administrator"
+msgstr "Administrator"
 
 #: paasng/accounts/constants.py:50
 msgid "不允许访问服务的用户"
@@ -428,13 +428,13 @@ msgstr "Allow selection of source code sources"
 
 #: paasng/accounts/constants.py:78
 msgid "允许创建 SMart 应用"
-msgstr "Allows creation of S-mart apps"
+msgstr "Allows creation of S-mart APP"
 
 #: paasng/accounts/constants.py:79
 #, fuzzy
 #| msgid "允许创建 SMart 应用"
 msgid "允许创建云原生应用"
-msgstr "Allows creation of S-mart apps"
+msgstr "Allows creation of S-mart APP"
 
 #: paasng/accounts/constants.py:80
 msgid "允许使用「提供镜像」的部署方式"
@@ -611,7 +611,7 @@ msgstr "Module {ref_module_name} does not exist"
 
 #: paasng/dev_resources/servicehub/views.py:513
 msgid "未知错误"
-msgstr "unknown error"
+msgstr "Unknown error"
 
 #: paasng/dev_resources/servicehub/views.py:516
 #, python-brace-format
@@ -620,7 +620,7 @@ msgstr "Module {ref_module_name} cannot be shared"
 
 #: paasng/dev_resources/servicehub/views.py:519
 msgid "不能重复共享"
-msgstr "cannot be shared repeatedly"
+msgstr "Cannot be shared repeatedly"
 
 #: paasng/dev_resources/services/providers/base.py:73
 msgid "资源不足, 配置资源实例失败."
@@ -628,7 +628,7 @@ msgstr "Insufficient resources, failed to configure resource instance."
 
 #: paasng/dev_resources/services/providers/sentry/provider.py:39
 msgid "Sentry 通用申请服务"
-msgstr "Sentry Common app Service"
+msgstr "Sentry Common Application Service"
 
 #: paasng/dev_resources/sourcectl/client.py:162
 #, fuzzy
@@ -791,7 +791,7 @@ msgstr "Please contact administrator"
 
 #: paasng/dev_resources/sourcectl/views.py:349
 msgid "无引擎应用不支持切换源码类型"
-msgstr "app do not support switching source code types"
+msgstr "APP do not support switching source code types"
 
 #: paasng/dev_resources/sourcectl/views.py:362
 msgid "不支持切换到蓝鲸 SVN 仓库"
@@ -982,7 +982,7 @@ msgstr "The currently running Dev Center version, the value is 3"
 
 #: paasng/engine/constants.py:168
 msgid "应用版本，默认版本为 default"
-msgstr "App version, the default version is default"
+msgstr "APP version, the default version is default"
 
 #: paasng/engine/constants.py:174
 msgid "目标端口号，值为 5000"
@@ -999,7 +999,7 @@ msgstr ""
 #: paasng/engine/deploy/bg_command/pre_release.py:56
 #: paasng/engine/deploy/release.py:55
 msgid "更新应用配置"
-msgstr "Update app configuration"
+msgstr "Update APP configuration"
 
 #: paasng/engine/deploy/bg_command/pre_release.py:63
 msgid "初始化指令执行环境"
@@ -1029,23 +1029,23 @@ msgstr ""
 #, fuzzy
 #| msgid "分析应用描述文件异常"
 msgid "应用描述文件解析异常: {}"
-msgstr "Analyzing app Description File Exceptions"
+msgstr "Analyzing APP Description File Exceptions"
 
 #: paasng/engine/deploy/building.py:191
 #: paasng/engine/deploy/image_release.py:59
 msgid "处理应用描述文件时出现异常, 请检查应用描述文件"
 msgstr ""
 "An exception occurred while processing the app description file, please "
-"check  app description file "
+"Check APP description file "
 
 #: paasng/engine/deploy/building.py:215 paasng/engine/deploy/building.py:284
 msgid "启动应用构建任务"
-msgstr "Start the app build task"
+msgstr "Start the APP build task"
 
 #: paasng/engine/deploy/building.py:262
 #: paasng/engine/deploy/image_release.py:63
 msgid "解析应用进程信息"
-msgstr "Parse app process information"
+msgstr "Parse APP process information"
 
 #: paasng/engine/deploy/building.py:266
 msgid "解析 .dockerignore 文件"
@@ -1074,11 +1074,11 @@ msgstr "cannot be interrupted, deployment has ended"
 
 #: paasng/engine/deploy/release.py:52
 msgid "更新进程配置"
-msgstr "update process configuration"
+msgstr "Update process configuration"
 
 #: paasng/engine/deploy/release.py:62
 msgid "部署应用"
-msgstr "Deploy app"
+msgstr "Deploy APP"
 
 #: paasng/engine/deploy/release.py:72 paasng/engine/deploy/release.py:90
 msgid "检测部署结果"
@@ -1160,7 +1160,7 @@ msgstr "meta"
 msgid "当前运行镜像不支持 WebConsole 功能，请尝试绑定最新运行时"
 msgstr ""
 "The current runtime image does not support WebConsole functionality, please "
-"try to bundle the latest app Runtime"
+"try to bundle the latest APP Runtime"
 
 #: paasng/engine/serializers.py:184
 #: paasng/plat_admin/admin42/serializers/config_vars.py:33
@@ -1210,7 +1210,7 @@ msgid ""
 "WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请"
 "尝试清理不必要的文件来减小体积。"
 msgstr ""
-"WARNING: The size of app source package is too large (>{warning_threshold}"
+"WARNING: The size of APP source package is too large (>{warning_threshold}"
 "MB), which will seriously affect the deployment performance. Please try to "
 "clean up unnecessary files to reduce the size."
 
@@ -1218,12 +1218,12 @@ msgstr ""
 #, fuzzy
 #| msgid "engine服务异常"
 msgid "服务异常"
-msgstr "engine service exception"
+msgstr "Engine service exception"
 
 #: paasng/engine/views.py:465
 #, python-brace-format
 msgid "应用描述文件校验失败：{exception}"
-msgstr "App description file verification failed: {exception}"
+msgstr "APP description file verification failed: {exception}"
 
 #: paasng/engine/views.py:467
 msgid "对象存储服务异常, 请稍后再试"
@@ -1301,15 +1301,15 @@ msgstr ""
 msgid "当前用户无部署该环境的权限, 请联系应用管理员"
 msgstr ""
 "The current user does not have permission to deploy this environment, please "
-"contact the app administrator"
+"contact the APP administrator"
 
 #: paasng/extensions/declarative/application/controller.py:87
 msgid "用户没有权限在 {} 下创建应用"
-msgstr "User does not have permission to create apps under {}"
+msgstr "User does not have permission to create APP under {}"
 
 #: paasng/extensions/declarative/application/controller.py:141
 msgid "你没有权限操作当前应用"
-msgstr "You do not have permission to operate the current app"
+msgstr "You do not have permission to operate the current APP"
 
 #: paasng/extensions/declarative/application/controller.py:193
 msgid "未定义主模块, 请检查 app_desc.yaml."
@@ -1322,13 +1322,13 @@ msgid ""
 "致应用在市场中访问异常, 请关闭市场开关后重新操作。"
 msgstr ""
 "The target {new_default_module_name} module does not meet the Market service "
-"opening conditions. Switching the main module will cause the app to access "
+"opening conditions. Switching the main module will cause the APP to access "
 "abnormally in the market. Please turn off the market switch and operate "
 "again."
 
 #: paasng/extensions/declarative/application/resources.py:136
 msgid "当前应用未定义主模块"
-msgstr "The current app does not define a default module"
+msgstr "The current APP does not define a default module"
 
 #: paasng/extensions/declarative/application/validations.py:114
 #: paasng/extensions/declarative/serializers.py:155
@@ -1343,7 +1343,7 @@ msgstr "An app can only have one default module"
 
 #: paasng/extensions/declarative/application/validations.py:138
 msgid "一个应用必须有一个主模块"
-msgstr "An app must have a default module"
+msgstr "An APP must have a default module"
 
 #: paasng/extensions/declarative/application/validations.py:144
 msgid "提供共享增强服务的模块不存在"
@@ -1358,7 +1358,7 @@ msgstr "content cannot be empty"
 #: paasng/extensions/declarative/protections.py:31
 msgid "通过描述文件定义的应用不支持该操作"
 msgstr ""
-"This operation is not supported by the app defined by the description file"
+"This operation is not supported by the APP defined by the description file"
 
 #: paasng/extensions/declarative/serializers.py:142
 msgid ""
@@ -1372,7 +1372,7 @@ msgstr ""
 #, fuzzy
 #| msgid "应用描述文件校验失败：{exception}"
 msgid "加载应用描述文件失败: {}"
-msgstr "App description file verification failed: {exception}"
+msgstr "APP description file verification failed: {exception}"
 
 #: paasng/extensions/scene_app/initializer.py:78
 #, fuzzy
@@ -1408,25 +1408,25 @@ msgstr ""
 #: paasng/extensions/smart_app/utils.py:54
 #: paasng/extensions/smart_app/utils.py:69
 msgid "找不到任何有效的应用描述信息"
-msgstr "No valid app descriptions found"
+msgstr "No valid APP descriptions found"
 
 #: paasng/extensions/smart_app/views.py:84
 msgid "你无法创建 SMart 应用"
-msgstr "You cannot create a S-mart app"
+msgstr "You cannot create a S-mart APP"
 
 #: paasng/extensions/smart_app/views.py:134
 msgid "你无法创建 S-Mart 应用"
-msgstr "You cannot create a S-mart app"
+msgstr "You cannot create a S-mart APP"
 
 #: paasng/extensions/smart_app/views.py:180
 #, python-brace-format
 msgid "应用ID: {appid} 的应用已存在!"
-msgstr "App ID: {appid} of the app already exists!"
+msgstr "APP ID: {appid} of the APP already exists!"
 
 #: paasng/extensions/smart_app/views.py:225
 #, python-brace-format
 msgid "应用ID: {appid} 的应用不存在!"
-msgstr "App ID: {appid} of the application does not exist!"
+msgstr "APP ID: {appid} of the APP does not exist!"
 
 #: paasng/monitoring/healthz/probes.py:138
 #, python-brace-format
@@ -1590,7 +1590,7 @@ msgstr "Now online"
 #: paasng/plat_admin/numbers/app.py:527
 #: paasng/platform/applications/views.py:832
 msgid "已下架"
-msgstr "archived"
+msgstr "Archived"
 
 #: paasng/plat_admin/numbers/app.py:528
 msgid "测试中"
@@ -1602,15 +1602,15 @@ msgstr "No valid configuration information is available."
 
 #: paasng/platform/applications/exceptions.py:25
 msgid "应用编码"
-msgstr "app Coding"
+msgstr "APP ID"
 
 #: paasng/platform/applications/exceptions.py:26
 msgid "应用名称"
-msgstr "App name"
+msgstr "APP name"
 
 #: paasng/platform/applications/protections.py:54
 msgid "S-Mart 不可关闭应用描述文件"
-msgstr "S-Mart cannot close the app description file"
+msgstr "S-Mart cannot close the APP description file"
 
 #: paasng/platform/applications/serializers.py:101
 msgid "{} 为 {} 的应用已存在"
@@ -1618,12 +1618,12 @@ msgstr "{} for {} already exists"
 
 #: paasng/platform/applications/serializers.py:118
 msgid "不支持修改应用 ID"
-msgstr "Modifying app IDs is not supported"
+msgstr "Modifying APP ID is not supported"
 
 #: paasng/platform/applications/serializers.py:137
 #: paasng/platform/applications/serializers.py:138
 msgid "应用 ID"
-msgstr "App ID"
+msgstr "APP ID"
 
 #: paasng/platform/applications/serializers.py:141
 #: paasng/platform/modules/serializers.py:52
@@ -1643,7 +1643,7 @@ msgstr "Cluster name error, cluster named {value} could not be found"
 
 #: paasng/platform/applications/serializers.py:228
 msgid "应用引擎参数未提供"
-msgstr "App engine parameters not provided"
+msgstr "APP engine parameters not provided"
 
 #: paasng/platform/applications/serializers.py:234
 msgid "已开启引擎，类型不能为 \"enginess_app\""
@@ -1702,7 +1702,7 @@ msgstr "Invalid classification option: %s"
 
 #: paasng/platform/applications/views.py:284
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
-msgstr "Before deleting an app, please archive it from the App Market."
+msgstr "Before deleting an APP, please archive it from the App Market."
 
 #: paasng/platform/applications/views.py:377
 #, fuzzy
@@ -1723,13 +1723,13 @@ msgstr "You cannot use non-default source code sources"
 
 #: paasng/platform/applications/views.py:417
 msgid "当前版本下无法创建蓝鲸插件应用"
-msgstr "The  bk-plugin app cannot be created under the current version"
+msgstr "The  bk-plugin APP cannot be created under the current version"
 
 #: paasng/platform/applications/views.py:481
 #, fuzzy
 #| msgid "你无法创建 SMart 应用"
 msgid "你无法创建云原生应用"
-msgstr "You cannot create a S-mart app"
+msgstr "You cannot create a S-mart APP"
 
 #: paasng/platform/applications/views.py:561
 #, python-format
@@ -1738,7 +1738,7 @@ msgstr ""
 
 #: paasng/platform/applications/views.py:828
 msgid "开发中"
-msgstr "developing"
+msgstr "Developing"
 
 #: paasng/platform/applications/views.py:831
 msgid "应用市场"
@@ -1770,15 +1770,15 @@ msgstr "The  Logging  snapshot has failed, please refresh and try again."
 
 #: paasng/platform/mgrlegacy/app_migrations/basic.py:52
 msgid "创建应用对象"
-msgstr "Creating app objects"
+msgstr "Creating APP objects"
 
 #: paasng/platform/mgrlegacy/app_migrations/basic.py:106
 msgid "同步应用基本信息"
-msgstr "Basic information about the Sync app"
+msgstr "Basic information about the Sync APP"
 
 #: paasng/platform/mgrlegacy/app_migrations/code.py:97
 msgid "变更应用代码"
-msgstr "Change of app code"
+msgstr "Change of APP code"
 
 #: paasng/platform/mgrlegacy/app_migrations/deploy.py:42
 msgid "部署到预发布环境和生产环境"
@@ -1857,7 +1857,7 @@ msgstr "Change desktop entry"
 
 #: paasng/platform/mgrlegacy/app_migrations/entrance.py:53
 msgid "应用接入层已经回滚到 PaaS2.0"
-msgstr "The app access layer has been rolled back to PaaS2.0"
+msgstr "The APP access layer has been rolled back to PaaS2.0"
 
 #: paasng/platform/mgrlegacy/app_migrations/envs_base.py:43
 msgid "同步环境变量"
@@ -1916,13 +1916,13 @@ msgstr "About to unbind Add-ons instance <{service_instance_id}>"
 #: paasng/platform/mgrlegacy/app_migrations/service_mysql.py:86
 msgid "当前应用尚未部署过预发布环境, 跳过创建预发布环境的数据库实例。"
 msgstr ""
-"The current app has not yet deployed the stag env, skip creating the "
+"The current APP has not yet deployed the stag env, skip creating the "
 "database instance of the stag env"
 
 #: paasng/platform/mgrlegacy/app_migrations/service_mysql.py:107
 msgid "当前应用尚未部署过生产环境, 跳过创建生产环境的数据库实例。"
 msgstr ""
-"The current app has not been deployed to the prod env, skip creating a "
+"The current APP has not been deployed to the prod env, skip creating a "
 "database instance for the prod env."
 
 #: paasng/platform/mgrlegacy/app_migrations/service_mysql_te.py:15
@@ -1945,17 +1945,17 @@ msgstr "Sync SVN repository information"
 #: paasng/platform/mgrlegacy/legacy_proxy.py:80
 #: paasng/platform/mgrlegacy/legacy_proxy_te.py:103
 msgid "暂不支持轻应用迁移"
-msgstr " Mini-App migration is not currently supported"
+msgstr " Mini-APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:84
 #: paasng/platform/mgrlegacy/legacy_proxy_te.py:109
 msgid "暂不支持该类型应用迁移"
-msgstr "This type of app migration is not currently supported"
+msgstr "This type of APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:87
 #: paasng/platform/mgrlegacy/legacy_proxy_te.py:118
 msgid "目前仅支持Python应用迁移"
-msgstr "Previously only supported Python app migration"
+msgstr "Previously only supported Python APP migration"
 
 #: paasng/platform/mgrlegacy/legacy_proxy_te.py:122
 msgid "该项目没有trunk分支，请先添加trunk分支"
@@ -1967,7 +1967,7 @@ msgstr "No known reason, please contact the administrator"
 
 #: paasng/platform/mgrlegacy/views.py:175
 msgid "已确认后的应用无法回滚"
-msgstr "apps that have been confirmed cannot be rolled back"
+msgstr "APP that have been confirmed cannot be rolled back"
 
 #: paasng/platform/modules/manager.py:251
 #: paasng/platform/modules/manager.py:289
@@ -2019,7 +2019,7 @@ msgstr ""
 #, fuzzy
 #| msgid "应用名称为 %s 的应用已存在"
 msgid "名称为 {} 的模块已存在"
-msgstr " App name %s already exists "
+msgstr " APP name %s already exists "
 
 #: paasng/platform/modules/serializers.py:149
 msgid "模板 {} 不可用"
@@ -2032,12 +2032,12 @@ msgstr "The command cannot begin with 'start '."
 
 #: paasng/platform/modules/views.py:89
 msgid "当前应用下不允许创建新模块"
-msgstr "New modules are not allowed to be created under the current app"
+msgstr "New modules are not allowed to be created under the current APP"
 
 #: paasng/platform/modules/views.py:94
 #, python-brace-format
 msgid "单个应用下最多能创建 {num} 个模块"
-msgstr "Up to {num} modules can be created under a single application"
+msgstr "Up to {num} modules can be created under a single APP"
 
 #: paasng/platform/modules/views.py:189
 msgid "主模块不允许被删除"
@@ -2060,17 +2060,17 @@ msgid ""
 "中访问异常"
 msgstr ""
 "The target {module_name} module does not meet the conditions for opening the "
-"Market service, switching the default module will cause the app to be "
+"Market service, switching the default module will cause the APP to be "
 "exceptionally accessible in the marketplace"
 
 #: paasng/platform/modules/views.py:403
 msgid "当前应用不支持配置「启动命令」"
 msgstr ""
-"The current app does not support the configuration of 「start commands」"
+"The current APP does not support the configuration of 「start commands」"
 
 #: paasng/platform/operations/constant.py:54
 msgid "创建应用"
-msgstr "Creating app"
+msgstr "create APP"
 
 #: paasng/platform/operations/constant.py:55
 msgid "部署预发布环境"
@@ -2090,19 +2090,19 @@ msgstr "improve market configuration"
 
 #: paasng/platform/operations/constant.py:59
 msgid "下线应用服务"
-msgstr "archive app"
+msgstr "archive APP"
 
 #: paasng/platform/operations/constant.py:60
 msgid "删除应用"
-msgstr "delete app"
+msgstr "delete APP"
 
 #: paasng/platform/operations/constant.py:61
 msgid "从应用市场下架"
-msgstr " remove from the app market "
+msgstr " remove from the APP market "
 
 #: paasng/platform/operations/constant.py:62
 msgid "发布至应用市场"
-msgstr " Publish to app market"
+msgstr " publish to APP market"
 
 #: paasng/platform/operations/constant.py:63
 msgid "下线预发布环境"
@@ -2212,27 +2212,27 @@ msgstr "Modify"
 #, fuzzy
 #| msgid "删除应用"
 msgid "删除"
-msgstr "delete app"
+msgstr "Delete APP"
 
 #: paasng/pluginscenter/constants.py:135
 #, fuzzy
 #| msgid "已下架"
 msgid "下架"
-msgstr "archived"
+msgstr "Archived"
 
 #: paasng/pluginscenter/constants.py:141
 msgid "插件"
-msgstr "plugin"
+msgstr "Plugin"
 
 #: paasng/pluginscenter/constants.py:142
 msgid "版本"
-msgstr "vesion"
+msgstr "Version"
 
 #: paasng/pluginscenter/constants.py:143
 #, fuzzy
 #| msgid "同步应用基本信息"
 msgid "基本信息"
-msgstr "Basic information about the Sync app"
+msgstr "Basic information about the Sync APP"
 
 #: paasng/pluginscenter/constants.py:144
 msgid "logo"
@@ -2318,7 +2318,7 @@ msgstr ""
 #, fuzzy
 #| msgid "应用应该至少拥有一个管理员"
 msgid "插件应该至少拥有一个管理员"
-msgstr "The app should have at least one admin"
+msgstr "The APP should have at least one admin"
 
 #: paasng/pluginscenter/exceptions.py:40
 msgid "添加插件成员失败"
@@ -2608,7 +2608,7 @@ msgstr "Other"
 
 #: paasng/publish/market/protections.py:67
 msgid "应用未在生产环境成功部署"
-msgstr "app not successfully deployed in prod env"
+msgstr "APP not successfully deployed in prod env"
 
 #: paasng/publish/market/protections.py:80
 msgid "未设置合法的第三方地址"
@@ -2640,7 +2640,7 @@ msgstr "The current module's prod env is not bound to this access address"
 
 #: paasng/security/access_control/views.py:93
 msgid "该应用对外网开放，白名单禁止关闭"
-msgstr "The app is open to the extranet, whitelisting is disabled"
+msgstr "The APP is open to the extranet, whitelisting is disabled"
 
 #: paasng/security/access_control/views.py:95
 msgid "白名单禁止关闭"
@@ -2654,7 +2654,7 @@ msgstr "The same strategy exists"
 
 #: paasng/security/access_control/views.py:395
 msgid "已经在审核中,请勿重复申请"
-msgstr "Already under review, please do not repeat your app"
+msgstr "Already under review, please do not repeat your APP"
 
 #: paasng/security/access_control/views.py:398
 msgid "提交申请成功"
@@ -2670,11 +2670,11 @@ msgstr "Failed to send notification message, please wait and try again"
 
 #: paasng/utils/error_codes.py:27
 msgid "应用应该至少拥有一个管理员"
-msgstr "The app should have at least one admin"
+msgstr "The APP should have at least one admin"
 
 #: paasng/utils/error_codes.py:28
 msgid "应用所有者不能执行该操作"
-msgstr "The app owner cannot perform the operation"
+msgstr "The APP owner cannot perform the operation"
 
 #: paasng/utils/error_codes.py:30
 msgid "查询API列表失败"
@@ -2682,19 +2682,19 @@ msgstr "Failed to query API list"
 
 #: paasng/utils/error_codes.py:31
 msgid "应用身份凭证缺失"
-msgstr "Missing app identification credentials"
+msgstr "Missing APP identification credentials"
 
 #: paasng/utils/error_codes.py:33
 msgid "应用创建失败"
-msgstr "app creation failure"
+msgstr "APP creation failure"
 
 #: paasng/utils/error_codes.py:34
 msgid "初始化应用源码模板失败"
-msgstr "Failed to initialise app source code template"
+msgstr "Failed to initialise APP source code template"
 
 #: paasng/utils/error_codes.py:35
 msgid "应用删除失败"
-msgstr "app deletion failed"
+msgstr "APP deletion failed"
 
 #: paasng/utils/error_codes.py:36
 msgid "访问受保护资源失败"
@@ -2775,7 +2775,7 @@ msgstr ""
 
 #: paasng/utils/error_codes.py:59
 msgid "应用尚未在该环境发布过"
-msgstr "The app has not been released in this environment"
+msgstr "The APP has not been released in this environment"
 
 #: paasng/utils/error_codes.py:60
 msgid "已开启部署权限控制，仅管理员可以操作"
@@ -2856,19 +2856,19 @@ msgstr "No changes are allowed to the current item"
 
 #: paasng/utils/error_codes.py:84
 msgid "应用尚未在任何环境部署"
-msgstr "The app has not been deployed in any environment"
+msgstr "The APP has not been deployed in any environment"
 
 #: paasng/utils/error_codes.py:85
 msgid "应用迁移确认, 切换入口失败"
-msgstr "app migration confirmed, Switching portal failed"
+msgstr "APP migration confirmed, Switching portal failed"
 
 #: paasng/utils/error_codes.py:86
 msgid "应用在新版开发者中心未完全下架"
-msgstr "App not fully archive in new version of Developer Center"
+msgstr "APP not fully archive in new version of Developer Center"
 
 #: paasng/utils/error_codes.py:87
 msgid "应用在旧版开发者中心未完全下架"
-msgstr "App not fully archive from old  Developer Center"
+msgstr "APP not fully archive from old  Developer Center"
 
 #: paasng/utils/error_codes.py:89
 msgid "查询下线信息失败"
@@ -2886,11 +2886,11 @@ msgstr "The conditions for opening the market service have not been met"
 #, fuzzy
 #| msgid "无法获取应用资源 metrics"
 msgid "应用资源 metrics 暂不支持"
-msgstr "Unable to fetch app resources metrics"
+msgstr "Unable to fetch APP resources metrics"
 
 #: paasng/utils/error_codes.py:95
 msgid "无法获取应用资源 metrics"
-msgstr "Unable to fetch app resources metrics"
+msgstr "Unable to fetch APP resources metrics"
 
 #: paasng/utils/error_codes.py:97
 msgid "初始化告警规则失败"
@@ -2914,7 +2914,7 @@ msgstr "Unable to delete domain"
 
 #: paasng/utils/error_codes.py:104
 msgid "应用引擎未开启"
-msgstr "App engine not turned on"
+msgstr "APP engine not turned on"
 
 #: paasng/utils/error_codes.py:106
 msgid "访问量统计接口异常"
@@ -2938,15 +2938,15 @@ msgstr "Document template does not exist"
 
 #: paasng/utils/error_codes.py:114
 msgid "没找到任何待创建的 S-mart 应用包"
-msgstr "No S-mart App packages were found to be created"
+msgstr "No S-mart APP packages were found to be created"
 
 #: paasng/utils/error_codes.py:115
 msgid "缺失应用描述文件"
-msgstr "Missing app description file"
+msgstr "Missing APP description file"
 
 #: paasng/utils/error_codes.py:116
 msgid "分析应用描述文件异常"
-msgstr "Analyzing app Description File Exceptions"
+msgstr "Analyzing APP Description File Exceptions"
 
 #: paasng/utils/error_codes.py:117
 msgid "访问容器镜像仓库异常"
@@ -2995,7 +2995,7 @@ msgstr "Document template does not exist"
 #, fuzzy
 #| msgid "分析应用描述文件异常"
 msgid "场景模板应用描述文件异常"
-msgstr "Analyzing app Description File Exceptions"
+msgstr "Analyzing APP Description File Exceptions"
 
 #: paasng/utils/error_codes.py:138
 msgid "创建蓝鲸可视化开发平台应用错误"
@@ -3009,7 +3009,7 @@ msgstr "engine service error"
 #, fuzzy
 #| msgid "初始化应用源码模板失败"
 msgid "初始化应用成员信息失败"
-msgstr "Failed to initialise app source code template"
+msgstr "Failed to initialise APP source code template"
 
 #: paasng/utils/error_codes.py:145
 msgid "添加应用成员失败"
@@ -3023,7 +3023,7 @@ msgstr ""
 #, fuzzy
 #| msgid "删除应用"
 msgid "删除应用成员失败"
-msgstr "delete app"
+msgstr "Delete APP"
 
 #: paasng/utils/error_codes.py:150
 msgid "因该功能正在升级改造，操作暂不可用。"

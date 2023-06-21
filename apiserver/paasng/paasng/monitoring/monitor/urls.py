@@ -43,6 +43,7 @@ urlpatterns = [
         'api/monitor/applications/<slug:code>/modules/<slug:module_name>/alert_rules/',
         views.AlertRulesView.as_view({'get': 'list'}),
     ),
+    # TODO init_alert_rules will be deprecated
     path(
         'api/monitor/applications/<slug:code>/alert_rules/init/',
         views.AlertRulesView.as_view({'post': 'init_alert_rules'}),

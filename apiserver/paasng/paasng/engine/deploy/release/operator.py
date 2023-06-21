@@ -25,6 +25,7 @@ from paas_wl.cnative.specs.credentials import get_references, validate_reference
 from paas_wl.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.cnative.specs.resource import deploy as apply_bkapp_to_k8s
+from paas_wl.platform.applications.models import Build
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.bg_wait.wait_bkapp import AppModelDeployStatusPoller, DeployStatusHandler
 from paasng.engine.exceptions import StepNotInPresetListError
@@ -44,8 +45,16 @@ class BkAppReleaseMgr(DeployStep):
     def start(self):
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
         with self.procedure('部署应用'):
+            build = Build.objects.get(pk=self.deployment.build_id)
+            # 对于仅托管镜像类型的云原生应用, build.image 字段为空字符串
+            # 对于从源码构建镜像的云原生应用, build.image 字段是构建后的镜像
+            image = build.image or None
             release_id = release_by_k8s_operator(
-                self.module_environment, revision, operator=self.deployment.operator, deployment_id=self.deployment.id
+                self.module_environment,
+                revision,
+                operator=self.deployment.operator,
+                deployment_id=self.deployment.id,
+                image=image,
             )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
@@ -58,7 +67,11 @@ class BkAppReleaseMgr(DeployStep):
 
 
 def release_by_k8s_operator(
-    env: ModuleEnvironment, revision: AppModelRevision, operator: str, deployment_id: Optional[str] = None
+    env: ModuleEnvironment,
+    revision: AppModelRevision,
+    operator: str,
+    image: Optional[str] = None,
+    deployment_id: Optional[str] = None,
 ) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
     this action will start an async waiting procedure which waits for the release to be finished.
@@ -66,6 +79,7 @@ def release_by_k8s_operator(
     :param env: The environment to create the release for.
     :param revision: The revision to be released.
     :param operator: current operator's user_id
+    :param deployment_id: the deployment id of the release
 
     :raises: ValueError when image credential_refs is invalid  TODO: 抛更具体的异常
     :raises: UnprocessibleEntityError when k8s can not process this manifest
@@ -95,7 +109,7 @@ def release_by_k8s_operator(
             operator=operator,
         )
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest_v1alpha1(credential_refs=credential_refs)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(credential_refs=credential_refs, image=image)
         )
     except Exception as e:
         if app_model_deploy is not None:

@@ -398,18 +398,22 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = CreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
-        version_info = self._get_version_info(request.user, module, params)
+        manifest = params.get("manifest", None)
+        version_info = None
+        # 只有仅托管镜像的云原生应用会传递 manifest
+        if manifest is None:
+            version_info = self._get_version_info(request.user, module, params)
 
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
+        # 选择历史构建的镜像时需要传递 build_id
         if build_id := params["advanced_options"].get("build_id"):
             wl_app = self.get_wl_app_via_path()
             if not Build.objects.filter(pk=build_id, app=wl_app).exists():
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在"))
 
-        manifest = params.get("manifest")
         deployment = None
         try:
             with coordinator.release_on_error():

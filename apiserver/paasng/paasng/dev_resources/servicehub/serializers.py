@@ -216,7 +216,7 @@ class BoundServiceInfoSLZ(serializers.Serializer):
     """Serializer for representing bound service info"""
 
     service = ServiceMinimalSLZ(help_text='增强服务信息')
-    provision_info = ProvisionInfoSLZ(help_text='增强服务实例分配信息')
+    provision_infos = ProvisionInfoSLZ(help_text='增强服务实例分配信息')
     specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())
 
 

@@ -236,7 +236,7 @@ class LocalServiceMgr(BaseServiceMgr):
         services = Service.objects.filter(region=region, is_active=True, is_visible=True)
         for svc in services:
             # Ignore services which is_visible field is False
-            if not include_hidden and not svc['is_visible']:
+            if not include_hidden and not svc.is_visible:
                 continue
 
             yield LocalServiceObj.from_db_object(svc)

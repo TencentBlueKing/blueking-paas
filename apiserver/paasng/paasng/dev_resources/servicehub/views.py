@@ -366,17 +366,16 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 continue
             unbound_services.append(svc)
 
-        total = len(bound_services) + len(shared_services) + len(unbound_services)
-
         svc_bound_info_map: Dict[str, Dict[str, Any]] = {
-            svc.uuid: {'service': svc, 'provision_info': {}, 'specifications': []} for svc in bound_services
+            svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in bound_services
         }
         for env in module.get_envs():
             list_provisioned_rels = mixed_service_mgr.list_provisioned_rels(env.engine_app)
             for rel in list_provisioned_rels:
-                bound_info = svc_bound_info_map[rel.get_service().uuid]
+                svc = rel.get_service()
+                bound_info = svc_bound_info_map[svc.uuid]
                 # 补充实例分配信息
-                bound_info['provision_info'][env.environment] = rel.is_provisioned()  # type: ignore
+                bound_info['provision_infos'][env.environment] = rel.is_provisioned()
 
                 # 现阶段所有环境的服务规格一致，若某环境已经获取到配置参数信息，则跳过以免重复
                 if len(bound_info['specifications']):
@@ -384,19 +383,16 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
                 # 补充配置参数信息
                 specs = rel.get_plan().specifications
-                for definition in bound_info['service'].specifications:  # type: ignore
+                for definition in bound_info['service'].specifications:
                     result = definition.as_dict()
                     result['value'] = specs.get(definition.name)
-                    bound_info['specifications'].append(result)  # type: ignore
+                    bound_info['specifications'].append(result)
 
         return Response(
             {
-                'count': total,
-                'results': {
-                    'bound': slzs.BoundServiceInfoSLZ(svc_bound_info_map.values(), many=True).data,
-                    'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
-                    'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
-                },
+                'bound': slzs.BoundServiceInfoSLZ(svc_bound_info_map.values(), many=True).data,
+                'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
+                'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
             }
         )
 

@@ -94,10 +94,7 @@ def get_simple_app_by_legacy_app(app: LApplication) -> Optional[UniSimpleApp]:
         return None
 
     # Compatible with some versions of APP in PaaS2.0 without name_en field
-    try:
-        name_en = app.name_en
-    except AttributeError:
-        name_en = app.name
+    name_en = getattr(app, 'name_en', app.name)
 
     simple_app = UniSimpleApp(
         _source=SimpleAppSource.LEGACY,

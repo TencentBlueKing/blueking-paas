@@ -38,6 +38,11 @@ urlpatterns = [
         views.ModuleViewSet.as_view({'post': 'set_as_default'}),
         name="module.set_default",
     ),
+    url(
+        r'^api/bkapps/cloud-native/(?P<code>[^/]+)/modules/$',
+        views.ModuleViewSet.as_view({'post': 'create_cloud_native_module'}),
+        name='module.create.cloud_native',
+    ),
     # BuildPack Runtime(Deprecated: using ModuleBuildConfigViewSet)
     url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/runtime/list/$',

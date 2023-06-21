@@ -21,11 +21,15 @@ from typing import Dict, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
+from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.cluster.serializers import ClusterSLZ
 from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.cnative.specs.constants import ApiVersion
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.models import to_error_string
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
 from paasng.dev_resources.sourcectl.validators import validate_image_url
@@ -234,12 +238,32 @@ class ImageTagOptionsSLZ(serializers.Serializer):
         return prefix
 
 
+class ModuleSourceConfigSLZ(serializers.Serializer):
+    """模块源码仓库/模板等信息"""
+
+    source_init_template = serializers.CharField(required=False, default='', allow_blank=True)
+    source_origin = serializers.ChoiceField(choices=SourceOrigin.get_choices(), default=SourceOrigin.AUTHORIZED_VCS)
+    source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
+    source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
+    source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
+    source_dir = serializers.CharField(required=False, default='', allow_blank=True)
+
+    def validate_source_init_template(self, tmpl_name):
+        if not tmpl_name:
+            return tmpl_name
+
+        # 创建模块的时候，只能使用普通应用模板
+        if not Template.objects.filter(name=tmpl_name, type=TemplateType.NORMAL).exists():
+            raise ValidationError(_('模板 {} 不可用').format(tmpl_name))
+        return tmpl_name
+
+
 class ModuleBuildConfigSLZ(serializers.Serializer):
     """模块镜像构建信息"""
 
     image_repository = serializers.CharField(help_text="镜像仓库", read_only=True)
     build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
-    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=True)
+    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # buildpack build 相关字段
     bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", allow_null=True, required=False)
@@ -255,14 +279,54 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
         build_method = RuntimeType(attrs["build_method"])
         missed_params = []
         if build_method == RuntimeType.BUILDPACK:
-            missed_params = [k for k in ['buildpacks', 'bp_stack_name'] if not attrs.get(k)]
+            missed_params = [k for k in ['tag_options', 'buildpacks', 'bp_stack_name'] if not attrs.get(k)]
         elif build_method == RuntimeType.DOCKERFILE:
-            missed_params = [k for k in ['dockerfile_path', 'docker_build_args'] if not attrs.get(k)]
+            missed_params = [k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if not attrs.get(k)]
         if missed_params:
             raise ValidationError(
                 detail={param: _('This field is required.') for param in missed_params}, code="required"
             )
         return attrs
+
+
+class CreateCNativeModuleSLZ(serializers.Serializer):
+    """Serializer for create cloud-native application's module"""
+
+    name = ModuleNameField()
+    source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码配置'))
+    build_config = ModuleBuildConfigSLZ(required=True, help_text=_('构建配置'))
+    manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
+
+    def validate(self, attrs):
+        build_cfg = attrs['build_config']
+
+        # 如果托管方式为仅镜像，则应该设置 manifest
+        if build_cfg['build_method'] == RuntimeType.CUSTOM_IMAGE:
+            if not attrs.get('manifest'):
+                raise ValidationError(_('云原生应用 manifest 不能为空'))
+
+            source_cfg = attrs['source_config']
+            # 检查 source_config 中 source_origin 类型必须为 IMAGE_REGISTRY
+            if source_cfg['source_origin'] != SourceOrigin.IMAGE_REGISTRY:
+                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 IMAGE_REGISTRY'))
+
+            try:
+                bkapp_res = BkAppResource(**attrs['manifest'])
+            except PDValidationError as e:
+                raise ValidationError(to_error_string(e))
+
+            if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
+                raise ValidationError(_('请使用 BkApp v1alpha2 以支持多模块'))
+
+            if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
+                raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))
+
+        return attrs
+
+    def validate_name(self, name):
+        if Module.objects.filter(application=self.context['application'], name=name).exists():
+            raise ValidationError(_("名称为 {} 的模块已存在").format(name))
+        return name
 
 
 class ModuleRuntimeOverviewSLZ(serializers.Serializer):

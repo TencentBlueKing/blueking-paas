@@ -52,6 +52,7 @@ from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
+    CreateCNativeModuleSLZ,
     CreateModuleSLZ,
     ListModulesSLZ,
     MinimalModuleSLZ,
@@ -82,14 +83,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def create(self, request, *args, **kwargs):
         """创建一个新模块, 创建 lesscode 模块时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供"""
         application = self.get_application()
-        if not AppSpecs(application).can_create_extra_modules:
-            raise ValidationError(_("当前应用下不允许创建新模块"))
-
-        modules_count = application.modules.all().count()
-        if modules_count >= settings.MAX_MODULES_COUNT_PER_APPLICATION:
-            raise error_codes.CREATE_MODULE_QUOTA_EXCEEDED.f(
-                _("单个应用下最多能创建 {num} 个模块").format(num=settings.MAX_MODULES_COUNT_PER_APPLICATION)
-            )
+        self._ensure_allow_create_module(application)
 
         serializer = CreateModuleSLZ(data=request.data, context={'application': application})
         serializer.is_valid(raise_exception=True)
@@ -100,13 +94,11 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # Permission check for non-default source origin
         source_origin = SourceOrigin(data['source_origin'])
-        if source_origin not in SourceOrigin.get_default_origins():
-            if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_('你无法使用非默认的源码来源'))
+        self._ensure_source_origin_available(request.user, source_origin)
 
         # lesscode app needs to create an application on the bk_lesscode platform first
-        bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
         if source_origin == SourceOrigin.BK_LESS_CODE:
+            bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
             try:
                 make_bk_lesscode_client(login_cookie=bk_token).create_app(
                     application.code, application.name, data['name']
@@ -240,6 +232,85 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             sender=application, application=application, new_module=module, old_module=default_module
         )
         return Response(status=status.HTTP_200_OK)
+
+    @transaction.atomic
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
+    def create_cloud_native_module(self, request, code):
+        """创建云原生应用模块（非默认）"""
+        application = self.get_application()
+        self._ensure_allow_create_module(application)
+
+        serializer = CreateCNativeModuleSLZ(data=request.data, context={'application': application})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        src_cfg = data.get('source_config', {})
+        # 检查当前用户能否使用指定的 source_origin
+        self._ensure_source_origin_available(request.user, SourceOrigin(src_cfg['source_origin']))
+
+        source_config = {'source_origin': src_cfg['source_origin']}
+        if tmpl_name := src_cfg['source_init_template']:
+            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            source_config.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+
+        module = Module.objects.create(
+            application=application,
+            is_default=False,
+            region=application.region,
+            name=data['name'],
+            owner=application.owner,
+            creator=request.user.pk,
+            exposed_url_type=get_region(application.region).entrance_config.exposed_url_type,
+            **source_config,
+        )
+        # 使用默认模块的 PROD 环境部署集群作为新模块集群
+        cluster = get_application_cluster(application)
+
+        build_cfg = data['build_config']
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+        try:
+            build_config.update_with_build_method(
+                build_cfg['build_method'],
+                module,
+                build_cfg.get('bp_stack_name'),
+                build_cfg.get('buildpacks'),
+                build_cfg.get('dockerfile_path'),
+                build_cfg.get('docker_build_args'),
+            )
+        except BPNotFound:
+            raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
+
+        ret = init_module_in_view(
+            module,
+            repo_type=src_cfg.get('source_control_type'),
+            repo_url=src_cfg.get('source_repo_url'),
+            repo_auth_info=src_cfg.get('source_repo_auth_info'),
+            source_dir=src_cfg.get('source_dir', ''),
+            cluster_name=cluster.name,
+            manifest=data.get('manifest'),
+        )
+
+        return Response(
+            data={'module': ModuleSLZ(module).data, 'source_init_result': ret.source_init_result},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def _ensure_allow_create_module(self, application: Application):
+        """检查当前应用是否允许继续创建模块"""
+        if not AppSpecs(application).can_create_extra_modules:
+            raise ValidationError(_("当前应用下不允许创建新模块"))
+
+        modules_count = application.modules.count()
+        if modules_count >= settings.MAX_MODULES_COUNT_PER_APPLICATION:
+            raise error_codes.CREATE_MODULE_QUOTA_EXCEEDED.f(
+                _("单个应用下最多能创建 {num} 个模块").format(num=settings.MAX_MODULES_COUNT_PER_APPLICATION)
+            )
+
+    def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
+        """对使用非默认源码来源的，需要检查是否有权限"""
+        if source_origin not in SourceOrigin.get_default_origins():
+            if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
+                raise ValidationError(_('你无法使用非默认的源码来源'))
 
 
 class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -386,25 +457,21 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         build_config = BuildConfig.objects.get_or_create_by_module(module)
 
         build_method = data["build_method"]
-        if build_method == RuntimeType.BUILDPACK:
-            bp_stack_name = data["bp_stack_name"]
-            buildpack_ids = [item["id"] for item in data["buildpacks"]]
-
-            binder = ModuleRuntimeBinder(module)
-            try:
-                binder.bind_bp_stack(bp_stack_name, buildpack_ids)
-            except BPNotFound:
-                raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
-
-            build_config.build_method = build_method
-            build_config.save(update_fields=["build_method", "updated"])
-        elif build_method == RuntimeType.DOCKERFILE:
-            build_config.build_method = build_method
-            build_config.dockerfile_path = data["dockerfile_path"]
-            build_config.docker_build_args = data["docker_build_args"]
-            build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
-        else:
+        if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]:
             raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
+
+        try:
+            build_config.update_with_build_method(
+                build_method,
+                module,
+                data.get('bp_stack_name'),
+                data.get('buildpacks'),
+                data.get('dockerfile_path'),
+                data.get('docker_build_args'),
+            )
+        except BPNotFound:
+            raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
+
         return Response()
 
     @swagger_auto_schema(response_serializer=ModuleRuntimeSLZ(many=True))

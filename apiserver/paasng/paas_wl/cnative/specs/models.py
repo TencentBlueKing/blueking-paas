@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union, overload
 
 import yaml
 from django.db import models
@@ -34,7 +34,7 @@ from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
 
 from .constants import DEFAULT_PROCESS_NAME, DeployStatus
-from .crd.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -198,15 +198,17 @@ def create_app_resource(
     obj = BkAppResource(
         metadata=ObjectMetadata(name=name),
         spec=BkAppSpec(
+            build=BkAppBuildConfig(
+                image=image,
+            ),
             processes=[
                 BkAppProcess(
                     name=DEFAULT_PROCESS_NAME,
-                    image=image,
                     command=command or [],
                     args=args or [],
                     targetPort=target_port or None,
                 )
-            ]
+            ],
         ),
     )
     # TODO: Allow the default fields to be skipped, such as empty "command" and "args"
@@ -245,16 +247,30 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-def generate_bkapp_name(env: ModuleEnvironment) -> str:
-    """Generate name of the BkApp resource by env.
+@overload
+def generate_bkapp_name(obj: Module) -> str:
+    ...
 
-    :param env: ModuleEnv object
+
+@overload
+def generate_bkapp_name(obj: ModuleEnvironment) -> str:
+    ...
+
+
+def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
+    """Generate name of the BkApp resource by env.
+    :param obj: Union[Module, ModuleEnvironment] object
     :return: BkApp resource name
     """
-    # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
-    module_name = env.module.name
-    if module_name == ModuleName.DEFAULT.value:
-        name = f'{env.application.code}'
+    if isinstance(obj, Module):
+        module_name = obj.name
+        code = obj.application.code
     else:
-        name = f'{env.application.code}-m-{module_name}'
+        module_name = obj.module.name
+        code = obj.application.code
+    # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
+    if module_name == ModuleName.DEFAULT.value:
+        name = f'{code}'
+    else:
+        name = f'{code}-m-{module_name}'
     return name.replace("_", "0us0")

@@ -33,6 +33,7 @@ from uuid import UUID
 
 from django.db import transaction
 
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import WlAppMetadata, get_metadata, update_metadata
@@ -114,8 +115,7 @@ def create_cnative_app_model_resource(
 
     application = module.application
     resource = create_app_resource(
-        # Use Application code as default resource name
-        name=application.code,
+        name=generate_bkapp_name(module),
         image=image,
         command=command,
         args=args,

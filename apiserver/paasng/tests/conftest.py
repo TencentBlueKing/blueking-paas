@@ -416,9 +416,13 @@ def bk_module(request) -> Module:
 
 
 @pytest.fixture
-def bk_module_full(bk_app_full) -> Module:
+def bk_module_full(request) -> Module:
     """Return the *fully featured* default module"""
-    return bk_app_full.get_default_module()
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app_full")
+    return bk_app.get_default_module()
 
 
 @pytest.fixture

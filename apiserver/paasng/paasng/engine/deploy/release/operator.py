@@ -43,9 +43,10 @@ class BkAppReleaseMgr(DeployStep):
     PHASE_TYPE = DeployPhaseTypes.RELEASE
 
     def start(self):
-        revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
+        build = Build.objects.get(pk=self.deployment.build_id)
+        # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
+        revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure('部署应用'):
-            build = Build.objects.get(pk=self.deployment.build_id)
             # 对于仅托管镜像类型的云原生应用, build.image 字段为空字符串
             # 对于从源码构建镜像的云原生应用, build.image 字段是构建后的镜像
             image = build.image or None

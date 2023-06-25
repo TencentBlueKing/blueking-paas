@@ -234,6 +234,7 @@ class BuildProcessExecutor(DeployStep):
         artifact_type = ArtifactType.SLUG
         if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
             artifact_type = ArtifactType.IMAGE
+        bkapp_revision_id = metadata.get("bkapp_revision_id", None)
 
         # starting create build
         build_instance = Build.objects.create(
@@ -245,6 +246,7 @@ class BuildProcessExecutor(DeployStep):
             revision=self.bp.revision,
             procfile=procfile,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
+            bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,
         )
 

@@ -101,7 +101,7 @@ class Deployment(OperationVersionBase):
         default=dict, help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec"
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
-    bkapp_revision_id = models.IntegerField(help_text="BkApp Revision id", null=True)
+    bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
 
     objects = DeploymentQuerySet().as_manager()
 

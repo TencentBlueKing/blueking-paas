@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.cnative.specs.constants import ApiVersion
 
 """Provide functions for the apiserver module.
 
@@ -35,6 +34,7 @@ from uuid import UUID
 
 from django.db import transaction
 
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp

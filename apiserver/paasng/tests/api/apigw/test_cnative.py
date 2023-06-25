@@ -68,10 +68,14 @@ class TestMresDeploymentsViewSet:
 
         create_cnative_deploy(bk_stag_env, bk_user)
         manifest = {
-            "apiVersion": "paas.bk.tencent.com/v1alpha1",
+            "apiVersion": "paas.bk.tencent.com/v1alpha2",
             "kind": "BkApp",
             "metadata": {"name": bk_app.code},
             "spec": {
+                "build": {
+                    "image": "strm/helloworld-http",
+                    "imagePullPolicy": "IfNotPresent",
+                },
                 "configuration": {"env": []},
                 "hooks": {"preRelease": {"args": ["-c", "echo hello2"], "command": ["/bin/sh"]}},
                 "processes": [
@@ -79,8 +83,6 @@ class TestMresDeploymentsViewSet:
                         "args": [],
                         "command": [],
                         "cpu": "250m",
-                        "image": "strm/helloworld-http",
-                        "imagePullPolicy": "IfNotPresent",
                         "memory": "256Mi",
                         "name": "web",
                         "replicas": 2,
@@ -96,7 +98,7 @@ class TestMresDeploymentsViewSet:
         ):
             response = api_client.post(url, data={"manifest": manifest})
 
-        assert response.data['apiVersion'] == "paas.bk.tencent.com/v1alpha1"
+        assert response.data['apiVersion'] == "paas.bk.tencent.com/v1alpha2"
         assert response.data['kind'] == "BkApp"
         assert response.data['metadata']['name'] == bk_app.code
         assert response.data['spec'] is not None
@@ -111,13 +113,17 @@ class TestMresStatusViewSet:
 
         dp = create_cnative_deploy(bk_stag_env, bk_user)
         bkapp_res = BkAppResource(
-            apiVersion="paas.bk.tencent.com/v1alpha1",
+            apiVersion="paas.bk.tencent.com/v1alpha2",
             kind="BkApp",
             metadata={
                 "name": bk_app.code,
                 "annotations": {BKPAAS_DEPLOY_ID_ANNO_KEY: dp.pk},
             },
             spec={
+                "build": {
+                    "image": "strm/helloworld-http",
+                    "imagePullPolicy": "IfNotPresent",
+                },
                 "configuration": {"env": []},
                 "hooks": {"preRelease": {"args": ["-c", "echo hello2"], "command": ["/bin/sh"]}},
                 "processes": [
@@ -125,8 +131,6 @@ class TestMresStatusViewSet:
                         "args": [],
                         "command": [],
                         "cpu": "250m",
-                        "image": "strm/helloworld-http",
-                        "imagePullPolicy": "IfNotPresent",
                         "memory": "256Mi",
                         "name": "web",
                         "replicas": 2,

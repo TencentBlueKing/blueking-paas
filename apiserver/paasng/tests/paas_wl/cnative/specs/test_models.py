@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
@@ -31,37 +32,55 @@ from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_create_app_resource():
-    obj = create_app_resource('foo-app', 'nginx:latest')
-    want = {
-        'apiVersion': 'paas.bk.tencent.com/v1alpha2',
-        'kind': 'BkApp',
-        'metadata': {'name': 'foo-app', 'annotations': {}, 'generation': 0},
-        'spec': {
-            'build': None,
-            'processes': [
-                {
-                    'name': 'web',
-                    'replicas': 1,
-                    'command': [],
-                    'args': [],
-                    'targetPort': None,
-                    'resQuotaPlan': None,
-                    'autoscaling': None,
-                    'cpu': '500m',
-                    'memory': '256Mi',
+class TestCreateAppResource:
+    @pytest.fixture
+    def bkapp_manifest(self):
+        return {
+            'apiVersion': 'paas.bk.tencent.com/v1alpha2',
+            'kind': 'BkApp',
+            'metadata': {'name': 'foo-app', 'annotations': {}, 'generation': 0},
+            'spec': {
+                'build': {
+                    'args': None,
+                    'buildTarget': None,
+                    'dockerfile': None,
                     'image': 'nginx:latest',
+                    'imageCredentialsName': None,
                     'imagePullPolicy': 'IfNotPresent',
-                }
-            ],
-            'hooks': None,
-            'addons': [],
-            'envOverlay': None,
-            'configuration': {'env': []},
-        },
-        'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},
-    }
-    assert obj.dict() == want
+                },
+                'processes': [
+                    {
+                        'name': 'web',
+                        'replicas': 1,
+                        'command': [],
+                        'args': [],
+                        'targetPort': None,
+                        'resQuotaPlan': None,
+                        'autoscaling': None,
+                        'cpu': '500m',
+                        'memory': '256Mi',
+                        'image': None,
+                        'imagePullPolicy': 'IfNotPresent',
+                    }
+                ],
+                'hooks': None,
+                'addons': [],
+                'envOverlay': None,
+                'configuration': {'env': []},
+            },
+            'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},
+        }
+
+    def test_v1alpha2(self, bkapp_manifest):
+        obj = create_app_resource('foo-app', 'nginx:latest')
+        assert obj.dict() == bkapp_manifest
+
+    def test_v1alpha1(self, bkapp_manifest):
+        obj = create_app_resource('foo-app', 'nginx:latest', api_version=ApiVersion.V1ALPHA1)
+        bkapp_manifest['apiVersion'] = 'paas.bk.tencent.com/v1alpha1'
+        bkapp_manifest['spec']['build'] = None
+        bkapp_manifest['spec']['processes'][0]['image'] = 'nginx:latest'
+        assert obj.dict() == bkapp_manifest
 
 
 @pytest.fixture

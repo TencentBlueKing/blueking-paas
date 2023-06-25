@@ -41,6 +41,7 @@ from rest_framework.views import APIView
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.shim import RegionClusterService
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
@@ -105,7 +106,9 @@ from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
+from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.manager import init_module_in_view
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.region.models import get_all_regions
@@ -408,9 +411,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         # Permission check for non-default source origin
         source_origin = SourceOrigin(engine_params['source_origin'])
-        if source_origin not in SourceOrigin.get_default_origins():
-            if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_('你无法使用非默认的源码来源'))
+        self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
         if params['type'] == ApplicationType.BK_PLUGIN and not get_bk_plugin_config(params['region']).allow_creation:
@@ -420,8 +421,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             return self._init_scene_app(request, params, engine_params)
 
         # lesscode app needs to create an application on the bk_lesscode platform first
-        bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
         if source_origin == SourceOrigin.BK_LESS_CODE:
+            bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
             try:
                 # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
                 make_bk_lesscode_client(login_cookie=bk_token).create_app(
@@ -458,9 +459,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         # Permission check for non-default source origin
         source_origin = SourceOrigin(engine_params['source_origin'])
-        if source_origin not in SourceOrigin.get_default_origins():
-            if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_('你无法使用非默认的源码来源'))
+        self._ensure_source_origin_available(request.user, source_origin)
 
         cluster_name = None
         return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
@@ -491,6 +490,17 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 raise ValidationError(_('你无法使用高级创建选项'))
             cluster_name = advanced_options.get('cluster_name')
 
+        source_config: Dict[str, Any] = {}
+        if src_cfg := params.get('source_config'):
+            source_origin = SourceOrigin(src_cfg['source_origin'])
+            self._ensure_source_origin_available(request.user, source_origin)
+
+            source_config['source_origin'] = source_origin
+            # 如果指定模板信息，则需要提取并保存
+            if tmpl_name := src_cfg['source_init_template']:
+                tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+                source_config.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+
         application = create_application(
             region=params["region"],
             code=params["code"],
@@ -499,19 +509,55 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
         )
-        create_default_module(application)
+        module = create_default_module(application, **source_config)
 
-        initialize_simple(
-            module=application.default_module, cluster_name=cluster_name, **params['cloud_native_params']
+        # 初始化应用镜像凭证信息
+        if image_credentials := params.get('image_credentials'):
+            self._init_image_credentials(application, image_credentials)
+
+        # 为默认模块绑定构建信息
+        if build_cfg := params.get('build_config'):
+            build_config = BuildConfig.objects.get_or_create_by_module(module)
+            try:
+                build_config.update_with_build_method(
+                    build_cfg['build_method'],
+                    module,
+                    build_cfg.get('bp_stack_name'),
+                    build_cfg.get('buildpacks'),
+                    build_cfg.get('dockerfile_path'),
+                    build_cfg.get('docker_build_args'),
+                )
+            except BPNotFound:
+                raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
+
+        source_init_result = None
+        if cloud_native_params := params.get('cloud_native_params'):
+            initialize_simple(module=module, cluster_name=cluster_name, **cloud_native_params)
+        else:
+            source_init_result = init_module_in_view(
+                module,
+                repo_type=src_cfg.get('source_control_type'),
+                repo_url=src_cfg.get('source_repo_url'),
+                repo_auth_info=src_cfg.get('source_repo_auth_info'),
+                source_dir=src_cfg.get('source_dir', ''),
+                cluster_name=cluster_name,
+                manifest=params.get('manifest'),
+            ).source_init_result
+
+        https_enabled = self._get_cluster_entrance_https_enabled(
+            module.region, cluster_name, ExposedURLType(module.exposed_url_type)
         )
 
         post_create_application.send(sender=self.__class__, application=application)
         create_market_config(
             application=application,
+            # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
             source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
+            # 对于新创建的应用, 如果集群支持 HTTPS, 则默认开启 HTTPS
+            prefer_https=https_enabled,
         )
         return Response(
-            data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': None},
+            data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': source_init_result},
             status=status.HTTP_201_CREATED,
         )
 
@@ -654,6 +700,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+    def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
+        """对使用非默认源码来源的，需要检查是否有权限"""
+        if source_origin not in SourceOrigin.get_default_origins():
+            if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
+                raise ValidationError(_('你无法使用非默认的源码来源'))
+
+    def _init_image_credentials(self, application: Application, image_credentials: Dict):
+        try:
+            AppUserCredential.objects.create(application_id=application.id, **image_credentials)
+        except IntegrityError:
+            raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
 
 class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):

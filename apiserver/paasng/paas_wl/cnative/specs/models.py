@@ -33,8 +33,8 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
 
-from .constants import DEFAULT_PROCESS_NAME, DeployStatus
-from .crd.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+from .constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
+from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,7 @@ class AppModelDeploy(TimestampedModel):
 def create_app_resource(
     name: str,
     image: str,
+    api_version: Optional[str] = ApiVersion.V1ALPHA2,
     command: Optional[List[str]] = None,
     args: Optional[List[str]] = None,
     target_port: Optional[int] = None,
@@ -196,20 +197,27 @@ def create_app_resource(
     :returns: `BkAppResource` object
     """
     obj = BkAppResource(
+        apiVersion=api_version,
         metadata=ObjectMetadata(name=name),
         spec=BkAppSpec(
+            build=BkAppBuildConfig(
+                image=image,
+            ),
             processes=[
                 BkAppProcess(
                     name=DEFAULT_PROCESS_NAME,
-                    image=image,
                     command=command or [],
                     args=args or [],
                     targetPort=target_port or None,
                 )
-            ]
+            ],
         ),
     )
-    # TODO: Allow the default fields to be skipped, such as empty "command" and "args"
+    # 兼容 v1alpha1 版本逻辑
+    if api_version == ApiVersion.V1ALPHA1:
+        obj.spec.build = None
+        obj.spec.processes[0].image = image
+
     return obj
 
 

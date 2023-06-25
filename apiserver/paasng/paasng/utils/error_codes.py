@@ -164,6 +164,9 @@ class ErrorCodes:
     ERROR_UPDATING_PROC_SERVICE = ErrorCode('无法更新进程服务')
     ERROR_UPDATING_PROC_INGRESS = ErrorCode('无法更新主入口')
 
+    # Credentials
+    CREATE_CREDENTIALS_FAILED = ErrorCode("Failed to create credentials")
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

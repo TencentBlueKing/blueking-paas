@@ -31,6 +31,8 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paas_wl.platform.api import create_app_ignore_duplicated, delete_module_related_res, update_metadata_by_env
 from paas_wl.platform.applications.constants import WlAppType
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
@@ -42,6 +44,7 @@ from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
 from paasng.engine.models import EngineApp
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.log.shim import setup_env_log_model
@@ -198,6 +201,27 @@ class ModuleInitializer:
         for env in self.module.get_envs():
             setup_env_log_model(env)
 
+    def initialize_app_model_resource(self, manifest: Optional[Dict] = None):
+        # 只有云原生应用需要在创建模块后初始化 AppModelResource
+        if self.application.type != ApplicationType.CLOUD_NATIVE:
+            return
+
+        res_name = generate_bkapp_name(self.module)
+        # 即使没有指定 manifest，也会默认初始化 AppModelResource，
+        # 但这仅仅是占位数据，应当在第一次部署时候被源码库中的配置替换
+        resource = create_app_resource(name=res_name, image='stub')
+        if manifest:
+            manifest['metadata']['name'] = res_name
+            resource = BkAppResource(**manifest)
+
+        app = self.application
+        AppModelResource.objects.create_from_resource(
+            region=app.region,
+            application_id=app.id,
+            module_id=self.module.id,
+            resource=resource,
+        )
+
     def _get_or_create_engine_app(self, name: str) -> EngineApp:
         """Create or get existed engine app by given name"""
         info = create_app_ignore_duplicated(self.application.region, name, WlAppType.DEFAULT)
@@ -261,6 +285,7 @@ def initialize_module(
     repo_auth_info: Optional[dict],
     source_dir: str = '',
     cluster_name: Optional[str] = None,
+    manifest: Optional[Dict] = None,
 ) -> ModuleInitResult:
     """Initialize a module
 
@@ -269,6 +294,7 @@ def initialize_module(
     :param repo_auth_info: The auth of repository, such as {"username": "ddd", "password": "www"}
     :param source_dir: The work dir, which containing Procfile.
     :param cluster_name: optional engine cluster name
+    :param manifest: optional cnative module manifest(only build_method=custom_image required)
     :raises: ModuleInitializationError when any steps failed
     """
     module_initializer = ModuleInitializer(module)
@@ -300,6 +326,9 @@ def initialize_module(
 
     with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
         module_initializer.initialize_log_config()
+
+    with _humanize_exception("initialize_app_model_resource", _("初始化资源配置失败, 请稍候再试")):
+        module_initializer.initialize_app_model_resource(manifest)
 
     return ModuleInitResult(source_init_result=source_init_result)
 

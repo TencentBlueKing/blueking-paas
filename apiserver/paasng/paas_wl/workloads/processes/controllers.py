@@ -140,7 +140,7 @@ class AppProcessesController:
         :param target_replicas: the expected replicas, '0' for stop
         :raises: ValueError when target_replicas is too big
         """
-        if not target_replicas:
+        if target_replicas is None:
             raise ValueError('target_replicas required when scale process')
 
         proc_spec = self._get_spec(proc_type)

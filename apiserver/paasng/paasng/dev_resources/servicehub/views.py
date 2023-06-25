@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -71,15 +71,15 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         res_must_not_be_protected_perm(ProtectedRes.SERVICES_MODIFICATIONS),
     ]
 
-    @swagger_auto_schema(response_serializer=slzs.ModuleServiceAttachmentSLZ(many=True))
+    @swagger_auto_schema(response_serializer=slzs.EnvServiceAttachmentSLZ(many=True))
     def list(self, request, code, module_name, environment):
-        """获取附件列表"""
+        """获取增强服务附件列表"""
 
         env = self.get_env_via_path()
         engine_app = env.get_engine_app()
         provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
         unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))
-        return Response(data=slzs.ModuleServiceAttachmentSLZ(provisioned_rels + unprovisioned_rels, many=True).data)
+        return Response(data=slzs.EnvServiceAttachmentSLZ(provisioned_rels + unprovisioned_rels, many=True).data)
 
     @swagger_auto_schema(response_serializer=slzs.ModuleServiceInfoSLZ)
     def retrieve_info(self, request, code, module_name):
@@ -314,7 +314,10 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self.paginator.get_paginated_response(serializer.data)
 
     def list_by_category(self, request, code, module_name, category_id):
-        """获取应用的服务(已安装&未安装)"""
+        """
+        获取应用的服务(已启用&未启用)
+        [Deprecated] use list_by_module instead
+        """
         application = self.get_application()
         module = self.get_module_via_path()
         category = get_object_or_404(ServiceCategory, pk=category_id)
@@ -339,10 +342,57 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 'count': total,
                 'category': slzs.CategorySLZ(category).data,
                 'results': {
-                    "bound": slzs.ServiceMinimalSLZ(bound_services, many=True).data,
-                    "shared": slzs.SharedServiceInfo(shared_infos, many=True).data,
-                    "unbound": slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
+                    'bound': slzs.ServiceMinimalSLZ(bound_services, many=True).data,
+                    'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
+                    'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
                 },
+            }
+        )
+
+    def list_by_module(self, request, code, module_name):
+        """获取指定模块所有分类的应用增强服务(已启用&未启用)"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+
+        # Query shared / bound services
+        shared_infos = list(ServiceSharingManager(module).list_all_shared_info())
+        shared_services = [info.service for info in shared_infos]
+        bound_services = list(mixed_service_mgr.list_binded(module))
+
+        services_in_region = list(mixed_service_mgr.list_by_region(region=application.region))
+        unbound_services = []
+        for svc in services_in_region:
+            if svc in bound_services or svc in shared_services:
+                continue
+            unbound_services.append(svc)
+
+        svc_bound_info_map: Dict[str, Dict[str, Any]] = {
+            svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in bound_services
+        }
+        for env in module.get_envs():
+            list_provisioned_rels = mixed_service_mgr.list_provisioned_rels(env.engine_app)
+            for rel in list_provisioned_rels:
+                svc = rel.get_service()
+                bound_info = svc_bound_info_map[svc.uuid]
+                # 补充实例分配信息
+                bound_info['provision_infos'][env.environment] = rel.is_provisioned()
+
+                # 现阶段所有环境的服务规格一致，若某环境已经获取到配置参数信息，则跳过以免重复
+                if len(bound_info['specifications']):
+                    continue
+
+                # 补充配置参数信息
+                specs = rel.get_plan().specifications
+                for definition in bound_info['service'].specifications:
+                    result = definition.as_dict()
+                    result['value'] = specs.get(definition.name)
+                    bound_info['specifications'].append(result)
+
+        return Response(
+            {
+                'bound': slzs.BoundServiceInfoSLZ(svc_bound_info_map.values(), many=True).data,
+                'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
+                'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
             }
         )
 
@@ -519,7 +569,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_('不能重复共享'))
         return Response({}, status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(tags=['增强服务'], response_serializer=slzs.SharedServiceInfo)
+    @swagger_auto_schema(tags=['增强服务'], response_serializer=slzs.SharedServiceInfoSLZ)
     @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def retrieve(self, request, code, module_name, service_id):
         """查看已创建的共享关系
@@ -531,7 +581,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         info = ServiceSharingManager(module).get_shared_info(service_obj)
         if not info:
             raise Http404
-        return Response(slzs.SharedServiceInfo(info).data)
+        return Response(slzs.SharedServiceInfoSLZ(info).data)
 
     @swagger_auto_schema(tags=['增强服务'], responses={204: openapi_empty_response})
     @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy='merge')

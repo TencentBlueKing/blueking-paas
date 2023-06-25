@@ -19,88 +19,90 @@
 import _ from 'lodash';
 
 class NavDataProcessor {
-  constructor () {
+  constructor() {
     this.navItems = [];
     this.navCategories = [];
     this.id = 0;
   }
 
-  _refineItem (item) {
+  _refineItem(item) {
     // Use desRoute as default
     const matchRouters = item.matchRouters || [item.destRoute.name];
     const matchRouterParams = item.matchRouterParams || item.destRoute.params;
+    // eslint-disable-next-line no-plusplus
     this.id++;
     return {
       ...item,
-      matchRouters: matchRouters,
-      matchRouterParams: matchRouterParams,
+      matchRouters,
+      matchRouterParams,
       id: this.id,
-      type: 'item'
+      type: 'item',
     };
   }
 
-  addNavItem (item) {
+  addNavItem(item) {
+    // eslint-disable-next-line no-underscore-dangle
     this.navItems.push(this._refineItem(item));
   }
 
-  simpleAddNavItem (categoryName, destRouter, name) {
+  simpleAddNavItem(categoryName, destRouter, name) {
     this.addNavItem({
-      'categoryName': categoryName,
-      'name': name,
-      'matchRouters': [destRouter],
-      'destRoute': {
-        'name': destRouter
-      }
+      categoryName,
+      name,
+      matchRouters: [destRouter],
+      destRoute: {
+        name: destRouter,
+      },
     });
   }
 
-  addServiceNavItem (id, name) {
+  addServiceNavItem(id, name) {
     this.addNavItem({
-      'categoryName': 'appServices',
-      'name': name,
-      'matchRouters': ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
-      'destRoute': {
-        'name': 'appService',
-        'params': {
-          'category_id': id.toString()
-        }
-      }
+      categoryName: 'appServices',
+      name,
+      matchRouters: ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
+      destRoute: {
+        name: 'appService',
+        params: {
+          category_id: id.toString(),
+        },
+      },
     });
   }
 
-  addPermissionNavItem (type) {
+  addPermissionNavItem(type) {
     const nav = {
       user_access_control: {
-        'categoryName': 'appPermissions',
-        'name': '用户限制',
-        'matchRouters': ['appPermissionUser', 'appPermissionPathExempt'],
-        'destRoute': {
-          'name': 'appPermissionUser'
-        }
+        categoryName: 'appPermissions',
+        name: '用户限制',
+        matchRouters: ['appPermissionUser', 'appPermissionPathExempt'],
+        destRoute: {
+          name: 'appPermissionUser',
+        },
       },
       ip_access_control: {
-        'categoryName': 'appPermissions',
-        'name': 'IP限制',
-        'matchRouters': ['appPermissionIP'],
-        'destRoute': {
-          'name': 'appPermissionIP'
-        }
+        categoryName: 'appPermissions',
+        name: 'IP限制',
+        matchRouters: ['appPermissionIP'],
+        destRoute: {
+          name: 'appPermissionIP',
+        },
       },
       approval: {
-        'categoryName': 'appPermissions',
-        'name': '单据审批',
-        'matchRouters': ['appOrderAudit'],
-        'destRoute': {
-          'name': 'appOrderAudit'
-        }
-      }
+        categoryName: 'appPermissions',
+        name: '单据审批',
+        matchRouters: ['appOrderAudit'],
+        destRoute: {
+          name: 'appOrderAudit',
+        },
+      },
     };
     if (type && nav[type]) {
       this.addNavItem(nav[type]);
     }
   }
 
-  feedOldStructures (data) {
+  feedOldStructures(data) {
     // Flat legacy sturecture
     _.forEach(data, (item) => {
       if (item.visible === false) {
@@ -109,11 +111,12 @@ class NavDataProcessor {
 
       if (item.sublist) {
         const categoryId = this.id;
+        // eslint-disable-next-line no-plusplus
         this.id++;
         const navCategory = {
           ...item,
           id: categoryId,
-          type: 'category'
+          type: 'category',
         };
 
         item.sublist.forEach((subitem) => {
@@ -122,8 +125,9 @@ class NavDataProcessor {
           }
 
           this.navItems.push({
+            // eslint-disable-next-line no-underscore-dangle
             ...this._refineItem(subitem),
-            categoryName: navCategory.name
+            categoryName: navCategory.name,
           });
         });
 
@@ -131,8 +135,9 @@ class NavDataProcessor {
         this.navCategories.push(navCategory);
       } else {
         this.navItems.push({
+          // eslint-disable-next-line no-underscore-dangle
           ...this._refineItem(item),
-          categoryName: null
+          categoryName: null,
         });
       }
     });
@@ -140,15 +145,15 @@ class NavDataProcessor {
 }
 
 export {
-  NavDataProcessor
+  NavDataProcessor,
 };
 
-export function processNavData (data) {
+export function processNavData(data) {
   const processer = new NavDataProcessor();
   processer.feedOldStructures(data);
   return {
-    'navItems': processer.navItems,
-    'navCategories': processer.navCategories
+    navItems: processer.navItems,
+    navCategories: processer.navCategories,
   };
 }
 
@@ -159,7 +164,7 @@ export function processNavData (data) {
  *
  * @return {number} 高度值
  */
-export function getActualTop (node) {
+export function getActualTop(node) {
   let actualTop = node.offsetTop;
   let current = node.offsetParent;
 
@@ -178,7 +183,7 @@ export function getActualTop (node) {
  *
  * @return {number} 宽度值
  */
-export function getActualLeft (node) {
+export function getActualLeft(node) {
   let actualLeft = node.offsetLeft;
   let current = node.offsetParent;
 
@@ -196,9 +201,10 @@ export function getActualLeft (node) {
  * @param refInstance {Object} 指定的 table
  *
  */
-export function clearFilter (refInstance) {
+export function clearFilter(refInstance) {
   if (refInstance.filterPanels) {
-    const filterPanels = refInstance.filterPanels;
+    const { filterPanels } = refInstance;
+    // eslint-disable-next-line no-restricted-syntax
     for (const key in filterPanels) {
       filterPanels[key].handleReset();
     };
@@ -211,6 +217,58 @@ export function clearFilter (refInstance) {
  * @param refInstance {h, { column }} 渲染函数
  *
  */
-export function renderHeader (h, { column }) {
+export function renderHeader(h, { column }) {
   return h('p', { class: 'table-header-tips-cls', directives: [{ name: 'bk-overflow-tips' }] }, [column.label]);
+}
+
+// 获取唯一随机数
+export function uuid() {
+  let id = '';
+  const randomNum = Math.floor((1 + Math.random()) * 0x10000).toString(16)
+    .substring(1);
+
+  for (let i = 0; i < 7; i++) {
+    id += randomNum;
+  }
+  return id;
+}
+
+// 格式化参数
+export function formatParams(data) {
+  const arr = [];
+  // eslint-disable-next-line no-restricted-syntax
+  for (const name in data) {
+    arr.push(`${encodeURIComponent(name)}=${encodeURIComponent(data[name])}`);
+  }
+  return arr.join('&');
+}
+
+export function ajaxRequest(params = {}) {
+  const fetchParams = params || {};
+  fetchParams.data = params.data || {};
+
+  const callbackName = fetchParams.jsonp;
+  const head = document.getElementsByTagName('head')[0];
+  fetchParams.data.callback = callbackName;
+
+  // 设置传递给后台的回调参数名
+  const data = formatParams(fetchParams.data);
+  const script = document.createElement('script');
+
+  script.addEventListener('error', () => {
+    head.removeChild(script);
+    fetchParams.error && fetchParams.error();
+  });
+  head.appendChild(script);
+
+  // 创建 jsonp 回调函数
+  window[callbackName] = function (res) {
+    head.removeChild(script);
+    clearTimeout(script.timer);
+    window[callbackName] = null;
+    fetchParams.success && fetchParams.success(res);
+  };
+
+  // 发送请求
+  script.src = `${fetchParams.url}?${data}`;
 }

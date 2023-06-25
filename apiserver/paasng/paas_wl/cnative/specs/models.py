@@ -33,7 +33,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
 
-from .constants import DEFAULT_PROCESS_NAME, DeployStatus
+from .constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
 from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
 
 logger = logging.getLogger(__name__)
@@ -186,6 +186,7 @@ class AppModelDeploy(TimestampedModel):
 def create_app_resource(
     name: str,
     image: str,
+    api_version: Optional[str] = ApiVersion.V1ALPHA2,
     command: Optional[List[str]] = None,
     args: Optional[List[str]] = None,
     target_port: Optional[int] = None,
@@ -211,7 +212,11 @@ def create_app_resource(
             ],
         ),
     )
-    # TODO: Allow the default fields to be skipped, such as empty "command" and "args"
+    # 兼容 v1alpha1 版本逻辑
+    if api_version == ApiVersion.V1ALPHA1:
+        obj.spec.build = None
+        obj.spec.processes[0].image = image
+
     return obj
 
 
@@ -259,6 +264,7 @@ def generate_bkapp_name(obj: ModuleEnvironment) -> str:
 
 def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
     """Generate name of the BkApp resource by env.
+
     :param obj: Union[Module, ModuleEnvironment] object
     :return: BkApp resource name
     """

@@ -32,6 +32,7 @@ from paasng.engine.utils.source import get_app_description_handler, get_processe
 from paasng.engine.workflow import DeployProcedure, DeployStep
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
+from paasng.platform.applications.constants import ApplicationType
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
@@ -55,32 +56,36 @@ class ImageReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
-        try:
-            self.handle_app_description()
-        except FileNotFoundError:
-            logger.debug("App description file not defined, do not process.")
-        except DescriptionValidationError as e:
-            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
-            logger.exception("Exception while parsing app description file, skip.")
-        except ControllerError as e:
-            self.stream.write_message(Style.Error(e.message))
-            logger.exception("Exception while processing app description file, skip.")
-        except Exception:
-            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
-            logger.exception("Exception while processing app description file, skip.")
+        self.try_handle_app_description()
 
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
-        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-            processes = get_processes(deployment=self.deployment)
+        # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
+        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
+            with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+                processes = get_processes(deployment=self.deployment)
+                build_id = self.deployment.advanced_options.build_id
+                if not build_id:
+                    # 旧的镜像应用需要构造 fake build
+                    runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
+                    build_id = self.engine_client.create_build(
+                        image=runtime_info.generate_image(self.version_info),
+                        procfile={p.name: p.command for p in processes.values()},
+                        extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
+                    )
+                self.deployment.update_fields(
+                    processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id
+                )
+        else:
             build_id = self.deployment.advanced_options.build_id
             if not build_id:
+                # 仅托管镜像的云原生应用需要构造 fake build
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                 build_id = self.engine_client.create_build(
                     image=runtime_info.generate_image(self.version_info),
-                    procfile={p.name: p.command for p in processes.values()},
-                    extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
+                    procfile={},
+                    extra_envs={},
                 )
-            self.deployment.update_fields(processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
+            self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
         with self.procedure_force_phase('配置镜像访问凭证', phase=preparation_phase):
             self._setup_image_credentials()
@@ -115,7 +120,7 @@ class ImageReleaseMgr(DeployStep):
                 password=credential.password,
             )
 
-    def handle_app_description(self):
+    def _handle_app_description(self):
         """Handle application description for deployment"""
         module = self.deployment.app_environment.module
         handler = get_app_description_handler(module, self.deployment.operator, self.deployment.version_info)
@@ -130,3 +135,19 @@ class ImageReleaseMgr(DeployStep):
             return
 
         handler.handle_deployment(self.deployment)
+
+    def try_handle_app_description(self):
+        """A tiny wrapper for _handle_app_description, will ignore all exception raise from _handle_app_description"""
+        try:
+            self._handle_app_description()
+        except FileNotFoundError:
+            logger.debug("App description file not defined, do not process.")
+        except DescriptionValidationError as e:
+            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
+            logger.exception("Exception while parsing app description file, skip.")
+        except ControllerError as e:
+            self.stream.write_message(Style.Error(e.message))
+            logger.exception("Exception while processing app description file, skip.")
+        except Exception:
+            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
+            logger.exception("Exception while processing app description file, skip.")

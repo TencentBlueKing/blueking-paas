@@ -256,6 +256,8 @@ class CloudNativeParamsSLZ(serializers.Serializer):
     command = serializers.ListField(help_text=_('启动命令'), child=serializers.CharField(), required=False, default=list)
     args = serializers.ListField(help_text=_('命令参数'), child=serializers.CharField(), required=False, default=list)
     target_port = serializers.IntegerField(label=_('容器端口'), required=False)
+    # 在前端页面调整完成前，先保持默认值为 v1alpha1 以兼容现有逻辑
+    api_version = serializers.CharField(label=_('API版本'), required=False, default=ApiVersion.V1ALPHA1)
 
 
 class ImageCredentialsParamsMixin(serializers.Serializer):

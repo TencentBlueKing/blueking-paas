@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.cnative.specs.constants import ApiVersion
+
 """Provide functions for the apiserver module.
 
 - Functions should be as few as possible
@@ -103,6 +105,7 @@ def delete_module_related_res(module: 'Module'):
 def create_cnative_app_model_resource(
     module: Module,
     image: str,
+    api_version: Optional[str] = ApiVersion.V1ALPHA2,
     command: Optional[List[str]] = None,
     args: Optional[List[str]] = None,
     target_port: Optional[int] = None,
@@ -117,6 +120,7 @@ def create_cnative_app_model_resource(
     resource = create_app_resource(
         name=generate_bkapp_name(module),
         image=image,
+        api_version=api_version,
         command=command,
         args=args,
         target_port=target_port,

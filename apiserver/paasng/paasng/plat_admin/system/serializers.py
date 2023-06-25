@@ -49,6 +49,7 @@ class UniversalAppSLZ(serializers.Serializer):
 
     source = serializers.IntegerField(source='get_source', help_text='应用来源平台。1 - 默认, 2 - 旧版本')
     name = serializers.CharField(help_text="应用名称")
+    name_en = serializers.CharField(help_text="应用英文名称")
     code = serializers.CharField(help_text="应用 ID（Code）")
     region = serializers.CharField(help_text="应用版本信息")
     logo_url = serializers.CharField(help_text="应用 logo 图片地址")

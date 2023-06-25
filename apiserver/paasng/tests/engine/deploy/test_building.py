@@ -177,7 +177,7 @@ class TestCloudNative:
         ) as mocked_stream, mock.patch(
             'paasng.engine.deploy.building.{}.launch_build_processes'.format(builder_class.__name__)
         ) as launch_build_processes:
-            mocked_get_bkapp_manifests.return_value = {res.metadata.name: res}
+            mocked_get_bkapp_manifests.return_value = {res.metadata.name: res.to_deployable()}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
             launch_build_processes.return_value = faked_build_process_id

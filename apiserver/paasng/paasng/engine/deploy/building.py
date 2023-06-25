@@ -154,7 +154,7 @@ class BaseBuilder(DeployStep):
             )
             raise DeployShouldAbortError("bkapp.yaml not found")
 
-        update_app_resource(application, module, manifest.to_deployable())
+        update_app_resource(application, module, manifest)
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         # 从源码部署总是使用最新创建的 revision

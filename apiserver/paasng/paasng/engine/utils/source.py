@@ -25,7 +25,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
@@ -195,7 +194,7 @@ def get_app_description_handler(
 
 def get_bkapp_manifest_for_module(
     module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
-) -> Optional[BkAppResource]:
+) -> Optional[Dict]:
     """Get app manifest from bkapp.yaml"""
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=source_dir)

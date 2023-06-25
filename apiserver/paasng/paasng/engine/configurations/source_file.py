@@ -55,7 +55,7 @@ class MetaDataReader(Protocol):
         :raises: exceptions.GetAppYamlError
         """
 
-    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, BkAppResource]:
+    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, Dict]:
         """Read bkapp.yaml from repository
 
         :raises: exceptions.GetAppYamlError
@@ -147,7 +147,7 @@ class MetaDataFileReader:
             raise exceptions.GetAppYamlError('file "app.yaml" must be dict type')
         return app_description
 
-    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, BkAppResource]:
+    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, Dict]:
         """Read bkapp.yaml from repository
 
         :raises: exceptions.GetAppYamlError
@@ -179,11 +179,15 @@ class MetaDataFileReader:
             manifest_list = list(yaml.safe_load_all(content))
         except Exception as e:
             raise exceptions.GetAppYamlError('file "bkapp.yaml"\'s format is not YAML') from e
+
         manifest_dict = {}
         for manifest in manifest_list:
             try:
                 res = BkAppResource(**manifest)
-                manifest_dict[res.metadata.name] = res
+                # Note: 目前这里假设用户能在 metadata.name 填写平台根据规则生成的资源名称
+                # 如果这个规则被修改, 会导致无法部署应用
+                # TODO: 提供兼容性更好的实现？例如支持只通过模块名来定位 manifest
+                manifest_dict[res.metadata.name] = manifest
             except Exception as e:
                 raise exceptions.GetAppYamlError('file "bkapp.yaml" is invalid bkapp') from e
         return manifest_dict
@@ -277,7 +281,7 @@ class PackageMetaDataReader(MetaDataFileReader):
             return package_storage.meta_info
         return super().get_app_desc(version_info)
 
-    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, BkAppResource]:
+    def get_bkapp_manifests(self, version_info: VersionInfo) -> Dict[str, Dict]:
         """Read bkapp.yaml from SourcePackage.meta_data(the field stored app_desc) or repository"""
         _, version = self.extract_version_info(version_info)
         package_storage = self.module.packages.get(version=version)

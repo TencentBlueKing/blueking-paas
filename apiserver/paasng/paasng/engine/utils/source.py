@@ -48,8 +48,6 @@ from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 logger = logging.getLogger(__name__)
 TypeProcesses = Dict[str, ProcessTmpl]
 
-MAX_PROCESSES_PER_MODULE = 8
-
 
 def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
     """Validate proc type format
@@ -59,9 +57,9 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
     :raise: django.core.exceptions.ValidationError
     """
 
-    if len(processes) > MAX_PROCESSES_PER_MODULE:
+    if len(processes) > settings.MAX_PROCESSES_PER_MODULE:
         raise ValidationError(
-            f'The number of processes exceeded: maximum {MAX_PROCESSES_PER_MODULE} processes per module, '
+            f'The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, '
             f'but got {len(processes)}'
         )
 

@@ -464,7 +464,7 @@ class TestCreateCloudNativeApp:
     @pytest.fixture(autouse=True)
     def setup(self, mock_wl_services_in_creation, mock_initialize_with_template, init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
-        settings.IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = True
+        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
     def test_legacy(self, api_client):
         """现存的云原生应用创建（cloud_native_params）"""
@@ -511,8 +511,73 @@ class TestCreateCloudNativeApp:
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        assert response.json()['application']['type'] == 'cloud_native'
+        app_data = response.json()['application']
+        assert app_data['type'] == 'cloud_native'
+        assert app_data['modules'][0]['build_method'] == 'custom_image'
 
-    # TODO 补充云原生应用其他场景：
-    #  - 源码 & 镜像（buildpack）
-    #  - 源码 & 镜像（dockerfile）
+    @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
+    def test_create_with_buildpack(self, MockedModuleRuntimeBinder, api_client):
+        """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
+        MockedModuleRuntimeBinder.bind_bp_stack.return_value = None
+
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f'uta-{random_suffix}',
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+                "build_config": {
+                    "build_method": "buildpack",
+                    "tag_options": {
+                        "prefix": "bkapp",
+                        "with_version": True,
+                        "with_build_time": True,
+                        "with_commit_id": True,
+                    },
+                    "bp_stack_name": "heroku-1.18",
+                    "buildpacks": [{"id": 1}],
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()['application']
+        assert app_data['type'] == 'cloud_native'
+        assert app_data['modules'][0]['build_method'] == 'buildpack'
+
+    def test_create_with_dockerfile(self, api_client):
+        """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f'uta-{random_suffix}',
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+                "build_config": {
+                    "build_method": "dockerfile",
+                    "tag_options": {
+                        "prefix": "bkapp",
+                        "with_version": False,
+                        "with_build_time": False,
+                        "with_commit_id": False,
+                    },
+                    "dockerfile_path": "./Dockerfile",
+                    "docker_build_args": {"version": "v1.1.0"},
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()['application']
+        assert app_data['type'] == 'cloud_native'
+        assert app_data['modules'][0]['build_method'] == 'dockerfile'

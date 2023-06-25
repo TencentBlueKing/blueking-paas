@@ -501,6 +501,7 @@ def create_scene_tmpls():
 
 def create_cnative_app(
     owner_username: Optional[str] = None,
+    repo_type: str = '',
     region: Optional[str] = None,
     force_info: Optional[dict] = None,
     cluster_name: Optional[str] = None,
@@ -530,10 +531,36 @@ def create_cnative_app(
         name=name,
         name_en=name,
     )
+    create_oauth2_client(application.code, application.region)
+
+    # First try Svn, then GitLab, then Default
+    if not repo_type:
+        try:
+            try:
+                sourcectl_name = get_sourcectl_types().names.bk_svn
+            except KeyError:
+                sourcectl_name = get_sourcectl_types().names.git_lab
+        except KeyError:
+            sourcectl_name = get_sourcectl_types().names.get_default()
+    else:
+        sourcectl_name = get_sourcectl_types().names.get(repo_type)
+
+    basic_type = get_sourcectl_types().get(sourcectl_name).basic_type
+    default_repo_url = f'{basic_type}://127.0.0.1:8080/app'
 
     create_default_module(application)
+    # TODO: 使用新的创建模块逻辑
     with contextmanager(_mock_wl_services_in_creation)():
-        initialize_simple(application.get_default_module(), '', cluster_name=cluster_name)
+        module = application.get_default_module()
+        initialize_simple(module, '', cluster_name=cluster_name)
+        module_initializer = ModuleInitializer(module)
+        # Set-up the repository data
+        module.source_origin = SourceOrigin.AUTHORIZED_VCS
+        module.source_init_template = settings.DUMMY_TEMPLATE_NAME
+        module.save()
+        module_initializer.initialize_with_template(sourcectl_name, default_repo_url)
+        module_initializer.initialize_log_config()
+
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)
     return application

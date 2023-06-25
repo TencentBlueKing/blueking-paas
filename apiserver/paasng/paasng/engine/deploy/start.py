@@ -69,13 +69,12 @@ def initialize_deployment(
         version_info = VersionInfo("", "", "")
         source_location = ""
 
+    # TODO: 直接发布镜像时允许使用其他 revisions
     bkapp_revision_id = None
-    if application.type == ApplicationType.CLOUD_NATIVE:
-        if manifest:
-            update_app_resource(application, module, manifest)
+    if application.type == ApplicationType.CLOUD_NATIVE and manifest:
+        update_app_resource(application, module, manifest)
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
-        # TODO: Allow use other revisions
         bkapp_revision_id = model_resource.revision.id
 
     deploy_config = module.get_deploy_config()

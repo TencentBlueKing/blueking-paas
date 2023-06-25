@@ -41,6 +41,7 @@ class Build(UuidAuditedModel):
     # Metadata
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
+    bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)
 
     artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")

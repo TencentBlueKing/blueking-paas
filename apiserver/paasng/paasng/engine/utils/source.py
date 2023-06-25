@@ -25,6 +25,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
@@ -189,6 +190,22 @@ def get_app_description_handler(
         return None
 
     return get_desc_handler(app_desc)
+
+
+def get_bkapp_manifest_for_module(
+    module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
+) -> Optional[Dict]:
+    """Get app manifest from bkapp.yaml"""
+    try:
+        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=source_dir)
+    except NotImplementedError:
+        return None
+    try:
+        manifests = metadata_reader.get_bkapp_manifests(version_info)
+    except GetAppYamlError:
+        return None
+    name = generate_bkapp_name(module)
+    return manifests.get(name, None)
 
 
 def get_source_package_path(deployment: Deployment) -> str:

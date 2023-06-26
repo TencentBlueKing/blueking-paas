@@ -58,7 +58,7 @@
   </ul>
 </template>
 
-<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -178,7 +178,7 @@ export default {
         }
 
         // 添加访问入口
-        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问入口'));
+        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'));
 
         // 添加代码检查
         this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));

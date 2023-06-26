@@ -93,8 +93,8 @@
             return {
                 isLoading: true,
                 panels: [
-                    { name: 'moduleAddress', label: this.$t('模块访问地址') },
-                    { name: 'domain', label: this.$t('独立域名') }
+                    { name: 'moduleAddress', label: this.$t('访问地址') },
+                    // { name: 'domain', label: this.$t('独立域名') }
                 ],
                 active: 'moduleAddress'
             };

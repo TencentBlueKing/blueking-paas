@@ -134,7 +134,7 @@ class ResQuotaPlan(str, StructuredEnum):
 
 
 # 资源配额方案到配额的映射表
-PLAN_TO_QUOTA_PLAN = {
+PLAN_TO_QUOTA_MAP = {
     ResQuotaPlan.P_DEFAULT: (DEFAULT_PROC_CPU, DEFAULT_PROC_MEM),
     ResQuotaPlan.P_1C512M: ("1000m", "512Mi"),
     ResQuotaPlan.P_2C1G: ("2000m", "1024Mi"),

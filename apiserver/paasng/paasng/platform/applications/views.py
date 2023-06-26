@@ -526,6 +526,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                     build_cfg.get('buildpacks'),
                     build_cfg.get('dockerfile_path'),
                     build_cfg.get('docker_build_args'),
+                    build_cfg.get('tag_options'),
                 )
             except BPNotFound:
                 raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))

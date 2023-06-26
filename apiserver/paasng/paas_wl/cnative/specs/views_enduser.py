@@ -24,7 +24,7 @@ from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from drf_yasg.utils import swagger_auto_schema
-from kubernetes.dynamic.exceptions import NotFoundError, UnprocessibleEntityError
+from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
@@ -149,10 +149,13 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             release_by_k8s_operator(env, revision, operator=request.user.pk)
         except ValueError:
             raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-        except (UnprocessibleEntityError, NotFoundError) as e:
-            # 格式错误类异常（422），或者资源不存在异常，允许将错误信息提供给用户
+        except UnprocessibleEntityError as e:
+            # 格式错误类异常（422），允许将错误信息提供给用户
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(f"{application.code}, env: {environment}, summary: {e.summary()}")
+        except ResourceNotFoundError:
+            # 集群内没有 BkApp 等 PaaS Operator 资源，可以暴露给用户
             raise error_codes.DEPLOY_BKAPP_FAILED.f(
-                f"app: {application.code}, env: {environment}, summary: {e.summary()}"
+                f"{application.code}, env: {environment}, reason: bkpaas-app-operator not ready"
             )
         except Exception as e:
             logger.exception(

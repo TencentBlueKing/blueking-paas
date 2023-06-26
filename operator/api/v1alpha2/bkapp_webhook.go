@@ -178,8 +178,18 @@ func (r *BkApp) validateAnnotations() *field.Error {
 
 func (r *BkApp) validateAppSpec() *field.Error {
 	procsField := field.NewPath("spec").Child("processes")
-	if len(r.Spec.Processes) == 0 {
+
+	numOfProcs := int32(len(r.Spec.Processes))
+	if numOfProcs == 0 {
 		return field.Invalid(procsField, r.Spec.Processes, "processes can't be empty")
+	}
+
+	if numOfProcs > config.Global.GetMaxProcesses() {
+		return field.Invalid(
+			procsField,
+			r.Spec.Processes,
+			fmt.Sprintf("number of processes has exceeded limit %d", config.Global.GetMaxProcesses()),
+		)
 	}
 
 	if err := r.validateBuildConfig(); err != nil {

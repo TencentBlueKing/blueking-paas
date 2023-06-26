@@ -86,6 +86,7 @@ type ProjectConfig struct {
 	IngressPluginConfig IngressPluginConfig `json:"ingressPluginConfig"`
 	ResLimitConfig      ResLimitConfig      `json:"resLimitConfig"`
 	AutoscalingConfig   AutoscalingConfig   `json:"autoscalingConfig"`
+	MaxProcesses        int32               `json:"maxProcesses"`
 }
 
 // NewProjectConfig create project config
@@ -105,6 +106,8 @@ func NewProjectConfig() *ProjectConfig {
 	conf.ResLimitConfig.ProcDefaultMemLimits = "256Mi"
 	conf.ResLimitConfig.MaxReplicas = 5
 
+	conf.MaxProcesses = 8
+
 	return &conf
 }
 
@@ -113,6 +116,11 @@ func init() {
 }
 
 // Below functions implements the ProjectConfigReader interface
+
+// GetMaxProcesses returns the max processes
+func (p *ProjectConfig) GetMaxProcesses() int32 {
+	return p.MaxProcesses
+}
 
 // GetProcMaxReplicas returns the max replicas of a process
 func (p *ProjectConfig) GetProcMaxReplicas() int32 {

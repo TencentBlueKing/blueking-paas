@@ -29,13 +29,3 @@ class AppDomainSource(int, StructuredEnum):
 
 class AppSubpathSource(int, StructuredEnum):
     DEFAULT = 1
-
-
-class AddressType(str, StructuredEnum):
-    """Address types, different value means different source. For example, "custom"
-    means the address was provided by a custom domain created by user.
-    """
-
-    SUBDOMAIN = 'subdomain'
-    SUBPATH = 'subpath'
-    CUSTOM = 'custom'

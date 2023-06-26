@@ -99,7 +99,7 @@
         class="ps-head-right"
       >
         <template>
-          <li class="mr20" v-if="curAppInfo.feature.AGGREGATE_SEARCH">
+          <li class="mr20" v-if="userFeature.AGGREGATE_SEARCH">
             <dropdown
               ref="dropdown"
               :options="{
@@ -419,6 +419,7 @@ import Dropdown from '@/components/ui/Dropdown';
 import { psHeaderInfo } from '@/mixins/ps-static-mixin';
 import defaultUserLogo from '../../static/images/default-user.png';
 import logVersion from './log-version.vue';
+import { ajaxRequest, uuid } from '@/common/utils'
 
 export default {
   components: {
@@ -722,6 +723,12 @@ export default {
       }).then((res) => {
         this.$i18n.locale = language;
         this.$store.commit('updateLocalLanguage', language);
+        // 设置cookies持续化
+        ajaxRequest({
+          url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
+          jsonp: 'callback' + uuid(),
+          data: Object.assign({ language }),
+        });
         this.$router.go(0);
       }, (e) => {
         this.$paasMessage({

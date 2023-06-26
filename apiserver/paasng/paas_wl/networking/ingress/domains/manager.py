@@ -18,14 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 """Manage application's custom domains"""
 import logging
-from typing import Dict, Optional, Protocol, Type
+from typing import Protocol
 
 from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
-from rest_framework.serializers import Serializer
 
 from paas_wl.cnative.specs.resource import deploy_networking
-from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.networking.ingress.domains.independent import (
     DomainResourceDeleteService,
@@ -127,29 +125,6 @@ class DftCustomDomainManager:
         ret = DomainResourceDeleteService(env).do(host=instance.name, path_prefix=instance.path_prefix)
         if not ret:
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")
-
-
-def validate_domain_payload(
-    data: Dict,
-    application: Application,
-    serializer_cls: Type[Serializer],
-    instance: Optional[Domain] = None,
-):
-    """Validate a domain data, which was read form user input
-
-    :param application: The application which domain belongs to
-    :param instance: Optional Domain object, must provide when perform updating
-    :param serializer_slz: Optional serializer type, if not given, use DomainSLZ
-    """
-    serializer = serializer_cls(
-        data=data,
-        instance=instance,
-        context={
-            'valid_domain_suffixes': get_custom_domain_config(application.region).valid_domain_suffixes,
-        },
-    )
-    serializer.is_valid(raise_exception=True)
-    return serializer.validated_data
 
 
 def check_domain_used_by_market(application: Application, hostname: str) -> bool:

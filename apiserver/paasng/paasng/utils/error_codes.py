@@ -35,7 +35,7 @@ class ErrorCodes:
     CANNOT_DELETE_APP = ErrorCode(_('应用删除失败'))
     APP_RES_PROTECTED = ErrorCode(_('访问受保护资源失败'))
     # 模块
-    CANNOT_SET_DEFAULT = ErrorCode(_('设置主模块失败'))
+    CANNOT_SET_DEFAULT = ErrorCode(_('设置默认访问模块失败'))
     CANNOT_DELETE_MODULE = ErrorCode(_('删除模块失败'))
     CREATE_MODULE_QUOTA_EXCEEDED = ErrorCode(_('模块创建数量已达到配额上限'))
     # 进程操作
@@ -75,6 +75,8 @@ class ErrorCodes:
     PACKAGE_ALREADY_EXISTS = ErrorCode(_('源码包已存在'), code_num=4312009)
     MISSING_VERSION_INFO = ErrorCode(_('缺失版本信息'), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_('对象存储服务异常'), code_num=4312011)
+    # 部署配置
+    BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
     QUERY_LOG_FAILED = ErrorCode(_('查询日志失败'))
     QUERY_REQUEST_ERROR = ErrorCode(_('查询日志失败，请检查查询条件'))
@@ -151,6 +153,19 @@ class ErrorCodes:
 
     # 平台升级提醒
     ACTION_NOT_AVAILABLE = ErrorCode(_('因该功能正在升级改造，操作暂不可用。'), status_code=503)
+    MODIFY_UNSUPPORTED = ErrorCode(_("暂不支持修改该配置"))
+
+    # workloads error code
+    # Custom Domain Start
+    DELETE_CUSTOM_DOMAIN_FAILED = ErrorCode('删除独立域名失败')
+    CREATE_CUSTOM_DOMAIN_FAILED = ErrorCode('创建独立域名失败')
+    UPDATE_CUSTOM_DOMAIN_FAILED = ErrorCode('修改独立域名失败')
+
+    ERROR_UPDATING_PROC_SERVICE = ErrorCode('无法更新进程服务')
+    ERROR_UPDATING_PROC_INGRESS = ErrorCode('无法更新主入口')
+
+    # Credentials
+    CREATE_CREDENTIALS_FAILED = ErrorCode("Failed to create credentials")
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

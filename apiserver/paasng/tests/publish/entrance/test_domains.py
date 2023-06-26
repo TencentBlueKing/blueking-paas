@@ -23,13 +23,8 @@ import pytest
 
 from paas_wl.cluster.models import Domain as DomainCfg
 from paas_wl.cluster.models import IngressConfig, PortMap
-from paasng.publish.entrance.domains import (
-    DomainPriorityType,
-    ModuleEnvDomains,
-    SubDomainAllocator,
-    get_preallocated_domain,
-    get_preallocated_domains_by_env,
-)
+from paas_wl.networking.entrance.allocator.domains import DomainPriorityType, ModuleEnvDomains, SubDomainAllocator
+from paasng.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db

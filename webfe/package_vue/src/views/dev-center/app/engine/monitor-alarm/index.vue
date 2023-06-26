@@ -38,6 +38,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import AlarmRecord from './alarm-record';
 export default {
+  // eslint-disable-next-line vue/multi-word-component-names
   name: '',
   components: {
     appTopBar,

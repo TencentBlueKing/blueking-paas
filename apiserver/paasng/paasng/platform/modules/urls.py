@@ -39,6 +39,12 @@ urlpatterns = [
         name="module.set_default",
     ),
     url(
+        r'^api/bkapps/cloud-native/(?P<code>[^/]+)/modules/$',
+        views.ModuleViewSet.as_view({'post': 'create_cloud_native_module'}),
+        name='module.create.cloud_native',
+    ),
+    # BuildPack Runtime(Deprecated: using ModuleBuildConfigViewSet)
+    url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/runtime/list/$',
         views.ModuleRuntimeViewSet.as_view({'get': 'list_available'}),
         name='api.modules.runtime.available_list',
@@ -52,6 +58,17 @@ urlpatterns = [
         make_app_pattern("/runtime/overview", include_envs=False),
         views.ModuleRuntimeOverviewView.as_view(),
         name="api.modules.deployment.meta_info",
+    ),
+    # BuildConfig
+    re_path(
+        make_app_pattern("/build_config/$", include_envs=False),
+        views.ModuleBuildConfigViewSet.as_view({"get": "retrieve", "post": "modify"}),
+        name="api.modules.build_config",
+    ),
+    url(
+        make_app_pattern("/bp_runtimes/$", include_envs=False),
+        views.ModuleBuildConfigViewSet.as_view({'get': 'list_available_bp_runtimes'}),
+        name='api.modules.bp_runtime.available_list',
     ),
     # DeployConfig
     re_path(

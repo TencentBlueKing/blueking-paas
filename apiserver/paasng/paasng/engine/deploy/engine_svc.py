@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, TypedDict
 
 from django.utils.functional import cached_property
 
+from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.release import Release
@@ -108,6 +109,7 @@ class EngineDeployClient:
             env_variables=extra_envs,
             procfile=procfile,
             image=image,
+            artifact_type=ArtifactType.NONE,
         )
         return str(build.uuid)
 

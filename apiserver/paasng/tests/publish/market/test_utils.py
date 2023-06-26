@@ -20,12 +20,14 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.networking.entrance.constants import AddressType
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_all_regions
-from paasng.publish.entrance.exposer import Address, ModuleLiveAddrs
+from paasng.publish.entrance.exposer import Address
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 from paasng.publish.market.utils import MarketAvailableAddressHelper
+from tests.publish.utils import ModuleLiveAddrs
 
 pytestmark = pytest.mark.django_db
 
@@ -37,7 +39,7 @@ def set_custom_domain():
 
         def _set_hostname(hostname):
             """Set mocker to return given hostname as return value"""
-            mocker.return_value = [Address(type='custom', url=f'http://{hostname}')]
+            mocker.return_value = [Address(type=AddressType.CUSTOM, url=f'http://{hostname}')]
 
         yield _set_hostname
 

@@ -270,6 +270,11 @@ export default {
         this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
       });
     },
+    back () {
+      this.$router.push({
+        name: 'myApplications'
+      });
+    }
   },
 };
 </script>

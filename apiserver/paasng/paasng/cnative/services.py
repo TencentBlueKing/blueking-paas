@@ -21,6 +21,7 @@ from typing import Dict, List, Optional
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.platform.api import create_app_ignore_duplicated, create_cnative_app_model_resource
 from paas_wl.platform.applications.constants import WlAppType
 from paasng.engine.constants import AppEnvName
@@ -40,6 +41,7 @@ def initialize_simple(
     module: Module,
     image: str,
     cluster_name: Optional[str] = None,
+    api_version: Optional[str] = ApiVersion.V1ALPHA2,
     command: Optional[List[str]] = None,
     args: Optional[List[str]] = None,
     target_port: Optional[int] = None,
@@ -56,7 +58,7 @@ def initialize_simple(
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
 
-    model_res = create_cnative_app_model_resource(module, image, command, args, target_port)
+    model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
     create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
 

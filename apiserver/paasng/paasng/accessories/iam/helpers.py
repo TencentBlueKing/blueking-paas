@@ -170,6 +170,16 @@ def delete_builtin_user_groups(app_code: str):
     user_groups.delete()
 
 
+def delete_grade_manager(app_code: str):
+    """删除应用的分级管理员"""
+    grade_manager = ApplicationGradeManager.objects.filter(app_code=app_code).first()
+    if not grade_manager:
+        return
+
+    IAM_CLI.delete_grade_manager(grade_manager.grade_manager_id)
+    grade_manager.delete()
+
+
 def user_group_apply_url(app_code: str) -> dict:
     """应用用户组权限申请链接"""
     ops_user_group_id = ApplicationUserGroup.objects.get(

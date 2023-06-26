@@ -16,24 +16,30 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict
+import string
+from typing import Dict, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
+from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.cluster.serializers import ClusterSLZ
 from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.cnative.specs.constants import ApiVersion
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.models import to_error_string
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
 from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
+from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
@@ -62,6 +68,7 @@ class ModuleSLZ(serializers.ModelSerializer):
     template_display_name = serializers.SerializerMethodField(help_text='初始化时使用的模板名称')
     source_origin = serializers.IntegerField(help_text='模块源码来源，例如 1 表示 Git 等代码仓库', source='get_source_origin')
     clusters = serializers.SerializerMethodField(help_text="模块下属各环境部署的集群信息")
+    build_method = serializers.SerializerMethodField(help_text="镜像构建方式")
 
     def get_repo_auth_info(self, instance):
         if not isinstance(instance.get_source_obj(), (SvnRepository, GitRepository)):
@@ -98,6 +105,11 @@ class ModuleSLZ(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 env_clusters[env.environment] = None
         return env_clusters
+
+    def get_build_method(self, obj: Module):
+        # 防止出现历史数据未绑定 BuildConfig 的情况
+        build_config = BuildConfig.objects.get_or_create_by_module(obj)
+        return build_config.build_method
 
     class Meta:
         model = Module
@@ -167,7 +179,7 @@ class AppSlugBuilderMinimalSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugBuilder
-        exclude = ["buildpacks", "modules", "environments"]
+        fields = ['id', 'name', 'display_name', 'description', 'image', 'tag']
 
 
 class AppSlugRunnerMinimalSLZ(serializers.ModelSerializer):
@@ -176,16 +188,15 @@ class AppSlugRunnerMinimalSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugRunner
-        exclude = ["modules", "environments"]
+        fields = ['id', 'name', 'display_name', 'description', 'image', 'tag']
 
 
-class AppBuildPackMinimalSLZ(serializers.ModelSerializer):
-    display_name = TranslatedCharField()
-    description = TranslatedCharField()
-
-    class Meta:
-        model = AppBuildPack
-        exclude = ["modules", "environments"]
+class AppBuildPackMinimalSLZ(serializers.Serializer):
+    id = serializers.IntegerField()
+    language = serializers.CharField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    display_name = TranslatedCharField(read_only=True)
+    description = TranslatedCharField(read_only=True)
 
 
 class ModuleRuntimeSLZ(serializers.Serializer):
@@ -199,11 +210,6 @@ class ModuleRuntimeBindSLZ(serializers.Serializer):
     image = serializers.CharField(max_length=64, required=True)
     buildpacks_id = serializers.ListField(child=serializers.IntegerField(), required=False, default=list, min_length=0)
 
-    def validate_buildpack_id(self, buildpack_id):
-        if buildpack_id is not None:
-            self.initial_data.setdefault("buildpacks_id", [buildpack_id])
-        return buildpack_id
-
 
 class RepositoryWithPermissionSLZ(RepositorySLZ):
     authorized = serializers.SerializerMethodField(default=False, help_text="是否已授权")
@@ -213,6 +219,113 @@ class RepositoryWithPermissionSLZ(RepositorySLZ):
             return get_version_service(self.context["module"], self.context["user"]).touch()
         except Exception:
             return False
+
+
+class ImageTagOptionsSLZ(serializers.Serializer):
+    prefix = serializers.CharField(help_text="自定义前缀", allow_blank=False, allow_null=True, max_length=24)
+    with_version = serializers.BooleanField(help_text="镜像Tag 是否带有分支/标签")
+    with_build_time = serializers.BooleanField(help_text="镜像 Tag 是否带有构建时间")
+    with_commit_id = serializers.BooleanField(help_text="镜像 Tag 是否带有提交ID(hash)")
+
+    def validate_prefix(self, prefix: Optional[str]):
+        charset = {*string.digits, *string.ascii_letters}
+        if prefix is None:
+            return None
+        if prefix.startswith(".") or prefix.startswith("-"):
+            raise ValidationError("Tag can not startswith '.' or '-'")
+        if forbidden_chars := set(prefix) - charset:
+            raise ValidationError(f"Tag can not contain {sorted(forbidden_chars)}")
+        return prefix
+
+
+class ModuleSourceConfigSLZ(serializers.Serializer):
+    """模块源码仓库/模板等信息"""
+
+    source_init_template = serializers.CharField(required=False, default='', allow_blank=True)
+    source_origin = serializers.ChoiceField(choices=SourceOrigin.get_choices(), default=SourceOrigin.AUTHORIZED_VCS)
+    source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
+    source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
+    source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
+    source_dir = serializers.CharField(required=False, default='', allow_blank=True)
+
+    def validate_source_init_template(self, tmpl_name):
+        if not tmpl_name:
+            return tmpl_name
+
+        if not Template.objects.filter(name=tmpl_name).exists():
+            raise ValidationError(_('模板 {} 不可用').format(tmpl_name))
+        return tmpl_name
+
+
+class ModuleBuildConfigSLZ(serializers.Serializer):
+    """模块镜像构建信息"""
+
+    image_repository = serializers.CharField(help_text="镜像仓库", read_only=True)
+    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
+    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
+
+    # buildpack build 相关字段
+    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", allow_null=True, required=False)
+    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), allow_null=True, required=False)
+
+    # docker build 相关字段
+    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
+    docker_build_args = serializers.DictField(
+        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
+    )
+
+    def validate(self, attrs):
+        build_method = RuntimeType(attrs["build_method"])
+        missed_params = []
+        if build_method == RuntimeType.BUILDPACK:
+            missed_params = [k for k in ['tag_options', 'buildpacks', 'bp_stack_name'] if not attrs.get(k)]
+        elif build_method == RuntimeType.DOCKERFILE:
+            missed_params = [k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if not attrs.get(k)]
+        if missed_params:
+            raise ValidationError(
+                detail={param: _('This field is required.') for param in missed_params}, code="required"
+            )
+        return attrs
+
+
+class CreateCNativeModuleSLZ(serializers.Serializer):
+    """Serializer for create cloud-native application's module"""
+
+    name = ModuleNameField()
+    source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码配置'))
+    build_config = ModuleBuildConfigSLZ(required=True, help_text=_('构建配置'))
+    manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
+
+    def validate(self, attrs):
+        build_cfg = attrs['build_config']
+
+        # 如果托管方式为仅镜像，则应该设置 manifest
+        if build_cfg['build_method'] == RuntimeType.CUSTOM_IMAGE:
+            if not attrs.get('manifest'):
+                raise ValidationError(_('云原生应用 manifest 不能为空'))
+
+            source_cfg = attrs['source_config']
+            # 检查 source_config 中 source_origin 类型必须为 IMAGE_REGISTRY
+            if source_cfg['source_origin'] != SourceOrigin.IMAGE_REGISTRY:
+                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 IMAGE_REGISTRY'))
+
+            try:
+                bkapp_res = BkAppResource(**attrs['manifest'])
+            except PDValidationError as e:
+                raise ValidationError(to_error_string(e))
+
+            if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
+                raise ValidationError(_('请使用 BkApp v1alpha2 以支持多模块'))
+
+            if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
+                raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))
+
+        return attrs
+
+    def validate_name(self, name):
+        if Module.objects.filter(application=self.context['application'], name=name).exists():
+            raise ValidationError(_("名称为 {} 的模块已存在").format(name))
+        return name
 
 
 class ModuleRuntimeOverviewSLZ(serializers.Serializer):

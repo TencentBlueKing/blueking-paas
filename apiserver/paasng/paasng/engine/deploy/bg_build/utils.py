@@ -56,14 +56,14 @@ def generate_slug_path(bp: BuildProcess) -> str:
     return f'{app.region}/home/{slug_name}/push'
 
 
-def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
+def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
     """generate all env vars needed for building"""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'WlApp' = bp.app
     env_vars: Dict[str, str] = {}
 
-    if metadata and metadata.get("use_dockerfile"):
+    if metadata.get("use_dockerfile"):
         # build application form Dockerfile
         image_repository = metadata['image_repository']
         output_image = metadata['image']
@@ -75,7 +75,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
             DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
         )
-    elif metadata and metadata.get("use_cnb"):
+    elif metadata.get("use_cnb"):
         # build application as image
         image_repository = metadata['image_repository']
         output_image = metadata['image']

@@ -57,18 +57,18 @@
             </div>
             <div class="status-container">
               <div
-              v-if="process.status === 'Running'"
-              class="process-status"
-            >
-              <span v-if="!process.autoscaling">
-                <img
-                  src="/static/images/btn_loading.gif"
-                  class="loading"
-                >
+                v-if="process.status === 'Running'"
+                class="process-status"
+              >
+                <span v-if="!process.autoscaling">
+                  <img
+                    src="/static/images/btn_loading.gif"
+                    class="loading"
+                  >
                   <span>
                     {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
                   </span>
-              </span>
+                </span>
               </div>
               <div class="process-operate">
                 <a
@@ -148,7 +148,7 @@
                     <i class="paasng-icon paasng-icon-more" v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'), disabled: process.available_instance_count || process.desired_replicas }" />
                   </template>
                   <ul class="bk-dropdown-list" slot="dropdown-content">
-                      <!-- <li>
+                    <!-- <li>
                         <a
                           text
                           href="javascript:void(0);"
@@ -156,13 +156,15 @@
                           @click="showProcessConfigDialog(process, index)"
                         > {{ $t('扩缩容') }} </a>
                       </li> -->
-                      <bk-button text size="small" @click="showProcessConfigDialog(process, index)"
-                      :disabled="!process.available_instance_count || !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
+                    <bk-button
+                      text size="small" @click="showProcessConfigDialog(process, index)"
+                      :disabled="!process.available_instance_count
+                        || !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
                   </ul>
                 </bk-dropdown-menu>
               </div>
+            </div>
           </div>
-        </div>
           <div
             v-if="process.name === curProcessKey"
             class="process-item-table"
@@ -510,7 +512,8 @@
           <bk-radio-button class="radio-cls" :value="false">
             {{ $t('手动调节') }}
           </bk-radio-button>
-          <bk-radio-button class="radio-cls" :value="true" 
+          <bk-radio-button
+            class="radio-cls" :value="true"
             :disabled="!autoScalDisableConfig.ENABLE_AUTOSCALING"
             v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.ENABLE_AUTOSCALING }">
             {{ $t('自动调节') }}
@@ -527,11 +530,12 @@
           </bk-form-item>
           <bk-form-item v-if="autoscaling" :label="$t('触发条件：')">
             <div class="rate-container">
-              <span>{{ $t('CPU 使用率') }} = <bk-input class="w80" v-model="defaultUtilizationRate" disabled></bk-input> </span>
+              <span>{{ $t('CPU 使用率') }} =
+                <bk-input class="w80" v-model="defaultUtilizationRate" disabled></bk-input> </span>
               <i
-                    class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                    v-bk-tooltips="autoScalingTip"
-                  />
+                class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                v-bk-tooltips="autoScalingTip"
+              />
             </div>
           </bk-form-item>
           <bk-form-item v-if="autoscaling" class="desc-form-item" :label-width="10">
@@ -539,7 +543,8 @@
               <p>
                 {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
               </p>
-              <p>{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
+              <p>{{$t('当')}} {{$t('CPU 使用率')}} &lt;
+                <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
               </p>
             </div>
           </bk-form-item>
@@ -563,36 +568,37 @@
           </bk-form-item>
         </bk-form>
         <div class="auto-container" v-if="autoscaling">
-          <bk-form :rules="scalingRules" :model="scalingConfig"
+          <bk-form
+            :rules="scalingRules" :model="scalingConfig"
             ref="scalingConfigForm"
             class="auto-form" :label-width="0"
             form-type="inline"
-            >
+          >
             <bk-form-item property="minReplicas" error-display-type="normal">
-                <bk-input
-                  type="number"
-                  :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
-                  class="dia-input"
-                  v-model="scalingConfig.minReplicas"
-                >
-                  <template slot="prepend">
-                    <div class="group-text">{{$t('最小副本数')}}</div>
-                  </template>
-                </bk-input>
-              </bk-form-item>
-              <bk-form-item property="maxReplicas" error-display-type="normal" class="ml20">
-                <bk-input
-                  type="number"
-                  :placeholder="'1 - ' + maxReplicasNum"
-                  class="dia-input"
-                  v-model="scalingConfig.maxReplicas"
-                >
-                  <template slot="prepend">
-                    <div class="group-text">{{$t('最大副本数')}}</div>
-                  </template>
-                </bk-input>
-              </bk-form-item>
-            </bk-form>
+              <bk-input
+                type="number"
+                :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
+                class="dia-input"
+                v-model="scalingConfig.minReplicas"
+              >
+                <template slot="prepend">
+                  <div class="group-text">{{$t('最小副本数')}}</div>
+                </template>
+              </bk-input>
+            </bk-form-item>
+            <bk-form-item property="maxReplicas" error-display-type="normal" class="ml20">
+              <bk-input
+                type="number"
+                :placeholder="'1 - ' + maxReplicasNum"
+                class="dia-input"
+                v-model="scalingConfig.maxReplicas"
+              >
+                <template slot="prepend">
+                  <div class="group-text">{{$t('最大副本数')}}</div>
+                </template>
+              </bk-input>
+            </bk-form-item>
+          </bk-form>
         </div>
       </div>
     </bk-dialog>
@@ -624,10 +630,8 @@
 <script> import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
-import dropdown from '@/components/ui/Dropdown';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import moment from 'moment';
-import numInput from '@/components/ui/bkInput';
 import chartOption from '@/json/instance-chart-option';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import $ from 'jquery';
@@ -650,10 +654,8 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components : {
-    dropdown,
+  components: {
     tooltipConfirm,
-    numInput,
     chart: ECharts,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
@@ -672,7 +674,7 @@ export default {
           start.setTime(start.getTime() - 60 * 1000 * 5);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '5m';
           timeShortCutText = i18n.t('最近5分钟');
         },
@@ -685,7 +687,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 1);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1h';
           timeShortCutText = i18n.t('最近1小时');
         },
@@ -698,7 +700,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 3);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '3h';
           timeShortCutText = i18n.t('最近3小时');
         },
@@ -711,7 +713,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 12);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '12h';
           timeShortCutText = i18n.t('最近12小时');
         },
@@ -724,7 +726,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '1d';
           timeShortCutText = i18n.t('最近1天');
         },
@@ -740,7 +742,7 @@ export default {
           start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
           return [start, end];
         },
-        onClick(picker) {
+        onClick() {
           timeRangeCache = '7d';
           timeShortCutText = i18n.t('最近7天');
         },
@@ -879,24 +881,24 @@ export default {
         metrics: [
           {
             metric: 'cpuUtilization',
-            value: '85'
-          }
-        ]
+            value: '85',
+          },
+        ],
       },
       scalingRules: null,
       maxReplicasNum: 0,
       minReplicasNum: 0,
       autoScalingTip: {
-          theme: 'light',
-          allowHtml: true,
-          content: this.$t('提示信息'),
-          html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩缩容计算规则')}</a>`,
-          placements: ['right']
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩缩容计算规则')}</a>`,
+        placements: ['right'],
       },
       autoScalDisableConfig: {},
       curTargetMaxReplicas: 0,
       curTargetMinReplicas: 0,
-      defaultUtilizationRate: '85%'
+      defaultUtilizationRate: '85%',
     };
   },
   computed: {
@@ -913,8 +915,8 @@ export default {
       return this.$store.state.envEventData;
     },
     shrinkLimit() {
-      return ((this.curTargetReplicas - 1)/this.curTargetReplicas * 85).toFixed(1) + '%'
-    }
+      return `${((this.curTargetReplicas - 1) / this.curTargetReplicas * 85).toFixed(1)}%`;
+    },
   },
   watch: {
     curLogTimeRange(val) {
@@ -922,11 +924,11 @@ export default {
     },
     '$route'() {
       this.init();
-      this.getAutoScalFlag()  //切换路由也需要获取featureflag
+      this.getAutoScalFlag();  // 切换路由也需要获取featureflag
     },
     'processConfigDialog.visiable'(val) {
-      if(val) {
-        const that = this
+      if (val) {
+        const that = this;
         this.scalingRules = {
           maxReplicas: [
             {
@@ -941,7 +943,7 @@ export default {
             },
             {
               validator(val) {
-                const maxReplicas = Number(val)
+                const maxReplicas = Number(val);
                 return maxReplicas <= maxReplicasNum;
               },
               message() {
@@ -951,10 +953,10 @@ export default {
             },
             {
               validator(v) {
-                  const maxReplicas = Number(v)
-                  const minReplicas = Number(that.scalingConfig.minReplicas)
-                  return maxReplicas >= minReplicas;
-                },
+                const maxReplicas = Number(v);
+                const minReplicas = Number(that.scalingConfig.minReplicas);
+                return maxReplicas >= minReplicas;
+              },
               message() {
                 return `${i18n.t('最大副本数不可小于最小副本数')}`;
               },
@@ -974,7 +976,7 @@ export default {
             },
             {
               validator(val) {
-                const maxReplicas = Number(val)
+                const maxReplicas = Number(val);
                 return maxReplicas <= maxReplicasNum;
               },
               message() {
@@ -983,34 +985,38 @@ export default {
               trigger: 'blur',
             },
             {
-                validator(v) {
-                  const minReplicas = Number(v)
-                  const maxReplicas = Number(that.scalingConfig.maxReplicas)
-                  return minReplicas <= maxReplicas;
-                },
-                message() {
-                  return `${i18n.t('最小副本数不可大于最大副本数')}`;
-                },
-                trigger: 'blur',
+              validator(v) {
+                const minReplicas = Number(v);
+                const maxReplicas = Number(that.scalingConfig.maxReplicas);
+                return minReplicas <= maxReplicas;
               },
-            ]
-        }
+              message() {
+                return `${i18n.t('最小副本数不可大于最大副本数')}`;
+              },
+              trigger: 'blur',
+              message() {
+                return `${i18n.t('缩容下限不可大于扩容上限')}`;
+              },
+              trigger: 'blur',
+            },
+          ],
+        };
       }
     },
-    'scalingConfig.maxReplicas' (val) {
-      if(val >= this.scalingConfig.minReplicas) {
+    'scalingConfig.maxReplicas'(val) {
+      if (val >= this.scalingConfig.minReplicas) {
         this.$refs.scalingConfigForm?.clearError();
       }
     },
-    'scalingConfig.minReplicas' (val) {
-      if(val <= this.scalingConfig.maxReplicas) {
+    'scalingConfig.minReplicas'(val) {
+      if (val <= this.scalingConfig.maxReplicas) {
         this.$refs.scalingConfigForm?.clearError();
       }
     },
     autoscaling() {
       this.$refs.processConfigForm?.clearError();
       this.$refs.scalingConfigForm?.clearError();
-    }
+    },
   },
   created() {
     // moment日期中英文显示
@@ -1022,7 +1028,7 @@ export default {
       next();
     });
     this.isDateChange = false;
-    this.getAutoScalFlag()
+    this.getAutoScalFlag();
   },
   beforedestroy() {
     this.closeServerPush();
@@ -1045,7 +1051,7 @@ export default {
       });
     },
 
-    handlerChange(dates, type) {
+    handlerChange(dates) {
       this.dateParams.start_time = dates[0];
       this.dateParams.end_time = dates[1];
       this.dateParams.time_range = timeRangeCache || 'customized';
@@ -1092,7 +1098,7 @@ export default {
     hideTooltipConfirm(process) {
       clearTimeout(this.tooltipTimer);
       this.tooltipTimer = setTimeout(() => {
-        this.$refs.tooltipConfirm.forEach((tooltip, tooltipIndex) => {
+        this.$refs.tooltipConfirm.forEach((tooltip) => {
           tooltip.cancel();
         });
         process.isShowTooltipConfirm = false;
@@ -1608,7 +1614,7 @@ export default {
           resourceLimit: processInfo.resource_limit,
           clusterLink: processInfo.cluster_link,
           scalingConfig: processInfo.scaling_config,
-          autoscaling: processInfo.autoscaling
+          autoscaling: processInfo.autoscaling,
         };
 
         this.updateProcessStatus(process);
@@ -1800,8 +1806,7 @@ export default {
       }
     },
 
-    showProcessConfigDialog(process, index) {
-
+    showProcessConfigDialog(process) {
       if (this.isAppOfflined) {
         this.$paasMessage({
           theme: 'error',
@@ -1811,8 +1816,8 @@ export default {
       }
 
       maxReplicasNum = process.maxReplicas;
-      this.maxReplicasNum = maxReplicasNum
-      this.minReplicasNum = this.environment === 'prod' ? 2 : 1
+      this.maxReplicasNum = maxReplicasNum;
+      this.minReplicasNum = this.environment === 'prod' ? 2 : 1;
       this.processPlan = {
         replicas: process.instances.length,
         processType: process.name,
@@ -1821,17 +1826,17 @@ export default {
         status: process.status,
       };
 
-      this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || this.maxReplicasNum
-      this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || this.minReplicasNum
-      this.curTargetMaxReplicas = this.scalingConfig.maxReplicas
-      this.curTargetMinReplicas = this.scalingConfig.minReplicas
+      this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || this.maxReplicasNum;
+      this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || this.minReplicasNum;
+      this.curTargetMaxReplicas = this.scalingConfig.maxReplicas;
+      this.curTargetMinReplicas = this.scalingConfig.minReplicas;
       this.processConfigDialog.visiable = true;
       this.processConfigDialog.showForm = true;
-      this.autoscaling = process.autoscaling
+      this.autoscaling = process.autoscaling;
       this.curTargetReplicas = this.processPlan.targetReplicas;
     },
 
-    showProcessDetailDialog(process, index) {
+    showProcessDetailDialog(process) {
       this.processPlan = {
         replicas: process.instance,
         processType: process.name,
@@ -1918,23 +1923,23 @@ export default {
       this.processConfigDialog.isLoading = true;
       setTimeout(async () => {
         try {
-          const manualValidate = await this.$refs?.processConfigForm?.validate()
-          const autoValidate = await this.$refs?.scalingConfigForm?.validate()
-        if(!this.autoscaling && manualValidate) {
-          this.processConfigDialog.isLoading = false;
-          this.processConfigDialog.visiable = false;
-          this.$store.commit('updataEnvEventData', []);
-          this.updateProcessConfig();
-        } if(this.autoscaling && autoValidate) {
-          this.processConfigDialog.isLoading = false;
-          this.processConfigDialog.visiable = false;
-          this.$store.commit('updataEnvEventData', []);
-          this.updateProcessConfig();
-        } 
-        } catch (error) {
+          const manualValidate = await this.$refs?.processConfigForm?.validate();
+          const autoValidate = await this.$refs?.scalingConfigForm?.validate();
+          if (!this.autoscaling && manualValidate) {
             this.processConfigDialog.isLoading = false;
+            this.processConfigDialog.visiable = false;
+            this.$store.commit('updataEnvEventData', []);
+            this.updateProcessConfig();
+          } if (this.autoscaling && autoValidate) {
+            this.processConfigDialog.isLoading = false;
+            this.processConfigDialog.visiable = false;
+            this.$store.commit('updataEnvEventData', []);
+            this.updateProcessConfig();
+          }
+        } catch (error) {
+          this.processConfigDialog.isLoading = false;
         }
-      })
+      });
     },
 
     closeProcessConfig() {
@@ -1943,15 +1948,17 @@ export default {
 
     afterCloseProcessConfig() {
       this.processConfigDialog.showForm = false;
-      this.autoscaling = false
-      this.scalingConfig.minReplicas = ''
-      this.scalingConfig.maxReplicas = ''
+      this.autoscaling = false;
+      this.scalingConfig.minReplicas = '';
+      this.scalingConfig.maxReplicas = '';
     },
 
     // 进程实例设置
     async updateProcessConfig() {
       // 不允许小于1或者大于最大值，如果没有改变也不允许操作
-      if (!this.autoscaling && (this.processPlan.targetReplicas < 1 || this.processPlan.targetReplicas > this.processPlan.maxReplicas || this.processPlan.targetReplicas === this.processPlan.replicas)) {
+      if (!this.autoscaling && (this.processPlan.targetReplicas < 1
+        || this.processPlan.targetReplicas > this.processPlan.maxReplicas
+        || this.processPlan.targetReplicas === this.processPlan.replicas)) {
         return;
       }
 
@@ -1961,11 +1968,11 @@ export default {
         operate_type: 'scale',
         target_replicas: this.processPlan.targetReplicas,
         autoscaling: this.autoscaling,
-        scaling_config:{
+        scaling_config: {
           min_replicas: this.scalingConfig.minReplicas,
           max_replicas: this.scalingConfig.maxReplicas,
-          metrics: this.scalingConfig.metrics
-        }
+          metrics: this.scalingConfig.metrics,
+        },
       };
       this.pendingProcessList.push(processType);
 
@@ -2163,26 +2170,26 @@ export default {
 
     async getAutoScalFlag() {
       try {
-          const res = await this.$store.dispatch('deploy/getAutoScalFlagWithEnv', {
-              appCode: this.appCode,
-              moduleId: this.curModuleId,
-              env: this.environment,
-          });
-          this.autoScalDisableConfig = res
+        const res = await this.$store.dispatch('deploy/getAutoScalFlagWithEnv', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+        });
+        this.autoScalDisableConfig = res;
       } catch (e) {
-          this.$paasMessage({
-              theme: 'error',
-              message: e.message || e.detail || this.$t('接口异常')
-          });
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
       }
     },
 
-    handleAutoChange(val) {
-      //切换tab 数据重置
-      this.processPlan.targetReplicas = this.curTargetReplicas
-      this.scalingConfig.maxReplicas = this.curTargetMaxReplicas
-      this.scalingConfig.minReplicas = this.curTargetMinReplicas
-    }
+    handleAutoChange() {
+      // 切换tab 数据重置
+      this.processPlan.targetReplicas = this.curTargetReplicas;
+      this.scalingConfig.maxReplicas = this.curTargetMaxReplicas;
+      this.scalingConfig.minReplicas = this.curTargetMinReplicas;
+    },
   },
 };
 </script>

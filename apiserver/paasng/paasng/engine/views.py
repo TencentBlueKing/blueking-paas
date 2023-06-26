@@ -43,6 +43,7 @@ from paas_wl.monitoring.metrics.exceptions import (
 )
 from paas_wl.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+from paas_wl.platform.applications.models import Build
 from paas_wl.platform.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
 from paas_wl.release_controller.api import get_latest_build_id
 from paasng.accessories.iam.helpers import fetch_user_roles
@@ -397,13 +398,22 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = CreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
-        version_info = self._get_version_info(request.user, module, params)
+        manifest = params.get("manifest", None)
+        version_info = None
+        # 只有仅托管镜像的云原生应用会传递 manifest
+        if manifest is None:
+            version_info = self._get_version_info(request.user, module, params)
 
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
-        manifest = params.get("manifest")
+        # 选择历史构建的镜像时需要传递 build_id
+        if build_id := params["advanced_options"].get("build_id"):
+            wl_app = self.get_wl_app_via_path()
+            if not Build.objects.filter(pk=build_id, app=wl_app).exists():
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在"))
+
         deployment = None
         try:
             with coordinator.release_on_error():
@@ -721,7 +731,10 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
 
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    schema = None
 
+    # Deprecated: use `api.app_domains.configs` instead
+    # 访问入口功能重构下, 下线该接口
     @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ(many=True)})
     def retrieve(self, request, code):
         """查看独立域名相关配置信息，比如前端负载均衡 IP 地址等"""

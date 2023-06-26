@@ -25,6 +25,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
@@ -160,7 +161,10 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
     """
     # Note: 对于非源码包类型的应用, 只有产品上配置的部署目录会生效
     if not ModuleSpecs(module).deploy_via_package:
-        return module.get_source_obj().get_source_dir()
+        if source_obj := module.get_source_obj():
+            return source_obj.get_source_dir()
+        # 模块未绑定 source_obj, 可能是仅托管镜像的云原生应用
+        return ""
 
     # Note: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
     handler = get_app_description_handler(module, operator, version_info)
@@ -186,6 +190,22 @@ def get_app_description_handler(
         return None
 
     return get_desc_handler(app_desc)
+
+
+def get_bkapp_manifest_for_module(
+    module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
+) -> Optional[Dict]:
+    """Get app manifest from bkapp.yaml"""
+    try:
+        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=source_dir)
+    except NotImplementedError:
+        return None
+    try:
+        manifests = metadata_reader.get_bkapp_manifests(version_info)
+    except GetAppYamlError:
+        return None
+    name = generate_bkapp_name(module)
+    return manifests.get(name, None)
 
 
 def get_source_package_path(deployment: Deployment) -> str:

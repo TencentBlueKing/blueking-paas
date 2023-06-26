@@ -25,6 +25,8 @@ from celery import shared_task
 from django.conf import settings
 from django.utils.encoding import force_text
 
+from paas_wl.platform.applications.constants import ArtifactType
+
 # NOTE: The background building process depends on the paas_wl package.
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
@@ -229,6 +231,10 @@ class BuildProcessExecutor(DeployStep):
         if 'image' not in metadata:
             raise KeyError("'image' is required")
         image = metadata['image']
+        artifact_type = ArtifactType.SLUG
+        if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
+            artifact_type = ArtifactType.IMAGE
+        bkapp_revision_id = metadata.get("bkapp_revision_id", None)
 
         # starting create build
         build_instance = Build.objects.create(
@@ -240,6 +246,8 @@ class BuildProcessExecutor(DeployStep):
             revision=self.bp.revision,
             procfile=procfile,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
+            bkapp_revision_id=bkapp_revision_id,
+            artifact_type=artifact_type,
         )
 
         # retrieve bp object again, flush the status

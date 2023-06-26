@@ -28,7 +28,7 @@
       RabbitMQ \u4F5C\u4E3A Celery \u7684 BROKER_URL\uFF1B\u5982\u9700\u4F7F\u7528
       Redis\uFF0C\u8BF7\u5728 Django \u7684\u914D\u7F6E\u4E2D\u624B\u52A8\u8BBE\u7F6E
       BROKER_URL \u7684\u503C:\n\n```\nBROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'\n```"
-    instance_tutorial_en: "To get the corresponding values via environment variables.\n\n```python\nREDIS_HOST = os.environ.get('REDIS_HOST')\nREDIS_PORT = int(os.environ.get('REDIS_PORT'))\nREDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')\n```\n\nBy default, the Blue Whale Python development framework uses RabbitMQ as the BROKER_URL for Celery; to use Redis, set the BROKER_URL value manually in Django's configuration:\n\n```\nBROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'\n```"
+    instance_tutorial_en: "To get the corresponding values via environment variables.\n\n```python\nREDIS_HOST = os.environ.get('REDIS_HOST')\nREDIS_PORT = int(os.environ.get('REDIS_PORT'))\nREDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')\n```\n\nBy default, the BlueKing Python development framework uses RabbitMQ as the BROKER_URL for Celery; to use Redis, set the BROKER_URL value manually in Django's configuration:\n\n```\nBROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'\n```"
     available_languages: python
     config: '{"specifications":[{"recommended_value":"","name":"type","display_name":"\u7c7b\u578b","description":"\u7c7b\u578b"}],"provider_name":"pool"}'
     is_active: true

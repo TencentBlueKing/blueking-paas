@@ -22,9 +22,17 @@ from typing import List
 from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 
-from paas_wl.cnative.specs.v1alpha1.bk_app import EnvVar
+from paas_wl.cnative.specs.crd.bk_app import EnvVar
 from paasng.engine.configurations.config_var import get_builtin_env_variables
+from paasng.engine.models.config_var import get_config_vars
 from paasng.platform.applications.models import ModuleEnvironment
+
+
+def generate_user_configurations(env: ModuleEnvironment) -> List[EnvVar]:
+    """获取用户定义的环境变量配置"""
+    return [
+        EnvVar(name=name.upper(), value=value) for name, value in get_config_vars(env.module, env.environment).items()
+    ]
 
 
 def generate_builtin_configurations(env: ModuleEnvironment) -> List[EnvVar]:

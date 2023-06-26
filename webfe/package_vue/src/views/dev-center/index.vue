@@ -729,7 +729,6 @@
                 },
                 isFilter: false,
                 type: 'default',
-                appTypeList: APP_TYPE_MAP,
                 curAppType: '',
                 curAppTypeActive: 'all',
                 tableEmptyConf: {
@@ -780,6 +779,12 @@
             },
             isShowAllWithRegions () {
                 return this.availableRegions.length > 1;
+            },
+            appTypeList () {
+                if (!this.$store.state.userFeature?.ALLOW_CREATE_CLOUD_NATIVE_APP) {
+                  return APP_TYPE_MAP.filter(item => item.key !== 'cloud_native_app_count');
+                }
+                return APP_TYPE_MAP;
             }
         },
         watch: {

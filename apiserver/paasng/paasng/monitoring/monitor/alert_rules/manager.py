@@ -22,7 +22,7 @@ from paasng.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
 from .ascode.client import AsCodeClient
-from .config import AppRuleConfigGenerator, RuleConfig
+from .config import AppRuleConfigGenerator, RuleConfig, get_supported_alert_codes
 
 
 class AlertRuleManager:
@@ -33,6 +33,7 @@ class AlertRuleManager:
         self.app_code = self.application.code
         self.default_receivers = application.get_developers()
         self.config_generator = AppRuleConfigGenerator(self.application, self.default_receivers)
+        self.supported_alerts = get_supported_alert_codes(application.type)
 
     def init_rules(self):
         """为 app 初始化告警规则. 其中规则包括了 app scoped 和 app module scoped
@@ -52,21 +53,6 @@ class AlertRuleManager:
         self._apply_rule_configs(rule_configs)
         self._save_rule_configs(rule_configs)
 
-    def create_module_rules(self, module_name: str):
-        """为新 module 创建告警规则
-
-        :param module_name: 新模块名
-        """
-        module_rule_configs = self.config_generator.gen_module_scoped_rule_configs(module_name)
-
-        rule_configs = self.config_generator.gen_rule_configs_from_qs(
-            AppAlertRule.objects.filter(application=self.application)
-        )
-        rule_configs.extend(module_rule_configs)
-
-        self._apply_rule_configs(rule_configs)
-        self._save_rule_configs(module_rule_configs)
-
     def update_rule(self, rule_obj: AppAlertRule, update_fields: Dict) -> AppAlertRule:
         """更新 app 的告警规则
 
@@ -83,8 +69,34 @@ class AlertRuleManager:
 
         return rule_obj
 
+    def refresh_rules_by_module(self, module_name: str, run_env: str):
+        """刷新 app 的告警规则
+
+        使用场景:
+        - app 部署 module 后, 刷新告警规则
+        """
+        if not self._need_refresh(module_name, run_env):
+            return
+
+        rule_configs = self._get_refreshable_app_scoped_rules(run_env)
+        rule_configs.extend(self._get_refreshable_module_scoped_rules(module_name, run_env))
+
+        self._apply_rule_configs(rule_configs)
+        self._save_rule_configs(rule_configs)
+
+    def delete_rules(self, module_name: str, run_env: str):
+        """删除 app 的模块告警规则
+
+        使用场景:
+        - app 下线 module 后, 刷新告警规则
+        """
+        AppAlertRule.objects.filter(
+            application=self.application, module__name=module_name, environment=run_env
+        ).delete()
+        self.refresh_rules()
+
     def refresh_rules(self):
-        """向 bkmonitor 刷新 app 的告警规则(从已存在的 AppAlertRule queryset 读取后刷新)
+        """刷新 app 的告警规则(从已存在的 AppAlertRule queryset 读取后刷新)
 
         使用场景:
         - app 删除 module 后, 刷新告警规则
@@ -94,10 +106,51 @@ class AlertRuleManager:
         )
         self._apply_rule_configs(existed_rule_configs)
 
+    def _get_refreshable_app_scoped_rules(self, run_env: str) -> List[RuleConfig]:
+        """获取待刷新的 app scoped 告警规则"""
+        rule_qs = AppAlertRule.objects.filter_app_scoped(self.application, run_env)
+        rule_configs = self.config_generator.gen_rule_configs_from_qs(rule_qs)
+        existed_alert_codes = {c.alert_code for c in rule_configs}
+
+        if new_alert_codes := set(self.supported_alerts.app_scoped_codes) - existed_alert_codes:
+            rule_configs.extend(self.config_generator.gen_app_scoped_rule_configs([run_env], list(new_alert_codes)))
+
+        return rule_configs
+
+    def _get_refreshable_module_scoped_rules(self, module_name: str, run_env: str) -> List[RuleConfig]:
+        """获取待刷新的 module scoped 告警规则"""
+        rule_qs = AppAlertRule.objects.filter_module_scoped(self.application, run_env, module_name)
+        rule_configs = self.config_generator.gen_rule_configs_from_qs(rule_qs)
+        existed_alert_codes = {c.alert_code for c in rule_configs}
+
+        if new_alert_codes := set(self.supported_alerts.module_scoped_codes) - existed_alert_codes:
+            rule_configs.extend(
+                self.config_generator.gen_module_scoped_rule_configs(module_name, [run_env], list(new_alert_codes))
+            )
+
+        return rule_configs
+
+    def _need_refresh(self, module_name: str, run_env: str) -> bool:
+        """根据 AppAlertRule 表中的记录, 确定是否需要刷新告警规则"""
+        expected_alert_codes = self.supported_alerts.app_scoped_codes
+        if AppAlertRule.objects.filter_app_scoped(self.application, run_env).filter(
+            alert_code__in=expected_alert_codes
+        ).count() != len(expected_alert_codes):
+            return True
+
+        expected_alert_codes = self.supported_alerts.module_scoped_codes
+        if AppAlertRule.objects.filter_module_scoped(self.application, run_env, module_name).filter(
+            alert_code__in=expected_alert_codes
+        ).count() != len(expected_alert_codes):
+            return True
+
+        return False
+
     def _apply_rule_configs(self, rule_configs: List[RuleConfig]):
         """通过 MonitorAsCode 方式下发告警规则到 bkmonitor"""
-        client = AsCodeClient(self.app_code, rule_configs=rule_configs, default_receivers=self.default_receivers)
-        client.apply_rule_configs()
+        if rule_configs:
+            client = AsCodeClient(self.app_code, rule_configs=rule_configs, default_receivers=self.default_receivers)
+            client.apply_rule_configs()
 
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""

@@ -76,6 +76,7 @@ class TestQueryUniApps:
         results = query_uni_apps_by_ids(ids=[bk_app.code, legacy_app.code])
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
+        assert results[bk_app.code].name_en == bk_app.name_en
         assert results[legacy_app.code].name == legacy_app.name
 
     @pytest.mark.parametrize(

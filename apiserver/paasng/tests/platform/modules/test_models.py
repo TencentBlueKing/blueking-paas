@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.platform.modules.constants import APP_CATEGORY, SourceOrigin
-from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -74,10 +74,11 @@ class TestAppSlugBuilder:
     def test_get_buildpack_choices(
         self, request, bk_module, buildpack, slugbuilder, region, is_hidden, bind, expect_empty
     ):
+        build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
         if region is not ...:
             buildpack.region = request.getfixturevalue(region)
         if bind:
-            buildpack.modules.add(bk_module)
+            build_config.buildpacks.add(buildpack)
         buildpack.is_hidden = is_hidden
         buildpack.save()
 
@@ -87,7 +88,7 @@ class TestAppSlugBuilder:
     @pytest.mark.parametrize(
         "labels, language, source_origin, expect_matched, expect_empty",
         [
-            # ({"language": "Python", "category": "smart_app"}, "Python", SourceOrigin.S_MART.value, True, False),
+            ({"language": "Python", "category": "smart_app"}, "Python", SourceOrigin.S_MART.value, True, False),
             (
                 {"language": "Python", "category": "smart_app"},
                 "Python",
@@ -119,10 +120,12 @@ class TestAppSlugBuilder:
             runtime_labels["category"] = APP_CATEGORY.S_MART_APP.value
         else:
             runtime_labels["category"] = APP_CATEGORY.NORMAL_APP.value
-        matched, availables = AppSlugBuilder.objects.filter_by_label(bk_module, runtime_labels)
-
-        assert matched == expect_matched
-        assert list(availables) == [] if expect_empty else [slugbuilder]
+        available_qs = AppSlugBuilder.objects.filter_by_label(bk_module, runtime_labels)
+        if expect_matched:
+            assert available_qs.count() > 0
+            assert list(available_qs) == [] if expect_empty else [slugbuilder]
+        else:
+            assert available_qs.count() == 0
 
 
 class TestAppSlugRunner:

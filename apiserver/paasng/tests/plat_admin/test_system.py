@@ -23,6 +23,7 @@ from unittest import mock
 import arrow
 import pytest
 from django.conf import settings
+from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.dev_resources.servicehub.constants import Category
@@ -41,7 +42,6 @@ from paasng.plat_admin.system.applications import (
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
 from tests.utils.helpers import create_legacy_application, generate_random_string
-from tests.utils.translation import active_language
 
 pytestmark = pytest.mark.django_db
 
@@ -97,7 +97,7 @@ class TestQueryUniApps:
             keyword_app = legacy_app
             keyword = legacy_app.name
 
-        with active_language(language):
+        with override(language, True):
             uni_apps_list = query_uni_apps_by_keyword(keyword, offset=0, limit=10)
             assert len(uni_apps_list) == expected_count
 

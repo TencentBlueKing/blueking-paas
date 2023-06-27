@@ -331,6 +331,10 @@ class ApplicationBuilder(BaseBuilder):
             image=builder_image,
             buildpacks=build_info.buildpacks_info or [],
         )
+
+        # 设置 slug-pilot 中 build 过程的超时时间(精确到分钟)
+        extra_envs['PILOT_BUILDER_TIMEOUT'] = f'{settings.BUILD_PROCESS_TIMEOUT//60}m'
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
@@ -338,7 +342,7 @@ class ApplicationBuilder(BaseBuilder):
             stream_channel_id=str(self.deployment.id),
             metadata={
                 'procfile': procfile,
-                'extra_envs': extra_envs or {},
+                'extra_envs': extra_envs,
                 # TODO: 不传递 image_repository
                 'image_repository': app_image_repository,
                 'image': app_image,
@@ -450,7 +454,7 @@ class BuildProcessPoller(DeployPoller):
     """
 
     max_retries_on_error = 10
-    overall_timeout_seconds = 60 * 15
+    overall_timeout_seconds = settings.BUILD_PROCESS_TIMEOUT
     default_retry_delay_seconds = 2
 
     def query(self) -> PollingResult:

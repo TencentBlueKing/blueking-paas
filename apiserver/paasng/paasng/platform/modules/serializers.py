@@ -240,6 +240,7 @@ class ImageTagOptionsSLZ(serializers.Serializer):
         return prefix
 
     def to_internal_value(self, data):
+        data = super().to_internal_value(data)
         return cattr.structure(data, ImageTagOptions)
 
 

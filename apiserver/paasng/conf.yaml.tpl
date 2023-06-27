@@ -197,6 +197,8 @@
 
 ## 每个应用下最多创建的模块数量
 # MAX_MODULES_COUNT_PER_APPLICATION: 10
+## 应用单个模块下最多创建的 process 数量
+# MAX_PROCESSES_PER_MODULE: 8
 
 ## 旧版本 PaaS 数据库 Host
 # PAAS_LEGACY_DATABASE_HOST: ''

@@ -764,7 +764,7 @@
                 this.currentMigrationId = '';
                 this.currentMigrationID = 0;
                 this.currentApp = {};
-                this.migrateType = '迁移';
+                this.migrateType = this.$t('迁移');
                 this.migrationStatus = {
                     name: '',
                     status: 0,
@@ -813,9 +813,9 @@
                                 this.currentMigrationID = migrationProcessId;
                                 // this.migrationState = "ON_MIGRATION"
                                 if (this.migrationState === 'ON_ROLLBACK') {
-                                    this.migrateType = '回滚';
+                                    this.migrateType = this.$t('回滚');
                                 }
-                                this.processTitle = `${this.$t('应用 [')}${this.currentApp.name}${this.$t('] 正在进行')}${this.migrateType}...`;
+                                this.processTitle = this.$t(`应用[{name}] 正在进行{type}...`, { name: this.currentApp.name, type: this.migrateType });
                                 this.pollMigration();
                                 this.fetchMigrationFlag();
                                 break;
@@ -859,12 +859,12 @@
                     return;
                 }
 
-                this.processTitle = `${this.$t('应用 [')}${this.currentApp.name}${this.$t('] 正在进行')}${this.migrateType}...`;
+                this.processTitle = this.$t(`应用[{name}] 正在进行{type}...`, { name: this.currentApp.name, type: this.migrateType });
                 // TODO: show loading icon
                 // this.$refs.confirmModal.close()
                 this.confirmDialog.visiable = true;
 
-                this.migrateType = '迁移';
+                this.migrateType = this.$t('迁移');
                 this.migrationState = 'ON_MIGRATION';
                 const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/`;
                 this.$http.post(url, { legacy_app_id: this.currentLegacyAppID }).then((response) => {
@@ -1009,13 +1009,13 @@
                     closeIcon: false,
                     confirmFn: () => {
                         // 回滚当前的迁移
-                        this.migrateType = '回滚';
+                        this.migrateType = this.$t('回滚');
                         this.rollbackMigration(this.currentMigrationID);
                     }
                 });
             },
             rollbackMigration (migrationProcessID) {
-                this.processTitle = `${this.$t('应用 [')}${this.currentApp.name}${this.$t('] 正在进行')}${this.migrateType}...`;
+                this.processTitle = this.$t(`应用[{name}] 正在进行{type}...`, { name: this.currentApp.name, type: this.migrateType });
                 // 迁移完成列表中的回滚，这时已经切换接入层
                 const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${migrationProcessID}/rollback/`;
                 this.$http.post(url, {}).then((response) => {

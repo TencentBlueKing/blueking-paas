@@ -2252,6 +2252,14 @@ msgstr "config info"
 msgid "可见范围"
 msgstr "visible range"
 
+#: paasng/platform/operations/constant.py:74
+msgid "开启用户访问限制"
+msgstr "enable user access restrictions"
+
+#: paasng/platform/operations/constant.py:75
+msgid "关闭用户访问限制"
+msgstr "disable user access restrictions"
+
 #: paasng/pluginscenter/exceptions.py:24
 msgid "创建插件项目(源码)失败, 请联系管理员"
 msgstr "Failed to create plug project, please contact the administrator"

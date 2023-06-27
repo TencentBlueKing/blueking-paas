@@ -24,6 +24,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY
 from paas_wl.cnative.specs.credentials import get_references, validate_references
+from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential, ImageCredentialRef
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -56,7 +57,7 @@ def test_get_references(manifest, expected):
 
 def test_validate_references(bk_app):
     references = [ImageCredentialRef(image="foo", credential_name="example")]
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidImageCredentials):
         validate_references(bk_app, references)
 
     G(AppUserCredential, application_id=bk_app.id, name="example", username="username")

@@ -332,9 +332,6 @@ class ApplicationBuilder(BaseBuilder):
             buildpacks=build_info.buildpacks_info or [],
         )
 
-        # 设置 slug-pilot 中 build 过程的超时时间(精确到分钟)
-        extra_envs['PILOT_BUILDER_TIMEOUT'] = f'{settings.BUILD_PROCESS_TIMEOUT//60}m'
-
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,

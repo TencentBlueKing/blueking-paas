@@ -58,7 +58,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -161,6 +161,7 @@ export default {
     async initNavByRegion(navTree) {
       try {
         const { region } = this.curAppInfo.application;
+        console.log('region', region);
         const res = await this.$store.dispatch('fetchRegionInfo', region);
         // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
         this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
@@ -461,7 +462,7 @@ export default {
       const nav = {
         user_access_control: {
           categoryName: 'appPermissions',
-          name: this.$t('用户限制'),
+          name: this.$t('用户限制1'),
           matchRouters: ['appPermissionUser', 'appPermissionPathExempt'],
           destRoute: {
             name: 'appPermissionUser',
@@ -469,7 +470,7 @@ export default {
         },
         ip_access_control: {
           categoryName: 'appPermissions',
-          name: this.$t('IP限制'),
+          name: this.$t('IP限制1'),
           matchRouters: ['appPermissionIP'],
           destRoute: {
             name: 'appPermissionIP',
@@ -494,10 +495,10 @@ export default {
     },
 
     /**
-             * 切换展开状态
-             *
-             * @param {Object} category 父导航项
-             */
+     * 切换展开状态
+     *
+     * @param {Object} category 父导航项
+     */
     toggleNavCategory(category) {
       this.navTree.forEach((item) => {
         if (category.name === item.name) {

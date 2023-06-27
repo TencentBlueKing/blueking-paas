@@ -26,55 +26,57 @@ import http from '@/api';
 const state = {
   region: '',
   module_custom_domain: {
-    enabled: false
+    enabled: false,
   },
   module_mobile_config: {
-    enabled: false
+    enabled: false,
   },
   entrance_config: {
-    manually_upgrade_to_subdomain_allowed: false
+    manually_upgrade_to_subdomain_allowed: false,
   },
   access_control: {
     module: [],
-    user_type: 'rtx'
+    user_type: 'rtx',
   },
   services: {
-    categories: []
-  }
+    categories: [],
+  },
 };
 
 // getters
 const getters = {
   region: state => state.region,
-  moduleMobileConfigEnabled: state => state.module_mobile_config.enabled
+  moduleMobileConfigEnabled: state => state.module_mobile_config.enabled,
 };
 
 // mutations
 const mutations = {
-  updateRegionInfo: function (state, regionObj) {
+  updateRegionInfo(state, regionObj) {
     state.region = regionObj.name;
     state.module_mobile_config = regionObj.module_mobile_config;
     state.module_custom_domain = regionObj.module_custom_domain;
     state.access_control = regionObj.access_control;
     state.services = regionObj.services;
     state.entrance_config = regionObj.entrance_config;
-  }
+  },
 };
 
 // actions
 const actions = {
-  fetchRegionInfo ({ commit, state }, region, config = {}) {
+  fetchRegionInfo({ commit }, region) {
+    console.log('region', region);
     const url = `${BACKEND_URL}/api/regions/${region}/`;
-    return http.get(url, {}, { fromCache: true }).then(data => {
+    return http.get(url, {}, { fromCache: true }).then((data) => {
       commit('updateRegionInfo', data);
+      console.log('data', data);
       return data;
     });
-  }
+  },
 };
 
 export default {
   state,
   getters,
   mutations,
-  actions
+  actions,
 };

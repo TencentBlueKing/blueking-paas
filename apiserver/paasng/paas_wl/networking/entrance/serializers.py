@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import re
-from typing import Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -135,6 +135,23 @@ class ModuleEnvAddressSLZ(serializers.Serializer):
     env = serializers.CharField(help_text="环境名")
     address = AvailableEntranceSLZ(help_text="访问地址", allow_null=True)
     is_running = serializers.BooleanField(help_text="该环境是否正在运行", default=True)
+
+
+class ModuleEntrancesSLZ(serializers.Serializer):
+    stag = ModuleEnvAddressSLZ(many=True)
+    prod = ModuleEnvAddressSLZ(many=True)
+
+
+class ApplicationEntrancesSLZ(serializers.Serializer):
+    def to_representation(self, instance: Dict[str, Any]):
+        """DRF 不支持 DictSerializer, 因此需要重写 to_representation"""
+        ret = serializers.OrderedDict()
+        field = ModuleEntrancesSLZ()
+        for field_name, attribute in instance.items():
+            ret[field_name] = field.to_representation(attribute)
+        return ret
+
+    module_name = ModuleEntrancesSLZ(help_text="该字段仅用于生成 swagger 文档")
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):

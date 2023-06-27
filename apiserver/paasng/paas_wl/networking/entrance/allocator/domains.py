@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Domain management"""
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
@@ -91,6 +91,14 @@ class ModuleEnvDomains:
 
         return self.allocator.list_available(
             root_domains, self.env.module.name, self.env.environment, self.env.module.is_default
+        )
+
+    def get_highest_priority(self) -> Optional[Domain]:
+        root_domains = self.ingress_config.app_root_domains
+        if not root_domains:
+            return None
+        return self.allocator.get_highest_priority(
+            root_domains[-1], self.env.module.name, self.env.environment, self.env.module.is_default
         )
 
 

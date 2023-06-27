@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Any, Dict
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
@@ -32,8 +33,8 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.networking.entrance import serializers as slzs
 from paas_wl.networking.entrance.addrs import URL, Address, EnvAddresses
-from paas_wl.networking.entrance.allocator.domains import SubDomainAllocator
-from paas_wl.networking.entrance.allocator.subpaths import SubPathAllocator
+from paas_wl.networking.entrance.allocator.domains import ModuleEnvDomains, SubDomainAllocator
+from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, SubPathAllocator
 from paas_wl.networking.entrance.constants import AddressType
 from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.networking.ingress.config import get_custom_domain_config
@@ -169,24 +170,43 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(response_serializer=slzs.ModuleEnvAddressSLZ(many=True), tags=["访问入口"])
+    @swagger_auto_schema(response_serializer=slzs.ApplicationEntrancesSLZ, tags=["访问入口"])
     def list_all_entrances(self, request, code):
         """查看应用所有模块的访问入口"""
         application = self.get_application()
-        results = []
+        all_entrances: Dict[str, Dict[str, Any]] = {}
         for module in application.modules.all():
+            module_entrances = all_entrances.setdefault(module.name, {})
             for env in module.envs.all():
-                addresses = EnvAddresses(env).get(only_running=False)
+                env_entrances = module_entrances.setdefault(env.environment, [])
+                is_running = env_is_running(env)
+                builtin_address = None
+                if not builtin_address:
+                    if builtin_subdomain := ModuleEnvDomains(env).get_highest_priority():
+                        builtin_address = Address(
+                            type=AddressType.SUBDOMAIN,
+                            url=builtin_subdomain.as_url().as_address(),
+                        )
+                if not builtin_address:
+                    if builtin_subpath := ModuleEnvSubpaths(env).get_highest_priority():
+                        builtin_address = Address(
+                            type=AddressType.SUBPATH,
+                            url=builtin_subpath.as_url().as_address(),
+                        )
+                addresses = []
+                if builtin_address:
+                    addresses.append(builtin_address)
+                addresses.extend(EnvAddresses(env).get_custom())
                 for address in addresses:
-                    results.append(
+                    env_entrances.append(
                         {
                             "module": module.name,
                             "env": env.environment,
                             "address": address,
-                            "is_running": env_is_running(env),
+                            "is_running": is_running,
                         }
                     )
-        return Response(data=slzs.ModuleEnvAddressSLZ(results, many=True).data)
+        return Response(data=slzs.ApplicationEntrancesSLZ(all_entrances).data)
 
     @swagger_auto_schema(response_serializer=slzs.AvailableEntranceSLZ(many=True), tags=["访问入口"])
     def list_module_available_entrances(self, request, code, module_name):

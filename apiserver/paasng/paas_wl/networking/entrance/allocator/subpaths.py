@@ -112,6 +112,14 @@ class ModuleEnvSubpaths:
             items.sort(key=Subpath.sort_by_type)
         return items
 
+    def get_highest_priority(self) -> Optional[Subpath]:
+        sub_path_domains = self.ingress_config.sub_path_domains
+        if not sub_path_domains:
+            return None
+        return self.allocator.get_highest_priority(
+            sub_path_domains[-1], self.env.module.name, self.env.environment, self.env.module.is_default
+        )
+
 
 def get_legacy_compatible_path(env: ModuleEnvironment) -> str:
     """Get the subpath for environment which is compatible with legacy infrastructure.

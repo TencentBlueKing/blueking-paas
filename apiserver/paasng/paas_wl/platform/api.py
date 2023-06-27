@@ -50,7 +50,7 @@ class CreatedAppInfo(NamedTuple):
 
 
 def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType) -> CreatedAppInfo:
-    """Create an engine app object, return directly if the object already exists"""
+    """Create an WlApp object, return directly if the object already exists"""
     try:
         obj = WlApp.objects.get(region=region, name=name)
     except WlApp.DoesNotExist:

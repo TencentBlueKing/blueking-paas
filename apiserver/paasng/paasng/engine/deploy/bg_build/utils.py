@@ -110,6 +110,8 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             CACHE_SET_URL=store.generate_presigned_url(
                 key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
             ),
+            # 设置 slug-pilot 中 build 过程的超时时间(精确到分钟)
+            PILOT_BUILDER_TIMEOUT=f'{settings.BUILD_PROCESS_TIMEOUT // 60}m',
         )
 
     env_vars.update(AppConfigVarManager(app=app).get_envs())

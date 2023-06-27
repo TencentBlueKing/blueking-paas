@@ -171,6 +171,21 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring("processes can't be empty"))
 		})
 
+		It("Processes exceed limit", func() {
+			processes := make([]paasv1alpha2.Process, 0)
+
+			i := int32(0)
+			for ; i < config.Global.GetMaxProcesses()+1; i++ {
+				processes = append(processes, paasv1alpha2.Process{
+					Name: fmt.Sprintf("web-%d", i),
+				})
+			}
+
+			bkapp.Spec.Processes = processes
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(`number of processes has exceeded limit`))
+		})
+
 		It("Process name duplicated", func() {
 			bkapp.Spec.Processes[1].Name = "web"
 			err := bkapp.ValidateCreate()

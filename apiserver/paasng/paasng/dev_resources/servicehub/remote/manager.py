@@ -185,7 +185,7 @@ class EnvClusterInfo:
 
 
 class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
-    """A relationship between EngineApp and Provinsioned instance"""
+    """A relationship between EngineApp and Provisioned instance"""
 
     def __init__(self, db_obj: RemoteServiceEngineAppAttachment, mgr: 'RemoteServiceMgr', store: RemoteServiceStore):
         self.store = store

@@ -20,7 +20,7 @@ import json
 import logging
 from typing import Dict
 
-from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, PLAN_TO_QUOTA_PLAN, ApiVersion, ResQuotaPlan
+from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, PLAN_TO_QUOTA_MAP, ApiVersion, ResQuotaPlan
 from paas_wl.cnative.specs.crd.bk_app import DEFAULT_PROC_CPU, DEFAULT_PROC_MEM, BkAppResource
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class ResourceQuotaReader:
 
     @staticmethod
     def _get_quota_by_plan(res_quota_plan: ResQuotaPlan) -> Dict[str, str]:
-        cpu, mem = PLAN_TO_QUOTA_PLAN.get(res_quota_plan, (DEFAULT_PROC_CPU, DEFAULT_PROC_MEM))
+        cpu, mem = PLAN_TO_QUOTA_MAP.get(res_quota_plan, (DEFAULT_PROC_CPU, DEFAULT_PROC_MEM))
         return {"cpu": cpu, "memory": mem}
 
     def from_v1alpha1_bkapp(self) -> Dict[str, Dict[str, str]]:

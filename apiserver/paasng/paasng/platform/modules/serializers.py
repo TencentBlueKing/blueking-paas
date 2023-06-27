@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import string
 from typing import Dict, Optional
 
+import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from pydantic import ValidationError as PDValidationError
@@ -40,6 +41,7 @@ from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
+from paasng.platform.modules.models.deploy_config import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
@@ -236,6 +238,10 @@ class ImageTagOptionsSLZ(serializers.Serializer):
         if forbidden_chars := set(prefix) - charset:
             raise ValidationError(f"Tag can not contain {sorted(forbidden_chars)}")
         return prefix
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        return cattr.structure(data, ImageTagOptions)
 
 
 class ModuleSourceConfigSLZ(serializers.Serializer):

@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from typing import Dict, Iterator, List
 
 from paas_wl.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY
+from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
 from paas_wl.workloads.images.entities import ImageCredentialsManager as _ImageCredentialsManager
@@ -58,7 +59,7 @@ def validate_references(application: Application, references: List[ImageCredenti
     request_names = {ref.credential_name for ref in references}
     all_names = set(AppUserCredential.objects.list_all_name(application))
     if missing_names := request_names - all_names:
-        raise ValueError(f"missing credentials {missing_names}")
+        raise InvalidImageCredentials(f"missing credentials {missing_names}")
 
 
 class ImageCredentialsManager(_ImageCredentialsManager):

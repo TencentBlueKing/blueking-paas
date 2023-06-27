@@ -143,27 +143,28 @@ class BuildConfig(UuidAuditedModel):
         buildpacks: List[Dict[str, Any]],
         dockerfile_path: Union[str, None],
         docker_build_args: Union[Dict[str, str], None],
+        tag_options: Union[ImageTagOptions, None],
     ) -> None:
         """根据指定的 build_method 更新部分字段"""
         from paasng.platform.modules.helpers import ModuleRuntimeBinder
 
+        self.build_method = build_method
+        if tag_options:
+            self.tag_options = tag_options
+
+        update_fields = ["build_method", "updated"]
         # 基于 buildpack 的构建方式
         if build_method == RuntimeType.BUILDPACK:
-            bp_stack_name = bp_stack_name
             buildpack_ids = [item["id"] for item in buildpacks]
 
             binder = ModuleRuntimeBinder(module)
             binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+            update_fields.extend(["tag_options"])
 
-            self.build_method = build_method
-            self.save(update_fields=["build_method", "updated"])
         # 基于 Dockerfile 的构建方式
         elif build_method == RuntimeType.DOCKERFILE:
-            self.build_method = build_method
             self.dockerfile_path = dockerfile_path
             self.docker_build_args = docker_build_args
-            self.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
-        # 自定义镜像及其他
-        else:
-            self.build_method = build_method
-            self.save(update_fields=["build_method", "updated"])
+            update_fields.extend(["dockerfile_path", "docker_build_args", "tag_options"])
+
+        self.save(update_fields=update_fields)

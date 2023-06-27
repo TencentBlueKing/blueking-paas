@@ -21,8 +21,10 @@ from typing import TYPE_CHECKING, List, Optional
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.networking.egress.misc import ClusterEgressIps, get_cluster_egress_ips
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.utils.configs import get_region_aware
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
@@ -72,22 +74,38 @@ class EnvClusterService:
         this function will not check if the cluster actually exists.
         """
         wl_app = self.env.wl_app
+        region = self.env.application.region
+
         if wl_app.latest_config.cluster:
             return wl_app.latest_config.cluster
-        return RegionClusterService(self.env.application.region).get_default_cluster().name
+
+        # 云原生应用需要用自己的默认集群
+        if wl_app.type == WlAppType.CLOUD_NATIVE:
+            return self._get_cnative_app_default_cluster(region).name
+
+        return RegionClusterService(region).get_default_cluster().name
 
     def bind_cluster(self, cluster_name: Optional[str]):
         """bind `env` to cluster named `cluster_name`, if cluster_name is not given, use default cluster
 
         :raises: Cluster.DoesNotExist if cluster not found
         """
+        wl_app = self.env.wl_app
+        region = self.env.application.region
+
         if cluster_name:
             cluster = Cluster.objects.get(name=cluster_name)
+        elif wl_app.type == WlAppType.CLOUD_NATIVE:
+            # 云原生应用需要用自己的默认集群
+            cluster = self._get_cnative_app_default_cluster(region)
         else:
-            cluster = RegionClusterService(self.env.application.region).get_default_cluster()
+            cluster = RegionClusterService(region).get_default_cluster()
 
-        wl_app = self.env.wl_app
         _bind_cluster_to_wl_app(wl_app, cluster)
+
+    def _get_cnative_app_default_cluster(self, region):
+        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
+        return RegionClusterService(region).get_cluster_by_name(default_cluster_name)
 
 
 def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):

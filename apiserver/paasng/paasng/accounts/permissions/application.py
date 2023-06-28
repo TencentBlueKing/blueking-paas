@@ -53,7 +53,7 @@ def application_perm_class(action: AppAction):
             elif isinstance(obj, Module):
                 return user_has_app_action_perm(request.user, obj.application, action)
             else:
-                logger.error('Application permission checked on incorrect object., type: %s', type(obj))
+                logger.error('Application permission checked on incorrect object, type: %s', type(obj))
                 return False
 
     return Permission

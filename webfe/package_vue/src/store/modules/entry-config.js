@@ -117,7 +117,7 @@ export default {
      * @param {Object} params 包括appCode，moduleId
      */
     getEntryDataList({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/entrance/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/entrances/`;
       return http.get(url);
     },
   },

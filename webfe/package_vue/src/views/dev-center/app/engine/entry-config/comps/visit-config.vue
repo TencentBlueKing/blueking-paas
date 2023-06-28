@@ -6,28 +6,99 @@
     >
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
-        class="ps-version-list"
         :data="entryList"
-        :size="'small'"
+        class="table-cls"
+        border
+        cell-class-name="table-cell-cls"
       >
         <bk-table-column :label="$t('模块')">
-          <template slot-scope="{ row }">
-            <span
-              v-bk-tooltips="row.moduleName"
-              style="cursor: pointer;"
-            >{{ row.moduleName || '--' }}</span>
+          <template slot-scope="{ row, $index }">
+            <section
+              class="module-container"
+              @mouseenter="handleMouseEnter($index)"
+              @mouseleave="defaultIndex = ''">
+              <div
+                style="cursor: pointer;"
+              >{{ row.moduleName || '--' }}</div>
+              <bk-button v-if="defaultIndex === $index" text theme="primary" @click="handleSetDefault(row)">
+                {{ $t('设为主模块') }}
+              </bk-button>
+            </section>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('环境')">
+          <template slot-scope="{ row, $index }">
+            <div
+              v-for="(item, i) in row.env" :key="item"
+              :style="{height: `${46 * row[item].length}px`}"
+              class="cell-container flex-column justify-content-center "
+              @mouseenter="handleEnvMouseEnter($index, i, row, item)">
+              <div
+                class="env-container"
+                :class="i === row.env.length - 1 ? 'last-env-container' : ''"
+              >
+                <div class="text-container">
+                  {{ entryEnv[item] }}
+                  <span class="icon-container" v-if="tableIndex === $index && envIndex === i">
+                    <i class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="'添加自定义访问地址'" />
+                    <i class="paasng-icon paasng-info-line pl10 info-icon" v-bk-tooltips="configIpTip" />
+                  </span>
+                </div>
+                <div v-if="i !== row.env.length - 1" class="line"></div>
+              </div>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('访问地址')" :width="500">
           <template slot-scope="{ row }">
-            <span
-              v-bk-tooltips="row.moduleName"
-              style="cursor: pointer;"
-            >{{ row.moduleName || '--' }}</span>
+            <div v-for="(item, index) in row.env" :key="item" class="cell-container">
+              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
+                <a
+                  :href="e.address.url"
+                  target="blank"
+                > {{ e.address.url}}</a>
+                <div v-if="index !== row.env.length - 1" class="line"></div>
+              </div>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('进程')">
+          <template slot-scope="{ row }">
+            <div v-for="(item, index) in row.env" :key="item" class="cell-container">
+              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
+                web
+                <div v-if="index !== row.env.length - 1" class="line"></div>
+              </div>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('类型')">
+          <template slot-scope="{ row }">
+            <div v-for="(item, index) in row.env" :key="item" class="cell-container">
+              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
+                {{ e.address.type === 'custom' ? $t('自定义') : $t('平台内置')}}
+                <div v-if="index !== row.env.length - 1" class="line"></div>
+              </div>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('操作')" :width="150">
+          <template slot-scope="{ row }">
+            <div v-for="item in row.env" :key="item" class="cell-container">
+              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
+                <bk-button text theme="primary">
+                  {{ $t('编辑') }}
+                </bk-button>
+                <bk-button text theme="primary" class="pl20">
+                  {{ $t('删除') }}
+                </bk-button>
+                <div class="line"></div>
+              </div>
+            </div>
           </template>
         </bk-table-column>
       </bk-table>
-      <bk-button
+      <!-- <bk-button
         v-if="moduleEntryInfo.type === 1 && canUpdateSubDomain"
         class="toggle-type"
         :text="true"
@@ -35,7 +106,7 @@
         @click="visitDialog.visiable = true"
       >
         {{ $t('切换为子域名') }}
-      </bk-button>
+      </bk-button> -->
 
       <bk-dialog
         v-model="visitDialog.visiable"
@@ -57,7 +128,7 @@
       </bk-dialog>
 
       <bk-dialog
-        width="600"
+        width="500"
         :value="domainDialog.visiable"
         :title="domainDialog.title"
         :theme="'primary'"
@@ -67,9 +138,9 @@
         @cancel="domainDialog.visiable = false"
       >
         <div class="tl">
-          <p> {{ $t('更改后：') }} </p>
-          <p>1. {{ $t('该模块的默认访问地址的根域为变为：') }}{{ rootDomainDefault }}</p>
-          <p>2. {{ $t('若该模块为主模块，则应用市场访问地址的根域也会变为：') }}{{ rootDomainDefault }}</p>
+          <p> {{ $t('设定后：') }} </p>
+          <p>{{ $t('应用短地址：（http://apps.example.com/appid/）') }}
+            {{ $t('指向') }} {{ domainDialog.moduleName }}{{ $t('模块的') }}{{ entryEnv[domainDialog.env] }}</p>
         </div>
       </bk-dialog>
     </div>
@@ -77,9 +148,12 @@
 </template>
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
+import { ENV_ENUM } from '@/common/constants';
+import Vue from 'vue';
 export default {
   mixins: [appBaseMixin],
-  data() {
+  data(vm) {
+    console.log('vm', vm);
     return {
       type: '',
       example: '',
@@ -100,17 +174,43 @@ export default {
       isEdited: false,
       domainDialog: {
         visiable: false,
-        title: this.$t('确认更改默认根域？'),
+        title: '',
+        moduleName: '',
       },
       rootDomainDefaultDiff: '',
       isTableLoading: false,
       entryList: [],
-
+      entryEnv: ENV_ENUM,
+      defaultIndex: '',
+      tableIndex: '',
+      envIndex: '',
+      ipConfigInfo: { frontend_ingress_ip: '' },
     };
   },
   computed: {
     platformFeature() {
       return this.$store.state.platformFeature;
+    },
+    configIpTip() {
+      return {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<div>
+          <div>域名解析目标IP</div>
+          <div
+            class="mt10"
+            style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px; text-align: center;">
+            ${this.ipConfigInfo.frontend_ingress_ip}
+          </div>
+          <div class="mt10 mb10">推荐操作流程: </div>
+          <div>1. 首先在“域名管理”添加域名</div>
+          <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
+          <div>3. 打开浏览器，测试访问是否正常 </div>
+          <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
+          </div>`,
+        placements: ['bottom'],
+      };
     },
   },
   watch: {
@@ -129,6 +229,7 @@ export default {
       this.getAppRegion();
       this.getEntryList();
       this.getDefaultDomainInfo();
+      this.loadDomainConfig();
     },
 
     async getAppRegion() {
@@ -147,30 +248,28 @@ export default {
       }
     },
 
-    // async getEntryList() {
-    //   try {
-    //     // const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
-    //     //   appCode: this.appCode,
-    //     // });
-    //     // this.entryList = res;
-    //     console.log(Object.values(data));
-    //     this.entryList = Object.keys(data).reduce((p, v) => {
-    //       p.push({
-    //         moduleName: v,
-    //         ...data[v],
-    //         env: Object.keys(data[v]),
-    //       });
-    //       return p;
-    //     }, []);
+    async getEntryList() {
+      try {
+        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+          appCode: this.appCode,
+        });
+        this.entryList = Object.keys(res).reduce((p, v) => {
+          p.push({
+            moduleName: v,
+            ...res[v],
+            env: (Object.keys(res[v]) || []).sort(),    // 按字母排序
+          });
+          return p;
+        }, []);
 
-    //     console.log('this.entryList', this.entryList);
-    //   } catch (e) {
-    //     this.$paasMessage({
-    //       theme: 'error',
-    //       message: e.message || e.detail || this.$t('接口异常'),
-    //     });
-    //   }
-    // },
+        console.log('this.entryList', this.entryList);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
 
     async handleConfirm() {
       this.isLoading = true;
@@ -242,18 +341,52 @@ export default {
       this.isEdited = true;
     },
 
-    handleShowDialog() {
-      if (this.rootDomainDefaultDiff !== this.rootDomainDefault) {
-        this.domainDialog.visiable = true;
-      }
-    },
-
     handleCancel() {
       this.isEdited = false;
       if (this.rootDomainDefaultDiff !== this.rootDomainDefault) {
         this.getDefaultDomainInfo();
       }
     },
+
+    // 处理鼠标移入事件
+    handleMouseEnter(index) {
+      this.defaultIndex = index;
+    },
+
+    //
+    handleEnvMouseEnter(index, envIndex, payload, env) {
+      this.tableIndex = index;
+      this.envIndex = envIndex;
+      this.ipConfigInfo = (this.curIngressIpConfigs || [])
+        .find(e => e.environment === env && e.module === payload.moduleName)
+      || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
+      console.log('this.ipConfigInfo', this.ipConfigInfo);
+    },
+
+    // 设置为主模块
+    handleSetDefault(payload) {
+      this.domainDialog.visiable = true;
+      this.domainDialog.moduleName = payload.moduleName;
+      this.domainDialog.env = payload.env[0];   // 默认取第一个环境
+      this.domainDialog.title = this.$t(`是否设定${payload.moduleName}模块为主模块`);
+    },
+
+
+    loadDomainConfig() {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/custom_domains/config/`).then(
+        (res) => {
+          this.curIngressIpConfigs = res;
+          console.log('this.curIngressIpConfigs', this.curIngressIpConfigs);
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`,
+          });
+        },
+      );
+    },
+
   },
 };
 </script>
@@ -295,5 +428,78 @@ export default {
         width: 180px;
         text-align: center;
         padding: 0;
+    }
+
+    .table-cls {
+      /deep/ .cell{
+        overflow:visible;
+        display: flex;
+        flex-flow: column;
+        align-items: flex-start;
+      }
+
+      .module-container{
+        height: 46px;
+        display: flex;
+        flex-flow: column;
+        justify-content: center;
+      }
+
+      .cell-container{
+        width: 100%;
+        position: relative;
+      }
+      .env-container{
+        background: #D8F4F5;
+        color: #45A0A5;
+        padding: 5px;
+        width: 76px;
+        font-size: 12px;
+        margin: 10px 0px;
+        text-align: center;
+        border-radius: 2px;
+      }
+
+      .last-env-container{
+        color: #E68D00;
+        background: #FFF2C9;
+        margin-bottom: 10px;
+        margin-top: 10px;
+      }
+
+      .text-container{
+        position: relative;
+      }
+      .icon-container{
+        position: absolute;
+        left: 80px;
+        display: flex;
+        align-items: center;
+        top: 4px;
+        color: #989ca6;
+        cursor: pointer;
+        .add-icon{
+          font-size: 14px;
+          &:hover {
+            color: #3A84FF;
+          }
+        }
+      }
+
+      .line{
+        height: 1px;
+        background: #dfe0e5;
+        width: calc(100% + 30px);
+        position: absolute;
+        top: 100%;
+        left: -15px;
+      }
+
+      .url-container{
+        position: relative;
+        height: 46px;
+        line-height: 46px;
+        width: 100%;
+      }
     }
 </style>

@@ -100,6 +100,6 @@ export const TOOLBAR_OPTIONS = [
 ];
 
 export const ENV_ENUM = {
-  stage: '预发布环境',
-  prod: '正式环境',
+  prod: '生产环境',
+  stag: '预发布环境',
 };

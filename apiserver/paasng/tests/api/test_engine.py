@@ -186,7 +186,7 @@ class TestDeploymentViewSet:
 
     def test_deploy(self, api_client, init_tmpls, bk_app_full, bk_module_full):
         url = reverse("api.deploy", kwargs={"code": bk_app_full.code, "environment": "stag"})
-        with mock.patch("paasng.engine.views.DeployTaskRunner"):
+        with mock.patch("paasng.engine.views.deploy.DeployTaskRunner"):
             resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar", "revision": "baz"})
 
         coordinator = DeploymentCoordinator(bk_module_full.get_envs("stag"))

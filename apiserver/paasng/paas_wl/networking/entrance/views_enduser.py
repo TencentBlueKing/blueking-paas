@@ -180,13 +180,13 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
             for env in module.envs.all():
                 env_entrances = module_entrances.setdefault(env.environment, [])
                 is_running = env_is_running(env)
+                # 每个环境仅展示一个内置访问地址
                 builtin_address = None
-                if not builtin_address:
-                    if builtin_subdomain := ModuleEnvDomains(env).get_highest_priority():
-                        builtin_address = Address(
-                            type=AddressType.SUBDOMAIN,
-                            url=builtin_subdomain.as_url().as_address(),
-                        )
+                if builtin_subdomain := ModuleEnvDomains(env).get_highest_priority():
+                    builtin_address = Address(
+                        type=AddressType.SUBDOMAIN,
+                        url=builtin_subdomain.as_url().as_address(),
+                    )
                 if not builtin_address:
                     if builtin_subpath := ModuleEnvSubpaths(env).get_highest_priority():
                         builtin_address = Address(
@@ -196,6 +196,14 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                 addresses = []
                 if builtin_address:
                     addresses.append(builtin_address)
+                else:
+                    # 除非集群的配置有问题, 理论上 builtin_address 不会为空
+                    logger.error(
+                        "builtin address is None for application %s module %s env %s",
+                        application.code,
+                        module.name,
+                        env.environment,
+                    )
                 addresses.extend(EnvAddresses(env).get_custom())
                 for address in addresses:
                     env_entrances.append(

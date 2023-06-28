@@ -9,16 +9,21 @@
         class="ps-version-list"
         :data="entryList"
         :size="'small'"
-        :span-method="handleSpanMethod"
       >
         <bk-table-column :label="$t('模块')">
           <template slot-scope="{ row }">
             <span
-              v-bk-tooltips="row.version"
-              :class="{ 'version-num': row.version }"
+              v-bk-tooltips="row.moduleName"
               style="cursor: pointer;"
-              @click="handleDetail(row)"
-            >{{ row.version || '--' }}</span>
+            >{{ row.moduleName || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('环境')">
+          <template slot-scope="{ row }">
+            <span
+              v-bk-tooltips="row.moduleName"
+              style="cursor: pointer;"
+            >{{ row.moduleName || '--' }}</span>
           </template>
         </bk-table-column>
       </bk-table>
@@ -100,6 +105,7 @@ export default {
       rootDomainDefaultDiff: '',
       isTableLoading: false,
       entryList: [],
+
     };
   },
   computed: {
@@ -121,7 +127,7 @@ export default {
      */
     init() {
       this.getAppRegion();
-      this.getEntryInfo();
+      this.getEntryList();
       this.getDefaultDomainInfo();
     },
 
@@ -141,29 +147,30 @@ export default {
       }
     },
 
-    async getEntryInfo() {
-      try {
-        const res = await this.$store.dispatch('entryConfig/getEntryInfo', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.moduleEntryInfo = res;
-        this.moduleEntryInfo.entrancesTemplate = res.entrances.reduce((p, v) => {
-          p[v.env].push(v);
-          return p;
-        }, { stag: [], prod: [] });
-      } catch (e) {
-        this.moduleEntryInfo = {
-          entrances: [],
-          type: 1,
-          entrancesTemplate: {},
-        };
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
-      }
-    },
+    // async getEntryList() {
+    //   try {
+    //     // const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+    //     //   appCode: this.appCode,
+    //     // });
+    //     // this.entryList = res;
+    //     console.log(Object.values(data));
+    //     this.entryList = Object.keys(data).reduce((p, v) => {
+    //       p.push({
+    //         moduleName: v,
+    //         ...data[v],
+    //         env: Object.keys(data[v]),
+    //       });
+    //       return p;
+    //     }, []);
+
+    //     console.log('this.entryList', this.entryList);
+    //   } catch (e) {
+    //     this.$paasMessage({
+    //       theme: 'error',
+    //       message: e.message || e.detail || this.$t('接口异常'),
+    //     });
+    //   }
+    // },
 
     async handleConfirm() {
       this.isLoading = true;

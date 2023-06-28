@@ -18,8 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
-from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
+from paas_wl.networking.ingress.models import Domain
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
 from paasng.publish.market.constant import ProductSourceUrlType
@@ -54,17 +53,35 @@ class TestAppEntranceViewSet:
     def test_list_all_entrances(self, bk_user, api_client, bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
         url = f"/api/bkapps/applications/{bk_app.code}/entrances/"
         resp = api_client.get(url)
-        # empty
-        assert resp.json() == []
+        # 未部署, 仅独立域名
+        assert resp.json() == {
+            'default': {
+                'stag': [
+                    {
+                        'module': 'default',
+                        'env': 'stag',
+                        'address': {
+                            'id': None,
+                            'url': f'http://stag-dot-{bk_app.code}.example.com',
+                            'type': 'subdomain',
+                        },
+                        'is_running': False,
+                    }
+                ],
+                'prod': [
+                    {
+                        'module': 'default',
+                        'env': 'prod',
+                        'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                        'is_running': False,
+                    }
+                ],
+            }
+        }
 
-        # setup data
-        # source type: subdomain
-        AppDomain.objects.create(app=bk_stag_wl_app, host='foo.example.com', source=AppDomainSource.AUTO_GEN)
-        AppDomain.objects.create(app=bk_stag_wl_app, host='foo.example.org', source=AppDomainSource.AUTO_GEN)
-        # source type: subpath
-        AppSubpath.objects.create(app=bk_stag_wl_app, subpath='/foo/', source=AppSubpathSource.DEFAULT)
+        # 添加独立域名
         # source type: custom
-        Domain.objects.create(
+        custom_domain = Domain.objects.create(
             name='foo-custom.example.com',
             path_prefix='/subpath/',
             module_id=bk_module.id,
@@ -72,42 +89,78 @@ class TestAppEntranceViewSet:
         )
 
         resp = api_client.get(url)
-        data = resp.json()
-        assert data == [
-            {
-                'module': 'default',
-                'env': 'stag',
-                'address': {'id': None, 'url': 'http://foo.example.com/', 'type': 'subdomain'},
-                'is_running': False,
-            },
-            {
-                'module': 'default',
-                'env': 'stag',
-                'address': {'id': None, 'url': 'http://foo.example.org/', 'type': 'subdomain'},
-                'is_running': False,
-            },
-            {
-                'module': 'default',
-                'env': 'stag',
-                'address': {'id': None, 'url': 'http://example.com/foo/', 'type': 'subpath'},
-                'is_running': False,
-            },
-            {
-                'module': 'default',
-                'env': 'stag',
-                'address': {
-                    'id': Domain.objects.get(environment_id=bk_stag_env.id).id,
-                    'url': 'http://foo-custom.example.com/subpath/',
-                    'type': 'custom',
-                },
-                'is_running': False,
-            },
-        ]
+        assert resp.json() == {
+            'default': {
+                'stag': [
+                    {
+                        'module': 'default',
+                        'env': 'stag',
+                        'address': {
+                            'id': None,
+                            'url': f'http://stag-dot-{bk_app.code}.example.com',
+                            'type': 'subdomain',
+                        },
+                        'is_running': False,
+                    },
+                    {
+                        'module': 'default',
+                        'env': 'stag',
+                        'address': {
+                            'id': custom_domain.id,
+                            'url': 'http://foo-custom.example.com/subpath/',
+                            'type': 'custom',
+                        },
+                        'is_running': False,
+                    },
+                ],
+                'prod': [
+                    {
+                        'module': 'default',
+                        'env': 'prod',
+                        'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                        'is_running': False,
+                    }
+                ],
+            }
+        }
 
         # test field `is_running`
         create_release(bk_stag_env.wl_app, bk_user, failed=False)
         resp = api_client.get(url)
-        assert resp.json() == [{**i, "is_running": True} for i in data]
+        assert resp.json() == {
+            'default': {
+                'stag': [
+                    {
+                        'module': 'default',
+                        'env': 'stag',
+                        'address': {
+                            'id': None,
+                            'url': f'http://stag-dot-{bk_app.code}.example.com',
+                            'type': 'subdomain',
+                        },
+                        'is_running': True,
+                    },
+                    {
+                        'module': 'default',
+                        'env': 'stag',
+                        'address': {
+                            'id': custom_domain.id,
+                            'url': 'http://foo-custom.example.com/subpath/',
+                            'type': 'custom',
+                        },
+                        'is_running': True,
+                    },
+                ],
+                'prod': [
+                    {
+                        'module': 'default',
+                        'env': 'prod',
+                        'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                        'is_running': False,
+                    }
+                ],
+            }
+        }
 
     def test_list_module_all_entrances(self, api_client, bk_user, bk_app, bk_module, bk_prod_env, bk_prod_wl_app):
         # setup data

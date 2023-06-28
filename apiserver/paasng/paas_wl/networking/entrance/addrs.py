@@ -114,11 +114,11 @@ class EnvAddresses:
 
         if only_running and not env_is_running(self.env):
             return []
-        return self._sort(self._get_subdomain()) + self._sort(self._get_subpath()) + self._sort(self._get_custom())
+        return self._sort(self._get_subdomain()) + self._sort(self._get_subpath()) + self._sort(self.get_custom())
 
     def validate_custom_url(self, url: str) -> bool:
         """validate if the given url is a custom domain url"""
-        for addr in self._get_custom():
+        for addr in self.get_custom():
             if addr.url == url:
                 return True
         return False
@@ -143,12 +143,12 @@ class EnvAddresses:
                 addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
         return addrs
 
-    def _get_custom(self) -> List[Address]:
+    def get_custom(self) -> List[Address]:
         """Get addresses from custom domains"""
         custom_domains = Domain.objects.filter(environment_id=self.env.id)
-        # TODO: Add HTTPS support, currently hard code "http_enabled" to False
         return [
-            Address(AddressType.CUSTOM, self._make_url(False, d.name, d.path_prefix), id=d.id) for d in custom_domains
+            Address(AddressType.CUSTOM, self._make_url(d.https_enabled, d.name, d.path_prefix), id=d.id)
+            for d in custom_domains
         ]
 
     def _make_url(self, https_enabled: bool, host: str, path: str = '/') -> str:

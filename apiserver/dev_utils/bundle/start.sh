@@ -19,4 +19,5 @@
 source .env
 
 mkdir -p $STORAGE_ROOT
-docker-compose up -d
+# mysql 5.7 不支持 ARM 架构, 强制指定使用 amd64 镜像
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker-compose up -d

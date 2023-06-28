@@ -173,6 +173,21 @@ class TestModuleBuildConfigViewSet:
         assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
         assert cfg.docker_build_args == {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"}
 
+    def test_modify_dockerbuild_with_emtpy_build_args(self, api_client, bk_app, bk_module):
+        data = {
+            'build_method': RuntimeType.DOCKERFILE,
+            'tag_options': {'prefix': "foo", 'with_version': False, 'with_build_time': False, 'with_commit_id': True},
+            'dockerfile_path': "rootfs/Dockerfile",
+            'docker_build_args': {},
+        }
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
+        resp = api_client.post(url, data=data)
+        assert resp.status_code == 200
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        assert cfg.build_method == RuntimeType.DOCKERFILE
+        assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
+        assert cfg.docker_build_args == {}
+
     @pytest.mark.parametrize(
         "data",
         [

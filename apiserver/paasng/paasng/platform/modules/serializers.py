@@ -284,9 +284,11 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
         build_method = RuntimeType(attrs["build_method"])
         missed_params = []
         if build_method == RuntimeType.BUILDPACK:
-            missed_params = [k for k in ['tag_options', 'buildpacks', 'bp_stack_name'] if not attrs.get(k)]
+            missed_params = [k for k in ['tag_options', 'buildpacks', 'bp_stack_name'] if attrs.get(k, None) is None]
         elif build_method == RuntimeType.DOCKERFILE:
-            missed_params = [k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if not attrs.get(k)]
+            missed_params = [
+                k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if attrs.get(k, None) is None
+            ]
         if missed_params:
             raise ValidationError(
                 detail={param: _('This field is required.') for param in missed_params}, code="required"

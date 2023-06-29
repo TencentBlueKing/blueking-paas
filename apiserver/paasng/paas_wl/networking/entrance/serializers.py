@@ -141,8 +141,6 @@ class ModuleEntrancesSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="模块名")
     is_default = serializers.BooleanField(help_text="是否主模块")
     envs = serializers.DictField(child=ModuleEnvAddressSLZ(many=True))
-    stag = ModuleEnvAddressSLZ(many=True)
-    prod = ModuleEnvAddressSLZ(many=True)
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):

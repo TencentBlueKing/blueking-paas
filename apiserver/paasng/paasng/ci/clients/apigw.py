@@ -83,6 +83,14 @@ class Group(OperationGroup):
         path="/v2/apigw-app/codecc/defect/metric/{taskId}",
     )
 
+    # 根据任务id查询所有工具问题数
+    app_codecc_tool_defect_count = bind_property(
+        Operation,
+        name="app_codecc_tool_defect_count",
+        method="GET",
+        path="/v2/apigw-app/codecc/defect/tool/defect/count/list",
+    )
+
 
 class Client(APIGatewayClient):
     """Bkapi devops client"""

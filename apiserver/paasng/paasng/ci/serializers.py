@@ -66,11 +66,3 @@ class CIAtomJobSerializer(serializers.Serializer):
             'revision': obj.deployment.source_revision,
             'comment': obj.deployment.source_comment,
         }
-
-
-class CITokenListSerializer(serializers.Serializer):
-    backend = serializers.ChoiceField(choices=CIBackend.get_django_choices())
-
-
-class CIOauthUrlSerializer(serializers.Serializer):
-    oauth_url = serializers.CharField()

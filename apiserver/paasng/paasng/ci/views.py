@@ -21,18 +21,26 @@ import logging
 from rest_framework import viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.ci import serializers
-from paasng.ci.models import CIAtomJob
+from paasng.ci.base import BkUserOAuth
+from paasng.ci.clients.bk_ci import BkCIClient
+from paasng.ci.constants import CIBackend
+from paasng.ci.exceptions import NotSupportedRepoType
+from paasng.ci.managers import get_ci_manager_cls_by_backend
+from paasng.ci.models import CIAtomJob, CIResourceAtom
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
 
 
 class CIJobViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """获取 CI 任务"""
+    """获取 CI 任务
+    TODO 前端修改完后删除，包括 url 和 serializers
+    """
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -60,3 +68,39 @@ class CIJobViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             CIAtomJob.objects.filter(env__module=module, **filter_params).order_by('-created'), self.request, view=self
         )
         return self.paginator.get_paginated_response(data=serializers.CIAtomJobSerializer(page, many=True).data)
+
+
+class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """获取 CI 信息"""
+
+    def query(self, request, code, module_name):
+        application = self.get_application()
+        module = application.get_module(module_name)
+        repo = module.get_source_obj()
+
+        # 防御，避免有数据拿不到 source_obj
+        if not repo:
+            enabled = False
+        else:
+            try:
+                get_ci_manager_cls_by_backend(CIBackend.CODECC).check_repo_support(repo.get_source_type())
+                enabled = True
+            except NotSupportedRepoType:
+                enabled = False
+
+        return Response(data=dict(enabled=enabled))
+
+    def get_detail(self, request, code, module_name):
+        application = self.get_application()
+        module = application.get_module(module_name)
+
+        # 查询模块下最近一次代码检查记录
+        last_ci_atom = CIResourceAtom.objects.filter(env__module=module).order_by('-created').first()
+        if not last_ci_atom:
+            return Response(data=None)
+
+        # 调用 API 查询代码检查的详细结果
+        user_oauth = BkUserOAuth.from_request(request)
+        client = BkCIClient(user_oauth)
+        data = client.get_codecc_defect_tool_counts(last_ci_atom.task_id)
+        return Response(data=data)

@@ -67,32 +67,15 @@ class BkCIClient:
 
         return resp
 
-    def check_codecc_build_status(self, build_id: str):
-        """[应用态]查询 CodeCC 构建状态"""
+    def get_codecc_defect_tool_counts(self, task_id: int):
+        """[应用态]根据任务id查询所有工具问题数"""
         try:
-            resp = self.client.app_codecc_build_id_mapping(
-                headers=self._prepare_headers(), data={"codeccbuildId": build_id}
-            )
+            resp = self.client.app_codecc_tool_defect_count(headers=self._prepare_headers(), data={"taskId ": task_id})
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f'check codecc build stauts error, detail: {e}')
+            raise BKCIGatewayServiceError(f'get codecc defect tool counts error, detail: {e}')
 
         if resp.get('code') != '0':
-            logger.exception(f"check codecc build stauts error, resp:{resp}")
+            logger.exception(f"get codecc defect tool counts error, resp:{resp}")
             raise BKCIApiError(resp['message'], resp['code'])
 
-        return resp
-
-    def get_codecc_task_metrics(self, task_id: int, build_id: str):
-        """[应用态]查询codecc任务度量信息"""
-        try:
-            resp = self.client.app_codecc_task_metrics(
-                headers=self._prepare_headers(), path_params={"taskId": task_id}, data={"buildId": build_id}
-            )
-        except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f'get codecc task metrics error, detail: {e}')
-
-        if resp.get('code') != '0':
-            logger.exception(f"get codecc task metrics error, resp:{resp}")
-            raise BKCIApiError(resp['message'], resp['code'])
-
-        return resp
+        return resp.get('data')

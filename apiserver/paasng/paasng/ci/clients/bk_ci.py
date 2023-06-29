@@ -70,7 +70,7 @@ class BkCIClient:
     def get_codecc_defect_tool_counts(self, task_id: int):
         """[应用态]根据任务id查询所有工具问题数"""
         try:
-            resp = self.client.app_codecc_tool_defect_count(headers=self._prepare_headers(), data={"taskId ": task_id})
+            resp = self.client.app_codecc_tool_defect_count(headers=self._prepare_headers(), data={"taskId": task_id})
         except APIGatewayResponseError as e:
             raise BKCIGatewayServiceError(f'get codecc defect tool counts error, detail: {e}')
 

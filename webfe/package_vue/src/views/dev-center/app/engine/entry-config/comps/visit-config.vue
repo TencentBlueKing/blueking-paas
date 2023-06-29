@@ -19,79 +19,118 @@
               @mouseleave="defaultIndex = ''">
               <div
                 style="cursor: pointer;"
-              >{{ row.moduleName || '--' }}</div>
-              <bk-button v-if="defaultIndex === $index" text theme="primary" @click="handleSetDefault(row)">
+                class="flex-row align-items-center"
+              >{{ row.name || '--' }}
+                <div class="module-default ml10" v-if="row.is_default">{{$t('主模块')}}</div>
+              </div>
+              <bk-button
+                v-if="defaultIndex === $index && !row.is_default" text theme="primary"
+                @click="handleSetDefault(row)">
                 {{ $t('设为主模块') }}
               </bk-button>
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')">
+        <bk-table-column :label="$t('环境')" :min-width="150">
           <template slot-scope="{ row, $index }">
             <div
-              v-for="(item, i) in row.env" :key="item"
-              :style="{height: `${46 * row[item].length}px`}"
-              class="cell-container flex-column justify-content-center "
+              v-for="(item, i) in row.envsData" :key="item"
+              :style="{height: `${46 * row.envs[item].length}px`}"
+              class="cell-container flex-column justify-content-center"
               @mouseenter="handleEnvMouseEnter($index, i, row, item)">
               <div
                 class="env-container"
-                :class="i === row.env.length - 1 ? 'last-env-container' : ''"
+                :class="i === row.envsData.length - 1 ? 'last-env-container' : ''"
               >
                 <div class="text-container">
                   {{ entryEnv[item] }}
                   <span class="icon-container" v-if="tableIndex === $index && envIndex === i">
-                    <i class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="'添加自定义访问地址'" />
+                    <i
+                      class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="'添加自定义访问地址'"
+                      @click="handleAdd($index, i, row, item)" />
                     <i class="paasng-icon paasng-info-line pl10 info-icon" v-bk-tooltips="configIpTip" />
                   </span>
                 </div>
-                <div v-if="i !== row.env.length - 1" class="line"></div>
+                <div v-if="i !== row.envsData.length - 1" class="line"></div>
               </div>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('访问地址')" :width="500">
+        <bk-table-column :label="$t('访问地址')" :width="600">
           <template slot-scope="{ row }">
-            <div v-for="(item, index) in row.env" :key="item" class="cell-container">
-              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
-                <a
-                  :href="e.address.url"
-                  target="blank"
-                > {{ e.address.url}}</a>
-                <div v-if="index !== row.env.length - 1" class="line"></div>
+            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
+              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
+                <div v-if="e.isEdit">
+                  <bk-input v-model="e.address.url" :placeholder="domainInputPlaceholderText">
+                    <template slot="prepend">
+                      <div class="group-text">http://</div>
+                    </template>
+                    <template slot="append">
+                      <bk-input
+                        class="append-input-cls"
+                        v-model="e.address.pathPrefix"
+                        :placeholder="$t('请输入路径')"></bk-input>
+                    </template>
+                  </bk-input>
+                </div>
+                <section v-else class="flex-row align-items-center">
+                  <a
+                    :href="e.address.url"
+                    target="blank"
+                  > {{ e.address.url}}</a>
+                  <div class="module-market ml10" v-if="row.is_market">{{$t('应用市场地址')}}</div>
+                </section>
+                <div class="line"></div>
               </div>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('进程')">
+        <bk-table-column :label="$t('进程')" :width="100">
           <template slot-scope="{ row }">
-            <div v-for="(item, index) in row.env" :key="item" class="cell-container">
-              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
+            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
+              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
                 web
-                <div v-if="index !== row.env.length - 1" class="line"></div>
+                <div class="line"></div>
               </div>
             </div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('类型')">
           <template slot-scope="{ row }">
-            <div v-for="(item, index) in row.env" :key="item" class="cell-container">
-              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
+            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
+              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
                 {{ e.address.type === 'custom' ? $t('自定义') : $t('平台内置')}}
-                <div v-if="index !== row.env.length - 1" class="line"></div>
+                <div class="line"></div>
               </div>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('操作')" :width="150">
-          <template slot-scope="{ row }">
-            <div v-for="item in row.env" :key="item" class="cell-container">
-              <div v-for="(e, i) in row[item]" :key="i" class="url-container">
-                <bk-button text theme="primary">
-                  {{ $t('编辑') }}
-                </bk-button>
-                <bk-button text theme="primary" class="pl20">
-                  {{ $t('删除') }}
-                </bk-button>
+        <bk-table-column :label="$t('操作')" :width="130">
+          <template slot-scope="{ row, $index }">
+            <div v-for="item in row.envsData" :key="item" class="cell-container">
+              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
+                <div v-if="e.address.type === 'custom'">
+                  <section v-if="e.isEdit">
+                    <bk-button text theme="primary" @click="handleSubmit(i, row, item)">
+                      {{ $t('保存') }}
+                    </bk-button>
+                    <bk-button text theme="primary" class="pl20" @click="handleCancel">
+                      {{ $t('取消') }}
+                    </bk-button>
+                  </section>
+                  <section v-else>
+                    <bk-button text theme="primary" @click="handleEdit($index, i, row, item)">
+                      {{ $t('编辑') }}
+                    </bk-button>
+                    <bk-button
+                      text theme="primary" class="pl20"
+                      :disabled="row.is_market"
+                      @click="showRemoveModal(i, row, item)">
+                      {{ $t('删除') }}
+                    </bk-button>
+                  </section>
+                </div>
+                <div v-else> -- </div>
                 <div class="line"></div>
               </div>
             </div>
@@ -149,11 +188,9 @@
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
-import Vue from 'vue';
 export default {
   mixins: [appBaseMixin],
-  data(vm) {
-    console.log('vm', vm);
+  data() {
     return {
       type: '',
       example: '',
@@ -185,6 +222,8 @@ export default {
       tableIndex: '',
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
+      domainConfig: {},
+      placeholderText: '',
     };
   },
   computed: {
@@ -212,6 +251,14 @@ export default {
         placements: ['bottom'],
       };
     },
+
+    domainInputPlaceholderText() {
+      if (this.domainConfig.valid_domain_suffixes.length) {
+        this.placeholderText = this.domainConfig.valid_domain_suffixes.join(',');
+        return this.$t('请输入有效域名，并以这些后缀结尾：') + this.placeholderText;
+      }
+      return this.$t('请输入有效域名');
+    },
   },
   watch: {
     '$route'() {
@@ -232,11 +279,13 @@ export default {
       this.loadDomainConfig();
     },
 
+    // 获取域名信息
     async getAppRegion() {
       this.canUpdateSubDomain = false;
       try {
         const { region } = this.curAppInfo.application;
         const res = await this.$store.dispatch('getAppRegion', region);
+        this.domainConfig = res.module_custom_domain;
         this.canUpdateSubDomain = res.entrance_config.manually_upgrade_to_subdomain_allowed;
       } catch (e) {
         this.$paasMessage({
@@ -250,16 +299,14 @@ export default {
 
     async getEntryList() {
       try {
+        this.isTableLoading = true;
         const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
           appCode: this.appCode,
         });
-        this.entryList = Object.keys(res).reduce((p, v) => {
-          p.push({
-            moduleName: v,
-            ...res[v],
-            env: (Object.keys(res[v]) || []).sort(),    // 按字母排序
-          });
-          return p;
+        this.entryList = res;
+        this.entryList = res.map((e) => {
+          e.envsData = Object.keys(e.envs);
+          return e;
         }, []);
 
         console.log('this.entryList', this.entryList);
@@ -268,6 +315,8 @@ export default {
           theme: 'error',
           message: e.message || e.detail || this.$t('接口异常'),
         });
+      } finally {
+        this.isTableLoading = false;
       }
     },
 
@@ -341,11 +390,9 @@ export default {
       this.isEdited = true;
     },
 
+    // 取消
     handleCancel() {
-      this.isEdited = false;
-      if (this.rootDomainDefaultDiff !== this.rootDomainDefault) {
-        this.getDefaultDomainInfo();
-      }
+      this.getEntryList();    // 重新请求数据
     },
 
     // 处理鼠标移入事件
@@ -353,30 +400,28 @@ export default {
       this.defaultIndex = index;
     },
 
-    //
+    // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
       this.tableIndex = index;
       this.envIndex = envIndex;
       this.ipConfigInfo = (this.curIngressIpConfigs || [])
         .find(e => e.environment === env && e.module === payload.moduleName)
       || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
-      console.log('this.ipConfigInfo', this.ipConfigInfo);
     },
 
     // 设置为主模块
     handleSetDefault(payload) {
       this.domainDialog.visiable = true;
       this.domainDialog.moduleName = payload.moduleName;
-      this.domainDialog.env = payload.env[0];   // 默认取第一个环境
+      this.domainDialog.env = payload?.envsData[0];   // 默认取第一个环境
       this.domainDialog.title = this.$t(`是否设定${payload.moduleName}模块为主模块`);
     },
 
-
+    // tips数据
     loadDomainConfig() {
       this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/custom_domains/config/`).then(
         (res) => {
           this.curIngressIpConfigs = res;
-          console.log('this.curIngressIpConfigs', this.curIngressIpConfigs);
         },
         (res) => {
           this.$paasMessage({
@@ -387,6 +432,96 @@ export default {
       );
     },
 
+    // 新增一条数据
+    handleAdd(index, envIndex, payload, envType) {
+      this.entryList = this.entryList.map((e, i) => {
+        if (index === i) {
+          e.envs[envType].push({
+            isEdit: true,
+            address: {
+              type: 'custom',
+              url: '',
+              pathPrefix: '/',
+            },
+          });
+        }
+        return e;
+      });
+    },
+
+    // 保存
+    async handleSubmit(envIndex, payload, envType) {
+      const curUrlParams = {
+        environment_name: envType,
+        domain_name: payload.envs[envType][envIndex].address.url,
+        path_prefix: payload.envs[envType][envIndex].address.pathPrefix,
+        module_name: payload.name,
+        id: payload.envs[envType][envIndex].address.id || '',
+      };
+      try {
+        const params = {
+          data: curUrlParams,
+          appCode: this.appCode,
+        };
+        let fetchUrl = 'entryConfig/addDomainInfo';
+        if (curUrlParams.id) {
+          fetchUrl = 'entryConfig/updateDomainInfo';
+        }
+        await this.$store.dispatch(fetchUrl, params);
+        this.$paasMessage({
+          theme: 'success',
+          message: `${curUrlParams.id ? this.$t('更新') : this.$t('添加')}${this.$t('成功')}`,
+        });
+        this.getEntryList();    // 重新请求数据
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 删除域名弹窗
+    showRemoveModal(envIndex, payload, envType) {
+      this.$bkInfo({
+        title: `${this.$t('确定要删除该域名')}?`,
+        maskClose: true,
+        confirmFn: () => {
+          this.handleDelete(envIndex, payload, envType);
+        },
+      });
+    },
+
+    // 处理删除域名
+    async handleDelete(envIndex, payload, envType) {
+      try {
+        await this.$store.dispatch('entryConfig/deleteDomainInfo', { appCode: this.appCode, id: payload.envs[envType][envIndex].address.id });
+        this.getEntryList();    // 重新请求数据
+        this.$paasMessage({
+          theme: 'success',
+          message: `${this.$t('删除成功')}`,
+        });
+      } catch (error) {
+        const errorMsg = error.message;
+
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('删除失败')},${errorMsg}`,
+        });
+      }
+    },
+
+    // 编辑
+    handleEdit(index, envIndex, payload, envType) {
+      this.entryList = this.entryList.map((e, i) => {
+        if (index === i) {
+          e.envs[envType][envIndex].isEdit = true;
+          // e.envs[envType][envIndex].address.url =
+        }
+        return e;
+      });
+      console.log('this.entryList', this.entryList);
+    },
   },
 };
 </script>
@@ -443,6 +578,17 @@ export default {
         display: flex;
         flex-flow: column;
         justify-content: center;
+        .module-default{
+          width: 52px;
+          height: 22px;
+          font-size: 12px;
+          color: #3A84FF;
+          line-height: 20px;
+          background: #EDF4FF;
+          border: 1px solid #3a84ff4d;
+          border-radius: 11px;
+          text-align: center;
+        }
       }
 
       .cell-container{
@@ -500,6 +646,26 @@ export default {
         height: 46px;
         line-height: 46px;
         width: 100%;
+        .module-market{
+          width: 88px;
+          height: 22px;
+          font-size: 12px;
+          color: #14A568;
+          text-align: center;
+          line-height: 20px;
+          background: #E4FAF0;
+          border: 1px solid #14a5684d;
+          border-radius: 11px;
+        }
+      }
+    }
+
+    .append-input-cls{
+      /deep/ .bk-form-input{
+        border: none;
+        border-bottom: 1px solid #c4c6cc;
+        height: 31px;
+        width: 130px;
       }
     }
 </style>

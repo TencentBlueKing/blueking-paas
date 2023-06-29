@@ -120,5 +120,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/entrances/`;
       return http.get(url);
     },
+
+    /**
+     * 删除域名
+     * @param {Object} params 包括appCode，moduleId
+     */
+    deleteDomainInfo({}, { appCode, id }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domains/${id}/`;
+      return http.delete(url);
+    },
   },
 };

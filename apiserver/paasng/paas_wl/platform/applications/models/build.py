@@ -16,14 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List, Optional
+
 from django.db import models
 from django.utils import timezone
 from jsonfield import JSONCharField, JSONField
 
 from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.platform.applications.models import UuidAuditedModel
+from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import validate_procfile
+from paasng.dev_resources.sourcectl.models import VersionInfo
 
 
 class Build(UuidAuditedModel):
@@ -77,25 +81,78 @@ class Build(UuidAuditedModel):
         return '%s-%s(%s)' % (self.uuid, self.app.name, self.app.region)
 
 
+class BuildProcessManager(models.Manager):
+    def new(
+        self,
+        owner: str,
+        builder_image: str,
+        source_tar_path: str,
+        version_info: VersionInfo,
+        invoke_message: str,
+        buildpacks_info: Optional[List] = None,
+    ):
+        """Create a new release
+
+        :param str owner: 发布者
+        :param str builder_image: builder 镜像
+        :param str source_tar_path:
+        :param VersionInfo version_info: 构建代码版本
+        :param str invoke_message: 触发信息
+        """
+        from paas_wl.platform.applications.models import WlApp
+
+        # Get the largest(latest) version and increase it by 1.
+        if not hasattr(self, "instance"):
+            raise RuntimeError("Only call `new` method from RelatedManager.")
+
+        if not isinstance(self.instance, WlApp):
+            raise RuntimeError("Only call from app.build_set.")
+
+        wl_app = self.instance
+        latest_build = self.order_by('-generation').first()
+        if latest_build:
+            next_generation = latest_build.version + 1
+        else:
+            next_generation = 1
+
+        build_process = BuildProcess.objects.create(
+            owner=owner,
+            app=wl_app,
+            image=builder_image,
+            buildpacks=buildpacks_info or [],
+            generation=next_generation,
+            invoke_message=invoke_message,
+            source_tar_path=source_tar_path,
+            revision=version_info.revision,
+            branch=version_info.version_name,
+            output_stream=OutputStream.objects.create(),
+        )
+        return build_process
+
+
 class BuildProcess(UuidAuditedModel):
-    """This Build Process was invoked via an source tarball or anything similar"""
+    """This Build Process was invoked via a source tarball or anything similar"""
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey('App', null=True, on_delete=models.CASCADE)
     image = models.CharField(max_length=512, null=True, help_text="builder image")
     buildpacks = JSONCharField(max_length=4096, null=True)
 
+    generation = models.PositiveBigIntegerField(verbose_name="自增ID", help_text="每个应用独立的自增ID")
+    invoke_message = models.CharField(help_text="触发信息", max_length=255, null=True, blank=True)
     source_tar_path = models.CharField(max_length=2048)
     branch = models.CharField(max_length=128, null=True)
     revision = models.CharField(max_length=128, null=True)
     logs_was_ready_at = models.DateTimeField(null=True, help_text='Pod 状态就绪允许读取日志的时间')
     int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断的时间')
+    complete_at = models.DateTimeField(verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True)
 
     status = models.CharField(choices=make_enum_choices(BuildStatus), max_length=12, default=BuildStatus.PENDING.value)
     output_stream = models.OneToOneField('OutputStream', null=True, on_delete=models.CASCADE)
 
     # A BuildProcess will result in a build and release, if succeeded
     build = models.OneToOneField('Build', null=True, related_name="build_process", on_delete=models.CASCADE)
+    objects = BuildProcessManager()
 
     class Meta:
         get_latest_by = 'created'
@@ -107,7 +164,7 @@ class BuildProcess(UuidAuditedModel):
     def set_int_requested_at(self):
         """Set `int_requested_at` field"""
         self.int_requested_at = timezone.now()
-        self.save(update_fields=['int_requested_at', 'updated'])
+        self.save(update_fields=['int_requested_at', 'complete_at', 'updated'])
 
     def check_interruption_allowed(self) -> bool:
         """Check if current build process allows interruptions"""
@@ -125,11 +182,9 @@ class BuildProcess(UuidAuditedModel):
     def update_status(self, status):
         """Update status and save"""
         self.status = status
-        self.save(update_fields=['status'])
-
-    def success(self):
-        """Shortcut for a BuildProcess Success"""
-        self.update_status(status=BuildStatus.SUCCESSFUL.value)
+        if status in [BuildStatus.FAILED, BuildStatus.SUCCESSFUL, BuildStatus.INTERRUPTED]:
+            self.complete_at = timezone.now()
+        self.save(update_fields=['status', 'complete_at', 'updated'])
 
     def buildpacks_as_build_env(self) -> str:
         """buildpacks to slugbuilder REQUIRED_BUILDPACKS env"""

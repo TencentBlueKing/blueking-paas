@@ -28,7 +28,6 @@ from django.utils.translation import gettext as _
 
 from paas_wl.cnative.specs.models import AppModelResource, generate_bkapp_name, update_app_resource
 from paas_wl.platform.applications.models.build import BuildProcess
-from paas_wl.platform.applications.models.misc import OutputStream
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.sourcectl.utils import (
     ExcludeChecker,
@@ -320,16 +319,13 @@ class ApplicationBuilder(BaseBuilder):
         app_image_repository = generate_image_repository(env.module)
         app_image = runtime_info.generate_image(version_info=self.version_info)
         # Create the Build object and start a background build task
-        build_process = BuildProcess.objects.create(
-            # TODO: Set the correct owner value
-            # owner='',
-            app=env.wl_app,
+        build_process = env.wl_app.buildprocess_set.new(
+            owner=self.deployment.operator,
+            builder_image=builder_image,
             source_tar_path=source_tar_path,
-            revision=self.version_info.revision,
-            branch=self.version_info.version_name,
-            output_stream=OutputStream.objects.create(),
-            image=builder_image,
-            buildpacks=build_info.buildpacks_info or [],
+            version_info=self.version_info,
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
+            buildpacks_info=build_info.buildpacks_info,
         )
 
         # Start the background build process
@@ -419,14 +415,15 @@ class DockerBuilder(BaseBuilder):
         }
 
         # Create the Build object and start a background build task
-        build_process = BuildProcess.objects.create(
-            app=env.wl_app,
+        # Create the Build object and start a background build task
+        build_process = env.wl_app.buildprocess_set.new(
+            owner=self.deployment.operator,
+            builder_image=builder_image,
             source_tar_path=source_tar_path,
-            revision=self.version_info.revision,
-            branch=self.version_info.version_name,
-            output_stream=OutputStream.objects.create(),
-            image=builder_image,
+            version_info=self.version_info,
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,

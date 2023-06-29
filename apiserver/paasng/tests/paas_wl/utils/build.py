@@ -17,7 +17,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models import BuildProcess, OutputStream, WlApp
+from paas_wl.platform.applications.models import WlApp
+from paasng.dev_resources.sourcectl.models import VersionInfo
 
 
 def create_build_proc(app: WlApp, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None):
@@ -29,15 +30,12 @@ def create_build_proc(app: WlApp, source_tar_path=None, revision=None, branch=No
     revision = revision or get_random_string(10)
     branch = branch or get_random_string(10)
 
-    build_process = BuildProcess.objects.create(
+    build_process = app.buildprocess_set.new(
         owner=app.owner,
-        app=app,
+        builder_image=image,
         source_tar_path=source_tar_path,
-        revision=revision,
-        branch=branch,
-        output_stream=OutputStream.objects.create(),
-        # 允许 none 参数
-        image=image,
-        buildpacks=buildpacks,
+        version_info=VersionInfo(revision=revision, version_name=branch, version_type="branch"),
+        invoke_message="",
+        buildpacks_info=buildpacks or [],
     )
     return build_process

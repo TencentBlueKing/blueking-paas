@@ -153,6 +153,26 @@ class DeploymentResultSLZ(serializers.Serializer):
     error_tips = DeploymentErrorTipsSLZ()
 
 
+class BuildProcessSLZ(serializers.Serializer):
+    """构建历史"""
+
+    generation = serializers.IntegerField(help_text="执行ID")
+    image_tag = serializers.CharField(help_text="构建镜像")
+    status = serializers.ChoiceField(choices=JobStatus.get_choices())
+    invoke_message = serializers.CharField(help_text="触发信息")
+    start_at = serializers.DateTimeField(help_text="开始时间", source="created")
+    complete_at = serializers.DateTimeField(help_text="结束时间", allow_null=True)
+
+    deployment_id = serializers.SerializerMethodField(help_text="用于查询详情日志")
+
+    def get_deployment_id(self, bp):
+        # Note: 这里涉及多次数据库查询
+        deployment = Deployment.objects.filter(build_process_id=bp.uuid).first()
+        if deployment:
+            return deployment.uuid
+        return None
+
+
 class GetReleasedInfoSLZ(serializers.Serializer):
     with_processes = serializers.BooleanField(default=False)
 

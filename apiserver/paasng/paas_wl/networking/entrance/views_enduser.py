@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Any, Dict
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
@@ -170,15 +169,16 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(response_serializer=slzs.ApplicationEntrancesSLZ, tags=["访问入口"])
+    @swagger_auto_schema(response_serializer=slzs.ModuleEntrancesSLZ(many=True), tags=["访问入口"])
     def list_all_entrances(self, request, code):
         """查看应用所有模块的访问入口"""
         application = self.get_application()
-        all_entrances: Dict[str, Dict[str, Any]] = {}
+        all_entrances = []
         for module in application.modules.all():
-            module_entrances = all_entrances.setdefault(module.name, {})
+            module_entrances = {"name": module.name, "is_default": module.is_default, "envs": {}}
+            all_entrances.append(module_entrances)
             for env in module.envs.all():
-                env_entrances = module_entrances.setdefault(env.environment, [])
+                env_entrances = module_entrances["envs"].setdefault(env.environment, [])
                 is_running = env_is_running(env)
                 # 每个环境仅展示一个内置访问地址
                 builtin_address = None
@@ -214,7 +214,7 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                             "is_running": is_running,
                         }
                     )
-        return Response(data=slzs.ApplicationEntrancesSLZ(all_entrances).data)
+        return Response(data=slzs.ModuleEntrancesSLZ(all_entrances, many=True).data)
 
     @swagger_auto_schema(response_serializer=slzs.AvailableEntranceSLZ(many=True), tags=["访问入口"])
     def list_module_available_entrances(self, request, code, module_name):

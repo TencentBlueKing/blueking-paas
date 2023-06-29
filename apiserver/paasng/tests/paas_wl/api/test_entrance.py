@@ -54,30 +54,34 @@ class TestAppEntranceViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/entrances/"
         resp = api_client.get(url)
         # 未部署, 仅独立域名
-        assert resp.json() == {
-            'default': {
-                'stag': [
-                    {
-                        'module': 'default',
-                        'env': 'stag',
-                        'address': {
-                            'id': None,
-                            'url': f'http://stag-dot-{bk_app.code}.example.com',
-                            'type': 'subdomain',
-                        },
-                        'is_running': False,
-                    }
-                ],
-                'prod': [
-                    {
-                        'module': 'default',
-                        'env': 'prod',
-                        'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
-                        'is_running': False,
-                    }
-                ],
+        assert resp.json() == [
+            {
+                "name": "default",
+                "is_default": True,
+                "envs": {
+                    'stag': [
+                        {
+                            'module': 'default',
+                            'env': 'stag',
+                            'address': {
+                                'id': None,
+                                'url': f'http://stag-dot-{bk_app.code}.example.com',
+                                'type': 'subdomain',
+                            },
+                            'is_running': False,
+                        }
+                    ],
+                    'prod': [
+                        {
+                            'module': 'default',
+                            'env': 'prod',
+                            'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                            'is_running': False,
+                        }
+                    ],
+                },
             }
-        }
+        ]
 
         # 添加独立域名
         # source type: custom
@@ -89,78 +93,86 @@ class TestAppEntranceViewSet:
         )
 
         resp = api_client.get(url)
-        assert resp.json() == {
-            'default': {
-                'stag': [
-                    {
-                        'module': 'default',
-                        'env': 'stag',
-                        'address': {
-                            'id': None,
-                            'url': f'http://stag-dot-{bk_app.code}.example.com',
-                            'type': 'subdomain',
+        assert resp.json() == [
+            {
+                "name": "default",
+                "is_default": True,
+                "envs": {
+                    'stag': [
+                        {
+                            'module': 'default',
+                            'env': 'stag',
+                            'address': {
+                                'id': None,
+                                'url': f'http://stag-dot-{bk_app.code}.example.com',
+                                'type': 'subdomain',
+                            },
+                            'is_running': False,
                         },
-                        'is_running': False,
-                    },
-                    {
-                        'module': 'default',
-                        'env': 'stag',
-                        'address': {
-                            'id': custom_domain.id,
-                            'url': 'http://foo-custom.example.com/subpath/',
-                            'type': 'custom',
+                        {
+                            'module': 'default',
+                            'env': 'stag',
+                            'address': {
+                                'id': custom_domain.id,
+                                'url': 'http://foo-custom.example.com/subpath/',
+                                'type': 'custom',
+                            },
+                            'is_running': False,
                         },
-                        'is_running': False,
-                    },
-                ],
-                'prod': [
-                    {
-                        'module': 'default',
-                        'env': 'prod',
-                        'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
-                        'is_running': False,
-                    }
-                ],
+                    ],
+                    'prod': [
+                        {
+                            'module': 'default',
+                            'env': 'prod',
+                            'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                            'is_running': False,
+                        }
+                    ],
+                },
             }
-        }
+        ]
 
         # test field `is_running`
         create_release(bk_stag_env.wl_app, bk_user, failed=False)
         resp = api_client.get(url)
-        assert resp.json() == {
-            'default': {
-                'stag': [
-                    {
-                        'module': 'default',
-                        'env': 'stag',
-                        'address': {
-                            'id': None,
-                            'url': f'http://stag-dot-{bk_app.code}.example.com',
-                            'type': 'subdomain',
+        assert resp.json() == [
+            {
+                "name": "default",
+                "is_default": True,
+                "envs": {
+                    'stag': [
+                        {
+                            'module': 'default',
+                            'env': 'stag',
+                            'address': {
+                                'id': None,
+                                'url': f'http://stag-dot-{bk_app.code}.example.com',
+                                'type': 'subdomain',
+                            },
+                            'is_running': True,
                         },
-                        'is_running': True,
-                    },
-                    {
-                        'module': 'default',
-                        'env': 'stag',
-                        'address': {
-                            'id': custom_domain.id,
-                            'url': 'http://foo-custom.example.com/subpath/',
-                            'type': 'custom',
+                        {
+                            'module': 'default',
+                            'env': 'stag',
+                            'address': {
+                                'id': custom_domain.id,
+                                'url': 'http://foo-custom.example.com/subpath/',
+                                'type': 'custom',
+                            },
+                            'is_running': True,
                         },
-                        'is_running': True,
-                    },
-                ],
-                'prod': [
-                    {
-                        'module': 'default',
-                        'env': 'prod',
-                        'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
-                        'is_running': False,
-                    }
-                ],
+                    ],
+                    'prod': [
+                        {
+                            'module': 'default',
+                            'env': 'prod',
+                            'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                            'is_running': False,
+                        }
+                    ],
+                },
             }
-        }
+        ]
 
     def test_list_module_all_entrances(self, api_client, bk_user, bk_app, bk_module, bk_prod_env, bk_prod_wl_app):
         # setup data

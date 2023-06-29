@@ -143,6 +143,12 @@ urlpatterns = [
         AppDomainsViewSet.as_view({'get': 'list_configs'}),
         name='api.custom_domains_config',
     ),
+    # build history
+    re_path(
+        make_app_pattern(r"/build/history/$"),
+        views.BuildProcessViewSet.as_view({"get": "list"}),
+        name="api.build.history",
+    ),
 ]
 
 # Built-in envs

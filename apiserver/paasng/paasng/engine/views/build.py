@@ -20,6 +20,7 @@ import logging
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.platform.applications.models import BuildProcess
@@ -31,26 +32,18 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 logger = logging.getLogger(__name__)
 
 
-class BuildProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class BuildProcessViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     serializer_class = BuildProcessSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    @property
-    def paginator(self):
-        if not hasattr(self, '_paginator'):
-            from rest_framework.pagination import LimitOffsetPagination
-
-            self._paginator = LimitOffsetPagination()
-            self._paginator.default_limit = 12
-        return self._paginator
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['status']
+    ordering = ('-created',)
 
     @swagger_auto_schema(response_serializer=BuildProcessSLZ(many=True))
     def list(self, request, code, module_name, environment):
         """获取构建历史"""
         wl_app = self.get_wl_app_via_path()
-        qs = BuildProcess.objects.filter(app=wl_app)
-
-        # Paginator
-        page = self.paginator.paginate_queryset(qs, self.request, view=self)
+        qs = self.filter_queryset(BuildProcess.objects.filter(app=wl_app).select_related("build"))
+        page = self.paginate_queryset(qs)
         serializer = BuildProcessSLZ(page, many=True)
         return self.paginator.get_paginated_response(serializer.data)

@@ -38,17 +38,3 @@ urlpatterns = [
         name='api.process_ingresses.default',
     ),
 ]
-
-
-urlpatterns += [
-    re_path(
-        r'applications/(?P<code>[^/]+)/domains/$',
-        views_enduser.AppDomainsViewSet.as_view({'get': 'list', 'post': 'create'}),
-        name='api.app_domains',
-    ),
-    re_path(
-        r'applications/(?P<code>[^/]+)/domains/(?P<id>\d+)/$',
-        views_enduser.AppDomainsViewSet.as_view({'put': 'update', 'delete': 'destroy'}),
-        name='api.app_domains.singular',
-    ),
-]

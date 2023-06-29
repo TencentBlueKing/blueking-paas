@@ -63,8 +63,9 @@ def test_bind_image(bk_module, slugbuilder, slugrunner, slugbuilder_attrs, slugr
         assert manager.get_slug_runner(raise_exception=True) == slugrunner
         # 测试重复绑定
         binder.bind_image(slugrunner, slugbuilder)
-        assert build_config.buildpack_builder is slugbuilder
-        assert build_config.buildpack_runner is slugrunner
+        build_config.refresh_from_db()
+        assert build_config.buildpack_builder == slugbuilder
+        assert build_config.buildpack_runner == slugrunner
     else:
         with pytest.raises(BindError):
             binder.bind_image(slugrunner, slugbuilder)

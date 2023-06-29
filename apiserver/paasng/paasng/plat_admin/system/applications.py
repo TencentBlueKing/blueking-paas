@@ -58,6 +58,7 @@ class UniSimpleApp:
     _source: SimpleAppSource
     region: str
     name: str
+    name_en: str
     code: str
     logo_url: str
     developers: List[str]
@@ -75,6 +76,7 @@ def get_simple_app_by_default_app(app: Application) -> UniSimpleApp:
         _source=SimpleAppSource.DEFAULT,
         region=app.region or 'unknown',
         name=app.name,
+        name_en=app.name_en,
         code=app.code,
         logo_url=app.get_logo_url(),
         created=app.created,
@@ -91,10 +93,14 @@ def get_simple_app_by_legacy_app(app: LApplication) -> Optional[UniSimpleApp]:
     if not region:
         return None
 
+    # Compatible with some versions of APP in PaaS2.0 without name_en field
+    name_en = getattr(app, 'name_en', app.name)
+
     simple_app = UniSimpleApp(
         _source=SimpleAppSource.LEGACY,
         region=region,
         name=app.name,
+        name_en=name_en,
         code=app.code,
         logo_url=normalizer.get_logo_url(),
         created=app.created_date,

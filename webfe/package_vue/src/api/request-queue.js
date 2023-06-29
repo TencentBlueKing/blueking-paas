@@ -21,7 +21,7 @@
  */
 
 export default class RequestQueue {
-  constructor () {
+  constructor() {
     this.queue = [];
   }
 
@@ -32,7 +32,7 @@ export default class RequestQueue {
      *
      * @return {Array|Object} 队列集合或队列对象
      */
-  get (id) {
+  get(id) {
     if (typeof id === 'undefined') {
       return this.queue;
     }
@@ -44,7 +44,7 @@ export default class RequestQueue {
      *
      * @param {Object} newRequest 请求对象
      */
-  set (newRequest) {
+  set(newRequest) {
     this.queue.push(newRequest);
   }
 
@@ -53,7 +53,7 @@ export default class RequestQueue {
      *
      * @param {string} id id
      */
-  delete (id) {
+  delete(id) {
     this.queue = [...this.queue.filter(request => request.requestId !== id)];
   }
 
@@ -65,12 +65,12 @@ export default class RequestQueue {
      *
      * @return {Promise} promise 对象
      */
-  cancel (requestIds, msg = 'request canceled') {
+  cancel(requestIds, msg = 'request canceled') {
     let cancelQueue = [];
     if (typeof requestIds === 'undefined') {
       cancelQueue = [...this.queue];
     } else if (requestIds instanceof Array) {
-      requestIds.forEach(requestId => {
+      requestIds.forEach((requestId) => {
         const cancelRequest = this.get(requestId);
         if (cancelRequest) {
           cancelQueue = [...cancelQueue, ...cancelRequest];
@@ -84,8 +84,8 @@ export default class RequestQueue {
     }
 
     try {
-      cancelQueue.forEach(request => {
-        const requestId = request.requestId;
+      cancelQueue.forEach((request) => {
+        const { requestId } = request;
         this.delete(requestId);
         request.cancelExcutor({ type: 'cancel', msg: `${msg}: ${requestId}` });
       });

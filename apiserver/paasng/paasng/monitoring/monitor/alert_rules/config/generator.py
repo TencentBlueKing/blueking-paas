@@ -23,7 +23,7 @@ from django.db.models import QuerySet
 from paasng.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
-from .app_rule import AppScopedRuleConfig, ModuleScopedRuleConfig, RuleConfig
+from .app_rule import AppScopedRuleConfig, ModuleScopedRuleConfig, RuleConfig, get_supported_alert_codes
 from .constants import DEFAULT_RULE_CONFIGS, RUN_ENVS
 
 
@@ -34,43 +34,48 @@ class AppRuleConfigGenerator:
         self.application = application
         self.app_code = application.code
         self.default_receivers = default_receivers
+        self.supported_alerts = get_supported_alert_codes(application.type)
 
-    def gen_app_scoped_rule_configs(self) -> List[RuleConfig]:
+    def gen_app_scoped_rule_configs(
+        self, run_envs: Optional[List[str]] = None, alert_codes: Optional[List[str]] = None
+    ) -> List[RuleConfig]:
         """generate app scoped alert rule configs"""
         rule_configs: List[RuleConfig] = []
+        run_envs = run_envs or RUN_ENVS
 
-        if not DEFAULT_RULE_CONFIGS.get('app_scoped'):
-            return rule_configs
-
-        for alert_code, alert_config in DEFAULT_RULE_CONFIGS['app_scoped'].items():
+        for alert_code in alert_codes or self.supported_alerts.app_scoped_codes:
             r_configs = [
                 AppScopedRuleConfig(
                     alert_code=alert_code,
                     app_code=self.app_code,
                     run_env=env,
-                    threshold_expr=alert_config['threshold_expr'],
+                    threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]['threshold_expr'],
                     receivers=self.default_receivers,
                 )
-                for env in RUN_ENVS
+                for env in run_envs
             ]
             rule_configs.extend([c for c in r_configs if c.is_valid()])
 
         return rule_configs
 
-    def gen_module_scoped_rule_configs(self, module_name: str) -> List[RuleConfig]:
+    def gen_module_scoped_rule_configs(
+        self, module_name: str, run_envs: Optional[List[str]] = None, alert_codes: Optional[List[str]] = None
+    ) -> List[RuleConfig]:
         """generate app module scoped alert rule configs by module_name"""
         rule_configs: List[RuleConfig] = []
-        for alert_code, alert_config in DEFAULT_RULE_CONFIGS['module_scoped'].items():
+        run_envs = run_envs or RUN_ENVS
+
+        for alert_code in alert_codes or self.supported_alerts.module_scoped_codes:
             r_configs = [
                 ModuleScopedRuleConfig(
                     alert_code=alert_code,
                     app_code=self.app_code,
                     run_env=env,
                     module_name=module_name,
-                    threshold_expr=alert_config['threshold_expr'],
+                    threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]['threshold_expr'],
                     receivers=self.default_receivers,
                 )
-                for env in RUN_ENVS
+                for env in run_envs
             ]
             rule_configs.extend([c for c in r_configs if c.is_valid()])
 
@@ -81,7 +86,7 @@ class AppRuleConfigGenerator:
         rule_configs: List[RuleConfig] = []
         config: RuleConfig
 
-        for rule_obj in qs:
+        for rule_obj in qs or []:
             if rule_obj.module:
                 config = ModuleScopedRuleConfig.from_alert_rule_obj(rule_obj)
             else:

@@ -165,6 +165,9 @@ spec:
             - resourceNamespace
             - retryPeriod
             type: object
+          maxProcesses:
+            format: int32
+            type: integer
           metadata:
             type: object
           metrics:
@@ -254,6 +257,7 @@ spec:
         required:
         - autoscalingConfig
         - ingressPluginConfig
+        - maxProcesses
         - platformConfig
         - resLimitConfig
         type: object

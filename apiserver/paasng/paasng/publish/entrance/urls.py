@@ -43,12 +43,12 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r'/root_domains/$', include_envs=False),
-        views.ModuleRootDomainsViewSet.as_view({'get': 'get'}),
+        views.ModuleRootDomainsViewSet.as_view({'get': 'list_root_domains'}),
         name="api.entrance.module.root_domain",
     ),
     re_path(
         make_app_pattern(r'/preferred_root_domain/$', include_envs=False),
-        views.ModulePreferredRootDomainsViewSet.as_view({'put': 'update'}),
+        views.ModuleRootDomainsViewSet.as_view({'put': 'update_preferred_root_domain'}),
         name="api.entrance.module.preferred_root_domain",
     ),
 ]

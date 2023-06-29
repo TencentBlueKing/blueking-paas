@@ -20,13 +20,14 @@ import logging
 from operator import attrgetter
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, overload
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from paas_wl.cluster.models import Cluster, Domain
 from paas_wl.cluster.shim import EnvClusterService
 from paasng.engine.constants import AppEnvName
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
-from paasng.platform.modules.exceptions import BindError
+from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
 from paasng.utils.validators import str2bool
 
@@ -75,6 +76,24 @@ class ModuleRuntimeBinder:
     def __init__(self, module: 'Module'):
         self.module = module
         self.build_config = BuildConfig.objects.get_or_create_by_module(module)
+
+    @transaction.atomic
+    def bind_bp_stack(self, bp_stack_name: str, ordered_bp_ids: List[int]):
+        """绑定 buildpack stack - 即构建和运行的镜像、以及构建工具"""
+        module = self.module
+        try:
+            slugbuilder = AppSlugBuilder.objects.filter_available(module=module).get(name=bp_stack_name)
+            slugrunner = AppSlugRunner.objects.filter_available(module=module).get(name=bp_stack_name)
+        except ObjectDoesNotExist:
+            raise BuildPackStackNotFound(bp_stack_name)
+
+        buildpacks = slugbuilder.get_buildpack_choices(module, id__in=ordered_bp_ids)
+        if len(ordered_bp_ids) != len(buildpacks):
+            raise BuildPacksNotFound
+
+        self.clear_runtime()
+        self.bind_image(slugrunner, slugbuilder)
+        self.bind_buildpacks(buildpacks, ordered_bp_ids)
 
     @transaction.atomic
     def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder):

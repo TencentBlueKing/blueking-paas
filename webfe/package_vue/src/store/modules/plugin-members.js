@@ -30,7 +30,7 @@ export default {
     /**
        * 获取成员列表
        */
-    getMemberList ({ commit, state }, { pdId, pluginId }, config = {}) {
+    getMemberList({ commit, state }, { pdId, pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/members/`;
       return http.get(url, config);
     },
@@ -38,7 +38,7 @@ export default {
     /**
        * 新增成员
        */
-    addMember ({ commit, state }, { pdId, pluginId, postParams }, config = {}) {
+    addMember({ commit, state }, { pdId, pluginId, postParams }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/members/`;
       return http.post(url, postParams, config);
     },
@@ -46,7 +46,7 @@ export default {
     /**
        * 退出插件
        */
-    leavePlugin ({ commit, state }, { pdId, pluginId }, config = {}) {
+    leavePlugin({ commit, state }, { pdId, pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/members/leave/`;
       return http.post(url, {}, config);
     },
@@ -54,7 +54,7 @@ export default {
     /**
        * 角色更新
        */
-    updateRole ({ commit, state }, { pdId, pluginId, username, params }, config = {}) {
+    updateRole({ commit, state }, { pdId, pluginId, username, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/members/${username}/`;
       return http.put(url, params, config);
     },
@@ -62,9 +62,9 @@ export default {
     /**
        * 删除成员
        */
-    deleteRole ({ commit, state }, { pdId, pluginId, username }, config = {}) {
+    deleteRole({ commit, state }, { pdId, pluginId, username }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/members/${username}/`;
       return http.delete(url, config);
-    }
-  }
+    },
+  },
 };

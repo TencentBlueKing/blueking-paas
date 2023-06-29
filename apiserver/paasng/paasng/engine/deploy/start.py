@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 def initialize_deployment(
     env: 'ModuleEnvironment',
     operator: str,
-    version_info: VersionInfo,
+    version_info: Optional[VersionInfo],
     advanced_options: Optional[Dict] = None,
     manifest: Optional[Dict] = None,
 ) -> Deployment:
@@ -58,15 +58,23 @@ def initialize_deployment(
     """
     module: Module = env.module
     application = module.application
-    version_service = get_version_service(module, operator=operator)
-    source_location = version_service.build_url(version_info)
+    if version_info:
+        version_service = get_version_service(module, operator=operator)
+        source_location = version_service.build_url(version_info)
+    else:
+        # 仅托管镜像的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
+        # Q: 那为什么不根据用户提供的 Image Tag 构造 VersionInfo?
+        # A: 因为 v1alpha1 版本的云原生应用并不能保证只有一个 tag...
+        #    构造 VersionInfo 在兼容 v1alpha1 需要写很复杂或依赖约定(例如用 web 的 tag)的逻辑, 这反而更难维护。
+        version_info = VersionInfo("", "", "")
+        source_location = ""
 
+    # TODO: 直接发布镜像时允许使用其他 revisions
     bkapp_revision_id = None
-    if manifest and application.type == ApplicationType.CLOUD_NATIVE:
-        update_app_resource(application, manifest)
+    if application.type == ApplicationType.CLOUD_NATIVE and manifest:
+        update_app_resource(application, module, manifest)
         # Get current module resource object
-        model_resource = AppModelResource.objects.get(application_id=application.id)
-        # TODO: Allow use other revisions
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         bkapp_revision_id = model_resource.revision.id
 
     deploy_config = module.get_deploy_config()
@@ -126,5 +134,5 @@ class DeployTaskRunner:
             and self.deployment.version_info.version_type == "image"
         ):
             return False
-        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布
-        return self.deployment.advanced_options.build_id is None
+        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布, 则无需构建
+        return not bool(self.deployment.advanced_options.build_id)

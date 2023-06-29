@@ -16,54 +16,54 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-let callbackSeed = 0
-function JSONP (api, params = {}, options = {}) {
-	return new Promise((resolve, reject) => {
-		let timer
-		const callbackName = `USER_LIST_CALLBACK${callbackSeed++}`
-		window[callbackName] = response => {
-			timer && clearTimeout(timer)
-			document.body.removeChild(script)
-			delete window[callbackName]
-			resolve(response)
-		}
-		const script = document.createElement('script')
-		script.onerror = event => {
-			document.body.removeChild(script)
-			delete window[callbackName]
-			reject('Get data failed.')
-		}
-		const query = []
-		for(const key in params) {
-			query.push(`${key}=${params[key]}`)
-		}
-		script.src = `${api}?${query.join('&')}&callback=${callbackName}`
-		if (options.timeout) {
-			setTimeout(() => {
-				document.body.removeChild(script)
-				delete window[callbackName]
-				reject('Get data timeout.')
-			}, options.timeout)
-		}
-		document.body.appendChild(script)
-	})
+let callbackSeed = 0;
+function JSONP(api, params = {}, options = {}) {
+  return new Promise((resolve, reject) => {
+    let timer;
+    const callbackName = `USER_LIST_CALLBACK${callbackSeed++}`;
+    window[callbackName] = (response) => {
+      timer && clearTimeout(timer);
+      document.body.removeChild(script);
+      delete window[callbackName];
+      resolve(response);
+    };
+    const script = document.createElement('script');
+    script.onerror = (event) => {
+      document.body.removeChild(script);
+      delete window[callbackName];
+      reject('Get data failed.');
+    };
+    const query = [];
+    for (const key in params) {
+      query.push(`${key}=${params[key]}`);
+    }
+    script.src = `${api}?${query.join('&')}&callback=${callbackName}`;
+    if (options.timeout) {
+      setTimeout(() => {
+        document.body.removeChild(script);
+        delete window[callbackName];
+        reject('Get data timeout.');
+      }, options.timeout);
+    }
+    document.body.appendChild(script);
+  });
 }
 
 const request = {
-	async getData (api, params, options) {
-		let data = []
-		try {
-			const response = await JSONP(api, params, options)
-			if (response.code !== 0) {
-				throw new Error(response)
-			}
-			data = response.data
-		} catch (error) {
-			console.error(error.message)
-			data = []
-		}
-		return data
-	}
-}
+  async getData(api, params, options) {
+    let data = [];
+    try {
+      const response = await JSONP(api, params, options);
+      if (response.code !== 0) {
+        throw new Error(response);
+      }
+      data = response.data;
+    } catch (error) {
+      console.error(error.message);
+      data = [];
+    }
+    return data;
+  },
+};
 
-export default request
+export default request;

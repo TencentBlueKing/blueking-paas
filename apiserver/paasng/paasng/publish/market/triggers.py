@@ -30,4 +30,4 @@ def sync_market_for_module_switching(sender, application, new_module, old_module
     """Update MarketConfig's source_module when application's default module has been changed"""
     logger.info(f"Changing application[{application.code}]'s source_module to {new_module.name}...")
     application.market_config.source_module = new_module
-    application.market_config.save(update_fields=["source_module"])
+    application.market_config.save(update_fields=["source_module", "updated"])

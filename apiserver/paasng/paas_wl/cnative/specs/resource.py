@@ -32,8 +32,8 @@ from paas_wl.cnative.specs.constants import (
     MResConditionType,
     MResPhaseType,
 )
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.cnative.specs.models import generate_bkapp_name
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.exceptions import ResourceMissing
@@ -51,11 +51,8 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     """
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
-        # TODO: Provide apiVersion or using AppEntity(after some adapting works) to make
-        # code more robust.
         try:
-            # TODO 确定多版本交互后解除版本锁定
-            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).get(
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(
                 generate_bkapp_name(env), namespace=wl_app.namespace
             )
         except ResourceNotFoundError:
@@ -103,7 +100,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
 
 
 def deploy_networking(env: ModuleEnvironment) -> None:
-    """Deploy the networking related resources for env, such as Ingress and etc."""
+    """Deploy the networking related resources for env, such as Ingress etc."""
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)

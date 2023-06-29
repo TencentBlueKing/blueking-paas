@@ -53,7 +53,7 @@
     display_name_zh_cn: 蓝鲸应用前端开发框架
     display_name_en: BlueKing Front-end framework
     description_zh_cn: Node10.x + Express4.x + Vue2.0，集成蓝鲸Vue组件库、Mock服务、统一登录
-    description_en: Node10.x + Express4.x + Vue2.0, integrated Blue Whale Vue component library, Mock service, login service, etc.
+    description_en: Node10.x + Express4.x + Vue2.0, integrated BlueKing Vue component library, Mock service, login service, etc.
     language: NodeJS
     market_ready: true
     preset_services_config: {}

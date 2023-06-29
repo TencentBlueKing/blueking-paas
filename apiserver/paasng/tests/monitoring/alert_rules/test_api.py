@@ -55,7 +55,7 @@ class TestAlertRulesView:
     def test_list_supported_alert_rules(self, api_client):
         resp = api_client.get('/api/monitor/supported_alert_rules/')
         alert_info = {alert['alert_code']: alert['display_name'] for alert in resp.data}
-        assert alert_info['high_cpu_usage'] == DEFAULT_RULE_CONFIGS['module_scoped']['high_cpu_usage']['display_name']
+        assert alert_info['high_cpu_usage'] == DEFAULT_RULE_CONFIGS['high_cpu_usage']['display_name']
 
 
 class TestInitAlertRulesAPI:

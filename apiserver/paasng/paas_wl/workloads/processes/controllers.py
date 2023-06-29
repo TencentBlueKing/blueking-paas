@@ -140,7 +140,7 @@ class AppProcessesController:
         :param target_replicas: the expected replicas, '0' for stop
         :raises: ValueError when target_replicas is too big
         """
-        if not target_replicas:
+        if target_replicas is None:
             raise ValueError('target_replicas required when scale process')
 
         proc_spec = self._get_spec(proc_type)
@@ -323,7 +323,7 @@ def env_is_running(env: ModuleEnvironment) -> bool:
     :return: Whether current env is running
     """
     if env.application.type == ApplicationType.CLOUD_NATIVE:
-        return AppModelDeploy.objects.any_successful(env)
+        return AppModelDeploy.objects.any_successful(env) and not env.is_offlined
     else:
         wl_app = env.wl_app
-        return Release.objects.any_successful(wl_app)
+        return Release.objects.any_successful(wl_app) and not env.is_offlined

@@ -26,7 +26,7 @@ from typing import Any, Dict, Type
 from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
+from paasng.platform.modules.models import BuildConfig, Module
 
 
 def source_origin_property(name: str):
@@ -62,7 +62,7 @@ class ModuleSpecs:
     def runtime_type(self) -> RuntimeType:
         if runtime_type := getattr(self.source_origin_specs, "runtime_type", None):
             return runtime_type
-        return RuntimeType(self.module.runtime_type)
+        return RuntimeType(BuildConfig.objects.get_or_create_by_module(self.module).build_method)
 
     def to_dict(self) -> Dict[str, Any]:
         return {

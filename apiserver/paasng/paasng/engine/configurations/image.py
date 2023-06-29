@@ -27,6 +27,7 @@ from paasng.engine.constants import RuntimeType
 from paasng.engine.models import Deployment
 from paasng.extensions.smart_app.conf import bksmart_settings
 from paasng.extensions.smart_app.utils import SMartImageManager
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
@@ -37,11 +38,11 @@ if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
 
 
-def generate_image_repository(app: 'EngineApp') -> str:
-    """Get the image repository for storing contaienr image"""
-    env = app.env
+def generate_image_repository(module: Module) -> str:
+    """Get the image repository for storing container image"""
+    application = module.application
     system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
-    app_part = f"{env.application.code}/{env.module.name}/{env.environment}"
+    app_part = f"{application.code}/{module.name}"
     return f"{system_prefix}/{app_part}"
 
 
@@ -101,6 +102,7 @@ class RuntimeImageInfo:
     def __init__(self, engine_app: 'EngineApp'):
         self.engine_app = engine_app
         self.module = engine_app.env.module
+        self.application = self.module.application
         self.module_spec = ModuleSpecs(self.module)
 
     @property
@@ -111,11 +113,17 @@ class RuntimeImageInfo:
     def generate_image(self, version_info: 'VersionInfo') -> str:
         """generate the runtime image of the application at a given version"""
         if self.type == RuntimeType.CUSTOM_IMAGE:
+            if self.application.type == ApplicationType.CLOUD_NATIVE:
+                # 仅托管镜像类型的云原生应用的镜像由 Yaml 定义, 因此返回空字符串
+                # Q: 为什么不尝试从 Yaml 解析？
+                # A: 因为 v1alpha1 版本的云原生应用并不能保证只有一个 image...
+                #    从 Yaml 解析在兼容 v1alpha1 需要写很复杂或依赖约定(例如用 web 的 image)的逻辑, 这反而更难维护。
+                return ""
             repo_url = self.module.get_source_obj().get_repo_url()
             reference = version_info.revision
             return f"{repo_url}:{reference}"
         elif self.type == RuntimeType.DOCKERFILE:
-            app_image_repository = generate_image_repository(self.engine_app)
+            app_image_repository = generate_image_repository(self.module)
             app_image_tag = generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
@@ -127,7 +135,7 @@ class RuntimeImageInfo:
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
             return (
-                generate_image_repository(self.engine_app)
+                generate_image_repository(self.module)
                 + ":"
                 + generate_image_tag(module=self.module, version=version_info)
             )

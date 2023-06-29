@@ -123,7 +123,6 @@ INSTALLED_APPS = [
     'paasng.engine.streaming',
     'paasng.publish.market',
     'paasng.publish.sync_market',
-    'paasng.publish.entrance',
     'paasng.dev_resources.sourcectl',
     'paasng.dev_resources.servicehub',
     'paasng.dev_resources.services',
@@ -157,6 +156,7 @@ INSTALLED_APPS = [
     'paas_wl.monitoring.metrics',
     'paas_wl.networking.egress',
     'paas_wl.networking.ingress',
+    'paas_wl.networking.entrance',
     'paas_wl.workloads.resource_templates',
     'paas_wl.release_controller.hooks',
     'paas_wl.workloads.processes',
@@ -606,6 +606,8 @@ AUTO_CREATE_REGULAR_USER = settings.get('AUTO_CREATE_REGULAR_USER', True)
 
 # 每个应用下最多创建的模块数量
 MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', 10)
+# 应用单个模块允许创建的最大 process 数量
+MAX_PROCESSES_PER_MODULE = settings.get('MAX_PROCESSES_PER_MODULE', 8)
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var='PAAS_LEGACY_DATABASE_URL', env_var_prefix='PAAS_LEGACY_', for_tests=RUNNING_TESTS
@@ -985,6 +987,12 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
 # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
 LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
+# 蓝鲸日志平台的API是否已经注册在 APIGW
+ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
+# 蓝鲸日志平台网关的环境
+BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
+# 蓝鲸日志平台相关的配置项
+BKLOG_CONFIG = settings.get("BKLOG_CONFIG", {})
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get('ELASTICSEARCH_HOSTS', [{'host': 'localhost', 'port': "9200"}])
@@ -1114,6 +1122,8 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get('SMART_DOCKER_PASSWORD', 'blueking
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
 
+# slugbuilder build 的超时时间, 单位秒
+BUILD_PROCESS_TIMEOUT = int(settings.get('BUILD_PROCESS_TIMEOUT', 60 * 15))
 
 # ------------------
 # App 应用镜像仓库配置

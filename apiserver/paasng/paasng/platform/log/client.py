@@ -29,7 +29,7 @@ from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
-from paasng.platform.log.exceptions import LogQueryError
+from paasng.platform.log.exceptions import LogQueryError, NoIndexError
 from paasng.platform.log.filters import (
     FieldFilter,
     agg_builtin_filters,
@@ -257,6 +257,8 @@ class ESLogClient:
         if filtered_indexes := filter_indexes_by_time_range(all_indexes, time_range=time_range):
             return filtered_indexes
         # 当无法匹配到 indexes 时, 实际上也会查询不到日志, 所以无需报错, 只需要返回一部分 index 提供给 ES 查询即可
+        if not all_indexes:
+            raise NoIndexError
         return sorted(all_indexes)[-10:]
 
     def _get_response_count(

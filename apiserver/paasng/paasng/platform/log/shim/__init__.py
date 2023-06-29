@@ -16,11 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+
+from django.conf import settings
+
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.shim import EnvClusterService
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.log.constants import LogCollectorType
+from paasng.platform.log.shim.setup_bklog import setup_default_bk_log_model
+from paasng.platform.log.shim.setup_elk import setup_saas_elk_model
 
 
-class EntranceConfig(AppConfig):
-    name = 'paasng.publish.entrance'
-
-    def ready(self):
-        from . import triggers  # noqa
+def setup_env_log_model(env: ModuleEnvironment):
+    cluster = EnvClusterService(env).get_cluster()
+    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+        return setup_default_bk_log_model(env)
+    if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
+        raise ValueError("ELK is not supported")
+    return setup_saas_elk_model(env)

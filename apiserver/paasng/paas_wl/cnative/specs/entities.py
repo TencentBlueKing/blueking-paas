@@ -20,7 +20,11 @@ import json
 import logging
 from typing import Dict, List, Optional
 
-from paas_wl.cnative.specs.configurations import generate_builtin_configurations, merge_envvars
+from paas_wl.cnative.specs.configurations import (
+    generate_builtin_configurations,
+    generate_user_configurations,
+    merge_envvars,
+)
 from paas_wl.cnative.specs.constants import (
     ACCESS_CONTROL_ANNO_KEY,
     BKAPP_CODE_ANNO_KEY,
@@ -32,6 +36,7 @@ from paas_wl.cnative.specs.constants import (
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    ApiVersion,
 )
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
 from paas_wl.platform.applications.models import WlApp
@@ -50,7 +55,7 @@ class BkAppManifestProcessor:
         self.env = model_deploy.environment
         self.model_deploy = model_deploy
 
-    def build_manifest_v1alpha1(self, credential_refs: List[ImageCredentialRef], image: Optional[str] = None) -> Dict:
+    def build_manifest(self, credential_refs: List[ImageCredentialRef], image: Optional[str] = None) -> Dict:
         """inject bkpaas-specific properties to annotations
 
         :param credential_refs: Image credential ref objects
@@ -58,12 +63,17 @@ class BkAppManifestProcessor:
         """
         wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
         manifest = BkAppResource(**self.model_deploy.revision.json_value)
-        if image:
-            for p in manifest.spec.processes:
-                p.image = image
+
+        # 替换镜像信息
+        self._patch_image(manifest, image)
 
         # 更新注解，包含应用基本信息，增强服务，访问控制，镜像凭证等
         self._inject_annotations(manifest, self.env.application, self.env, wl_app, credential_refs)
+
+        # 注入用户自定义变量，与 YAML 中定义的进行合并，优先级：页面填写的 > YAML 中已有的
+        manifest.spec.configuration.env = merge_envvars(
+            manifest.spec.configuration.env, generate_user_configurations(env=self.env)
+        )
 
         # 注入平台内置环境变量
         manifest.spec.configuration.env = merge_envvars(
@@ -74,6 +84,17 @@ class BkAppManifestProcessor:
         # refresh status.conditions
         data["status"] = {"conditions": []}
         return data
+
+    def _patch_image(self, manifest: BkAppResource, image: Optional[str] = None) -> None:
+        if not image:
+            return
+
+        if manifest.apiVersion == ApiVersion.V1ALPHA2 and manifest.spec.build:
+            manifest.spec.build.image = image
+
+        elif manifest.apiVersion == ApiVersion.V1ALPHA1:
+            for p in manifest.spec.processes:
+                p.image = image
 
     def _inject_annotations(
         self,

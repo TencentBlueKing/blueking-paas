@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union, overload
 
 import yaml
 from django.db import models
@@ -31,9 +31,10 @@ from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
+from paasng.platform.modules.models import Module
 
-from .constants import DEFAULT_PROCESS_NAME, DeployStatus
-from .v1alpha1.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+from .constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
+from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +42,9 @@ logger = logging.getLogger(__name__)
 class AppModelResourceManager(models.Manager):
     """A custom manager for `AppModelResource`, provides useful utility functions"""
 
-    def get_json(self, application: Application) -> Dict:
+    def get_json(self, application: Application, module: Module) -> Dict:
         """Get the JSON value of app model resource by application"""
-        return AppModelResource.objects.get(application_id=application.id).revision.json_value
+        return AppModelResource.objects.get(application_id=application.id, module_id=module.id).revision.json_value
 
     def create_from_resource(self, region: str, application_id: str, module_id: str, resource: 'BkAppResource'):
         """Create a model resource object from `BkAppResource` object
@@ -185,6 +186,7 @@ class AppModelDeploy(TimestampedModel):
 def create_app_resource(
     name: str,
     image: str,
+    api_version: Optional[str] = ApiVersion.V1ALPHA2,
     command: Optional[List[str]] = None,
     args: Optional[List[str]] = None,
     target_port: Optional[int] = None,
@@ -195,24 +197,31 @@ def create_app_resource(
     :returns: `BkAppResource` object
     """
     obj = BkAppResource(
+        apiVersion=api_version,
         metadata=ObjectMetadata(name=name),
         spec=BkAppSpec(
+            build=BkAppBuildConfig(
+                image=image,
+            ),
             processes=[
                 BkAppProcess(
                     name=DEFAULT_PROCESS_NAME,
-                    image=image,
                     command=command or [],
                     args=args or [],
                     targetPort=target_port or None,
                 )
-            ]
+            ],
         ),
     )
-    # TODO: Allow the default fields to be skipped, such as empty "command" and "args"
+    # 兼容 v1alpha1 版本逻辑
+    if api_version == ApiVersion.V1ALPHA1:
+        obj.spec.build = None
+        obj.spec.processes[0].image = image
+
     return obj
 
 
-def update_app_resource(app: Application, payload: Dict):
+def update_app_resource(app: Application, module: Module, payload: Dict):
     """Update application's resource
 
     :param payload: application model resource JSON
@@ -220,7 +229,7 @@ def update_app_resource(app: Application, payload: Dict):
     :raise: `ValueError` if model resource has not been initialized for given application
     """
     # force replace metadata.name with app_code to avoid user modify
-    payload['metadata']['name'] = app.code
+    payload['metadata']['name'] = generate_bkapp_name(module)
 
     try:
         obj = BkAppResource(**payload)
@@ -231,7 +240,7 @@ def update_app_resource(app: Application, payload: Dict):
     try:
         # Only the default module is supported currently, so `module_id` is ignored in query
         # conditions.
-        model_resource = AppModelResource.objects.get(application_id=app.id)
+        model_resource = AppModelResource.objects.get(application_id=app.id, module_id=module.id)
     except AppModelResource.DoesNotExist:
         raise ValueError(f'{app.id} not initialized')
 
@@ -239,21 +248,36 @@ def update_app_resource(app: Application, payload: Dict):
 
 
 def to_error_string(exc: PDValidationError) -> str:
-    """Transform a pydantic Exception object to an one-line string"""
+    """Transform a pydantic Exception object to a one-line string"""
     # TODO: Improve error message format
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-def generate_bkapp_name(env: ModuleEnvironment) -> str:
+@overload
+def generate_bkapp_name(obj: Module) -> str:
+    ...
+
+
+@overload
+def generate_bkapp_name(obj: ModuleEnvironment) -> str:
+    ...
+
+
+def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
     """Generate name of the BkApp resource by env.
 
-    :param env: ModuleEnv object
+    :param obj: Union[Module, ModuleEnvironment] object
     :return: BkApp resource name
     """
-    # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
-    module_name = env.module.name
-    if module_name == ModuleName.DEFAULT.value:
-        name = f'{env.application.code}'
+    if isinstance(obj, Module):
+        module_name = obj.name
+        code = obj.application.code
     else:
-        name = f'{env.application.code}-m-{module_name}'
+        module_name = obj.module.name
+        code = obj.application.code
+    # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
+    if module_name == ModuleName.DEFAULT.value:
+        name = f'{code}'
+    else:
+        name = f'{code}-m-{module_name}'
     return name.replace("_", "0us0")

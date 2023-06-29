@@ -72,7 +72,7 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
         "id": "foo",
         "name": "bar",
         "language": "Python",
-        "applicableLanguage": None,
+        "applicable_language": None,
         "repository": "http://git.example.com/template.git",
     }
     assert data["repository"] == f"http://git.example.com/foo/{data['id']}.git"

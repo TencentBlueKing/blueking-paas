@@ -187,5 +187,5 @@ class CloudNativeTypeSpecs(AppTypeSpecs):
 
     type_ = ApplicationType.CLOUD_NATIVE
     engine_enabled = True
-    can_create_extra_modules = False
+    can_create_extra_modules = True
     require_templated_source = False

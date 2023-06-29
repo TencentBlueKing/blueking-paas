@@ -80,7 +80,7 @@ class TestMresConditionDetector:
 class TestBkAppClusterOperator:
     """测试在集群中操作 bkapp 资源"""
 
-    def test_deploy_and_get_status(self, bk_app, bk_stag_env, bk_stag_wl_app, mock_knamespace):
+    def test_deploy_and_get_status_v1alpha1(self, bk_app, bk_stag_env, bk_stag_wl_app, mock_knamespace):
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha1",
             "kind": "BkApp",
@@ -106,6 +106,31 @@ class TestBkAppClusterOperator:
         manifest["spec"]["processes"].append(
             {"name": "worker", "replicas": 1, "image": "busybox:latest", "cpu": "100m", "memory": "100Mi"}
         )
+        with replace_cluster_service():
+            ret = deploy(bk_stag_env, manifest)
+        assert ret["spec"]["processes"][1]["name"] == "worker"
+
+    def test_deploy_and_get_status_v1alpha2(self, bk_app, bk_stag_env, bk_stag_wl_app, mock_knamespace):
+        manifest: Dict = {
+            "apiVersion": "paas.bk.tencent.com/v1alpha2",
+            "kind": "BkApp",
+            "metadata": {"name": bk_app.code},
+            "spec": {
+                "build": {"image": "nginx:latest"},
+                "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
+                "hooks": {"preRelease": {"command": ["/bin/echo"], "args": ["Hello"]}},
+                "configuration": {"env": []},
+            },
+        }
+
+        with replace_cluster_service():
+            ret = deploy(bk_stag_env, manifest)
+
+        assert ret["spec"]["processes"][0]["name"] == "web"
+        assert get_mres_from_cluster(bk_stag_env) is not None
+
+        # 修改进程配置信息，再次部署到集群
+        manifest["spec"]["processes"].append({"name": "worker", "replicas": 1})
         with replace_cluster_service():
             ret = deploy(bk_stag_env, manifest)
         assert ret["spec"]["processes"][1]["name"] == "worker"

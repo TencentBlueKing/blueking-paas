@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import cattr
 from attrs import define
@@ -27,6 +27,9 @@ from jsonfield import JSONField
 from paasng.engine.constants import RuntimeType
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.models import UuidAuditedModel, make_json_field, make_legacy_json_field
+
+if TYPE_CHECKING:
+    from paasng.platform.modules.models.module import Module
 
 
 @define
@@ -131,3 +134,37 @@ class BuildConfig(UuidAuditedModel):
     # Image Tag Policy
     tag_options: ImageTagOptions = ImageTagOptionsField(default=ImageTagOptions)
     objects = BuildConfigManager()
+
+    def update_with_build_method(
+        self,
+        build_method: RuntimeType,
+        module: 'Module',
+        bp_stack_name: Union[str, None],
+        buildpacks: List[Dict[str, Any]],
+        dockerfile_path: Union[str, None],
+        docker_build_args: Union[Dict[str, str], None],
+        tag_options: Union[ImageTagOptions, None],
+    ) -> None:
+        """根据指定的 build_method 更新部分字段"""
+        from paasng.platform.modules.helpers import ModuleRuntimeBinder
+
+        self.build_method = build_method
+        if tag_options:
+            self.tag_options = tag_options
+
+        update_fields = ["build_method", "updated"]
+        # 基于 buildpack 的构建方式
+        if build_method == RuntimeType.BUILDPACK:
+            buildpack_ids = [item["id"] for item in buildpacks]
+
+            binder = ModuleRuntimeBinder(module)
+            binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+            update_fields.extend(["tag_options"])
+
+        # 基于 Dockerfile 的构建方式
+        elif build_method == RuntimeType.DOCKERFILE:
+            self.dockerfile_path = dockerfile_path
+            self.docker_build_args = docker_build_args
+            update_fields.extend(["dockerfile_path", "docker_build_args", "tag_options"])
+
+        self.save(update_fields=update_fields)

@@ -28,7 +28,6 @@ from paasng.engine.constants import JobStatus
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import (
-    ModuleLiveAddrs,
     get_exposed_url,
     get_module_exposed_links,
     update_exposed_url_type_to_subdomain,
@@ -39,6 +38,7 @@ from paasng.publish.market.utils import MarketAvailableAddressHelper
 from paasng.publish.sync_market.handlers import register_application_with_default
 from paasng.publish.sync_market.managers import AppManger
 from tests.engine.setup_utils import create_fake_deployment
+from tests.publish.utils import ModuleLiveAddrs
 from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
@@ -110,16 +110,6 @@ def test_get_module_exposed_links(bk_module, bk_stag_env):
         urls = get_module_exposed_links(bk_module)
         assert urls == {
             'stag': {'deployed': True, 'url': 'http://foo-stag.example.com'},
-            'prod': {'deployed': True, 'url': 'http://foo-prod.example.com'},
-        }
-
-        # Simulate case when stag environment was offline
-        bk_stag_env.is_offlined = True
-        bk_stag_env.save(update_fields=['is_offlined'])
-
-        urls = get_module_exposed_links(bk_module)
-        assert urls == {
-            'stag': {'deployed': False, 'url': None},
             'prod': {'deployed': True, 'url': 'http://foo-prod.example.com'},
         }
 

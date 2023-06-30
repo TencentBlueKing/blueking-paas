@@ -81,6 +81,7 @@
                 <section v-else>
                   <bk-button
                     text theme="primary"
+                    @click="handleUrlOpen(e.address.url)"
                   > {{ e.address.url }}</bk-button>
                 </section>
                 <div class="line"></div>
@@ -658,6 +659,10 @@ export default {
         }
       }
       return domains[0].name;
+    },
+
+    handleUrlOpen(url) {
+      window.open(url, '_blank');
     },
   },
 };

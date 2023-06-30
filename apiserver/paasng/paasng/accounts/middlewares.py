@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 from bkpaas_auth.models import DatabaseUser
 from blue_krill.auth.utils import validate_jwt_token
@@ -29,10 +29,12 @@ from django.utils.encoding import smart_text
 from django.utils.translation import gettext as _
 from rest_framework.authentication import get_authorization_header
 
+from paasng.accounts.constants import SiteRole
+from paasng.accounts.utils import ForceAllowAuthedApp
 from paasng.utils.basic import get_client_ip
 from paasng.utils.local import local
 
-from .models import AuthenticatedAppAsUser, User, UserPrivateToken
+from .models import AuthenticatedAppAsUser, User, UserPrivateToken, UserProfile
 from .permissions.constants import SiteAction
 from .permissions.global_site import user_has_site_action_perm
 
@@ -138,8 +140,8 @@ class PrivateTokenAuthenticationMiddleware:
 
 class AuthenticatedAppAsUserMiddleware:
     """When an API request forwarded by API Gateway was received, if it includes an authenticated
-    app(aka "OAuth client") and has no authenticated user info too. This middleware will try to find
-    a `DatabaseUser` object by querying `AuthenticatedAppAsUser` relations.
+    app(aka "OAuth client") and has no authenticated user info too. This middleware will try to set
+    a authenticated user object according to the app info.
 
     If other services want to call apiserver's SYSTEM APIs, this middleware can be very useful.
     Under these circumstances, a valid "app_code/app_secret" pair usually was already provided in every
@@ -151,12 +153,14 @@ class AuthenticatedAppAsUserMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
         # Ignore already authenticated requests
         if getattr(request, 'user', None) and request.user.is_authenticated:
-            return self.get_response(request)
+            return None
 
-        user = self.get_user(request)
-        if user:
+        if user := self.get_user(request, view_func):
             logger.info(
                 'Authenticated user by AuthenticatedApp, username: %s, ip: %s, path: %s',
                 user.username,
@@ -164,12 +168,17 @@ class AuthenticatedAppAsUserMiddleware:
                 request.path_info,
             )
             set_database_user(request, user)
+        return None
 
-        response = self.get_response(request)
-        return response
+    def get_user(self, request, view_func: Callable) -> Optional[User]:
+        """Get an user object from current request, if no relation can be found by current
+        application, a user and relation might be created if the view object has been marked
+        as "force-allow" by `ForceAllowAuthedApp.mark_view_set`.
 
-    def get_user(self, request) -> Optional[User]:
-        """Get user object from current request"""
+        :param request: Current request object.
+        :param view_func: Current view function.
+        :return: An User object.
+        """
         if not getattr(request, 'app', None):
             return None
         if not request.app.verified:
@@ -179,8 +188,24 @@ class AuthenticatedAppAsUserMiddleware:
             obj = AuthenticatedAppAsUser.objects.get(bk_app_code=request.app.bk_app_code, is_active=True)
             return obj.user
         except AuthenticatedAppAsUser.DoesNotExist:
-            logger.info(f'No user was found by authenticated app: {request.app.bk_app_code}')
+            if hasattr(view_func, 'cls') and ForceAllowAuthedApp.check_marked(view_func.cls):
+                # Automatically create a new user and relation
+                return self.create_user(request.app.bk_app_code)
             return None
+
+    @staticmethod
+    def create_user(bk_app_code: str) -> DatabaseUser:
+        """Create a user and relationship from an application code with default permissions."""
+        # Create the user
+        user_db, _ = User.objects.get_or_create(username=f'authed-app-{bk_app_code}')
+        user = DatabaseUser.from_db_obj(user_db)
+        UserProfile.objects.update_or_create(user=user.pk, defaults={'role': SiteRole.SYSTEM_API_BASIC_READER.value})
+
+        # Create the relationship
+        AuthenticatedAppAsUser.objects.update_or_create(
+            bk_app_code=bk_app_code, defaults={'user': user_db, 'is_active': True}
+        )
+        return user_db
 
 
 class RequestIDProvider:
@@ -207,7 +232,7 @@ def set_database_user(request: HttpRequest, user: User, set_non_cookies: bool = 
     :param set_non_cookies: whether set a special attribute to mark current request was NOT authenticated
         via user cookies.
     """
-    # Translate user into module "bkpaas_auth"'s User object to mantain consistency.
+    # Translate the user into module "bkpaas_auth"'s User object to maintain consistency.
     request.user = DatabaseUser.from_db_obj(user=user)
     if set_non_cookies:
         # Reference from bkpaas_auth

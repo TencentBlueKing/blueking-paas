@@ -462,7 +462,7 @@ export default {
       const nav = {
         user_access_control: {
           categoryName: 'appPermissions',
-          name: this.$t('用户限制1'),
+          name: this.$t('用户限制'),
           matchRouters: ['appPermissionUser', 'appPermissionPathExempt'],
           destRoute: {
             name: 'appPermissionUser',
@@ -470,7 +470,7 @@ export default {
         },
         ip_access_control: {
           categoryName: 'appPermissions',
-          name: this.$t('IP限制1'),
+          name: this.$t('IP限制'),
           matchRouters: ['appPermissionIP'],
           destRoute: {
             name: 'appPermissionIP',

@@ -19,7 +19,10 @@
           class="perm-action mt15"
         >
           <div :class="['perm-icon', { 'active': isUseUserPermission }]">
-            <span :class="['paasng-icon', { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]" />
+            <span
+              :class="[
+                'paasng-icon',
+                { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]" />
           </div>
           <div class="perm-title">
             {{ isUseUserPermission ? $t('已开启用户限制') : $t('未开启用户限制') }}
@@ -33,7 +36,8 @@
             </div>
           </div>
           <p class="perm-tip">
-            {{ isUseUserPermission ? $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') : $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') }}
+            {{ isUseUserPermission ? $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效')
+              : $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') }}
             <a
               class="a-link"
               :href="GLOBAL.DOC.ACCESS_CONTROL"
@@ -240,7 +244,8 @@
       @cancel="closePermission"
     >
       <div class="tl">
-        {{ isUseUserPermission ? $t('停用后【预发布】和【生产】环境的用户限制将立即失效，所有用户都可访问') : $t('开启后【预发布】和【生产】环境的用户限制都将立即生效，仅白名单内用户可访问') }}
+        {{ isUseUserPermission ? $t('停用后【预发布】和【生产】环境的用户限制将立即失效，所有用户都可访问')
+          : $t('开启后【预发布】和【生产】环境的用户限制都将立即生效，仅白名单内用户可访问') }}
       </div>
     </bk-dialog>
 
@@ -497,7 +502,7 @@
   </div>
 </template>
 
-<script> import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
 import appTopBar from '@/components/paas-app-bar';
 
@@ -656,7 +661,7 @@ export default {
     this.init();
   },
   methods: {
-    timeFilterHandler(key, index) {
+    timeFilterHandler(key) {
       const currentTimestamp = new Date().getTime();
       if (key === 'custom') {
         this.$delete(this.timeFilters, 'custom');
@@ -957,7 +962,7 @@ export default {
       });
     },
 
-    renderHeader(h, { column }) {
+    renderHeader(h) {
       return h(
         'div',
         {
@@ -1014,12 +1019,12 @@ export default {
     },
 
     /**
-             * 分页limit chang 回调
-             *
-             * @param {Number} currentLimit 新limit
-             * @param {Number} prevLimit 旧limit
-             */
-    limitChange(currentLimit, prevLimit) {
+     * 分页limit chang 回调
+     *
+     * @param {Number} currentLimit 新limit
+     * @param {Number} prevLimit 旧limit
+     */
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchUserPermissionList(true);
@@ -1068,7 +1073,7 @@ export default {
       this.curUserParams.content = rtxList.join(';');
     },
 
-    togglePermission(val, oldVal) {
+    togglePermission() {
       this.userPermissionDialog.visiable = !this.userPermissionDialog.visiable;
     },
 
@@ -1101,7 +1106,7 @@ export default {
       this.currentSelectList = [...selection];
     },
 
-    handlerChange(selection, row) {
+    handlerChange(selection) {
       this.currentSelectList = [...selection];
     },
 
@@ -1233,14 +1238,14 @@ export default {
       this.addUserDialog.isLoading = true;
       setTimeout(() => {
         this.$refs.addUserForm.validate().then(
-          (res) => {
+          () => {
             if (this.checkUserParams(params)) {
               this.submitUserParams();
             } else {
               this.addUserDialog.isLoading = false;
             }
           },
-          (res) => {
+          () => {
             this.addUserDialog.isLoading = false;
           },
         );

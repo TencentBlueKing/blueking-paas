@@ -110,8 +110,12 @@ class RuntimeImageInfo:
         """返回当前 engine_app 的运行时的类型, buildpack 或者 custom_image"""
         return self.module_spec.runtime_type
 
-    def generate_image(self, version_info: 'VersionInfo') -> str:
-        """generate the runtime image of the application at a given version"""
+    def generate_image(self, version_info: 'VersionInfo', special_tag: Optional[str] = None) -> str:
+        """generate the runtime image of the application at a given version
+
+        :param version_info: 版本信息
+        :param special_tag: 指定镜像 Tag
+        """
         if self.type == RuntimeType.CUSTOM_IMAGE:
             if self.application.type == ApplicationType.CLOUD_NATIVE:
                 # 仅托管镜像类型的云原生应用的镜像由 Yaml 定义, 因此返回空字符串
@@ -124,7 +128,7 @@ class RuntimeImageInfo:
             return f"{repo_url}:{reference}"
         elif self.type == RuntimeType.DOCKERFILE:
             app_image_repository = generate_image_repository(self.module)
-            app_image_tag = generate_image_tag(module=self.module, version=version_info)
+            app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
             from paasng.extensions.smart_app.utils import SMartImageManager
@@ -134,11 +138,9 @@ class RuntimeImageInfo:
         mgr = ModuleRuntimeManager(self.module)
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
-            return (
-                generate_image_repository(self.module)
-                + ":"
-                + generate_image_tag(module=self.module, version=version_info)
-            )
+            app_image_repository = generate_image_repository(self.module)
+            app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
+            return f"{app_image_repository}:{app_image_tag}"
         return getattr(slug_runner, "full_image", '')
 
     @property

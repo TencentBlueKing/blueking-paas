@@ -119,21 +119,25 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = CreateDeploymentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
-        manifest = params.get("manifest", None)
-        version_info = None
-        # 只有仅托管镜像的云原生应用会传递 manifest
-        if manifest is None:
-            version_info = self._get_version_info(request.user, module, params)
-
-        coordinator = DeploymentCoordinator(env)
-        if not coordinator.acquire_lock():
-            raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
         # 选择历史构建的镜像时需要传递 build_id
+        build = None
         if build_id := params["advanced_options"].get("build_id"):
             wl_app = self.get_wl_app_via_path()
             if not Build.objects.filter(pk=build_id, app=wl_app).exists():
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在"))
+            build = Build.objects.get(pk=build_id, app=wl_app)
+
+        manifest = params.get("manifest", None)
+        version_info = None
+        # 只有仅托管镜像的云原生应用会传递 manifest
+        # 目前仅托管镜像的云原生应用的 image 字段由前端组装
+        if manifest is None:
+            version_info = self._get_version_info(request.user, module, params, build=build)
+
+        coordinator = DeploymentCoordinator(env)
+        if not coordinator.acquire_lock():
+            raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
         deployment = None
         try:
@@ -161,8 +165,16 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
     @staticmethod
-    def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:
+    def _get_version_info(user: User, module: Module, params: Dict, build: Optional[Build] = None) -> VersionInfo:
         """Get VersionInfo from user inputted params"""
+        if build is not None:
+            # 目前构造的 VersionInfo 并未使用
+            image_tag = build.image_tag or ""
+            return VersionInfo(
+                version_type="image",
+                version_name=image_tag,
+                revision=image_tag,
+            )
         version_name = params["version_name"]
         version_type = params["version_type"]
         revision = params.get("revision", None)

@@ -140,8 +140,8 @@ class PrivateTokenAuthenticationMiddleware:
 
 class AuthenticatedAppAsUserMiddleware:
     """When an API request forwarded by API Gateway was received, if it includes an authenticated
-    app(aka "OAuth client") and has no authenticated user info too. This middleware will try to set
-    a authenticated user object according to the app info.
+    app(aka "OAuth client") and has no authenticated user info too, this middleware will try to attach
+    an authenticated user object to current request according to the app info.
 
     If other services want to call apiserver's SYSTEM APIs, this middleware can be very useful.
     Under these circumstances, a valid "app_code/app_secret" pair usually was already provided in every

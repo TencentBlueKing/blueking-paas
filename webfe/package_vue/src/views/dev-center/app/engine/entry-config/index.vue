@@ -27,10 +27,10 @@
             class="mt20 mb35"
             @data-ready="handlerDataReady"
           />
-          <port-config
+          <!-- <port-config
             class="mt20 mb35"
             @data-ready="handlerDataReady"
-          />
+          /> -->
           <!-- <mobile-config @data-ready="handlerDataReady"></mobile-config> -->
         </section>
       </paas-content-loader>
@@ -52,7 +52,7 @@
 import accessUser from './comps/access-user';
 import accessIp from './comps/access-ip';
 import accessAudit from './comps/access-audit';
-import portConfig from './comps/port-config';
+// import portConfig from './comps/port-config';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
@@ -61,7 +61,7 @@ export default {
     // domainConfig,
     accessUser,
     accessIp,
-    portConfig,
+    // portConfig,
     accessAudit,
   },
   mixins: [appBaseMixin],
@@ -123,6 +123,7 @@ export default {
     .controller{
       margin: 16px 24px 0 24px;
       background: #fff;
+      min-height: calc(100% - 50px);
       .entry-bar{
         /deep/ .bar-container{
           border: none !important;

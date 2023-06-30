@@ -11,7 +11,7 @@
         border
         cell-class-name="table-cell-cls"
       >
-        <bk-table-column :label="$t('模块')">
+        <bk-table-column :label="$t('模块')" :width="200">
           <template slot-scope="{ row, $index }">
             <section
               class="module-container"
@@ -31,13 +31,14 @@
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')" :min-width="150">
+        <bk-table-column :label="$t('环境')" :width="180">
           <template slot-scope="{ row, $index }">
             <div
               v-for="(item, i) in row.envsData" :key="item"
               :style="{height: `${46 * row.envs[item].length}px`}"
               class="cell-container flex-column justify-content-center"
-              @mouseenter="handleEnvMouseEnter($index, i, row, item)">
+              @mouseenter="handleEnvMouseEnter($index, i, row, item)"
+              @mouseleave="tableIndex = ''; envIndex = ''">
               <div
                 class="env-container"
                 :class="i === row.envsData.length - 1 ? 'last-env-container' : ''"
@@ -56,29 +57,31 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('访问地址')" :width="600">
+        <bk-table-column :label="$t('访问地址')" :min-width="500">
           <template slot-scope="{ row }">
             <div v-for="(item) in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
                 <div v-if="e.isEdit">
-                  <bk-input v-model="e.address.url" :placeholder="domainInputPlaceholderText">
-                    <template slot="prepend">
-                      <div class="group-text">http://</div>
-                    </template>
-                    <template slot="append">
+                  <bk-form :label-width="0" form-type="inline" :model="e.address" ref="urlInfoForm">
+                    <bk-form-item :required="true" :property="'url'" :rules="rules.url">
+                      <bk-input v-model="e.address.url" :placeholder="domainInputPlaceholderText" class="url-input-cls">
+                        <template slot="prepend">
+                          <div class="group-text">http://</div>
+                        </template>
+                      </bk-input>
+                    </bk-form-item>
+                    <bk-form-item :required="true" :property="'pathPrefix'" :rules="rules.pathPrefix">
                       <bk-input
-                        class="append-input-cls"
+                        class="path-input-cls"
                         v-model="e.address.pathPrefix"
                         :placeholder="$t('请输入路径')"></bk-input>
-                    </template>
-                  </bk-input>
+                    </bk-form-item>
+                  </bk-form>
                 </div>
-                <section v-else class="flex-row align-items-center">
-                  <a
-                    :href="e.address.url"
-                    target="blank"
-                  > {{ e.address.url}}</a>
-                  <div class="module-market ml10" v-if="row.is_market">{{$t('应用市场地址')}}</div>
+                <section v-else>
+                  <bk-button
+                    text theme="primary"
+                  > {{ e.address.url }}</bk-button>
                 </section>
                 <div class="line"></div>
               </div>
@@ -95,7 +98,7 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('类型')">
+        <bk-table-column :label="$t('类型')" :width="110">
           <template slot-scope="{ row }">
             <div v-for="(item) in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
@@ -111,10 +114,10 @@
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
                 <div v-if="e.address.type === 'custom'">
                   <section v-if="e.isEdit">
-                    <bk-button text theme="primary" @click="handleSubmit(i, row, item)">
+                    <bk-button text theme="primary" @click="handleSubmit($index, i, row, item)">
                       {{ $t('保存') }}
                     </bk-button>
-                    <bk-button text theme="primary" class="pl20" @click="handleCancel">
+                    <bk-button text theme="primary" class="pl20" @click="handleCancel($index, i, row, item)">
                       {{ $t('取消') }}
                     </bk-button>
                   </section>
@@ -124,7 +127,6 @@
                     </bk-button>
                     <bk-button
                       text theme="primary" class="pl20"
-                      :disabled="row.is_market"
                       @click="showRemoveModal(i, row, item)">
                       {{ $t('删除') }}
                     </bk-button>
@@ -168,18 +170,41 @@
 
       <bk-dialog
         width="500"
-        :value="domainDialog.visiable"
+        v-model="domainDialog.visiable"
         :title="domainDialog.title"
         :theme="'primary'"
         :header-position="'left'"
         :mask-close="false"
-        @confirm="updateRootDomain"
-        @cancel="domainDialog.visiable = false"
       >
         <div class="tl">
           <p> {{ $t('设定后：') }} </p>
-          <p>{{ $t('应用短地址：（http://apps.example.com/appid/）') }}
-            {{ $t('指向') }} {{ domainDialog.moduleName }}{{ $t('模块的') }}{{ entryEnv[domainDialog.env] }}</p>
+          <p>
+            {{ $t('应用短地址') }}(stag-dot-{{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.stag) }})
+            {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
+            {{ $t('模块的预发布环境') }}
+          </p>
+          <p class="mt10">
+            {{ $t('应用短地址') }}(prod-dot-{{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.prod) }})
+            {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
+            {{ $t('模块的生产环境') }}
+          </p>
+        </div>
+
+        <div slot="footer">
+          <bk-button
+            theme="primary"
+            @click="submitSetModule"
+            :loading="setModuleLoading"
+          >
+            {{ $t('确定') }}
+          </bk-button>
+          <bk-button
+            theme="default"
+            class="ml10"
+            @click="domainDialog.visiable = false"
+          >
+            {{ $t('取消') }}
+          </bk-button>
         </div>
       </bk-dialog>
     </div>
@@ -208,7 +233,6 @@ export default {
       region: '',
       rootDomains: [],
       rootDomainDefault: '',
-      isEdited: false,
       domainDialog: {
         visiable: false,
         title: '',
@@ -224,6 +248,35 @@ export default {
       ipConfigInfo: { frontend_ingress_ip: '' },
       domainConfig: {},
       placeholderText: '',
+      rules: {
+        url: [
+          {
+            required: true,
+            message: this.$t('域名不能为空'),
+            trigger: 'blur',
+          },
+          {
+            validator: (value) => {
+              const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
+              // eslint-disable-next-line no-useless-escape
+              const domainReg = new RegExp(`^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(${validDomainsPart})$`);
+              return domainReg.test(value);
+            },
+            message: () => `${this.$t('请输入有效域名，并以这些后缀结尾：')}${this.placeholderText}`,
+            trigger: 'blur',
+          },
+        ],
+        pathPrefix: [
+          {
+            required: true,
+            message: this.$t('路径不能为空'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      curClickAppModule: { clusters: {} },
+      setModuleLoading: false,
+      hostInfo: {},
     };
   },
   computed: {
@@ -253,7 +306,7 @@ export default {
     },
 
     domainInputPlaceholderText() {
-      if (this.domainConfig.valid_domain_suffixes.length) {
+      if (this.domainConfig?.valid_domain_suffixes?.length) {
         this.placeholderText = this.domainConfig.valid_domain_suffixes.join(',');
         return this.$t('请输入有效域名，并以这些后缀结尾：') + this.placeholderText;
       }
@@ -273,10 +326,10 @@ export default {
      * 数据初始化入口
      */
     init() {
-      this.getAppRegion();
-      this.getEntryList();
-      this.getDefaultDomainInfo();
-      this.loadDomainConfig();
+      this.getAppRegion();    // 环境信息
+      this.getEntryList();    // 列表信息
+      // this.getDefaultDomainInfo();
+      this.loadDomainConfig();    // 域名信息
     },
 
     // 获取域名信息
@@ -297,19 +350,21 @@ export default {
       }
     },
 
+    // 访问地址列表数据
     async getEntryList() {
       try {
         this.isTableLoading = true;
         const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
           appCode: this.appCode,
         });
-        this.entryList = res;
-        this.entryList = res.map((e) => {
-          e.envsData = Object.keys(e.envs);
+        this.entryList = (res || []).map((e) => {
+          if (!e.envs.prod?.length && !e.envs.stag?.length) {
+            e.envsData = [];
+          } else {
+            e.envsData = Object.keys(e.envs);
+          }
           return e;
         }, []);
-
-        console.log('this.entryList', this.entryList);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -361,38 +416,72 @@ export default {
       }
     },
 
-    async updateRootDomain() {
+    // async updateRootDomain() {
+    //   try {
+    //     await this.$store.dispatch('entryConfig/updateRootDomain', {
+    //       appCode: this.appCode,
+    //       moduleId: this.curModuleId,
+    //       data: {
+    //         preferred_root_domain: this.rootDomainDefault,
+    //       },
+    //     });
+    //     this.$paasMessage({
+    //       theme: 'success',
+    //       message: this.$t('修改成功'),
+    //     });
+    //   } catch (e) {
+    //     this.$paasMessage({
+    //       theme: 'error',
+    //       message: e.message || e.detail || this.$t('接口异常'),
+    //     });
+    //   } finally {
+    //     this.isEdited = false;
+    //     this.domainDialog.visiable = false;
+    //     this.getDefaultDomainInfo();
+    //   }
+    // },
+
+    // 设置主模块
+    async submitSetModule() {
+      this.domainDialog.visiable = false;
+      this.setModuleLoading = true;
       try {
-        await this.$store.dispatch('entryConfig/updateRootDomain', {
+        await this.$store.dispatch('module/setMainModule', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
-          data: {
-            preferred_root_domain: this.rootDomainDefault,
-          },
+          modelName: this.curClickAppModule.name,
         });
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('修改成功'),
+          message: this.$t('主模块设置成功'),
         });
-      } catch (e) {
+        this.$store.commit('updateCurAppModuleIsDefault', this.curClickAppModule.id);
+        this.getEntryList();    // 重新请求数据
+      } catch (res) {
         this.$paasMessage({
+          limit: 1,
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: res.message,
         });
       } finally {
-        this.isEdited = false;
-        this.domainDialog.visiable = false;
-        this.getDefaultDomainInfo();
+        this.setModuleLoading = false;
       }
     },
 
-    showEdit() {
-      this.isEdited = true;
-    },
-
     // 取消
-    handleCancel() {
-      this.getEntryList();    // 重新请求数据
+    handleCancel(index, envIndex, payload, envType) {
+      const isEditCancel = payload.envs[envType][envIndex].address.id;
+      // 如果是编辑的时候取消则改变状态 如果是新增时取消则删除当前这条数据
+      if (isEditCancel) {
+        this.entryList = this.entryList.map((e, i) => {
+          if (index === i) {
+            e.envs[envType][envIndex].isEdit = false;
+            e.envs[envType][envIndex].address.url = `http://${this.hostInfo.hostName}${this.hostInfo.pathName}`; // 拼接地址和路径
+          }
+          return e;
+        });
+      } else {
+        payload.envs[envType].splice(envIndex, 1);
+      }
     },
 
     // 处理鼠标移入事件
@@ -405,16 +494,16 @@ export default {
       this.tableIndex = index;
       this.envIndex = envIndex;
       this.ipConfigInfo = (this.curIngressIpConfigs || [])
-        .find(e => e.environment === env && e.module === payload.moduleName)
+        .find(e => e.environment === env && e.module === payload.name)
       || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
     },
 
     // 设置为主模块
     handleSetDefault(payload) {
+      this.curClickAppModule = this.curAppModuleList.find(e => e.name === payload.name) || {}; // 当前点击的模块的所有信息
       this.domainDialog.visiable = true;
-      this.domainDialog.moduleName = payload.moduleName;
-      this.domainDialog.env = payload?.envsData[0];   // 默认取第一个环境
-      this.domainDialog.title = this.$t(`是否设定${payload.moduleName}模块为主模块`);
+      this.domainDialog.moduleName = payload.name;
+      this.domainDialog.title = this.$t(`是否设定${payload.name}模块为主模块`);
     },
 
     // tips数据
@@ -449,8 +538,13 @@ export default {
       });
     },
 
-    // 保存
-    async handleSubmit(envIndex, payload, envType) {
+    // 保存一条数据
+    async handleSubmit(index, envIndex, payload, envType) {
+      // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
+      const readDataLength =  (payload?.envs[envType] || [])
+        .filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
+      const validateFromIndex = envIndex - readDataLength;    // 当前点击保存的输入框下标
+      await this.$refs.urlInfoForm[validateFromIndex].validate();   // 校验
       const curUrlParams = {
         environment_name: envType,
         domain_name: payload.envs[envType][envIndex].address.url,
@@ -472,7 +566,13 @@ export default {
           theme: 'success',
           message: `${curUrlParams.id ? this.$t('更新') : this.$t('添加')}${this.$t('成功')}`,
         });
-        this.getEntryList();    // 重新请求数据
+        this.entryList = this.entryList.map((e, i) => {
+          if (index === i) {
+            e.envs[envType][envIndex].isEdit = false;
+            e.envs[envType][envIndex].address.url = `http://${curUrlParams.domain_name}${curUrlParams.path_prefix}`; // 拼接地址和路径
+          }
+          return e;
+        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -516,11 +616,30 @@ export default {
       this.entryList = this.entryList.map((e, i) => {
         if (index === i) {
           e.envs[envType][envIndex].isEdit = true;
-          // e.envs[envType][envIndex].address.url =
+          const u = e.envs[envType][envIndex].address.url ? new URL(e.envs[envType][envIndex].address.url) : '';   // 格式化地址
+          e.envs[envType][envIndex].address.url = u.hostname;
+          e.envs[envType][envIndex].address.pathPrefix = u.pathname;
+          this.hostInfo.hostName = u.hostname;
+          this.hostInfo.pathName = u.pathname;
         }
         return e;
       });
       console.log('this.entryList', this.entryList);
+    },
+
+    // 获取展示用的应用根域名，优先使用非保留的，如果没有，则选择第一个
+    getAppRootDomain(clusterConf = {}) {
+      const domains = clusterConf?.ingress_config?.app_root_domains || [];
+      if (domains.length === 0) {
+        return '';
+      }
+
+      for (const domain of domains) {
+        if (!domain.reversed) {
+          return domain.name;
+        }
+      }
+      return domains[0].name;
     },
   },
 };
@@ -660,12 +779,14 @@ export default {
       }
     }
 
-    .append-input-cls{
+    .url-input-cls{
       /deep/ .bk-form-input{
-        border: none;
-        border-bottom: 1px solid #c4c6cc;
-        height: 31px;
-        width: 130px;
+        width: 350px;
+      }
+    }
+    .path-input-cls{
+      /deep/ .bk-form-input{
+        width: 120px;
       }
     }
 </style>

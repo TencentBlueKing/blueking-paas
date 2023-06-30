@@ -63,6 +63,8 @@ class AdvancedOptions:
     build_only: bool = False
     # 直接发布历史 build
     build_id: Optional[str] = None
+    # 触发消息
+    invoke_message: Optional[str] = None
 
 
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)

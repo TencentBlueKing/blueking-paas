@@ -29,6 +29,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.monitoring.metrics.constants import MetricsResourceType
+from paas_wl.platform.applications.models import BuildProcess
 from paasng.engine.constants import ConfigVarEnvName, DeployConditions, ImagePullPolicy, JobStatus, MetricsType
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
@@ -161,22 +162,22 @@ class BuildProcessSLZ(serializers.Serializer):
     status = serializers.ChoiceField(choices=JobStatus.get_choices())
     invoke_message = serializers.CharField(help_text="触发信息")
     start_at = serializers.DateTimeField(help_text="开始时间", source="created")
-    complete_at = serializers.DateTimeField(help_text="结束时间", allow_null=True)
+    completed_at = serializers.DateTimeField(help_text="结束时间", allow_null=True)
 
     deployment_id = serializers.SerializerMethodField(help_text="用于查询详情日志")
     build_id = serializers.CharField(source="build.uuid", allow_null=True)
 
-    def get_deployment_id(self, bp):
+    def get_deployment_id(self, bp: BuildProcess):
         # Note: 这里涉及多次数据库查询
         deployment = Deployment.objects.filter(build_process_id=bp.uuid).first()
         if deployment:
             return deployment.pk
         return None
 
-    def get_image_tag(self, bp):
-        if bp.build and bp.build.image:
-            return bp.build.image.split(":", 1)[1]
-        return None
+    def get_image_tag(self, bp: BuildProcess):
+        if not bp.build:
+            return None
+        return bp.build.image_tag
 
 
 class GetReleasedInfoSLZ(serializers.Serializer):

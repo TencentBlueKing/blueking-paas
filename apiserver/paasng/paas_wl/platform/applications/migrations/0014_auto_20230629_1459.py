@@ -40,8 +40,8 @@ def initial_bp_generation(apps, schema_editor):
     for app_id in app_ids:
         to_update = []
         bps = BuildProcess.objects.using(alias).filter(generation=0, app_id=app_id).order_by("-created")
-        for idx, bp in enumerate(bps):
-            bp.generation = idx + 1
+        for idx, bp in enumerate(bps, start=1):
+            bp.generation = idx
             to_update.append(bp)
         BuildProcess.objects.using(alias).bulk_update(to_update, ["generation"])
 

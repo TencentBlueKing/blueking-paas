@@ -415,7 +415,6 @@ class DockerBuilder(BaseBuilder):
         }
 
         # Create the Build object and start a background build task
-        # Create the Build object and start a background build task
         build_process = env.wl_app.buildprocess_set.new(
             owner=self.deployment.operator,
             builder_image=builder_image,

@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='buildprocess',
-            name='complete_at',
+            name='completed_at',
             field=models.DateTimeField(help_text='failed/successful/interrupted 都是完成', null=True, verbose_name='完成时间'),
         ),
         migrations.AddField(

@@ -23,10 +23,10 @@ from django.utils import timezone
 from jsonfield import JSONCharField, JSONField
 
 from paas_wl.platform.applications.constants import ArtifactType
-from paas_wl.platform.applications.models import UuidAuditedModel
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
-from paas_wl.utils.models import validate_procfile
+from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.dev_resources.sourcectl.models import VersionInfo
 
 
@@ -55,12 +55,16 @@ class Build(UuidAuditedModel):
         ordering = ['-created']
 
     @property
-    def type(self):
-        return 'buildpack'
-
-    @property
-    def source_based(self):
-        return True
+    def image_tag(self) -> Optional[str]:
+        """从 image 字段分割出 tag 属性"""
+        if not self.image:
+            return None
+        split = self.image.split(":", 1)
+        if len(split) == 2:
+            return split[1]
+        # warning: no test cover
+        # nobody know what kind of data will it be
+        return split[0]
 
     def get_env_variables(self):
         """获取获取构建产物所需的环境变量"""
@@ -95,11 +99,11 @@ class BuildProcessManager(models.Manager):
 
         :param str owner: 发布者
         :param str builder_image: builder 镜像
-        :param str source_tar_path:
+        :param str source_tar_path: 源码上传到对象存储服务的路径
         :param VersionInfo version_info: 构建代码版本
         :param str invoke_message: 触发信息
+        :param List buildpacks_info: 序列化后的 buildpacks 信息
         """
-        from paas_wl.platform.applications.models import WlApp
 
         # Get the largest(latest) version and increase it by 1.
         if not hasattr(self, "instance"):
@@ -145,7 +149,7 @@ class BuildProcess(UuidAuditedModel):
     revision = models.CharField(max_length=128, null=True)
     logs_was_ready_at = models.DateTimeField(null=True, help_text='Pod 状态就绪允许读取日志的时间')
     int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断的时间')
-    complete_at = models.DateTimeField(verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True)
+    completed_at = models.DateTimeField(verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True)
 
     status = models.CharField(choices=make_enum_choices(BuildStatus), max_length=12, default=BuildStatus.PENDING.value)
     output_stream = models.OneToOneField('OutputStream', null=True, on_delete=models.CASCADE)
@@ -164,7 +168,7 @@ class BuildProcess(UuidAuditedModel):
     def set_int_requested_at(self):
         """Set `int_requested_at` field"""
         self.int_requested_at = timezone.now()
-        self.save(update_fields=['int_requested_at', 'complete_at', 'updated'])
+        self.save(update_fields=['int_requested_at', 'completed_at', 'updated'])
 
     def check_interruption_allowed(self) -> bool:
         """Check if current build process allows interruptions"""
@@ -183,8 +187,8 @@ class BuildProcess(UuidAuditedModel):
         """Update status and save"""
         self.status = status
         if status in [BuildStatus.FAILED, BuildStatus.SUCCESSFUL, BuildStatus.INTERRUPTED]:
-            self.complete_at = timezone.now()
-        self.save(update_fields=['status', 'complete_at', 'updated'])
+            self.completed_at = timezone.now()
+        self.save(update_fields=['status', 'completed_at', 'updated'])
 
     def buildpacks_as_build_env(self) -> str:
         """buildpacks to slugbuilder REQUIRED_BUILDPACKS env"""

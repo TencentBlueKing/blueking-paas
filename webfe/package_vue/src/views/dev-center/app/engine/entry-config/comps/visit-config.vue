@@ -38,7 +38,7 @@
               :style="{height: `${46 * row.envs[item].length}px`}"
               class="cell-container flex-column justify-content-center"
               @mouseenter="handleEnvMouseEnter($index, i, row, item)"
-              @mouseleave="tableIndex = ''; envIndex = ''">
+              @mouseleave="handleEnvMouseLeave">
               <div
                 class="env-container"
                 :class="i === row.envsData.length - 1 ? 'last-env-container' : ''"
@@ -277,6 +277,7 @@ export default {
       curClickAppModule: { clusters: {} },
       setModuleLoading: false,
       hostInfo: {},
+      tipShow: false,
     };
   },
   computed: {
@@ -287,7 +288,6 @@ export default {
       return {
         theme: 'light',
         allowHtml: true,
-        content: this.$t('提示信息'),
         html: `<div>
           <div>域名解析目标IP</div>
           <div
@@ -302,6 +302,14 @@ export default {
           <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
           </div>`,
         placements: ['bottom'],
+        onHidden: () => {
+          this.tipShow = false;
+          this.tableIndex = '';
+          this.envIndex = '';
+        },
+        onShown: () => {
+          this.tipShow = true;
+        },
       };
     },
 
@@ -317,6 +325,12 @@ export default {
     '$route'() {
       this.init();
     },
+    // tipShow(val) {
+    //   if (!val) {
+    //     this.tableIndex = '';
+    //     this.envIndex = '';
+    //   }
+    // },
   },
   created() {
     this.init();
@@ -496,6 +510,10 @@ export default {
       this.ipConfigInfo = (this.curIngressIpConfigs || [])
         .find(e => e.environment === env && e.module === payload.name)
       || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
+    },
+
+    // 环境鼠标移出事件
+    handleEnvMouseLeave() {
     },
 
     // 设置为主模块

@@ -172,11 +172,11 @@ export default {
         });
 
         // 添加权限管理
-        // if (res.access_control && res.access_control.module) {
-        //   res.access_control.module.forEach((moduleType) => {
-        //     navTree = this.addPermissionNavItem(navTree, moduleType);
-        //   });
-        // }
+        if (res.access_control && res.access_control.module) {
+          res.access_control.module.forEach((moduleType) => {
+            navTree = this.addPermissionNavItem(navTree, moduleType);
+          });
+        }
 
         // 添加访问入口
         this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'));

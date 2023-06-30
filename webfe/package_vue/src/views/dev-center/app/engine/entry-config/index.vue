@@ -2,7 +2,7 @@
   <div class="right-main">
     <bk-tab
       :active.sync="active"
-      ext-cls="domain-tab-cls ps-container"
+      ext-cls="domain-tab-cls"
       type="unborder-card"
       @tab-change="handleTabChange"
     >

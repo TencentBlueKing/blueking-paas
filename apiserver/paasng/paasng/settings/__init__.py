@@ -605,9 +605,9 @@ APIGW_HEALTHZ_URL = settings.get('APIGW_HEALTHZ_URL', 'http://localhost:8080')
 AUTO_CREATE_REGULAR_USER = settings.get('AUTO_CREATE_REGULAR_USER', True)
 
 # 每个应用下最多创建的模块数量
-MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', 10)
+MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', default=10, cast='@int')
 # 应用单个模块允许创建的最大 process 数量
-MAX_PROCESSES_PER_MODULE = settings.get('MAX_PROCESSES_PER_MODULE', 8)
+MAX_PROCESSES_PER_MODULE = settings.get('MAX_PROCESSES_PER_MODULE', default=16, cast='@int')
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var='PAAS_LEGACY_DATABASE_URL', env_var_prefix='PAAS_LEGACY_', for_tests=RUNNING_TESTS

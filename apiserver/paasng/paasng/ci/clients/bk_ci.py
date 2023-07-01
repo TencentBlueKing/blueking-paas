@@ -43,19 +43,20 @@ class BkCIClient:
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
-        self.client: BKCIGroup = client.api
 
-    def _prepare_headers(self) -> dict:
-        headers = {
-            # 应用态 API 需要添加 X-DEVOPS-UID
-            "X-DEVOPS-UID": self.user_oauth.operator,
-        }
-        return headers
+        client.update_headers(
+            {
+                # 应用态 API 需要添加 X-DEVOPS-UID
+                "X-DEVOPS-UID": self.user_oauth.operator,
+            }
+        )
+
+        self.client: BKCIGroup = client.api
 
     def trigger_codecc_pipeline(self, trigger_params: dict):
         """[应用态]手动触发流水线，不存在时创建"""
         try:
-            resp = self.client.app_codecc_custom_pipeline_new(headers=self._prepare_headers(), data=trigger_params)
+            resp = self.client.app_codecc_custom_pipeline_new(data=trigger_params)
         except APIGatewayResponseError as e:
             raise BKCIGatewayServiceError(f'trigger codecc pipeline error, detail: {e}')
 
@@ -70,7 +71,7 @@ class BkCIClient:
     def get_codecc_defect_tool_counts(self, task_id: int):
         """[应用态]根据任务id查询所有工具问题数"""
         try:
-            resp = self.client.app_codecc_tool_defect_count(headers=self._prepare_headers(), data={"taskId": task_id})
+            resp = self.client.app_codecc_tool_defect_count(data={"taskId": task_id})
         except APIGatewayResponseError as e:
             raise BKCIGatewayServiceError(f'get codecc defect tool counts error, detail: {e}')
 

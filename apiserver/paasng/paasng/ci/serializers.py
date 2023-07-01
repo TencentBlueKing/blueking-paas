@@ -66,3 +66,13 @@ class CIAtomJobSerializer(serializers.Serializer):
             'revision': obj.deployment.source_revision,
             'comment': obj.deployment.source_comment,
         }
+
+
+class CodeCCDetailSerializer(serializers.Serializer):
+    lastAnalysisTime = serializers.IntegerField(help_text="最近检查时间")
+    rdIndicatorsScore = serializers.FloatField(help_text="综合得分/质量星级")
+    codeSecurityScore = serializers.FloatField(help_text="代码安全得分")
+    codeStyleScore = serializers.FloatField(help_text="代码规范得分")
+    codeMeasureScore = serializers.FloatField(help_text="代码度量得分")
+    lastAnalysisResultList = serializers.ListField(allow_null=True, help_text="代码检查详情")
+    detailUrl = serializers.CharField(help_text="详情链接")

@@ -18,7 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from rest_framework import viewsets
+from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -90,6 +92,7 @@ class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(data=dict(enabled=enabled))
 
+    @swagger_auto_schema(responses={200: serializers.CodeCCDetailSerializer, 204: None}, tags=["代码检查"])
     def get_detail(self, request, code, module_name):
         application = self.get_application()
         module = application.get_module(module_name)
@@ -97,10 +100,22 @@ class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 查询模块下最近一次代码检查记录
         last_ci_atom = CIResourceAtom.objects.filter(env__module=module).order_by('-created').first()
         if not last_ci_atom:
-            return Response(data=None)
+            # 未执行过代码检查，去部署
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        task_id = last_ci_atom.task_id
+        # 详情访问 URL
+        detail_url = settings.CI_CONFIGS[CIBackend.CODECC]["base_detail_url"].format(
+            project_id=last_ci_atom.resource.credentials["project_id"], task_id=task_id
+        )
 
         # 调用 API 查询代码检查的详细结果
         user_oauth = BkUserOAuth.from_request(request)
         client = BkCIClient(user_oauth)
-        data = client.get_codecc_defect_tool_counts(last_ci_atom.task_id)
-        return Response(data=data)
+        data = client.get_codecc_defect_tool_counts(task_id)
+        data['detailUrl'] = detail_url
+
+        serializer = serializers.CodeCCDetailSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        return Response(data=serializer.data)

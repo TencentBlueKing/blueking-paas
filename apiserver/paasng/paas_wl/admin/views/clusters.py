@@ -17,25 +17,38 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from dataclasses import asdict
 from typing import Optional
 
+from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet, mixins
+from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet, mixins
 
-from paas_wl.admin.helpers import detect_operator_status, fetch_paas_cobj_info
+from paas_wl.admin.helpers import (
+    HelmReleaseParser,
+    WorkloadsDetector,
+    convert_secrets_to_releases,
+    detect_operator_status,
+    fetch_paas_cobj_info,
+    filter_latest_releases,
+)
 from paas_wl.admin.serializers.clusters import (
     APIServerSLZ,
     ClusterRegisterRequestSLZ,
     GenRegionClusterStateSLZ,
+    GetClusterComponentStatusSLZ,
     ReadonlyClusterSLZ,
 )
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.networking.egress.models import generate_state
 from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.resources.base.exceptions import ResourceMissing
+from paas_wl.resources.base.kres import KSecret
 from paas_wl.resources.utils.app import get_scheduler_client
+from paas_wl.utils.error_codes import error_codes
 from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 
 logger = logging.getLogger(__name__)
@@ -109,3 +122,53 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         # PaaS 平台自定义资源信息
         resp_data.update(fetch_paas_cobj_info(client, resp_data['crds']))
         return Response(resp_data)
+
+
+class ClusterComponentViewSet(ViewSet):
+    def list_components(self, request, cluster_name, *args, **kwargs):
+        resp_data = {'cluster_name': cluster_name, 'components': {}}
+        try:
+            client = get_client_by_cluster_name(cluster_name)
+        except ValueError:
+            # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
+            return Response(resp_data)
+
+        secrets = KSecret(client).ops_label.list({"owner": "helm"}).items
+        releases = filter_latest_releases(convert_secrets_to_releases(secrets))
+
+        for rel in releases:
+            chart_name = rel.chart.name
+            if chart_name not in settings.BKPAAS_K8S_CLUSTER_COMPONENTS:
+                continue
+
+            if chart_name not in resp_data['components']:
+                resp_data['components'][chart_name] = asdict(rel)
+            else:
+                raise error_codes.CLUSTER_COMPONENT_CONFLICT.f(
+                    'chart {} deployed repeatedly in cluster {}'.format(cluster_name, chart_name)
+                )
+
+        return Response(resp_data)
+
+    def get_component_status(self, request, cluster_name, component_name, *args, **kwargs):
+        """查看组件具体状态（主要检查 Workloads 状态）"""
+        slz = GetClusterComponentStatusSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        try:
+            client = get_client_by_cluster_name(cluster_name)
+        except ValueError:
+            # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
+            return Response()
+
+        try:
+            secret = KSecret(client).get(namespace=params['namespace'], name=params['secret_name'])
+        except ResourceMissing:
+            raise error_codes.CLUSTER_COMPONENT_NOT_EXIST.f(
+                'chart {} not deployed in cluster {}'.format(cluster_name, component_name)
+            )
+
+        release = HelmReleaseParser(secret, parse_manifest=True).parse()
+        statuses = WorkloadsDetector(client, release).get_statuses()
+        return Response(data=statuses)

@@ -114,7 +114,7 @@ def generate_env_vars_for_app(app: 'Application', config_vars_prefix: str) -> Di
     return add_prefix_to_key(app_info_envs, config_vars_prefix)
 
 
-def generate_runtime_env_vars_for_app(engine_app: 'Application', config_vars_prefix: str) -> Dict[str, str]:
+def generate_runtime_env_vars_for_app(engine_app: 'EngineApp', config_vars_prefix: str) -> Dict[str, str]:
     """Generate built-in  runtime envs for app"""
     runtime_envs = {
         AppRunTimeBuiltinEnv.APP_MODULE_NAME.value: engine_app.env.module.name,

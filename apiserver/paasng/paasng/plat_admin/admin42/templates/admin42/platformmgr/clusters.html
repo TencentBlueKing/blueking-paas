@@ -588,7 +588,6 @@
                     this.readOnlyDialog.row = row
                     this.readOnlyDialog.form = { ...row, ingress_config: {...row.ingress_config} }
                     this.readOnlyDialog.visible = true
-                    console.log(this.readOnlyDialog.form)
                 },
                 handleGenNodeState: function (region, clusterName) {
                     let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)

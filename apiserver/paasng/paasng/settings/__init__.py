@@ -572,6 +572,17 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get('IS_ALLOW_CREATE_CLOU
 # 云原生应用的默认集群名称
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
+# 开发者中心使用的 k8s 集群组件（helm chart 名称）
+BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
+    "BKPAAS_K8S_CLUSTER_COMPONENTS",
+    [
+        'bk-ingress-nginx',
+        'bkapp-log-collection',
+        'bkpaas-app-operator',
+        'bcs-general-pod-autoscaler',
+    ],
+)
+
 # ---------------
 # HealthZ 配置
 # ---------------

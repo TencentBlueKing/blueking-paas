@@ -602,6 +602,14 @@ class KDeployment(BaseKresource):
     kind = 'Deployment'
 
 
+class KStatefulSet(BaseKresource):
+    kind = 'StatefulSet'
+
+
+class KDaemonSet(BaseKresource):
+    kind = 'DaemonSet'
+
+
 class KService(BaseKresource):
     kind = 'Service'
 

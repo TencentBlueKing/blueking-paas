@@ -141,3 +141,10 @@ class GenRegionClusterStateSLZ(serializers.Serializer):
 
         attrs['ignore_labels'] = ignore_labels
         return attrs
+
+
+class GetClusterComponentStatusSLZ(serializers.Serializer):
+    """获取集群组件状态用序列化器"""
+
+    namespace = serializers.CharField(help_text='Chart 部署的命名空间', max_length=64)
+    secret_name = serializers.CharField(help_text='存储 Release 信息的 Secret 名称', max_length=64)

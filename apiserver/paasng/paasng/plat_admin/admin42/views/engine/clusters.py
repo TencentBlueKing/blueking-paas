@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
@@ -31,7 +32,6 @@ class ClusterManageView(GenericTemplateView):
 
     name = "应用集群管理"
     template_name = "admin42/platformmgr/clusters.html"
-    # 仅管理员可导入导出
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
@@ -52,4 +52,19 @@ class ClusterManageView(GenericTemplateView):
                 ],
             }
         )
+        return kwargs
+
+
+class ClusterComponentManageView(GenericTemplateView):
+    """集群组件管理页面"""
+
+    name = "集群组件管理"
+    template_name = "admin42/platformmgr/cluster_components.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_context_data(self, **kwargs):
+        if 'view' not in kwargs:
+            kwargs['view'] = self
+
+        kwargs['cluster_components'] = settings.BKPAAS_K8S_CLUSTER_COMPONENTS
         return kwargs

@@ -83,6 +83,14 @@ urlpatterns = [
         clusters.ClusterViewSet.as_view({'get': 'get_operator_info'}),
     ),
     path(
+        'admin42/platform/clusters/<str:cluster_name>/components/',
+        clusters.ClusterComponentViewSet.as_view({'get': 'list_components'}),
+    ),
+    path(
+        'admin42/platform/clusters/<str:cluster_name>/components/<str:component_name>/',
+        clusters.ClusterComponentViewSet.as_view({'get': 'get_component_status'}),
+    ),
+    path(
         'admin42/platform/clusters/<str:pk>/',
         clusters.ClusterViewSet.as_view({'get': 'retrieve', 'put': 'update_or_create', 'delete': 'destroy'}),
     ),

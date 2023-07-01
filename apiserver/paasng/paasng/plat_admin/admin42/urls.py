@@ -199,6 +199,12 @@ urlpatterns = [
     ),
     # 平台管理-集群管理页
     url(r'^platform/clusters/manage/$', clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),
+    # 平台管理-集群组件管理页
+    url(
+        r'^platform/clusters/components/manage/$',
+        clusters.ClusterComponentManageView.as_view(),
+        name="admin.cluster_components.manage",
+    ),
     # 平台管理-集群 Operator 管理页
     url(r'^platform/operators/manage/$', operator.OperatorManageView.as_view(), name="admin.operators.manage"),
     # 平台管理-共享证书管理

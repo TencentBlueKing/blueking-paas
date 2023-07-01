@@ -21,7 +21,6 @@
         </bk-table-column>
     </bk-table>
 
-    <!-- 查看集群详情用弹窗 -->
     <bk-dialog
         v-model="dialog.visible"
         header-position="left"
@@ -183,7 +182,7 @@
                         this.dialog.tableLoading = false
                     })
                 },
-                getComponentStatus (row, comp_name) {
+                getComponentStatus: function (row, comp_name) {
                     if (!row.components || !row.components[comp_name]) {
                         return "--"
                     }

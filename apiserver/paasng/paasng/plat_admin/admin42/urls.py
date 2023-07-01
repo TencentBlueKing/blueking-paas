@@ -199,7 +199,7 @@ urlpatterns = [
     ),
     # 平台管理-集群管理页
     url(r'^platform/clusters/manage/$', clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),
-    # 平台管理-集群组件管理页
+    # 平台管理-集群组件页
     url(
         r'^platform/clusters/components/manage/$',
         clusters.ClusterComponentManageView.as_view(),

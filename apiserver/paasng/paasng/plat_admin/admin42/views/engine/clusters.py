@@ -56,9 +56,9 @@ class ClusterManageView(GenericTemplateView):
 
 
 class ClusterComponentManageView(GenericTemplateView):
-    """集群组件管理页面"""
+    """集群组件页面"""
 
-    name = "集群组件管理"
+    name = "集群组件"
     template_name = "admin42/platformmgr/cluster_components.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 

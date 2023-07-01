@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from collections import defaultdict
 from dataclasses import asdict
 from typing import Optional
 
@@ -126,7 +127,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
 class ClusterComponentViewSet(ViewSet):
     def list_components(self, request, cluster_name, *args, **kwargs):
-        resp_data = {'cluster_name': cluster_name, 'components': {}}
+        resp_data = {'cluster_name': cluster_name, 'components': defaultdict(list)}
         try:
             client = get_client_by_cluster_name(cluster_name)
         except ValueError:
@@ -141,12 +142,7 @@ class ClusterComponentViewSet(ViewSet):
             if chart_name not in settings.BKPAAS_K8S_CLUSTER_COMPONENTS:
                 continue
 
-            if chart_name not in resp_data['components']:
-                resp_data['components'][chart_name] = asdict(rel)
-            else:
-                raise error_codes.CLUSTER_COMPONENT_CONFLICT.f(
-                    'chart {} deployed repeatedly in cluster {}'.format(cluster_name, chart_name)
-                )
+            resp_data['components'][chart_name].append(asdict(rel))
 
         return Response(resp_data)
 

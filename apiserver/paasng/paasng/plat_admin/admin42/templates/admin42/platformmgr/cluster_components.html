@@ -12,11 +12,14 @@
         </bk-table-column>
         <bk-table-column v-for="comp_name in clusterComponents" :label="comp_name" align="center">
             <template slot-scope="props">
-                <div :set="status = getComponentStatus(props.row, comp_name)">
-                    <bk-tag theme="success" v-if="status === 'deployed'" @click="handleView(props.row, comp_name)"> ✔ </bk-tag>
-                    <bk-tag theme="danger" v-else-if="status === 'failed'" @click="handleView(props.row, comp_name)"> ✘ </bk-tag>
-                    <bk-tag v-else @click="handleView(props.row, comp_name)"> $[ status ] </bk-tag>
-                </div>
+                <span v-for="release in getCompReleases(props.row, comp_name)">
+                    <span :set="status = release.deploy_result.status">
+                        <bk-tag theme="success" v-if="status === 'deployed'" @click="handleView(release, props.row.cluster_name)"> ✔ </bk-tag>
+                        <bk-tag theme="danger" v-else-if="status === 'failed'" @click="handleView(release, props.row.cluster_name)"> ✘ </bk-tag>
+                        <bk-tag v-else @click="handleView(release, props.row.cluster_name)"> $[ status ] </bk-tag>
+                    </span>
+                </span>
+                <div v-if="!getCompReleases(props.row, comp_name).length">--</div>
             </template>
         </bk-table-column>
     </bk-table>
@@ -142,8 +145,7 @@
                                 }
                             },
                             workloads: []
-                        },
-                        row: undefined
+                        }
                     },
                 }
             },
@@ -182,29 +184,25 @@
                         this.dialog.tableLoading = false
                     })
                 },
-                getComponentStatus: function (row, comp_name) {
+                getCompReleases: function (row, comp_name) {
                     if (!row.components || !row.components[comp_name]) {
-                        return "--"
+                        return []
                     }
-                    return row.components[comp_name].deploy_result.status
+                    return row.components[comp_name]
                 },
-                handleView: function(row, comp_name) {
-                    if (!row.components || !row.components[comp_name]) {
-                        return
-                    }
-                    this.dialog.row = row
+                handleView: function(release, cluster_name) {
                     this.dialog.form = {
-                        cluster_name: row.cluster_name,
-                        comp: {...row.components[comp_name]},
+                        cluster_name: cluster_name,
+                        comp: {...release},
                         workloads: undefined
                     }
                     this.dialog.visible = true
                     this.dialog.tableLoading = true
                     this.retrieve(
-                        row.cluster_name,
-                        comp_name,
-                        row.components[comp_name].namespace,
-                        row.components[comp_name].secret_name,
+                        cluster_name,
+                        release.chart.name,
+                        release.namespace,
+                        release.secret_name,
                     )
                 },
             },

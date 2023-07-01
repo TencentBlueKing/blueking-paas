@@ -1,43 +1,27 @@
 # bkpaas-cli
 
-bkpaas-cli 是蓝鲸开发者中心提供的命令行工具，支持应用基础信息查看，部署，部署结果查询等功能。
+bkpaas-cli 是蓝鲸开发者中心提供的命令行工具，支持查看应用基础信息、部署和查询部署结果等功能。
 
-## 使用指南
+## 快速开始
 
-### 配置信息
+### 初始化配置文件
 
-bkpaas-cli 通过配置文件来存储 API 访问路径，用户认证等信息，你可以在开发者中心上获取到示例配置。
-
-默认情况下 bkpaas-cli 会读取 `${HOME}/.blueking-paas/config.yaml` 并加载为配置，你可以执行以下命令来初始化：
+bkpaas-cli 需要配置文件来存储必要的平台 API 路径和用户认证等信息。默认情况下， 命令使用的文件路径为：`${HOME}/.blueking-paas/config.yaml`，你可以执行以下命令来初始化一份示例配置：
 
 ```shell
 >>> mkdir ${HOME}/.blueking-paas && cat > ${HOME}/.blueking-paas/config.yaml << EOF
+# PaaS 平台及用户认证相关的 API 地址
 paasApigwUrl: http://bkapi.example.com/api/bkpaas3
 paasUrl: https://bkpaas3.example.com
 checkTokenUrl: http://apigw.example.com/auth/check_token/
+# 用户名
 username: admin
 accessToken: ""
 EOF
 ```
 
-如果你有特殊指定的需求，可以执行以下命令，bkpaas-cli 将优先使用你指定的文件作为配置：
-
-```shell
-export BKPAAS_CLI_CONFIG='/root/.blueking-paas/config.yaml'
-```
-
-你可以通过执行命令 `bkpaas-cli config view` 来查看当前加载 & 使用的配置内容：
-
-```shell
->>> bkpaas-cli config view
-configFilePath: /root/.blueking-paas/config.yaml
-
-paasApigwUrl: http://bkapi.example.com/api/bkpaas3
-paasUrl: https://bkpaas3.example.com
-checkTokenUrl: http://apigw.example.com/auth/check_token/
-username: admin
-accessToken: [REDACTED]
-```
+1. 该配置中的地址仅做示例用，请将其替换为蓝鲸平台的真实地址，如果你不清楚如何获得这些地址，请联系你的蓝鲸平台管理员
+2. 请将 `username: admin` 替换为你的真实用户名，`accessToken` 可以留空，会通过“用户登录”阶段完成对该字段的填充
 
 ### 用户登录
 
@@ -74,6 +58,8 @@ User login... Success!
 >>> AccessToken: ********
 User login... Success!
 ```
+
+## 使用指南
 
 ### 蓝鲸应用管理
 
@@ -337,6 +323,33 @@ Application Recent 5 Deploy History (AppCode: demo-app, Module: default, Env: st
 | dev-1              | 3f89690a | admin    | 40s       | successful | 2023-04-17 21:03:52 |
 | dev-1              | 3f89690a | admin    | 32s       | successful | 2023-04-17 20:32:53 |
 +--------------------+----------+----------+-----------+------------+---------------------+
+```
+
+### 配置文件管理
+
+#### 修改默认配置文件路径
+
+执行以下命令，bkpaas-cli 将使用你指定的文件作为配置：
+
+```shell
+export BKPAAS_CLI_CONFIG='/etc/my_bkpaas_cli_config.yaml'
+```
+
+> 默认配置文件路径为：``${HOME}/.blueking-paas/config.yaml`
+
+#### 查看配置内容
+
+你可以通过执行命令 `bkpaas-cli config view` 来查看当前加载 & 使用的配置内容：
+
+```shell
+>>> bkpaas-cli config view
+configFilePath: /root/.blueking-paas/config.yaml
+
+paasApigwUrl: http://bkapi.example.com/api/bkpaas3
+paasUrl: https://bkpaas3.example.com
+checkTokenUrl: http://apigw.example.com/auth/check_token/
+username: admin
+accessToken: [REDACTED]
 ```
 
 ### 工具版本

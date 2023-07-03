@@ -168,7 +168,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def _get_version_info(user: User, module: Module, params: Dict, build: Optional[Build] = None) -> VersionInfo:
         """Get VersionInfo from user inputted params"""
         if build is not None:
-            # 目前构造的 VersionInfo 并未使用
+            # 为了让 initialize_deployment 中依赖 VersionInfo 的逻辑能正常运行, 这里根据 build 构造 VersionInfo
+            # 但实际上这个 VersionInfo 里的信息并未被使用
+            # TODO: 解决这种奇怪的问题, 不管是让 initialize_deployment 不依赖 VersionInfo 或者让这里构造的 VersionInfo 变得有意义
             image_tag = build.image_tag or ""
             return VersionInfo(
                 version_type="image",

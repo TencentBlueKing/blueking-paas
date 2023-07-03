@@ -115,6 +115,9 @@ class RuntimeImageInfo:
 
         :param version_info: 版本信息
         :param special_tag: 指定镜像 Tag
+        :return: 返回运行构建产物(Build)的镜像
+                 如果构建产物是 Image, 则返回的是镜像
+                 如果构建产物是 Slug, 则返回 SlugRunner 的镜像
         """
         if self.type == RuntimeType.CUSTOM_IMAGE:
             if self.application.type == ApplicationType.CLOUD_NATIVE:

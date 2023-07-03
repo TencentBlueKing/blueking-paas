@@ -608,7 +608,8 @@ export default {
         });
         this.entryList = this.entryList.map((e, i) => {
           if (index === i) {
-            e.envs[envType][envIndex].isEdit = false;
+            e.envs[envType][envIndex].isEdit = false;       // 改变本条数据的状态
+            e.envs[envType][envIndex].is_running = true;    // 能保存和编辑这代表已经部署过了
             e.envs[envType][envIndex].address.url = `http://${curUrlParams.domain_name}${curUrlParams.path_prefix}`; // 拼接地址和路径
           }
           return e;

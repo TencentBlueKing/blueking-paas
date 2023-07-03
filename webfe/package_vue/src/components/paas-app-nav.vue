@@ -156,8 +156,8 @@ export default {
     },
 
     /**
-             * 根据接口来展示对应的导航项
-             */
+     * 根据接口来展示对应的导航项
+     */
     async initNavByRegion(navTree) {
       try {
         const { region } = this.curAppInfo.application;
@@ -169,14 +169,6 @@ export default {
         res.services.categories.forEach((category) => {
           navTree = this.addServiceNavItem(navTree, category.id, category.name);
         });
-
-        // 添加权限管理;
-        // if (res.access_control && res.access_control.module) {
-        //   console.log('res.access_control.module', res.access_control.module);
-        //   res.access_control.module.forEach((moduleType) => {
-        //     navTree = this.addPermissionNavItem(navTree, moduleType);
-        //   });
-        // }
 
         // 添加访问入口
         this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);

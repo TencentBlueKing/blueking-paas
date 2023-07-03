@@ -161,7 +161,6 @@ export default {
     async initNavByRegion(navTree) {
       try {
         const { region } = this.curAppInfo.application;
-        console.log('region', region);
         const res = await this.$store.dispatch('fetchRegionInfo', region);
         // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
         this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
@@ -171,15 +170,16 @@ export default {
           navTree = this.addServiceNavItem(navTree, category.id, category.name);
         });
 
-        // 添加权限管理
-        if (res.access_control && res.access_control.module) {
-          res.access_control.module.forEach((moduleType) => {
-            navTree = this.addPermissionNavItem(navTree, moduleType);
-          });
-        }
+        // 添加权限管理;
+        // if (res.access_control && res.access_control.module) {
+        //   console.log('res.access_control.module', res.access_control.module);
+        //   res.access_control.module.forEach((moduleType) => {
+        //     navTree = this.addPermissionNavItem(navTree, moduleType);
+        //   });
+        // }
 
         // 添加访问入口
-        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'));
+        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);
 
         // 添加代码检查
         this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
@@ -291,8 +291,8 @@ export default {
     },
 
     /**
-             * 根据角色，初始访问权限
-             */
+     * 根据角色，初始访问权限
+     */
     initRouterPermission() {
       const appRole = this.curAppInfo.role;
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
@@ -401,7 +401,8 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
+          || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
@@ -455,9 +456,9 @@ export default {
     },
 
     /**
-             * 权限管理添加子项
-             * @param {String} type 类型
-             */
+     * 权限管理添加子项
+     * @param {String} type 类型
+     */
     addPermissionNavItem(navTree, type) {
       const nav = {
         user_access_control: {

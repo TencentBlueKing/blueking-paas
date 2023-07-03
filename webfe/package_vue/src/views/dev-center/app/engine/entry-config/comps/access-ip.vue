@@ -14,8 +14,8 @@
           <div :class="['perm-icon', { 'active': isUseIPPermission }]">
             <span :class="['paasng-icon', { 'paasng-lock': !isUseIPPermission, 'paasng-unlock': isUseIPPermission }]" />
           </div>
-          <div class="perm-title">
-            {{ isUseIPPermission ? $t('已开启 IP 限制') : $t('未开启 IP 限制') }}
+          <div class="perm-title flex-row align-items-center">
+            {{ $t('IP 限制 ') }}
             <div
               class="ps-switcher-wrapper"
               @click="togglePermission"
@@ -24,195 +24,201 @@
                 v-model="isUseIPPermission"
               />
             </div>
+            <div class="perm-status" :class="isUseIPPermission ? 'perm-status-open' : 'perm-status-close'">
+              {{ isUseIPPermission ? $t('已开启') : $t('未开启') }}
+            </div>
           </div>
           <p class="perm-tip">
-            {{ isUseIPPermission ? $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') : $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') }}
+            {{ isUseIPPermission ? $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效')
+              : $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') }}
           </p>
         </div>
         <template v-if="!isPermissionChecking && isUseIPPermission">
-          <div class="ps-table-bar">
-            <bk-button
-              theme="primary"
-              @click="showIPModal"
-            >
-              <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
-            </bk-button>
-            <bk-dropdown-menu
-              ref="largeDropdown"
-              trigger="click"
-              ext-cls="by-ip-export-wrapper"
-            >
+          <section class="table-container mt15">
+            <div class="ps-table-bar">
               <bk-button
-                slot="dropdown-trigger"
-                :loading="exportLoading"
+                theme="primary"
+                @click="showIPModal"
               >
-                {{ $t('批量导入/导出') }}
+                <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
               </bk-button>
-              <ul
-                slot="dropdown-content"
-                class="bk-dropdown-list"
+              <bk-dropdown-menu
+                ref="largeDropdown"
+                trigger="click"
+                ext-cls="by-ip-export-wrapper"
               >
-                <li>
-                  <a
-                    href="javascript:;"
-                    style="margin: 0;"
-                    @click="handleExport('file')"
-                  > {{ $t('从文件导入') }} </a>
-                </li>
-                <li>
-                  <a
-                    href="javascript:;"
-                    style="margin: 0;"
-                    @click="handleExport('batch')"
-                  > {{ $t('批量导出') }} </a>
-                </li>
-              </ul>
-            </bk-dropdown-menu>
-            <bk-button
-              style="margin-left: 6px;"
-              :disabled="isBatchDisabled"
-              @click="batchDelete"
-            >
-              {{ $t('批量删除') }}
-            </bk-button>
-            <bk-input
-              v-model="keyword"
-              style="width: 240px; float: right;"
-              :placeholder="$t('输入关键字，按Enter搜索')"
-              :right-icon="'paasng-icon paasng-search'"
-              clearable
-              @enter="searchIpList"
-            />
-          </div>
-
-          <bk-table
-            v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
-            :data="IPPermissionList"
-            size="small"
-            :class="{ 'set-border': tableLoading }"
-            :ext-cls="'ps-permission-table'"
-            :pagination="pagination"
-            @page-change="pageChange"
-            @page-limit-change="limitChange"
-            @select="handlerChange"
-            @select-all="handlerAllChange"
-          >
-            <div slot="empty">
-              <table-empty
-                :keyword="tableEmptyConf.keyword"
-                :abnormal="tableEmptyConf.isAbnormal"
-                @reacquire="fetchIpList(true)"
-                @clear-filter="clearFilterKey"
+                <bk-button
+                  slot="dropdown-trigger"
+                  :loading="exportLoading"
+                >
+                  {{ $t('批量导入/导出') }}
+                </bk-button>
+                <ul
+                  slot="dropdown-content"
+                  class="bk-dropdown-list"
+                >
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      @click="handleExport('file')"
+                    > {{ $t('从文件导入') }} </a>
+                  </li>
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      @click="handleExport('batch')"
+                    > {{ $t('批量导出') }} </a>
+                  </li>
+                </ul>
+              </bk-dropdown-menu>
+              <bk-button
+                style="margin-left: 6px;"
+                :disabled="isBatchDisabled"
+                @click="batchDelete"
+              >
+                {{ $t('批量删除') }}
+              </bk-button>
+              <bk-input
+                v-model="keyword"
+                style="width: 240px; float: right;"
+                :placeholder="$t('输入关键字，按Enter搜索')"
+                :right-icon="'paasng-icon paasng-search'"
+                clearable
+                @enter="searchIpList"
               />
             </div>
-            <bk-table-column
-              type="selection"
-              width="60"
-              align="left"
-            />
-            <bk-table-column
-              label="IP/IP段"
-              prop="content"
-              :render-header="$renderHeader"
-            />
-            <bk-table-column
-              :label="$t('路径')"
-              prop="path"
-            />
-            <bk-table-column
-              :label="$t('添加者')"
-              :render-header="$renderHeader"
+
+            <bk-table
+              v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+              :data="IPPermissionList"
+              size="small"
+              :class="{ 'set-border': tableLoading }"
+              :ext-cls="'ps-permission-table'"
+              :pagination="pagination"
+              @page-change="pageChange"
+              @page-limit-change="limitChange"
+              @select="handlerChange"
+              @select-all="handlerAllChange"
             >
-              <template slot-scope="props">
-                <span>{{ props.row.owner.username || '--' }}</span>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('添加时间')"
-              :render-header="renderHeader"
-            >
-              <template slot-scope="{ row }">
-                <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('更新时间')"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="{ row }">
-                <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('添加原因')"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="props">
-                <bk-popover>
-                  <div class="reason">
-                    {{ props.row.desc ? props.row.desc : '--' }}
-                  </div>
-                  <div
-                    slot="content"
-                    style="white-space: normal;"
-                  >
-                    {{ props.row.desc ? props.row.desc : '--' }}
-                  </div>
-                </bk-popover>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('到期时间')"
-              width="100"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="{ row }">
-                <template v-if="row.is_expired">
-                  <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
+              <div slot="empty">
+                <table-empty
+                  :keyword="tableEmptyConf.keyword"
+                  :abnormal="tableEmptyConf.isAbnormal"
+                  @reacquire="fetchIpList(true)"
+                  @clear-filter="clearFilterKey"
+                />
+              </div>
+              <bk-table-column
+                type="selection"
+                width="60"
+                align="left"
+              />
+              <bk-table-column
+                label="IP/IP段"
+                prop="content"
+                :render-header="$renderHeader"
+              />
+              <bk-table-column
+                :label="$t('路径')"
+                prop="path"
+              />
+              <bk-table-column
+                :label="$t('添加者')"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="props">
+                  <span>{{ props.row.owner.username || '--' }}</span>
                 </template>
-                <template v-else>
-                  <template v-if="row.expires_at">
-                    <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('添加时间')"
+                :render-header="renderHeader"
+              >
+                <template slot-scope="{ row }">
+                  <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('更新时间')"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="{ row }">
+                  <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('添加原因')"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="props">
+                  <bk-popover>
+                    <div class="reason">
+                      {{ props.row.desc ? props.row.desc : '--' }}
+                    </div>
+                    <div
+                      slot="content"
+                      style="white-space: normal;"
+                    >
+                      {{ props.row.desc ? props.row.desc : '--' }}
+                    </div>
+                  </bk-popover>
+                </template>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('到期时间')"
+                width="100"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="{ row }">
+                  <template v-if="row.is_expired">
+                    <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
                   </template>
                   <template v-else>
-                    {{ $t('永不') }}
+                    <template v-if="row.expires_at">
+                      <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+                    </template>
+                    <template v-else>
+                      {{ $t('永不') }}
+                    </template>
                   </template>
                 </template>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('操作')"
-              width="150"
-            >
-              <template slot-scope="props">
-                <section>
-                  <bk-button
-                    theme="primary"
-                    text
-                    @click="handleRenewal(props.row)"
-                  >
-                    {{ $t('续期') }}
-                  </bk-button>
-                  <bk-button
-                    theme="primary"
-                    text
-                    style="margin-left: 6px;"
-                    @click="handleEdit(props.row)"
-                  >
-                    {{ $t('编辑') }}
-                  </bk-button>
-                  <bk-button
-                    theme="primary"
-                    text
-                    style="margin-left: 6px;"
-                    @click="showRemoveModal(props.row)"
-                  >
-                    {{ $t('删除') }}
-                  </bk-button>
-                </section>
-              </template>
-            </bk-table-column>
-          </bk-table>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('操作')"
+                width="150"
+              >
+                <template slot-scope="props">
+                  <section>
+                    <bk-button
+                      theme="primary"
+                      text
+                      @click="handleRenewal(props.row)"
+                    >
+                      {{ $t('续期') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-left: 6px;"
+                      @click="handleEdit(props.row)"
+                    >
+                      {{ $t('编辑') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-left: 6px;"
+                      @click="showRemoveModal(props.row)"
+                    >
+                      {{ $t('删除') }}
+                    </bk-button>
+                  </section>
+                </template>
+              </bk-table-column>
+            </bk-table>
+          </section>
         </template>
       </section>
     </paas-content-loader>
@@ -1486,8 +1492,10 @@ export default {
       }
 
       .perm-action {
-          padding: 0 0 20px 0;
+          position: relative;
           overflow: hidden;
+          background: #fff;
+          padding: 20px 24px;
 
           .perm-icon {
               float: left;
@@ -1507,17 +1515,54 @@ export default {
           }
 
           .perm-title {
+              font-size: 14px;
+              color: #313238;
               margin-bottom: 5px;
               line-height: 1;
-              font-size: 18px;
-              color: rgba(51, 51, 51, 1);
+              font-weight: 700;
+              .perm-status{
+                border-radius: 2px;
+                width: 52px;
+                height: 22px;
+                text-align: center;
+                line-height: 22px;
+                margin-left: 15px;
+                font-size: 12px;
+              }
+              .perm-status-open{
+                color: #14A568;
+                background: #E4FAF0;
+              }
+              .perm-status-close{
+                color: #fff;
+                background-color: #dcdee5;
+              }
           }
 
           .perm-tip {
               line-height: 1;
               font-size: 12px;
-              color: rgba(82, 82, 93, 1);
+              color: #979BA5;
           }
+      }
+
+      .table-container{
+        background: #fff;
+        padding: 0px 24px 20px;
+        .ps-table-bar {
+            position: relative;
+            padding: 16px 0;
+            border-top: 1px solid #e6e9ea;
+            .path-exempt {
+                position: absolute;
+                top: 20px;
+                left: 336px;
+                &.en-path {
+                    left: 382px;
+                }
+            }
+
+        }
       }
 
       .container {

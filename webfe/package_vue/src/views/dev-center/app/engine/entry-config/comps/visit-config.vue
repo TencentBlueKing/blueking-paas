@@ -57,7 +57,7 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('访问地址')" :min-width="500">
+        <bk-table-column :label="$t('访问地址')" :min-width="580">
           <template slot-scope="{ row }">
             <div v-for="(item) in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">

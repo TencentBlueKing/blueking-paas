@@ -27,11 +27,6 @@
             class="mt20 mb35"
             @data-ready="handlerDataReady"
           />
-          <!-- <port-config
-            class="mt20 mb35"
-            @data-ready="handlerDataReady"
-          /> -->
-          <!-- <mobile-config @data-ready="handlerDataReady"></mobile-config> -->
         </section>
       </paas-content-loader>
     </div>
@@ -41,27 +36,23 @@
     <div v-else-if="active === 'ip_access_control'">
       <accessIp></accessIp>
     </div>
-    <div v-else-if="active === 'approval'">
+    <div v-else-if="active === 'approval'" class="controller">
       <accessAudit></accessAudit>
     </div>
   </div>
 </template>
 
 <script>import visitConfig from './comps/visit-config';
-// import domainConfig from './comps/custom-domain';
 import accessUser from './comps/access-user';
 import accessIp from './comps/access-ip';
 import accessAudit from './comps/access-audit';
-// import portConfig from './comps/port-config';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   components: {
     visitConfig,
-    // domainConfig,
     accessUser,
     accessIp,
-    // portConfig,
     accessAudit,
   },
   mixins: [appBaseMixin],
@@ -76,7 +67,6 @@ export default {
       return this.$store.state.region.access_control.module.map(e => e);
     },
     panels() {
-      console.log('this.accessControl', this.accessControl);
       const panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
       if (this.accessControl.includes('user_access_control')) {   // 用户限制
         panelsData.push({ name: 'user_access_control', label: this.$t('用户限制') });

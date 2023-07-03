@@ -1,13 +1,12 @@
-<template lang="html">
+<template>
   <div
-    class="right-main order-approve-wrapper"
-    style="overflow: hidden; min-height: 500px;"
+    class="right-main approve-container"
   >
     <paas-content-loader
-      :is-loading="isLoading"
+      :is-loading="loaderLoading"
       placeholder="order-loading"
       :offset-top="25"
-      class="app-container middle"
+      class="app-container middle order-approve-wrapper"
     >
       <section v-show="!isLoading">
         <bk-tab
@@ -45,7 +44,8 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      isLoading: true,
+      isLoading: false,
+      loaderLoading: true,
       orderStatus: 'processing',
     };
   },
@@ -57,7 +57,7 @@ export default {
   watch: {
     '$route'() {
       this.$refs.moduleRef && this.$refs.moduleRef.setCurModule(this.curModule);
-      this.isLoading = true;
+      // this.isLoading = true;
     },
   },
   mounted() {
@@ -69,6 +69,7 @@ export default {
     },
     handlerDataReady() {
       this.isLoading = false;
+      this.loaderLoading = false;
     },
   },
 };
@@ -76,6 +77,14 @@ export default {
 </script>
 
   <style lang="scss" scoped>
+  .approve-container{
+    min-height: calc(100% - 50px);
+    .order-approve-wrapper{
+      background: #fff;
+      margin: 0;
+    }
+  }
+
       .ps-table-bar {
           padding: 20px 0;
       }

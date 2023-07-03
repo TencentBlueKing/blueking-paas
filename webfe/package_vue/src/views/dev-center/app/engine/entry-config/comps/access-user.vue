@@ -4,7 +4,7 @@
       :is-loading="isPermissionChecking"
       placeholder="user-limit-loading"
       :offset-top="25"
-      class="app-container middle user-container"
+      class="app-container middle access-user"
     >
       <section>
         <div
@@ -17,8 +17,8 @@
                        { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]">
             </span>
           </div>
-          <div class="perm-title">
-            {{ isUseUserPermission ? $t('已开启用户限制') : $t('未开启用户限制') }}
+          <div class="perm-title flex-row align-items-center">
+            用户限制
             <div
               class="ps-switcher-wrapper"
               @click="togglePermission"
@@ -26,6 +26,9 @@
               <bk-switcher
                 v-model="isUseUserPermission"
               />
+            </div>
+            <div class="perm-status" :class="isUseUserPermission ? 'perm-status-open' : 'perm-status-close'">
+              {{ isUseUserPermission ? $t('已开启') : $t('未开启') }}
             </div>
           </div>
           <p class="perm-tip">
@@ -40,188 +43,192 @@
           </p>
         </div>
         <template v-if="!isPermissionChecking && isUseUserPermission">
-          <div class="ps-table-bar">
-            <bk-button
-              theme="primary"
-              @click="showUserModal"
-            >
-              <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
-            </bk-button>
-            <bk-dropdown-menu
-              ref="largeDropdown"
-              trigger="click"
-              ext-cls="by-user-export-wrapper"
-            >
-              <bk-button
-                slot="dropdown-trigger"
-                :loading="exportLoading"
-              >
-                {{ $t('批量导入/导出') }}
-              </bk-button>
-              <ul
-                slot="dropdown-content"
-                class="bk-dropdown-list"
-              >
-                <li>
-                  <a
-                    href="javascript:;"
-                    style="margin: 0;"
-                    @click="handleExport('file')"
-                  > {{ $t('从文件导入') }} </a>
-                </li>
-                <li>
-                  <a
-                    href="javascript:;"
-                    style="margin: 0;"
-                    @click="handleExport('batch')"
-                  > {{ $t('批量导出') }} </a>
-                </li>
-              </ul>
-            </bk-dropdown-menu>
-            <bk-button
-              style="margin-left: 6px;"
-              :disabled="isBatchDisabled"
-              @click="batchDelete"
-            >
-              {{ $t('批量删除') }}
-            </bk-button>
-            <div
-              v-if="curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE"
-              :class="['path-exempt', localLanguage === 'en' ? 'en-path': '']"
-            >
-              <bk-button
-                text
-                size="small"
-                @click="handlePathExempt"
-              >
-                {{ $t('配置豁免路径') }}
-              </bk-button>
-            </div>
-            <bk-input
-              v-model="keyword"
-              style="width: 240px; float: right;"
-              :placeholder="$t('输入关键字，按Enter搜索')"
-              :right-icon="'paasng-icon paasng-search'"
-              clearable
-              @enter="searchUserPermissionList"
-            />
-          </div>
-
-          <bk-table
-            v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
-            :data="userPermissionList"
-            size="small"
-            :class="{ 'set-border': tableLoading }"
-            :pagination="pagination"
-            :ext-cls="'ps-permission-table'"
-            @page-change="pageChange"
-            @page-limit-change="limitChange"
-            @select="handlerChange"
-            @select-all="handlerAllChange"
+          <bk-tab
+            :active.sync="active"
+            ext-cls="user-tab-cls"
+            type="unborder-card"
           >
-            <div slot="empty">
-              <table-empty
-                :keyword="tableEmptyConf.keyword"
-                :abnormal="tableEmptyConf.isAbnormal"
-                @reacquire="fetchUserPermissionList(true)"
-                @clear-filter="clearFilterKey"
+            <bk-tab-panel
+              v-for="(panel, index) in userPanels"
+              :key="index"
+              v-bind="panel"
+            />
+          </bk-tab>
+          <section class="table-container mt15" v-if="active === 'whiteList'">
+            <div class="ps-table-bar">
+              <bk-button
+                theme="primary"
+                @click="showUserModal"
+              >
+                <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
+              </bk-button>
+              <bk-dropdown-menu
+                ref="largeDropdown"
+                trigger="click"
+                ext-cls="by-user-export-wrapper"
+              >
+                <bk-button
+                  slot="dropdown-trigger"
+                  :loading="exportLoading"
+                >
+                  {{ $t('批量导入/导出') }}
+                </bk-button>
+                <ul
+                  slot="dropdown-content"
+                  class="bk-dropdown-list"
+                >
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      @click="handleExport('file')"
+                    > {{ $t('从文件导入') }} </a>
+                  </li>
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      @click="handleExport('batch')"
+                    > {{ $t('批量导出') }} </a>
+                  </li>
+                </ul>
+              </bk-dropdown-menu>
+              <bk-button
+                style="margin-left: 6px;"
+                :disabled="isBatchDisabled"
+                @click="batchDelete"
+              >
+                {{ $t('批量删除') }}
+              </bk-button>
+              <bk-input
+                v-model="keyword"
+                style="width: 240px; float: right;"
+                :placeholder="$t('输入关键字，按Enter搜索')"
+                :right-icon="'paasng-icon paasng-search'"
+                clearable
+                @enter="searchUserPermissionList"
               />
             </div>
-            <bk-table-column
-              type="selection"
-              width="60"
-              align="left"
-            />
-            <bk-table-column
-              :label="userTypeMap[userType]"
-              prop="content"
-            />
-            <bk-table-column
-              :label="$t('添加者')"
-              :render-header="$renderHeader"
+
+            <bk-table
+              v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+              :data="userPermissionList"
+              size="small"
+              :class="{ 'set-border': tableLoading }"
+              :pagination="pagination"
+              :ext-cls="'ps-permission-table'"
+              @page-change="pageChange"
+              @page-limit-change="limitChange"
+              @select="handlerChange"
+              @select-all="handlerAllChange"
             >
-              <template slot-scope="props">
-                <span>{{ props.row.owner.username || '--' }}</span>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('添加时间')"
-              :render-header="renderHeader"
-              :show-overflow-tooltip="false"
-            >
-              <template slot-scope="{ row }">
-                <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('更新时间')"
-              :render-header="$renderHeader"
-              :show-overflow-tooltip="false"
-            >
-              <template slot-scope="{ row }">
-                <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('添加原因')"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="props">
-                {{ props.row.desc ? props.row.desc : '--' }}
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('到期时间')"
-              width="100"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="{ row }">
-                <template v-if="row.is_expired">
-                  <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
+              <div slot="empty">
+                <table-empty
+                  :keyword="tableEmptyConf.keyword"
+                  :abnormal="tableEmptyConf.isAbnormal"
+                  @reacquire="fetchUserPermissionList(true)"
+                  @clear-filter="clearFilterKey"
+                />
+              </div>
+              <bk-table-column
+                type="selection"
+                width="60"
+                align="left"
+              />
+              <bk-table-column
+                :label="userTypeMap[userType]"
+                prop="content"
+              />
+              <bk-table-column
+                :label="$t('添加者')"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="props">
+                  <span>{{ props.row.owner.username || '--' }}</span>
                 </template>
-                <template v-else>
-                  <template v-if="row.expires_at">
-                    <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('添加时间')"
+                :render-header="renderHeader"
+                :show-overflow-tooltip="false"
+              >
+                <template slot-scope="{ row }">
+                  <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('更新时间')"
+                :render-header="$renderHeader"
+                :show-overflow-tooltip="false"
+              >
+                <template slot-scope="{ row }">
+                  <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('添加原因')"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="props">
+                  {{ props.row.desc ? props.row.desc : '--' }}
+                </template>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('到期时间')"
+                width="100"
+                :render-header="$renderHeader"
+              >
+                <template slot-scope="{ row }">
+                  <template v-if="row.is_expired">
+                    <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
                   </template>
                   <template v-else>
-                    {{ $t('永不') }}
+                    <template v-if="row.expires_at">
+                      <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+                    </template>
+                    <template v-else>
+                      {{ $t('永不') }}
+                    </template>
                   </template>
                 </template>
-              </template>
-            </bk-table-column>
-            <bk-table-column
-              :label="$t('操作')"
-              width="150"
-            >
-              <template slot-scope="props">
-                <section>
-                  <bk-button
-                    theme="primary"
-                    text
-                    @click="handleRenewal(props.row)"
-                  >
-                    {{ $t('续期') }}
-                  </bk-button>
-                  <bk-button
-                    theme="primary"
-                    text
-                    style="margin-left: 6px;"
-                    @click="handleEdit(props.row)"
-                  >
-                    {{ $t('编辑') }}
-                  </bk-button>
-                  <bk-button
-                    theme="primary"
-                    text
-                    style="margin-left: 6px;"
-                    @click="showRemoveModal(props.row)"
-                  >
-                    {{ $t('删除') }}
-                  </bk-button>
-                </section>
-              </template>
-            </bk-table-column>
-          </bk-table>
+              </bk-table-column>
+              <bk-table-column
+                :label="$t('操作')"
+                width="150"
+              >
+                <template slot-scope="props">
+                  <section>
+                    <bk-button
+                      theme="primary"
+                      text
+                      @click="handleRenewal(props.row)"
+                    >
+                      {{ $t('续期') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-left: 6px;"
+                      @click="handleEdit(props.row)"
+                    >
+                      {{ $t('编辑') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-left: 6px;"
+                      @click="showRemoveModal(props.row)"
+                    >
+                      {{ $t('删除') }}
+                    </bk-button>
+                  </section>
+                </template>
+              </bk-table-column>
+            </bk-table>
+          </section>
+          <section v-if="active === 'exemptPath'">
+            <access-path></access-path>
+          </section>
         </template>
       </section>
     </paas-content-loader>
@@ -498,12 +505,12 @@
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
-import appTopBar from '@/components/paas-app-bar';
+import accessPath from './access-path.vue';
 
 export default {
   components: {
     user,
-    appTopBar,
+    accessPath,
   },
   mixins: [appBaseMixin],
   data() {
@@ -613,6 +620,8 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      userPanels: [{ name: 'whiteList', label: this.$t('白名单') }],
+      active: 'whiteList',
     };
   },
   computed: {
@@ -649,6 +658,19 @@ export default {
           this.isFilter = false;
         }
       }
+    },
+    'curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE': {    // 是否可以开启豁免路径
+      handler(value) {
+        const hasExemptPathTag = this.userPanels.find(e => e.name === 'exemptPath');
+        if (value) {
+          if (!hasExemptPathTag) {
+            this.userPanels.push({ name: 'exemptPath', label: this.$t('豁免路径') });
+          }
+        } else {
+          this.userPanels = [{ name: 'whiteList', label: this.$t('白名单') }];
+        }
+      },
+      immediate: true,
     },
   },
   mounted() {
@@ -947,16 +969,7 @@ export default {
       this.fetchUserPermissionList(true);
     },
 
-    handlePathExempt() {
-      this.$router.push({
-        name: 'appPermissionPathExempt',
-        params: {
-          id: this.appCode,
-        },
-      });
-    },
-
-    renderHeader(h, { column }) {
+    renderHeader(h) {
       return h(
         'div',
         {
@@ -989,10 +1002,10 @@ export default {
     },
 
     /**
-               * 分页页码 chang 回调
-               *
-               * @param {Number} page 页码
-               */
+     * 分页页码 chang 回调
+     *
+     * @param {Number} page 页码
+     */
     pageChange(page) {
       if (this.currentBackup === page) {
         return;
@@ -1013,12 +1026,12 @@ export default {
     },
 
     /**
-               * 分页limit chang 回调
-               *
-               * @param {Number} currentLimit 新limit
-               * @param {Number} prevLimit 旧limit
-               */
-    limitChange(currentLimit, prevLimit) {
+     * 分页limit chang 回调
+     *
+     * @param {Number} currentLimit 新limit
+     * @param {Number} prevLimit 旧limit
+     */
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchUserPermissionList(true);
@@ -1067,7 +1080,7 @@ export default {
       this.curUserParams.content = rtxList.join(';');
     },
 
-    togglePermission(val, oldVal) {
+    togglePermission() {
       this.userPermissionDialog.visiable = !this.userPermissionDialog.visiable;
     },
 
@@ -1100,7 +1113,7 @@ export default {
       this.currentSelectList = [...selection];
     },
 
-    handlerChange(selection, row) {
+    handlerChange(selection) {
       this.currentSelectList = [...selection];
     },
 
@@ -1232,14 +1245,14 @@ export default {
       this.addUserDialog.isLoading = true;
       setTimeout(() => {
         this.$refs.addUserForm.validate().then(
-          (res) => {
+          () => {
             if (this.checkUserParams(params)) {
               this.submitUserParams();
             } else {
               this.addUserDialog.isLoading = false;
             }
           },
-          (res) => {
+          () => {
             this.addUserDialog.isLoading = false;
           },
         );
@@ -1447,10 +1460,8 @@ export default {
 </script>
 
   <style lang="scss" scoped>
-      .user-container{
-        background: #fff;
-        padding: 16px 24px;
-        margin-top: 16px;
+      .access-user{
+        min-height: calc(100% - 50px);
       }
       .bk-table {
           &.set-border {
@@ -1462,7 +1473,8 @@ export default {
       .perm-action {
           position: relative;
           overflow: hidden;
-          padding: 0 0 20px 0;
+          background: #fff;
+          padding: 20px 24px;
 
           .perm-icon {
               float: left;
@@ -1482,16 +1494,35 @@ export default {
           }
 
           .perm-title {
-              font-size: 18px;
-              color: rgba(51, 51, 51, 1);
+              font-size: 14px;
+              color: #313238;
               margin-bottom: 5px;
               line-height: 1;
+              font-weight: 700;
+              .perm-status{
+                border-radius: 2px;
+                width: 52px;
+                height: 22px;
+                text-align: center;
+                line-height: 22px;
+                margin-left: 15px;
+                font-size: 12px;
+              }
+              .perm-status-open{
+                color: #14A568;
+                background: #E4FAF0;
+              }
+              .perm-status-close{
+                color: #fff;
+                background-color: #dcdee5;
+              }
           }
 
           .perm-tip {
               font-size: 12px;
-              color: rgba(82, 82, 93, 1);
               line-height: 1;
+              font-size: 12px;
+              color: #979BA5;
               .a-link {
                   margin-left: 5px;
                   &:hover {
@@ -1507,23 +1538,29 @@ export default {
           color: #666;
       }
 
-      .ps-table-bar {
-          position: relative;
-          padding: 16px 0;
-          border-top: 1px solid #e6e9ea;
-          .path-exempt {
-              position: absolute;
-              top: 20px;
-              left: 336px;
-              &.en-path {
-                  left: 382px;
-              }
-          }
+      .table-container{
+        background: #fff;
+        padding: 0px 24px 20px;
+        .ps-table-bar {
+            position: relative;
+            padding: 16px 0;
+            border-top: 1px solid #e6e9ea;
+            .path-exempt {
+                position: absolute;
+                top: 20px;
+                left: 336px;
+                &.en-path {
+                    left: 382px;
+                }
+            }
 
+        }
       }
+
 
       .middle {
           border-bottom: none;
+          padding-top: 10px;
       }
 
       .reason {
@@ -1631,5 +1668,14 @@ export default {
               color: #ff4d4d;
           }
       }
+
+      .user-tab-cls{
+        background: #fff;
+        margin-top: 15px;
+        /deep/ .bk-tab-section {
+            padding: 0 !important;
+        }
+      }
+
   </style>
 

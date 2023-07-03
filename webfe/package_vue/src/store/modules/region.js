@@ -64,11 +64,9 @@ const mutations = {
 // actions
 const actions = {
   fetchRegionInfo({ commit }, region) {
-    console.log('region', region);
     const url = `${BACKEND_URL}/api/regions/${region}/`;
     return http.get(url, {}, { fromCache: true }).then((data) => {
       commit('updateRegionInfo', data);
-      console.log('data', data);
       return data;
     });
   },

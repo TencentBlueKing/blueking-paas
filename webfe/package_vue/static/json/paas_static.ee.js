@@ -610,7 +610,7 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appAccessPortal",
-                "label": staticI18n.$t("访问入口"),
+                "label": staticI18n.$t("访问管理"),
                 "matchRouters": ["appAccessPortal"],
                 "iconfontName": "link",
                 "supportModule": true,
@@ -881,12 +881,6 @@ export const PAAS_STATIC_CONFIG = {
                 "destRoute": {
                     "name": "moduleManage"
                 },
-                "children": []
-            },
-            {
-                "name": "appPermissions",
-                "label": staticI18n.$t("权限管理"),
-                "iconfontName": "security",
                 "children": []
             },
             {

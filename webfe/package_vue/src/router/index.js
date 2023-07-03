@@ -191,7 +191,7 @@ const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'
   window.showDeployTip(error);
 });
 
-const appAccessPortal = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/access-portal').then(module => module).catch((error) => {
+const appAccessPortal = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/entry-config').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -216,10 +216,6 @@ const appServicesSharedInstance = () => import(/* webpackChunkName: 'app-service
 });
 
 const appServicesConfig = () => import(/* webpackChunkName: 'app-services' */'@/views/dev-center/app/services/config').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
-const appAccessCtlPathExempt = () => import(/* webpackChunkName: 'app-access-ctl' */'@/views/dev-center/app/access-ctl/path-exempt').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -681,11 +677,6 @@ const router = new Router({
           path: ':id/:moduleId/service/:category_id/service_config/:service',
           component: appServicesConfig,
           name: 'appServiceConfig',
-        },
-        {
-          path: ':id/permission/path-exempt',
-          component: appAccessCtlPathExempt,
-          name: 'appPermissionPathExempt',
         },
         {
           path: ':id/docu-management',

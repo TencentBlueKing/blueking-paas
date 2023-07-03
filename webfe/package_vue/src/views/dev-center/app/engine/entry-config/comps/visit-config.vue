@@ -345,14 +345,8 @@ export default {
     '$route'() {
       this.init();
     },
-    // tipShow(val) {
-    //   if (!val) {
-    //     this.tableIndex = '';
-    //     this.envIndex = '';
-    //   }
-    // },
   },
-  created() {
+  mounted() {
     this.init();
   },
   methods: {
@@ -668,7 +662,6 @@ export default {
         }
         return e;
       });
-      console.log('this.entryList', this.entryList);
     },
 
     // 获取展示用的应用根域名，优先使用非保留的，如果没有，则选择第一个

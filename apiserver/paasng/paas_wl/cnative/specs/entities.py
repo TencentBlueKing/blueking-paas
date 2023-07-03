@@ -124,7 +124,7 @@ class BkAppManifestProcessor:
         if bkpa_site_id := get_metadata(wl_app).bkpa_site_id:
             manifest.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
-        # always inject a flag to tell operator that workloads have crated the secret
+        # always inject a flag to tell operator that workloads have created the secret
         manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
 
         # inject access control enable info

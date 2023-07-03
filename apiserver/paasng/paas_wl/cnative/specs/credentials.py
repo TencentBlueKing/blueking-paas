@@ -50,15 +50,19 @@ def get_references(manifest: Dict) -> List[ImageCredentialRef]:
                 continue
             refs.append(ImageCredentialRef(image=split_image(process["image"]), credential_name=annotations[anno_key]))
         return refs
+
     elif api_version == ApiVersion.V1ALPHA2:
         build_cfg = manifest["spec"].get("build")
         if not build_cfg:
             return []
+
         credential_name = build_cfg.get("imageCredentialsName")
         image = build_cfg.get("image")
         if not credential_name or not image:
             return []
+
         return [ImageCredentialRef(image=split_image(image), credential_name=credential_name)]
+
     raise NotImplementedError
 
 

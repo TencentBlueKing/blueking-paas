@@ -51,7 +51,6 @@ def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
 
 def build_app_registry_auth(obj: 'ImageCredentials') -> Dict:
     """transform credentials to CNB required format"""
-    # {settings.APP_DOCKER_REGISTRY_HOST: build_app_registry_auth()}
     return {item.registry: "Basic " + b64encode(f"{item.username}:{item.password}") for item in obj.credentials}
 
 

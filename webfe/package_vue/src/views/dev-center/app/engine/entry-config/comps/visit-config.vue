@@ -45,7 +45,9 @@
               >
                 <div class="text-container">
                   {{ entryEnv[item] }}
-                  <span class="icon-container" v-if="tableIndex === $index && envIndex === i">
+                  <span
+                    class="icon-container"
+                    v-if="tableIndex === $index && envIndex === i && row.envs[item] && row.envs[item][0].is_running">
                     <i
                       class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="'添加自定义访问地址'"
                       @click="handleAdd($index, i, row, item)" />
@@ -79,10 +81,13 @@
                   </bk-form>
                 </div>
                 <section v-else>
-                  <bk-button
-                    text theme="primary"
-                    @click="handleUrlOpen(e.address.url)"
-                  > {{ e.address.url }}</bk-button>
+                  <div v-bk-tooltips="{content: $t('该环境未部署，无法访问'), disabled: e.is_running}">
+                    <bk-button
+                      text theme="primary"
+                      :disabled="!e.is_running"
+                      @click="handleUrlOpen(e.address.url)"
+                    > {{ e.address.url }}</bk-button>
+                  </div>
                 </section>
                 <div class="line"></div>
               </div>
@@ -180,14 +185,18 @@
         <div class="tl">
           <p> {{ $t('设定后：') }} </p>
           <p>
-            {{ $t('应用短地址') }}(stag-dot-{{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.stag) }})
+            {{ $t('应用短地址') }}({{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.prod) }})
+            {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
+            {{ $t('模块的生产环境') }}
+          </p>
+          <p class="mt10">
+            {{ $t('应用短地址') }}({{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.stag) }})
             {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
             {{ $t('模块的预发布环境') }}
           </p>
-          <p class="mt10">
-            {{ $t('应用短地址') }}(prod-dot-{{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.prod) }})
-            {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
-            {{ $t('模块的生产环境') }}
+          <p>
+            {{ $t('应用访问限制') }}( {{ accessControlText.join('、') }} ){{ $t('变更为') }}
+            {{ $t('对') }} {{ domainDialog.moduleName }} {{ $t('生效') }}
           </p>
         </div>
 
@@ -269,8 +278,8 @@ export default {
         ],
         pathPrefix: [
           {
-            required: true,
-            message: this.$t('路径不能为空'),
+            regex: /^\/[a-z-z0-9_-]*\/?$/,
+            message: `${this.$t('路径必须以')}"/"${this.$t('开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)')}`,
             trigger: 'blur',
           },
         ],
@@ -279,6 +288,7 @@ export default {
       setModuleLoading: false,
       hostInfo: {},
       tipShow: false,
+      curDataId: '',
     };
   },
   computed: {
@@ -313,13 +323,22 @@ export default {
         },
       };
     },
-
+    // 域名规则placeholder
     domainInputPlaceholderText() {
       if (this.domainConfig?.valid_domain_suffixes?.length) {
         this.placeholderText = this.domainConfig.valid_domain_suffixes.join(',');
         return this.$t('请输入有效域名，并以这些后缀结尾：') + this.placeholderText;
       }
       return this.$t('请输入有效域名');
+    },
+
+    // 根据数据提示不同内容
+    accessControlText() {
+      const textData = { user_access_control: this.$t('用户限制'), ip_access_control: this.$t('IP限制') };
+      return (this.$store.state.region?.access_control?.module || []).reduce((prev, v) => {
+        prev.push(textData[v]);
+        return prev;
+      }, []);
     },
   },
   watch: {
@@ -580,7 +599,9 @@ export default {
         if (curUrlParams.id) {
           fetchUrl = 'entryConfig/updateDomainInfo';
         }
-        await this.$store.dispatch(fetchUrl, params);
+        const res = await this.$store.dispatch(fetchUrl, params);
+        // 当前保存的这条数据返回的id
+        this.curDataId = res.id;
         this.$paasMessage({
           theme: 'success',
           message: `${curUrlParams.id ? this.$t('更新') : this.$t('添加')}${this.$t('成功')}`,
@@ -614,7 +635,10 @@ export default {
     // 处理删除域名
     async handleDelete(envIndex, payload, envType) {
       try {
-        await this.$store.dispatch('entryConfig/deleteDomainInfo', { appCode: this.appCode, id: payload.envs[envType][envIndex].address.id });
+        await this.$store.dispatch(
+          'entryConfig/deleteDomainInfo',
+          { appCode: this.appCode, id: payload.envs[envType][envIndex].address.id || this.curDataId },
+        );
         this.getEntryList();    // 重新请求数据
         this.$paasMessage({
           theme: 'success',

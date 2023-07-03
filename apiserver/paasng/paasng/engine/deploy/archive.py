@@ -99,7 +99,7 @@ class OfflineManager:
 
         # Start the offline operation, this will start background task
         op_id = str(offline_operation.pk)
-        ArchiveOperationController(env=self.env, operation_id=op_id).start()
+        ArchiveOperationController(env=self.env).start()
         wait_for_all_stopped(env=self.env, result_handler=ArchiveResultHandler, extra_params={"operation_id": op_id})
         return offline_operation
 

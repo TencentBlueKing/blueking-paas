@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
@@ -41,7 +41,6 @@ from paas_wl.cnative.specs.constants import (
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
-from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
@@ -55,10 +54,9 @@ class BkAppManifestProcessor:
         self.env = model_deploy.environment
         self.model_deploy = model_deploy
 
-    def build_manifest(self, credential_refs: List[ImageCredentialRef], image: Optional[str] = None) -> Dict:
+    def build_manifest(self, image: Optional[str] = None) -> Dict:
         """inject bkpaas-specific properties to annotations
 
-        :param credential_refs: Image credential ref objects
         :param image: optional, the image build by platform, will overwrite the image filed in manifest
         """
         wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
@@ -68,7 +66,7 @@ class BkAppManifestProcessor:
         self._patch_image(manifest, image)
 
         # 更新注解，包含应用基本信息，增强服务，访问控制，镜像凭证等
-        self._inject_annotations(manifest, self.env.application, self.env, wl_app, credential_refs)
+        self._inject_annotations(manifest, self.env.application, self.env, wl_app)
 
         # 注入用户自定义变量，与 YAML 中定义的进行合并，优先级：页面填写的 > YAML 中已有的
         manifest.spec.configuration.env = merge_envvars(
@@ -102,7 +100,6 @@ class BkAppManifestProcessor:
         application: Application,
         env: ModuleEnvironment,
         wl_app: WlApp,
-        credential_refs: List[ImageCredentialRef],
     ) -> None:
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.model_deploy.pk)
@@ -127,14 +124,8 @@ class BkAppManifestProcessor:
         if bkpa_site_id := get_metadata(wl_app).bkpa_site_id:
             manifest.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
-        # flush credentials and inject a flag to tell operator that workloads have crated the secret
-        if credential_refs:
-            AppImageCredential.objects.flush_from_refs(
-                application=application, wl_app=wl_app, references=credential_refs
-            )
-            manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
-        else:
-            manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = ""
+        # always inject a flag to tell operator that workloads have crated the secret
+        manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
 
         # inject access control enable info
         try:

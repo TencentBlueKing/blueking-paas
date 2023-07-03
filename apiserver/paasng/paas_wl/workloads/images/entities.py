@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
+    """transform credentials to docker config json format"""
     return {
         "auths": {
             item.registry: {
@@ -46,6 +47,12 @@ def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
             for item in obj.credentials
         }
     }
+
+
+def build_app_registry_auth(obj: 'ImageCredentials') -> Dict:
+    """transform credentials to CNB required format"""
+    # {settings.APP_DOCKER_REGISTRY_HOST: build_app_registry_auth()}
+    return {item.registry: "Basic " + b64encode(f"{item.username}:{item.password}") for item in obj.credentials}
 
 
 class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
@@ -109,12 +116,12 @@ class ImageCredentials(AppEntity):
 
     @classmethod
     def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
-        # TODO: add builtin credential
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
+        # inject builtin credential for APP_DOCKER_REGISTRY_HOST
         if settings.APP_DOCKER_REGISTRY_HOST:
             credentials.append(
                 ImageCredential(

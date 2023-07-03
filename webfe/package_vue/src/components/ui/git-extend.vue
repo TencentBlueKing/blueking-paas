@@ -52,7 +52,7 @@
         >
           <span style="color: #ff3737;">{{ alertText }}</span>
           <span v-if="gitControlType === 'tc_git'">{{ $t('首次使用工蜂，请先阅读') }}</span>
-          <span v-else-if="gitControlType === 'github'">{{ $t('首次使用Github，请先阅读') }}</span>
+          <span v-else-if="gitControlType === 'github'">{{ $t('首次使用GitHub，请先阅读') }}</span>
           <span v-else>{{ $t('首次使用Gitee，请先阅读') }}</span>
           <a
             :href="authDocs"

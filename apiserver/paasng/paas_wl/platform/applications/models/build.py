@@ -115,7 +115,7 @@ class BuildProcessManager(models.Manager):
         wl_app = self.instance
         latest_build = self.order_by('-generation').first()
         if latest_build:
-            next_generation = latest_build.version + 1
+            next_generation = latest_build.generation + 1
         else:
             next_generation = 1
 

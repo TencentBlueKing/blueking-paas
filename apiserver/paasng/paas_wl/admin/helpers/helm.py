@@ -91,7 +91,7 @@ class HelmReleaseParser:
 
         resources: List[Dict] = []
         if self.parse_manifest:
-            resources = yaml.safe_load_all(release['manifest'])  # type: ignore
+            resources = list(yaml.safe_load_all(release['manifest']))
 
         return HelmRelease(
             name=release['name'],

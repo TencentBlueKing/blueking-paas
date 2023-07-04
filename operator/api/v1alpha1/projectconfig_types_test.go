@@ -29,7 +29,7 @@ import (
 
 var _ = Context("test init ProjectConfig", func() {
 	It("test load from file", func() {
-		var projectConfig ProjectConfig
+		var projCfg ProjectConfig
 		configContent := `
 apiVersion: paas.bk.tencent.com/v1alpha1
 kind: ProjectConfig
@@ -44,7 +44,7 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: e56dbef1.bk.tencent.com
-platformConfig:
+platform:
   bkAppCode: "foo"
   bkAppSecret: "bar"
   bkAPIGatewayURL: "https://example.com"
@@ -57,23 +57,23 @@ platformConfig:
 		_, err = file.Write([]byte(configContent))
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = ctrl.ConfigFile().AtPath(file.Name()).OfKind(&projectConfig).Complete()
+		_, err = ctrl.ConfigFile().AtPath(file.Name()).OfKind(&projCfg).Complete()
 		Expect(err).NotTo(HaveOccurred())
 
 		// 检测 Health
-		Expect(projectConfig.Health.HealthProbeBindAddress).To(Equal(":8081"))
+		Expect(projCfg.Health.HealthProbeBindAddress).To(Equal(":8081"))
 		// 检测 Metrics
-		Expect(projectConfig.Metrics.BindAddress).To(Equal("127.0.0.1:8080"))
+		Expect(projCfg.Metrics.BindAddress).To(Equal("127.0.0.1:8080"))
 		// 检测 webhook
-		Expect(projectConfig.Webhook.Port).To(Equal(lo.ToPtr(9443)))
+		Expect(projCfg.Webhook.Port).To(Equal(lo.ToPtr(9443)))
 		// 检测 leaderElection
-		Expect(projectConfig.LeaderElection.LeaderElect).To(Equal(lo.ToPtr(true)))
-		Expect(projectConfig.LeaderElection.ResourceName).To(Equal("e56dbef1.bk.tencent.com"))
+		Expect(projCfg.LeaderElection.LeaderElect).To(Equal(lo.ToPtr(true)))
+		Expect(projCfg.LeaderElection.ResourceName).To(Equal("e56dbef1.bk.tencent.com"))
 		// 检测 platformConfig
-		Expect(projectConfig.PlatformConfig.BkAppCode).To(Equal("foo"))
-		Expect(projectConfig.PlatformConfig.BkAppSecret).To(Equal("bar"))
-		Expect(projectConfig.PlatformConfig.BkAPIGatewayURL).To(Equal("https://example.com"))
-		Expect(projectConfig.PlatformConfig.SentryDSN).To(Equal("https://sentry.example.com"))
-		Expect(projectConfig.PlatformConfig.IngressClassName).To(Equal("nginx"))
+		Expect(projCfg.Platform.BkAppCode).To(Equal("foo"))
+		Expect(projCfg.Platform.BkAppSecret).To(Equal("bar"))
+		Expect(projCfg.Platform.BkAPIGatewayURL).To(Equal("https://example.com"))
+		Expect(projCfg.Platform.SentryDSN).To(Equal("https://sentry.example.com"))
+		Expect(projCfg.Platform.IngressClassName).To(Equal("nginx"))
 	})
 })

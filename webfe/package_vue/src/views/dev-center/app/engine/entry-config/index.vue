@@ -20,7 +20,6 @@
         :is-loading="isLoading"
         placeholder="entry-loading"
         :offset-top="20"
-        class="app-container middle"
       >
         <section v-show="!isLoading">
           <visit-config
@@ -111,9 +110,10 @@ export default {
         }
     }
     .controller{
-      margin: 16px 24px 0 24px;
       background: #fff;
       min-height: calc(100% - 50px);
+      width: calc(100% - 50px);
+      margin: 16px auto 0;
       .entry-bar{
         /deep/ .bar-container{
           border: none !important;

@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Subpaths management"""
 from dataclasses import dataclass, field
+from operator import attrgetter
 from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
@@ -117,7 +118,10 @@ class ModuleEnvSubpaths:
         if not sub_path_domains:
             return None
         return self.allocator.get_highest_priority(
-            sub_path_domains[-1], self.env.module.name, self.env.environment, self.env.module.is_default
+            sorted(sub_path_domains, key=attrgetter("reserved"))[0],
+            self.env.module.name,
+            self.env.environment,
+            self.env.module.is_default,
         )
 
 

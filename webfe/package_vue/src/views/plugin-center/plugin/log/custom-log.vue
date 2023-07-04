@@ -43,7 +43,7 @@
     >
       <div class="log-fields">
         <p class="title">
-          {{ $t('字段设置222') }}
+          {{ $t('字段设置') }}
           <i
             v-bk-tooltips="$t('仅显示查询结果前200条数据包含的字段，没有出现的字段仍可以通过输入关键字查询')"
             class="paasng-icon paasng-info-circle tooltip-icon"

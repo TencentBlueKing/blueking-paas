@@ -14,7 +14,7 @@
           >
             {{ $t('应用编排') }}
           </router-link>
-          <span style="position: relative; top: -1px;">|</span>
+          <span class="success-dividing-line">|</span>
           <router-link
             :to="{ name: 'appRoles', params: { id: appCode } }"
             class="link"
@@ -30,7 +30,7 @@
           >
             {{ $t('添加成员') }}
           </router-link>
-          <span style="position: relative; top: -1px;">|</span>
+          <span class="success-dividing-line">|</span>
           <router-link
             :to="{ name: 'appCloudAPI', params: { id: appCode } }"
             class="link"

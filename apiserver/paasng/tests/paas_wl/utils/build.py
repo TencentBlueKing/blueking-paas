@@ -15,29 +15,51 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict, Optional
+
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models import BuildProcess, OutputStream, WlApp
+from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
+from paasng.dev_resources.sourcectl.models import VersionInfo
 
 
-def create_build_proc(app: WlApp, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None):
+def create_build_proc(
+    wl_app: WlApp, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None
+) -> BuildProcess:
     """Create a BuildProcess object
 
-    :param app: The WlApp object
+    :param wl_app: The WlApp object
     """
     source_tar_path = source_tar_path or get_random_string(10)
     revision = revision or get_random_string(10)
     branch = branch or get_random_string(10)
 
-    build_process = BuildProcess.objects.create(
-        owner=app.owner,
-        app=app,
+    build_process = wl_app.buildprocess_set.new(
+        owner=wl_app.owner,
+        builder_image=image,
         source_tar_path=source_tar_path,
-        revision=revision,
-        branch=branch,
-        output_stream=OutputStream.objects.create(),
-        # 允许 none 参数
-        image=image,
-        buildpacks=buildpacks,
+        version_info=VersionInfo(revision=revision, version_name=branch, version_type="branch"),
+        invoke_message="",
+        buildpacks_info=buildpacks or [],
     )
     return build_process
+
+
+def create_build(wl_app: WlApp, image: str = "", procfile: Optional[Dict] = None, bp: Optional[BuildProcess] = None):
+    procfile = procfile or {"web": "start web"}
+    branch = bp.branch if bp is not None else "master"
+    revision = bp.revision if bp is not None else "1"
+    build_params = {
+        "owner": wl_app.owner,
+        "app": wl_app,
+        "image": image or "nginx:latest",
+        "source_type": "foo",
+        "branch": branch,
+        "revision": revision,
+        "procfile": procfile,
+    }
+    wl_build = Build.objects.create(**build_params)
+    if bp:
+        bp.build = wl_build
+        bp.save()
+    return wl_build

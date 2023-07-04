@@ -31,7 +31,7 @@
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')" :width="180">
+        <bk-table-column :label="$t('环境')" :width="160">
           <template slot-scope="{ row, $index }">
             <div
               v-for="(item, i) in row.envsData" :key="item"
@@ -94,7 +94,7 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('进程')" :width="100">
+        <!-- <bk-table-column :label="$t('进程')" :width="100">
           <template slot-scope="{ row }">
             <div v-for="(item) in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
@@ -113,7 +113,7 @@
               </div>
             </div>
           </template>
-        </bk-table-column>
+        </bk-table-column> -->
         <bk-table-column :label="$t('操作')" :width="130">
           <template slot-scope="{ row, $index }">
             <div v-for="item in row.envsData" :key="item" class="cell-container">

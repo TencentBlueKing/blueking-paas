@@ -24,92 +24,11 @@ from typing import Any, Dict, List
 
 import arrow
 import yaml
-from kubernetes.client import ApiException
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.admin.constants import BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE, HELM_RELEASE_SECRET_TYPE
-from paas_wl.cnative.specs.constants import ApiVersion
+from paas_wl.admin.constants import HELM_RELEASE_SECRET_TYPE
 from paas_wl.resources.base.base import EnhancedApiClient
-from paas_wl.resources.base.crd import BkApp, DomainGroupMapping
-from paas_wl.resources.base.exceptions import ResourceMissing
-from paas_wl.resources.base.kres import KCustomResourceDefinition, KDaemonSet, KDeployment, KNamespace, KStatefulSet
-
-
-def detect_operator_status(client: EnhancedApiClient) -> Dict:
-    """获取指定集群中 Operator 的部署情况"""
-    result = {
-        'namespace': False,
-        'crds': {BkApp.kind: False, DomainGroupMapping.kind: False},
-        'controller': {},
-    }
-
-    # 检查集群中是否存在 Operator 需要的 CRD 定义
-    for crd in KCustomResourceDefinition(client).ops_label.list(labels={}).items:
-        crd_kind = crd['spec']['names']['kind']
-        if crd_kind in [BkApp.kind, DomainGroupMapping.kind]:
-            result['crds'][crd_kind] = True  # type: ignore
-
-    # 检查 controller 部署的命名空间是否存在
-    try:
-        KNamespace(client).get(name=BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE)
-    except (ResourceMissing, ApiException):
-        return result
-    else:
-        result['namespace'] = True
-
-    deployments = (
-        KDeployment(client)
-        .ops_label.list(
-            labels={'control-plane': 'controller-manager'},
-            namespace=BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE,
-        )
-        .items
-    )
-    if not deployments:
-        return result
-
-    # 获取 controller 副本状态
-    result['controller'] = {
-        'replicas': deployments[0]['spec']['replicas'],
-        'readyReplicas': deployments[0].get('status', {}).get('readyReplicas', 0),
-    }
-    return result
-
-
-def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool]) -> Dict:
-    result: Dict[str, Dict] = {BkApp.kind: {}, DomainGroupMapping.kind: {}}
-
-    # 统计 BkApp NotReady & 总数量
-    if crd_exists[BkApp.kind]:
-        bkapps = BkApp(client).ops_label.list(labels={}).items
-        ready_cnt = 0
-        not_ready_bkapps = []
-        for bkapp in bkapps:
-            bkapp_name = f"{bkapp['metadata']['namespace']}/{bkapp['metadata']['name']}"
-
-            if hookStatuses := bkapp.get('status', {}).get('hookStatuses', []):
-                # 任何 Hook 状态不健康，该 bkapp 都被认为非 ready
-                if any(hs.get('phase') != 'Healthy' for hs in hookStatuses):
-                    not_ready_bkapps.append(bkapp_name)
-                    continue
-
-            # bkapp 总状态需要是 Running 才能算是 ready 的
-            if bkapp.get('status', {}).get('phase') != 'Running':
-                not_ready_bkapps.append(bkapp_name)
-                continue
-
-            ready_cnt += 1
-
-        result[BkApp.kind] = {'total_cnt': len(bkapps), 'ready_cnt': ready_cnt, 'not_ready_bkapps': not_ready_bkapps}
-
-    # 统计 DomainGroupMapping 数量
-    if crd_exists[DomainGroupMapping.kind]:
-        domain_group_mappings = (
-            DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).ops_label.list(labels={}).items
-        )
-        result[DomainGroupMapping.kind]['total_cnt'] = len(domain_group_mappings)
-
-    return result
+from paas_wl.resources.base.kres import KDaemonSet, KDeployment, KStatefulSet
 
 
 @dataclass
@@ -206,7 +125,7 @@ def filter_latest_releases(releases: List[HelmRelease]) -> List[HelmRelease]:
         if rel.name not in release_map or rel.version > release_map[rel.name].version:
             release_map[rel.name] = rel
 
-    return release_map.values()  # type: ignore
+    return list(release_map.values())
 
 
 class WorkloadsDetector:

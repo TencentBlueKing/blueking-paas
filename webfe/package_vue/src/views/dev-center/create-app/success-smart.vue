@@ -14,14 +14,14 @@
           >
             {{ $t('添加成员') }}
           </router-link>
-          <span style="position: relative; top: -1px;">|</span>
+          <span class="success-dividing-line">|</span>
           <router-link
             :to="{ name: 'appDeploy', params: { id: appCode } }"
             class="link"
           >
             {{ $t('部署应用') }}
           </router-link>
-          <span style="position: relative; top: -1px;">|</span>
+          <span class="success-dividing-line">|</span>
           <router-link
             :to="{ name: 'appCloudAPI', params: { id: appCode } }"
             class="link"

@@ -1181,9 +1181,6 @@
     }
     .display-description {
         position: relative;
-        // overflow: hidden;
-        // text-overflow: ellipsis;
-        // -webkit-line-clamp: 2;
     }
     .content-box {
         font-size: 12px;

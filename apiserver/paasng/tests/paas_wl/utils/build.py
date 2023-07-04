@@ -21,21 +21,20 @@ from django.utils.crypto import get_random_string
 
 from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
 from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 def create_build_proc(
-    wl_app: WlApp, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None
+    env: ModuleEnvironment, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None
 ) -> BuildProcess:
-    """Create a BuildProcess object
-
-    :param wl_app: The WlApp object
-    """
+    """Create a BuildProcess object"""
     source_tar_path = source_tar_path or get_random_string(10)
     revision = revision or get_random_string(10)
     branch = branch or get_random_string(10)
 
-    build_process = wl_app.buildprocess_set.new(
-        owner=wl_app.owner,
+    build_process = BuildProcess.objects.new(
+        env=env,
+        owner=env.application.owner,
         builder_image=image,
         source_tar_path=source_tar_path,
         version_info=VersionInfo(revision=revision, version_name=branch, version_type="branch"),

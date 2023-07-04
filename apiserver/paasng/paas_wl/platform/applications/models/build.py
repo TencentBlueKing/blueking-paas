@@ -20,24 +20,29 @@ from typing import List, Optional
 
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONCharField, JSONField
 
 from paas_wl.platform.applications.constants import ArtifactType
-from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 class Build(UuidAuditedModel):
+    application_id = models.UUIDField(verbose_name=_('所属应用'), null=True)
+    module_id = models.UUIDField(verbose_name=_('所属模块'), null=True)
+
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', on_delete=models.CASCADE)
+    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
 
     # Slug path
     slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push", null=True)
     image = models.TextField(help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物", null=True)
 
+    # 源码信息
     source_type = models.CharField(max_length=128, null=True)
     branch = models.CharField(max_length=128, null=True, help_text="readable version, such as trunk/master")
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
@@ -53,6 +58,18 @@ class Build(UuidAuditedModel):
     class Meta:
         get_latest_by = 'created'
         ordering = ['-created']
+
+    @property
+    def image_repository(self) -> Optional[str]:
+        """从 image 字段分割出 repository 属性"""
+        if not self.image:
+            return None
+        split = self.image.split(":", 1)
+        if len(split) == 2:
+            return split[0]
+        # warning: no test cover
+        # nobody know what kind of data will it be
+        return split[0]
 
     @property
     def image_tag(self) -> Optional[str]:
@@ -88,15 +105,17 @@ class Build(UuidAuditedModel):
 class BuildProcessManager(models.Manager):
     def new(
         self,
-        owner: str,
+        env: ModuleEnvironment,
         builder_image: str,
         source_tar_path: str,
         version_info: VersionInfo,
         invoke_message: str,
+        owner: str,
         buildpacks_info: Optional[List] = None,
     ):
-        """Create a new release
+        """Create a new build processes
 
+        :param str env: 执行本次构建的环境
         :param str owner: 发布者
         :param str builder_image: builder 镜像
         :param str source_tar_path: 源码上传到对象存储服务的路径
@@ -106,21 +125,23 @@ class BuildProcessManager(models.Manager):
         """
 
         # Get the largest(latest) version and increase it by 1.
-        if not hasattr(self, "instance"):
-            raise RuntimeError("Only call `new` method from RelatedManager.")
+        if hasattr(self, "instance"):
+            raise RuntimeError("Can not call `new` method from RelatedManager.")
 
-        if not isinstance(self.instance, WlApp):
-            raise RuntimeError("Only call from app.build_set.")
+        application_id = env.application_id
+        module_id = env.module_id
+        wl_app = env.wl_app
+        latest_bp = self.filter(module_id=module_id).order_by('-generation').first()  # type: BuildProcess
+        if latest_bp:
+            next_generation = latest_bp.generation + 1
 
-        wl_app = self.instance
-        latest_build = self.order_by('-generation').first()
-        if latest_build:
-            next_generation = latest_build.generation + 1
         else:
             next_generation = 1
 
         build_process = BuildProcess.objects.create(
             owner=owner,
+            application_id=application_id,
+            module_id=module_id,
             app=wl_app,
             image=builder_image,
             buildpacks=buildpacks_info or [],
@@ -137,8 +158,11 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
+    application_id = models.UUIDField(verbose_name=_('所属应用'), null=True)
+    module_id = models.UUIDField(verbose_name=_('所属模块'), null=True)
+
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE)
+    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
     image = models.CharField(max_length=512, null=True, help_text="builder image")
     buildpacks = JSONCharField(max_length=4096, null=True)
 

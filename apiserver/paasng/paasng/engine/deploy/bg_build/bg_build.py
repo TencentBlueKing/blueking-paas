@@ -239,6 +239,8 @@ class BuildProcessExecutor(DeployStep):
         # starting create build
         build_instance = Build.objects.create(
             owner=settings.BUILDER_USERNAME,
+            application_id=self.bp.application_id,
+            module_id=self.bp.module_id,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
             image=image,

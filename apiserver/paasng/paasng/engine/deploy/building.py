@@ -319,8 +319,9 @@ class ApplicationBuilder(BaseBuilder):
         app_image_repository = generate_image_repository(env.module)
         app_image = runtime_info.generate_image(version_info=self.version_info)
         # Create the Build object and start a background build task
-        build_process = env.wl_app.buildprocess_set.new(
+        build_process = BuildProcess.objects.new(
             owner=self.deployment.operator,
+            env=env,
             builder_image=builder_image,
             source_tar_path=source_tar_path,
             version_info=self.version_info,
@@ -415,8 +416,9 @@ class DockerBuilder(BaseBuilder):
         }
 
         # Create the Build object and start a background build task
-        build_process = env.wl_app.buildprocess_set.new(
+        build_process = BuildProcess.objects.new(
             owner=self.deployment.operator,
+            env=env,
             builder_image=builder_image,
             source_tar_path=source_tar_path,
             version_info=self.version_info,

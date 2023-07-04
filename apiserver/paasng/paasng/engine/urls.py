@@ -145,7 +145,7 @@ urlpatterns = [
     ),
     # build history
     re_path(
-        make_app_pattern(r"/build/history/$"),
+        make_app_pattern(r"/build/history/$", include_envs=False),
         views.BuildProcessViewSet.as_view({"get": "list"}),
         name="api.build.history",
     ),

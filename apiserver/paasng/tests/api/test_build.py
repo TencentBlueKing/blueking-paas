@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 class TestBuildProcessViewSet:
     def test_list_pending(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
-        bp = create_build_proc(bk_stag_env.wl_app)
+        bp = create_build_proc(bk_stag_env)
         resp = api_client.get(
             path=f"/api/bkapps/applications/{bk_app.code}/modules/"
             f"{bk_module.name}/envs/{bk_stag_env.environment}/build/history/"
@@ -40,7 +40,7 @@ class TestBuildProcessViewSet:
         assert data["results"][0]["build_id"] is None
 
     def test_list_successful(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
-        bp = create_build_proc(bk_stag_env.wl_app)
+        bp = create_build_proc(bk_stag_env)
         bp.update_status(BuildStatus.SUCCESSFUL)
         build = create_build(bk_stag_env.wl_app, image="nginx:latest", bp=bp)
         resp = api_client.get(

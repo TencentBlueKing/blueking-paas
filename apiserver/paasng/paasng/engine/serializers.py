@@ -54,9 +54,11 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         default=ImagePullPolicy.IF_NOT_PRESENT,
     )
     build_only = serializers.BooleanField(help_text="是否仅构建, 不发布", default=False)
+    build_image_tag = serializers.CharField(help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True)
     build_id = serializers.CharField(
         help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
     )
+    invoke_message = serializers.CharField(help_text="触发信息", required=False, allow_null=True, allow_blank=True)
 
 
 class CreateDeploymentSLZ(serializers.Serializer):
@@ -549,3 +551,26 @@ class DeployPhaseSLZ(DeployFramePhaseSLZ):
     start_time = serializers.DateTimeField(required=False)
     complete_time = serializers.DateTimeField(required=False)
     steps = DeployStepSLZ(source="get_sorted_steps", many=True)
+
+
+class ImageArtifactMinimalSLZ(serializers.Serializer):
+    """镜像构件概览"""
+
+    repository = serializers.CharField(help_text="镜像仓库")
+    tag = serializers.CharField(help_text="镜像 Tag")
+
+
+class ImageArtifactDetailSLZ(serializers.Serializer):
+    """镜像构件详情"""
+
+    # 镜像详情
+    repository = serializers.CharField(help_text="镜像仓库")
+    tag = serializers.CharField(help_text="镜像 Tag")
+    size = serializers.IntegerField(help_text="镜像大小")
+    updated = serializers.DateTimeField(help_text='更新时间')
+    digest = serializers.CharField(help_text="摘要")
+    invoke_message = serializers.CharField(help_text="触发信息")
+    # 构建记录
+    # build_records = OperationSLZ(many=True, default=list)
+    # 部署记录
+    # deploy_records = OperationSLZ(many=True, default=list)

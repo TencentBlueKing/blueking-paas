@@ -53,7 +53,9 @@
               class="process-command"
               @click="showProcessDetail(process)"
             >
-              {{ process.cmd }}
+              <p v-bk-overflow-tips>
+                {{ process.cmd }}
+              </p>
             </div>
             <div class="status-container">
               <div
@@ -2195,6 +2197,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .process-table-wrapper {
         &.reset-style {
             border: 1px solid #dcdee5;
@@ -2257,6 +2260,10 @@ export default {
                 min-height: 75px;
                 display: flex;
                 align-items: center;
+
+                p {
+                  @include multiline-ellipsis;
+                }
             }
 
             .process-status {

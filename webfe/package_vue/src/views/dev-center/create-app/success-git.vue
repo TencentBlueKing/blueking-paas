@@ -15,14 +15,14 @@
             >
               {{ $t('查看应用概览') }}
             </router-link>
-            <span style="position: relative; top: -1px;">|</span>
+            <span class="success-dividing-line">|</span>
             <router-link
               :to="{ name: 'appDeploy', params: { id: appCode } }"
               class="link"
             >
               {{ $t('部署应用') }}
             </router-link>
-            <span style="position: relative; top: -1px;">|</span>
+            <span class="success-dividing-line">|</span>
             <router-link
               :to="{ name: 'appRoles', params: { id: appCode } }"
               class="link"

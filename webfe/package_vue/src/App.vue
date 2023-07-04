@@ -177,4 +177,10 @@ export default {
             @include dashed($i + px);
         }
     }
+
+    .success-dividing-line {
+        position: relative;
+        top: -1px;
+        margin: 0 5px;
+    }
 </style>

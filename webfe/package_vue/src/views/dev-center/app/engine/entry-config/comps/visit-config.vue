@@ -185,17 +185,12 @@
         <div class="tl">
           <p> {{ $t('设定后：') }} </p>
           <p>
-            {{ $t('应用短地址') }}({{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.prod) }})
+            1. {{ $t('应用短地址') }}({{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.prod) }})
             {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
             {{ $t('模块的生产环境') }}
           </p>
-          <p class="mt10">
-            {{ $t('应用短地址') }}({{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.stag) }})
-            {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
-            {{ $t('模块的预发布环境') }}
-          </p>
           <p>
-            {{ $t('应用访问限制') }}( {{ accessControlText.join('、') }} ){{ $t('变更为') }}
+            2. {{ $t('应用访问限制') }}( {{ accessControlText.join('、') }} ){{ $t('变更为') }}
             {{ $t('对') }} {{ domainDialog.moduleName }} {{ $t('生效') }}
           </p>
         </div>

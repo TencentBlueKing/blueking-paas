@@ -30,7 +30,7 @@ from paasng.platform.region.models import get_all_regions
 class ClusterManageView(GenericTemplateView):
     """Cluster 管理页"""
 
-    name = "应用集群管理"
+    name = "集群管理"
     template_name = "admin42/platformmgr/clusters.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 

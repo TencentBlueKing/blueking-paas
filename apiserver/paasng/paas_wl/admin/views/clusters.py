@@ -28,14 +28,13 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet, mixins
 
-from paas_wl.admin.helpers import (
+from paas_wl.admin.helpers.helm import (
     HelmReleaseParser,
     WorkloadsDetector,
     convert_secrets_to_releases,
-    detect_operator_status,
-    fetch_paas_cobj_info,
     filter_latest_releases,
 )
+from paas_wl.admin.helpers.operator import detect_operator_status, fetch_paas_cobj_info
 from paas_wl.admin.serializers.clusters import (
     APIServerSLZ,
     ClusterRegisterRequestSLZ,
@@ -109,6 +108,10 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+class ClusterComponentViewSet(ViewSet):
+    """集群组件信息相关"""
+
     def get_operator_info(self, requests, cluster_name, *args, **kwargs):
         """获取各集群 Operator 相关信息"""
         resp_data = {'cluster_name': cluster_name}
@@ -124,8 +127,6 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         resp_data.update(fetch_paas_cobj_info(client, resp_data['crds']))
         return Response(resp_data)
 
-
-class ClusterComponentViewSet(ViewSet):
     def list_components(self, request, cluster_name, *args, **kwargs):
         resp_data = {'cluster_name': cluster_name, 'components': defaultdict(list)}
         try:

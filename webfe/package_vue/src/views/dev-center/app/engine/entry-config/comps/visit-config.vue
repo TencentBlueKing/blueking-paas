@@ -44,12 +44,12 @@
                 :class="i === row.envsData.length - 1 ? 'last-env-container' : ''"
               >
                 <div class="text-container">
-                  {{ entryEnv[item] }}
+                  {{ $t(entryEnv[item]) }}
                   <span
                     class="icon-container"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item] && row.envs[item][0].is_running">
                     <i
-                      class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="'添加自定义访问地址'"
+                      class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="$t('添加自定义访问地址')"
                       @click="handleAdd($index, i, row, item)" />
                     <i class="paasng-icon paasng-info-line pl10 info-icon" v-bk-tooltips="configIpTip" />
                   </span>
@@ -734,7 +734,6 @@ export default {
         flex-flow: column;
         justify-content: center;
         .module-default{
-          width: 52px;
           height: 22px;
           font-size: 12px;
           color: #3A84FF;
@@ -743,6 +742,7 @@ export default {
           border: 1px solid #3a84ff4d;
           border-radius: 11px;
           text-align: center;
+          padding: 0 5px;
         }
       }
 

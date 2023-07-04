@@ -18,7 +18,7 @@
             </span>
           </div>
           <div class="perm-title flex-row align-items-center">
-            用户限制
+            {{ $t('用户限制') }}
             <div
               class="ps-switcher-wrapper"
               @click="togglePermission"
@@ -1501,12 +1501,12 @@ export default {
               font-weight: 700;
               .perm-status{
                 border-radius: 2px;
-                width: 52px;
                 height: 22px;
                 text-align: center;
                 line-height: 22px;
                 margin-left: 15px;
                 font-size: 12px;
+                padding: 0 5px;
               }
               .perm-status-open{
                 color: #14A568;

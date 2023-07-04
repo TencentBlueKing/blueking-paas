@@ -27,7 +27,7 @@
     <bk-dialog
         v-model="dialog.visible"
         header-position="left"
-        width="900"
+        width="1000"
         :mask-close="true"
         :show-footer="false"
     >
@@ -85,6 +85,11 @@
             >
                 <bk-table-column type="index" label="#" width="50"></bk-table-column>
                 <bk-table-column prop="kind" label="Kind" width="100"></bk-table-column>
+                <bk-table-column label="Name" width="100">
+                    <template slot-scope="props">
+                        <span v-bk-tooltips="props.row.name">$[ props.row.name ]</span>
+                    </template>
+                </bk-table-column>
                 <bk-table-column label="Replicas" width="250">
                     <template slot-scope="props">
                         <span v-bk-tooltips="props.row.status">$[ props.row.status ]</span>

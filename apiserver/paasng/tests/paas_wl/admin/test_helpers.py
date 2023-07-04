@@ -46,7 +46,7 @@ def helm_release_secret() -> ResourceInstance:
             "description": "Upgrade complete",
             "last_deployed": "2023-06-29T17:25:24.359441991+08:00",
         },
-        "manifest": "---\nfoo:bar\n---\nbar:boo\n",
+        "manifest": "---\nfoo: bar\n---\nbar: boo\n",
     }
     raw = base64.b64encode(base64.b64encode(gzip.compress(json.dumps(release_data).encode())))
     return ResourceInstance(

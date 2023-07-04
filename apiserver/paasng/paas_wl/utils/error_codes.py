@@ -88,5 +88,8 @@ class ErrorCodes:
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode("Failed to create credentials")
 
+    # 集群组件相关
+    CLUSTER_COMPONENT_NOT_EXIST = ErrorCode('Cluster component not exist')
+
 
 error_codes = ErrorCodes()

@@ -171,6 +171,12 @@
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 
+## 开发者中心使用的 k8s 集群组件（helm chart 名称）
+# BKPAAS_K8S_CLUSTER_COMPONENTS:
+# - bk-ingress-nginx
+# - bkapp-log-collection
+# - bkpaas-app-operator
+# - bcs-general-pod-autoscaler
 
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
 

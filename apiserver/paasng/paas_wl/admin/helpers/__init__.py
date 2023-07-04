@@ -16,9 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-
-# 云原生应用 Operator 部署的命名空间
-BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE = 'bkpaas-app-operator-system'
-
-# Helm 存储 Release 信息的 Secret 类型
-HELM_RELEASE_SECRET_TYPE = 'helm.sh/release.v1'

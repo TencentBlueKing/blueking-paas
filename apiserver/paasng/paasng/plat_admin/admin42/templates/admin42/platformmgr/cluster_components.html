@@ -1,0 +1,213 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-component-list" class="p20">
+    <bk-table :data="data" class="mt20">
+        <bk-table-column label="集群名称" prop="cluster_name" align="center"></bk-table-column>
+        <bk-table-column label="集群 ID" min-width="100" align="center">
+            <template slot-scope="props">
+                <span v-if="props.row.cluster_id">$[ props.row.cluster_id ]</span>
+                <span v-else>--</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column v-for="comp_name in clusterComponents" :label="comp_name" align="center">
+            <template slot-scope="props">
+                <span v-for="release in getCompReleases(props.row, comp_name)">
+                    <span :set="status = release.deploy_result.status">
+                        <bk-tag theme="success" v-if="status === 'deployed'" @click="handleView(release, props.row.cluster_name)"> ✔ </bk-tag>
+                        <bk-tag theme="danger" v-else-if="status === 'failed'" @click="handleView(release, props.row.cluster_name)"> ✘ </bk-tag>
+                        <bk-tag v-else @click="handleView(release, props.row.cluster_name)"> $[ status ] </bk-tag>
+                    </span>
+                </span>
+                <div v-if="!getCompReleases(props.row, comp_name).length">--</div>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog
+        v-model="dialog.visible"
+        header-position="left"
+        width="900"
+        :mask-close="true"
+        :show-footer="false"
+    >
+        <div slot="header">集群组件详情</div>
+        <bk-form :label-width="140" :model="dialog.form">
+            <bk-form-item label="集群名称">
+                <bk-input v-model="dialog.form.cluster_name" disabled="true"></bk-input>
+            </bk-form-item>
+            <hr>
+            <h5>Release 信息</h5>
+            <bk-form-item label="命名空间">
+                <bk-input v-model="dialog.form.comp.namespace" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="Release 名称">
+                <bk-input v-model="dialog.form.comp.name" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="版本号">
+                <bk-input v-model="dialog.form.comp.version" disabled="true"></bk-input>
+            </bk-form-item>
+            <hr>
+            <h5>Chart 信息</h5>
+            <bk-form-item label="Chart 名称">
+                <bk-input v-model="dialog.form.comp.chart.name" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="Chart 版本">
+                <bk-input v-model="dialog.form.comp.chart.version" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="App 版本">
+                <bk-input v-model="dialog.form.comp.chart.app_version" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="Chart 描述">
+                <bk-input
+                    v-model="dialog.form.comp.chart.description"
+                    disabled="true"
+                    type="textarea"
+                    rows="5"
+                ></bk-input>
+            </bk-form-item>
+            <hr>
+            <h5>Chart 部署结果</h5>
+            <bk-form-item label="状态">
+                <bk-input v-model="dialog.form.comp.deploy_result.status" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="部署详情">
+                <bk-input v-model="dialog.form.comp.deploy_result.description" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="部署时间">
+                <bk-input v-model="dialog.form.comp.deploy_result.created_at" disabled="true"></bk-input>
+            </bk-form-item>
+            <hr>
+            <h5>工作负载状况</h5>
+            <bk-table
+                :data="dialog.form.workloads"
+                v-bkloading="{ isLoading: dialog.tableLoading, size: 'mini', theme: 'primary' }"
+            >
+                <bk-table-column type="index" label="#" width="50"></bk-table-column>
+                <bk-table-column prop="kind" label="Kind" width="100"></bk-table-column>
+                <bk-table-column label="Replicas" width="250">
+                    <template slot-scope="props">
+                        <span v-bk-tooltips="props.row.status">$[ props.row.status ]</span>
+                    </template>
+                </bk-table-column>
+                <bk-table-column label="Conditions">
+                    <template slot-scope="props">
+                        <json-pretty
+                            :data="props.row.conditions"
+                            show-length highlight-mouseover-node :deep="0"
+                        ></json-pretty>
+                    </template>
+                </bk-table-column>
+            </bk-table>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+    const clusterComponents = {{ cluster_components | to_json }}
+
+    const URLRouter = {
+        listClusters: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
+        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/components/' %}"),
+        retrieve: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/components/${comp_name}/' %}"),
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#platform-component-list",
+            delimiters: ['$[', ']'],
+            mixins: [SubmitMixin],
+            data: function() {
+                return {
+                    data: [],
+                    dialog: {
+                        visible: false,
+                        form: {
+                            cluster_name: '',
+                            comp: {
+                                name: '',
+                                namespace: '',
+                                version: 0,
+                                chart: {
+                                    name: '',
+                                    version: '',
+                                    app_version: '',
+                                    description: ''
+                                },
+                                deploy_result: {
+                                    status: '',
+                                    description: '',
+                                    created_at: ''
+                                }
+                            },
+                            workloads: []
+                        }
+                    },
+                }
+            },
+            mounted: function () {
+                this.list()
+            },
+            methods: {
+                list: async function () {
+                    const el = this.$bkLoading({title: '加载中'})
+                    try {
+                        // 先获取集群信息占位
+                        let clusters = await this.$http.get(URLRouter.listClusters)
+                        for (let i = 0; i < clusters.length; i++) {
+                            this.data.push({
+                                cluster_name: clusters[i].name,
+                                cluster_id: clusters[i].annotations.bcs_cluster_id
+                            })
+                        }
+                    } finally {
+                        el.hide = true
+                    }
+                    // 再逐个更新集群的组件信息
+                    for (let i = 0; i < this.data.length; i ++) {
+                        let url = URLRouter.list.replace("${cluster_name}", this.data[i].cluster_name)
+                        await this.$http.get(url).then(ret => {
+                            this.$set(this.data, i, {...this.data[i], ...ret})
+                        })
+                    }
+                },
+                retrieve: async function (cluster_name, comp_name, namespace, secret_name) {
+                    let url = URLRouter.retrieve.replace("${cluster_name}", cluster_name).replace("${comp_name}", comp_name)
+                    await this.$http.get(
+                        url, {params: {namespace: namespace, secret_name: secret_name}}
+                    ).then(ret => {
+                        this.dialog.form.workloads = ret
+                        this.dialog.tableLoading = false
+                    })
+                },
+                getCompReleases: function (row, comp_name) {
+                    if (!row.components || !row.components[comp_name]) {
+                        return []
+                    }
+                    return row.components[comp_name]
+                },
+                handleView: function(release, cluster_name) {
+                    this.dialog.form = {
+                        cluster_name: cluster_name,
+                        comp: {...release},
+                        workloads: undefined
+                    }
+                    this.dialog.visible = true
+                    this.dialog.tableLoading = true
+                    this.retrieve(
+                        cluster_name,
+                        release.chart.name,
+                        release.namespace,
+                        release.secret_name,
+                    )
+                },
+            },
+        })
+    })
+</script>
+
+{% endblock %}

@@ -1,15 +1,15 @@
 <template>
-  <div class="right-main">
+  <div>
     <paas-content-loader
       :is-loading="isPermissionChecking"
       placeholder="user-limit-loading"
       :offset-top="25"
-      class="app-container middle"
+      class="middle"
     >
       <section v-show="!isPermissionChecking">
         <div
           v-if="!isPermissionChecking"
-          class="perm-action mt15"
+          class="perm-action"
         >
           <div :class="['perm-icon', { 'active': isUseIPPermission }]">
             <span :class="['paasng-icon', { 'paasng-lock': !isUseIPPermission, 'paasng-unlock': isUseIPPermission }]" />

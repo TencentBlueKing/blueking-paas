@@ -1475,7 +1475,6 @@ export default {
           position: relative;
           overflow: hidden;
           background: #fff;
-          padding: 10px;
 
           .perm-icon {
               float: left;

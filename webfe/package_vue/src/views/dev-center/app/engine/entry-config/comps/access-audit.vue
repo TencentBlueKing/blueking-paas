@@ -1,16 +1,15 @@
 <template>
   <div
-    class="right-main approve-container"
-  >
+    class="approve-container">
     <paas-content-loader
       :is-loading="loaderLoading"
       placeholder="order-loading"
       :offset-top="25"
-      class="app-container middle order-approve-wrapper"
+      class="order-approve-wrapper"
     >
       <section v-show="!isLoading">
         <bk-tab
-          class="mt5"
+          class="mt5 audit-tab-cls"
           :active.sync="orderStatus"
           type="unborder-card"
         >
@@ -99,6 +98,9 @@ export default {
           &:first-child {
               padding-left: 30px;
           }
+      }
+      .audit-tab-cls{
+        margin: 10px 24px 0px;
       }
   </style>
 

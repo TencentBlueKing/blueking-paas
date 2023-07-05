@@ -40,7 +40,7 @@
       <div v-else-if="active === 'ip_access_control'">
         <accessIp></accessIp>
       </div>
-      <div v-else-if="active === 'approval'" class="controller">
+      <div v-else-if="active === 'approval'">
         <accessAudit></accessAudit>
       </div>
     </section>
@@ -124,7 +124,7 @@ export default {
       background: #fff;
       min-height: calc(100% - 50px);
       width: calc(100% - 38px);
-      margin: 16px auto 0;
+      margin: 20px auto 0;
       .entry-bar{
         /deep/ .bar-container{
           border: none !important;

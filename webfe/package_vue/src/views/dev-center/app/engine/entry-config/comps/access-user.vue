@@ -1,15 +1,15 @@
 <template>
-  <div class="right-main">
+  <div>
     <paas-content-loader
       :is-loading="isPermissionChecking"
       placeholder="user-limit-loading"
       :offset-top="25"
-      class="app-container middle access-user"
+      class="access-user"
     >
       <section>
         <div
           v-if="!isPermissionChecking"
-          class="perm-action mt15"
+          class="perm-action"
         >
           <div :class="['perm-icon', { 'active': isUseUserPermission }]">
             <span
@@ -1462,6 +1462,7 @@ export default {
   <style lang="scss" scoped>
       .access-user{
         min-height: calc(100% - 50px);
+        padding: 20px 24px;
       }
       .bk-table {
           &.set-border {
@@ -1474,7 +1475,7 @@ export default {
           position: relative;
           overflow: hidden;
           background: #fff;
-          padding: 20px 24px;
+          padding: 10px;
 
           .perm-icon {
               float: left;
@@ -1671,7 +1672,7 @@ export default {
 
       .user-tab-cls{
         background: #fff;
-        margin-top: 15px;
+        margin-top: 10px;
         /deep/ .bk-tab-section {
             padding: 0 !important;
         }

@@ -19,7 +19,8 @@ from typing import Dict, Optional
 
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
+from paas_wl.platform.applications.constants import ArtifactType
+from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -44,20 +45,31 @@ def create_build_proc(
     return build_process
 
 
-def create_build(wl_app: WlApp, image: str = "", procfile: Optional[Dict] = None, bp: Optional[BuildProcess] = None):
+def create_build(
+    env: ModuleEnvironment,
+    image: str = "",
+    procfile: Optional[Dict] = None,
+    bp: Optional[BuildProcess] = None,
+    artifact_type: ArtifactType = ArtifactType.IMAGE,
+):
     procfile = procfile or {"web": "start web"}
     branch = bp.branch if bp is not None else "master"
     revision = bp.revision if bp is not None else "1"
+    wl_app = env.wl_app
     build_params = {
         "owner": wl_app.owner,
+        "application_id": env.application_id,
+        "module_id": env.module_id,
         "app": wl_app,
         "image": image or "nginx:latest",
         "source_type": "foo",
         "branch": branch,
         "revision": revision,
         "procfile": procfile,
+        "artifact_type": artifact_type,
     }
     wl_build = Build.objects.create(**build_params)
+    mark_as_latest_artifact(wl_build)
     if bp:
         bp.build = wl_build
         bp.save()

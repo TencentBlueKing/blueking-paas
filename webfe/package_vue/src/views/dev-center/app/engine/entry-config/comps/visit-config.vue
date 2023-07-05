@@ -1,5 +1,5 @@
 <template>
-  <div class="port-config">
+  <div class="port-config" v-bkloading="{ isLoading: setModuleLoading, title: $t('正在设置主模块') }">
     <div
       class="content"
       style="position: relative;"
@@ -15,11 +15,10 @@
           <template slot-scope="{ row, $index }">
             <section
               class="module-container"
+              :class="defaultIndex === $index && !row.is_default ? 'module-cursor' : ''"
               @mouseenter="handleMouseEnter($index)"
               @mouseleave="defaultIndex = ''">
-              <div
-                style="cursor: pointer;"
-                class="flex-row align-items-center"
+              <div class="flex-row align-items-center"
               >{{ row.name || '--' }}
                 <div class="module-default ml10" v-if="row.is_default">{{$t('访问管理主模块')}}</div>
               </div>
@@ -41,7 +40,6 @@
               @mouseleave="handleEnvMouseLeave">
               <div
                 class="env-container"
-                :class="i === row.envsData.length - 1 ? 'last-env-container' : ''"
               >
                 <div class="text-container">
                   <span v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
@@ -189,15 +187,22 @@
       >
         <div class="tl">
           <p> {{ $t('设定后：') }} </p>
-          <p>
-            1. {{ $t('应用短地址') }}({{ $route.params.id }}{{ getAppRootDomain(curClickAppModule.clusters.prod) }})
-            {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
-            {{ $t('模块的生产环境') }}
-          </p>
-          <p>
-            2. {{ $t('应用访问限制') }}( {{ accessControlText.join('、') }} ){{ $t('变更为') }}
-            {{ $t('对') }} {{ domainDialog.moduleName }} {{ $t('生效') }}
-          </p>
+          <div class="flex-row mt5">
+            <p>1. </p>
+            <p class="pl10">
+              {{ $t('应用短地址') }}{{$t('（')}}{{ $route.params.id }}
+              {{ getAppRootDomain(curClickAppModule.clusters.prod) }}{{$t('）')}}
+              {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
+              {{ $t('模块的生产环境') }}
+            </p>
+          </div>
+          <div class="flex-row mt5">
+            <p>2. </p>
+            <p class="pl10">
+              {{ $t('应用访问限制') }}{{$t('（')}}{{ accessControlText.join('、') }}{{$t('）')}}{{ $t('变更为') }}
+              {{ $t('对') }}{{ domainDialog.moduleName }} {{ $t('生效') }}
+            </p>
+          </div>
         </div>
 
         <div slot="footer">
@@ -307,7 +312,7 @@ export default {
             ${this.ipConfigInfo.frontend_ingress_ip}
           </div>
           <div class="mt10 mb10">推荐操作流程: </div>
-          <div>1. 首先在“域名管理”添加域名</div>
+          <div>1. 点击右侧 “添加” 自定义域名</div>
           <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
           <div>3. 打开浏览器，测试访问是否正常 </div>
           <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
@@ -744,6 +749,9 @@ export default {
           text-align: center;
           padding: 0 5px;
         }
+        .module-cursor{
+          cursor: pointer;
+        }
       }
 
       .cell-container{
@@ -759,13 +767,6 @@ export default {
         margin: 10px 0px;
         text-align: center;
         border-radius: 2px;
-      }
-
-      .last-env-container{
-        color: #E68D00;
-        background: #FFF2C9;
-        margin-bottom: 10px;
-        margin-top: 10px;
       }
 
       .text-container{

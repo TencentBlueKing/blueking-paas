@@ -2169,4 +2169,7 @@ export default {
   白名单: 'Whitelists',
   '该环境未部署，无法访问': 'The environment is not deployed and cannot be accessed',
   访问管理主模块: 'Main',
+  '（': '(',
+  '）': ')',
+  正在设置主模块: 'Setting up main module',
 };

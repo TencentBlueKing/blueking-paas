@@ -8,7 +8,7 @@
         {{ $t('健康监测') }}
       </h2>
     </div>
-    <div class="ps-container service">
+    <div class="ps-container service-container">
       <paas-content-loader
         class="middle bnone"
         :is-loading="isLoading"
@@ -78,92 +78,91 @@
   </div>
 </template>
 
-<script>
-    export default {
-        data () {
-            return {
-                isLoading: false,
-                categoryId: '',
+<script>export default {
+  data() {
+    return {
+      isLoading: false,
+      categoryId: '',
 
-                lauguageMap: {
-                    all: this.$t('全部'),
-                    ieod: this.$t('内部版'),
-                    tencent: this.$t('外部版'),
-                    clouds: this.$t('混合云版')
-                },
+      lauguageMap: {
+        all: this.$t('全部'),
+        ieod: this.$t('内部版'),
+        tencent: this.$t('外部版'),
+        clouds: this.$t('混合云版'),
+      },
 
-                tabActive: 'all',
+      tabActive: 'all',
 
-                categoryObject: {
-                    all: {
-                        services: []
-                    }
-                },
-                uniqueRegionList: []
-            };
+      categoryObject: {
+        all: {
+          services: [],
         },
-        computed: {
-            isEmpty () {
-                const keys = Object.keys(this.categoryObject);
-                return keys.every(item => !this.categoryObject[item].services.length);
-            }
-        },
-        watch: {
-            '$route' () {
-                this.categoryId = Number(this.$route.params.category_id);
-                this.tabActive = 'all';
-                this.categoryObject = Object.assign({}, {
-                    all: {
-                        services: []
-                    }
-                });
-                this.fetchCategoryInfo();
-            }
-        },
-        async created () {
-            this.categoryId = Number(this.$route.params.category_id);
-            this.fetchCategoryInfo();
-        },
-        methods: {
-            tabChange (tab) {
-                this.tabActive = tab;
-                const tempServices = [];
-                this.categoryObject.all.services.forEach(item => {
-                    if (item.enabled_regions.includes(tab)) {
-                        tempServices.push(item);
-                    }
-                });
-
-                this.categoryObject[tab].services = [...tempServices];
-            },
-            fetchCategoryInfo () {
-                this.isLoading = true;
-                this.$http.get(`${BACKEND_URL}/api/services/categories/${this.categoryId}/`).then((response) => {
-                    const resData = response;
-
-                    const allRegions = []
-
-                    ;(resData.results || []).forEach(item => {
-                        item.enabled_regions.forEach(regItem => {
-                            allRegions.push(regItem);
-                        });
-                    });
-
-                    this.uniqueRegionList = [...new Set(allRegions)];
-
-                    this.uniqueRegionList.forEach(item => {
-                        this.$set(this.categoryObject, item, {
-                            services: []
-                        });
-                    });
-
-                    this.categoryObject.all.services = [...resData.results];
-
-                    this.isLoading = false;
-                });
-            }
-        }
+      },
+      uniqueRegionList: [],
     };
+  },
+  computed: {
+    isEmpty() {
+      const keys = Object.keys(this.categoryObject);
+      return keys.every(item => !this.categoryObject[item].services.length);
+    },
+  },
+  watch: {
+    '$route'() {
+      this.categoryId = Number(this.$route.params.category_id);
+      this.tabActive = 'all';
+      this.categoryObject = Object.assign({}, {
+        all: {
+          services: [],
+        },
+      });
+      this.fetchCategoryInfo();
+    },
+  },
+  async created() {
+    this.categoryId = Number(this.$route.params.category_id);
+    this.fetchCategoryInfo();
+  },
+  methods: {
+    tabChange(tab) {
+      this.tabActive = tab;
+      const tempServices = [];
+      this.categoryObject.all.services.forEach((item) => {
+        if (item.enabled_regions.includes(tab)) {
+          tempServices.push(item);
+        }
+      });
+
+      this.categoryObject[tab].services = [...tempServices];
+    },
+    fetchCategoryInfo() {
+      this.isLoading = true;
+      this.$http.get(`${BACKEND_URL}/api/services/categories/${this.categoryId}/`).then((response) => {
+        const resData = response;
+
+        const allRegions = []
+
+                    ;(resData.results || []).forEach((item) => {
+          item.enabled_regions.forEach((regItem) => {
+            allRegions.push(regItem);
+          });
+        });
+
+        this.uniqueRegionList = [...new Set(allRegions)];
+
+        this.uniqueRegionList.forEach((item) => {
+          this.$set(this.categoryObject, item, {
+            services: [],
+          });
+        });
+
+        this.categoryObject.all.services = [...resData.results];
+
+        this.isLoading = false;
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -227,5 +226,12 @@
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+    }
+
+    .service-container{
+      background: #fff;
+      margin-top: 20px;
+      padding: 0 20px;
+      min-height: 260px;
     }
 </style>

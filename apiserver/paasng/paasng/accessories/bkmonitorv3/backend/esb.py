@@ -62,6 +62,13 @@ class MonitorV3Group(OperationGroup):
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/search_alert/",
     )
+    # 统一查询时序数据
+    promql_query = bind_property(
+        Operation,
+        name='promql_query',
+        method='POST',
+        path='/api/c/compapi/v2/monitor_v3/graph_promql_query/',
+    )
 
 
 class Client(ESBClient):

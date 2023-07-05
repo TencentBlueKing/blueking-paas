@@ -33,6 +33,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("test webhook.Defaulter", func() {
@@ -270,6 +271,92 @@ var _ = Describe("test webhook.Validator", func() {
 				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: "fake",
 			}
 			Expect(bkapp.ValidateCreate()).To(BeNil())
+		})
+	})
+
+	Context("Test mounts", func() {
+		It("Normal", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      "redis-conf",
+					MountPath: "/etc/redis",
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+				},
+				{
+					Name:      "nginx-conf",
+					MountPath: "/etc/nginx/conf",
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("Invalid name", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "redis_conf",
+				MountPath: "/etc/redis",
+				Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("a lowercase RFC 1123 label must consist of"))
+		})
+		It("Invalid mountPath", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "nginx-conf",
+				MountPath: "etc",
+				Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must match regex"))
+		})
+		It("Duplicate name", func() {
+			sameName := "sample-conf"
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      sameName,
+					MountPath: "/etc/redis",
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+				},
+				{
+					Name:      sameName,
+					MountPath: "/etc/nginx/conf",
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("Duplicate mountPath", func() {
+			samePath := "/etc/sample"
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      "redis-conf",
+					MountPath: samePath,
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+				},
+				{
+					Name:      "nginx-conf",
+					MountPath: samePath,
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("Invalid source", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "redis-conf",
+				MountPath: "/etc/redis",
+				Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap"}`)},
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Invalid value: runtime.RawExtension"))
 		})
 	})
 

@@ -35,6 +35,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.cnative.specs.addresses import get_exposed_url
 from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
@@ -50,6 +51,7 @@ from paas_wl.cnative.specs.serializers import (
     QueryDeploysSerializer,
 )
 from paas_wl.utils.error_codes import error_codes
+from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.deploy.release.operator import release_by_k8s_operator
@@ -146,10 +148,20 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # TODO: Allow use other revisions
         revision = model_resource.revision
 
+        # Try to get and validate the image credentials, will raise InvalidImageCredentials when any refs are invalid
         try:
-            release_by_k8s_operator(env, revision, operator=request.user.pk)
+            credential_refs = get_references(revision.json_value)
+            validate_references(application, credential_refs)
         except InvalidImageCredentials:
             raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
+        # flush credentials if needed
+        if credential_refs:
+            AppImageCredential.objects.flush_from_refs(
+                application=application, wl_app=env.wl_app, references=credential_refs
+            )
+
+        try:
+            release_by_k8s_operator(env, revision, operator=request.user.pk)
         except UnprocessibleEntityError as e:
             # 格式错误类异常（422），允许将错误信息提供给用户
             raise error_codes.DEPLOY_BKAPP_FAILED.f(

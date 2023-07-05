@@ -25,7 +25,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from paas_wl.cnative.specs import credentials
 from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
 from paas_wl.cnative.specs.constants import (
-    IMAGE_CREDENTIALS_REF_ANNO_KEY,
+    SERVICE_ACCOUNT_READY_TIMEOUT,
     ApiVersion,
     ConditionStatus,
     DeployStatus,
@@ -74,16 +74,16 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
     """
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
     with get_client_by_app(wl_app) as client:
+        # TODO: 讨论命名空间, 镜像访问凭证等资源是否需要移动到 paasng.engine.deploy.release.operator.release_by_k8s_operator 中？
         # 若命名空间不存在，则提前创建（若为新建命名空间，需要等待 ServiceAccount 就绪）
         namespace_client = KNamespace(client)
         _, created = namespace_client.get_or_create(name=wl_app.namespace)
         if created:
-            namespace_client.wait_for_default_sa(namespace=wl_app.namespace)
+            namespace_client.wait_for_default_sa(namespace=wl_app.namespace, timeout=SERVICE_ACCOUNT_READY_TIMEOUT)
 
-        if manifest["metadata"]["annotations"].get(IMAGE_CREDENTIALS_REF_ANNO_KEY) == "true":
-            # 下发镜像访问凭证(secret)
-            image_credentials = ImageCredentials.load_from_app(wl_app)
-            credentials.ImageCredentialsManager(client).upsert(image_credentials)
+        # 下发镜像访问凭证(secret)
+        image_credentials = ImageCredentials.load_from_app(wl_app)
+        credentials.ImageCredentialsManager(client).upsert(image_credentials)
 
         # 创建或更新 BkApp
         bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(

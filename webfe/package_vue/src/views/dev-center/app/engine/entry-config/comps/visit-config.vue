@@ -519,11 +519,11 @@ export default {
 
     // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
-      this.tableIndex = index;
-      this.envIndex = envIndex;
       this.ipConfigInfo = (this.curIngressIpConfigs || [])
         .find(e => e.environment === env && e.module === payload.name)
       || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
+      this.tableIndex = index;
+      this.envIndex = envIndex;
     },
 
     // 环境鼠标移出事件

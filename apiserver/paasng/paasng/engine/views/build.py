@@ -17,14 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
 
-from django.conf import settings
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
-from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
-from moby_distribution.registry.utils import parse_image
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
@@ -35,23 +30,17 @@ from paas_wl.platform.applications.models import Build, BuildProcess
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine import serializers
+from paasng.engine.constants import JobStatus
+from paasng.engine.models import Deployment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
 
 
-def get_app_docker_registry_client() -> DockerRegistryV2Client:
-    return DockerRegistryV2Client.from_api_endpoint(
-        api_endpoint=APIEndpoint(url=settings.APP_DOCKER_REGISTRY_HOST),
-        username=settings.APP_DOCKER_REGISTRY_USERNAME,
-        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-    )
-
-
-class ImageArtifactSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+class ImageArtifactViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['status']
+    search_fields = ['image']
     ordering = ('-created',)
 
     @swagger_auto_schema(response_serializer=serializers.ImageArtifactMinimalSLZ(many=True))
@@ -71,25 +60,28 @@ class ImageArtifactSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     def retrieve_image_detail(self, request, code, module_name, build_id):
         """获取镜像构件的详情"""
         module = self.get_module_via_path()
-        build = get_object_or_404(Build.objects.filter(module_id=module.pk), uuid=build_id)
-        image = parse_image(build.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
-        registry_client = get_app_docker_registry_client()
-        ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
-        metadata = ref.get_metadata()
-        manifest: ManifestSchema2 = ref.get()
+        build = get_object_or_404(Build.objects.filter(module_id=module.pk, artifact_deleted=False), uuid=build_id)
 
-        # TODO: 构建记录
-        build_records: List[Dict] = []
-        # TODO: 部署记录
-        deploy_records: List[Dict] = []
+        build_records = Build.objects.filter(
+            module_id=module.pk, artifact_type=ArtifactType.IMAGE, image=build.image
+        ).order_by("-created")
+        deploy_records = []
+        for deploy in (
+            Deployment.objects.owned_by_module(module)
+            .filter(build_id=build.uuid, status=JobStatus.SUCCESSFUL)
+            .order_by("-created")
+        ):
+            deploy_records.append(
+                {
+                    "operator": deploy.operator,
+                    "environment": deploy.app_environment.environment,
+                    "at": deploy.complete_time,
+                }
+            )
         return Response(
             data=serializers.ImageArtifactDetailSLZ(
                 {
-                    "repository": build.image_repository,
-                    "tag": build.image_tag,
-                    "size": sum(layer.size for layer in manifest.layers),
-                    "digest": metadata.digest,
-                    "invoke_message": build.build_process.invoke_message,
+                    "image_info": build,
                     "build_records": build_records,
                     "deploy_records": deploy_records,
                 }

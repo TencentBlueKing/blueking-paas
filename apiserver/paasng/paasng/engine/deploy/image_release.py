@@ -29,7 +29,8 @@ from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.release import start_release_step
-from paasng.engine.models import DeployPhaseTypes
+from paasng.engine.exceptions import DeployShouldAbortError
+from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_phase_start
 from paasng.engine.utils.output import Style
 from paasng.engine.utils.source import get_app_description_handler, get_processes
@@ -66,9 +67,10 @@ class ImageReleaseMgr(DeployStep):
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
             with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-                processes = get_processes(deployment=self.deployment)
                 build_id = self.deployment.advanced_options.build_id
                 if not build_id:
+                    # 旧的镜像应用从 deploy_config 读取进程信息
+                    processes = get_processes(deployment=self.deployment)
                     # 旧的镜像应用需要构造 fake build
                     runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                     build_id = self.engine_client.create_build(
@@ -76,6 +78,15 @@ class ImageReleaseMgr(DeployStep):
                         procfile={p.name: p.command for p in processes.values()},
                         extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
                     )
+                else:
+                    # TODO: 提供更好的处理方式, 不应该依赖上一个 Deployment
+                    # Q: 为什么不从 Build.procfile 里读取?
+                    # A: 因为 Build.procfile 目前只存储了启动命令, 没有 replicas/plan 等信息...
+                    # 普通应用从上一次使用该 build 部署的 deployment 获取进程信息
+                    deployment = Deployment.objects.filter(build_id=build_id).exclude(processes={}).first()
+                    if not deployment:
+                        raise DeployShouldAbortError("failed to get processes")
+                    processes = deployment.processes
                 self.deployment.update_fields(
                     processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id
                 )
@@ -108,6 +119,7 @@ class ImageReleaseMgr(DeployStep):
 
         :param p: DeployProcedure object for writing hint messages
         """
+
         for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
             p.stream.write_message(
                 'Creating new service instance of %s, it will take several minutes...' % rel.get_service().display_name

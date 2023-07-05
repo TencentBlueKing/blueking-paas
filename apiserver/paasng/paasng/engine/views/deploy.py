@@ -123,8 +123,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 选择历史构建的镜像时需要传递 build_id
         build = None
         if build_id := params["advanced_options"].get("build_id"):
-            if not Build.objects.filter(pk=build_id).exists():
-                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在"))
+            if not Build.objects.filter(pk=build_id, artifact_deleted=False).exists():
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
             build = Build.objects.get(pk=build_id)
 
         manifest = params.get("manifest", None)

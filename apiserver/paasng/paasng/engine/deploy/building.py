@@ -317,7 +317,9 @@ class ApplicationBuilder(BaseBuilder):
         builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 
         app_image_repository = generate_image_repository(env.module)
-        app_image = runtime_info.generate_image(version_info=self.version_info)
+        app_image = runtime_info.generate_image(
+            version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
+        )
         # Create the Build object and start a background build task
         build_process = BuildProcess.objects.new(
             owner=self.deployment.operator,
@@ -408,7 +410,9 @@ class DockerBuilder(BaseBuilder):
         env = self.deployment.app_environment
         builder_image = settings.KANIKO_IMAGE
         app_image_repository = generate_image_repository(env.module)
-        app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(version_info=self.version_info)
+        app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
+            version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
+        )
         # 注入构建环境所需环境变量
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),

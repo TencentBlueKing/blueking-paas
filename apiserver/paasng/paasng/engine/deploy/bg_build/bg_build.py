@@ -22,13 +22,12 @@ from uuid import UUID
 
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
-from django.conf import settings
 from django.utils.encoding import force_text
 
 from paas_wl.platform.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
-from paas_wl.platform.applications.models.build import Build, BuildProcess
+from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.utils.kubestatus import check_pod_health_status
@@ -238,7 +237,7 @@ class BuildProcessExecutor(DeployStep):
 
         # starting create build
         build_instance = Build.objects.create(
-            owner=settings.BUILDER_USERNAME,
+            owner=self.deployment.operator,
             application_id=self.bp.application_id,
             module_id=self.bp.module_id,
             app=self.wl_app,
@@ -251,11 +250,12 @@ class BuildProcessExecutor(DeployStep):
             bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,
         )
+        mark_as_latest_artifact(build_instance)
 
         # retrieve bp object again, flush the status
         self.bp.build = build_instance
-        self.bp.status = BuildStatus.SUCCESSFUL.value
-        self.bp.save(update_fields=["build", "status"])
+        self.bp.save(update_fields=["build"])
+        self.bp.update_status(BuildStatus.SUCCESSFUL)
         return build_instance
 
     def clean_slugbuilder(self):

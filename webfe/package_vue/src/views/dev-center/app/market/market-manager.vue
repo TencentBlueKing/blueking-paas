@@ -19,7 +19,7 @@
               {{ baseInfo.name || '--' }}
               <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div>
               <router-link :to="{ name: 'appBaseInfo' }">
-                {{ $t('点击修改基本信息') }}
+                {{ $t('点击去去"基本信息"页面修改') }}
               </router-link>
             </div>
             <div> {{ $t('创建时间：') }} {{ baseInfo.updated || '--' }}</div>
@@ -397,7 +397,7 @@ import RenderMemberItem from './render-member-display';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
 
 export default {
-  components : {
+  components: {
     user,
     userSelectorDialog,
     RenderMemberItem,

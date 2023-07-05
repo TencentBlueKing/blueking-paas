@@ -1,43 +1,49 @@
 <template>
   <div class="right-main">
-    <bk-tab
-      :active.sync="active"
-      ext-cls="domain-tab-cls"
-      type="unborder-card"
-      @tab-change="handleTabChange"
-    >
-      <bk-tab-panel
-        v-for="(panel, index) in panels"
-        :key="index"
-        v-bind="panel"
-      />
-    </bk-tab>
-    <div
-      v-if="active === 'moduleAddress'"
-      class="controller"
-    >
-      <paas-content-loader
-        :is-loading="isLoading"
-        placeholder="entry-loading"
-        :offset-top="20"
+    <div class="ps-top-bar">
+      <h2>
+        {{ $t('访问管理') }}
+      </h2>
+    </div>
+    <section class="visit-container">
+      <bk-tab
+        :active.sync="active"
+        ext-cls="domain-tab-cls"
+        type="unborder-card"
+        @tab-change="handleTabChange"
       >
-        <section v-show="!isLoading">
-          <visit-config
-            class="mt20 mb35"
-            @data-ready="handlerDataReady"
-          />
-        </section>
-      </paas-content-loader>
-    </div>
-    <div v-else-if="active === 'user_access_control'">
-      <accessUser></accessUser>
-    </div>
-    <div v-else-if="active === 'ip_access_control'">
-      <accessIp></accessIp>
-    </div>
-    <div v-else-if="active === 'approval'" class="controller">
-      <accessAudit></accessAudit>
-    </div>
+        <bk-tab-panel
+          v-for="(panel, index) in panels"
+          :key="index"
+          v-bind="panel"
+        />
+      </bk-tab>
+      <div
+        v-if="active === 'moduleAddress'"
+        class="controller"
+      >
+        <paas-content-loader
+          :is-loading="isLoading"
+          placeholder="entry-loading"
+          :offset-top="20"
+        >
+          <section v-show="!isLoading">
+            <visit-config
+              @data-ready="handlerDataReady"
+            />
+          </section>
+        </paas-content-loader>
+      </div>
+      <div v-else-if="active === 'user_access_control'">
+        <accessUser></accessUser>
+      </div>
+      <div v-else-if="active === 'ip_access_control'">
+        <accessIp></accessIp>
+      </div>
+      <div v-else-if="active === 'approval'" class="controller">
+        <accessAudit></accessAudit>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -100,9 +106,14 @@ export default {
 </script>
 <style lang="scss" scoped>
 .right-main{
+        .visit-container{
+          background: #fff;
+          margin: 20px 24px 0 24px;
+          padding-bottom: 20px;
+        }
     .domain-tab-cls {
         min-height: auto;
-        margin: auto;
+        margin: 0 24px;
         padding-top: 0px !important;
         background: #fff;
         /deep/ .bk-tab-section {
@@ -112,7 +123,7 @@ export default {
     .controller{
       background: #fff;
       min-height: calc(100% - 50px);
-      width: calc(100% - 50px);
+      width: calc(100% - 38px);
       margin: 16px auto 0;
       .entry-bar{
         /deep/ .bar-container{

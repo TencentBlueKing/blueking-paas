@@ -11,7 +11,7 @@
         border
         cell-class-name="table-cell-cls"
       >
-        <bk-table-column :label="$t('模块')" :width="200">
+        <bk-table-column :label="$t('模块')" :width="190">
           <template slot-scope="{ row, $index }">
             <section
               class="module-container"
@@ -21,7 +21,7 @@
                 style="cursor: pointer;"
                 class="flex-row align-items-center"
               >{{ row.name || '--' }}
-                <div class="module-default ml10" v-if="row.is_default">{{$t('主模块')}}</div>
+                <div class="module-default ml10" v-if="row.is_default">{{$t('访问管理主模块')}}</div>
               </div>
               <bk-button
                 v-if="defaultIndex === $index && !row.is_default" text theme="primary"
@@ -44,14 +44,17 @@
                 :class="i === row.envsData.length - 1 ? 'last-env-container' : ''"
               >
                 <div class="text-container">
-                  {{ $t(entryEnv[item]) }}
+                  <span v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
                   <span
-                    class="icon-container"
-                    v-if="tableIndex === $index && envIndex === i && row.envs[item] && row.envs[item][0].is_running">
-                    <i
-                      class="paasng-icon paasng-plus-thick add-icon" v-bk-tooltips="$t('添加自定义访问地址')"
-                      @click="handleAdd($index, i, row, item)" />
-                    <i class="paasng-icon paasng-info-line pl10 info-icon" v-bk-tooltips="configIpTip" />
+                    class="btn-container"
+                    v-if="tableIndex === $index && envIndex === i && row.envs[item]">
+                    <bk-button
+                      v-bk-tooltips="$t('添加自定义访问地址')"
+                      :disabled="!row.envs[item][0].is_running"
+                      text theme="primary"
+                      @click="handleAdd($index, i, row, item)">
+                      {{ $t('添加') }}
+                    </bk-button>
                   </span>
                 </div>
                 <div v-if="i !== row.envsData.length - 1" class="line"></div>
@@ -59,12 +62,14 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('访问地址')" :min-width="580">
+        <bk-table-column :label="$t('访问地址')" :min-width="600">
           <template slot-scope="{ row }">
             <div v-for="(item) in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
                 <div v-if="e.isEdit">
-                  <bk-form :label-width="0" form-type="inline" :model="e.address" ref="urlInfoForm">
+                  <bk-form
+                    :label-width="0" form-type="inline" :model="e.address" ref="urlInfoForm"
+                    class="url-from-cls">
                     <bk-form-item :required="true" :property="'url'" :rules="rules.url">
                       <bk-input v-model="e.address.url" :placeholder="domainInputPlaceholderText" class="url-input-cls">
                         <template slot="prepend">
@@ -114,7 +119,7 @@
             </div>
           </template>
         </bk-table-column> -->
-        <bk-table-column :label="$t('操作')" :width="130">
+        <bk-table-column :label="$t('操作')" :width="120">
           <template slot-scope="{ row, $index }">
             <div v-for="item in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
@@ -250,7 +255,7 @@ export default {
       defaultIndex: '',
       tableIndex: '',
       envIndex: '',
-      ipConfigInfo: { frontend_ingress_ip: '' },
+      ipConfigInfo: { frontend_ingress_ip: '1' },
       domainConfig: {},
       placeholderText: '',
       rules: {
@@ -282,7 +287,6 @@ export default {
       curClickAppModule: { clusters: {} },
       setModuleLoading: false,
       hostInfo: {},
-      tipShow: false,
       curDataId: '',
     };
   },
@@ -294,6 +298,7 @@ export default {
       return {
         theme: 'light',
         allowHtml: true,
+        content: this.$t('提示信息'),
         html: `<div>
           <div>域名解析目标IP</div>
           <div
@@ -523,6 +528,8 @@ export default {
 
     // 环境鼠标移出事件
     handleEnvMouseLeave() {
+      this.tableIndex = '';
+      this.envIndex = '';
     },
 
     // 设置为主模块
@@ -771,20 +778,12 @@ export default {
       .text-container{
         position: relative;
       }
-      .icon-container{
+      .btn-container{
         position: absolute;
         left: 80px;
-        display: flex;
-        align-items: center;
-        top: 4px;
         color: #989ca6;
         cursor: pointer;
-        .add-icon{
-          font-size: 14px;
-          &:hover {
-            color: #3A84FF;
-          }
-        }
+        width: 50px;
       }
 
       .line{
@@ -817,17 +816,17 @@ export default {
 
     .url-input-cls{
       /deep/ .bk-form-input{
-        width: 350px;
+        width: 380px;
       }
     }
     .path-input-cls{
       /deep/ .bk-form-input{
-        width: 120px;
+        width: 100px;
       }
     }
 
     .port-config{
-      width: calc(100vw - 290px);
+      width: calc(100vw - 326px);
       overflow-x: auto;
     }
 </style>

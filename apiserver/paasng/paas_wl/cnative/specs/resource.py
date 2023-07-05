@@ -26,6 +26,7 @@ from paas_wl.cnative.specs import credentials
 from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
 from paas_wl.cnative.specs.constants import (
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
+    SERVICE_ACCOUNT_READY_TIMEOUT,
     ApiVersion,
     ConditionStatus,
     DeployStatus,
@@ -78,7 +79,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         namespace_client = KNamespace(client)
         _, created = namespace_client.get_or_create(name=wl_app.namespace)
         if created:
-            namespace_client.wait_for_default_sa(namespace=wl_app.namespace)
+            namespace_client.wait_for_default_sa(namespace=wl_app.namespace, timeout=SERVICE_ACCOUNT_READY_TIMEOUT)
 
         if manifest["metadata"]["annotations"].get(IMAGE_CREDENTIALS_REF_ANNO_KEY) == "true":
             # 下发镜像访问凭证(secret)

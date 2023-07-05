@@ -199,7 +199,7 @@ class K8sScheduler:
     # namespace API #
     #################
 
-    def ensure_namespace(self, namespace: str, max_wait_seconds: int = 10):
+    def ensure_namespace(self, namespace: str, max_wait_seconds: int = 15):
         """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
 
         :param namespace: 需要确保存在的 namespace

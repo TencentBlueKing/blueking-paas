@@ -54,6 +54,8 @@ LEGACY_PROC_IMAGE_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-image-config
 # legacy resource configs in annotations to maintain backward compatibility.
 LEGACY_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 
+# 部署云原生应用时，等待 ServiceAccount 就绪的超时时间（单位：秒）
+SERVICE_ACCOUNT_READY_TIMEOUT = 15
 
 # 轮询云原生应用的部署状态时，如果获取到失败状态的次数超过最大容忍次数，就认为部署失败
 CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3

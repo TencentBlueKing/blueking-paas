@@ -2,6 +2,11 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-component-list" class="p20">
+    <bk-alert
+        type="warning"
+        title="组件信息来源于集群 HelmRelease，可用于评估集群组件部署状态，点击 Tag 可查看组件详情"
+        class="mb15"
+    ></bk-alert>
     <bk-table :data="data" class="mt20">
         <bk-table-column label="集群名称" prop="cluster_name" align="center"></bk-table-column>
         <bk-table-column label="集群 ID" min-width="100" align="center">
@@ -14,9 +19,23 @@
             <template slot-scope="props">
                 <span v-for="release in getCompReleases(props.row, comp_name)">
                     <span :set="status = release.deploy_result.status">
-                        <bk-tag theme="success" v-if="status === 'deployed'" @click="handleView(release, props.row.cluster_name)"> ✔ </bk-tag>
-                        <bk-tag theme="danger" v-else-if="status === 'failed'" @click="handleView(release, props.row.cluster_name)"> ✘ </bk-tag>
-                        <bk-tag v-else @click="handleView(release, props.row.cluster_name)"> $[ status ] </bk-tag>
+                        <bk-tag
+                            theme="success"
+                            v-if="status === 'deployed'"
+                            @click="handleView(release, props.row.cluster_name)"
+                            v-bk-tooltips="release.name"
+                        > ✔ </bk-tag>
+                        <bk-tag
+                            theme="danger"
+                            v-else-if="status === 'failed'"
+                            @click="handleView(release, props.row.cluster_name)"
+                            v-bk-tooltips="release.name"
+                        > ✘ </bk-tag>
+                        <bk-tag
+                            v-else
+                            @click="handleView(release, props.row.cluster_name)"
+                            v-bk-tooltips="release.name"
+                        > $[ status ] </bk-tag>
                     </span>
                 </span>
                 <div v-if="!getCompReleases(props.row, comp_name).length">--</div>

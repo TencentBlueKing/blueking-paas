@@ -313,14 +313,6 @@ export default {
           <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
           </div>`,
         placements: ['bottom'],
-        onHidden: () => {
-          this.tipShow = false;
-          this.tableIndex = '';
-          this.envIndex = '';
-        },
-        onShown: () => {
-          this.tipShow = true;
-        },
       };
     },
     // 域名规则placeholder
@@ -522,6 +514,7 @@ export default {
       this.ipConfigInfo = (this.curIngressIpConfigs || [])
         .find(e => e.environment === env && e.module === payload.name)
       || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
+      console.log('this.ipConfigInfo', this.ipConfigInfo);
       this.tableIndex = index;
       this.envIndex = envIndex;
     },

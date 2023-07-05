@@ -21,6 +21,10 @@ import logging
 from celery import shared_task
 from django.utils.translation import gettext as _
 
+from paas_wl.cnative.specs.credentials import get_references, validate_references
+from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.cnative.specs.models import AppModelRevision
+from paas_wl.workloads.images.models import AppImageCredential
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
 from paasng.engine.constants import JobStatus
@@ -112,15 +116,28 @@ class ImageReleaseMgr(DeployStep):
 
     def _setup_image_credentials(self):
         """Setup Image Credentials for pulling image"""
-        mgr = ImageCredentialManager(self.module_environment.module)
-        credential = mgr.provide()
-        # TODO: AppImageCredential.objects.flush_from_refs 移动到这里处理
-        if credential:
-            self.engine_client.upsert_image_credentials(
-                registry=credential.registry,
-                username=credential.username,
-                password=credential.password,
-            )
+        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
+            mgr = ImageCredentialManager(self.module_environment.module)
+            credential = mgr.provide()
+            # TODO: AppImageCredential.objects.flush_from_refs 移动到这里处理
+            if credential:
+                self.engine_client.upsert_image_credentials(
+                    registry=credential.registry,
+                    username=credential.username,
+                    password=credential.password,
+                )
+        else:
+            application = self.module_environment.application
+            revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
+            try:
+                credential_refs = get_references(revision.json_value)
+                validate_references(application, credential_refs)
+            except InvalidImageCredentials as e:
+                # message = f"missing credentials {missing_names}"
+                self.stream.write_message(Style.Error(str(e)))
+                raise
+            if credential_refs:
+                AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
     def _handle_app_description(self):
         """Handle application description for deployment"""

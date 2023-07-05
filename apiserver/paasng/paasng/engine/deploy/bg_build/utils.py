@@ -32,7 +32,7 @@ from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
-from paas_wl.workloads.images.entities import ImageCredentials, build_dockerconfig
+from paas_wl.workloads.images.entities import ImageCredentials, build_app_registry_auth, build_dockerconfig
 from paasng.engine.configurations.building import SlugBuilderTemplate
 from paasng.utils.blobstore import make_blob_store
 
@@ -63,6 +63,8 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
     app: 'WlApp' = bp.app
     env_vars: Dict[str, str] = {}
 
+    # TODO: 支持构建镜像到私有仓库
+    # Note: 从 ImageCredentials 加载凭证理论上会读取到用户配置的用户/密码, 只需要让 output_image 可以自定义即可支持构建镜像到私有仓库
     if metadata.get("use_dockerfile"):
         # build application form Dockerfile
         image_repository = metadata['image_repository']
@@ -85,6 +87,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             ),
             OUTPUT_IMAGE=output_image,
             CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
+            CNB_REGISTRY_AUTH=json.dumps(build_app_registry_auth(ImageCredentials.load_from_app(app))),
         )
     else:
         # build application as slug

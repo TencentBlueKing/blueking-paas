@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from contextlib import contextmanager
 from typing import Dict, Iterator, List
 
-from paas_wl.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY
+from paas_wl.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ApiVersion
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
@@ -37,17 +37,33 @@ def get_references(manifest: Dict) -> List[ImageCredentialRef]:
 
     :raise: ValueError if the value is an invalid json
     """
-    annotations = manifest["metadata"]["annotations"]
-    processes = manifest["spec"]["processes"]
-    # dynamic build references from annotations
-    refs = []
-    for process in processes:
-        proc_name = process["name"]
-        anno_key = f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.{proc_name}"
-        if anno_key not in annotations:
-            continue
-        refs.append(ImageCredentialRef(image=split_image(process["image"]), credential_name=annotations[anno_key]))
-    return refs
+    api_version = manifest["apiVersion"]
+    if api_version == ApiVersion.V1ALPHA1:
+        annotations = manifest["metadata"]["annotations"]
+        processes = manifest["spec"]["processes"]
+        # dynamic build references from annotations
+        refs = []
+        for process in processes:
+            proc_name = process["name"]
+            anno_key = f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.{proc_name}"
+            if anno_key not in annotations:
+                continue
+            refs.append(ImageCredentialRef(image=split_image(process["image"]), credential_name=annotations[anno_key]))
+        return refs
+
+    elif api_version == ApiVersion.V1ALPHA2:
+        build_cfg = manifest["spec"].get("build")
+        if not build_cfg:
+            return []
+
+        credential_name = build_cfg.get("imageCredentialsName")
+        image = build_cfg.get("image")
+        if not credential_name or not image:
+            return []
+
+        return [ImageCredentialRef(image=split_image(image), credential_name=credential_name)]
+
+    raise NotImplementedError
 
 
 def validate_references(application: Application, references: List[ImageCredentialRef]):

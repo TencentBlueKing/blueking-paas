@@ -37,6 +37,7 @@ from paas_wl.resources.base.base import get_client_by_cluster_name, get_global_c
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
+from paasng.platform.applications.models import ModuleEnvironment
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
@@ -320,7 +321,8 @@ def wl_release(wl_app):
 @pytest.fixture
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
-    return create_build_proc(wl_app)
+    env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)
+    return create_build_proc(env)
 
 
 @pytest.fixture

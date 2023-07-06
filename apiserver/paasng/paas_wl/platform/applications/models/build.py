@@ -18,26 +18,53 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import List, Optional
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONCharField, JSONField
+from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
+from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
+from moby_distribution.registry.utils import parse_image
 
 from paas_wl.platform.applications.constants import ArtifactType
-from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.platform.applications.models import ModuleEnvironment
+
+
+def get_app_docker_registry_client() -> DockerRegistryV2Client:
+    return DockerRegistryV2Client.from_api_endpoint(
+        api_endpoint=APIEndpoint(url=settings.APP_DOCKER_REGISTRY_HOST),
+        username=settings.APP_DOCKER_REGISTRY_USERNAME,
+        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+    )
+
+
+def mark_as_latest_artifact(build: "Build"):
+    """mark the given build as latest artifact"""
+    if build.artifact_type != ArtifactType.IMAGE:
+        return
+    # 旧的同名镜像会被覆盖, 则标记为已删除
+    qs = Build.objects.filter(module_id=build.module_id, image=build.image).exclude(uuid=build.uuid)
+    qs.update(artifact_deleted=True)
+    return
 
 
 class Build(UuidAuditedModel):
+    application_id = models.UUIDField(verbose_name=_('所属应用'), null=True)
+    module_id = models.UUIDField(verbose_name=_('所属模块'), null=True)
+
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', on_delete=models.CASCADE)
+    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
 
     # Slug path
     slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push", null=True)
     image = models.TextField(help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物", null=True)
 
+    # 源码信息
     source_type = models.CharField(max_length=128, null=True)
     branch = models.CharField(max_length=128, null=True, help_text="readable version, such as trunk/master")
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
@@ -48,6 +75,7 @@ class Build(UuidAuditedModel):
     bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)
 
     artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
+    artifact_detail = models.JSONField(default={}, help_text="构件详情")
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
 
     class Meta:
@@ -55,16 +83,24 @@ class Build(UuidAuditedModel):
         ordering = ['-created']
 
     @property
+    def image_repository(self) -> Optional[str]:
+        """从 image 字段分割出 repository 属性"""
+        if not self.image:
+            return None
+        repository, _, tag = self.image.partition(":")
+        return repository
+
+    @property
     def image_tag(self) -> Optional[str]:
         """从 image 字段分割出 tag 属性"""
         if not self.image:
             return None
-        split = self.image.split(":", 1)
-        if len(split) == 2:
-            return split[1]
+        repository, _, tag = self.image.partition(":")
+        if tag:
+            return tag
         # warning: no test cover
         # nobody know what kind of data will it be
-        return split[0]
+        return repository
 
     def get_env_variables(self):
         """获取获取构建产物所需的环境变量"""
@@ -77,6 +113,28 @@ class Build(UuidAuditedModel):
         self.save(update_fields=["env_variables", "updated"])
         return self.env_variables
 
+    def get_artifact_detail(self):
+        """获取构件详情, 如果构件详情未初始化, 则进行初始化"""
+        if self.artifact_detail:
+            return self.artifact_detail
+        if self.artifact_type == ArtifactType.IMAGE:
+            image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
+            registry_client = get_app_docker_registry_client()
+            ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
+            metadata = ref.get_metadata()
+            manifest: ManifestSchema2 = ref.get()
+            self.artifact_detail = {
+                "size": sum(layer.size for layer in manifest.layers),
+                "digest": metadata.digest,
+                "invoke_message": self.build_process.invoke_message,
+            }
+        else:
+            self.artifact_detail = {
+                "invoke_message": self.build_process.invoke_message,
+            }
+        self.save(update_fields=["artifact_detail"])
+        return self.artifact_detail
+
     @property
     def version(self):
         return '%s:%s/%s' % (self.source_type, self.branch, self.revision)
@@ -88,15 +146,17 @@ class Build(UuidAuditedModel):
 class BuildProcessManager(models.Manager):
     def new(
         self,
-        owner: str,
+        env: ModuleEnvironment,
         builder_image: str,
         source_tar_path: str,
         version_info: VersionInfo,
         invoke_message: str,
+        owner: str,
         buildpacks_info: Optional[List] = None,
     ):
-        """Create a new release
+        """Create a new build processes
 
+        :param str env: 执行本次构建的环境
         :param str owner: 发布者
         :param str builder_image: builder 镜像
         :param str source_tar_path: 源码上传到对象存储服务的路径
@@ -106,21 +166,23 @@ class BuildProcessManager(models.Manager):
         """
 
         # Get the largest(latest) version and increase it by 1.
-        if not hasattr(self, "instance"):
-            raise RuntimeError("Only call `new` method from RelatedManager.")
+        if hasattr(self, "instance"):
+            raise RuntimeError("Can not call `new` method from RelatedManager.")
 
-        if not isinstance(self.instance, WlApp):
-            raise RuntimeError("Only call from app.build_set.")
+        application_id = env.application_id
+        module_id = env.module_id
+        wl_app = env.wl_app
+        latest_bp = self.filter(module_id=module_id).order_by('-generation').first()  # type: BuildProcess
+        if latest_bp:
+            next_generation = latest_bp.generation + 1
 
-        wl_app = self.instance
-        latest_build = self.order_by('-generation').first()
-        if latest_build:
-            next_generation = latest_build.generation + 1
         else:
             next_generation = 1
 
         build_process = BuildProcess.objects.create(
             owner=owner,
+            application_id=application_id,
+            module_id=module_id,
             app=wl_app,
             image=builder_image,
             buildpacks=buildpacks_info or [],
@@ -137,8 +199,11 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
+    application_id = models.UUIDField(verbose_name=_('所属应用'), null=True)
+    module_id = models.UUIDField(verbose_name=_('所属模块'), null=True)
+
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE)
+    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
     image = models.CharField(max_length=512, null=True, help_text="builder image")
     buildpacks = JSONCharField(max_length=4096, null=True)
 

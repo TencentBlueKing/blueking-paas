@@ -62,7 +62,7 @@ class AdvancedOptions:
     # 只构建, 不发布
     build_only: bool = False
     # 构建的镜像 tag, 将覆盖默认规则
-    build_image_tag: Optional[str] = None
+    special_tag: Optional[str] = None
     # 直接发布历史 build
     build_id: Optional[str] = None
     # 触发消息

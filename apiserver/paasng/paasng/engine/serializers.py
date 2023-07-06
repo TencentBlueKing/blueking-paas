@@ -29,7 +29,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.monitoring.metrics.constants import MetricsResourceType
-from paas_wl.platform.applications.models import BuildProcess
+from paas_wl.platform.applications.models import Build, BuildProcess
 from paasng.engine.constants import ConfigVarEnvName, DeployConditions, ImagePullPolicy, JobStatus, MetricsType
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
@@ -38,6 +38,7 @@ from paasng.engine.models.managers import DeployDisplayBlockRenderer
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField
@@ -54,9 +55,11 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         default=ImagePullPolicy.IF_NOT_PRESENT,
     )
     build_only = serializers.BooleanField(help_text="是否仅构建, 不发布", default=False)
+    special_tag = serializers.CharField(help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True)
     build_id = serializers.CharField(
         help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
     )
+    invoke_message = serializers.CharField(help_text="触发信息", required=False, allow_null=True, allow_blank=True)
 
 
 class CreateDeploymentSLZ(serializers.Serializer):
@@ -549,3 +552,45 @@ class DeployPhaseSLZ(DeployFramePhaseSLZ):
     start_time = serializers.DateTimeField(required=False)
     complete_time = serializers.DateTimeField(required=False)
     steps = DeployStepSLZ(source="get_sorted_steps", many=True)
+
+
+class ImageArtifactMinimalSLZ(serializers.Serializer):
+    """镜像构件概览"""
+
+    id = serializers.CharField(help_text="构件ID", source="uuid")
+    repository = serializers.CharField(help_text="镜像仓库", source="image_repository")
+    tag = serializers.CharField(help_text="镜像 Tag", source="image_tag")
+    size = serializers.IntegerField(help_text="镜像大小", source="get_artifact_detail.size")
+    digest = serializers.CharField(help_text="摘要", source="get_artifact_detail.digest")
+    invoke_message = serializers.CharField(help_text="触发信息", source="get_artifact_detail.invoke_message")
+    updated = serializers.DateTimeField(help_text="更新时间")
+
+    operator = serializers.SerializerMethodField(help_text="操作人")
+
+    def get_operator(self, build: Build) -> str:
+        try:
+            return get_username_by_bkpaas_user_id(build.owner)
+        except ValueError:
+            return build.owner
+
+
+class ImageDeployRecord(serializers.Serializer):
+    """镜像部署记录"""
+
+    at = serializers.DateTimeField(help_text="部署成功时间")
+    operator = serializers.SerializerMethodField(help_text="操作人")
+    environment = serializers.CharField(help_text="部署环境")
+
+    def get_operator(self, record) -> str:
+        try:
+            return get_username_by_bkpaas_user_id(record["operator"])
+        except ValueError:
+            return record["operator"]
+
+
+class ImageArtifactDetailSLZ(serializers.Serializer):
+    """镜像构件详情"""
+
+    image_info = ImageArtifactMinimalSLZ(help_text="镜像详情")
+    build_records = ImageArtifactMinimalSLZ(many=True, default=list, help_text="构建记录")
+    deploy_records = ImageDeployRecord(many=True, default=list, help_text="部署记录")

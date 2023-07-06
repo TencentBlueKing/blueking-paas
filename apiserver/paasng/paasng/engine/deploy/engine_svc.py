@@ -87,9 +87,8 @@ class EngineDeployClient:
         :return: The created release object.
         """
         build = Build.objects.get(pk=build_id)
-        release = build.app.release_set.new(
-            # TODO: Set the correct owner value
-            owner='',
+        release = self.wl_app.release_set.new(
+            owner=build.owner,
             build=build,
             procfile=procfile,
         )

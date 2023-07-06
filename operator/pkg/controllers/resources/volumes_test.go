@@ -19,12 +19,10 @@
 package resources
 
 import (
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Get VolumeMountMap", func() {
@@ -32,6 +30,7 @@ var _ = Describe("Get VolumeMountMap", func() {
 
 	nginxMountName, redisMountName := "nginx-conf", "redis-conf"
 	nginxPath, redisPath := "/etc/nginx", "/etc/redis"
+	nginxConfigName, redisConfigName := "nginx-configmap", "redis-configmap"
 
 	BeforeEach(func() {
 		bkapp = &paasv1alpha2.BkApp{
@@ -49,15 +48,15 @@ var _ = Describe("Get VolumeMountMap", func() {
 					{
 						Name:      nginxMountName,
 						MountPath: nginxPath,
-						Source: &runtime.RawExtension{
-							Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`),
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: nginxConfigName},
 						},
 					},
 					{
 						Name:      redisMountName,
 						MountPath: redisPath,
-						Source: &runtime.RawExtension{
-							Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`),
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: redisConfigName},
 						},
 					},
 				},
@@ -69,10 +68,7 @@ var _ = Describe("Get VolumeMountMap", func() {
 		vmMap := GetVolumeMountMap(bkapp)
 
 		Expect(len(vmMap)).To(Equal(2))
-
-		Expect(vmMap[nginxMountName].VolumeSource.GetType()).To(Equal(paasv1alpha2.ConfigMapType))
 		Expect(vmMap[nginxMountName].MountPath).To(Equal(nginxPath))
-
 		Expect(vmMap[redisMountName].MountPath).To(Equal(redisPath))
 	})
 
@@ -88,8 +84,8 @@ var _ = Describe("Get VolumeMountMap", func() {
 					Mount: paasv1alpha2.Mount{
 						Name:      nginxMountName,
 						MountPath: overlayPath,
-						Source: &runtime.RawExtension{
-							Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`),
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: nginxConfigName},
 						},
 					},
 					EnvName: paasv1alpha2.ProdEnv,
@@ -98,8 +94,8 @@ var _ = Describe("Get VolumeMountMap", func() {
 					Mount: paasv1alpha2.Mount{
 						Name:      etcdName,
 						MountPath: etcdPath,
-						Source: &runtime.RawExtension{
-							Raw: []byte(`{"type": "configMap", "name": "etcd-configmap"}`),
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
 						},
 					},
 					EnvName: paasv1alpha2.ProdEnv,
@@ -108,8 +104,8 @@ var _ = Describe("Get VolumeMountMap", func() {
 					Mount: paasv1alpha2.Mount{
 						Name:      etcdName,
 						MountPath: etcdPath,
-						Source: &runtime.RawExtension{
-							Raw: []byte(`{"type": "configMap", "name": "etcd-configmap"}`),
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
 						},
 					},
 					EnvName: paasv1alpha2.StagEnv,

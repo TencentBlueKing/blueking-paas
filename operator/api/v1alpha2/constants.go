@@ -131,8 +131,5 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 // AllowedImagePullPolicies 允许使用的镜像拉取策略
 var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, corev1.PullAlways, corev1.PullNever}
 
-// ConfigMapType 类型
-const ConfigMapType = "configMap"
-
 // FilePathPattern 文件路径正则
 const FilePathPattern = `^(/[\w-_.]+/?)+$`

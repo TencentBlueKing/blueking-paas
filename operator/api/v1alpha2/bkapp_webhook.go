@@ -386,11 +386,11 @@ func (r *BkApp) validateMount(
 	if mount.Source == nil {
 		return field.Required(path.Child("source"), "")
 	}
-	vs, err := ConvertToVolumeSource(mount.Source)
+	cfg, err := mount.Source.ToConfigurer()
 	if err != nil {
 		return field.Invalid(path.Child("source"), mount.Source, err.Error())
 	}
-	if errs := vs.Validate(); len(errs) > 0 {
+	if errs := cfg.Validate(); len(errs) > 0 {
 		return field.Invalid(path.Child("source"), mount.Source, strings.Join(errs, ","))
 	}
 	return nil

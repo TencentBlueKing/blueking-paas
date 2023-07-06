@@ -33,7 +33,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("test webhook.Defaulter", func() {
@@ -280,12 +279,16 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					Name:      "redis-conf",
 					MountPath: "/etc/redis",
-					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+					},
 				},
 				{
 					Name:      "nginx-conf",
 					MountPath: "/etc/nginx/conf",
-					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+					},
 				},
 			}
 
@@ -296,7 +299,9 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
 				Name:      "redis_conf",
 				MountPath: "/etc/redis",
-				Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+				},
 			}}
 
 			err := bkapp.ValidateCreate()
@@ -306,7 +311,9 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
 				Name:      "nginx-conf",
 				MountPath: "etc",
-				Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
 			}}
 
 			err := bkapp.ValidateCreate()
@@ -318,12 +325,16 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					Name:      sameName,
 					MountPath: "/etc/redis",
-					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+					},
 				},
 				{
 					Name:      sameName,
 					MountPath: "/etc/nginx/conf",
-					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+					},
 				},
 			}
 
@@ -336,27 +347,32 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					Name:      "redis-conf",
 					MountPath: samePath,
-					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "redis-configmap"}`)},
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+					},
 				},
 				{
 					Name:      "nginx-conf",
 					MountPath: samePath,
-					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+					},
 				},
 			}
 
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
 		})
+
 		It("Invalid source", func() {
 			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
 				Name:      "redis-conf",
 				MountPath: "/etc/redis",
-				Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap"}`)},
+				Source:    &paasv1alpha2.VolumeSource{},
 			}}
 
 			err := bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("Invalid value: runtime.RawExtension"))
+			Expect(err.Error()).To(ContainSubstring("unknown volume source"))
 		})
 	})
 

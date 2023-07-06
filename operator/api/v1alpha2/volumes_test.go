@@ -19,14 +19,12 @@
 package v1alpha2_test
 
 import (
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("test apply to deployment", func() {
@@ -54,9 +52,9 @@ var _ = Describe("test apply to deployment", func() {
 	It("configmap source", func() {
 		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
 
-		source := &runtime.RawExtension{Raw: []byte(`{"type":"configMap","name":"nginx-configmap"}`)}
-		vs, _ := paasv1alpha2.ConvertToVolumeSource(source)
-		_ = vs.ApplyToDeployment(deployment, mountName, mountPath)
+		vs := paasv1alpha2.VolumeSource{ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"}}
+		cfg, _ := vs.ToConfigurer()
+		_ = cfg.ApplyToDeployment(deployment, mountName, mountPath)
 
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))

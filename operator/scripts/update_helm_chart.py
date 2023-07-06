@@ -38,12 +38,10 @@ def wrap_multiline_str(space_num: int, m_string: str) -> str:
 # 目标文件 与 原始文件集合的映射关系，如果存在多个原始文件，则进行合并
 filepath_conf = {
     '_helpers.tpl': ['_helpers.tpl'],
-
     # crd
     'crds/paas.bk.tencent.com_bkapps.tpl': ['bkapp-crd.yaml'],
     'crds/paas.bk.tencent.com_domaingroupmappings.yaml': ['domaingroupmapping-crd.yaml'],
     'crds/paas.bk.tencent.com_projectconfigs.yaml': ['projectconfig-crd.yaml'],
-
     # controller
     'controller/deployment.yaml': ['deployment.yaml'],
     'controller/config.yaml': ['manager-config.yaml'],
@@ -52,13 +50,11 @@ filepath_conf = {
     'controller/manager-rbac.yaml': ['manager-rbac.yaml'],
     'controller/metrics-reader-rbac.yaml': ['metrics-reader-rbac.yaml'],
     'controller/proxy-rbac.yaml': ['proxy-rbac.yaml'],
-
     # webhooks
     'webhooks/mutating-webhook.tpl': ['mutating-webhook-configuration.yaml'],
     'webhooks/validating-webhook.tpl': ['validating-webhook-configuration.yaml'],
     'webhooks/webhook-cert-secret.tpl': ["webhook-cert-secret.yaml"],
     'webhooks/webhook-service.yaml': ['webhook-service.yaml'],
-
     # certificate
     'certificate/selfsigned-issuer.yaml': ['selfsigned-issuer.yaml'],
     'certificate/serving-cert.yaml': ['serving-cert.yaml'],
@@ -200,7 +196,7 @@ content_patch_conf = {
                   paasAnalysis:
                     enabled: {{ .Values.paasAnalysis.enabled }}
                   {{- end }}
-                {{- else -}}
+                {{- else }}
                 ingressPlugin: {}
                 {{- end }}
                 ''',
@@ -444,10 +440,12 @@ data:
 '''.lstrip(),  # noqa: E501
     ),
     'mutating-webhook-configuration.yaml': WrapContent(
-        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n', '{{- end -}}\n',
+        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n',
+        '{{- end -}}\n',
     ),
     'validating-webhook-configuration.yaml': WrapContent(
-        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n', '{{- end -}}\n',
+        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n',
+        '{{- end -}}\n',
     ),
 }
 

@@ -663,8 +663,22 @@ spec:
                           type: string
                         source:
                           description: Source of the mount
+                          properties:
+                            configMap:
+                              description: ConfigMapSource represents a configMap
+                                that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                              required:
+                              - name
+                              - type
+                              type: object
+                          required:
+                          - configMap
                           type: object
-                          x-kubernetes-preserve-unknown-fields: true
                       required:
                       - envName
                       - mountPath
@@ -727,8 +741,22 @@ spec:
                       type: string
                     source:
                       description: Source of the mount
+                      properties:
+                        configMap:
+                          description: ConfigMapSource represents a configMap that
+                            should populate this volume
+                          properties:
+                            name:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                          - name
+                          - type
+                          type: object
+                      required:
+                      - configMap
                       type: object
-                      x-kubernetes-preserve-unknown-fields: true
                   required:
                   - mountPath
                   - name

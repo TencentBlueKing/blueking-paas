@@ -22,7 +22,6 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // BkApp is the Schema for the bkapps API
@@ -178,8 +177,7 @@ type Mount struct {
 	// Name of the mount
 	Name string `json:"name"`
 	// Source of the mount
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Source *runtime.RawExtension `json:"source"`
+	Source *VolumeSource `json:"source"`
 }
 
 // ResQuotaPlan is used to specify process resource quota

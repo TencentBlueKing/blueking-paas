@@ -19,60 +19,42 @@
 package v1alpha2
 
 import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/tidwall/gjson"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-// ConvertToVolumeSource 将原始 source 根据 type 转换成对应的 VolumeSource
-func ConvertToVolumeSource(source *runtime.RawExtension) (VolumeSource, error) {
-	sourceType := gjson.Get(string(source.Raw), "type").String()
-
-	if sourceType == ConfigMapType {
-		var cs ConfigMapSource
-		err := json.Unmarshal(source.Raw, &cs)
-		if err != nil {
-			return nil, err
-		}
-		return cs, nil
-	}
-
-	return nil, fmt.Errorf("not supported type: %s", sourceType)
+// VolumeSource 参考 k8s.io/api/core/v1.VolumeSource
+type VolumeSource struct {
+	ConfigMap *ConfigMapSource `json:"configMap"`
 }
 
-// VolumeSource 接口, 区别与 k8s.io/api/core/v1.VolumeSource
+// ToConfigurer 将有效的 source 转换成对应的 VolumeSourceConfigurer
+func (vs *VolumeSource) ToConfigurer() (VolumeSourceConfigurer, error) {
+	if vs.ConfigMap != nil {
+		return vs.ConfigMap, nil
+	}
+	return nil, errors.New("unknown volume source")
+}
+
+// VolumeSourceConfigurer 接口
 // +k8s:deepcopy-gen=false
-type VolumeSource interface {
-	// GetType return source type
-	GetType() string
+type VolumeSourceConfigurer interface {
 	// Validate source
 	Validate() []string
 	// ApplyToDeployment 将 source 应用到 deployment
 	ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error
 }
 
-// ConfigMapSource 基于 K8S ConfigMap 实现 VolumeSource
+// ConfigMapSource represents a configMap that should populate this volume
 type ConfigMapSource struct {
 	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-// GetType return source type
-func (c ConfigMapSource) GetType() string {
-	return c.Type
-}
-
 // Validate source
 func (c ConfigMapSource) Validate() []string {
-	if c.Type != ConfigMapType {
-		return []string{fmt.Sprintf("unexpected type: %s, expected: %s", c.Type, ConfigMapType)}
-	}
-
 	return validation.IsDNS1123Subdomain(c.Name)
 }
 
@@ -101,4 +83,4 @@ func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountN
 	return nil
 }
 
-var _ VolumeSource = new(ConfigMapSource)
+var _ VolumeSourceConfigurer = new(ConfigMapSource)

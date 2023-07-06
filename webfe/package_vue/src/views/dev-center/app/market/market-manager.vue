@@ -27,7 +27,18 @@
         </div>
       </div>
       <div class="market-info mb25">
-        <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+        <div class="flex-row justify-content-between align-items-center">
+          <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+          <bk-button
+            theme="primary"
+            outline
+            class="mr10  market-info-btn"
+            :title="$t('编辑')"
+            @click="isSaveMarketInfo=false"
+          >
+            {{ $t('编辑') }}
+          </bk-button>
+        </div>
         <div v-if="!isSaveMarketInfo">
           <bk-form
             class="market-info-container"
@@ -321,23 +332,11 @@
               <p class="form-text">{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
             </bk-form-item>
             <bk-form-item
-              v-if="!isSmartApp"
-              :label="$t('打开方式：')"
-            >
-              <p class="form-text">{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
-            </bk-form-item>
-            <bk-form-item
               :label="$t('应用简介：')"
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
               <p class="form-text">{{ baseInfo.introduction || '--' }}</p>
-            </bk-form-item>
-            <bk-form-item
-              v-if="baseInfo.open_mode === 'desktop'"
-              :label="$t('窗口大小：')"
-            >
-              <p class="form-text">{{ $t('宽') }}{{ baseInfo.width }}， {{ $t('高') }}{{ baseInfo.height }}</p>
             </bk-form-item>
             <bk-form-item
               :label="$t('应用联系人：')"
@@ -348,16 +347,10 @@
               <p class="form-text">{{ baseInfo.contactArr.join('; ') || '--' }}</p>
             </bk-form-item>
             <bk-form-item
-              v-if="baseInfo.open_mode === 'desktop'"
-              :label="$t('拉伸窗口：')"
-            >
-              <p class="form-text">{{ baseInfo.resizableKey === 'able' ? $t('允许') : $t('不允许') }}</p>
-            </bk-form-item>
-            <bk-form-item
               v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
               :label="$t('所属业务：')"
             >
-              <p class="form-text">{{ baseInfo.related_corp_products || '--' }}</p>
+              <p class="form-text">{{ businessDetailName || '--' }}</p>
             </bk-form-item>
             <bk-form-item
               v-if="!isSmartApp"
@@ -365,16 +358,25 @@
             >
               <p class="form-text">{{ baseInfo.description || '--' }}</p>
             </bk-form-item>
+            <bk-form-item
+              v-if="!isSmartApp"
+              :label="$t('打开方式：')"
+            >
+              <p class="form-text">{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="baseInfo.open_mode === 'desktop'"
+              :label="$t('窗口大小：')"
+            >
+              <p class="form-text">{{ $t('宽') }}{{ baseInfo.width }}， {{ $t('高') }}{{ baseInfo.height }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="baseInfo.open_mode === 'desktop'"
+              :label="$t('拉伸窗口：')"
+            >
+              <p class="form-text">{{ baseInfo.resizableKey === 'able' ? $t('允许') : $t('不允许') }}</p>
+            </bk-form-item>
           </bk-form>
-          <bk-button
-            theme="primary"
-            outline
-            class="mr10  market-info-btn"
-            :title="$t('编辑')"
-            @click="isSaveMarketInfo=false"
-          >
-            {{ $t('编辑') }}
-          </bk-button>
         </div>
       </div>
 
@@ -513,6 +515,9 @@ export default {
     departments() {
       return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'department');
     },
+    businessDetailName() {
+      return this.businessList.find(e => this.baseInfo.related_corp_products.includes(e.id))?.display_name;
+    },
   },
   watch: {
     '$route'() {
@@ -579,8 +584,8 @@ export default {
     },
 
     /**
-             * 获取分类数据并进行二次组装
-             */
+     * 获取分类数据并进行二次组装
+     */
     async getTags() {
       try {
         const tagList = await this.$store.dispatch('market/getTags');
@@ -753,7 +758,7 @@ export default {
       if (this.isSmartApp) {
         this.saveMarketInfo();
       } else {
-        this.$refs.baseInfoForm.validate().then((validator) => {
+        this.$refs.baseInfoForm.validate().then(() => {
           this.saveMarketInfo();
         });
       }
@@ -800,6 +805,8 @@ export default {
             message: this.$t('信息保存成功！'),
           });
           this.$store.commit('updateCurAppProduct', res);
+          this.isSaveMarketInfo = false;
+          this.initAppMarketInfo(); // 请求市场信息
         } catch (e) {
           this.$paasMessage({
             theme: 'error',

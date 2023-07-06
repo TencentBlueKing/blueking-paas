@@ -45,9 +45,9 @@
                   <span v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
                   <span
                     class="btn-container"
+                    v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item]">
                     <bk-button
-                      v-bk-tooltips="$t('添加自定义访问地址')"
                       :disabled="!row.envs[item][0].is_running"
                       text theme="primary"
                       @click="handleAdd($index, i, row, item)">

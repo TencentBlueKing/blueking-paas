@@ -29,8 +29,10 @@
 
         <market-info
           @data-ready="handleDataReady"
+          ref="marketInfoRef"
         />
         <market-manager
+          @current-app-info-updated="handleMarketInfo"
           @data-ready="handleManagerDataReady"
         />
       </section>
@@ -61,6 +63,11 @@ export default {
     },
     handleManagerDataReady() {
       this.isManagerDataLoading = false;
+    },
+
+    // 编辑保存成功之后需要更新tips内容
+    handleMarketInfo() {
+      this.$refs.marketInfoRef.checkAppPrepare();
     },
   },
 };

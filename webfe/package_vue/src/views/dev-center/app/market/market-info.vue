@@ -113,7 +113,7 @@
           class="pl10"
           theme="primary"
           text
-          @click="isEditAddress = false3"
+          @click="isEditAddress = false"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -355,13 +355,13 @@ export default {
       // 自定义数据
       const customData = {
         id: 1,
-        name: '自定义地址',
+        name: this.$t('自定义地址'),
         children: [],
       };
       // 平台内置数据
       const platformData = {
         id: 2,
-        name: '平台内置地址',
+        name: this.$t('平台内置地址'),
         children: [],
       };
       const curAddressData = this.addressData.find(e => e.name === this.curModule) || {};
@@ -371,15 +371,20 @@ export default {
           // 只需要要prod环境中运行中的地址
           if (item.env === 'prod' && item.is_running) {
             if (item.address.type === 'custom') {
+              if (!p.customData) {
+                p.customData = customData;
+              }
               p.customData.children.push(item);
             } else {
+              if (!p.platformData) {
+                p.platformData = platformData;
+              }
               p.platformData.children.push(item);
             }
           }
         });
         return p;
-      }, { customData, platformData });
-      console.log('list', list);
+      }, {});
       return list;
     },
   },
@@ -448,6 +453,7 @@ export default {
         });
         this.avaliableAddressValueBackup = this.currentAddress.value;
         this.switchAddressDialog.visiable = false;
+        this.isEditAddress = false;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -499,11 +505,9 @@ export default {
         case 'fill_thirdparty_url':
           this.$refs.urlInput.focus();
           break;
-
           // 未完善应用基本信息
         case 'fill_product_info':
           break;
-
           // 应用未在生产环境成功部署
         case 'deploy_prod_env':
           // eslint-disable-next-line no-case-declarations
@@ -618,6 +622,13 @@ export default {
     // 编辑访问地址
     handlerAddress() {
       if (this.isEditAddress) {
+        if (!this.curModule || !this.curAddress) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请选择访问地址'),
+          });
+          return;
+        }
         this.switchAddressDialog.visiable = true;
       } else {
         this.isEditAddress = true;

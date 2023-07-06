@@ -591,9 +591,6 @@ class ImageDeployRecord(serializers.Serializer):
 class ImageArtifactDetailSLZ(serializers.Serializer):
     """镜像构件详情"""
 
-    # 镜像详情
-    image_info = ImageArtifactMinimalSLZ()
-    # 构建记录
-    build_records = ImageArtifactMinimalSLZ(many=True, default=list)
-    # 部署记录
-    deploy_records = ImageDeployRecord(many=True, default=list)
+    image_info = ImageArtifactMinimalSLZ(help_text="镜像详情")
+    build_records = ImageArtifactMinimalSLZ(many=True, default=list, help_text="构建记录")
+    deploy_records = ImageDeployRecord(many=True, default=list, help_text="部署记录")

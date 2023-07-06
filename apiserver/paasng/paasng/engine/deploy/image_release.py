@@ -82,8 +82,10 @@ class ImageReleaseMgr(DeployStep):
                     # TODO: 提供更好的处理方式, 不应该依赖上一个 Deployment
                     # Q: 为什么不从 Build.procfile 里读取?
                     # A: 因为 Build.procfile 目前只存储了启动命令, 没有 replicas/plan 等信息...
-                    # 普通应用从上一次使用该 build 部署的 deployment 获取进程信息
-                    deployment = Deployment.objects.filter(build_id=build_id).exclude(processes={}).first()
+                    # 普通应用从第一个使用该 build 部署的 deployment 获取进程信息
+                    deployment = (
+                        Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
+                    )
                     if not deployment:
                         raise DeployShouldAbortError("failed to get processes")
                     processes = deployment.processes

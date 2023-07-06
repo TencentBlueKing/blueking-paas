@@ -87,24 +87,20 @@ class Build(UuidAuditedModel):
         """从 image 字段分割出 repository 属性"""
         if not self.image:
             return None
-        split = self.image.split(":", 1)
-        if len(split) == 2:
-            return split[0]
-        # warning: no test cover
-        # nobody know what kind of data will it be
-        return split[0]
+        repository, _, tag = self.image.partition(":")
+        return repository
 
     @property
     def image_tag(self) -> Optional[str]:
         """从 image 字段分割出 tag 属性"""
         if not self.image:
             return None
-        split = self.image.split(":", 1)
-        if len(split) == 2:
-            return split[1]
+        repository, _, tag = self.image.partition(":")
+        if tag:
+            return tag
         # warning: no test cover
         # nobody know what kind of data will it be
-        return split[0]
+        return repository
 
     def get_env_variables(self):
         """获取获取构建产物所需的环境变量"""

@@ -22,6 +22,7 @@ import urllib.parse
 from contextlib import suppress
 from dataclasses import asdict
 from pathlib import Path
+from typing import Dict, List, Union
 
 import pymysql
 import pytest
@@ -36,6 +37,7 @@ from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from paas_wl.networking.entrance.addrs import Address, AddressType
 from paasng.accounts.constants import SiteRole
 from paasng.accounts.models import UserProfile
 from paasng.dev_resources.sourcectl.models import SourceTypeSpecConfig
@@ -55,7 +57,6 @@ from paasng.publish.sync_market.handlers import before_finishing_application_cre
 from paasng.publish.sync_market.managers import AppManger
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
-from tests.publish.utils import ModuleLiveAddrs
 from tests.utils import mock
 from tests.utils.auth import create_user
 from tests.utils.helpers import (
@@ -741,43 +742,58 @@ def mark_skip_if_console_not_configured():
 
 
 @pytest.fixture
-def with_empty_live_addrs():
-    """Always return empty addresses by patching `get_addresses` function"""
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {"env": "stag", "is_running": False, "addresses": []},
-                {"env": "prod", "is_running": False, "addresses": []},
-            ]
-        )
-        yield
+def mock_env_is_running():
+    status: Dict[Union[str, ModuleEnvironment], bool] = {}
+
+    def side_effect(env: ModuleEnvironment) -> bool:
+        if env in status:
+            return status[env]
+        return status.get(env.environment, False)
+
+    status["side_effect"] = side_effect  # type: ignore
+    with mock.patch("paasng.publish.entrance.exposer.env_is_running") as m1, mock.patch(
+        "paas_wl.networking.entrance.shim.env_is_running"
+    ) as m2:
+        m1.side_effect = side_effect
+        m2.side_effect = side_effect
+        yield status
 
 
 @pytest.fixture
-def with_live_addrs():
-    """Always return valid addresses by patching `get_live_addresses` function"""
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {
-                    "env": "stag",
-                    "is_running": True,
-                    "addresses": [
-                        {"type": "subpath", "url": "http://example.com/foo-stag/"},
-                        {"type": "subdomain", "url": "http://foo-stag.example.com"},
-                    ],
-                },
-                {
-                    "env": "prod",
-                    "is_running": True,
-                    "addresses": [
-                        {"type": "subpath", "url": "http://example.com/foo-prod/"},
-                        {"type": "subdomain", "url": "http://foo-prod.example.com"},
-                    ],
-                },
-            ]
-        )
-        yield
+def mock_get_builtin_addresses(mock_env_is_running):
+    addresses: Dict[str, List] = {}
+
+    def side_effect(env: ModuleEnvironment) -> tuple:
+        env_is_running = mock_env_is_running["side_effect"](env)
+        if env in addresses:
+            return env_is_running, addresses[env]
+        return env_is_running, addresses.get(env.environment, [])
+
+    with mock.patch("paas_wl.networking.entrance.shim.get_builtin_addresses") as m:
+        m.side_effect = side_effect
+        yield addresses
+
+
+@pytest.fixture
+def with_empty_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
+    """Always return empty addresses by patching `get_builtin_addresses` function"""
+    yield
+
+
+@pytest.fixture
+def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
+    """Always return valid addresses by patching `get_builtin_addresses` function"""
+    mock_env_is_running["stag"] = True
+    mock_env_is_running["prod"] = True
+    mock_get_builtin_addresses["stag"] = [
+        Address(type=AddressType.SUBPATH, url="http://example.com/foo-stag/"),
+        Address(type=AddressType.SUBDOMAIN, url="http://foo-stag.example.com"),
+    ]
+    mock_get_builtin_addresses["prod"] = [
+        Address(type=AddressType.SUBPATH, url="http://example.com/foo-prod/"),
+        Address(type=AddressType.SUBDOMAIN, url="http://foo-prod.example.com"),
+    ]
+    yield
 
 
 @pytest.fixture

@@ -26,7 +26,6 @@ from paas_wl.networking.ingress.models import Domain
 from paas_wl.utils.error_codes import APIError
 from paasng.platform.modules.constants import ExposedURLType
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
-from tests.publish.utils import ModuleLiveAddrs
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -42,23 +41,16 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
         (ExposedURLType.SUBDOMAIN, "foo.com", {"type": "subpath", "url": "https://foo.com/bar"}, False),
     ],
 )
-def test_check_domain_used_by_market(bk_app, bk_module, url_type, hostname, address_data, expected):
+def test_check_domain_used_by_market(
+    bk_app, bk_module, url_type, hostname, address_data, expected, mock_env_is_running, mock_get_builtin_addresses
+):
     bk_module.exposed_url_type = url_type
     bk_module.save()
     bk_app.refresh_from_db()
 
-    # TODO: 重构 ControllerClient 时修改后移除这个 mock
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {
-                    "env": "prod",
-                    "is_running": True,
-                    "addresses": [address_data],
-                },
-            ]
-        )
-        assert check_domain_used_by_market(bk_app, hostname) == expected
+    mock_env_is_running["prod"] = True
+    mock_get_builtin_addresses["prod"] = [address_data]
+    assert check_domain_used_by_market(bk_app, hostname) == expected
 
 
 class TestCNativeDftCustomDomainManager:

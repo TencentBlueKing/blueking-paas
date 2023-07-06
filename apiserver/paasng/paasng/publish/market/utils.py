@@ -21,10 +21,11 @@ from dataclasses import dataclass
 from typing import List, Optional
 from urllib.parse import urlparse
 
-from paas_wl.networking.entrance.addrs import EnvExposedURL, default_port_map
+from paas_wl.networking.entrance.addrs import EnvAddresses, EnvExposedURL, default_port_map
+from paas_wl.networking.entrance.shim import get_builtin_addresses
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import get_addresses, get_exposed_url, list_custom_addresses
+from paasng.publish.entrance.exposer import get_exposed_url
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 
@@ -40,25 +41,23 @@ class AvailableAddressMixin:
         """由平台提供的首选默认访问入口"""
         entrance = get_exposed_url(self.env)
         return AvailableAddress(
-            address=entrance.address if entrance else None,
+            address=entrance.url.as_address() if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
         )
 
     @property
     def default_access_entrances(self) -> List[AvailableAddress]:
         """由平台提供的所有默认访问入口"""
-        addrs = get_addresses(self.env)
-        entrances = [a.to_exposed_url() for a in addrs]
+        is_running, addresses = get_builtin_addresses(self.env)
         return [
-            AvailableAddress(address=entrance.address, type=ProductSourceUrlType.ENGINE_PROD_ENV.value)
-            for entrance in entrances
+            AvailableAddress(address=addr.url, type=ProductSourceUrlType.ENGINE_PROD_ENV.value) for addr in addresses
         ]
 
     @property
     def domain_addresses(self) -> List[AvailableAddress]:
         return [
             AvailableAddress(address=addr.url, type=ProductSourceUrlType.CUSTOM_DOMAIN.value)
-            for addr in list_custom_addresses(self.env)
+            for addr in EnvAddresses(self.env).get_custom()
         ]
 
     def filter_domain_address(self, address: str) -> Optional['AvailableAddress']:
@@ -97,7 +96,10 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
 
     @property
     def addresses(self) -> List['AvailableAddress']:
-        """应用市场所有可选的访问入口"""
+        """应用市场所有可选的访问入口
+
+        [deprecated] TODO: 移除该协议
+        """
         if (
             not self.market_config.prefer_https
             and self.default_access_entrance.address
@@ -115,18 +117,18 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
     @property
     def default_access_entrance_with_http(self) -> AvailableAddress:
         """由平台提供的首选默认访问入口(HTTP协议)"""
-        entrance = self.transform_entrance(get_exposed_url(self.env), protocol="http")
+        entrance = self.transform_protocol(get_exposed_url(self.env), protocol="http")
         return AvailableAddress(
-            address=entrance.address if entrance else None,
+            address=entrance.url.as_address() if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
         )
 
     @property
     def default_access_entrance_with_https(self) -> AvailableAddress:
         """由平台提供的首选默认访问入口(HTTPS协议)"""
-        entrance = self.transform_entrance(get_exposed_url(self.env), protocol="https")
+        entrance = self.transform_protocol(get_exposed_url(self.env), protocol="https")
         return AvailableAddress(
-            address=entrance.address if entrance else None,
+            address=entrance.url.as_address() if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS.value,
         )
 
@@ -152,8 +154,9 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
         raise NotImplementedError
 
     @staticmethod
-    def transform_entrance(entrance: Optional[EnvExposedURL], protocol: str):
-        if entrance and entrance.url.protocol != protocol:
-            entrance.url.protocol = protocol
-            entrance.url.port = default_port_map.get_port_num(protocol)
+    def transform_protocol(entrance: Optional[EnvExposedURL], protocol: str) -> Optional[EnvExposedURL]:
+        if not entrance or protocol == entrance.url.protocol:
+            return entrance
+        entrance.url.protocol = protocol
+        entrance.url.port = default_port_map.get_port_num(protocol)
         return entrance

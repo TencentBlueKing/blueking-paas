@@ -26,6 +26,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
+from paas_wl.networking.entrance.serializers import AvailableEntranceSLZ
 from paasng.platform.applications.serializers import ApplicationField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import RichTextField
@@ -38,7 +39,7 @@ from .utils import MarketAvailableAddressHelper
 
 class AppLogoField(serializers.ImageField):
     def to_internal_value(self, logo):
-        if logo.size >= 2**21:
+        if logo.size >= 2 ** 21:
             raise ValidationError(_('文件太大, 大小不能超过2M'))
 
         if not re.match(r'^.+\.\w+$', logo.name):
@@ -355,3 +356,11 @@ class FailedProconditionSLZ(serializers.Serializer):
 class PublishProtectionSLZ(serializers.Serializer):
     all_conditions_matched = serializers.BooleanField()
     failed_conditions = FailedProconditionSLZ(many=True)
+
+
+class MarketEntranceSLZ(serializers.Serializer):
+    """切换市场访问地址"""
+
+    module = serializers.CharField(help_text="切换模块名")
+    env = serializers.CharField(help_text="环境名")
+    address = AvailableEntranceSLZ(help_text="访问地址")

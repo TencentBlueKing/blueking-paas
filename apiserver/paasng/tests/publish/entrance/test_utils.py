@@ -1,6 +1,6 @@
 import pytest
 
-from paasng.publish.entrance.utils import get_legacy_url
+from paas_wl.networking.entrance.utils import get_legacy_url
 
 pytestmark = pytest.mark.django_db
 

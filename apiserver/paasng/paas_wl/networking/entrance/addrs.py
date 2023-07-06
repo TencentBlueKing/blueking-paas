@@ -29,6 +29,7 @@ from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.region.models import get_region
 
 default_port_map = PortMap()
 
@@ -105,8 +106,14 @@ class EnvAddresses:
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.app = env.application
-        self.wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
-        self.ingress_cfg = get_cluster_by_app(self.wl_app).ingress_config
+
+    @property
+    def wl_app(self):
+        return WlApp.objects.get(pk=self.env.engine_app_id)
+
+    @property
+    def ingress_cfg(self):
+        return get_cluster_by_app(self.wl_app).ingress_config
 
     def get(self, only_running: bool = True) -> List[Address]:
         """Get available addresses, sorted by: (subdomain, subpath, custom)"""
@@ -161,3 +168,15 @@ class EnvAddresses:
     def _sort(addrs: List[Address]) -> List[Address]:
         """Sort address list, short and not reserved address first"""
         return sorted(addrs, key=lambda addr: (addr.is_sys_reserved, len(addr.url)))
+
+
+def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
+    """Deprecated: Get legacy URL address which is a hard-coded value generated
+    y region configuration.
+
+    :return: None if not configured.
+    """
+    app = env.application
+    if tmpl := get_region(app.region).basic_info.link_engine_app:
+        return tmpl.format(code=app.code, region=app.region, name=env.engine_app.name)
+    return None

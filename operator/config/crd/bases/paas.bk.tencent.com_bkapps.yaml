@@ -649,6 +649,8 @@ spec:
                   mounts:
                     description: Mounts overwrite BkApp's mounts by environment
                     items:
+                      description: MountOverlay overwrite or add application's mounts
+                        by environment
                       properties:
                         envName:
                           description: EnvName is app environment name

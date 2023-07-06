@@ -291,4 +291,25 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			))
 		})
 	})
+
+	Context("Mounts related fields", func() {
+		It("mount configmap", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					MountPath: "/etc/nginx",
+					Name:      "nginx-conf",
+					Source:    &runtime.RawExtension{Raw: []byte(`{"type": "configMap", "name": "nginx-configmap"}`)},
+				},
+			}
+			deploys := GetWantedDeploys(bkapp)
+
+			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal("nginx-conf"))
+			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/etc/nginx"))
+			Expect(deploys[0].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
+
+			Expect(deploys[1].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(deploys[1].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
+		})
+	})
 })

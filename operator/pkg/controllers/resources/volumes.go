@@ -20,36 +20,41 @@ package resources
 
 import paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 
-// VolumeMount ...
+// VolumeMount with volume source
 type VolumeMount struct {
 	Name      string
 	MountPath string
 	paasv1alpha2.VolumeSource
 }
 
-// VolumeMounts ...
-type VolumeMounts map[string]VolumeMount
+// VolumeMountMap is a map which key is mount name
+type VolumeMountMap map[string]VolumeMount
 
-// GetVolumeMounts ...
-func GetVolumeMounts(bkapp *paasv1alpha2.BkApp) VolumeMounts {
-	vm := VolumeMounts{}
+// GetVolumeMountMap ...
+func GetVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMountMap {
+	vmMap := make(VolumeMountMap)
 	for _, mount := range bkapp.Spec.Mounts {
 		// 因为 webhook 中已完成校验, 这里忽略错误
 		vs, _ := paasv1alpha2.ConvertToVolumeSource(mount.Source)
-		vm[mount.Name] = VolumeMount{Name: mount.Name, MountPath: mount.MountPath, VolumeSource: vs}
+		vmMap[mount.Name] = VolumeMount{Name: mount.Name, MountPath: mount.MountPath, VolumeSource: vs}
+	}
+
+	if bkapp.Spec.EnvOverlay == nil {
+		return vmMap
 	}
 
 	runEnv := GetEnvName(bkapp)
 
 	for _, mount := range bkapp.Spec.EnvOverlay.Mounts {
 		if mount.EnvName == runEnv {
+			// 因为 webhook 中已完成校验, 这里忽略错误
 			vs, _ := paasv1alpha2.ConvertToVolumeSource(mount.Mount.Source)
-			vm[mount.Mount.Name] = VolumeMount{
+			vmMap[mount.Mount.Name] = VolumeMount{
 				Name:         mount.Mount.Name,
 				MountPath:    mount.Mount.MountPath,
 				VolumeSource: vs,
 			}
 		}
 	}
-	return vm
+	return vmMap
 }

@@ -24,11 +24,12 @@ import (
 
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-// ConvertToVolumeSource ...
+// ConvertToVolumeSource 将原始 source 根据 type 转换成对应的 VolumeSource
 func ConvertToVolumeSource(source *runtime.RawExtension) (VolumeSource, error) {
 	sourceType := gjson.Get(string(source.Raw), "type").String()
 
@@ -47,8 +48,11 @@ func ConvertToVolumeSource(source *runtime.RawExtension) (VolumeSource, error) {
 // VolumeSource 接口, 区别与 k8s.io/api/core/v1.VolumeSource
 // +k8s:deepcopy-gen=false
 type VolumeSource interface {
+	// GetType return source type
 	GetType() string
+	// Validate source
 	Validate() []string
+	// ApplyToDeployment 将 source 应用到 deployment
 	ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error
 }
 
@@ -58,12 +62,12 @@ type ConfigMapSource struct {
 	Name string `json:"name"`
 }
 
-// GetType ...
+// GetType return source type
 func (c ConfigMapSource) GetType() string {
 	return c.Type
 }
 
-// Validate ...
+// Validate source
 func (c ConfigMapSource) Validate() []string {
 	if c.Type != ConfigMapType {
 		return []string{fmt.Sprintf("unexpected type: %s, expected: %s", c.Type, ConfigMapType)}
@@ -72,8 +76,28 @@ func (c ConfigMapSource) Validate() []string {
 	return validation.IsDNS1123Subdomain(c.Name)
 }
 
-// ApplyToDeployment ...
+// ApplyToDeployment 将 source 应用到 deployment
 func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error {
+	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      mountName,
+			MountPath: mountPath,
+		})
+	}
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: mountName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: c.Name},
+				},
+			},
+		},
+	)
+
 	return nil
 }
 

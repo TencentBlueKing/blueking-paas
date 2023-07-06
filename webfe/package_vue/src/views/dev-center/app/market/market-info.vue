@@ -62,18 +62,60 @@
         v-if="!confirmRequiredWhenPublish || isSureRisk || appMarketConfig.enabled"
         class="address-info mt15 flex-row align-items-center">
         <strong class="address-info-title">{{ $t('访问地址') }}</strong>
-        <div class="address-info-url">
-          <div v-for="(item, index) in avaliableAddress" :key="index" :class="avaliableAddress.length > 1 ? 'pt5' : ''">
-            {{ item.address }}
+        <!-- 编辑态 -->
+        <div class="address-info-url" v-if="isEditAddress">
+          <div class="flex-row align-items-center">
+            <bk-select
+              v-model="curModule"
+              class="module-select-cls"
+              :clearable="false"
+            >
+              <bk-option
+                v-for="item in moduleList"
+                :id="item"
+                :key="item"
+                :name="item"
+              />
+            </bk-select>
+            <bk-select
+              v-model="curAddress"
+              style="width: 360px;"
+              :clearable="false"
+            >
+              <bk-option-group
+                v-for="(group, index) in addressList"
+                :name="group.name"
+                :key="index">
+                <bk-option
+                  v-for="option in group.children"
+                  :key="option.address.url"
+                  :id="option.address.url"
+                  :name="option.address.url">
+                </bk-option>
+              </bk-option-group>
+            </bk-select>
           </div>
+        </div>
+        <!-- 查看态 -->
+        <div class="address-info-url" v-if="avaliableAddress[0] && !isEditAddress">
+          {{ avaliableAddress[0].address }}
         </div>
         <bk-button
           class="address-info-btn"
           theme="primary"
           text
-          @click="openSwitchDialog"
+          @click="handlerAddress"
         >
-          {{ $t('编辑') }}
+          {{ isEditAddress ? $t( '确定') : $t( '编辑') }}
+        </bk-button>
+        <bk-button
+          v-if="isEditAddress"
+          class="pl10"
+          theme="primary"
+          text
+          @click="isEditAddress = false3"
+        >
+          {{ $t('取消') }}
         </bk-button>
       </div>
     </template>
@@ -187,7 +229,7 @@
       @after-leave="afterAddressDialogClose"
     >
       <div>
-        <p>{{ $t('请确认将访问地址更改为：') + (currentAddress.type === 2 ? $t('与主模块生产环境一致') : currentAddress.address) }}</p>
+        <p>{{ $t('请确认将访问地址更改为：') + curAddress }}</p>
       </div>
       <div slot="footer">
         <bk-button
@@ -270,6 +312,11 @@ export default {
       visitTabLoading: false,
       infoTabLoading: false,
       marketAddress: null,
+      isEditAddress: false,
+      addressData: [],
+      curAddress: '',
+      curModule: '',
+      moduleList: [],
     };
   },
   computed: {
@@ -290,9 +337,6 @@ export default {
       return !this.appPreparations.all_conditions_matched
       || (this.confirmRequiredWhenPublish && !this.isSureRisk && !this.appMarketConfig.enabled);
     },
-    isSwitchDisabled() {
-      return this.avaliableAddressValue === this.avaliableAddressValueBackup;
-    },
     curAppInfo() {
       return this.$store.state.curAppInfo;
     },
@@ -305,6 +349,39 @@ export default {
     deployInfo() { // 未部署
       return this.appPreparations.failed_conditions.find(e => e.action_name === 'deploy_prod_env');
     },
+    // 选择的模块对应的访问地址数据不同
+    addressList() {
+      if (!this.curModule) return;
+      // 自定义数据
+      const customData = {
+        id: 1,
+        name: '自定义地址',
+        children: [],
+      };
+      // 平台内置数据
+      const platformData = {
+        id: 2,
+        name: '平台内置地址',
+        children: [],
+      };
+      const curAddressData = this.addressData.find(e => e.name === this.curModule) || {};
+      const list = (Object.keys(curAddressData?.envs) || []).reduce((p, v) => {
+        const curAddressItemData = curAddressData.envs[v];
+        curAddressItemData.forEach((item) => {
+          // 只需要要prod环境中运行中的地址
+          if (item.env === 'prod' && item.is_running) {
+            if (item.address.type === 'custom') {
+              p.customData.children.push(item);
+            } else {
+              p.platformData.children.push(item);
+            }
+          }
+        });
+        return p;
+      }, { customData, platformData });
+      console.log('list', list);
+      return list;
+    },
   },
   watch: {
     '$route'() {
@@ -316,11 +393,12 @@ export default {
   },
   methods: {
     /**
-             * 初始化入口
-             */
+     * 初始化入口
+     */
     async init() {
       this.initMarketConfig();
       this.checkAppPrepare();
+      this.getEntryList();
       this.engineAbled = this.curAppInfo.web_config.engine_enabled;
 
       if (this.engineAbled) {
@@ -349,11 +427,6 @@ export default {
           message: e.message,
         });
       }
-    },
-
-    openSwitchDialog() {
-      this.switchAddressDialog.visiable = true;
-      this.currentAddress = this.avaliableAddress.find(item => item.value === this.avaliableAddressValue);
     },
 
     afterAddressDialogClose() {
@@ -402,8 +475,8 @@ export default {
     },
 
     /**
-             * 检查应用发布的准备条件
-             */
+     * 检查应用发布的准备条件
+     */
     async checkAppPrepare() {
       try {
         const res = await this.$store.dispatch('market/getAppMarketPrepare', this.appCode);
@@ -417,9 +490,9 @@ export default {
     },
 
     /**
-             * 完善发布条件
-             * @param {Object} condition 条件对象
-             */
+     * 完善发布条件
+     * @param {Object} condition 条件对象
+     */
     handleEditCondition(condition) {
       switch (condition.action_name) {
         // 完善第三方地址
@@ -446,8 +519,8 @@ export default {
     },
 
     /**
-             * 获取应用市场配置
-             */
+     * 获取应用市场配置
+     */
     async initMarketConfig() {
       this.isDataLoading = true;
       try {
@@ -472,8 +545,8 @@ export default {
     },
 
     /**
-             * 提交访问数据
-             */
+     * 提交访问数据
+     */
     submitVisitInfo() {
       this.$refs.visitInfoForm.validate().then(() => {
         this.updateAppMarketConfig();
@@ -481,8 +554,8 @@ export default {
     },
 
     /**
-             * 更新应用市场配置
-             */
+     * 更新应用市场配置
+     */
     async updateAppMarketConfig() {
       if (this.isConfigSaving) return;
 
@@ -511,8 +584,8 @@ export default {
     },
 
     /**
-             * 处理开启或关闭市场
-             */
+     * 处理开启或关闭市场
+     */
     async handlerSwitch() {
       if (!this.appPreparations.all_conditions_matched) return;
 
@@ -541,6 +614,34 @@ export default {
         }
       }
     },
+
+    // 编辑访问地址
+    handlerAddress() {
+      if (this.isEditAddress) {
+        this.switchAddressDialog.visiable = true;
+      } else {
+        this.isEditAddress = true;
+      }
+    },
+
+    // 访问地址列表数据
+    async getEntryList() {
+      try {
+        this.isTableLoading = true;
+        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+          appCode: this.appCode,
+        });
+        this.addressData = res || [];
+        this.moduleList = (res || []).map(e => e.name);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.isTableLoading = false;
+      }
+    },
   },
 };
 </script>
@@ -559,5 +660,9 @@ export default {
     }
     .icon-wrapper {
         float: left;
+    }
+    .module-select-cls{
+      width: 100px;
+      margin-right: 5px;
     }
 </style>

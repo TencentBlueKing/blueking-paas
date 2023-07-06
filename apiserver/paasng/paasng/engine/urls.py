@@ -143,11 +143,22 @@ urlpatterns = [
         AppDomainsViewSet.as_view({'get': 'list_configs'}),
         name='api.custom_domains_config',
     ),
-    # build history
+    # build artifact
     re_path(
-        make_app_pattern(r"/build/history/$"),
+        make_app_pattern(r"/build/artifact/image/$", include_envs=False),
+        views.ImageArtifactViewSet.as_view({"get": "list_image"}),
+        name="api.build.image.list",
+    ),
+    re_path(
+        make_app_pattern(r"/build/artifact/image/(?P<build_id>[^/]+)$", include_envs=False),
+        views.ImageArtifactViewSet.as_view({"get": "retrieve_image_detail"}),
+        name="api.build.image.detail",
+    ),
+    # build process
+    re_path(
+        make_app_pattern(r"/build_process/$", include_envs=False),
         views.BuildProcessViewSet.as_view({"get": "list"}),
-        name="api.build.history",
+        name="api.build_process.list",
     ),
 ]
 

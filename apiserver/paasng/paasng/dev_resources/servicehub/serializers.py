@@ -218,6 +218,7 @@ class BoundServiceInfoSLZ(serializers.Serializer):
     service = ServiceMinimalSLZ(help_text='增强服务信息')
     provision_infos = ProvisionInfoSLZ(help_text='增强服务实例分配信息')
     specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())
+    ref_modules = serializers.ListField(help_text='共享当前增强服务的模块', allow_null=True, child=MinimalModuleSLZ())
 
 
 class SharedServiceInfoSLZ(serializers.Serializer):
@@ -226,3 +227,10 @@ class SharedServiceInfoSLZ(serializers.Serializer):
     module = MinimalModuleSLZ(help_text='发起共享的模块')
     ref_module = MinimalModuleSLZ(help_text='被共享的模块')
     service = ServiceMinimalSLZ(help_text='共享服务信息')
+
+
+class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
+    """携带分配 & 配置信息的共享服务信息"""
+
+    provision_infos = ProvisionInfoSLZ(help_text='共享服务实例分配信息')
+    specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())

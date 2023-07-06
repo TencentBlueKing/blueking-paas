@@ -11,7 +11,7 @@
       <paas-content-loader
         :is-loading="isLoading"
         placeholder="process-loading"
-        :offset-top="10"
+        :offset-top="0"
       >
         <bk-tab
           :key="routeName"
@@ -74,8 +74,7 @@
   </div>
 </template>
 
-<script>
-import processOperation from './comps/process-operation';
+<script>import processOperation from './comps/process-operation';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
@@ -98,7 +97,7 @@ export default {
     },
   },
   watch: {
-    '$route'(to, from) {
+    '$route'() {
       this.isLoading = true;
     },
   },
@@ -131,7 +130,7 @@ export default {
         this.advisedDocLinks = response.links;
       });
     },
-    handlerDataReady(env) {
+    handlerDataReady() {
       setTimeout(() => {
         this.isLoading = false;
       }, 200);
@@ -144,6 +143,7 @@ export default {
   .ps-processes-container{
     background: #fff;
     margin-top: 14px;
+    padding-top: 0px;
     .process-wrapper{
       padding: 0 24px 10px 24px;
     }

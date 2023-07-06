@@ -6,7 +6,7 @@
     <section v-show="!isDataLoading" class="market-manager">
       <div
         v-if="isSmartApp"
-        class="info mb15"
+        class="info mb10 mt10"
       >
         {{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}
       </div>
@@ -19,10 +19,10 @@
               {{ baseInfo.name || '--' }}
               <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div>
               <router-link :to="{ name: 'appBaseInfo' }">
-                {{ $t('点击去去"基本信息"页面修改') }}
+                {{ $t('点击修改基本信息') }}
               </router-link>
             </div>
-            <div> {{ $t('创建时间：') }} {{ baseInfo.updated || '--' }}</div>
+            <div class="mt5"> {{ $t('创建时间：') }} {{ baseInfo.updated || '--' }}</div>
           </div>
         </div>
       </div>
@@ -318,26 +318,26 @@
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <p>{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
+              <p class="form-text">{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
             </bk-form-item>
             <bk-form-item
               v-if="!isSmartApp"
               :label="$t('打开方式：')"
             >
-              <p>{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
+              <p class="form-text">{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
             </bk-form-item>
             <bk-form-item
               :label="$t('应用简介：')"
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <p>{{ baseInfo.introduction || '--' }}</p>
+              <p class="form-text">{{ baseInfo.introduction || '--' }}</p>
             </bk-form-item>
             <bk-form-item
               v-if="baseInfo.open_mode === 'desktop'"
               :label="$t('窗口大小：')"
             >
-              <p>{{ $t('宽') }}{{ baseInfo.width }}， {{ $t('高') }}{{ baseInfo.height }}</p>
+              <p class="form-text">{{ $t('宽') }}{{ baseInfo.width }}， {{ $t('高') }}{{ baseInfo.height }}</p>
             </bk-form-item>
             <bk-form-item
               :label="$t('应用联系人：')"
@@ -345,25 +345,25 @@
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <p>{{ baseInfo.contactArr.join('; ') || '--' }}</p>
+              <p class="form-text">{{ baseInfo.contactArr.join('; ') || '--' }}</p>
             </bk-form-item>
             <bk-form-item
               v-if="baseInfo.open_mode === 'desktop'"
               :label="$t('拉伸窗口：')"
             >
-              <p>{{ baseInfo.resizableKey === 'able' ? $t('允许') : $t('不允许') }}</p>
+              <p class="form-text">{{ baseInfo.resizableKey === 'able' ? $t('允许') : $t('不允许') }}</p>
             </bk-form-item>
             <bk-form-item
               v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
               :label="$t('所属业务：')"
             >
-              <p>{{ baseInfo.related_corp_products || '--' }}</p>
+              <p class="form-text">{{ baseInfo.related_corp_products || '--' }}</p>
             </bk-form-item>
             <bk-form-item
               v-if="!isSmartApp"
               :label="$t('详细描述：')"
             >
-              <p>{{ baseInfo.description || '--' }}</p>
+              <p class="form-text">{{ baseInfo.description || '--' }}</p>
             </bk-form-item>
           </bk-form>
           <bk-button

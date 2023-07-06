@@ -71,10 +71,9 @@
           class="address-info-btn"
           theme="primary"
           text
-          :disabled="isSwitchDisabled"
           @click="openSwitchDialog"
         >
-          {{ $t('更改访问地址') }}
+          {{ $t('编辑') }}
         </bk-button>
       </div>
     </template>

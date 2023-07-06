@@ -1190,7 +1190,7 @@ export default {
   '主模块生产环境独立域名：': 'Default module prod env domain: ',
   访问地址更改成功: 'Access address changed successfully',
   '应用市场信息请在“app.yaml”文件中配置': 'Please configure the market information in the "app_desc.yaml" file',
-  '点击去去"基本信息"页面修改': 'Click to modify basic information',
+  点击修改基本信息: 'Click to modify basic information',
   显示信息: 'Display information',
   '应用分类：': 'Category: ',
   '应用简介：': 'Introduction: ',

@@ -19,10 +19,13 @@
 package resources
 
 import (
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Get VolumeMountMap", func() {
@@ -65,11 +68,11 @@ var _ = Describe("Get VolumeMountMap", func() {
 	})
 
 	It("mounts without overlay", func() {
-		vmMap := GetVolumeMountMap(bkapp)
+		volMountMap := GetVolumeMountMap(bkapp)
 
-		Expect(len(vmMap)).To(Equal(2))
-		Expect(vmMap[nginxMountName].MountPath).To(Equal(nginxPath))
-		Expect(vmMap[redisMountName].MountPath).To(Equal(redisPath))
+		Expect(len(volMountMap)).To(Equal(2))
+		Expect(volMountMap[nginxMountName].MountPath).To(Equal(nginxPath))
+		Expect(volMountMap[redisMountName].MountPath).To(Equal(redisPath))
 	})
 
 	It("mounts with overlay", func() {
@@ -113,17 +116,53 @@ var _ = Describe("Get VolumeMountMap", func() {
 			},
 		}
 
-		vmMap := GetVolumeMountMap(bkapp)
+		volMountMap := GetVolumeMountMap(bkapp)
 
-		Expect(len(vmMap)).To(Equal(3))
+		Expect(len(volMountMap)).To(Equal(3))
 
-		Expect(vmMap[nginxMountName].MountPath).To(Equal(overlayPath))
-		Expect(vmMap[etcdName].MountPath).To(Equal(etcdPath))
+		Expect(volMountMap[nginxMountName].MountPath).To(Equal(overlayPath))
+		Expect(volMountMap[etcdName].MountPath).To(Equal(etcdPath))
 	})
 
 	It("no mounts", func() {
 		bkapp.Spec.Mounts = []paasv1alpha2.Mount{}
-		vmMap := GetVolumeMountMap(bkapp)
-		Expect(len(vmMap)).To(Equal(0))
+		volMountMap := GetVolumeMountMap(bkapp)
+		Expect(len(volMountMap)).To(Equal(0))
+	})
+})
+
+var _ = Describe("test apply to deployment", func() {
+	var deployment *appsv1.Deployment
+
+	BeforeEach(func() {
+		deployment = &appsv1.Deployment{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-deployment",
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: paasv1alpha2.ReplicasOne,
+				Selector: &metav1.LabelSelector{},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx:latest"}}},
+				},
+			},
+		}
+	})
+
+	It("configmap source", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+
+		vs := &paasv1alpha2.VolumeSource{ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"}}
+		cfg, _ := ToVolumeSourceConfigurer(vs)
+		_ = cfg.ApplyToDeployment(deployment, mountName, mountPath)
+
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
 	})
 })

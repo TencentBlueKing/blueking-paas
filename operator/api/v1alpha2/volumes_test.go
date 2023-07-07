@@ -19,46 +19,19 @@
 package v1alpha2_test
 
 import (
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-var _ = Describe("test apply to deployment", func() {
-	var deployment *appsv1.Deployment
-
-	BeforeEach(func() {
-		deployment = &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       "Deployment",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-deployment",
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: paasv1alpha2.ReplicasOne,
-				Selector: &metav1.LabelSelector{},
-				Template: corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx:latest"}}},
-				},
-			},
-		}
-	})
-
-	It("configmap source", func() {
-		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
-
-		vs := paasv1alpha2.VolumeSource{ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"}}
-		cfg, _ := vs.ToConfigurer()
-		_ = cfg.ApplyToDeployment(deployment, mountName, mountPath)
-
-		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
-		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
-
-		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
-	})
-})
+var _ = DescribeTable("Validate ConfigMapSource",
+	func(name, errStr string) {
+		Expect(strings.Join(paasv1alpha2.ConfigMapSource{Name: name}.Validate(), ",")).To(ContainSubstring(errStr))
+	},
+	Entry("invalid", "Normal", "a lowercase RFC 1123 subdomain"),
+	Entry("invalid", "abc_test", "a lowercase RFC 1123 subdomain"),
+	Entry("invalid", "", "a lowercase RFC 1123 subdomain"),
+)

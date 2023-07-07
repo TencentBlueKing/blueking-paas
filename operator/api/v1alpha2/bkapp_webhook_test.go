@@ -374,6 +374,17 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("unknown volume source"))
 		})
+
+		It("Source is nil", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "redis-conf",
+				MountPath: "/etc/redis",
+				Source:    nil,
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Required value"))
+		})
 	})
 
 	Context("Test envOverlay", func() {

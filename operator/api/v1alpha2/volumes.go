@@ -20,8 +20,6 @@ package v1alpha2
 
 import (
 	"github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -30,57 +28,29 @@ type VolumeSource struct {
 	ConfigMap *ConfigMapSource `json:"configMap"`
 }
 
-// ToConfigurer 将有效的 source 转换成对应的 VolumeSourceConfigurer
-func (vs *VolumeSource) ToConfigurer() (VolumeSourceConfigurer, error) {
+// ToValidator 将 volume source 转换成 VolumeSourceValidator
+func (vs *VolumeSource) ToValidator() (VolumeSourceValidator, error) {
 	if vs.ConfigMap != nil {
 		return vs.ConfigMap, nil
 	}
 	return nil, errors.New("unknown volume source")
 }
 
-// VolumeSourceConfigurer 接口
+// VolumeSourceValidator 接口
 // +k8s:deepcopy-gen=false
-type VolumeSourceConfigurer interface {
+type VolumeSourceValidator interface {
 	// Validate source
 	Validate() []string
-	// ApplyToDeployment 将 source 应用到 deployment
-	ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error
 }
 
 // ConfigMapSource represents a configMap that should populate this volume
 type ConfigMapSource struct {
-	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-// Validate source
+// Validate ConfigMap name
 func (c ConfigMapSource) Validate() []string {
 	return validation.IsDNS1123Subdomain(c.Name)
 }
 
-// ApplyToDeployment 将 source 应用到 deployment
-func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error {
-	containers := deployment.Spec.Template.Spec.Containers
-	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
-			Name:      mountName,
-			MountPath: mountPath,
-		})
-	}
-
-	deployment.Spec.Template.Spec.Volumes = append(
-		deployment.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: mountName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: c.Name},
-				},
-			},
-		},
-	)
-
-	return nil
-}
-
-var _ VolumeSourceConfigurer = new(ConfigMapSource)
+var _ VolumeSourceValidator = new(ConfigMapSource)

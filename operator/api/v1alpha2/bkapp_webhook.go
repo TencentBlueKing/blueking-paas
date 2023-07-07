@@ -223,11 +223,7 @@ func (r *BkApp) validateAppSpec() *field.Error {
 		}
 	}
 
-	if err := r.validateMounts(); err != nil {
-		return err
-	}
-
-	return nil
+	return r.validateMounts()
 }
 
 // Get all process names
@@ -340,35 +336,35 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 // validate Spec.Mounts field
 // 校验部分参考 https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/apis/core/validation/validation.go
 func (r *BkApp) validateMounts() *field.Error {
-	mountpoints, mountnames := sets.String{}, sets.String{}
+	mountPoints, mountNames := sets.String{}, sets.String{}
 
 	for idx, mount := range r.Spec.Mounts {
 		path := field.NewPath("spec").Child("mounts").Index(idx)
-		if err := r.validateMount(path, mount, mountpoints, mountnames); err != nil {
+		if err := r.validateMount(path, mount); err != nil {
 			return err
 		}
-		mountnames.Insert(mount.Name)
-		mountpoints.Insert(mount.MountPath)
+
+		if mountNames.Has(mount.Name) {
+			return field.Duplicate(path.Child("name"), mount.Name)
+		}
+		mountNames.Insert(mount.Name)
+
+		if mountPoints.Has(mount.MountPath) {
+			return field.Duplicate(path.Child("mountPath"), mount.MountPath)
+		}
+		mountPoints.Insert(mount.MountPath)
 	}
 
 	return nil
 }
 
-func (r *BkApp) validateMount(
-	path *field.Path,
-	mount Mount,
-	mountpoints sets.String,
-	mountnames sets.String,
-) *field.Error {
+func (r *BkApp) validateMount(path *field.Path, mount Mount) *field.Error {
 	// 校验 name
 	if len(mount.Name) == 0 {
 		return field.Required(path.Child("name"), "")
 	}
 	if errs := validation.IsDNS1123Label(mount.Name); len(errs) > 0 {
 		return field.Invalid(path.Child("name"), mount.Name, strings.Join(errs, ","))
-	}
-	if mountnames.Has(mount.Name) {
-		return field.Duplicate(path.Child("name"), mount.Name)
 	}
 
 	// 校验 mountPath
@@ -378,19 +374,16 @@ func (r *BkApp) validateMount(
 	if matched, _ := regexp.MatchString(FilePathPattern, mount.MountPath); !matched {
 		return field.Invalid(path.Child("mountPath"), mount.MountPath, "must match regex "+FilePathPattern)
 	}
-	if mountpoints.Has(mount.MountPath) {
-		return field.Duplicate(path.Child("mountPath"), mount.MountPath)
-	}
 
 	// 校验 source
 	if mount.Source == nil {
 		return field.Required(path.Child("source"), "")
 	}
-	cfg, err := mount.Source.ToConfigurer()
+	val, err := mount.Source.ToValidator()
 	if err != nil {
 		return field.Invalid(path.Child("source"), mount.Source, err.Error())
 	}
-	if errs := cfg.Validate(); len(errs) > 0 {
+	if errs := val.Validate(); len(errs) > 0 {
 		return field.Invalid(path.Child("source"), mount.Source, strings.Join(errs, ","))
 	}
 	return nil
@@ -453,18 +446,26 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "mounts"
-	mountpoints, mountnames := sets.String{}, sets.String{}
+	mountPoints, mountNames := sets.String{}, sets.String{}
 	for i, mount := range r.Spec.EnvOverlay.Mounts {
 		mField := f.Child("mounts").Index(i)
 		if !mount.EnvName.IsValid() {
 			return field.Invalid(mField.Child("envName"), mount.EnvName, "envName is invalid")
 		}
 
-		if err := r.validateMount(mField, mount.Mount, mountpoints, mountnames); err != nil {
+		if err := r.validateMount(mField, mount.Mount); err != nil {
 			return err
 		}
-		mountnames.Insert(mount.Mount.Name)
-		mountpoints.Insert(mount.Mount.MountPath)
+
+		if mountNames.Has(mount.Mount.Name) {
+			return field.Duplicate(mField.Child("name"), mount.Mount.Name)
+		}
+		mountNames.Insert(mount.Mount.Name)
+
+		if mountPoints.Has(mount.Mount.MountPath) {
+			return field.Duplicate(mField.Child("mountPath"), mount.Mount.MountPath)
+		}
+		mountPoints.Insert(mount.Mount.MountPath)
 	}
 
 	return nil

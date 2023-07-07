@@ -18,29 +18,45 @@
 
 package resources
 
-import paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+import (
+	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 
-// VolumeMount with volume source
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+)
+
+// VolumeMount with volume source configurer
 type VolumeMount struct {
 	Name      string
 	MountPath string
-	paasv1alpha2.VolumeSourceConfigurer
+	VolumeSourceConfigurer
+}
+
+// VolumeSourceConfigurer ...
+type VolumeSourceConfigurer interface {
+	// ApplyToDeployment 将 volume source 应用到 deployment
+	ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error
 }
 
 // VolumeMountMap is a map which key is mount name
 type VolumeMountMap map[string]VolumeMount
 
-// GetVolumeMountMap ...
+// GetVolumeMountMap 结合 mounts 和 envoverlay.mounts, 生成 VolumeMountMap
 func GetVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMountMap {
-	vmMap := make(VolumeMountMap)
+	volMountMap := make(VolumeMountMap)
 	for _, mount := range bkapp.Spec.Mounts {
 		// 因为 webhook 中已完成校验, 这里忽略错误
-		cfg, _ := mount.Source.ToConfigurer()
-		vmMap[mount.Name] = VolumeMount{Name: mount.Name, MountPath: mount.MountPath, VolumeSourceConfigurer: cfg}
+		cfg, _ := ToVolumeSourceConfigurer(mount.Source)
+		volMountMap[mount.Name] = VolumeMount{
+			Name:                   mount.Name,
+			MountPath:              mount.MountPath,
+			VolumeSourceConfigurer: cfg,
+		}
 	}
 
 	if bkapp.Spec.EnvOverlay == nil {
-		return vmMap
+		return volMountMap
 	}
 
 	runEnv := GetEnvName(bkapp)
@@ -48,13 +64,49 @@ func GetVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMountMap {
 	for _, mount := range bkapp.Spec.EnvOverlay.Mounts {
 		if mount.EnvName == runEnv {
 			// 因为 webhook 中已完成校验, 这里忽略错误
-			cfg, _ := mount.Mount.Source.ToConfigurer()
-			vmMap[mount.Mount.Name] = VolumeMount{
+			cfg, _ := ToVolumeSourceConfigurer(mount.Mount.Source)
+			volMountMap[mount.Mount.Name] = VolumeMount{
 				Name:                   mount.Mount.Name,
 				MountPath:              mount.Mount.MountPath,
 				VolumeSourceConfigurer: cfg,
 			}
 		}
 	}
-	return vmMap
+	return volMountMap
+}
+
+// ToVolumeSourceConfigurer ...
+func ToVolumeSourceConfigurer(vs *paasv1alpha2.VolumeSource) (VolumeSourceConfigurer, error) {
+	if vs.ConfigMap != nil {
+		return ConfigMapSource(*vs.ConfigMap), nil
+	}
+	return nil, errors.New("unknown volume source")
+}
+
+// ConfigMapSource ...
+type ConfigMapSource paasv1alpha2.ConfigMapSource
+
+// ApplyToDeployment 将 configmap source 应用到 deployment
+func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error {
+	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      mountName,
+			MountPath: mountPath,
+		})
+	}
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: mountName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: c.Name},
+				},
+			},
+		},
+	)
+
+	return nil
 }

@@ -52,7 +52,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 	}
 	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
-	vmMap := GetVolumeMountMap(app)
+	volMountMap := GetVolumeMountMap(app)
 	deployList := []*appsv1.Deployment{}
 	replicasGetter := NewReplicasGetter(app)
 	for _, proc := range app.Spec.Processes {
@@ -109,7 +109,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 			},
 		}
 
-		for _, mount := range vmMap {
+		for _, mount := range volMountMap {
 			err = mount.ApplyToDeployment(deployment, mount.Name, mount.MountPath)
 			if err != nil {
 				log.Error(err, "Failed to inject mounts info to process", proc.Name)

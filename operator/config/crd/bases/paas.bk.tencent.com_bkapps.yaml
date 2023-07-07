@@ -670,11 +670,8 @@ spec:
                               properties:
                                 name:
                                   type: string
-                                type:
-                                  type: string
                               required:
                               - name
-                              - type
                               type: object
                           required:
                           - configMap
@@ -748,11 +745,8 @@ spec:
                           properties:
                             name:
                               type: string
-                            type:
-                              type: string
                           required:
                           - name
-                          - type
                           type: object
                       required:
                       - configMap

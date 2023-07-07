@@ -47,6 +47,9 @@
                     class="btn-container"
                     v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item]">
+                    <i
+                      class="paasng-icon paasng-plus-thick"
+                      :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''" />
                     <bk-button
                       :disabled="!row.envs[item][0].is_running"
                       text theme="primary"
@@ -775,9 +778,12 @@ export default {
       .btn-container{
         position: absolute;
         left: 80px;
-        color: #989ca6;
+        color: #3a84ff;
         cursor: pointer;
         width: 50px;
+        .disable-add-icon{
+          color: #dcdee5;
+        }
       }
 
       .line{

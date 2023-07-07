@@ -52,12 +52,12 @@ class BKConsoleProbe(MySQLProbe):
 
 
 class PlatformMysqlProbe(MySQLProbe):
-    name = "platform-mysql"
+    name = "platform-mysql-ng"
     config = transfer_django_db_settings(settings.DATABASES['default'])
 
 
 class WorkloadsMysqlProbe(MySQLProbe):
-    name = "platform-mysql"
+    name = "platform-mysql-wl"
     config = transfer_django_db_settings(settings.DATABASES['workloads'])
 
 

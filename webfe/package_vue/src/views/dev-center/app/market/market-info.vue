@@ -470,11 +470,13 @@ export default {
     async sureSwitchAddress() {
       this.switchAddressDialog.loading = true;
       try {
-        await this.$store.dispatch('market/updateAppMarketAvaliableAddress', {
-          source_url_type: this.currentAddress.type,
-          source_tp_url: '',
-          custom_domain_url: this.currentAddress.type === 2 ? '' : this.currentAddress.address,
+        await this.$store.dispatch('market/updateMarketUrl', {
           appCode: this.appCode,
+          data: {
+            type: this.currentAddress.type,
+            module: this.curModule,
+            url: this.curAddress,
+          },
         });
         this.$paasMessage({
           theme: 'success',

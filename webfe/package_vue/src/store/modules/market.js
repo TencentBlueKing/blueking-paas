@@ -33,7 +33,7 @@ export default {
          * @param {Object} params 包括appCode, 文件数据
          * @param {Object} config ajax配置
          */
-    uploadAppLogo ({ commit, state }, { appCode, data }, config) {
+    uploadAppLogo({}, { appCode, data }, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/logo/`;
       return http.put(url, data, config);
     },
@@ -44,7 +44,7 @@ export default {
          * @param {String} appCode 应用id
          * @param {Object} config ajax配置
          */
-    getAppBaseInfo ({ commit, state }, appCode, config) {
+    getAppBaseInfo({}, appCode, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
       return http.get(url, config);
     },
@@ -55,7 +55,7 @@ export default {
          * @param {Object} params 包括appCode, env
          * @param {Object} config ajax配置
          */
-    getAppEnvInfo ({ commit, state }, { appCode, env }, config) {
+    getAppEnvInfo({}, { appCode, env }, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/released_state/`;
       return http.get(url, config);
     },
@@ -66,7 +66,7 @@ export default {
          * @param {String} appCode 应用id
          * @param {Object} config ajax配置
          */
-    getAppMarketInfo ({ commit, state }, appCode, config) {
+    getAppMarketInfo({}, appCode, config) {
       const url = `${BACKEND_URL}/api/market/products/${appCode}/`;
       return http.get(url, config);
     },
@@ -74,7 +74,7 @@ export default {
     /**
          * 获取分类列表
          */
-    getTags ({ commit, state }, config) {
+    getTags({}, config) {
       const url = `${BACKEND_URL}/api/market/tags`;
       return http.get(url, config);
     },
@@ -82,7 +82,7 @@ export default {
     /**
          * 获取业务列表
          */
-    getBusinessList ({ commit, state }, config) {
+    getBusinessList({}, config) {
       const url = `${BACKEND_URL}/api/market/corp_products/`;
       return http.get(url, config);
     },
@@ -93,7 +93,7 @@ export default {
          * @param {Object} params 参数
          * @param {Object} config ajax配置
          */
-    registerMarketInfo ({ commit, state }, params, config) {
+    registerMarketInfo({}, params, config) {
       const url = `${BACKEND_URL}/api/market/products/`;
       return http.post(url, params, config);
     },
@@ -104,7 +104,7 @@ export default {
          * @param {Object} params 参数，包括appCode, data
          * @param {Object} config ajax配置
          */
-    updateMarketInfo ({ commit, state }, { appCode, data }, config) {
+    updateMarketInfo({}, { appCode, data }, config) {
       const url = `${BACKEND_URL}/api/market/products/${appCode}`;
       return http.put(url, data, config);
     },
@@ -115,7 +115,7 @@ export default {
          * @param {String} appCode 应用id
          * @param {Object} config ajax配置
          */
-    getAppMarketConfig ({ commit, state }, appCode, config) {
+    getAppMarketConfig({}, appCode, config) {
       const url = `${BACKEND_URL}/api/market/applications/${appCode}/config/`;
       return http.get(url, config);
     },
@@ -126,7 +126,7 @@ export default {
          * @param {Object} params 参数，包括appCode, data
          * @param {Object} config ajax配置
          */
-    updateAppMarketConfig ({ commit, state }, { appCode, data }, config) {
+    updateAppMarketConfig({}, { appCode, data }, config) {
       const url = `${BACKEND_URL}/api/market/applications/${appCode}/config/`;
       return http.put(url, data, config);
     },
@@ -137,7 +137,7 @@ export default {
          * @param {Object} params 参数，包括appCode, data
          * @param {Object} config ajax配置
          */
-    updateAppMarketSwitch ({ commit, state }, { appCode, data }, config) {
+    updateAppMarketSwitch({}, { appCode, data }, config) {
       const url = `${BACKEND_URL}/api/market/applications/${appCode}/switch/`;
       return http.post(url, data, config);
     },
@@ -148,7 +148,7 @@ export default {
          * @param {String} appCode 应用id
          * @param {Object} config ajax配置
          */
-    getAppMarketPrepare ({ commit, state }, appCode, config) {
+    getAppMarketPrepare({}, appCode, config) {
       const url = `${BACKEND_URL}/api/market/applications/${appCode}/publish/preparations/`;
       return http.get(url, config);
     },
@@ -159,7 +159,7 @@ export default {
          * @param {String} appCode 应用id
          * @param {Object} config ajax配置
          */
-    getAppMarketAvaliableAddress ({ commit, state }, appCode, config) {
+    getAppMarketAvaliableAddress({}, appCode, config) {
       const url = `${BACKEND_URL}/api/market/applications/${appCode}/available_address/`;
       return http.get(url, config);
     },
@@ -170,7 +170,7 @@ export default {
          * @param {String} params 请求参数
          * @param {Object} config ajax配置
          */
-    updateAppMarketAvaliableAddress ({ commit, state }, params, config) {
+    updateAppMarketAvaliableAddress({ }, params, config) {
       const { source_url_type, source_tp_url, custom_domain_url, appCode } = params;
       const url = `${BACKEND_URL}/api/market/applications/${appCode}/config/`;
       return http.put(url, { source_url_type, source_tp_url, custom_domain_url }, config);
@@ -182,7 +182,7 @@ export default {
          * @param {String} appCode 应用id
          * @param {Object} config ajax配置
          */
-    getMobileMarketInfo ({ commit, state }, { appCode }, config) {
+    getMobileMarketInfo({}, { appCode }, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/mobile_config/`;
       return http.get(url, config);
     },
@@ -193,7 +193,7 @@ export default {
          * @param {Object} params 参数，包括appCode, data
          * @param {Object} config ajax配置
          */
-    enableMobileMarket ({ commit, state }, { appCode, env, data }, config) {
+    enableMobileMarket({}, { appCode, env, data }, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/mobile_config/on/`;
       return http.post(url, data, config);
     },
@@ -204,7 +204,7 @@ export default {
          * @param {Object} params 参数，包括appCode, data
          * @param {Object} config ajax配置
          */
-    disableMobileMarket ({ commit, state }, { appCode, env }, config) {
+    disableMobileMarket({}, { appCode, env }, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/mobile_config/off/`;
       return http.post(url, {}, config);
     },
@@ -215,7 +215,7 @@ export default {
          * @param {Object} params 参数，包括appCode
          * @param {Object} config ajax配置
          */
-    getDescAppStatus ({ commit, state }, appCode, config) {
+    getDescAppStatus({}, appCode, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/protections/`;
       return http.get(url, config);
     },
@@ -226,20 +226,32 @@ export default {
          * @param {Object} params 参数，包括appCode
          * @param {Object} config ajax配置
          */
-    changeDescAppStatus ({ commit, state }, appCode, config) {
+    changeDescAppStatus({}, appCode, config) {
       const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/switch/app_desc_flag/`;
       return http.put(url, {}, config);
     },
 
     /**
-         * 获取插件分类列表
-         *
-         * @param {String} appCode 应用id
-         * @param {Object} config ajax配置
-         */
-    getPluginTypeList ({ commit, state }, config) {
+     * 获取插件分类列表
+     *
+     * @param {String} appCode 应用id
+     * @param {Object} config ajax配置
+     */
+    getPluginTypeList({}, config) {
       const url = `${BACKEND_URL}/api/bk_plugin_tags/`;
       return http.get(url, config);
-    }
-  }
+    },
+
+
+    /**
+     * 更新访问地址
+     *  @param {String} appCode 应用id
+     * @param {String} data 需要更新的数据
+     * @param {Object} config ajax配置
+     */
+    updateMarketUrl({}, { appCode, data }, config) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/entrances/market/`;
+      return http.post(url, data, config);
+    },
+  },
 };

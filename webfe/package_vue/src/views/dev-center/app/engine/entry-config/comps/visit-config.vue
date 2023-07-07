@@ -42,7 +42,11 @@
                 class="env-container"
               >
                 <div class="text-container">
-                  <span v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
+                  <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
+                  <span
+                    v-if="tableIndex === $index && envIndex === i && row.envs[item]"
+                    v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
+                  <span v-else>{{ $t(entryEnv[item]) }}</span>
                   <span
                     class="btn-container"
                     v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
@@ -263,7 +267,7 @@ export default {
       defaultIndex: '',
       tableIndex: '',
       envIndex: '',
-      ipConfigInfo: { frontend_ingress_ip: '1' },
+      ipConfigInfo: { frontend_ingress_ip: '' },
       domainConfig: {},
       placeholderText: '',
       rules: {

@@ -137,7 +137,9 @@ def check_domain_used_by_market(application: Application, instance: Domain) -> b
     if not market_config.custom_domain_url:
         return False
     u = URL.from_address(market_config.custom_domain_url)
-    return u.hostname == instance.name and u.path == instance.path_prefix
+    # 判断域名和路径是否相同
+    # 判断路径时去除两端的 "/", 避免根路径省略时无法正常匹配
+    return u.hostname == instance.name and u.path.strip("/") == instance.path_prefix.strip("/")
 
 
 # cloud-native related managers starts

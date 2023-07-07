@@ -19,13 +19,12 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from dataclasses import dataclass
 from typing import List, Optional
-from urllib.parse import urlparse
 
-from paas_wl.networking.entrance.addrs import EnvAddresses, EnvExposedURL, default_port_map
-from paas_wl.networking.entrance.shim import get_builtin_addresses
+from paas_wl.networking.entrance.addrs import EnvExposedURL, default_port_map
+from paas_wl.networking.entrance.shim import EnvAddresses, get_builtin_addresses
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import get_exposed_url
+from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 
@@ -41,13 +40,16 @@ class AvailableAddressMixin:
         """由平台提供的首选默认访问入口"""
         entrance = get_exposed_url(self.env)
         return AvailableAddress(
-            address=entrance.url.as_address() if entrance else None,
+            address=entrance.address if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
         )
 
     @property
     def default_access_entrances(self) -> List[AvailableAddress]:
         """由平台提供的所有默认访问入口"""
+        # 保留原逻辑, 当模块未运行时返回空列表
+        if not env_is_deployed(self.env):
+            return []
         is_running, addresses = get_builtin_addresses(self.env)
         return [
             AvailableAddress(address=addr.url, type=ProductSourceUrlType.ENGINE_PROD_ENV.value) for addr in addresses
@@ -55,17 +57,18 @@ class AvailableAddressMixin:
 
     @property
     def domain_addresses(self) -> List[AvailableAddress]:
+        # 保留原逻辑, 当模块未运行时返回空列表
+        if not env_is_deployed(self.env):
+            return []
         return [
             AvailableAddress(address=addr.url, type=ProductSourceUrlType.CUSTOM_DOMAIN.value)
-            for addr in EnvAddresses(self.env).get_custom()
+            for addr in EnvAddresses(self.env).list_custom()
         ]
 
     def filter_domain_address(self, address: str) -> Optional['AvailableAddress']:
         """获取与 `address` 完全匹配的 `MarketAvailableAddress` 对象"""
-        o = urlparse(address)
         for available_address in self.domain_addresses:
-            # 由于 独立域名 只记录了 hostname, 因此只匹配 hostname
-            if available_address.hostname == o.hostname:
+            if available_address.address == address:
                 return available_address
         return None
 
@@ -85,7 +88,7 @@ class ModuleEnvAvailableAddressHelper(AvailableAddressMixin):
 
 @dataclass
 class MarketAvailableAddressHelper(AvailableAddressMixin):
-    """应用市场访问地址(主模块生产环境)助手"""
+    """应用市场访问地址(绑定模块的生产环境)助手"""
 
     market_config: MarketConfig
 

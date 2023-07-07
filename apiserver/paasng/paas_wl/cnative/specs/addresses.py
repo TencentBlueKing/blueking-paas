@@ -30,7 +30,6 @@ from paas_wl.cnative.specs.crd.domain_group_mapping import (
     ObjectMetadata,
 )
 from paas_wl.cnative.specs.models import generate_bkapp_name
-from paas_wl.networking.entrance.addrs import EnvAddresses
 from paas_wl.networking.ingress.certs.utils import DomainWithCert, pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.managers.domain import save_subdomains
@@ -158,6 +157,9 @@ def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:
 
 def get_exposed_url(env: ModuleEnvironment) -> Optional[str]:
     """Get exposed URL for given env"""
-    if addrs := EnvAddresses(env).get():
+    # TODO: use paasng.publish.entrance.exposer.get_exposed_url
+    from paas_wl.networking.entrance.shim import EnvAddresses
+
+    if addrs := EnvAddresses(env).list_activated():
         return addrs[0].url
     return None

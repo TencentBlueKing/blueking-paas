@@ -31,7 +31,7 @@ class ProductSourceUrlType(int, StructuredEnum):
     DISABLED = EnumField(1, label="未开启")
     ENGINE_PROD_ENV = EnumField(2, label="与绑定模块生产环境一致")
     THIRD_PARTY = EnumField(3, label="第三方访问地址")
-    CUSTOM_DOMAIN = EnumField(4, label="主模块生产环境独立域名")
+    CUSTOM_DOMAIN = EnumField(4, label="绑定模块生产环境独立域名")
     ENGINE_PROD_ENV_HTTPS = EnumField(5, label="与绑定模块生产环境一致, 并启用 HTTPS")
 
 

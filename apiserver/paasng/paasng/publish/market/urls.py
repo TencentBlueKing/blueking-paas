@@ -79,7 +79,7 @@ urlpatterns += [
     ),
     re_path(
         r'api/bkapps/applications/(?P<code>[^/]+)/entrances/market/$',
-        views.MarketConfigViewSet.as_view({'get': 'get_entrance', 'post': 'set_entrance'}),
+        views.MarketConfigViewSet.as_view({'post': 'set_entrance'}),
         name='api.applications.entrances.market_entrance',
     ),
 ]

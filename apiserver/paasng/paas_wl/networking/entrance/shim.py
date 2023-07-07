@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Optional, Tuple
 
-from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.entrance.addrs import URL, Address, get_legacy_url
+from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.networking.entrance.addrs import URL, Address
 from paas_wl.networking.entrance.allocator.domains import ModuleEnvDomains
 from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths
 from paas_wl.networking.entrance.constants import AddressType
@@ -30,6 +30,19 @@ from paas_wl.platform.applications.models import WlApp
 from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
+from paasng.platform.region.models import get_region
+
+
+def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
+    """Deprecated: Get legacy URL address which is a hard-coded value generated
+    y region configuration.
+
+    :return: None if not configured.
+    """
+    app = env.application
+    if tmpl := get_region(app.region).basic_info.link_engine_app:
+        return tmpl.format(code=app.code, region=app.region, name=env.engine_app.name)
+    return None
 
 
 class EnvAddresses:
@@ -46,7 +59,7 @@ class EnvAddresses:
 
     @property
     def ingress_cfg(self):
-        return get_cluster_by_app(self.wl_app).ingress_config
+        return EnvClusterService(self.env).get_cluster().ingress_config
 
     def list_by_allocator(self) -> List[Address]:
         """list all addresses which should be allocated to the given environment"""
@@ -60,18 +73,21 @@ class EnvAddresses:
     def list_subdomain_by_allocator(self) -> List[Address]:
         """list all subdomain addresses which should be allocated to the given environment"""
         subdomains = ModuleEnvDomains(self.env).all()
-        return [Address(type=AddressType.SUBDOMAIN, url=d.as_url().as_address()) for d in subdomains]
+        return self._sort([Address(type=AddressType.SUBDOMAIN, url=d.as_url().as_address()) for d in subdomains])
 
     def list_subpath_by_allocator(self) -> List[Address]:
         """list all subpath addresses which should be allocated to the given environment"""
         subpaths = ModuleEnvSubpaths(self.env).all()
-        return [Address(type=AddressType.SUBPATH, url=p.as_url().as_address()) for p in subpaths]
+        return self._sort([Address(type=AddressType.SUBPATH, url=p.as_url().as_address()) for p in subpaths])
 
     def list_activated(self) -> List[Address]:
         """"list all `activated` addresses for deployed environment"""
+        if not env_is_running(self.env):
+            return []
+
         return (
-            self._sort(self.list_activated_subdomain())
-            + self._sort(self.list_activated_subpath())
+            self.list_activated_subdomain()
+            + self.list_activated_subpath()
             + self._sort(self.list_custom())
             + self.list_legacy()
         )
@@ -84,7 +100,7 @@ class EnvAddresses:
             root_domain = self.ingress_cfg.find_app_root_domain(d.host)
             is_sys_reserved = root_domain.reserved if root_domain else False
             addrs.append(Address(AddressType.SUBDOMAIN, self._make_url(d.https_enabled, d.host), is_sys_reserved))
-        return addrs
+        return self._sort(addrs)
 
     def list_activated_subpath(self) -> List[Address]:
         """list all `activated` subpath for deployed environment"""
@@ -94,7 +110,7 @@ class EnvAddresses:
             for obj in path_objs:
                 url = self._make_url(domain.https_enabled, domain.name, obj.subpath)
                 addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
-        return addrs
+        return self._sort(addrs)
 
     def list_custom(self) -> List[Address]:
         """Get addresses from custom domains"""
@@ -103,6 +119,13 @@ class EnvAddresses:
             Address(AddressType.CUSTOM, self._make_url(d.https_enabled, d.name, d.path_prefix), id=d.id)
             for d in custom_domains
         ]
+
+    def validate_custom_url(self, url: str) -> bool:
+        """validate if the given url is a custom domain url"""
+        for addr in self.list_custom():
+            if addr.url == url:
+                return True
+        return False
 
     def list_legacy(self) -> List[Address]:
         """Get addresses by legacy logic"""

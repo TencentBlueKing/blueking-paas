@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def set_custom_domain():
     """Allow to set custom domains by mocking"""
-    with mock.patch('paasng.publish.market.utils.EnvAddresses.get_custom') as mocker:
+    with mock.patch('paasng.publish.market.utils.EnvAddresses.list_custom') as mocker:
 
         def _set_hostname(hostname):
             """Set mocker to return given hostname as return value"""
@@ -142,11 +142,11 @@ class TestMarketAvailableAddressHelper:
 
 
 class TestMarketAvailableAddressHelperNoDeployment:
-    @mock.patch('paasng.publish.market.utils.get_exposed_url')
-    def test_list_without_deploy(self, mocker, bk_app, bk_module, set_custom_domain):
+    def test_list_without_deploy(
+        self, bk_app, bk_module, set_custom_domain, mock_env_is_running, mock_get_builtin_addresses
+    ):
         # Mock get_exposed_url to return None in order to simulate env which has
         # not been deployed yet.
-        mocker.return_value = None
 
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         helper = MarketAvailableAddressHelper(market_config)
@@ -155,5 +155,4 @@ class TestMarketAvailableAddressHelperNoDeployment:
 
         assert helper.addresses == [
             AvailableAddress(address=None, type=2),
-            AvailableAddress(address="http://test.example.com", type=4),
         ]

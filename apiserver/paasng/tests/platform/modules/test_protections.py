@@ -74,7 +74,7 @@ class TestAllEnvsArchivedCondition:
 class TestCustomDomainUnBoundCondition:
     @pytest.fixture
     def list_addrs_stub(self):
-        with mock.patch("paasng.platform.modules.protections.EnvAddresses.get_custom") as mocker:
+        with mock.patch("paasng.platform.modules.protections.EnvAddresses.list_custom") as mocker:
             yield mocker
 
     def test_no_domain(self, bk_module, list_addrs_stub):

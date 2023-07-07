@@ -20,7 +20,8 @@ import pytest
 
 from paas_wl.cluster.models import Domain as ClusterDomain
 from paas_wl.cluster.models import PortMap
-from paas_wl.networking.entrance.addrs import Address, AddressType, EnvAddresses
+from paas_wl.networking.entrance.addrs import Address, AddressType
+from paas_wl.networking.entrance.shim import EnvAddresses, get_legacy_url
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from tests.paas_wl.utils.release import create_release
@@ -45,8 +46,13 @@ class TestEnvAddresses:
         )
 
     def test_not_deployed(self, bk_stag_env):
-        addrs = EnvAddresses(bk_stag_env).get()
-        assert addrs == []
+        # 未部署, activated 为空
+        assert EnvAddresses(bk_stag_env).list_activated() == []
+
+        # 短域名在前
+        subdomain = EnvAddresses(bk_stag_env).list_subdomain_by_allocator()
+        assert len(subdomain) > 1
+        assert len(subdomain[0].url) < len(subdomain[1].url)
 
     def test_integrated(self, bk_user, bk_stag_env, patch_ingress_config):
         """Integrated test with multiple subpath domains and customized ports"""
@@ -63,7 +69,7 @@ class TestEnvAddresses:
 
         # Create a successful release record to by-paas deployment check
         create_release(bk_stag_env.wl_app, bk_user, failed=False)
-        addrs = EnvAddresses(bk_stag_env).get()
+        addrs = EnvAddresses(bk_stag_env).list_activated()
         assert addrs == [
             Address(AddressType.SUBDOMAIN, 'http://foo.example.org:8080/', False),
             Address(AddressType.SUBDOMAIN, 'http://foo-more.example.org:8080/', False),
@@ -75,5 +81,10 @@ class TestEnvAddresses:
                 'http://foo-custom.example.com:8080/',
                 False,
                 id=Domain.objects.get(environment_id=bk_stag_env.id).id,
+            ),
+            Address(
+                AddressType.LEGACY,
+                get_legacy_url(bk_stag_env) or "",
+                False,
             ),
         ]

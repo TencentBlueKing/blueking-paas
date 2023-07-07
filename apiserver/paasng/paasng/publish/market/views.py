@@ -18,23 +18,18 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Optional
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.networking.entrance.addrs import EnvAddresses
-from paas_wl.networking.entrance.constants import AddressType
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.publish.market import serializers
-from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig, Product, Tag, get_all_corp_products
 from paasng.publish.market.protections import AppPublishPreparer
 from paasng.publish.market.signals import offline_market, release_to_market
@@ -184,37 +179,14 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     @atomic
     @swagger_auto_schema(request_body=serializers.MarketEntranceSLZ, tags=["访问入口"])
     def set_entrance(self, request, code):
-        """设置某个模块为默认访问模块"""
-        slz = serializers.MarketEntranceSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-
+        """设置市场访问地址"""
         application = self.get_application()
-        try:
-            module = application.get_module(module_name=data["module"])
-        except ObjectDoesNotExist:
-            # 可能在设置之前模块已经被删除了
-            raise error_codes.CANNOT_SET_DEFAULT.f(_("{module_name} 模块已经被删除").format(module_name=data["module"]))
-
-        # 验证独立域名
-        address = data["address"]
-        if address["type"] == AddressType.CUSTOM:
-            url = address["url"]
-            if not EnvAddresses(module.get_envs("prod")).validate_custom_url(address["url"]):
-                raise error_codes.CANNOT_SET_DEFAULT.f(
-                    _("{url} 并非 {module_name} 模块的访问入口").format(url=url, module_name=module.name)
-                )
-
-        # 保存市场信息
-        market_config, __ = MarketConfig.objects.get_or_create_by_app(application)
-        market_config.source_module = module
-        if address["type"] == AddressType.CUSTOM:
-            market_config.custom_domain_url = address["url"]
-            market_config.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN
-        else:
-            market_config.source_url_type = ProductSourceUrlType.ENGINE_PROD_ENV
-        market_config.save()
-        return Response()
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+        slz = serializers.MarketEntranceSLZ(instance=market_config, data=request.data)
+        slz.is_valid(raise_exception=True)
+        market_config = slz.save()
+        serializer = self.serializer_class(market_config)
+        return Response(serializer.data)
 
 
 class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

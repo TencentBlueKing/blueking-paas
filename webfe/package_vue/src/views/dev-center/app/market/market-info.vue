@@ -142,35 +142,63 @@
           </bk-radio>
         </bk-form-item>
 
-        <bk-form-item
-          v-if="appMarketConfig.source_url_type === 3"
-          :label="$t('访问地址：')"
-          :required="true"
-          :property="'source_tp_url'"
-          :rules="visitInfoRules.sourceUrl"
-        >
-          <bk-input
-            ref="urlInput"
-            v-model="appMarketConfig.source_tp_url"
-            :placeholder="`${$t('请输入第三方地址，例如')}: http://example.com)`"
-          />
-          <p class="tip mt10">
-            {{ $t('用户从桌面打开应用时的访问地址') }}
-          </p>
-        </bk-form-item>
-
-        <bk-form-item>
-          <bk-button
-            v-show="!engineAbled"
-            theme="primary"
-            class="mr10 mt5"
-            :title="$t('保存')"
-            :loading="isConfigSaving"
-            @click.stop.prevent="submitVisitInfo"
+        <section class="source-form-cls">
+          <bk-form-item
+            v-if="appMarketConfig.source_url_type === 3"
+            :label="$t('访问地址：')"
+            :label-width="120"
+            :required="true"
+            :property="'source_tp_url'"
+            :rules="visitInfoRules.sourceUrl"
           >
-            {{ $t('保存') }}
-          </bk-button>
-        </bk-form-item>
+            <div class="flex-row align-items-baseline form-input-cls" v-if="isEditAddress">
+              <div>
+                <bk-input
+                  ref="urlInput"
+                  style="width: 400px;"
+                  v-model="appMarketConfig.source_tp_url"
+                  :placeholder="`${$t('请输入第三方地址，例如')}: http://example.com)`"
+                />
+                <p class="tip mt10">
+                  {{ $t('用户从桌面打开应用时的访问地址') }}
+                </p>
+              </div>
+              <bk-button
+                theme="primary"
+                class="ml20"
+                text
+                :loading="isConfigSaving"
+                @click="submitVisitInfo"
+              >
+                {{ $t('保存') }}
+              </bk-button>
+              <bk-button
+                theme="primary"
+                class="ml20"
+                text
+                :loading="isConfigSaving"
+                @click="handleCancel"
+              >
+                {{ $t('取消') }}
+              </bk-button>
+            </div>
+            <div v-else>
+              <span class="address-info-url">
+                {{ appMarketConfig.source_tp_url || $t('暂无')}}
+              </span>
+              <bk-button
+                theme="primary"
+                class="ml20"
+                text
+                :loading="isConfigSaving"
+                @click="handleEdit"
+              >
+                {{ $t('编辑') }}
+              </bk-button>
+            </div>
+          </bk-form-item>
+        </section>
+
       </bk-form>
     </template>
 
@@ -317,6 +345,7 @@ export default {
       curAddress: '',
       curModule: '',
       moduleList: [],
+      sourceUrlLocal: '',
     };
   },
   computed: {
@@ -537,6 +566,10 @@ export default {
         }
         this.avaliableAddressValueBackup = this.avaliableAddressValue;
         this.marketAddress = this.appMarketConfig.market_address;
+
+        // 当前选中的模块、当前选中的地址
+        this.curModule = this.appMarketConfig.source_module_name;
+        this.curAddress = this.appMarketConfig.market_address;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -577,6 +610,7 @@ export default {
           theme: 'success',
           message: this.$t('保存成功！'),
         });
+        this.isEditAddress = false;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -653,6 +687,19 @@ export default {
         this.isTableLoading = false;
       }
     },
+
+    // 第三方访问地址取消
+    handleCancel() {
+      this.isEditAddress = false;
+      this.$refs.visitInfoForm.clearError();
+      this.appMarketConfig.source_tp_url = this.sourceUrlLocal;   // 如果取消则用之前的值
+    },
+
+    // 第三方访问地址编辑
+    handleEdit() {
+      this.isEditAddress = true;
+      this.sourceUrlLocal = this.appMarketConfig.source_tp_url;
+    },
   },
 };
 </script>
@@ -675,5 +722,23 @@ export default {
     .module-select-cls{
       width: 100px;
       margin-right: 5px;
+    }
+
+    .source-form-cls{
+      background: #fff;
+      margin-top: 20px;
+      padding: 20px 0px;
+      /deep/ .bk-label{
+        color: #313238;
+        font-weight: 700;
+      }
+
+      /deep/ .tooltips-icon{
+        right: calc(100% - 390px) !important;
+        top: 7px !important;
+      }
+    }
+    .form-input-cls{
+      position: relative;
     }
 </style>

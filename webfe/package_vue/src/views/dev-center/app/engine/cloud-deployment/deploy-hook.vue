@@ -13,7 +13,7 @@
         </div>
         <div>
           <div
-            class="ps-switcher-wrapper"
+            class="ps-switcher-wrapper mr10"
             @click="togglePermission"
           >
             <bk-switcher

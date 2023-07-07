@@ -68,6 +68,14 @@ class Group(OperationGroup):
         path="/search_alert/",
     )
 
+    # 统一查询时序数据
+    promql_query = bind_property(
+        Operation,
+        name='promql_query',
+        method='POST',
+        path='/promql_query/',
+    )
+
 
 class Client(APIGatewayClient):
     """bkmonitorv3

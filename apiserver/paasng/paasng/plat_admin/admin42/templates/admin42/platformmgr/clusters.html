@@ -138,7 +138,7 @@
                 ></json-pretty>
             </bk-form-item>
             <bk-form-item label="集群出口 IP" desc="用于指引用户配置独立域名的解析, 如果集群使用云厂商的 clb 做流量控制, 那么这里应当填对应的 vip">
-                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip" disabled="true"></bk-input>
+                <bk-input v-model="readOnlyDialog.form.ingress_config.frontend_ingress_ip" disabled="true"></bk-input>
             </bk-form-item>
             <bk-form-item label="注解" required>
                 <json-pretty
@@ -588,7 +588,6 @@
                     this.readOnlyDialog.row = row
                     this.readOnlyDialog.form = { ...row, ingress_config: {...row.ingress_config} }
                     this.readOnlyDialog.visible = true
-                    console.log(this.readOnlyDialog.form)
                 },
                 handleGenNodeState: function (region, clusterName) {
                     let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)

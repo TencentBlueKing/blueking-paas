@@ -17,11 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import base64
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
-
-from django.conf import settings
 
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.release_controller.models import ContainerRuntimeSpec
@@ -32,11 +29,6 @@ if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
     from paasng.platform.modules.models.module import Module
     from paasng.platform.modules.models.runtime import AppBuildPack, AppSlugBuilder
-
-
-def build_app_registry_auth() -> str:
-    auth = f"{settings.APP_DOCKER_REGISTRY_USERNAME}:{settings.APP_DOCKER_REGISTRY_PASSWORD}".encode()
-    return "Basic " + base64.b64encode(auth).decode()
 
 
 @dataclass
@@ -83,9 +75,6 @@ class SlugbuilderInfo:
             environments.update(slugbuilder.environments)
             if manager.is_cnb_runtime:
                 use_cnb = True
-                environments.update(
-                    CNB_REGISTRY_AUTH=json.dumps({settings.APP_DOCKER_REGISTRY_HOST: build_app_registry_auth()})
-                )
 
         buildpacks = buildpacks or []
         for buildpack in buildpacks:

@@ -25,7 +25,7 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          autoscalingConfig:
+          autoscaling:
             description: AutoscalingConfig contains the config for autoscaling
             properties:
               enabled:
@@ -85,11 +85,11 @@ spec:
                 description: ReadinessEndpointName, defaults to "readyz"
                 type: string
             type: object
-          ingressPluginConfig:
+          ingressPlugin:
             description: IngressPluginConfig contains the config for controlling ingress
               config
             properties:
-              accessControlConfig:
+              accessControl:
                 description: AccessControlConfig contains the config for controlling
                   ingress snippet about Access control module
                 properties:
@@ -100,7 +100,7 @@ spec:
                 required:
                 - redisConfigKey
                 type: object
-              paasAnalysisConfig:
+              paasAnalysis:
                 description: PaaSAnalysisConfig contains the config for controlling
                   ingress snippet about PA(paas-analysis) module
                 properties:
@@ -179,7 +179,7 @@ spec:
                   disable the metrics serving.
                 type: string
             type: object
-          platformConfig:
+          platform:
             description: PlatformConfig contains the config for interacting with other
               service
             properties:
@@ -208,7 +208,7 @@ spec:
             - ingressClassName
             - sentryDSN
             type: object
-          resLimitConfig:
+          resLimit:
             description: ResLimitConfig contains bkapp resource limit
             properties:
               maxReplicas:
@@ -255,11 +255,11 @@ spec:
                 type: integer
             type: object
         required:
-        - autoscalingConfig
-        - ingressPluginConfig
+        - autoscaling
+        - ingressPlugin
         - maxProcesses
-        - platformConfig
-        - resLimitConfig
+        - platform
+        - resLimit
         type: object
     served: true
     storage: true

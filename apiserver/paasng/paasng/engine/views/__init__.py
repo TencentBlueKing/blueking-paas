@@ -16,17 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from .build import BuildProcessViewSet, ImageArtifactViewSet
 from .configvar import ConfigVarBuiltinViewSet, ConfigVarImportExportViewSet, ConfigVarViewSet
 from .deploy import DeploymentViewSet, DeployPhaseViewSet
 from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset
 from .release import ReleasedInfoViewSet, ReleasesViewset
 
 __all__ = [
+    "BuildProcessViewSet",
     "ConfigVarBuiltinViewSet",
     "ConfigVarImportExportViewSet",
     "ConfigVarViewSet",
     "DeploymentViewSet",
     "DeployPhaseViewSet",
+    "ImageArtifactViewSet",
     "OfflineViewset",
     "OperationsViewset",
     "ProcessResourceMetricsViewset",

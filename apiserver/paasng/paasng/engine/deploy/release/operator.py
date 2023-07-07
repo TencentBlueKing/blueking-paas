@@ -21,7 +21,6 @@ import time
 from typing import Optional
 
 from paas_wl.cnative.specs.constants import DeployStatus
-from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.cnative.specs.resource import deploy as apply_bkapp_to_k8s
@@ -89,10 +88,6 @@ def release_by_k8s_operator(
     application = env.application
     module = env.module
 
-    # Try to get and validate the image credentials, will raise ValueError when any refs are invalid
-    credential_refs = get_references(revision.json_value)
-    validate_references(application, credential_refs)
-
     # TODO: read name from request data or generate by model resource payload
     # Add current timestamp in name to avoid conflicts
     default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
@@ -110,7 +105,7 @@ def release_by_k8s_operator(
             operator=operator,
         )
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(credential_refs=credential_refs, image=image)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(image=image)
         )
     except Exception as e:
         if app_model_deploy is not None:

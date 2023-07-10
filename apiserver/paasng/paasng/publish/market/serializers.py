@@ -410,6 +410,9 @@ class MarketEntranceSLZ(serializers.Serializer):
             instance.source_tp_url = url
             update_fields.extend(["source_tp_url"])
         else:
+            module = self._validate_module_name(self.instance, validated_data=validated_data)
+            instance.source_module = module
+            update_fields.extend(["source_module"])
             if source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN:
                 instance.custom_domain_url = url
                 update_fields.extend(["custom_domain_url"])

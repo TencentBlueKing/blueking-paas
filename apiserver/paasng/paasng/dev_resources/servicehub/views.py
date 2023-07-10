@@ -53,6 +53,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter
 from paasng.platform.applications.protections import ProtectedRes, raise_if_protected, res_must_not_be_protected_perm
 from paasng.platform.modules.manager import ModuleCleaner
+from paasng.platform.modules.models import Module
 from paasng.platform.modules.serializers import MinimalModuleSLZ
 from paasng.platform.region.models import get_all_regions
 from paasng.utils.api_docs import openapi_empty_response
@@ -366,35 +367,66 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 continue
             unbound_services.append(svc)
 
-        svc_bound_info_map: Dict[str, Dict[str, Any]] = {
-            svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in bound_services
+        # 已经启用的增强服务
+        bound_service_obj_allocations = self._gen_service_obj_allocations(module, bound_services)
+        bound_service_infos = list(bound_service_obj_allocations.values())
+        # 补充引用当前模块实例的模块信息
+        sharing_ref_mgr = SharingReferencesManager(module)
+        for svc_info in bound_service_infos:
+            svc_info['ref_modules'] = sharing_ref_mgr.list_related_modules(svc_info['service'])
+
+        # 共享其他模块的增强服务
+        shared_service_infos = []
+        for shared_info in shared_infos:
+            svc = shared_info.service
+            ref_svc_allocation = self._gen_service_obj_allocations(shared_info.ref_module, services=[svc])[svc.uuid]
+            shared_service_infos.append(
+                {
+                    "service": svc,
+                    "module": shared_info.module,
+                    "ref_module": shared_info.ref_module,
+                    "provision_infos": ref_svc_allocation["provision_infos"],
+                    "specifications": ref_svc_allocation["specifications"],
+                }
+            )
+
+        return Response(
+            {
+                'bound': slzs.BoundServiceInfoSLZ(bound_service_infos, many=True).data,
+                'shared': slzs.SharedServiceInfoWithAllocationSLZ(shared_service_infos, many=True).data,
+                'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
+            }
+        )
+
+    @staticmethod
+    def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
+        """生成服务对象分配信息"""
+        svc_allocation_map: Dict[str, Dict[str, Any]] = {
+            svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in services
         }
         for env in module.get_envs():
             list_provisioned_rels = mixed_service_mgr.list_provisioned_rels(env.engine_app)
             for rel in list_provisioned_rels:
                 svc = rel.get_service()
-                bound_info = svc_bound_info_map[svc.uuid]
+                if svc.uuid not in svc_allocation_map:
+                    continue
+
+                alloc = svc_allocation_map[svc.uuid]
                 # 补充实例分配信息
-                bound_info['provision_infos'][env.environment] = rel.is_provisioned()
+                alloc['provision_infos'][env.environment] = rel.is_provisioned()
 
                 # 现阶段所有环境的服务规格一致，若某环境已经获取到配置参数信息，则跳过以免重复
-                if len(bound_info['specifications']):
+                if alloc['specifications']:
                     continue
 
                 # 补充配置参数信息
                 specs = rel.get_plan().specifications
-                for definition in bound_info['service'].specifications:
+                for definition in alloc['service'].specifications:
                     result = definition.as_dict()
                     result['value'] = specs.get(definition.name)
-                    bound_info['specifications'].append(result)
+                    alloc['specifications'].append(result)
 
-        return Response(
-            {
-                'bound': slzs.BoundServiceInfoSLZ(svc_bound_info_map.values(), many=True).data,
-                'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
-                'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
-            }
-        )
+        return svc_allocation_map
 
 
 class ServiceSetViewSet(viewsets.ViewSet):

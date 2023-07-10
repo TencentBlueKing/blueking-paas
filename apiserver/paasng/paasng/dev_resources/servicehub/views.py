@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from itertools import groupby
 from typing import Any, Dict, List
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -377,31 +376,17 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             svc_info['ref_modules'] = sharing_ref_mgr.list_related_modules(svc_info['service'])
 
         # 共享其他模块的增强服务
-        # 对于共享的实例，先按照模块名称分组，再逐个获取分配信息
-        services_groupby_module = dict(
-            [(key, list(group)) for key, group in groupby(shared_infos, lambda x: x.ref_module.name)]
-        )
-
-        shared_service_obj_allocations = {}
-        for service_infos in services_groupby_module.values():
-            # 同一组的模块都是一样的，所以直接取第一个
-            module = service_infos[0].ref_module
-            services = [info.service for info in service_infos]
-            shared_service_obj_allocations.update(
-                self._gen_service_obj_allocations(module, services),
-            )
-
         shared_service_infos = []
-        for svc_info in shared_infos:
-            svc = svc_info.service
-            allocation = shared_service_obj_allocations.get(svc.uuid, {})
+        for shared_info in shared_infos:
+            svc = shared_info.service
+            ref_svc_allocation = self._gen_service_obj_allocations(shared_info.ref_module, services=[svc])[svc.uuid]
             shared_service_infos.append(
                 {
-                    'service': svc,
-                    'module': svc_info.module,
-                    'ref_module': svc_info.ref_module,
-                    'provision_infos': allocation.get('provision_infos', {}),
-                    'specifications': allocation.get('specifications', []),
+                    "service": svc,
+                    "module": shared_info.module,
+                    "ref_module": shared_info.ref_module,
+                    "provision_infos": ref_svc_allocation["provision_infos"],
+                    "specifications": ref_svc_allocation["specifications"],
                 }
             )
 

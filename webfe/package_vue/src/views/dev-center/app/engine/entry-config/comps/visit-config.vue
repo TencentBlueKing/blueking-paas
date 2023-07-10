@@ -843,10 +843,15 @@ export default {
 
     /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
         padding: 0;
-        background: #f5f7fa;
+        background: #FAFBFD;
         z-index: 1;
       }
 
+      /deep/ .bk-table-body-wrapper .hover-row .table-colum-cls :nth-child(even){
+        padding: 0;
+        background: #f5f7fa;
+        z-index: 1;
+      }
     /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
       padding: 0 !important;
     }

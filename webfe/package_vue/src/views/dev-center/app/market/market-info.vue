@@ -98,7 +98,7 @@
         </div>
         <!-- 查看态 -->
         <div class="address-info-url" v-if="avaliableAddress[0] && !isEditAddress">
-          {{ avaliableAddress[0].address }}
+          {{ curAddress }}
         </div>
         <bk-button
           class="address-info-btn"
@@ -347,6 +347,7 @@ export default {
       curModule: '',
       moduleList: [],
       sourceUrlLocal: '',
+      curAddressType: '',
     };
   },
   computed: {
@@ -471,10 +472,15 @@ export default {
     async sureSwitchAddress() {
       this.switchAddressDialog.loading = true;
       try {
+        const curAddressData = this.addressData.find(e => e.name === this.curModule) || {};
+        const envsData = curAddressData?.envs;
+        if (envsData && envsData?.prod && envsData?.prod?.length) {   // 只要prod的地址数据
+          this.curAddressType = envsData.prod.find(e => e.address.url === this.curAddress)?.address?.type;
+        }
         await this.$store.dispatch('market/updateMarketUrl', {
           appCode: this.appCode,
           data: {
-            type: this.currentAddress.type,
+            type: this.curAddressType === 'custom' ? 4 : 2,
             module: this.curModule,
             url: this.curAddress,
           },
@@ -486,6 +492,7 @@ export default {
         this.avaliableAddressValueBackup = this.currentAddress.value;
         this.switchAddressDialog.visiable = false;
         this.isEditAddress = false;
+        this.initMarketConfig();      // 重新请求数据
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -602,9 +609,12 @@ export default {
       this.isConfigSaving = true;
 
       try {
-        await this.$store.dispatch('market/updateAppMarketConfig', {
+        await this.$store.dispatch('market/updateMarketUrl', {
           appCode: this.appCode,
-          data: this.appMarketConfig,
+          data: {
+            type: 3,
+            url: this.appMarketConfig.source_tp_url,
+          },
         });
 
         this.checkAppPrepare();

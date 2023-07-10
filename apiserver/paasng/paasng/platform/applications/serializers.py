@@ -370,9 +370,9 @@ class ApplicationSLZ(serializers.ModelSerializer):
     config_info = serializers.DictField(read_only=True, help_text='应用的额外状态信息')
     modules = serializers.SerializerMethodField(help_text='应用各模块信息列表')
 
-    def get_modules(self, obj):
+    def get_modules(self, application: Application):
         # 将 default_module 排在第一位
-        modules = obj.modules.all().order_by('-is_default', '-created')
+        modules = application.modules.all().order_by('-is_default', '-created')
         return ModuleSLZ(modules, many=True).data
 
     class Meta:

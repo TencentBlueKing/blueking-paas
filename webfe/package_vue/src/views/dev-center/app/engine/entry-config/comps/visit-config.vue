@@ -47,11 +47,11 @@
               >
                 <div class="text-container">
                   <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
-                  <span
-                    class="pl15 pr15"
+                  <div
+                    class="ml15 mr15 text"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item]"
-                    v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
-                  <span class="pl15 pr15" v-else>{{ $t(entryEnv[item]) }}</span>
+                    v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</div>
+                  <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
                   <span
                     class="btn-container"
                     v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
@@ -311,6 +311,9 @@ export default {
         placements: ['bottom'],
         onHidden: () => {
           this.tipShow = false;
+          if (this.mouseEnter) return;
+          this.tableIndex = '';
+          this.envIndex = '';
         },
         onShown: () => {
           this.tipShow = true;
@@ -518,10 +521,12 @@ export default {
       || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
       this.tableIndex = index;
       this.envIndex = envIndex;
+      this.mouseEnter = true;
     },
 
     // 环境鼠标移出事件
     handleEnvMouseLeave() {
+      this.mouseEnter = false;
       if (this.tipShow) return;
       this.tableIndex = '';
       this.envIndex = '';
@@ -756,6 +761,9 @@ export default {
         position: relative;
         display: flex;
         align-items: center;
+        .text{
+          border-bottom: 1px dashed #979ba5;
+        }
       }
       .btn-container{
         position: absolute;

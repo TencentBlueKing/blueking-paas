@@ -20,7 +20,11 @@
               @mouseleave="defaultIndex = ''">
               <div class="flex-row align-items-center"
               >{{ row.name || '--' }}
-                <div class="module-default ml10" v-if="row.is_default">{{$t('访问管理主模块')}}</div>
+                <img
+                  class="module-default ml10"
+                  v-if="row.is_default"
+                  src="/static/images/main.png"
+                >
               </div>
               <bk-button
                 v-if="defaultIndex === $index && !row.is_default" text theme="primary"
@@ -30,7 +34,7 @@
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')" :width="160">
+        <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls">
           <template slot-scope="{ row, $index }">
             <div
               v-for="(item, i) in row.envsData" :key="item"
@@ -44,9 +48,10 @@
                 <div class="text-container">
                   <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
                   <span
+                    class="pl15 pr15"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item]"
                     v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</span>
-                  <span v-else>{{ $t(entryEnv[item]) }}</span>
+                  <span class="pl15 pr15" v-else>{{ $t(entryEnv[item]) }}</span>
                   <span
                     class="btn-container"
                     v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
@@ -91,12 +96,20 @@
                   </bk-form>
                 </div>
                 <section v-else>
-                  <div v-bk-tooltips="{content: $t('该环境未部署，无法访问'), disabled: e.is_running}">
+                  <div
+                    v-bk-tooltips="{content: $t('该环境未部署，无法访问'), disabled: e.is_running}"
+                    class="flex-row align-items-center">
                     <bk-button
                       text theme="primary"
+                      class="address-btn-cls"
                       :disabled="!e.is_running"
                       @click="handleUrlOpen(e.address.url)"
                     > {{ e.address.url }}</bk-button>
+                    <img
+                      class="custom-image ml10"
+                      v-if="e.address.type === 'custom'"
+                      src="/static/images/custom.png"
+                    >
                   </div>
                 </section>
                 <div class="line"></div>
@@ -104,27 +117,7 @@
             </div>
           </template>
         </bk-table-column>
-        <!-- <bk-table-column :label="$t('进程')" :width="100">
-          <template slot-scope="{ row }">
-            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
-              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
-                web
-                <div class="line"></div>
-              </div>
-            </div>
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('类型')" :width="110">
-          <template slot-scope="{ row }">
-            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
-              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
-                {{ e.address.type === 'custom' ? $t('自定义') : $t('平台内置')}}
-                <div class="line"></div>
-              </div>
-            </div>
-          </template>
-        </bk-table-column> -->
-        <bk-table-column :label="$t('操作')" :width="120">
+        <bk-table-column :label="$t('操作')" :width="120" fixed="right">
           <template slot-scope="{ row, $index }">
             <div v-for="item in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
@@ -155,15 +148,6 @@
           </template>
         </bk-table-column>
       </bk-table>
-      <!-- <bk-button
-        v-if="moduleEntryInfo.type === 1 && canUpdateSubDomain"
-        class="toggle-type"
-        :text="true"
-        theme="primary"
-        @click="visitDialog.visiable = true"
-      >
-        {{ $t('切换为子域名') }}
-      </bk-button> -->
 
       <bk-dialog
         v-model="visitDialog.visiable"
@@ -747,14 +731,7 @@ export default {
         justify-content: center;
         .module-default{
           height: 22px;
-          font-size: 12px;
-          color: #3A84FF;
-          line-height: 20px;
-          background: #EDF4FF;
-          border: 1px solid #3a84ff4d;
-          border-radius: 11px;
-          text-align: center;
-          padding: 0 5px;
+          width: 38px;
         }
         .module-cursor{
           cursor: pointer;
@@ -766,18 +743,13 @@ export default {
         position: relative;
       }
       .env-container{
-        background: #D8F4F5;
-        color: #45A0A5;
-        padding: 5px;
-        width: 76px;
         font-size: 12px;
-        margin: 10px 0px;
-        text-align: center;
-        border-radius: 2px;
       }
 
       .text-container{
         position: relative;
+        display: flex;
+        align-items: center;
       }
       .btn-container{
         position: absolute;
@@ -815,6 +787,13 @@ export default {
           border: 1px solid #14a5684d;
           border-radius: 11px;
         }
+        .address-btn-cls{
+          height: 46px !important;
+        }
+        .custom-image{
+          height: 22px;
+          width: 38px;
+        }
       }
     }
 
@@ -832,5 +811,14 @@ export default {
     .port-config{
       width: calc(100vw - 326px);
       overflow-x: auto;
+    }
+
+    /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
+        padding: 0;
+        background: #f5f7fa;
+      }
+
+    /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
+      padding: 0 !important;
     }
 </style>

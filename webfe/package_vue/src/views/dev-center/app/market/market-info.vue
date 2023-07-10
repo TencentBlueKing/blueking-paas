@@ -269,6 +269,7 @@
         </bk-button>
         <bk-button
           theme="default"
+          class="ml10"
           @click="switchAddressDialog.visiable = false"
         >
           {{ $t('取消') }}

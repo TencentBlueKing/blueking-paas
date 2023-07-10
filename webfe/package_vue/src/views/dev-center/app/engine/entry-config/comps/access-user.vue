@@ -43,17 +43,14 @@
           </p>
         </div>
         <template v-if="!isPermissionChecking && isUseUserPermission">
-          <bk-tab
-            :active.sync="active"
-            ext-cls="user-tab-cls"
-            type="unborder-card"
-          >
-            <bk-tab-panel
+          <div class="bk-button-group ml25 mt15">
+            <bk-button
               v-for="(panel, index) in userPanels"
               :key="index"
-              v-bind="panel"
-            />
-          </bk-tab>
+              @click="active = panel.name"
+              :class="active === panel.name ? 'is-selected' : ''">
+              {{ panel.label }}</bk-button>
+          </div>
           <section class="table-container mt15" v-if="active === 'whiteList'">
             <div class="ps-table-bar">
               <bk-button

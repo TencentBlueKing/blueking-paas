@@ -16,8 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Add a database user and make it authenticable by verified app, see `AuthenticatedAppAsUserMiddleware`
-for more details"""
+"""Add a database user and allow it to be authenticated by a verified application,
+see `AuthenticatedAppAsUserMiddleware` for more details"""
 import logging
 
 from bkpaas_auth.models import DatabaseUser

@@ -30,6 +30,7 @@ export default {
   actions: {
     /**
          * 获取代码检查列表
+         * TODO：去掉，不再展示列表，改为直接展示代码检查结果
          * @param {Object} params 请求参数：appCode, moduleId, env, limit, offset
          */
     getCodeReviewList ({ commit, state }, { appCode, moduleId, env, limit, offset }, config = {}) {
@@ -41,23 +42,9 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/jobs/?${json2Query(params)}`;
       return http.get(url, config);
     },
-
     /**
-         * 判断token是否存在
+         * 判断模块的代码仓库是否支持代码检查功能
          */
-    getCiToken ({ commit, state }, config = {}) {
-      const url = `${BACKEND_URL}/api/ci/token/?backend=tencent_ci`;
-      return http.get(url, config);
-    },
-
-    /**
-         * 获取授权url
-         */
-    getAuthUrl ({ commit, state }, config = {}) {
-      const url = `${BACKEND_URL}/api/ci/oauth_url/?backend=tencent_ci`;
-      return http.get(url, config);
-    },
-
     getCiInfo ({ commit, state }, { appCode, moduleId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/info/`;
       return http.get(url, config);

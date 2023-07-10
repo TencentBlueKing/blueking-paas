@@ -18,28 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class DesiredCodeNotMeetException(Exception):
-    """返回结果不符合预期"""
-
-
-class ResultJsonLoadFailed(Exception):
-    """返回结果无法被 JSON 解析"""
-
-
-class UserAuthMissingError(Exception):
-    """用户信息缺失"""
-
-
-class UserTokenNotReadyError(Exception):
-    """用户 oauth token 缺失"""
-
-
 class NotSupportedCIBackend(Exception):
     """不支持的 CI 后端"""
-
-
-class NotSupportedCIAtom(Exception):
-    """不支持的 CI Atom"""
 
 
 class NotSupportedRepoType(Exception):
@@ -48,11 +28,3 @@ class NotSupportedRepoType(Exception):
     def __init__(self, source_type: str, *args):
         self.source_type = source_type
         super().__init__(*args)
-
-
-class RequiredContextMissingError(Exception):
-    """必须的 context 内容缺失"""
-
-
-class UnableParseJobStatus(Exception):
-    """无法解析出准确的任务状态"""

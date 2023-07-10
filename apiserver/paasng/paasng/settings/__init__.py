@@ -596,6 +596,7 @@ HEALTHZ_PROBES = settings.get(
     'HEALTHZ_PROBES',
     [
         'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
+        'paasng.monitoring.healthz.probes.WorkloadsMysqlProbe',
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',

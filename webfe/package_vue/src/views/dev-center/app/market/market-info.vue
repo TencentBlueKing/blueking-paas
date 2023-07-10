@@ -69,6 +69,7 @@
               v-model="curModule"
               class="module-select-cls"
               :clearable="false"
+              @change="handleModuleChange"
             >
               <bk-option
                 v-for="item in moduleList"
@@ -712,6 +713,11 @@ export default {
     handleEdit() {
       this.isEditAddress = true;
       this.sourceUrlLocal = this.appMarketConfig.source_tp_url;
+    },
+
+    // 修改模块，则访问地址需要重新填写
+    handleModuleChange() {
+      this.curAddress = '';
     },
   },
 };

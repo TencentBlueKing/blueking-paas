@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.kube_res.base import Schedule
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
 
 if TYPE_CHECKING:
@@ -64,13 +65,12 @@ class SlugbuilderInfo:
     @classmethod
     def from_module(cls, module: 'Module') -> 'SlugbuilderInfo':
         """根据模块获取支持的构建环境"""
-        from paasng.platform.modules.helpers import ModuleRuntimeManager
-
         manager = ModuleRuntimeManager(module)
         buildpacks = manager.list_buildpacks()  # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
         environments = {}
         slugbuilder = manager.get_slug_builder(raise_exception=False)
         use_cnb = False
+        breakpoint()
         if slugbuilder:
             environments.update(slugbuilder.environments)
             if manager.is_cnb_runtime:

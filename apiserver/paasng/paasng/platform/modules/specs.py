@@ -70,10 +70,10 @@ class ModuleSpecs:
     @property
     def artifact_type(self) -> ArtifactType:
         """构件类型"""
-        if self.runtime_type == RuntimeType.DOCKERFILE:
-            return ArtifactType.IMAGE
-        elif self.runtime_type == RuntimeType.CUSTOM_IMAGE:
+        if self.runtime_type == RuntimeType.CUSTOM_IMAGE:
             return ArtifactType.NONE
+        elif self.runtime_type == RuntimeType.DOCKERFILE:
+            return ArtifactType.IMAGE
         if SlugbuilderInfo.from_module(self.module).use_cnb:
             return ArtifactType.IMAGE
         return ArtifactType.SLUG

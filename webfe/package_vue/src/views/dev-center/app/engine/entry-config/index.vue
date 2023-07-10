@@ -124,7 +124,7 @@ export default {
       background: #fff;
       min-height: calc(100% - 50px);
       width: calc(100% - 38px);
-      margin: 20px auto 0;
+      margin: 15px auto 0;
       .entry-bar{
         /deep/ .bar-container{
           border: none !important;

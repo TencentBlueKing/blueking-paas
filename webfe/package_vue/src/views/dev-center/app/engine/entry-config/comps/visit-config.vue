@@ -4,6 +4,14 @@
       class="content"
       style="position: relative;"
     >
+      <div class="table-title">
+        <i class="paasng-icon paasng-info-line info-icon" />
+        {{$t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。')}}
+        <a
+          :href="GLOBAL.DOC.APP_ENTRY_INTRO"
+          target="blank"
+        > {{ $t('详细使用说明') }} </a>
+      </div>
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
         :data="entryList"
@@ -727,6 +735,12 @@ export default {
         padding: 0;
     }
 
+    .table-title{
+      font-size: 12px;
+      color: #63656E;
+      margin-bottom: 15px;
+    }
+
     .table-cls {
       /deep/ .cell{
         overflow:visible;
@@ -830,6 +844,7 @@ export default {
     /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
         padding: 0;
         background: #f5f7fa;
+        z-index: 1;
       }
 
     /deep/ .bk-table-body-wrapper .table-colum-cls .cell {

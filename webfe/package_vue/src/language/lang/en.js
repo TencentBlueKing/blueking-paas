@@ -2172,4 +2172,5 @@ export default {
   '（': '(',
   '）': ')',
   正在设置主模块: 'Setting up main module',
+  '平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。': 'The platform provides built-in access addresses for applications, and custom addresses can also be added to configure additional access entries.',
 };

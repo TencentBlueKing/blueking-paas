@@ -827,4 +827,8 @@ export default {
     /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
       padding: 0 !important;
     }
+
+    .btn-container{
+      text-align: center;
+    }
 </style>

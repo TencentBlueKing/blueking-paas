@@ -1149,7 +1149,7 @@ paths:
         matchSubpath: false
         backend:
           type: HTTP
-          method: get
+          method: post
           path: /backend/sys/api/log/applications/{code}/modules/{module_name}/structured/list/
           matchSubpath: false
           timeout: 0
@@ -1254,6 +1254,30 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
+  /system/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/specs/:
+    get:
+      operationId: retrieve_addon_specs
+      description: 获取增强服务的规格组合
+      tags: []
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/specs/
+          matchSubpath: false
+          timeout: 30
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: retrieve addon specifications
   /system/bkapps/xycd/third_app/:
     post:
       operationId: create_xy_cd_app
@@ -1380,6 +1404,33 @@ paths:
         backend:
           type: HTTP
           method: get
+          path: /backend/sys/api/bk_plugins/{code}/logs/
+          matchSubpath: false
+          timeout: 10
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: false
+          resourcePermissionRequired: false
+        disabledStages: []
+        descriptionEn:
+    post:
+      operationId: list_bk_plugin_logs_cloned
+      description: 查询单个蓝鲸插件的日志
+      tags:
+      - 应用/模块信息查询
+      - 私有化版未提供
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
           path: /backend/sys/api/bk_plugins/{code}/logs/
           matchSubpath: false
           timeout: 10
@@ -1519,6 +1570,31 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: false
           resourcePermissionRequired: false
+        disabledStages: []
+        descriptionEn:
+  /system/uni_applications/list/minimal/:
+    get:
+      operationId: uni_apps_list_minimal
+      description: 查询多平台应用基本信息，可根据 id 或者 name 模糊搜索, 最多只返回 1000 条数据
+      tags:
+      - 应用/模块信息查询
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/uni_applications/list/minimal/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
   /system/uni_applications/query/by_id/:

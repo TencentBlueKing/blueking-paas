@@ -70,7 +70,6 @@ class SlugbuilderInfo:
         environments = {}
         slugbuilder = manager.get_slug_builder(raise_exception=False)
         use_cnb = False
-        breakpoint()
         if slugbuilder:
             environments.update(slugbuilder.environments)
             if manager.is_cnb_runtime:

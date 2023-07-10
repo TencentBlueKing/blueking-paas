@@ -23,6 +23,8 @@ to the current version of the project delivered to anyone in the future.
 from abc import ABC
 from typing import Any, Dict, Type
 
+from paas_wl.platform.applications.constants import ArtifactType
+from paasng.engine.configurations.building import SlugbuilderInfo
 from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import SourceOrigin
@@ -60,14 +62,31 @@ class ModuleSpecs:
 
     @property
     def runtime_type(self) -> RuntimeType:
+        """运行时类型/构建方式"""
         if runtime_type := getattr(self.source_origin_specs, "runtime_type", None):
             return runtime_type
         return RuntimeType(BuildConfig.objects.get_or_create_by_module(self.module).build_method)
 
+    @property
+    def artifact_type(self) -> ArtifactType:
+        """构件类型"""
+        if self.runtime_type == RuntimeType.DOCKERFILE:
+            return ArtifactType.IMAGE
+        elif self.runtime_type == RuntimeType.CUSTOM_IMAGE:
+            return ArtifactType.NONE
+        if SlugbuilderInfo.from_module(self.module).use_cnb:
+            return ArtifactType.IMAGE
+        return ArtifactType.SLUG
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'templated_source_enabled': self.templated_source_enabled,
-            "runtime_type": self.runtime_type.value,
+            # 运行时类型
+            "runtime_type": self.runtime_type,
+            # 构建方式
+            "build_method": self.runtime_type,
+            # 构件类型
+            "artifact_type": self.artifact_type,
         }
 
 

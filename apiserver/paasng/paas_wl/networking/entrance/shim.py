@@ -32,6 +32,8 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
 
+logger = logging.getLogger(__name__)
+
 
 def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
     """Deprecated: Get legacy URL address which is a hard-coded value generated
@@ -45,7 +47,7 @@ def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
     return None
 
 
-class EnvAddresses:
+class BaseEnvAddresses:
     """Get all addresses for given environment"""
 
     def __init__(self, env: ModuleEnvironment):
@@ -61,64 +63,32 @@ class EnvAddresses:
     def ingress_cfg(self):
         return EnvClusterService(self.env).get_cluster().ingress_config
 
-    def list_by_allocator(self) -> List[Address]:
-        """list all addresses which should be allocated to the given environment"""
-        return (
-            self.list_subdomain_by_allocator()
-            + self.list_subpath_by_allocator()
-            + self.list_custom()
-            + self.list_legacy()
-        )
+    def list(self) -> List[Address]:
+        """Get all addresses"""
+        raise NotImplementedError
 
-    def list_subdomain_by_allocator(self) -> List[Address]:
-        """list all subdomain addresses which should be allocated to the given environment"""
-        subdomains = ModuleEnvDomains(self.env).all()
-        return self._sort([Address(type=AddressType.SUBDOMAIN, url=d.as_url().as_address()) for d in subdomains])
+    def list_subdomain(self) -> List[Address]:
+        """list all subdomain addresses for given environment"""
+        raise NotImplementedError
 
-    def list_subpath_by_allocator(self) -> List[Address]:
-        """list all subpath addresses which should be allocated to the given environment"""
-        subpaths = ModuleEnvSubpaths(self.env).all()
-        return self._sort([Address(type=AddressType.SUBPATH, url=p.as_url().as_address()) for p in subpaths])
+    def list_subpath(self) -> List[Address]:
+        """list all subpath addresses for given environment"""
+        raise NotImplementedError
 
-    def list_activated(self) -> List[Address]:
-        """"list all `activated` addresses for deployed environment"""
-        if not env_is_running(self.env):
-            return []
-
-        return (
-            self.list_activated_subdomain()
-            + self.list_activated_subpath()
-            + self._sort(self.list_custom())
-            + self.list_legacy()
-        )
-
-    def list_activated_subdomain(self) -> List[Address]:
-        """list all `activated` subdomain addresses for deployed environment"""
-        subdomains = AppDomain.objects.filter(app=self.wl_app, source=AppDomainSource.AUTO_GEN)
-        addrs = []
-        for d in subdomains:
-            root_domain = self.ingress_cfg.find_app_root_domain(d.host)
-            is_sys_reserved = root_domain.reserved if root_domain else False
-            addrs.append(Address(AddressType.SUBDOMAIN, self._make_url(d.https_enabled, d.host), is_sys_reserved))
-        return self._sort(addrs)
-
-    def list_activated_subpath(self) -> List[Address]:
-        """list all `activated` subpath for deployed environment"""
-        path_objs = AppSubpath.objects.filter(app=self.wl_app).order_by('created')
-        addrs = []
-        for domain in self.ingress_cfg.sub_path_domains:
-            for obj in path_objs:
-                url = self._make_url(domain.https_enabled, domain.name, obj.subpath)
-                addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
-        return self._sort(addrs)
+    def list_legacy(self) -> List[Address]:
+        """Get addresses by legacy logic"""
+        url = get_legacy_url(self.env)
+        return [Address(type=AddressType.LEGACY, url=url)] if url else []
 
     def list_custom(self) -> List[Address]:
         """Get addresses from custom domains"""
         custom_domains = Domain.objects.filter(environment_id=self.env.id)
-        return [
-            Address(AddressType.CUSTOM, self._make_url(d.https_enabled, d.name, d.path_prefix), id=d.id)
-            for d in custom_domains
-        ]
+        return self._sort(
+            [
+                Address(AddressType.CUSTOM, self._make_url(d.https_enabled, d.name, d.path_prefix), id=d.id)
+                for d in custom_domains
+            ]
+        )
 
     def validate_custom_url(self, url: str) -> bool:
         """validate if the given url is a custom domain url"""
@@ -126,11 +96,6 @@ class EnvAddresses:
             if addr.url == url:
                 return True
         return False
-
-    def list_legacy(self) -> List[Address]:
-        """Get addresses by legacy logic"""
-        url = get_legacy_url(self.env)
-        return [Address(type=AddressType.LEGACY, url=url)] if url else []
 
     def _make_url(self, https_enabled: bool, host: str, path: str = '/') -> str:
         """Make URL address"""
@@ -144,7 +109,59 @@ class EnvAddresses:
         return sorted(addrs, key=lambda addr: (addr.is_sys_reserved, len(addr.url)))
 
 
-logger = logging.getLogger(__name__)
+class LiveEnvAddresses(BaseEnvAddresses):
+    """Get all live addresses for given environment
+
+    **live** is meaning that the address should currently be accessible.
+    """
+
+    def list(self) -> List[Address]:
+        """"list all `live` addresses for deployed environment"""
+        if not env_is_running(self.env):
+            return []
+
+        return self.list_subdomain() + self.list_subpath() + self.list_custom() + self.list_legacy()
+
+    def list_subdomain(self) -> List[Address]:
+        """list all `live` subdomain addresses for deployed environment"""
+        subdomains = AppDomain.objects.filter(app=self.wl_app, source=AppDomainSource.AUTO_GEN)
+        addrs = []
+        for d in subdomains:
+            root_domain = self.ingress_cfg.find_app_root_domain(d.host)
+            is_sys_reserved = root_domain.reserved if root_domain else False
+            addrs.append(Address(AddressType.SUBDOMAIN, self._make_url(d.https_enabled, d.host), is_sys_reserved))
+        return self._sort(addrs)
+
+    def list_subpath(self) -> List[Address]:
+        """list all `activated` subpath for deployed environment"""
+        path_objs = AppSubpath.objects.filter(app=self.wl_app).order_by('created')
+        addrs = []
+        for domain in self.ingress_cfg.sub_path_domains:
+            for obj in path_objs:
+                url = self._make_url(domain.https_enabled, domain.name, obj.subpath)
+                addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
+        return self._sort(addrs)
+
+
+class PreAllocatedEnvAddresses(BaseEnvAddresses):
+    """Get all allocated addresses for given environment
+
+    **allocated** is meaning that the address should be allocated to the given env,
+    But the address may not currently accessible if the given env is not deployed.
+    """
+
+    def list(self) -> List[Address]:
+        return self.list_subdomain() + self.list_subpath() + self.list_custom() + self.list_legacy()
+
+    def list_subdomain(self) -> List[Address]:
+        """list all subdomain addresses which should be allocated to the given environment"""
+        subdomains = ModuleEnvDomains(self.env).all()
+        return self._sort([Address(type=AddressType.SUBDOMAIN, url=d.as_url().as_address()) for d in subdomains])
+
+    def list_subpath(self) -> List[Address]:
+        """list all subpath addresses which should be allocated to the given environment"""
+        subpaths = ModuleEnvSubpaths(self.env).all()
+        return self._sort([Address(type=AddressType.SUBPATH, url=p.as_url().as_address()) for p in subpaths])
 
 
 def get_highest_priority_builtin_address(env: ModuleEnvironment) -> Tuple[bool, Optional[Address]]:
@@ -153,14 +170,19 @@ def get_highest_priority_builtin_address(env: ModuleEnvironment) -> Tuple[bool, 
     - Custom domain is not included
     - Both cloud-native and default application are supported
 
-    :returns: Return the shortest url by default. If a preferred root domain was
-        set and a match can be found using that domain, the matched address will
-        be returned in priority.
+    Returns:
+        Tuple[bool, str]: A tuple containing two values:
+            - A boolean value indicating whether the environment is running.
+            - A string representing the shortest URL by default.
+              * If a preferred root domain was set and a match can be found using that domain,
+              * the matched address will be returned in priority.
+              * If the env is not running, the URL returned is algorithmically allocated(MAY NOT accessible).
     """
     module = env.module
     is_running, addresses = get_builtin_addresses(env)
     if not addresses:
         return is_running, None
+    # Use the first address because the results is sorted already
     addr = addresses[0]
     if module.exposed_url_type in [ExposedURLType.SUBPATH, ExposedURLType.SUBDOMAIN]:
         if preferred_root := module.user_preferred_root_domain:
@@ -174,14 +196,25 @@ def get_highest_priority_builtin_address(env: ModuleEnvironment) -> Tuple[bool, 
 
 
 def get_builtin_addresses(env: ModuleEnvironment) -> Tuple[bool, List[Address]]:
-    """Get all builtin address of given environment"""
+    """Get all builtin address of given environment
+
+    Returns:
+        Tuple[bool, List[Address]]: A tuple containing two values:
+            - A boolean value indicating whether the environment is running.
+            - A list representing all route URL of given environment.
+              * If the env is not running, the URL returned is algorithmically allocated(MAY NOT accessible).
+    """
     module = env.module
-    svc = EnvAddresses(env)
+    svc: BaseEnvAddresses
     is_running = env_is_running(env)
+    if is_running:
+        svc = LiveEnvAddresses(env)
+    else:
+        svc = PreAllocatedEnvAddresses(env)
     if module.exposed_url_type == ExposedURLType.SUBPATH:
-        addresses = svc.list_activated_subpath() if is_running else svc.list_subpath_by_allocator()
+        addresses = svc.list_subpath()
     elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-        addresses = svc.list_activated_subdomain() if is_running else svc.list_subdomain_by_allocator()
+        addresses = svc.list_subdomain()
     else:
         addresses = svc.list_legacy()
     return is_running, addresses

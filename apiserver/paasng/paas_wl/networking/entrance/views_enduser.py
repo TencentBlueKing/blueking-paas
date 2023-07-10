@@ -33,7 +33,7 @@ from paas_wl.networking.entrance.allocator.domains import SubDomainAllocator
 from paas_wl.networking.entrance.allocator.subpaths import SubPathAllocator
 from paas_wl.networking.entrance.constants import AddressType
 from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
-from paas_wl.networking.entrance.shim import EnvAddresses, get_highest_priority_builtin_address
+from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_highest_priority_builtin_address
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
@@ -186,7 +186,7 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                         module.name,
                         env.environment,
                     )
-                addresses.extend(EnvAddresses(env).list_custom())
+                addresses.extend(LiveEnvAddresses(env).list_custom())
                 for address in addresses:
                     env_entrances.append(
                         {

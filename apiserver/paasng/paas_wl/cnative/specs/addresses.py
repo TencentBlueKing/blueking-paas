@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List, Optional, Set
+from typing import List, Set
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.constants import DomainGroupSource
@@ -153,13 +153,3 @@ def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:
         logger.info("created a secret %s for host %s", secret_name, d.host)
     d.tlsSecretName = secret_name
     return d
-
-
-def get_exposed_url(env: ModuleEnvironment) -> Optional[str]:
-    """Get exposed URL for given env"""
-    # TODO: use paasng.publish.entrance.exposer.get_exposed_url
-    from paas_wl.networking.entrance.shim import EnvAddresses
-
-    if addrs := EnvAddresses(env).list_activated():
-        return addrs[0].url
-    return None

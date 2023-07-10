@@ -21,7 +21,7 @@ import pytest
 from paas_wl.cluster.models import Domain as ClusterDomain
 from paas_wl.cluster.models import PortMap
 from paas_wl.networking.entrance.addrs import Address, AddressType
-from paas_wl.networking.entrance.shim import EnvAddresses, get_legacy_url
+from paas_wl.networking.entrance.shim import LiveEnvAddresses, PreAllocatedEnvAddresses, get_legacy_url
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from tests.paas_wl.utils.release import create_release
@@ -46,11 +46,17 @@ class TestEnvAddresses:
         )
 
     def test_not_deployed(self, bk_stag_env):
-        # 未部署, activated 为空
-        assert EnvAddresses(bk_stag_env).list_activated() == []
+        # 未部署, LiveEnvAddresses.list 为空
+        assert LiveEnvAddresses(bk_stag_env).list() == []
+        # 但 LiveEnvAddresses.list_subdomain 不为空, 因为读取的是 AppDomain 模型
+        assert LiveEnvAddresses(bk_stag_env).list_subdomain() == [
+            Address(type=AddressType.SUBDOMAIN, url="http://foo.example.com/"),
+            Address(type=AddressType.SUBDOMAIN, url="http://foo.example.org/"),
+            Address(type=AddressType.SUBDOMAIN, url="http://foo-more.example.org/"),
+        ]
 
         # 短域名在前
-        subdomain = EnvAddresses(bk_stag_env).list_subdomain_by_allocator()
+        subdomain = PreAllocatedEnvAddresses(bk_stag_env).list_subdomain()
         assert len(subdomain) > 1
         assert len(subdomain[0].url) < len(subdomain[1].url)
 
@@ -69,7 +75,7 @@ class TestEnvAddresses:
 
         # Create a successful release record to by-paas deployment check
         create_release(bk_stag_env.wl_app, bk_user, failed=False)
-        addrs = EnvAddresses(bk_stag_env).list_activated()
+        addrs = LiveEnvAddresses(bk_stag_env).list()
         assert addrs == [
             Address(AddressType.SUBDOMAIN, 'http://foo.example.org:8080/', False),
             Address(AddressType.SUBDOMAIN, 'http://foo-more.example.org:8080/', False),

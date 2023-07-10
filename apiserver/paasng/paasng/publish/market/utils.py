@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from paas_wl.networking.entrance.addrs import EnvExposedURL, default_port_map
-from paas_wl.networking.entrance.shim import EnvAddresses, get_builtin_addresses
+from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addresses
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.publish.entrance.exposer import get_exposed_url
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 
@@ -47,22 +47,16 @@ class AvailableAddressMixin:
     @property
     def default_access_entrances(self) -> List[AvailableAddress]:
         """由平台提供的所有默认访问入口"""
-        # 保留原逻辑, 当模块未运行时返回空列表
-        if not env_is_deployed(self.env):
-            return []
-        is_running, addresses = get_builtin_addresses(self.env)
+        _, addresses = get_builtin_addresses(self.env)
         return [
             AvailableAddress(address=addr.url, type=ProductSourceUrlType.ENGINE_PROD_ENV.value) for addr in addresses
         ]
 
     @property
     def domain_addresses(self) -> List[AvailableAddress]:
-        # 保留原逻辑, 当模块未运行时返回空列表
-        if not env_is_deployed(self.env):
-            return []
         return [
             AvailableAddress(address=addr.url, type=ProductSourceUrlType.CUSTOM_DOMAIN.value)
-            for addr in EnvAddresses(self.env).list_custom()
+            for addr in LiveEnvAddresses(self.env).list_custom()
         ]
 
     def filter_domain_address(self, address: str) -> Optional['AvailableAddress']:

@@ -27,7 +27,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
-from paas_wl.networking.entrance.shim import EnvAddresses
+from paas_wl.networking.entrance.shim import LiveEnvAddresses
 from paasng.platform.applications.serializers import ApplicationField, AppNameField
 from paasng.platform.modules.models import Module
 from paasng.publish.market.constant import AppState, ProductSourceUrlType
@@ -437,7 +437,7 @@ class MarketEntranceSLZ(serializers.Serializer):
     @staticmethod
     def _validate_custom_domain_url(module: Module, url: str):
         """validate the given url whether a custom domain in given module"""
-        if not EnvAddresses(module.get_envs("prod")).validate_custom_url(url):
+        if not LiveEnvAddresses(module.get_envs("prod")).validate_custom_url(url):
             raise ValidationError(
                 detail={"url": _("{url} 并非 {module_name} 模块的访问入口").format(url=url, module_name=module.name)}
             )

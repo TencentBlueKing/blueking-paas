@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def set_custom_domain():
     """Allow to set custom domains by mocking"""
-    with mock.patch('paasng.publish.market.utils.EnvAddresses.list_custom') as mocker:
+    with mock.patch('paasng.publish.market.utils.LiveEnvAddresses.list_custom') as mocker:
 
         def _set_hostname(hostname):
             """Set mocker to return given hostname as return value"""
@@ -155,4 +155,5 @@ class TestMarketAvailableAddressHelperNoDeployment:
 
         assert helper.addresses == [
             AvailableAddress(address=None, type=2),
+            AvailableAddress(address='http://test.example.com', type=4),
         ]

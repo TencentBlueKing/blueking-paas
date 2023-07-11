@@ -4,7 +4,7 @@
       <h2> {{ $t('基本信息') }} </h2>
     </div>
     <paas-content-loader
-      class="app-container middle"
+      class="app-container middle base-info-container"
       :is-loading="isLoading"
       placeholder="base-info-loading"
     >
@@ -1229,6 +1229,11 @@
 </script>
 
 <style lang="scss" scoped>
+    .base-info-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 2px 24px;
+    }
     .desc-flex{
         display: flex;
         justify-content: flex-start;

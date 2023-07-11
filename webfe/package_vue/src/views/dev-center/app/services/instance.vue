@@ -1,13 +1,13 @@
 <template lang="html">
-  <div class="right-main">
+  <div>
     <app-top-bar
       :paths="servicePaths"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
     />
 
-    <div class="app-container">
-      <section>
+    <div class="instance-container">
+      <section class="instance-tab-container">
         <bk-tab
           class="mt5"
           :active.sync="curServiceTab"
@@ -62,7 +62,9 @@
                         class="ps-table-slide-up"
                       >
                         <td>#{{ index + 1 }}</td>
-                        <template v-if="item.service_instance.config.hasOwnProperty('is_done') && !item.service_instance.config.is_done">
+                        <template
+                          v-if="item.service_instance.config.hasOwnProperty('is_done')
+                            && !item.service_instance.config.is_done">
                           <td>
                             <p class="mt15 mb15">
                               {{ $t('服务正在创建中，请通过“管理入口”查看进度') }}
@@ -296,396 +298,397 @@
   </div>
 </template>
 
-<script>
-    import { marked } from 'marked';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
-    import ConfigView from './comps/config-view';
-    import ConfigEdit from './comps/config-edit';
-    import $ from 'jquery';
+<script>import { marked } from 'marked';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
+import ConfigView from './comps/config-view';
+import ConfigEdit from './comps/config-edit';
+import $ from 'jquery';
 
-    export default {
-        components: {
-            appTopBar,
-            ConfigView,
-            ConfigEdit
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                categoryId: 0,
-                instanceList: [],
-                instanceCount: 0,
-                name: '',
-                appName: this.$route.query.appName,
-                title: '',
-                // isLoading: true,
-                isGuardLoading: true,
-                service: this.$route.params.service,
-                hFieldstoggleStatus: [],
-                hFieldstoggleText: {
-                    true: this.$t('隐藏'),
-                    false: this.$t('显示')
-                },
-                serviceExtraMsg: '',
-                serviceExtraMsgMap: {
-                    'GCS-MySQL': this.$t('每个应用默认开启MySQL服务，并默认分配两个服务实例'),
-                    'MySQL': this.$t('每个应用默认开启MySQL服务，并默认分配两个服务实例'),
-                    'RabbitMQ': this.$t('开启RabbitMQ服务，系统默认分配两个服务实例'),
-                    'Sentry': this.$t('服务开启后，应用错误将自动上报到Sentry服务')
-                },
-                serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
-                // detail: 实例详情 manager: 管理实例
-                curServiceTab: 'detail',
-                delAppDialog: {
-                    visiable: false,
-                    isLoading: false,
-                    moduleList: []
-                },
-                formRemoveConfirmCode: '',
-                servicePaths: [],
-                showConfigInfo: true,
-                canEditConfig: false,
-                specifications: [],
-                definitions: [],
-                values: [],
-                editLoading: false,
-                saveLoading: false,
-                requestQueue: ['init', 'enabled', 'shareModule'],
-                copyContent: ''
-            };
-        },
-        computed: {
-            compiledMarkdown: function () {
-                this.$nextTick(() => {
-                    $('#markdown').find('a').each(function () {
-                        $(this).attr('target', '_blank');
-                    });
-                });
-                console.log('marked', marked)
-                return marked(this.serviceMarkdown, { sanitize: true });
-            },
-            hasAdminUrl () {
-                const hasUrlItems = this.instanceList.filter(item => {
-                    return item.service_instance.config.admin_url;
-                });
-                if (hasUrlItems && hasUrlItems.length) {
-                    return true;
-                }
-                return false;
-            },
-            formRemoveValidated () {
-                return this.appCode === this.formRemoveConfirmCode;
-            },
-            region () {
-                return this.curAppInfo.application.region;
-            },
-            errorTips () {
-                return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
-            },
-            pageTips () {
-                return `${this.$t('实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，这些模块将获得实例的所有环境变量。')}`;
-            },
-            isLoading () {
-                return this.requestQueue.length > 0;
-            }
-        },
-        watch: {
-            '$route' () {
-                this.requestQueue = ['init', 'enabled', 'shareModule'];
-                this.init();
-                this.fetchEnableSpecs();
-                this.fetchServicesShareDetail();
-            },
-            curServiceTab (value) {
-                if (value === 'detail') {
-                    this.init();
-                }
-            }
-        },
-        created () {
-            this.init();
-            this.fetchEnableSpecs();
-            this.fetchServicesShareDetail();
-        },
-        methods: {
-            async fetchServicesShareDetail () {
-                try {
-                    const res = await this.$store.dispatch('service/getServicesShareDetail', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        serviceId: this.service
-                    });
-                    this.delAppDialog.moduleList = [...res];
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: res.message
-                    });
-                } finally {
-                    this.requestQueue.shift();
-                }
-            },
-
-            fliter (str) {
-                if (str.substr(str.length - 1, str.length) === '_') {
-                    str = str.substr(0, str.length - 1);
-                }
-            },
-
-            init () {
-                this.isGuardLoading = true;
-
-                this.$http.get(BACKEND_URL + '/api/services/' + this.service + '/').then((response) => {
-                    this.servicePaths = [];
-                    const resData = response.result;
-                    if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
-                        this.serviceMarkdown = resData.instance_tutorial;
-                    }
-                    this.servicePaths.push({
-                        title: this.$t(resData.category.name_zh_cn),
-                        routeName: 'appService'
-                    });
-                    this.servicePaths.push({
-                        title: this.curModuleId
-                    });
-                    this.servicePaths.push({
-                        title: resData.display_name
-                    });
-                    this.categoryId = resData.category.id;
-                }).finally(res => {
-                    this.isGuardLoading = false;
-                });
-
-                const relatedInformationUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.service}/`;
-                this.$http.get(relatedInformationUrl).then((response) => {
-                    const resData = response;
-                    this.instanceList = resData.results;
-                    this.instanceCount = resData.count;
-                    this.canEditConfig = resData.count === 0;
-                    for (const instanceIndex in resData.results) {
-                        this.hFieldstoggleStatus.push({});
-                        this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(this.instanceList[instanceIndex].service_instance.credentials);
-                        this.instanceList[instanceIndex].usage = JSON.parse(this.instanceList[instanceIndex].usage);
-                    }
-                }).catch(_ => {
-                    this.$router.push({
-                        name: 'appService',
-                        params: {
-                            id: this.appCode,
-                            moduleId: this.curModuleId
-                        }
-                    });
-                }).finally(res => {
-                    this.requestQueue.shift();
-                });
-            },
-
-            async fetchEnableSpecs () {
-                try {
-                    const res = await this.$store.dispatch('service/getEnableSpecs', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        service: this.service
-                    });
-                    this.specifications = (res.results || []).map(({ display_name, value }) => {
-                        return {
-                            name: display_name,
-                            value
-                        };
-                    });
-                } catch (_) {
-
-                } finally {
-                    this.requestQueue.shift();
-                }
-            },
-
-            async fetchServicesSpecsDetail () {
-                this.editLoading = true;
-                try {
-                    const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
-                        id: this.service,
-                        region: this.region
-                    })
-                    ;(res.definitions || []).forEach((item, index) => {
-                        let values = [];
-                        res.values.forEach(val => {
-                            values.push(val[index]);
-                        });
-                        values = [...new Set(values)].filter(Boolean);
-                        this.$set(item, 'children', values);
-                        this.$set(item, 'active', this.specifications[index].value);
-                        this.$set(item, 'showError', false);
-                    });
-                    this.definitions = [...res.definitions];
-                    this.values = [...res.values];
-                    this.showConfigInfo = false;
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: res.message
-                    });
-                } finally {
-                    this.editLoading = false;
-                }
-            },
-
-            showExtraMsg (serviceName) {
-                if (!(serviceName in this.serviceExtraMsgMap)) {
-                    return false;
-                } else {
-                    this.serviceExtraMsg = this.serviceExtraMsgMap[serviceName];
-                    return true;
-                }
-            },
-
-            curTabSwitch (tab) {
-                this.curServiceTab = tab;
-            },
-
-            showRemovePrompt () {
-                this.delAppDialog.visiable = true;
-                this.fetchServicesShareDetail();
-            },
-
-            hookAfterClose () {
-                this.formRemoveConfirmCode = '';
-            },
-
-            submitRemoveInstance () {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.service}/`;
-
-                this.$http.delete(url).then(
-                    res => {
-                        this.delAppDialog.visiable = false;
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('删除服务实例成功')
-                        });
-                        this.$router.push({
-                            name: 'appService',
-                            params: {
-                                category_id: this.$route.params.category_id,
-                                id: this.$route.params.id
-                            }
-                        });
-                    },
-                    res => {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: res.detail
-                        });
-                        this.delAppDialog.visiable = false;
-                    }
-                );
-            },
-
-            handleConfigEdit () {
-                this.fetchServicesSpecsDetail();
-            },
-
-            async handleConfigChange (action, payload) {
-                if (action === 'cancel') {
-                    this.showConfigInfo = true;
-                    return;
-                }
-                this.saveLoading = true;
-                const params = {
-                    specs: payload,
-                    service_id: this.service,
-                    module_name: this.curModuleId,
-                    code: this.appCode
-                };
-                try {
-                    await this.$store.dispatch('service/enableServices', params);
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'success',
-                        message: this.$t('配置信息修改成功')
-                    });
-                    const specifications = [];
-                    for (const key in payload) {
-                        const curObj = this.definitions.find(item => item.name === key);
-                        specifications.push({
-                            name: curObj.display_name,
-                            value: payload[key]
-                        });
-                    }
-                    const specificationsNames = this.specifications.map(item => item.name);
-                    const notHasNames = specificationsNames.filter(item => {
-                        const arr = this.definitions.map(item => item.display_name);
-                        return !arr.includes(item);
-                    });
-                    notHasNames.forEach(item => {
-                        const obj = this.specifications.find(spec => spec.name === item);
-                        specifications.push({
-                            name: obj.name,
-                            value: obj.value
-                        });
-                    });
-                    this.specifications = specifications;
-                    this.showConfigInfo = true;
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: res.message
-                    });
-                } finally {
-                    this.saveLoading = false;
-                }
-            },
-            handleCopy (payload) {
-                const credentials = payload.service_instance.credentials;
-                const hiddenFields = payload.service_instance.hidden_fields;
-
-                for (const key in credentials) {
-                    this.copyContent += key + ':' + credentials[key] + '\n';
-                }
-                for (const key in hiddenFields) {
-                    this.copyContent += key + ':' + hiddenFields[key] + '\n';
-                }
-
-                const el = document.createElement('textarea');
-                el.value = this.copyContent;
-                el.setAttribute('readonly', '');
-                el.style.position = 'absolute';
-                el.style.left = '-9999px';
-                document.body.appendChild(el);
-                const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                if (selected) {
-                    document.getSelection().removeAllRanges();
-                    document.getSelection().addRange(selected);
-                }
-                this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
-            },
-
-            toAppDeploy () {
-                const type = this.curAppInfo.application.type || '';
-                if (type === 'cloud_native') {
-                    this.$router.push({
-                        name: 'cloudAppDeployForProcess',
-                        params: {
-                          moduleId: this.curAppModule.name,
-                          id: this.appCode
-                        }
-                    });
-                    return;
-                }
-                this.$router.push({
-                    name: 'appDeploy',
-                    params: { id: this.appCode },
-                    query: { focus: 'stag' }
-                });
-            }
-        }
+export default {
+  components: {
+    appTopBar,
+    ConfigView,
+    ConfigEdit,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      categoryId: 0,
+      instanceList: [],
+      instanceCount: 0,
+      name: '',
+      appName: this.$route.query.appName,
+      title: '',
+      // isLoading: true,
+      isGuardLoading: true,
+      service: this.$route.params.service,
+      hFieldstoggleStatus: [],
+      hFieldstoggleText: {
+        true: this.$t('隐藏'),
+        false: this.$t('显示'),
+      },
+      serviceExtraMsg: '',
+      serviceExtraMsgMap: {
+        'GCS-MySQL': this.$t('每个应用默认开启MySQL服务，并默认分配两个服务实例'),
+        MySQL: this.$t('每个应用默认开启MySQL服务，并默认分配两个服务实例'),
+        RabbitMQ: this.$t('开启RabbitMQ服务，系统默认分配两个服务实例'),
+        Sentry: this.$t('服务开启后，应用错误将自动上报到Sentry服务'),
+      },
+      serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
+      // detail: 实例详情 manager: 管理实例
+      curServiceTab: 'detail',
+      delAppDialog: {
+        visiable: false,
+        isLoading: false,
+        moduleList: [],
+      },
+      formRemoveConfirmCode: '',
+      servicePaths: [],
+      showConfigInfo: true,
+      canEditConfig: false,
+      specifications: [],
+      definitions: [],
+      values: [],
+      editLoading: false,
+      saveLoading: false,
+      requestQueue: ['init', 'enabled', 'shareModule'],
+      copyContent: '',
     };
+  },
+  computed: {
+    compiledMarkdown() {
+      this.$nextTick(() => {
+        $('#markdown').find('a')
+          .each(function () {
+            $(this).attr('target', '_blank');
+          });
+      });
+      console.log('marked', marked);
+      return marked(this.serviceMarkdown, { sanitize: true });
+    },
+    hasAdminUrl() {
+      const hasUrlItems = this.instanceList.filter(item => item.service_instance.config.admin_url);
+      if (hasUrlItems && hasUrlItems.length) {
+        return true;
+      }
+      return false;
+    },
+    formRemoveValidated() {
+      return this.appCode === this.formRemoveConfirmCode;
+    },
+    region() {
+      return this.curAppInfo.application.region;
+    },
+    errorTips() {
+      return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
+    },
+    pageTips() {
+      return `${this.$t('实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，这些模块将获得实例的所有环境变量。')}`;
+    },
+    isLoading() {
+      return this.requestQueue.length > 0;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.requestQueue = ['init', 'enabled', 'shareModule'];
+      this.init();
+      this.fetchEnableSpecs();
+      this.fetchServicesShareDetail();
+    },
+    curServiceTab(value) {
+      if (value === 'detail') {
+        this.init();
+      }
+    },
+  },
+  created() {
+    this.init();
+    this.fetchEnableSpecs();
+    this.fetchServicesShareDetail();
+  },
+  methods: {
+    async fetchServicesShareDetail() {
+      try {
+        const res = await this.$store.dispatch('service/getServicesShareDetail', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.service,
+        });
+        this.delAppDialog.moduleList = [...res];
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      } finally {
+        this.requestQueue.shift();
+      }
+    },
+
+    fliter(str) {
+      if (str.substr(str.length - 1, str.length) === '_') {
+        str = str.substr(0, str.length - 1);
+      }
+    },
+
+    init() {
+      this.isGuardLoading = true;
+
+      this.$http.get(`${BACKEND_URL}/api/services/${this.service}/`).then((response) => {
+        this.servicePaths = [];
+        const resData = response.result;
+        if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
+          this.serviceMarkdown = resData.instance_tutorial;
+        }
+        this.servicePaths.push({
+          title: this.$t(resData.category.name_zh_cn),
+          routeName: 'appService',
+        });
+        this.servicePaths.push({
+          title: this.curModuleId,
+        });
+        this.servicePaths.push({
+          title: resData.display_name,
+        });
+        this.categoryId = resData.category.id;
+      })
+        .finally(() => {
+          this.isGuardLoading = false;
+        });
+
+      const relatedInformationUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.service}/`;
+      this.$http.get(relatedInformationUrl).then((response) => {
+        const resData = response;
+        this.instanceList = resData.results;
+        this.instanceCount = resData.count;
+        this.canEditConfig = resData.count === 0;
+        // eslint-disable-next-line no-restricted-syntax
+        for (const instanceIndex in resData.results) {
+          this.hFieldstoggleStatus.push({});
+          // eslint-disable-next-line max-len
+          this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(this.instanceList[instanceIndex].service_instance.credentials);
+          this.instanceList[instanceIndex].usage = JSON.parse(this.instanceList[instanceIndex].usage);
+        }
+      })
+        .catch(() => {
+          this.$router.push({
+            name: 'appService',
+            params: {
+              id: this.appCode,
+              moduleId: this.curModuleId,
+            },
+          });
+        })
+        .finally(() => {
+          this.requestQueue.shift();
+        });
+    },
+
+    async fetchEnableSpecs() {
+      try {
+        const res = await this.$store.dispatch('service/getEnableSpecs', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+        });
+        this.specifications = (res.results || []).map(({ display_name, value }) => ({
+          // eslint-disable-next-line camelcase
+          name: display_name,
+          value,
+        }));
+      } catch (_) {
+
+      } finally {
+        this.requestQueue.shift();
+      }
+    },
+
+    async fetchServicesSpecsDetail() {
+      this.editLoading = true;
+      try {
+        const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
+          id: this.service,
+          region: this.region,
+        })
+                    ;(res.definitions || []).forEach((item, index) => {
+          let values = [];
+          res.values.forEach((val) => {
+            values.push(val[index]);
+          });
+          values = [...new Set(values)].filter(Boolean);
+          this.$set(item, 'children', values);
+          this.$set(item, 'active', this.specifications[index].value);
+          this.$set(item, 'showError', false);
+        });
+        this.definitions = [...res.definitions];
+        this.values = [...res.values];
+        this.showConfigInfo = false;
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      } finally {
+        this.editLoading = false;
+      }
+    },
+
+    showExtraMsg(serviceName) {
+      if (!(serviceName in this.serviceExtraMsgMap)) {
+        return false;
+      }
+      this.serviceExtraMsg = this.serviceExtraMsgMap[serviceName];
+      return true;
+    },
+
+    curTabSwitch(tab) {
+      this.curServiceTab = tab;
+    },
+
+    showRemovePrompt() {
+      this.delAppDialog.visiable = true;
+      this.fetchServicesShareDetail();
+    },
+
+    hookAfterClose() {
+      this.formRemoveConfirmCode = '';
+    },
+
+    submitRemoveInstance() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.service}/`;
+
+      this.$http.delete(url).then(
+        () => {
+          this.delAppDialog.visiable = false;
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('删除服务实例成功'),
+          });
+          this.$router.push({
+            name: 'appService',
+            params: {
+              category_id: this.$route.params.category_id,
+              id: this.$route.params.id,
+            },
+          });
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: res.detail,
+          });
+          this.delAppDialog.visiable = false;
+        },
+      );
+    },
+
+    handleConfigEdit() {
+      this.fetchServicesSpecsDetail();
+    },
+
+    async handleConfigChange(action, payload) {
+      if (action === 'cancel') {
+        this.showConfigInfo = true;
+        return;
+      }
+      this.saveLoading = true;
+      const params = {
+        specs: payload,
+        service_id: this.service,
+        module_name: this.curModuleId,
+        code: this.appCode,
+      };
+      try {
+        await this.$store.dispatch('service/enableServices', params);
+        this.$paasMessage({
+          limit: 1,
+          theme: 'success',
+          message: this.$t('配置信息修改成功'),
+        });
+        const specifications = [];
+        for (const key in payload) {
+          const curObj = this.definitions.find(item => item.name === key);
+          specifications.push({
+            name: curObj.display_name,
+            value: payload[key],
+          });
+        }
+        const specificationsNames = this.specifications.map(item => item.name);
+        const notHasNames = specificationsNames.filter((item) => {
+          const arr = this.definitions.map(item => item.display_name);
+          return !arr.includes(item);
+        });
+        notHasNames.forEach((item) => {
+          const obj = this.specifications.find(spec => spec.name === item);
+          specifications.push({
+            name: obj.name,
+            value: obj.value,
+          });
+        });
+        this.specifications = specifications;
+        this.showConfigInfo = true;
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      } finally {
+        this.saveLoading = false;
+      }
+    },
+    handleCopy(payload) {
+      const { credentials } = payload.service_instance;
+      const hiddenFields = payload.service_instance.hidden_fields;
+
+      for (const key in credentials) {
+        this.copyContent += `${key}:${credentials[key]}\n`;
+      }
+      for (const key in hiddenFields) {
+        this.copyContent += `${key}:${hiddenFields[key]}\n`;
+      }
+
+      const el = document.createElement('textarea');
+      el.value = this.copyContent;
+      el.setAttribute('readonly', '');
+      el.style.position = 'absolute';
+      el.style.left = '-9999px';
+      document.body.appendChild(el);
+      const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      if (selected) {
+        document.getSelection().removeAllRanges();
+        document.getSelection().addRange(selected);
+      }
+      this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+    },
+
+    toAppDeploy() {
+      const type = this.curAppInfo.application.type || '';
+      if (type === 'cloud_native') {
+        this.$router.push({
+          name: 'cloudAppDeployForProcess',
+          params: {
+            moduleId: this.curAppModule.name,
+            id: this.appCode,
+          },
+        });
+        return;
+      }
+      this.$router.push({
+        name: 'appDeploy',
+        params: { id: this.appCode },
+        query: { focus: 'stag' },
+      });
+    },
+  },
+};
 
 </script>
 
@@ -1031,5 +1034,13 @@
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;
+    }
+    .instance-tab-container{
+      background: #fff;
+      margin-top: 16px;
+    }
+
+    .instance-container{
+      margin: 0px 24px;
     }
 </style>

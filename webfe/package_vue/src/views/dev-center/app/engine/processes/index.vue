@@ -7,11 +7,11 @@
       :module-list="curAppModuleList"
     />
 
-    <section class="app-container middle">
+    <section class="app-container middle ps-processes-container">
       <paas-content-loader
         :is-loading="isLoading"
         placeholder="process-loading"
-        :offset-top="10"
+        :offset-top="0"
       >
         <bk-tab
           :key="routeName"
@@ -74,73 +74,80 @@
   </div>
 </template>
 
-<script>
-    import processOperation from './comps/process-operation';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
+<script>import processOperation from './comps/process-operation';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
 
-    export default {
-        components: {
-            processOperation,
-            appTopBar
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: true,
-                environment: 'stag',
-                advisedDocLinks: []
-            };
-        },
-        computed: {
-            routeName () {
-                return this.$route.name;
-            }
-        },
-        watch: {
-            '$route' (to, from) {
-                this.isLoading = true;
-            }
-        },
-        created () {
-          this.$store.commit('updataEnvEventData', []);
-          this.init();
-        },
-        beforedestroy () {
-          this.$store.commit('updataEnvEventData', ['stag', 'prod']);
-        },
-        methods: {
-            init () {
-                this.loadAdvisedDocLinks();
-                // 获取当前tab项
-                if (this.$route.query && this.$route.query.env === 'prod') {
-                    this.environment = 'prod';
-                }
-            },
-            changeEnv (environment) {
-                this.isLoading = true;
-                if (environment === 'stag') {
-                    this.$refs.prodComponent.closeLogDetail();
-                } else if (environment === 'prod') {
-                    this.$refs.stagComponent.closeLogDetail();
-                }
-            },
-            loadAdvisedDocLinks () {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_processes&limit=4`;
-                this.$http.get(url).then((response) => {
-                    this.advisedDocLinks = response.links;
-                });
-            },
-            handlerDataReady (env) {
-                setTimeout(() => {
-                    this.isLoading = false;
-                }, 200);
-            }
-        }
+export default {
+  components: {
+    processOperation,
+    appTopBar,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: true,
+      environment: 'stag',
+      advisedDocLinks: [],
     };
+  },
+  computed: {
+    routeName() {
+      return this.$route.name;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.isLoading = true;
+    },
+  },
+  created() {
+    this.$store.commit('updataEnvEventData', []);
+    this.init();
+  },
+  beforedestroy() {
+    this.$store.commit('updataEnvEventData', ['stag', 'prod']);
+  },
+  methods: {
+    init() {
+      this.loadAdvisedDocLinks();
+      // 获取当前tab项
+      if (this.$route.query && this.$route.query.env === 'prod') {
+        this.environment = 'prod';
+      }
+    },
+    changeEnv(environment) {
+      this.isLoading = true;
+      if (environment === 'stag') {
+        this.$refs.prodComponent.closeLogDetail();
+      } else if (environment === 'prod') {
+        this.$refs.stagComponent.closeLogDetail();
+      }
+    },
+    loadAdvisedDocLinks() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_processes&limit=4`;
+      this.$http.get(url).then((response) => {
+        this.advisedDocLinks = response.links;
+      });
+    },
+    handlerDataReady() {
+      setTimeout(() => {
+        this.isLoading = false;
+      }, 200);
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
+  .ps-processes-container{
+    background: #fff;
+    margin-top: 14px;
+    padding-top: 0px;
+    .process-wrapper{
+      padding: 0 24px 10px 24px;
+    }
+
     a {
         cursor: pointer;
     }
@@ -184,4 +191,5 @@
             line-height: 28px;
         }
     }
+  }
 </style>

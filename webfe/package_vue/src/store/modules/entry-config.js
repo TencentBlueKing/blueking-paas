@@ -30,7 +30,7 @@ export default {
          * 获取应用进程服务
          * @param {Object} params 包括appCode, env
          */
-    getProcessServices ({ commit, state }, { appCode, moduleId, env }) {
+    getProcessServices({}, { appCode, moduleId, env }) {
       const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
       return http.get(url);
     },
@@ -39,7 +39,7 @@ export default {
          * 修改进程服务的端口列表
          * @param {Object} params 包括appCode, env, serviceName
          */
-    updateServicePorts ({ commit, state }, { appCode, moduleId, env, serviceName, ports }) {
+    updateServicePorts({}, { appCode, moduleId, env, serviceName, ports }) {
       const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/${serviceName}`;
       return http.post(url, { ports });
     },
@@ -48,11 +48,11 @@ export default {
          * 修改模块主入口
          * @param {Object} params 包括appCode, env, serviceName, servicePortName
          */
-    setServiceMainEntry ({ commit, state }, { appCode, moduleId, env, serviceName, servicePortName }) {
+    setServiceMainEntry({}, { appCode, moduleId, env, serviceName, servicePortName }) {
       const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_ingresses/default`;
       return http.post(url, {
         service_name: serviceName,
-        service_port_name: servicePortName
+        service_port_name: servicePortName,
       });
     },
 
@@ -60,10 +60,10 @@ export default {
          * 更新访问地址类型
          * @param {Object} params 包括appCode，moduleId, type
          */
-    updateEntryType ({ commit, state }, { appCode, moduleId, type }) {
+    updateEntryType({}, { appCode, moduleId, type }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/exposed_url_type/`;
       return http.put(url, {
-        exposed_url_type: type
+        exposed_url_type: type,
       });
     },
 
@@ -71,7 +71,7 @@ export default {
          * 获取访问入口配置信息
          * @param {Object} params 包括appCode，moduleId
          */
-    getEntryInfo ({ commit, state }, { appCode, moduleId }) {
+    getEntryInfo({}, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/default_entrance/`;
       return http.get(url);
     },
@@ -80,7 +80,7 @@ export default {
          * 添加域名
          * @param {Object} params
          */
-    addDomainInfo ({ commit, state }, { appCode, data }) {
+    addDomainInfo({}, { appCode, data }) {
       const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/domains/`;
       return http.post(url, data);
     },
@@ -89,7 +89,7 @@ export default {
          *更新域名
          * @param {Object} params
          */
-    updateDomainInfo ({ commit, state }, { appCode, data }) {
+    updateDomainInfo({}, { appCode, data }) {
       const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/domains/${data.id}/`;
       return http.put(url, data);
     },
@@ -98,7 +98,7 @@ export default {
          * 获取默认根域名
          * @param {Object} params
          */
-    getDefaultDomainInfo ({ commit, state }, { appCode, moduleId }) {
+    getDefaultDomainInfo({}, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/root_domains/`;
       return http.get(url);
     },
@@ -107,9 +107,27 @@ export default {
          * 修改默认根域名
          * @param {Object} params
          */
-    updateRootDomain ({ commit, state }, { appCode, moduleId, data }) {
+    updateRootDomain({}, { appCode, moduleId, data }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/preferred_root_domain/`;
       return http.put(url, data);
-    }
-  }
+    },
+
+    /**
+     * 获取访问入口列表数据
+     * @param {Object} params 包括appCode，moduleId
+     */
+    getEntryDataList({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/entrances/`;
+      return http.get(url);
+    },
+
+    /**
+     * 删除域名
+     * @param {Object} params 包括appCode，moduleId
+     */
+    deleteDomainInfo({}, { appCode, id }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domains/${id}/`;
+      return http.delete(url);
+    },
+  },
 };

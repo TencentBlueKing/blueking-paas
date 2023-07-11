@@ -8,7 +8,7 @@
     </div>
 
     <paas-content-loader
-      class="ps-container"
+      class="services-overview-container"
       :is-loading="loading"
       placeholder="service-inner-loading"
     >
@@ -78,7 +78,8 @@
                   @click="toServiceInner(props.row)"
                 >
                   <img
-                    :src="props.row.application ? (props.row.application.logo_url ? props.row.application.logo_url : defaultImg) : defaultImg"
+                    :src="props.row.application ?
+                      (props.row.application.logo_url ? props.row.application.logo_url : defaultImg) : defaultImg"
                     class="fleft applogo"
                   >
                   <span class="app-name-text">
@@ -125,160 +126,159 @@
   </div>
 </template>
 
-<script>
-    export default {
-        data () {
-            return {
-                serviceObject: {
-                    logo: '',
-                    display_name: '',
-                    available_languages: [],
-                    description: '',
-                    long_description: ''
-                },
-                wordsList: [],
-                attList: [],
-                length: 0,
-                uuid: '',
-                app_id: '',
-                name: '',
-                display_name: '',
-                appName: '',
-                logo: '',
-                sortRules: '',
-                pagelimit: 5,
-                pages: 1,
-                is_up: true,
-                loading: true,
-                defaultImg: '/static/images/default_logo.png',
-                routerEnglishName: '',
-                isDataLoading: false,
-                pageConf: {
-                    current: 1,
-                    limit: 10,
-                    limitList: [5, 10, 20, 50],
-                    count: 0
-                },
-                lauguageMap: {
-                    ieod: this.$t('内部版'),
-                    tencent: this.$t('外部版'),
-                    clouds: this.$t('混合云版')
-                },
-                enabledRegions: []
-            };
-        },
-        computed: {
-            curCategoryId () {
-                return this.$route.params.category_id;
-            }
-        },
-        watch: {
-            'pageConf.current' (value) {
-                this.getDataByPage(value, true);
-            }
-        },
-        created () {
-            this.getDataByPage(1, false);
-        },
-        methods: {
-            renderHeader (h, { column }) {
-                return h(
-                    'div',
-                    [
-                        h('span', {
-                            domProps: {
-                                innerHTML: this.$t('启用时间')
-                            }
-                        }),
-                        h('img', {
-                            style: {
-                                position: 'relative',
-                                top: '1px',
-                                left: '1px',
-                                cursor: 'pointer',
-                                transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)'
-                            },
-                            attrs: {
-                                src: '/static/images/sort-icon.png'
-                            },
-                            on: {
-                                click: this.sortTab
-                            }
-                        })
-                    ]
-                );
-            },
-
-            toServiceInner (item) {
-                this.$router.push({
-                    name: 'appServiceInner',
-                    params: {
-                        service: item.service,
-                        id: item.application.code,
-                        category_id: this.curCategoryId
-                    }
-                });
-            },
-
-            sortTab () {
-                if (this.sortRules === '') {
-                    this.sortRules = '&order_by=created';
-                } else {
-                    this.sortRules = '';
-                }
-                this.getDataByPage(1);
-                this.is_up = !this.is_up;
-            },
-
-            userDetail (item) {
-                this.$router.push({
-                    name: 'appServiceInner',
-                    params: {
-                        service: item.service,
-                        id: item.application.code
-                    }
-                });
-            },
-
-            handlePageChange (page) {
-                this.pageConf.current = page;
-            },
-
-            handlePageSizeChange (newVal) {
-                this.pageConf.limit = newVal;
-                this.$nextTick(() => {
-                    this.getDataByPage(1);
-                });
-            },
-
-            getDataByPage (page = 1, loadingFlag = true) {
-                const getnum = (page - 1) * this.pageConf.limit;
-                const getUrl = BACKEND_URL + '/api/services/name/' + this.$route.params.name + '/application-attachments/?offset=' + getnum + '&limit=' + this.pageConf.limit + this.sortRules;
-                if (loadingFlag) {
-                    this.isDataLoading = true;
-                }
-                this.$http.get(getUrl).then((response) => {
-                    const resData = response;
-
-                    this.serviceObject = Object.assign({}, {
-                        logo: resData.results.logo || '',
-                        display_name: resData.results.display_name || '',
-                        available_languages: (resData.results.available_languages || '').split(','),
-                        description: resData.results.description || '',
-                        long_description: resData.results.long_description || ''
-                    });
-
-                    this.pageConf.count = resData.count || 0;
-                    this.length = this.pageConf.count;
-                    this.attList = resData.results.instances;
-                    this.enabledRegions = resData.results.enabled_regions.map(item => this.lauguageMap[item]);
-                    this.loading = false;
-
-                    this.isDataLoading = false;
-                });
-            }
-        }
+<script>export default {
+  data() {
+    return {
+      serviceObject: {
+        logo: '',
+        display_name: '',
+        available_languages: [],
+        description: '',
+        long_description: '',
+      },
+      wordsList: [],
+      attList: [],
+      length: 0,
+      uuid: '',
+      app_id: '',
+      name: '',
+      display_name: '',
+      appName: '',
+      logo: '',
+      sortRules: '',
+      pagelimit: 5,
+      pages: 1,
+      is_up: true,
+      loading: true,
+      defaultImg: '/static/images/default_logo.png',
+      routerEnglishName: '',
+      isDataLoading: false,
+      pageConf: {
+        current: 1,
+        limit: 10,
+        limitList: [5, 10, 20, 50],
+        count: 0,
+      },
+      lauguageMap: {
+        ieod: this.$t('内部版'),
+        tencent: this.$t('外部版'),
+        clouds: this.$t('混合云版'),
+      },
+      enabledRegions: [],
     };
+  },
+  computed: {
+    curCategoryId() {
+      return this.$route.params.category_id;
+    },
+  },
+  watch: {
+    'pageConf.current'(value) {
+      this.getDataByPage(value, true);
+    },
+  },
+  created() {
+    this.getDataByPage(1, false);
+  },
+  methods: {
+    renderHeader(h) {
+      return h(
+        'div',
+        [
+          h('span', {
+            domProps: {
+              innerHTML: this.$t('启用时间'),
+            },
+          }),
+          h('img', {
+            style: {
+              position: 'relative',
+              top: '1px',
+              left: '1px',
+              cursor: 'pointer',
+              transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
+            },
+            attrs: {
+              src: '/static/images/sort-icon.png',
+            },
+            on: {
+              click: this.sortTab,
+            },
+          }),
+        ],
+      );
+    },
+
+    toServiceInner(item) {
+      this.$router.push({
+        name: 'appServiceInner',
+        params: {
+          service: item.service,
+          id: item.application.code,
+          category_id: this.curCategoryId,
+        },
+      });
+    },
+
+    sortTab() {
+      if (this.sortRules === '') {
+        this.sortRules = '&order_by=created';
+      } else {
+        this.sortRules = '';
+      }
+      this.getDataByPage(1);
+      this.is_up = !this.is_up;
+    },
+
+    userDetail(item) {
+      this.$router.push({
+        name: 'appServiceInner',
+        params: {
+          service: item.service,
+          id: item.application.code,
+        },
+      });
+    },
+
+    handlePageChange(page) {
+      this.pageConf.current = page;
+    },
+
+    handlePageSizeChange(newVal) {
+      this.pageConf.limit = newVal;
+      this.$nextTick(() => {
+        this.getDataByPage(1);
+      });
+    },
+
+    getDataByPage(page = 1, loadingFlag = true) {
+      const getnum = (page - 1) * this.pageConf.limit;
+      const getUrl = `${BACKEND_URL}/api/services/name/${this.$route.params.name}/application-attachments/?offset=${getnum}&limit=${this.pageConf.limit}${this.sortRules}`;
+      if (loadingFlag) {
+        this.isDataLoading = true;
+      }
+      this.$http.get(getUrl).then((response) => {
+        const resData = response;
+
+        this.serviceObject = Object.assign({}, {
+          logo: resData.results.logo || '',
+          display_name: resData.results.display_name || '',
+          available_languages: (resData.results.available_languages || '').split(','),
+          description: resData.results.description || '',
+          long_description: resData.results.long_description || '',
+        });
+
+        this.pageConf.count = resData.count || 0;
+        this.length = this.pageConf.count;
+        this.attList = resData.results.instances;
+        this.enabledRegions = resData.results.enabled_regions.map(item => this.lauguageMap[item]);
+        this.loading = false;
+
+        this.isDataLoading = false;
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -365,5 +365,15 @@
     .page-wrapper {
         text-align: center;
         margin-top: 20px;
+    }
+
+    .services-overview-container{
+      background: #fff;
+      padding: 10px 24px;
+      margin: 20px 24px;
+    }
+
+    .overview-tit{
+      background: #fff;
     }
 </style>

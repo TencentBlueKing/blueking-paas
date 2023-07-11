@@ -1,13 +1,10 @@
-le<template lang="html">
+<template lang="html">
   <div class="right-main">
-    <section class="app-container middle">
+    <section class="app-container middle app-status-container">
       <paas-content-loader
         placeholder="process-loading"
         :offset-top="10"
       >
-        <div class="title mb15">
-          {{ $t('部署状态') }}
-        </div>
         <bk-tab
           :key="routeName"
           :active.sync="environment"
@@ -36,8 +33,8 @@ le<template lang="html">
                       style="color: #EA3636;"
                       :class="['icon paasng-icon', 'paasng-close-circle-shape']"
                     />
-                    {{ $t('由') }} {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('部署失败') }}
-                    <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
+                    {{ $t('由') }} {{ statusData.deployment.operator }}
+                    {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('部署失败') }}
                     <div
                       v-for="(item, i) in deployFailData"
                       :key="i"
@@ -69,8 +66,8 @@ le<template lang="html">
                       style="color: #2DCB56;"
                       :class="['icon paasng-icon', 'paasng-check-circle-shape']"
                     />
-                    {{ $t('由') }} {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('部署成功') }}
-                    <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
+                    {{ $t('由') }} {{ statusData.deployment.operator }}
+                    {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('部署成功') }}
                     <div
                       v-for="(item, i) in deployFailData"
                       :key="i"
@@ -104,7 +101,6 @@ le<template lang="html">
                       ext-cls="deploy-round-load"
                     />
                     {{ $t('发布中，请等待更新完成') }}
-                    <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
                     <div
                       v-for="(item, i) in deployFailData"
                       :key="i"
@@ -135,7 +131,8 @@ le<template lang="html">
                   v-if="Object.keys(statusData.deployment).length"
                   class="right-contanier"
                 >
-                  {{ $t('操作记录') }}：{{ $t('由') }} {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('发布') }}
+                  {{ $t('操作记录') }}：{{ $t('由') }}
+                  {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('发布') }}
                   <a
                     class="ml20"
                     target="_blank"
@@ -216,145 +213,152 @@ le<template lang="html">
 </template>
 
 <script>
-    import processOperation from './comps/process-operation';
-    import processYaml from './comps/process-yaml';
-    import processVersion from './comps/process-version';
-    import processEvent from './comps/process-event.vue';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import moment from 'moment';
-    import i18n from '@/language/i18n.js';
+import processOperation from './comps/process-operation';
+import processYaml from './comps/process-yaml';
+import processVersion from './comps/process-version';
+import processEvent from './comps/process-event.vue';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import moment from 'moment';
+import i18n from '@/language/i18n.js';
 
-    export default {
-        components: {
-            processOperation,
-            processYaml,
-            processVersion,
-            processEvent
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isStagLoading: true,
-                isProdLoading: true,
-                environment: 'stag',
-                panels: [{ env: 'stag', label: '预发布环境' }, { env: 'prod', label: '生产环境' }],
-                tabData: [
-                    { name: 'status', label: i18n.t('进程状态'), count: 10 },
-                    { name: 'event', label: i18n.t('事件'), count: 10 },
-                    { name: 'yaml', label: 'YAML', count: 20 },
-                    { name: 'version', label: i18n.t('版本'), count: 30 }
-                ],
-                active: 'status',
-                statusData: {
-                    deployment: {},
-                    ingress: {}
-                },
-                deploymentCreatedTime: '',
-                deployId: 0,
-                deployFailData: [],
-                intervalTimer: null,
-                yamlKey: 0,
-                versionKey: 0,
-                activeIndex: 0,
-                eventList: []
-            };
-        },
-        computed: {
-            routeName () {
-                return this.$route.name;
-            }
-        },
-        watch: {
-            '$route' (to, from) {
-                this.isStagLoading = true;
-                this.isProdLoading = true;
-            }
-        },
-        created () {
-            this.environment = this.$route.query.env || 'stag';
-            if (this.environment === 'prod') {
-                this.activeIndex = 1;
-            }
-            this.$store.commit('updataEnvEventData', []);
-            this.init();
-        },
-        beforeDestroy () {
-            this.$store.commit('updataEnvEventData', ['stag', 'prod']);
-            clearInterval(this.intervalTimer);
-        },
-        methods: {
-            async getCloudAppInfo () {
-                try {
-                    const res = await this.$store.dispatch('deploy/getCloudAppStatus', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: this.environment
-
-                    });
-                    this.eventList = res.events;
-                    this.statusData = res;
-                    this.deployId = this.statusData.deployment.deploy_id;
-                    this.deploymentCreatedTime = moment(res.deployment.created).format('YYYY-MM-DD HH:mm:ss');
-                    this.deployFailData = res.conditions && res.conditions;
-                    this.intervalTimer = setTimeout(() => {
-                        this.getCloudAppInfo();
-                    }, 3000);
-                    if (this.statusData.deployment.status === 'ready' || this.statusData.deployment.status === 'error') {
-                        clearInterval(this.intervalTimer);
-                    }
-                    this.heavyLoad();
-                } catch (e) {
-                    this.heavyLoad();
-                    if (e.code !== 'GET_DEPLOYMENT_FAILED') {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: e.detail || e.message || this.$t('接口异常')
-                        });
-                    }
-                    this.resetData();
-                    clearInterval(this.intervalTimer);
-                }
-            },
-            resetData () {
-                this.deployId = 0;
-                this.statusData = {
-                    deployment: {},
-                    ingress: {}
-                };
-                this.deploymentCreatedTime = '';
-                this.eventList = [];
-            },
-            async init () {
-                this.getCloudAppInfo();
-            },
-            changeEnv (val) {
-                this.activeIndex = this.panels.findIndex(item => item.env === val);
-                this.getCloudAppInfo();
-            },
-            handlerDataReady (env) {
-                setTimeout(() => {
-                    if (env === 'stag') {
-                        this.isStagLoading = false;
-                    } else {
-                        this.isProdLoading = false;
-                    }
-                }, 200);
-            },
-            heavyLoad () {
-                this.$nextTick(() => {
-                    if (this.active === 'yaml') {
-                        this.yamlKey++;
-                    }
-                    if (this.active === 'version') {
-                        this.versionKey++;
-                    }
-                });
-            }
-        }
+export default {
+  components: {
+    processOperation,
+    processYaml,
+    processVersion,
+    processEvent,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isStagLoading: true,
+      isProdLoading: true,
+      environment: 'stag',
+      panels: [{ env: 'stag', label: '预发布环境' }, { env: 'prod', label: '生产环境' }],
+      tabData: [
+        { name: 'status', label: i18n.t('进程状态'), count: 10 },
+        { name: 'event', label: i18n.t('事件'), count: 10 },
+        { name: 'yaml', label: 'YAML', count: 20 },
+        { name: 'version', label: i18n.t('版本'), count: 30 },
+      ],
+      active: 'status',
+      statusData: {
+        deployment: {},
+        ingress: {},
+      },
+      deploymentCreatedTime: '',
+      deployId: 0,
+      deployFailData: [],
+      intervalTimer: null,
+      yamlKey: 0,
+      versionKey: 0,
+      activeIndex: 0,
+      eventList: [],
     };
+  },
+  computed: {
+    routeName() {
+      return this.$route.name;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.isStagLoading = true;
+      this.isProdLoading = true;
+    },
+  },
+  created() {
+    this.environment = this.$route.query.env || 'stag';
+    if (this.environment === 'prod') {
+      this.activeIndex = 1;
+    }
+    this.$store.commit('updataEnvEventData', []);
+    this.init();
+  },
+  beforeDestroy() {
+    this.$store.commit('updataEnvEventData', ['stag', 'prod']);
+    clearInterval(this.intervalTimer);
+  },
+  methods: {
+    async getCloudAppInfo() {
+      try {
+        const res = await this.$store.dispatch('deploy/getCloudAppStatus', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+
+        });
+        this.eventList = res.events;
+        this.statusData = res;
+        this.deployId = this.statusData.deployment.deploy_id;
+        this.deploymentCreatedTime = moment(res.deployment.created).format('YYYY-MM-DD HH:mm:ss');
+        this.deployFailData = res.conditions && res.conditions;
+        this.intervalTimer = setTimeout(() => {
+          this.getCloudAppInfo();
+        }, 3000);
+        if (this.statusData.deployment.status === 'ready' || this.statusData.deployment.status === 'error') {
+          clearInterval(this.intervalTimer);
+        }
+        this.heavyLoad();
+      } catch (e) {
+        this.heavyLoad();
+        if (e.code !== 'GET_DEPLOYMENT_FAILED') {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
+        }
+        this.resetData();
+        clearInterval(this.intervalTimer);
+      }
+    },
+    resetData() {
+      this.deployId = 0;
+      this.statusData = {
+        deployment: {},
+        ingress: {},
+      };
+      this.deploymentCreatedTime = '';
+      this.eventList = [];
+    },
+    async init() {
+      this.getCloudAppInfo();
+    },
+    changeEnv(val) {
+      this.activeIndex = this.panels.findIndex(item => item.env === val);
+      this.getCloudAppInfo();
+    },
+    handlerDataReady(env) {
+      setTimeout(() => {
+        if (env === 'stag') {
+          this.isStagLoading = false;
+        } else {
+          this.isProdLoading = false;
+        }
+      }, 200);
+    },
+    heavyLoad() {
+      this.$nextTick(() => {
+        if (this.active === 'yaml') {
+          // eslint-disable-next-line no-plusplus
+          this.yamlKey++;
+        }
+        if (this.active === 'version') {
+          // eslint-disable-next-line no-plusplus
+          this.versionKey++;
+        }
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss">
+    .app-status-container{
+      padding-top: 0px;
+      margin: 0;
+      margin-top: 0 !important;
+    }
     .status-tab-cls .bk-tab-label-wrapper .bk-tab-label-list .bk-tab-label-item {
         padding: 0 20px;
         margin-right: 0;
@@ -446,7 +450,19 @@ le<template lang="html">
         }
     }
     .status-tab-wrapper{
-        padding: 0 20px;
+        /deep/ .bk-tab-header{
+          background: #fff;
+        }
+
+        /deep/ .bk-tab-section{
+          background: #fff;
+          margin: 20px;
+          padding-top: 0px;
+        }
+
+        /deep/ .bk-tab-content{
+          padding-top: 20px;
+        }
     }
     .status-tab-cls{
         border: 1px solid #e6e9ea;

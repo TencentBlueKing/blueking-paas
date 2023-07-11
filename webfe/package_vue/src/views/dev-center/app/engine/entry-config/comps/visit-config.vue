@@ -150,7 +150,7 @@
                   </section>
                 </div>
                 <div v-else> -- </div>
-                <div class="line"></div>
+                <div class="line" :style="{top: $index < 4 ? '100%' : 'calc(100% - 0.5px)'}"></div>
               </div>
             </div>
           </template>

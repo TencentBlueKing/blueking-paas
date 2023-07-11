@@ -646,6 +646,43 @@ spec:
                       - value
                       type: object
                     type: array
+                  mounts:
+                    description: Mounts overwrite BkApp's mounts by environment
+                    items:
+                      description: MountOverlay overwrite or add application's mounts
+                        by environment
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        mountPath:
+                          description: Path of the mount
+                          type: string
+                        name:
+                          description: Name of the mount
+                          type: string
+                        source:
+                          description: Source of the mount
+                          properties:
+                            configMap:
+                              description: ConfigMapSource represents a configMap
+                                that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                          required:
+                          - configMap
+                          type: object
+                      required:
+                      - envName
+                      - mountPath
+                      - name
+                      - source
+                      type: object
+                    type: array
                   replicas:
                     description: Replicas overwrite processes's replicas count
                     items:
@@ -688,6 +725,38 @@ spec:
                         type: array
                     type: object
                 type: object
+              mounts:
+                description: Mounts is a list of mount volume
+                items:
+                  description: Mount is used to specify mount volume
+                  properties:
+                    mountPath:
+                      description: Path of the mount
+                      type: string
+                    name:
+                      description: Name of the mount
+                      type: string
+                    source:
+                      description: Source of the mount
+                      properties:
+                        configMap:
+                          description: ConfigMapSource represents a configMap that
+                            should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                      required:
+                      - configMap
+                      type: object
+                  required:
+                  - mountPath
+                  - name
+                  - source
+                  type: object
+                type: array
               processes:
                 items:
                   description: Process defines the process of BkApp

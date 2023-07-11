@@ -64,6 +64,10 @@ type AppSpec struct {
 	// +optional
 	Addons []Addon `json:"addons,omitempty"`
 
+	// Mounts is a list of mount volume
+	// +optional
+	Mounts []Mount `json:"mounts,omitempty"`
+
 	// Hook commands of current BkApp resource
 	// +optional
 	Hooks *AppHooks `json:"hooks,omitempty"`
@@ -166,6 +170,16 @@ type AddonSpec struct {
 	Value string `json:"value"`
 }
 
+// Mount is used to specify mount volume
+type Mount struct {
+	// Path of the mount
+	MountPath string `json:"mountPath"`
+	// Name of the mount
+	Name string `json:"name"`
+	// Source of the mount
+	Source *VolumeSource `json:"source"`
+}
+
 // ResQuotaPlan is used to specify process resource quota
 type ResQuotaPlan string
 
@@ -261,6 +275,10 @@ type AppEnvOverlay struct {
 	// Autoscaling overwrite process's autoscaling config
 	// +optional
 	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
+
+	// Mounts overwrite BkApp's mounts by environment
+	// +optional
+	Mounts []MountOverlay `json:"mounts,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
@@ -311,6 +329,13 @@ type AutoscalingOverlay struct {
 	Process string `json:"process"`
 	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
 	Policy ScalingPolicy `json:"policy"`
+}
+
+// MountOverlay overwrite or add application's mounts by environment
+type MountOverlay struct {
+	Mount Mount `json:",inline"`
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
 }
 
 // AppStatus defines the observed state of BkApp

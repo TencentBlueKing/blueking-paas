@@ -19,13 +19,13 @@ to the current version of the project delivered to anyone in the future.
 """Preconditions for publish Application/Module"""
 from django.utils.translation import gettext as _
 
+from paas_wl.networking.entrance.shim import LiveEnvAddresses
 from paasng.engine.deploy.archive import OfflineManager
 from paasng.engine.models import Deployment
 from paasng.engine.models.managers import DeployOperationManager
 from paasng.platform.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.platform.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import list_module_custom_addresses
 
 
 class ModuleDeleteCondition(BaseCondition):
@@ -80,8 +80,9 @@ class CustomDomainUnBoundCondition(ModuleDeleteCondition):
     action_name = "unbind_custom_domain"
 
     def validate(self):
-        if list_module_custom_addresses(self.module):
-            raise ConditionNotMatched(_("删除模块前，请先确认所有独立域名已经下线"), action_name=self.action_name)
+        for env in self.module.get_envs():
+            if LiveEnvAddresses(env).list_custom():
+                raise ConditionNotMatched(_("删除模块前，请先确认所有独立域名已经下线"), action_name=self.action_name)
 
 
 class ModuleDeletionPreparer(BaseConditionChecker):

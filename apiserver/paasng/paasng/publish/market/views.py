@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Optional
 
+from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
@@ -174,6 +175,18 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         signal = release_to_market if request.data["enabled"] else offline_market
         signal.send(sender=application, application=application, operator=self.request.user.pk)
         return Response(self.get_serializer(application.market_config).data)
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.MarketEntranceSLZ, tags=["访问入口"])
+    def set_entrance(self, request, code):
+        """设置市场访问地址"""
+        application = self.get_application()
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+        slz = serializers.MarketEntranceSLZ(instance=market_config, data=request.data)
+        slz.is_valid(raise_exception=True)
+        market_config = slz.save()
+        serializer = self.serializer_class(market_config)
+        return Response(serializer.data)
 
 
 class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

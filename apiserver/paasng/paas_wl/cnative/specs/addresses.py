@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List, Optional, Set
+from typing import List, Set
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.constants import DomainGroupSource
@@ -30,7 +30,6 @@ from paas_wl.cnative.specs.crd.domain_group_mapping import (
     ObjectMetadata,
 )
 from paas_wl.cnative.specs.models import generate_bkapp_name
-from paas_wl.networking.entrance.addrs import EnvAddresses
 from paas_wl.networking.ingress.certs.utils import DomainWithCert, pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.managers.domain import save_subdomains
@@ -154,10 +153,3 @@ def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:
         logger.info("created a secret %s for host %s", secret_name, d.host)
     d.tlsSecretName = secret_name
     return d
-
-
-def get_exposed_url(env: ModuleEnvironment) -> Optional[str]:
-    """Get exposed URL for given env"""
-    if addrs := EnvAddresses(env).get():
-        return addrs[0].url
-    return None

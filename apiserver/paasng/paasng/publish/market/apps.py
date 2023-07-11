@@ -21,7 +21,3 @@ from paasng.utils.addons import PlugableAppConfig
 
 class AppsConfig(PlugableAppConfig):
     name = 'paasng.publish.market'
-
-    def ready(self):
-        super().ready()
-        from . import triggers  # noqa

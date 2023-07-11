@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from __future__ import print_function
-
 import logging
 import re
 from typing import Optional
@@ -32,7 +30,6 @@ from paasng.engine.signals import post_appenv_deploy
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.signals import (
-    application_default_module_switch,
     application_logo_updated,
     application_member_updated,
     before_finishing_application_creation,
@@ -387,12 +384,11 @@ def market_config_update_handler(sender, instance: MarketConfig, created: bool, 
             manager = RemoteAppManager(product, session)
             manager.sync_data(sync_fileds)
         except Exception:
-            logger.exception(u"同步修改Product属性到桌面失败！")
+            logger.exception("同步修改Product属性到桌面失败！")
 
 
-@receiver(application_default_module_switch)
 @run_required_db_console_config
-def sync_external_url_to_market(application: Application, **kwargs):
+def sync_external_url_to_market(application: Application):
     """同步访问地址至应用市场"""
     market_config = application.market_config
     if not market_config.enabled:
@@ -411,7 +407,7 @@ def sync_external_url_to_market(application: Application, **kwargs):
             # 精简版应用、独立域名应用、独立子域名应用均需要同步 external_url
             manager.sync_data(["external_url"])
         except Exception:
-            logger.exception(u"同步修改 external_url 属性到桌面失败！")
+            logger.exception("同步修改Product属性到桌面失败！")
 
 
 @receiver(post_appenv_deploy)

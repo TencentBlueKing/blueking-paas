@@ -32,7 +32,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.addresses import get_exposed_url
 from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
@@ -56,6 +55,7 @@ from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
 
@@ -230,12 +230,13 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not mres:
             raise error_codes.GET_MRES_FAILED.f(f"App: {code}, env: {environment}")
         self.check_applied_deployment(mres, latest_dp)
+        url_obj = get_exposed_url(env)
 
         return Response(
             MresStatusSLZ(
                 {
                     "deployment": latest_dp,
-                    "ingress": {"url": get_exposed_url(env)},
+                    "ingress": {"url": url_obj.address if url_obj else None},
                     "conditions": mres.status.conditions,
                     "events": list_events(env, latest_dp.created),
                 }

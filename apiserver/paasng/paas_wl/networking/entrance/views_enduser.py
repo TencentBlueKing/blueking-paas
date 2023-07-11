@@ -18,11 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
-from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -31,27 +28,23 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.networking.entrance import serializers as slzs
-from paas_wl.networking.entrance.addrs import URL, Address, EnvAddresses
-from paas_wl.networking.entrance.allocator.domains import ModuleEnvDomains, SubDomainAllocator
-from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, SubPathAllocator
+from paas_wl.networking.entrance.addrs import URL, Address
+from paas_wl.networking.entrance.allocator.domains import SubDomainAllocator
+from paas_wl.networking.entrance.allocator.subpaths import SubPathAllocator
 from paas_wl.networking.entrance.constants import AddressType
 from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
+from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addr_preferred
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
-from paasng.publish.market.constant import ProductSourceUrlType
-from paasng.publish.market.models import MarketConfig
-from paasng.publish.market.protections import ModulePublishPreparer
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import permission_classes as perm_classes
 
 logger = logging.getLogger(__name__)
 
@@ -180,20 +173,9 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
             for env in module.envs.all():
                 env_entrances = module_entrances["envs"].setdefault(env.environment, [])
                 is_running = env_is_running(env)
-                # 每个环境仅展示一个内置访问地址
-                builtin_address = None
-                if builtin_subdomain := ModuleEnvDomains(env).get_highest_priority():
-                    builtin_address = Address(
-                        type=AddressType.SUBDOMAIN,
-                        url=builtin_subdomain.as_url().as_address(),
-                    )
-                if not builtin_address:
-                    if builtin_subpath := ModuleEnvSubpaths(env).get_highest_priority():
-                        builtin_address = Address(
-                            type=AddressType.SUBPATH,
-                            url=builtin_subpath.as_url().as_address(),
-                        )
                 addresses = []
+                # 每个环境仅展示一个内置访问地址
+                _, builtin_address = get_builtin_addr_preferred(env)
                 if builtin_address:
                     addresses.append(builtin_address)
                 else:
@@ -204,7 +186,7 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                         module.name,
                         env.environment,
                     )
-                addresses.extend(EnvAddresses(env).get_custom())
+                addresses.extend(LiveEnvAddresses(env).list_custom())
                 for address in addresses:
                     env_entrances.append(
                         {
@@ -259,57 +241,3 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                 )
             )
         return Response(data=slzs.AvailableEntranceSLZ([default_entrance, *custom_domains], many=True).data)
-
-    @atomic
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
-    @swagger_auto_schema(request_body=slzs.SwitchDefaultEntranceSLZ, tags=["访问入口"])
-    def set_default_entrance(self, request, code):
-        """设置某个模块为默认访问模块"""
-        slz = slzs.SwitchDefaultEntranceSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-
-        application = self.get_application()
-        default_module = application.get_default_module_with_lock()
-        try:
-            module = application.get_module_with_lock(module_name=data["module"])
-        except ObjectDoesNotExist:
-            # 可能在设置之前模块已经被删除了
-            raise error_codes.CANNOT_SET_DEFAULT.f(_("{module_name} 模块已经被删除").format(module_name=data["module"]))
-
-        # 验证独立域名
-        address = data["address"]
-        if address["type"] == AddressType.CUSTOM:
-            url = address["url"]
-            if not EnvAddresses(module.get_envs("prod")).validate_custom_url(address["url"]):
-                raise error_codes.CANNOT_SET_DEFAULT.f(
-                    _("{url} 并非 {module_name} 模块的访问入口").format(url=url, module_name=module.name)
-                )
-
-        market_config, __ = MarketConfig.objects.get_or_create_by_app(application)
-        # 切换默认访问模块
-        if module.name != default_module.name:
-            if market_config.enabled and not ModulePublishPreparer(module).all_matched:
-                raise error_codes.CANNOT_SET_DEFAULT.f(
-                    _("目标 {module_name} 模块未满足应用市场服务开启条件，切换默认访问模块会导致应用在市场中访问异常").format(module_name=module.name)
-                )
-            logger.info(
-                f'Switching default module for application[{application.code}], '
-                f'{default_module.name} -> {module.name}...'
-            )
-            default_module.is_default = False
-            module.is_default = True
-            module.save(update_fields=["is_default", "updated"])
-            default_module.save(update_fields=["is_default", "updated"])
-            application_default_module_switch.send(
-                sender=application, application=application, new_module=module, old_module=default_module
-            )
-
-        # 保存市场信息
-        if address["type"] == AddressType.CUSTOM:
-            market_config.custom_domain_url = address["url"]
-            market_config.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN
-        else:
-            market_config.source_url_type = ProductSourceUrlType.ENGINE_PROD_ENV
-        market_config.save()
-        return Response()

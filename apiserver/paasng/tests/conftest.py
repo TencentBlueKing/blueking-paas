@@ -769,7 +769,7 @@ def mock_get_builtin_addresses(mock_env_is_running):
             return env_is_running, addresses[env]
         return env_is_running, addresses.get(env.environment, [])
 
-    with mock.patch("paas_wl.networking.entrance.shim.get_builtin_addresses") as m:
+    with mock.patch("paas_wl.networking.entrance.shim.get_builtin_addrs") as m:
         m.side_effect = side_effect
         yield addresses
 

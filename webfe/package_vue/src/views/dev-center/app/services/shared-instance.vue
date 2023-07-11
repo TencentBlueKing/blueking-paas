@@ -4,14 +4,16 @@
       :paths="servicePaths"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
+      :title="$t('数据存储')"
     />
 
-    <div class="app-container">
+    <div class="app-container shared-container">
       <paas-content-loader
         :is-loading="isLoading"
         placeholder="data-inner-shared-loading"
         :height="600"
         :offset-top="0"
+        class="shared-detail-container"
       >
         <section class="detail-item">
           <h4> {{ $t('服务说明') }} </h4>
@@ -22,7 +24,8 @@
         </section>
         <section class="detail-item mt20">
           <h4> {{ $t('解除共享') }} </h4>
-          <p> {{ $t('解除共享关系后，当前模块将无法获取') }} {{ refModuleName }} {{ $t('模块的') }} {{ servieceName }} {{ $t('服务的所有环境变量。') }} </p>
+          <p> {{ $t('解除共享关系后，当前模块将无法获取') }}
+            {{ refModuleName }} {{ $t('模块的') }} {{ servieceName }} {{ $t('服务的所有环境变量。') }} </p>
           <bk-button @click="handleOpenRemoveDialog">
             {{ $t('解除服务共享') }}
           </bk-button>
@@ -79,147 +82,147 @@
   </div>
 </template>
 
-<script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
 
-    export default {
-        components: {
-            appTopBar
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                servicePaths: [],
-                categoryId: 0,
-                service: this.$route.params.service,
-                requestQueue: ['init', 'detail'],
-                detailData: {},
-                removeSharedDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                formRemoveConfirmCode: ''
-            };
-        },
-        computed: {
-            isLoading () {
-                return this.requestQueue.length > 0;
-            },
-            refModuleName () {
-                return this.detailData.ref_module ? this.detailData.ref_module.name : '';
-            },
-            servieceName () {
-                return this.detailData.service ? this.detailData.service.display_name : '';
-            },
-            formRemoveValidated () {
-                return this.appCode === this.formRemoveConfirmCode;
-            },
-            errorTips () {
-                return `${this.$t('解除后，当前模块将无法获取 ')}${this.refModuleName} ${this.$t('模块的')} ${this.servieceName} ${this.$t('服务的所有环境变量')}`;
-            }
-        },
-        watch: {
-            '$route' () {
-                this.init();
-                this.fetchData();
-            }
-        },
-        created () {
-            this.init();
-            this.fetchData();
-        },
-        methods: {
-            init () {
-                this.$http.get(BACKEND_URL + '/api/services/' + this.service + '/').then((response) => {
-                    this.servicePaths = [];
-                    const resData = response.result;
-                    this.servicePaths.push({
-                        title: resData.category.name,
-                        routeName: 'appService'
-                    });
-                    this.servicePaths.push({
-                        title: this.curModuleId
-                    });
-                    this.servicePaths.push({
-                        title: resData.display_name
-                    });
-                    this.categoryId = resData.category.id;
-                }).finally(res => {
-                    this.requestQueue.shift();
-                });
-            },
-
-            handleViewDetail () {
-                this.$router.push({
-                    name: 'appServiceInner',
-                    params: {
-                        id: this.appCode,
-                        category_id: this.categoryId,
-                        service: this.service,
-                        moduleId: this.detailData.ref_module.name
-                    }
-                });
-            },
-
-            hookAfterClose () {
-                this.formRemoveConfirmCode = '';
-            },
-
-            handleOpenRemoveDialog () {
-                this.removeSharedDialog.visiable = true;
-            },
-
-            async submitRemoveShared () {
-                this.removeSharedDialog.isLoading = true;
-                try {
-                    await this.$store.dispatch('service/deleteSharedAttachment', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        serviceId: this.service
-                    });
-                    this.removeSharedDialog.visiable = false;
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('解除服务共享成功'),
-                        delay: 1500
-                    });
-                    this.$router.push({
-                        name: 'appService',
-                        params: {
-                            category_id: this.categoryId,
-                            id: this.appCode
-                        }
-                    });
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.removeSharedDialog.isLoading = false;
-                }
-            },
-
-            async fetchData () {
-                try {
-                    const res = await this.$store.dispatch('service/getSharedAttachmentDetail', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        serviceId: this.service
-                    });
-                    this.detailData = JSON.parse(JSON.stringify(res));
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.requestQueue.shift();
-                }
-            }
-        }
+export default {
+  components: {
+    appTopBar,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      servicePaths: [],
+      categoryId: 0,
+      service: this.$route.params.service,
+      requestQueue: ['init', 'detail'],
+      detailData: {},
+      removeSharedDialog: {
+        visiable: false,
+        isLoading: false,
+      },
+      formRemoveConfirmCode: '',
     };
+  },
+  computed: {
+    isLoading() {
+      return this.requestQueue.length > 0;
+    },
+    refModuleName() {
+      return this.detailData.ref_module ? this.detailData.ref_module.name : '';
+    },
+    servieceName() {
+      return this.detailData.service ? this.detailData.service.display_name : '';
+    },
+    formRemoveValidated() {
+      return this.appCode === this.formRemoveConfirmCode;
+    },
+    errorTips() {
+      return `${this.$t('解除后，当前模块将无法获取 ')}${this.refModuleName} ${this.$t('模块的')} ${this.servieceName} ${this.$t('服务的所有环境变量')}`;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.init();
+      this.fetchData();
+    },
+  },
+  created() {
+    this.init();
+    this.fetchData();
+  },
+  methods: {
+    init() {
+      this.$http.get(`${BACKEND_URL}/api/services/${this.service}/`).then((response) => {
+        this.servicePaths = [];
+        const resData = response.result;
+        this.servicePaths.push({
+          title: resData.category.name,
+          routeName: 'appService',
+        });
+        this.servicePaths.push({
+          title: this.curModuleId,
+        });
+        this.servicePaths.push({
+          title: resData.display_name,
+        });
+        this.categoryId = resData.category.id;
+      })
+        .finally(() => {
+          this.requestQueue.shift();
+        });
+    },
+
+    handleViewDetail() {
+      this.$router.push({
+        name: 'appServiceInner',
+        params: {
+          id: this.appCode,
+          category_id: this.categoryId,
+          service: this.service,
+          moduleId: this.detailData.ref_module.name,
+        },
+      });
+    },
+
+    hookAfterClose() {
+      this.formRemoveConfirmCode = '';
+    },
+
+    handleOpenRemoveDialog() {
+      this.removeSharedDialog.visiable = true;
+    },
+
+    async submitRemoveShared() {
+      this.removeSharedDialog.isLoading = true;
+      try {
+        await this.$store.dispatch('service/deleteSharedAttachment', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.service,
+        });
+        this.removeSharedDialog.visiable = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('解除服务共享成功'),
+          delay: 1500,
+        });
+        this.$router.push({
+          name: 'appService',
+          params: {
+            category_id: this.categoryId,
+            id: this.appCode,
+          },
+        });
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.removeSharedDialog.isLoading = false;
+      }
+    },
+
+    async fetchData() {
+      try {
+        const res = await this.$store.dispatch('service/getSharedAttachmentDetail', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.service,
+        });
+        this.detailData = JSON.parse(JSON.stringify(res));
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.requestQueue.shift();
+      }
+    },
+  },
+};
 
 </script>
 
@@ -234,6 +237,14 @@
                 line-height: 24px;
                 font-size: 14px;
             }
+        }
+    }
+    .shared-container{
+        background: #fff;
+        margin-top: 16px;
+        min-height: 640px;
+        .shared-detail-container{
+            padding: 10px 24px 16px 24px;
         }
     }
 </style>

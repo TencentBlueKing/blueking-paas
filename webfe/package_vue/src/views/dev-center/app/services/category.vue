@@ -10,7 +10,7 @@
     <paas-content-loader
       :is-loading="loading"
       placeholder="data-store-loading"
-      :offset-top="30"
+      :offset-top="10"
       class="app-container ps-category middle"
     >
       <div class="fadeIn">
@@ -29,7 +29,8 @@
                   <div class="service-item">
                     <router-link
                       v-if="!item.isShare"
-                      :to="{ name: 'appServiceInner', params: { id: appCode, service: item.uuid, category_id: item.category.id } }"
+                      :to="{ name: 'appServiceInner',
+                             params: { id: appCode, service: item.uuid, category_id: item.category.id } }"
                     >
                       <div class="badge">
                         <div class="logo">
@@ -46,7 +47,9 @@
                     </router-link>
                     <router-link
                       v-else
-                      :to="{ name: 'appServiceInnerShared', params: { id: appCode, service: item.service.uuid, category_id: item.service.category.id } }"
+                      :to="{
+                        name: 'appServiceInnerShared',
+                        params: { id: appCode, service: item.service.uuid, category_id: item.service.category.id } }"
                     >
                       <div class="badge">
                         <i
@@ -92,7 +95,9 @@
                   <div class="service-item service-item-with-console">
                     <router-link
                       target="_blank"
-                      :to="{ name: 'serviceInnerPage', params: { category_id: item.category.id, name: item.name }, query: { name: item.display_name } }"
+                      :to="{ name: 'serviceInnerPage',
+                             params: { category_id: item.category.id, name: item.name },
+                             query: { name: item.display_name } }"
                     >
                       <div class="badge">
                         <div class="logo">
@@ -188,117 +193,116 @@
   </div>
 </template>
 
-<script>
-    import _ from 'lodash';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
-    import SharedDialog from './comps/shared-dialog';
+<script>import _ from 'lodash';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
+import SharedDialog from './comps/shared-dialog';
 
-    export default {
-        components: {
-            appTopBar,
-            SharedDialog
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                title: '',
-                serviceListBound: [],
-                serviceListUnbound: [],
-                appid: '',
-                loading: true,
-                serviceStates: {},
-                isShowDialog: false,
-                curData: {}
-            };
-        },
-        watch: {
-            '$route' () {
-                this.init();
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.loading = true;
-                this.service_category_id = this.$route.params.category_id;
-
-                const categoryUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/categories/${this.service_category_id}/`;
-
-                this.$http.get(categoryUrl).then((response) => {
-                    const body = response.results;
-                    const sharedData = JSON.parse(JSON.stringify(body.shared));
-                    sharedData.forEach(item => {
-                        item.isShare = true;
-                    });
-                    this.serviceListBound = body.bound.concat(sharedData);
-                    this.serviceListUnbound = body.unbound;
-
-                    const category = response.category;
-                    this.title = category.name_zh_cn;
-
-                    this.loading = false;
-                });
-            },
-
-            handleExportSuccess () {
-                this.init();
-            },
-
-            handleOpenExportDialog (payload, index) {
-                this.curData = payload;
-                this.isShowDialog = true;
-                setTimeout(() => {
-                    const $ref = this.$refs[`${index}_popconfirmRef`][0].$refs.popover;
-                    $ref.instance.hide();
-                });
-            },
-
-            enableService (service) {
-                if (service.specifications.length) {
-                    this.$router.push({
-                        name: 'appServiceConfig',
-                        params: {
-                            id: this.appCode,
-                            service: service.uuid,
-                            category_id: service.category.id,
-                            moduleId: this.curModuleId
-                        }
-                    });
-                    return;
-                }
-
-                if (this.serviceStates[service.uuid] === 'applying') {
-                    return;
-                }
-
-                this.$set(this.serviceStates, service.uuid, 'applying');
-                const formData = {
-                    service_id: service.uuid,
-                    code: this.appCode,
-                    module_name: this.curModuleId
-                };
-                const url = `${BACKEND_URL}/api/services/service-attachments/`;
-                this.$http.post(url, formData).then((response) => {
-                    this.serviceListBound.push(service);
-                    _.remove(this.serviceListUnbound, service);
-                    this.serviceStates[service.uuid] = 'applied';
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('服务启用成功')
-                    });
-                }, (resp) => {
-                    this.serviceStates[service.uuid] = 'default';
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: resp.detail || this.$t('接口异常')
-                    });
-                });
-            }
-        }
+export default {
+  components: {
+    appTopBar,
+    SharedDialog,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      title: '',
+      serviceListBound: [],
+      serviceListUnbound: [],
+      appid: '',
+      loading: true,
+      serviceStates: {},
+      isShowDialog: false,
+      curData: {},
     };
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.loading = true;
+      this.service_category_id = this.$route.params.category_id;
+
+      const categoryUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/categories/${this.service_category_id}/`;
+
+      this.$http.get(categoryUrl).then((response) => {
+        const body = response.results;
+        const sharedData = JSON.parse(JSON.stringify(body.shared));
+        sharedData.forEach((item) => {
+          item.isShare = true;
+        });
+        this.serviceListBound = body.bound.concat(sharedData);
+        this.serviceListUnbound = body.unbound;
+
+        const { category } = response;
+        this.title = category.name_zh_cn;
+
+        this.loading = false;
+      });
+    },
+
+    handleExportSuccess() {
+      this.init();
+    },
+
+    handleOpenExportDialog(payload, index) {
+      this.curData = payload;
+      this.isShowDialog = true;
+      setTimeout(() => {
+        const $ref = this.$refs[`${index}_popconfirmRef`][0].$refs.popover;
+        $ref.instance.hide();
+      });
+    },
+
+    enableService(service) {
+      if (service.specifications.length) {
+        this.$router.push({
+          name: 'appServiceConfig',
+          params: {
+            id: this.appCode,
+            service: service.uuid,
+            category_id: service.category.id,
+            moduleId: this.curModuleId,
+          },
+        });
+        return;
+      }
+
+      if (this.serviceStates[service.uuid] === 'applying') {
+        return;
+      }
+
+      this.$set(this.serviceStates, service.uuid, 'applying');
+      const formData = {
+        service_id: service.uuid,
+        code: this.appCode,
+        module_name: this.curModuleId,
+      };
+      const url = `${BACKEND_URL}/api/services/service-attachments/`;
+      this.$http.post(url, formData).then(() => {
+        this.serviceListBound.push(service);
+        _.remove(this.serviceListUnbound, service);
+        this.serviceStates[service.uuid] = 'applied';
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('服务启用成功'),
+        });
+      }, (resp) => {
+        this.serviceStates[service.uuid] = 'default';
+        this.$paasMessage({
+          theme: 'error',
+          message: resp.detail || this.$t('接口异常'),
+        });
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

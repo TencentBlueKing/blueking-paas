@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
@@ -314,6 +315,37 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 			Expect(deploys[1].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
 			Expect(deploys[1].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
+		})
+	})
+
+	Context("DomainResolution field", func() {
+		It("with empty values", func() {
+			bkapp.Spec.DomainResolution = nil
+
+			web := GetWantedDeploys(bkapp)[0]
+			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
+			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
+		})
+		It("with non-empty HostAliases", func() {
+			bkapp.Spec.DomainResolution = &v1alpha2.DomainResConfig{
+				HostAliases: []v1alpha2.HostAlias{
+					{IP: "127.0.0.1", Hostnames: []string{"foo.local", "bar.local"}},
+					{IP: "192.168.1.1", Hostnames: []string{"foobar.local"}},
+				},
+			}
+
+			web := GetWantedDeploys(bkapp)[0]
+			Expect(len(web.Spec.Template.Spec.HostAliases)).To(Equal(2))
+			Expect(web.Spec.Template.Spec.HostAliases[1].IP).To(Equal("192.168.1.1"))
+			Expect(web.Spec.Template.Spec.HostAliases[1].Hostnames).To(Equal([]string{"foobar.local"}))
+			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
+		})
+		It("with non-empty Nameservers", func() {
+			bkapp.Spec.DomainResolution = &v1alpha2.DomainResConfig{Nameservers: []string{"8.8.8.8"}}
+
+			web := GetWantedDeploys(bkapp)[0]
+			Expect(web.Spec.Template.Spec.DNSConfig.Nameservers).To(Equal([]string{"8.8.8.8"}))
+			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
 		})
 	})
 })

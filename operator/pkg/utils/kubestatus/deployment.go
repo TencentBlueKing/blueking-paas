@@ -35,10 +35,11 @@ var ErrDeploymentStillProgressing = errors.New("deployment is progressing")
 
 // CheckDeploymentHealthStatus check if the deployment is healthy
 // For a deployment:
-//   healthy means the deployment is available, see also: DeploymentAvailable.
-//   unhealthy means the deployment is failed to reconcile.
-//   progressing is meaningless for deployment, if you want to know if those pods that
-//   associated with this deployment is progressing, you should call GetDeploymentDirectFailMessage.
+//
+//	healthy means the deployment is available, see also: DeploymentAvailable.
+//	unhealthy means the deployment is failed to reconcile.
+//	progressing is meaningless for deployment, if you want to know if those pods that
+//	associated with this deployment is progressing, you should call GetDeploymentDirectFailMessage.
 func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		return &HealthStatus{

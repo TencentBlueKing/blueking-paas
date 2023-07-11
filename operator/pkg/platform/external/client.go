@@ -109,7 +109,7 @@ func (c *Client) NewRequest(ctx context.Context, method, endpoint string, body i
 // Do formats and executes the request. Returns a Result object for easy response processing.
 //
 // Error type:
-//  * http.Client.Do errors are returned directly.
+//   - http.Client.Do errors are returned directly.
 func (c *Client) Do(req *http.Request) Result {
 	// 设置蓝鲸网关的认证信息
 	req.Header.Set(

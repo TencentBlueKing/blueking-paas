@@ -51,6 +51,12 @@ class URL:
         assert parsed.hostname
         return URL(protocol=protocol, hostname=parsed.hostname, port=port, path=parsed.path, query=parsed.query)
 
+    def compare_with(self, hostname: str, path: str) -> bool:
+        """compare URL with `${hostname}${path}` pair"""
+        # 判断域名和路径是否相同
+        # 判断路径时去除两端的 "/", 避免根路径省略时无法正常匹配
+        return self.hostname == hostname and self.path.strip("/") == path.strip("/")
+
 
 class EnvExposedURL(NamedTuple):
     url: URL

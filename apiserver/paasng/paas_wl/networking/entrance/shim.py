@@ -90,8 +90,8 @@ class BaseEnvAddresses:
             ]
         )
 
-    def validate_custom_url(self, url: str) -> bool:
-        """validate if the given url is a custom domain url"""
+    def has_custom_url(self, url: str) -> bool:
+        """check whether the given url is a custom domain in the environment"""
         for addr in self.list_custom():
             if addr.url == url:
                 return True
@@ -112,7 +112,7 @@ class BaseEnvAddresses:
 class LiveEnvAddresses(BaseEnvAddresses):
     """Get all live addresses for given environment
 
-    **live** is meaning that the address should currently be accessible.
+    **live** means that the address should currently be accessible.
     """
 
     def list(self) -> List[Address]:
@@ -144,9 +144,9 @@ class LiveEnvAddresses(BaseEnvAddresses):
 
 
 class PreAllocatedEnvAddresses(BaseEnvAddresses):
-    """Get all allocated addresses for given environment
+    """Get all pre-allocated addresses for given environment
 
-    **allocated** is meaning that the address should be allocated to the given env,
+    **pre-allocated** means that the address should be allocated to the given env,
     But the address may not currently accessible if the given env is not deployed.
     """
 
@@ -164,24 +164,24 @@ class PreAllocatedEnvAddresses(BaseEnvAddresses):
         return self._sort([Address(type=AddressType.SUBPATH, url=p.as_url().as_address()) for p in subpaths])
 
 
-def get_highest_priority_builtin_address(env: ModuleEnvironment) -> Tuple[bool, Optional[Address]]:
+def get_builtin_addr_preferred(env: ModuleEnvironment) -> Tuple[bool, Optional[Address]]:
     """Get the highest priority builtin address of given environment
 
     - Custom domain is not included
     - Both cloud-native and default application are supported
 
-    Returns:
-        Tuple[bool, str]: A tuple containing two values:
-            - A boolean value indicating whether the environment is running.
-            - A string representing the shortest URL by default.
-              * If a preferred root domain was set and a match can be found using that domain,
-              * the matched address will be returned in priority.
-              * If the env is not running, the URL returned is algorithmically allocated(MAY NOT accessible).
+    :returns: Tuple[bool, str] containing two values:
+        - A boolean value indicating whether the address is living.
+        - A string representing the shortest URL by default.
+          * If a preferred root domain was set and a match can be found using that domain,
+          * the matched address will be returned in priority.
+          * If the env is not running, the URL returned is algorithmically allocated(MAY NOT accessible).
     """
     module = env.module
-    is_running, addresses = get_builtin_addresses(env)
+    is_living, addresses = get_builtin_addrs(env)
     if not addresses:
-        return is_running, None
+        return is_living, None
+
     # Use the first address because the results is sorted already
     addr = addresses[0]
     if module.exposed_url_type in [ExposedURLType.SUBPATH, ExposedURLType.SUBDOMAIN]:
@@ -192,22 +192,23 @@ def get_highest_priority_builtin_address(env: ModuleEnvironment) -> Tuple[bool, 
                 logger.warning('No addresses found matching preferred root domain: %s', preferred_root)
             else:
                 addr = preferred_addr
-    return is_running, addr
+    return is_living, addr
 
 
-def get_builtin_addresses(env: ModuleEnvironment) -> Tuple[bool, List[Address]]:
-    """Get all builtin address of given environment
+def get_builtin_addrs(env: ModuleEnvironment) -> Tuple[bool, List[Address]]:
+    """Get all builtin addresses of given environment
 
-    Returns:
-        Tuple[bool, List[Address]]: A tuple containing two values:
-            - A boolean value indicating whether the environment is running.
-            - A list representing all route URL of given environment.
-              * If the env is not running, the URL returned is algorithmically allocated(MAY NOT accessible).
+    :returns: Tuple[bool, str] containing two values:
+        - A boolean value indicating whether the addresses are living
+        - A string representing the shortest URL by default.
+          * If a preferred root domain was set and a match can be found using that domain,
+          * the matched address will be returned in priority.
+          * If the env is not running, the URLs returned are algorithmically allocated(MAY NOT accessible).
     """
     module = env.module
     svc: BaseEnvAddresses
-    is_running = env_is_running(env)
-    if is_running:
+    is_living = env_is_running(env)
+    if is_living:
         svc = LiveEnvAddresses(env)
     else:
         svc = PreAllocatedEnvAddresses(env)
@@ -217,4 +218,4 @@ def get_builtin_addresses(env: ModuleEnvironment) -> Tuple[bool, List[Address]]:
         addresses = svc.list_subdomain()
     else:
         addresses = svc.list_legacy()
-    return is_running, addresses
+    return is_living, addresses

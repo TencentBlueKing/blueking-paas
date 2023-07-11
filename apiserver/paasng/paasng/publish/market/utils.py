@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from paas_wl.networking.entrance.addrs import EnvExposedURL, default_port_map
-from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addresses
+from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addrs
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.publish.entrance.exposer import get_exposed_url
@@ -47,7 +47,7 @@ class AvailableAddressMixin:
     @property
     def default_access_entrances(self) -> List[AvailableAddress]:
         """由平台提供的所有默认访问入口"""
-        _, addresses = get_builtin_addresses(self.env)
+        _, addresses = get_builtin_addrs(self.env)
         return [
             AvailableAddress(address=addr.url, type=ProductSourceUrlType.ENGINE_PROD_ENV.value) for addr in addresses
         ]

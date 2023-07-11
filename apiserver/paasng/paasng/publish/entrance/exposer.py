@@ -22,7 +22,7 @@ from typing import Dict, Optional
 
 from paas_wl.networking.entrance.addrs import EnvExposedURL
 from paas_wl.networking.entrance.handlers import refresh_module_domains
-from paas_wl.networking.entrance.shim import get_highest_priority_builtin_address
+from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
@@ -64,8 +64,8 @@ def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:
         set and a match can be found using that domain, the matched address will
         be returned in priority.
     """
-    is_running, addr = get_highest_priority_builtin_address(module_env)
-    if not is_running or not addr:
+    is_living, addr = get_builtin_addr_preferred(module_env)
+    if not is_living or not addr:
         return None
     return addr.to_exposed_url()
 

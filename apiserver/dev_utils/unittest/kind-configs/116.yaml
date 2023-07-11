@@ -1,0 +1,25 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 8080
+    hostPort: 30816
+    listenAddress: "0.0.0.0"
+    protocol: TCP
+  kubeadmConfigPatches:
+    - |
+      kind: ClusterConfiguration
+      metadata:
+        name: config
+      apiServer:
+        extraArgs:
+          insecure-bind-address: "0.0.0.0"
+          insecure-port: "8080"
+    - |
+      kind: InitConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          # 标记节点允许允许 ingress-nginx, 默认情况下 ingress-nginx 的 nodeSelector 需要该标签
+          # kind-node=true 用于标记该节点上 kind 创建的, 避免其他测试修改或删除该节点
+          node-labels: ingress-ready=true,kind-node=true

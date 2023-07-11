@@ -141,8 +141,8 @@ export default {
   },
   methods: {
     /**
-             * 侧导航初始化入口
-             */
+     * 侧导航初始化入口
+     */
     async init(isReload = true) {
       if (!this.curAppInfo.application) return;
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
@@ -309,8 +309,8 @@ export default {
     },
 
     /**
-             * 根据当前routeName选中导航
-             */
+     * 根据当前routeName选中导航
+     */
     async selectRouterByName(routeName) {
       try {
         await this.checkPermission(routeName);
@@ -401,10 +401,10 @@ export default {
     },
 
     /**
-             * 返回导航目录对应的Icon
-             * @param {Object} navItem 导航
-             * @return {Array} Classes
-             */
+     * 返回导航目录对应的Icon
+     * @param {Object} navItem 导航
+     * @return {Array} Classes
+     */
     getIconClass(navItem) {
       const classes = ['paasng-icon', 'app-nav-icon'];
       classes.push(`paasng-${navItem.iconfontName || 'gear'}`);
@@ -426,10 +426,10 @@ export default {
     },
 
     /**
-             * 强服务添加子项
-             * @param {Number} id id
-             * @param {String} name 名称
-             */
+     * 强服务添加子项
+     * @param {Number} id id
+     * @param {String} name 名称
+     */
     addServiceNavItem(navTree, id, name) {
       const category = navTree.find(item => item.name === 'appServices');
       category.children.push({
@@ -443,46 +443,6 @@ export default {
           },
         },
       });
-
-      return navTree;
-    },
-
-    /**
-     * 权限管理添加子项
-     * @param {String} type 类型
-     */
-    addPermissionNavItem(navTree, type) {
-      const nav = {
-        user_access_control: {
-          categoryName: 'appPermissions',
-          name: this.$t('用户限制'),
-          matchRouters: ['appPermissionUser', 'appPermissionPathExempt'],
-          destRoute: {
-            name: 'appPermissionUser',
-          },
-        },
-        ip_access_control: {
-          categoryName: 'appPermissions',
-          name: this.$t('IP限制'),
-          matchRouters: ['appPermissionIP'],
-          destRoute: {
-            name: 'appPermissionIP',
-          },
-        },
-        approval: {
-          categoryName: 'appPermissions',
-          name: this.$t('单据审批'),
-          matchRouters: ['appOrderAudit'],
-          destRoute: {
-            name: 'appOrderAudit',
-          },
-        },
-      };
-
-      const category = navTree.find(item => item.name === 'appPermissions');
-      if (type && nav[type]) {
-        category.children.push(nav[type]);
-      }
 
       return navTree;
     },
@@ -503,10 +463,10 @@ export default {
     },
 
     /**
-             * 访问相应路由
-             *
-             * @param {Object} nav 导航对象
-             */
+     * 访问相应路由
+     *
+     * @param {Object} nav 导航对象
+     */
     async goPage(navItem) {
       try {
         await this.checkPermission(navItem.destRoute?.name);

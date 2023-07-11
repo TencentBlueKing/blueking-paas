@@ -323,15 +323,6 @@ export default {
     this.init();
   },
   methods: {
-    handleToByUser() {
-      this.$router.push({
-        name: 'appPermissionUser',
-        params: {
-          id: this.appCode,
-        },
-      });
-    },
-
     sortTab() {
       if (!this.pagination.count) {
         return;

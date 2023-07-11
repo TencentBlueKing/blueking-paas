@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -48,6 +48,9 @@ class BkMonitorBackend(Protocol):
         ...
 
     def search_alert(self, *args, **kwargs) -> Dict:
+        ...
+
+    def promql_query(self, *args, **kwargs) -> Dict:
         ...
 
 
@@ -142,16 +145,50 @@ class BkMonitorClient:
 
         return resp.get('data', {}).get('space_uid')
 
+    def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
+        """
+        通过 promql 语法访问蓝鲸监控，获取容器 cpu / 内存等指标数据
+
+        :param bk_biz_id: 集群绑定的蓝鲸业务 ID
+        :param promql: promql 查询语句，可参考 PROMQL_TMPL
+        :param start: 起始时间戳，如 "1622009400"
+        :param end: 结束时间戳，如 "1622009500"
+        :param step: 步长，如："1m"
+        :returns: 时序数据 Series
+        """
+        params: Dict[str, Union[str, int, None]] = {
+            'promql': promql,
+            'start_time': start,
+            'end_time': end,
+            'step': step,
+            'bk_biz_id': bk_biz_id,
+        }
+
+        headers = {'X-Bk-Scope-Space-Uid': f'bkcc__{bk_biz_id}'}
+        try:
+            resp = self.client.promql_query(headers=headers, data=params)
+        except APIGatewayResponseError:
+            # 详细错误信息 bkapi_client_core 会自动记录
+            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+
+        if resp.get('error'):
+            raise BkMonitorApiError(resp['error'])
+
+        return resp.get('data', {}).get('series', [])
+
 
 def make_bk_monitor_client() -> BkMonitorClient:
     if settings.ENABLE_BK_MONITOR_APIGW:
-        apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
+        apigw_client = Client(
+            endpoint=settings.BK_API_URL_TMPL,
+            stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE,
+        )
         apigw_client.update_bkapi_authorization(
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
         return BkMonitorClient(apigw_client.api)
 
-    # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
+    # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
     esb_client = get_client_by_username("admin")
     return BkMonitorClient(esb_client.monitor_v3)

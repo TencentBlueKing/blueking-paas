@@ -572,6 +572,17 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get('IS_ALLOW_CREATE_CLOU
 # 云原生应用的默认集群名称
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
+# 开发者中心使用的 k8s 集群组件（helm chart 名称）
+BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
+    "BKPAAS_K8S_CLUSTER_COMPONENTS",
+    [
+        'bk-ingress-nginx',
+        'bkapp-log-collection',
+        'bkpaas-app-operator',
+        'bcs-general-pod-autoscaler',
+    ],
+)
+
 # ---------------
 # HealthZ 配置
 # ---------------
@@ -585,6 +596,7 @@ HEALTHZ_PROBES = settings.get(
     'HEALTHZ_PROBES',
     [
         'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
+        'paasng.monitoring.healthz.probes.WorkloadsMysqlProbe',
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
@@ -605,7 +617,9 @@ APIGW_HEALTHZ_URL = settings.get('APIGW_HEALTHZ_URL', 'http://localhost:8080')
 AUTO_CREATE_REGULAR_USER = settings.get('AUTO_CREATE_REGULAR_USER', True)
 
 # 每个应用下最多创建的模块数量
-MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', 10)
+MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', default=10, cast='@int')
+# 应用单个模块允许创建的最大 process 数量
+MAX_PROCESSES_PER_MODULE = settings.get('MAX_PROCESSES_PER_MODULE', default=16, cast='@int')
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var='PAAS_LEGACY_DATABASE_URL', env_var_prefix='PAAS_LEGACY_', for_tests=RUNNING_TESTS
@@ -1120,6 +1134,8 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get('SMART_DOCKER_PASSWORD', 'blueking
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
 
+# slugbuilder build 的超时时间, 单位秒
+BUILD_PROCESS_TIMEOUT = int(settings.get('BUILD_PROCESS_TIMEOUT', 60 * 15))
 
 # ------------------
 # App 应用镜像仓库配置

@@ -55,11 +55,10 @@ class ProdEnvReadinessCondition(PublishCondition):
 
     def validate(self):
         market_config, _created = MarketConfig.objects.get_or_create_by_app(self.application)
-        if not (
-            market_config.source_url_type
-            in [ProductSourceUrlType.ENGINE_PROD_ENV.value, ProductSourceUrlType.CUSTOM_DOMAIN.value]
-            and market_config.source_module
-        ):
+        if market_config.source_url_type in [
+            ProductSourceUrlType.DISABLED,
+            ProductSourceUrlType.THIRD_PARTY,
+        ]:
             return
 
         app_env = market_config.source_module.envs.get(environment='prod')

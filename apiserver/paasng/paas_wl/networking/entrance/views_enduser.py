@@ -32,8 +32,8 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.networking.entrance import serializers as slzs
 from paas_wl.networking.entrance.addrs import URL, Address, EnvAddresses
-from paas_wl.networking.entrance.allocator.domains import SubDomainAllocator
-from paas_wl.networking.entrance.allocator.subpaths import SubPathAllocator
+from paas_wl.networking.entrance.allocator.domains import ModuleEnvDomains, SubDomainAllocator
+from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, SubPathAllocator
 from paas_wl.networking.entrance.constants import AddressType
 from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.networking.ingress.config import get_custom_domain_config
@@ -169,24 +169,52 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(response_serializer=slzs.ModuleEnvAddressSLZ(many=True), tags=["访问入口"])
+    @swagger_auto_schema(response_serializer=slzs.ModuleEntrancesSLZ(many=True), tags=["访问入口"])
     def list_all_entrances(self, request, code):
         """查看应用所有模块的访问入口"""
         application = self.get_application()
-        results = []
+        all_entrances = []
         for module in application.modules.all():
+            module_entrances = {"name": module.name, "is_default": module.is_default, "envs": {}}
+            all_entrances.append(module_entrances)
             for env in module.envs.all():
-                addresses = EnvAddresses(env).get(only_running=False)
+                env_entrances = module_entrances["envs"].setdefault(env.environment, [])
+                is_running = env_is_running(env)
+                # 每个环境仅展示一个内置访问地址
+                builtin_address = None
+                if builtin_subdomain := ModuleEnvDomains(env).get_highest_priority():
+                    builtin_address = Address(
+                        type=AddressType.SUBDOMAIN,
+                        url=builtin_subdomain.as_url().as_address(),
+                    )
+                if not builtin_address:
+                    if builtin_subpath := ModuleEnvSubpaths(env).get_highest_priority():
+                        builtin_address = Address(
+                            type=AddressType.SUBPATH,
+                            url=builtin_subpath.as_url().as_address(),
+                        )
+                addresses = []
+                if builtin_address:
+                    addresses.append(builtin_address)
+                else:
+                    # 除非集群的配置有问题, 理论上 builtin_address 不会为空
+                    logger.error(
+                        "builtin address is None for application %s module %s env %s",
+                        application.code,
+                        module.name,
+                        env.environment,
+                    )
+                addresses.extend(EnvAddresses(env).get_custom())
                 for address in addresses:
-                    results.append(
+                    env_entrances.append(
                         {
                             "module": module.name,
                             "env": env.environment,
                             "address": address,
-                            "is_running": env_is_running(env),
+                            "is_running": is_running,
                         }
                     )
-        return Response(data=slzs.ModuleEnvAddressSLZ(results, many=True).data)
+        return Response(data=slzs.ModuleEntrancesSLZ(all_entrances, many=True).data)
 
     @swagger_auto_schema(response_serializer=slzs.AvailableEntranceSLZ(many=True), tags=["访问入口"])
     def list_module_available_entrances(self, request, code, module_name):

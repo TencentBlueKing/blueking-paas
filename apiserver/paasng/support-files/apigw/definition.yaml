@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.0.10
-  title: "add list cnative deploy history api"
-  comment: "add list cnative deploy history api"
+  version: 1.0.11
+  title: "add retrieve_addon_specs api"
+  comment: "add retrieve_addon_specs api"
 
 
 stage:

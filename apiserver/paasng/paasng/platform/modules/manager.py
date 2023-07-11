@@ -87,10 +87,13 @@ class ModuleInitializer:
     def create_engine_apps(self, environments: Optional[List[str]] = None, cluster_name: Optional[str] = None):
         """Create engine app instances for application"""
         environments = environments or self.default_environments
+        wl_app_type = (
+            WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT
+        )
 
         for environment in environments:
             name = self.make_engine_app_name(environment)
-            engine_app = self._get_or_create_engine_app(name)
+            engine_app = self._get_or_create_engine_app(name, wl_app_type)
             env = ModuleEnvironment.objects.create(
                 application=self.application, module=self.module, engine_app_id=engine_app.id, environment=environment
             )
@@ -222,9 +225,9 @@ class ModuleInitializer:
             resource=resource,
         )
 
-    def _get_or_create_engine_app(self, name: str) -> EngineApp:
+    def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""
-        info = create_app_ignore_duplicated(self.application.region, name, WlAppType.DEFAULT)
+        info = create_app_ignore_duplicated(self.application.region, name, app_type)
         engine_app = EngineApp.objects.create(
             id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
         )

@@ -171,6 +171,12 @@
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 
+## 开发者中心使用的 k8s 集群组件（helm chart 名称）
+# BKPAAS_K8S_CLUSTER_COMPONENTS:
+# - bk-ingress-nginx
+# - bkapp-log-collection
+# - bkpaas-app-operator
+# - bcs-general-pod-autoscaler
 
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
 
@@ -179,6 +185,7 @@
 ## 服务健康探针列表
 # HEALTHZ_PROBES:
 #   - paasng.monitoring.healthz.probes.PlatformMysqlProbe
+#   - paasng.monitoring.healthz.probes.WorkloadsMysqlProbe
 #   - paasng.monitoring.healthz.probes.PlatformRedisProbe
 #   - paasng.monitoring.healthz.probes.ServiceHubProbe
 #   - paasng.monitoring.healthz.probes.PlatformBlobStoreProbe
@@ -197,6 +204,8 @@
 
 ## 每个应用下最多创建的模块数量
 # MAX_MODULES_COUNT_PER_APPLICATION: 10
+## 应用单个模块下最多创建的 process 数量
+# MAX_PROCESSES_PER_MODULE: 8
 
 ## 旧版本 PaaS 数据库 Host
 # PAAS_LEGACY_DATABASE_HOST: ''
@@ -655,6 +664,9 @@
 # PYTHON_BUILDPACK_PIP_INDEX_URL: ''
 ## 从源码构建应用时，额外注入的环境变量
 # BUILD_EXTRA_ENV_VARS: {}
+
+## slugbuilder build 的超时时间, 单位秒, 默认 15 分钟
+# BUILD_PROCESS_TIMEOUT = 900
 
 
 ## ---------------------------------------- 服务导出配置 ----------------------------------------

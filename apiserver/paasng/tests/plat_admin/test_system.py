@@ -23,7 +23,7 @@ from unittest import mock
 import arrow
 import pytest
 from django.conf import settings
-from django.utils import translation
+from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.dev_resources.servicehub.constants import Category
@@ -97,13 +97,12 @@ class TestQueryUniApps:
             keyword_app = legacy_app
             keyword = legacy_app.name
 
-        translation.activate(language)
+        with override(language, True):
+            uni_apps_list = query_uni_apps_by_keyword(keyword, offset=0, limit=10)
+            assert len(uni_apps_list) == expected_count
 
-        uni_apps_list = query_uni_apps_by_keyword(keyword, offset=0, limit=10)
-        assert len(uni_apps_list) == expected_count
-
-        uni_apps_dict = {app.code: app.name for app in uni_apps_list}
-        uni_apps_dict[keyword_app.code] = attrgetter(name_field)(keyword_app)
+            uni_apps_dict = {app.code: app.name for app in uni_apps_list}
+            uni_apps_dict[keyword_app.code] = attrgetter(name_field)(keyword_app)
 
 
 class TestGetContactInfo:

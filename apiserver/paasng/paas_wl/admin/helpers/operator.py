@@ -20,12 +20,12 @@ from typing import Dict
 
 from kubernetes.client import ApiException
 
+from paas_wl.admin.constants import BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.resources.base.base import EnhancedApiClient
 from paas_wl.resources.base.crd import BkApp, DomainGroupMapping
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KDeployment, KNamespace
-
-from .constants import BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE
 
 
 def detect_operator_status(client: EnhancedApiClient) -> Dict:
@@ -97,7 +97,9 @@ def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool])
 
     # 统计 DomainGroupMapping 数量
     if crd_exists[DomainGroupMapping.kind]:
-        domain_group_mappings = DomainGroupMapping(client).ops_label.list(labels={}).items
+        domain_group_mappings = (
+            DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).ops_label.list(labels={}).items
+        )
         result[DomainGroupMapping.kind]['total_cnt'] = len(domain_group_mappings)
 
     return result

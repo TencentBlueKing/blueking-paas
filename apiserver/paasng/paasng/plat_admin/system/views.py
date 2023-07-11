@@ -27,6 +27,7 @@ from rest_framework.response import Response
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.utils import ForceAllowAuthedApp
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
 from paasng.dev_resources.servicehub.services import ServiceObj, ServiceSpecificationHelper
 from paasng.engine.phases_steps.display_blocks import ServicesInfo
@@ -55,6 +56,7 @@ from paasng.utils.error_codes import error_codes
 logger = logging.getLogger(__name__)
 
 
+@ForceAllowAuthedApp.mark_view_set
 class SysUniApplicationViewSet(viewsets.ViewSet):
     """System universal application view sets"""
 

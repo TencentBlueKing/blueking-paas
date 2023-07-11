@@ -149,13 +149,13 @@
                 titleInfo: {
                     'tc_git': this.$t('工蜂 Git 授权'),
                     'bk_gitlab': this.$t('蓝鲸内部 GitLab 授权'),
-                    'github': this.$t('Github 授权'),
+                    'github': this.$t('GitHub 授权'),
                     'gitee': this.$t('Gitee 授权')
                 },
                 infoMap: {
                     'tc_git': this.$t('授权蓝鲸访问您的工蜂代码库信息，授权后蓝鲸仅获取工蜂仓库的只读权限'),
                     'bk_gitlab': this.$t('授权访问您的蓝鲸内部 GitLab 代码库信息，授权后蓝鲸仅获取仓库的只读权限'),
-                    'github': this.$t('授权蓝鲸访问您的 Github 代码库信息，授权后蓝鲸将获取仓库的访问权限'),
+                    'github': this.$t('授权蓝鲸访问您的 GitHub 代码库信息，授权后蓝鲸将获取仓库的访问权限'),
                     'gitee': this.$t('授权蓝鲸访问您的 Gitee 代码库信息，授权后蓝鲸将获取仓库的访问权限')
                 }
             };

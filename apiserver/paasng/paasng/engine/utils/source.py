@@ -57,6 +57,13 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
     :return: validated processes, which all key is lower case.
     :raise: django.core.exceptions.ValidationError
     """
+
+    if len(processes) > settings.MAX_PROCESSES_PER_MODULE:
+        raise ValidationError(
+            f'The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, '
+            f'but got {len(processes)}'
+        )
+
     for proc_type in processes.keys():
         if not PROC_TYPE_PATTERN.match(proc_type):
             raise ValidationError(f'Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}')

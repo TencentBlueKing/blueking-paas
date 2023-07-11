@@ -724,12 +724,18 @@ export default {
         this.$i18n.locale = language;
         this.$store.commit('updateLocalLanguage', language);
         // 设置cookies持续化
-        ajaxRequest({
-          url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
-          jsonp: 'callback' + uuid(),
-          data: Object.assign({ language }),
-        });
-        this.$router.go(0);
+        if(window.BK_COMPONENT_API_URL) {
+          ajaxRequest({
+            url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
+            jsonp: 'callback' + uuid(),
+            data: Object.assign({ language }),
+            success: () => {
+              this.$router.go(0);
+            }
+          });
+        } else {
+          this.$router.go(0);
+        }
       }, (e) => {
         this.$paasMessage({
           theme: 'error',

@@ -361,6 +361,8 @@
                 if (!this.form.isValid()) {
                     return;
                 }
+                this.formLoading = true;
+
                 const formData = this.$form.serializeObject();
 
                 const params = {
@@ -400,6 +402,7 @@
                         theme: 'error',
                         message: resp.detail
                     });
+                    this.formLoading = false;
                 }).then(
                     () => {
                         this.formLoading = false;

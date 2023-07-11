@@ -22,6 +22,7 @@ from django_dynamic_fixture import G
 from paasng.engine.constants import RuntimeType
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
+from paasng.platform.modules.models.deploy_config import ImageTagOptions
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -154,12 +155,13 @@ class TestModuleBuildConfigViewSet:
         assert cfg.buildpack_builder == slugbuilder
         assert cfg.buildpack_runner == slugrunner
         assert cfg.buildpacks.count() == 3
+        assert cfg.tag_options == ImageTagOptions("foo", True, False, True)
         assert ModuleRuntimeManager(bk_module).list_buildpacks() == [buildpack_z, buildpack_x, buildpack_y]
 
     def test_modify_dockerbuild(self, api_client, bk_app, bk_module):
         data = {
             'build_method': RuntimeType.DOCKERFILE,
-            'tag_options': {'prefix': "foo", 'with_version': True, 'with_build_time': False, 'with_commit_id': True},
+            'tag_options': {'prefix': "foo", 'with_version': False, 'with_build_time': False, 'with_commit_id': True},
             'dockerfile_path': "rootfs/Dockerfile",
             'docker_build_args': {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
         }
@@ -168,7 +170,23 @@ class TestModuleBuildConfigViewSet:
         assert resp.status_code == 200
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         assert cfg.build_method == RuntimeType.DOCKERFILE
+        assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
         assert cfg.docker_build_args == {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"}
+
+    def test_modify_dockerbuild_with_emtpy_build_args(self, api_client, bk_app, bk_module):
+        data = {
+            'build_method': RuntimeType.DOCKERFILE,
+            'tag_options': {'prefix': "foo", 'with_version': False, 'with_build_time': False, 'with_commit_id': True},
+            'dockerfile_path': "rootfs/Dockerfile",
+            'docker_build_args': {},
+        }
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
+        resp = api_client.post(url, data=data)
+        assert resp.status_code == 200
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        assert cfg.build_method == RuntimeType.DOCKERFILE
+        assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
+        assert cfg.docker_build_args == {}
 
     @pytest.mark.parametrize(
         "data",

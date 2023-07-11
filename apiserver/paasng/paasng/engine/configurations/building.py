@@ -17,26 +17,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import base64
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
-
-from django.conf import settings
 
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.kube_res.base import Schedule
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
     from paasng.platform.modules.models.module import Module
     from paasng.platform.modules.models.runtime import AppBuildPack, AppSlugBuilder
-
-
-def build_app_registry_auth() -> str:
-    auth = f"{settings.APP_DOCKER_REGISTRY_USERNAME}:{settings.APP_DOCKER_REGISTRY_PASSWORD}".encode()
-    return "Basic " + base64.b64encode(auth).decode()
 
 
 @dataclass
@@ -72,8 +65,6 @@ class SlugbuilderInfo:
     @classmethod
     def from_module(cls, module: 'Module') -> 'SlugbuilderInfo':
         """根据模块获取支持的构建环境"""
-        from paasng.platform.modules.helpers import ModuleRuntimeManager
-
         manager = ModuleRuntimeManager(module)
         buildpacks = manager.list_buildpacks()  # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
         environments = {}
@@ -83,9 +74,6 @@ class SlugbuilderInfo:
             environments.update(slugbuilder.environments)
             if manager.is_cnb_runtime:
                 use_cnb = True
-                environments.update(
-                    CNB_REGISTRY_AUTH=json.dumps({settings.APP_DOCKER_REGISTRY_HOST: build_app_registry_auth()})
-                )
 
         buildpacks = buildpacks or []
         for buildpack in buildpacks:

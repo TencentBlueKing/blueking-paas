@@ -16,18 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
+from typing import Optional
 
 
-class Group(OperationGroup):
+class BKCIGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk-iam's
+    API Gateway resource. It's a wrapper class of API SDK's original exceptions
+    """
 
-    # 统一查询时序数据
-    promql_query = bind_property(Operation, name='promql_query', method='POST', path='/promql_query/')
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
 
 
-class Client(APIGatewayClient):
-    """bkmonitor 监控平台 v3 上云版"""
+class BKCIApiError(BKCIGatewayServiceError):
+    """When calling the bk-iam api, bk-iam returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """
 
-    _api_name = "bkmonitorv3"
-
-    api = bind_property(Group, name="api")
+    def __init__(self, message: str, code: Optional[int] = None):
+        super().__init__(message)
+        self.code = code

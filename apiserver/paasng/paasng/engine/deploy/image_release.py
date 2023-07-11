@@ -21,11 +21,16 @@ import logging
 from celery import shared_task
 from django.utils.translation import gettext as _
 
+from paas_wl.cnative.specs.credentials import get_references, validate_references
+from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.cnative.specs.models import AppModelRevision
+from paas_wl.workloads.images.models import AppImageCredential
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.release import start_release_step
-from paasng.engine.models import DeployPhaseTypes
+from paasng.engine.exceptions import DeployShouldAbortError
+from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_phase_start
 from paasng.engine.utils.output import Style
 from paasng.engine.utils.source import get_app_description_handler, get_processes
@@ -62,9 +67,10 @@ class ImageReleaseMgr(DeployStep):
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
             with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-                processes = get_processes(deployment=self.deployment)
                 build_id = self.deployment.advanced_options.build_id
                 if not build_id:
+                    # 旧的镜像应用从 deploy_config 读取进程信息
+                    processes = get_processes(deployment=self.deployment)
                     # 旧的镜像应用需要构造 fake build
                     runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                     build_id = self.engine_client.create_build(
@@ -72,6 +78,17 @@ class ImageReleaseMgr(DeployStep):
                         procfile={p.name: p.command for p in processes.values()},
                         extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
                     )
+                else:
+                    # TODO: 提供更好的处理方式, 不应该依赖上一个 Deployment
+                    # Q: 为什么不从 Build.procfile 里读取?
+                    # A: 因为 Build.procfile 目前只存储了启动命令, 没有 replicas/plan 等信息...
+                    # 普通应用从第一个使用该 build 部署的 deployment 获取进程信息
+                    deployment = (
+                        Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
+                    )
+                    if not deployment:
+                        raise DeployShouldAbortError("failed to get processes")
+                    processes = deployment.processes
                 self.deployment.update_fields(
                     processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id
                 )
@@ -81,6 +98,8 @@ class ImageReleaseMgr(DeployStep):
                 # 仅托管镜像的云原生应用需要构造 fake build
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                 build_id = self.engine_client.create_build(
+                    # 仅托管镜像的云原生应用目前并不会使用 build.image 字段
+                    # 目前仅托管镜像的云原生应用的 image 字段由前端组装
                     image=runtime_info.generate_image(self.version_info),
                     procfile={},
                     extra_envs={},
@@ -102,6 +121,7 @@ class ImageReleaseMgr(DeployStep):
 
         :param p: DeployProcedure object for writing hint messages
         """
+
         for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
             p.stream.write_message(
                 'Creating new service instance of %s, it will take several minutes...' % rel.get_service().display_name
@@ -110,15 +130,28 @@ class ImageReleaseMgr(DeployStep):
 
     def _setup_image_credentials(self):
         """Setup Image Credentials for pulling image"""
-        mgr = ImageCredentialManager(self.module_environment.module)
-        credential = mgr.provide()
-        # TODO: AppImageCredential.objects.flush_from_refs 移动到这里处理
-        if credential:
-            self.engine_client.upsert_image_credentials(
-                registry=credential.registry,
-                username=credential.username,
-                password=credential.password,
-            )
+        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
+            mgr = ImageCredentialManager(self.module_environment.module)
+            credential = mgr.provide()
+            # TODO: AppImageCredential.objects.flush_from_refs 移动到这里处理
+            if credential:
+                self.engine_client.upsert_image_credentials(
+                    registry=credential.registry,
+                    username=credential.username,
+                    password=credential.password,
+                )
+        else:
+            application = self.module_environment.application
+            revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
+            try:
+                credential_refs = get_references(revision.json_value)
+                validate_references(application, credential_refs)
+            except InvalidImageCredentials as e:
+                # message = f"missing credentials {missing_names}"
+                self.stream.write_message(Style.Error(str(e)))
+                raise
+            if credential_refs:
+                AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
     def _handle_app_description(self):
         """Handle application description for deployment"""

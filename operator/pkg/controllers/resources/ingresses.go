@@ -77,7 +77,7 @@ type Domain struct {
 	// The name of Secret resource which contains TLS cert files, empty value
 	// means no HTTPS is supported.
 	//
-	// Currently, the secret resource was created by "workloads" service. This
+	// Currently, the secret resource was created by "apiserver" service. This
 	// behaviour may change in the future.
 	TLSSecretName string `json:"tlsSecretName"`
 }

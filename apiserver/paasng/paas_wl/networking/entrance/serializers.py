@@ -137,6 +137,12 @@ class ModuleEnvAddressSLZ(serializers.Serializer):
     is_running = serializers.BooleanField(help_text="该环境是否正在运行", default=True)
 
 
+class ModuleEntrancesSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="模块名")
+    is_default = serializers.BooleanField(help_text="是否主模块")
+    envs = serializers.DictField(child=ModuleEnvAddressSLZ(many=True))
+
+
 class CustomDomainsConfigSLZ(serializers.Serializer):
     module = serializers.CharField(help_text='所属模块')
     environment = serializers.CharField(help_text='部署环境')

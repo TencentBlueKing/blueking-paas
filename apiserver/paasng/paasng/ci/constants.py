@@ -20,5 +20,4 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
 class CIBackend(str, StructuredEnum):
-    TENCENT_CI = EnumField('tencent_ci', label='腾讯 CI')
     CODECC = EnumField('codecc', label='CodeCC')

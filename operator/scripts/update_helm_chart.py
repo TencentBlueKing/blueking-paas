@@ -174,46 +174,46 @@ content_patch_conf = {
         ),
     ],
     'manager-config.yaml': [
-        ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controllerConfig'),
+        ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controller'),
         (
             # 白名单控制支持 enabled & 挪到 values 顶层
             wrap_multiline_str(
                 4,
                 '''
-                ingressPluginConfig:
-                  accessControlConfig:
-                    redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
-                  paasAnalysisConfig:
-                    enabled: {{ .Values.controllerConfig.ingressPluginConfig.paasAnalysisConfig.enabled }}
+                ingressPlugin:
+                  accessControl:
+                    redisConfigKey: {{ .Values.controller.ingressPlugin.accessControl.redisConfigKey | quote }}
+                  paasAnalysis:
+                    enabled: {{ .Values.controller.ingressPlugin.paasAnalysis.enabled }}
                 ''',  # noqa: E501
             ),
             wrap_multiline_str(
                 4,
                 '''
                 {{- if or .Values.accessControl.enabled .Values.paasAnalysis.enabled }}
-                ingressPluginConfig:
+                ingressPlugin:
                   {{- if .Values.accessControl.enabled }}
-                  accessControlConfig:
+                  accessControl:
                     redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
                   {{- end }}
                   {{- if .Values.paasAnalysis.enabled }}
-                  paasAnalysisConfig:
+                  paasAnalysis:
                     enabled: {{ .Values.paasAnalysis.enabled }}
                   {{- end }}
                 {{- else -}}
-                ingressPluginConfig: {}
+                ingressPlugin: {}
                 {{- end }}
                 ''',
             ),
         ),
         (
             # 自动扩缩容配置挪到 values 顶层
-            '.Values.controllerConfig.autoscalingConfig',
+            '.Values.controller.autoscaling',
             '.Values.autoscaling',
         ),
         (
-            # 平台配置挪到 values 顶层
-            '.Values.controllerConfig.platformConfig',
+            # 平台配置挪到 values 顶层，依旧保留 Config 后缀以兼容存量 values
+            '.Values.controller.platform',
             '.Values.platformConfig',
         ),
     ],
@@ -608,21 +608,21 @@ class HelmChartUpdater:
         values['fullnameOverride'] = ''
 
         # manager 配置相关
-        values['controllerConfig'] = values['managerConfig']['controllerManagerConfigYaml']
+        values['controller'] = values['managerConfig']['controllerManagerConfigYaml']
         del values['managerConfig']
 
         # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
         # PA 访问日志统计挪到顶层
         values['paasAnalysis'] = {'enabled': False}
-        del values['controllerConfig']['ingressPluginConfig']
+        del values['controller']['ingressPlugin']
 
         values['autoscaling'] = {'enabled': False}
-        del values['controllerConfig']['autoscalingConfig']
+        del values['controller']['autoscaling']
 
-        # 平台配置挪到顶层
-        values['platformConfig'] = values['controllerConfig']['platformConfig']
-        del values['controllerConfig']['platformConfig']
+        # 平台配置挪到顶层，依旧保留 Config 后缀以兼容存量 values
+        values['platformConfig'] = values['controller']['platform']
+        del values['controller']['platform']
 
         # 证书管理相关
         values['cert'] = {

@@ -16,24 +16,23 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Optional
+from .build import BuildProcessViewSet, ImageArtifactViewSet
+from .configvar import ConfigVarBuiltinViewSet, ConfigVarImportExportViewSet, ConfigVarViewSet
+from .deploy import DeploymentViewSet, DeployPhaseViewSet
+from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset
+from .release import ReleasedInfoViewSet, ReleasesViewset
 
-
-class BkMonitorGatewayServiceError(Exception):
-    """This error indicates that there's something wrong when operating bk-monitor's
-    API Gateway resource. It's a wrapper class of API SDK's original exceptions
-    """
-
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
-
-
-class BkMonitorApiError(BkMonitorGatewayServiceError):
-    """When calling the bk-monitor api, bk-monitor returns an error message,
-    which needs to be captured and displayed to the user on the page
-    """
-
-    def __init__(self, message: str, code: Optional[int] = None):
-        super().__init__(message)
-        self.code = code
+__all__ = [
+    "BuildProcessViewSet",
+    "ConfigVarBuiltinViewSet",
+    "ConfigVarImportExportViewSet",
+    "ConfigVarViewSet",
+    "DeploymentViewSet",
+    "DeployPhaseViewSet",
+    "ImageArtifactViewSet",
+    "OfflineViewset",
+    "OperationsViewset",
+    "ProcessResourceMetricsViewset",
+    "ReleasedInfoViewSet",
+    "ReleasesViewset",
+]

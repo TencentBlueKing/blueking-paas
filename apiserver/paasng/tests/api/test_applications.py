@@ -513,12 +513,17 @@ class TestCreateCloudNativeApp:
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         app_data = response.json()['application']
         assert app_data['type'] == 'cloud_native'
-        assert app_data['modules'][0]['build_method'] == 'custom_image'
+        assert app_data['modules'][0]['web_config']['build_method'] == 'custom_image'
+        assert app_data['modules'][0]['web_config']['artifact_type'] == 'none'
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
-    def test_create_with_buildpack(self, MockedModuleRuntimeBinder, api_client):
+    @mock.patch('paasng.engine.configurations.building.ModuleRuntimeManager')
+    def test_create_with_buildpack(self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
         MockedModuleRuntimeBinder.bind_bp_stack.return_value = None
+        MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
+            is_cnb_runtime=True, environments={}
+        )
 
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -548,7 +553,8 @@ class TestCreateCloudNativeApp:
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         app_data = response.json()['application']
         assert app_data['type'] == 'cloud_native'
-        assert app_data['modules'][0]['build_method'] == 'buildpack'
+        assert app_data['modules'][0]['web_config']['build_method'] == 'buildpack'
+        assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'
 
     def test_create_with_dockerfile(self, api_client):
         """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
@@ -580,4 +586,5 @@ class TestCreateCloudNativeApp:
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         app_data = response.json()['application']
         assert app_data['type'] == 'cloud_native'
-        assert app_data['modules'][0]['build_method'] == 'dockerfile'
+        assert app_data['modules'][0]['web_config']['build_method'] == 'dockerfile'
+        assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'

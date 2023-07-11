@@ -95,92 +95,8 @@
                     @click="showEdit('nameInput')"
                   />
                 </div>
-
-                <!-- <div class="action-box">
-                  <template v-if="isFormEdited.nameInput">
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      text
-                      @click.stop.prevent="updatePluginBaseInfo('nameInput')"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelBasicInfo('nameInput', 'reset')"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div> -->
               </bk-form-item>
             </bk-form>
-            <!-- 属于额外字段(extra_fields) -->
-            <!-- <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('连接器类型') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">{{ pluginInfo.repo_type || '--' }}</div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('建议使用场景') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">{{ pluginInfo.test || '--' }}</div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('建议日数据量') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <bk-input
-                                    ref="dataVolumeInput"
-                                    :placeholder="$t('请输入20个字符以内的应用名称')"
-                                    :readonly="!isFormEdited.dataVolumeInput"
-                                    ext-cls="paas-info-app-name-cls"
-                                    :clearable="false"
-                                    :maxlength="20"
-                                    v-model="pluginInfo.test">
-                                </bk-input>
-
-                                <div class="action-box">
-                                    <template v-if="!isFormEdited.dataVolumeInput">
-                                        <a class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
-                                            @click="showEdit('dataVolumeInput')">
-                                        </a>
-                                    </template>
-                                    <template v-else>
-                                        <bk-button
-                                            style="margin-right: 6px;"
-                                            theme="primary"
-                                            text
-                                            @click.stop.prevent="submitBasicInfo">
-                                            {{ $t('保存') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="primary"
-                                            text
-                                            @click.stop.prevent="cancelBasicInfo('dataVolumeInput')">
-                                            {{ $t('取消') }}
-                                        </bk-button>
-                                    </template>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form last-basic-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('查询模式') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">{{ pluginInfo.test || '--' }}</div>
-                            </bk-form-item>
-                        </bk-form> -->
           </div>
         </div>
 
@@ -198,12 +114,6 @@
           <div class="info">
             {{ $t('用于插件市场展示的信息') }}
           </div>
-          <!-- <bk-alert type="warning" class="mt10" :show-icon="true">
-                        <div slot="title">
-                            {{ $t('插件市场信息从代码仓库的配置文件中获取') }}，
-                            <span class="detail-doc">{{ $t('前往 tool.json 修改') }}</span>
-                        </div>
-                    </bk-alert> -->
           <div class="content no-border">
             <bk-form
               class="info-special-form"
@@ -487,11 +397,6 @@
     };
     const logXss = new xss.FilterXSS(xssOptions);
     export default {
-        // components: {
-        //     'bk-member-selector': () => {
-        //         return import('@/components/user/member-selector/member-selector.vue');
-        //     }
-        // },
         components: {
             authenticationInfo,
             user,
@@ -642,7 +547,6 @@
                     this.cancelBasicInfo(ref, 'reset');
                     return;
                 }
-                // this.pluginInfo
                 const data = {
                     name: this.pluginInfo.name_zh_cn,
                     extra_fields: {}
@@ -1181,9 +1085,6 @@
     }
     .display-description {
         position: relative;
-        // overflow: hidden;
-        // text-overflow: ellipsis;
-        // -webkit-line-clamp: 2;
     }
     .content-box {
         font-size: 12px;

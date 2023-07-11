@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
+from typing import Union
 
 from iam.exceptions import AuthAPIError
 from rest_framework.exceptions import PermissionDenied
@@ -27,6 +28,7 @@ from paasng.accessories.iam.helpers import user_group_apply_url
 from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 logger = logging.getLogger(__name__)
@@ -42,8 +44,17 @@ def application_perm_class(action: AppAction):
     """
 
     class Permission(BasePermission):
-        def has_object_permission(self, request, view, obj):
-            return user_has_app_action_perm(request.user, obj, action)
+        def has_object_permission(self, request, view, obj: Union[Application, Module]):
+            """Check if the current request has permission to operate the object.
+            If the object type is not supported, return `false`.
+            """
+            if isinstance(obj, Application):
+                return user_has_app_action_perm(request.user, obj, action)
+            elif isinstance(obj, Module):
+                return user_has_app_action_perm(request.user, obj.application, action)
+            else:
+                logger.error('Application permission checked on incorrect object, type: %s', type(obj))
+                return False
 
     return Permission
 

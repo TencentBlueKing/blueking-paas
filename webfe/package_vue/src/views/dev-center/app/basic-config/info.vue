@@ -570,6 +570,7 @@
           {{ $t('确定') }}
         </bk-button>
         <bk-button
+          class="ml10"
           theme="default"
           @click="delAppDialog.visiable = false"
         >

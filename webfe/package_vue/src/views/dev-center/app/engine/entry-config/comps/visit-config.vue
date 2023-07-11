@@ -18,14 +18,14 @@
         class="table-cls"
         border
         cell-class-name="table-cell-cls"
+        @row-mouse-enter="handleRowMouseEnter"
+        @row-mouse-leave="handleRowMouseLeave"
       >
-        <bk-table-column :label="$t('模块')" :width="190">
+        <bk-table-column :label="$t('模块')" :width="190" class-name="table-colum-module-cls">
           <template slot-scope="{ row, $index }">
             <section
               class="module-container"
-              :class="defaultIndex === $index && !row.is_default ? 'module-cursor' : ''"
-              @mouseenter="handleMouseEnter($index)"
-              @mouseleave="defaultIndex = ''">
+              :class="rowIndex === $index && !row.is_default ? 'module-cursor' : ''">
               <div class="flex-row align-items-center"
               >{{ row.name || '--' }}
                 <img
@@ -35,7 +35,7 @@
                 >
               </div>
               <bk-button
-                v-if="defaultIndex === $index && !row.is_default" text theme="primary"
+                v-if="rowIndex === $index && !row.is_default" text theme="primary"
                 @click="handleSetDefault(row)">
                 {{ $t('设为主模块') }}
               </bk-button>
@@ -63,7 +63,7 @@
                   <span
                     class="btn-container"
                     v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
-                    v-if="tableIndex === $index && envIndex === i && row.envs[item]">
+                    v-if="rowIndex === $index && row.envs[item]">
                     <i
                       class="paasng-icon paasng-plus-thick"
                       :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''" />
@@ -81,7 +81,7 @@
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('访问地址')" :min-width="600">
-          <template slot-scope="{ row }">
+          <template slot-scope="{ row, $index }">
             <div v-for="(item) in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
                 <div v-if="e.isEdit">
@@ -105,7 +105,7 @@
                 </div>
                 <section v-else>
                   <div
-                    v-bk-tooltips="{content: $t('该环境未部署，无法访问'), disabled: e.is_running}"
+                    v-bk-tooltips="{content: $t(rowIndex === $index ?'该环境未部署，无法访问' : ''), disabled: e.is_running}"
                     class="flex-row align-items-center">
                     <bk-button
                       text theme="primary"
@@ -256,7 +256,7 @@ export default {
       isTableLoading: false,
       entryList: [],
       entryEnv: ENV_ENUM,
-      defaultIndex: '',
+      rowIndex: '',
       tableIndex: '',
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
@@ -517,11 +517,6 @@ export default {
       }
     },
 
-    // 处理鼠标移入事件
-    handleMouseEnter(index) {
-      this.defaultIndex = index;
-    },
-
     // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
       this.ipConfigInfo = (this.curIngressIpConfigs || [])
@@ -692,6 +687,16 @@ export default {
     handleUrlOpen(url) {
       window.open(url, '_blank');
     },
+
+    // 表格鼠标移入
+    handleRowMouseEnter(index) {
+      this.rowIndex = index;
+    },
+
+    // 表格鼠标移出
+    handleRowMouseLeave() {
+      this.rowIndex = '';
+    },
   },
 };
 </script>
@@ -797,6 +802,7 @@ export default {
         position: absolute;
         top: 100%;
         left: -15px;
+        z-index: 1;
       }
 
       .url-container{
@@ -852,8 +858,16 @@ export default {
         background: #f5f7fa;
         z-index: 1;
       }
+
+      /deep/ .bk-table-body-wrapper .table-colum-cls .cell-container:nth-child(2){
+        border-top: 1px solid #dfe0e5;
+      }
     /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
       padding: 0 !important;
+    }
+
+    /deep/ .bk-table-body-wrapper .table-colum-module-cls {
+      background: #FAFBFD;
     }
 
     .btn-container{

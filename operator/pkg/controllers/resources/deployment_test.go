@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
@@ -327,8 +326,8 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
 		})
 		It("with non-empty HostAliases", func() {
-			bkapp.Spec.DomainResolution = &v1alpha2.DomainResConfig{
-				HostAliases: []v1alpha2.HostAlias{
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
 					{IP: "127.0.0.1", Hostnames: []string{"foo.local", "bar.local"}},
 					{IP: "192.168.1.1", Hostnames: []string{"foobar.local"}},
 				},
@@ -341,7 +340,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
 		})
 		It("with non-empty Nameservers", func() {
-			bkapp.Spec.DomainResolution = &v1alpha2.DomainResConfig{Nameservers: []string{"8.8.8.8"}}
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{Nameservers: []string{"8.8.8.8"}}
 
 			web := GetWantedDeploys(bkapp)[0]
 			Expect(web.Spec.Template.Spec.DNSConfig.Nameservers).To(Equal([]string{"8.8.8.8"}))

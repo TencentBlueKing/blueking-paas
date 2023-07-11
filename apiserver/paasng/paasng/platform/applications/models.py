@@ -439,13 +439,6 @@ class ApplicationEnvironment(TimestampedModel):
         """Return the WlApp object(in 'workloads' module)"""
         return self.engine_app.to_wl_obj()
 
-    def get_exposed_link(self):
-        # TODO: move this method out of ApplicationEnvironment class
-        from paasng.publish.entrance.exposer import get_exposed_url
-
-        entrance = get_exposed_url(self)
-        return entrance.address if entrance else None
-
     def is_production(self) -> bool:
         """判断当前环境是否用于生产"""
         return self.environment == 'prod'

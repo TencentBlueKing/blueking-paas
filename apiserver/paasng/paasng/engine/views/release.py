@@ -54,9 +54,10 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except Deployment.DoesNotExist:
             raise error_codes.APP_NOT_RELEASED
 
+        entrance = get_exposed_url(deployment.app_environment)
         data = {
             'deployment': DeploymentSLZ(deployment).data,
-            'exposed_link': {"url": deployment.app_environment.get_exposed_link()},
+            'exposed_link': {"url": entrance.address if entrance else None},
         }
         if serializer.data['with_processes']:
             _specs = ProcessManager(module_env.engine_app).list_processes_specs()

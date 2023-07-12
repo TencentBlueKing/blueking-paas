@@ -214,8 +214,7 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
     labels = {}
     # 由于云原生应用对命名空间进行合并（仅保留 stag/prod 两个命名空间），因此查询进程信息，需要带上模块信息的 labels
     if wl_app.type == WlAppType.CLOUD_NATIVE:
-        module_name = EngineApp.objects.get(region=wl_app.region, name=wl_app.name).env.module.name
-        labels = {MODULE_NAME_ANNO_KEY: module_name}
+        labels = {MODULE_NAME_ANNO_KEY: wl_app.module_name}
 
     procs = process_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
     procs_items = ProcSpecsSerializer(procs.items, many=True)

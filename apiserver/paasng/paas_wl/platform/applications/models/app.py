@@ -68,6 +68,12 @@ class App(UuidAuditedModel):
 
         return self.scheduler_safe_name
 
+    @cached_property
+    def module_name(self):
+        from paasng.engine.models import EngineApp
+
+        return EngineApp.objects.get(region=self.region, name=self.name).env.module.name
+
     @property
     def latest_config(self):
         return self.config_set.latest()

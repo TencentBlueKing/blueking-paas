@@ -25,7 +25,6 @@ from jsonfield import JSONField
 
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import UuidAuditedModel
-from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.platform.applications.models.validators import validate_app_name, validate_app_structure
 
 logger = logging.getLogger(__name__)
@@ -71,6 +70,8 @@ class App(UuidAuditedModel):
 
     @cached_property
     def module_name(self):
+        from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
+
         return get_metadata(self).module_name
 
     @property

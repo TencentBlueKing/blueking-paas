@@ -27,6 +27,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from paas_wl.cnative.specs.constants import MODULE_NAME_ANNO_KEY
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
@@ -54,6 +55,7 @@ from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.watch import watch_process_events
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.engine.models import EngineApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.operations.constant import OperationType
@@ -142,7 +144,6 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     # Use special negotiation class to accept "text/event-stream" content type
@@ -210,10 +211,15 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
     :param release_id: if given, include instances created by given release only
     :return: A dict with "processes" and "instances"
     """
-    procs = process_kmodel.list_by_app_with_meta(app=wl_app)
+    labels = {}
+    # 由于云原生应用对命名空间进行合并（仅保留 stag/prod 两个命名空间），因此查询进程信息，需要带上模块信息的 labels
+    if wl_app.type == WlAppType.CLOUD_NATIVE:
+        labels = {MODULE_NAME_ANNO_KEY: wl_app.module_name}
+
+    procs = process_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
     procs_items = ProcSpecsSerializer(procs.items, many=True)
 
-    insts = instance_kmodel.list_by_app_with_meta(app=wl_app)
+    insts = instance_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
     insts_items = InstanceForDisplaySLZ(insts.items, many=True)
 
     # Filter instances if required

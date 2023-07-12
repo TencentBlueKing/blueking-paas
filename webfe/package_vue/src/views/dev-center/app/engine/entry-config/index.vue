@@ -10,7 +10,6 @@
         :active.sync="active"
         ext-cls="domain-tab-cls"
         type="unborder-card"
-        :key="active"
         @tab-change="handleTabChange"
       >
         <bk-tab-panel
@@ -74,6 +73,7 @@ export default {
     },
     panels() {
       let panelsData = [];
+      // 运营者不需要访问地址
       if (this.curAppInfo.role.name !== 'operator') {
         panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
       }
@@ -87,6 +87,17 @@ export default {
         panelsData.push({ name: 'approval', label: this.$t('单据审批') });
       }
       return panelsData;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.$nextTick(() => {
+        if (this.curAppInfo.role.name !== 'operator') {
+          this.active = 'moduleAddress';
+        } else {
+          this.active = 'user_access_control';
+        }
+      });
     },
   },
   methods: {

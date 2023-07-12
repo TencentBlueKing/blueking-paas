@@ -20,6 +20,7 @@ package v1alpha2
 
 import (
 	"fmt"
+	"net"
 	"regexp"
 	"strings"
 
@@ -50,6 +51,9 @@ var (
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
 )
+
+// MaxDNSNameservers is the max number of nameservers in DomainResolution
+const MaxDNSNameservers = 2
 
 // SetupWebhookWithManager ...
 func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -198,6 +202,9 @@ func (r *BkApp) validateAppSpec() *field.Error {
 	if err := r.validateBuildConfig(); err != nil {
 		return err
 	}
+	if err := r.validateDomainResolution(); err != nil {
+		return err
+	}
 
 	procCounter := map[string]int{}
 	for idx, proc := range r.Spec.Processes {
@@ -257,6 +264,52 @@ func (r *BkApp) validateBuildConfig() *field.Error {
 				proc.Name,
 				fmt.Sprintf("image not configured for process %s", proc.Name),
 			)
+		}
+	}
+	return nil
+}
+
+// Validate the domain resolution config
+func (r *BkApp) validateDomainResolution() *field.Error {
+	if r.Spec.DomainResolution == nil {
+		return nil
+	}
+	dsField := field.NewPath("spec").Child("domainResolution")
+
+	// Validate DNS nameservers
+	servers := r.Spec.DomainResolution.Nameservers
+	if len(servers) > MaxDNSNameservers {
+		return field.Invalid(
+			dsField.Child("nameservers"),
+			servers,
+			fmt.Sprintf("must not have more than %v nameservers", MaxDNSNameservers),
+		)
+	}
+	for i, ns := range servers {
+		if ip := net.ParseIP(ns); ip == nil {
+			return field.Invalid(dsField.Child("nameservers").Index(i), ns, "must be valid IP address")
+		}
+	}
+
+	// Validate host aliases
+	hostAliases := r.Spec.DomainResolution.HostAliases
+	for i, alias := range hostAliases {
+		if ip := net.ParseIP(alias.IP); ip == nil {
+			return field.Invalid(
+				dsField.Child("hostAliases").Index(i).Child("ip"),
+				alias.IP,
+				"must be valid IP address",
+			)
+		}
+		for j, hostname := range alias.Hostnames {
+			errs := validation.IsDNS1123Subdomain(hostname)
+			if len(errs) > 0 {
+				return field.Invalid(
+					dsField.Child("hostAliases").Index(i).Child("hostnames").Index(j),
+					hostname,
+					"must be valid hostname",
+				)
+			}
 		}
 	}
 	return nil

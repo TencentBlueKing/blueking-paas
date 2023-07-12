@@ -35,9 +35,10 @@ const (
 )
 
 // CheckPodHealthStatus check if the pod is healthy
-// For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+// For a Pod, meaning of different health statuses:
+// - healthy: the Pod is successfully complete or is Ready
+// - unhealthy: the Pod is restarting or is Failed
+// - progressing: the Pod is still running and condition `PodReady` is False.
 func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	healthyStatus := &HealthStatus{
 		Phase:   paasv1alpha2.HealthHealthy,

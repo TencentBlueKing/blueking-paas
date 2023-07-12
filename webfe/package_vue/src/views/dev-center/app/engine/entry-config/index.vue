@@ -10,6 +10,7 @@
         :active.sync="active"
         ext-cls="domain-tab-cls"
         type="unborder-card"
+        :key="active"
         @tab-change="handleTabChange"
       >
         <bk-tab-panel
@@ -64,7 +65,7 @@ export default {
   data() {
     return {
       isLoading: true,
-      active: 'moduleAddress',
+      active: '',
     };
   },
   computed: {
@@ -72,7 +73,10 @@ export default {
       return this.$store.state.region.access_control.module.map(e => e);
     },
     panels() {
-      const panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
+      let panelsData = [];
+      if (this.curAppInfo.role.name !== 'operator') {
+        panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
+      }
       if (this.accessControl.includes('user_access_control')) {   // 用户限制
         panelsData.push({ name: 'user_access_control', label: this.$t('用户限制') });
       }

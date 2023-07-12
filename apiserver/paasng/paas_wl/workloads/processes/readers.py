@@ -62,15 +62,15 @@ process_kmodel = ProcessReader(Process)
 class InstanceReader(AppEntityReader[Instance]):
     """Customized reader for ProcInstance"""
 
-    def list_by_process_type(self, wl_app: 'WlApp', process_type: str) -> List[Instance]:
+    def list_by_process_type(self, app: 'WlApp', process_type: str) -> List[Instance]:
         """List instances by process type"""
-        labels = ProcessAPIAdapter.get_kube_pod_selector(wl_app, process_type)
-        return self.list_by_app(wl_app, labels=labels)
+        labels = ProcessAPIAdapter.get_kube_pod_selector(app, process_type)
+        return self.list_by_app(app, labels=labels)
 
-    def list_by_app_with_meta(self, wl_app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
+    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
         """Overwrite original method to remove slugbuilder pods"""
-        resources = super().list_by_app_with_meta(wl_app, labels=labels)
-        if wl_app.type == WlAppType.CLOUD_NATIVE:
+        resources = super().list_by_app_with_meta(app, labels=labels)
+        if app.type == WlAppType.CLOUD_NATIVE:
             resources.items = list(self.filter_cnative_instances(resources.items))
         else:
             # Ignore instances with no valid "release_version" label

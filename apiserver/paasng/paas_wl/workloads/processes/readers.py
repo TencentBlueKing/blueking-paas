@@ -62,16 +62,16 @@ process_kmodel = ProcessReader(Process)
 class InstanceReader(AppEntityReader[Instance]):
     """Customized reader for ProcInstance"""
 
-    def list_by_process_type(self, app: 'WlApp', process_type: str) -> List[Instance]:
+    def list_by_process_type(self, wl_app: 'WlApp', process_type: str) -> List[Instance]:
         """List instances by process type"""
-        labels = ProcessAPIAdapter.get_kube_pod_selector(app, process_type)
-        return self.list_by_app(app, labels=labels)
+        labels = ProcessAPIAdapter.get_kube_pod_selector(wl_app, process_type)
+        return self.list_by_app(wl_app, labels=labels)
 
-    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
+    def list_by_app_with_meta(self, wl_app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
         """Overwrite original method to remove slugbuilder pods"""
-        resources = super().list_by_app_with_meta(app, labels=labels)
-        if app.type == WlAppType.CLOUD_NATIVE:
-            resources.items = list(self.filter_cnative_insts(app, resources.items))
+        resources = super().list_by_app_with_meta(wl_app, labels=labels)
+        if wl_app.type == WlAppType.CLOUD_NATIVE:
+            resources.items = list(self.filter_cnative_instances(resources.items))
         else:
             # Ignore instances with no valid "release_version" label
             resources.items = [r for r in resources.items if r.version > 0]
@@ -90,12 +90,12 @@ class InstanceReader(AppEntityReader[Instance]):
             )
 
     @staticmethod
-    def filter_cnative_insts(app: 'WlApp', items: Iterable[Instance]) -> Iterable[Instance]:
+    def filter_cnative_instances(items: Iterable[Instance]) -> Iterable[Instance]:
         """Filter instances for cloud-native applications, remove hooks and other
         unrelated items.
         """
         for inst in items:
-            if inst.name.startswith('pre-release-hook'):
+            if inst.name.startswith('pre-release-hook') or inst.name.startswith('pre-rel'):
                 continue
             yield inst
 

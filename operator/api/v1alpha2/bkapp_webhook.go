@@ -307,7 +307,8 @@ func (r *BkApp) validateDomainResolution() *field.Error {
 				return field.Invalid(
 					dsField.Child("hostAliases").Index(i).Child("hostnames").Index(j),
 					hostname,
-					"must be valid hostname")
+					"must be valid hostname",
+				)
 			}
 		}
 	}

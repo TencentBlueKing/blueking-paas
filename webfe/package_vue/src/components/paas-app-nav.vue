@@ -374,7 +374,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appSummary',
+            name: 'appBaseInfo',
             params: {
               id: this.curAppInfo.application.code,
             },

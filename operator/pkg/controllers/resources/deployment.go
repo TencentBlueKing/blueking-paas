@@ -106,6 +106,8 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 						HostAliases:      buildHostAliases(app),
 						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq),
 						ImagePullSecrets: buildImagePullSecrets(app),
+						// 不默认向 Pod 中挂载 ServiceAccount Token
+						AutomountServiceAccountToken: lo.ToPtr(false),
 					},
 				},
 			},

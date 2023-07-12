@@ -71,7 +71,7 @@ class InstanceReader(AppEntityReader[Instance]):
         """Overwrite original method to remove slugbuilder pods"""
         resources = super().list_by_app_with_meta(app, labels=labels)
         if app.type == WlAppType.CLOUD_NATIVE:
-            resources.items = list(self.filter_cnative_insts(app, resources.items))
+            resources.items = list(self.filter_cnative_instances(resources.items))
         else:
             # Ignore instances with no valid "release_version" label
             resources.items = [r for r in resources.items if r.version > 0]
@@ -90,12 +90,12 @@ class InstanceReader(AppEntityReader[Instance]):
             )
 
     @staticmethod
-    def filter_cnative_insts(app: 'WlApp', items: Iterable[Instance]) -> Iterable[Instance]:
+    def filter_cnative_instances(items: Iterable[Instance]) -> Iterable[Instance]:
         """Filter instances for cloud-native applications, remove hooks and other
         unrelated items.
         """
         for inst in items:
-            if inst.name.startswith('pre-release-hook'):
+            if inst.name.startswith('pre-rel'):
                 continue
             yield inst
 

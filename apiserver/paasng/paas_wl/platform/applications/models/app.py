@@ -68,6 +68,12 @@ class App(UuidAuditedModel):
 
         return self.scheduler_safe_name
 
+    @cached_property
+    def module_name(self):
+        from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
+
+        return get_metadata(self).module_name
+
     @property
     def latest_config(self):
         return self.config_set.latest()

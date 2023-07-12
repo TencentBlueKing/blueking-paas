@@ -72,6 +72,10 @@ type AppSpec struct {
 	// +optional
 	Hooks *AppHooks `json:"hooks,omitempty"`
 
+	// Domain name resolution config
+	// +optional
+	DomainResolution *DomainResConfig `json:"domainResolution,omitempty"`
+
 	// EnvOverlay holds environment specified configurations, includes replica
 	// count and environment variables.
 	// +optional
@@ -245,6 +249,28 @@ type Hook struct {
 
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
+}
+
+// DomainResConfig defines the domain resolution config of the application
+type DomainResConfig struct {
+	// Nameservers specifies the IP addresses of the name servers
+	// +optional
+	Nameservers []string `json:"nameservers,omitempty"`
+
+	// HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
+	// file if specified. This is only valid for non-hostNetwork pods.
+	// NOTE: Copied from Kubernetes PodSpec API.
+	// +optional
+	HostAliases []HostAlias `json:"hostAliases,omitempty"`
+}
+
+// HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
+// pod's hosts file.
+type HostAlias struct {
+	// IP address of the host file entry.
+	IP string `json:"ip,omitempty"`
+	// Hostnames for the above IP address.
+	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 // AppConfig is bkapp related configuration, such as environment variables, etc.

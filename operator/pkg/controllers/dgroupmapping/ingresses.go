@@ -43,8 +43,8 @@ type DGroupMappingSyncer struct {
 }
 
 // NewDGroupMappingSyncer creates a DGroupMappingSyncer object
-// - bkapp is the owner for current syncer, usually is the referenced BkApp object
-//   of DomainGroupMapping object.
+//   - bkapp is the owner for current syncer, usually is the referenced BkApp object
+//     of DomainGroupMapping object.
 func NewDGroupMappingSyncer(client client.Client, bkapp *paasv1alpha2.BkApp) *DGroupMappingSyncer {
 	return &DGroupMappingSyncer{client: client, bkapp: bkapp}
 }

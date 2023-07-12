@@ -387,6 +387,63 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
+	Context("Test DomainResolution nameservers", func() {
+		It("Invalid IP address", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				Nameservers: []string{"foo@example!"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must be valid IP address"))
+		})
+		It("Too many entries", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				Nameservers: []string{"8.8.8.8", "8.8.8.9", "1.1.1.1"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(
+				err.Error(),
+			).To(ContainSubstring(fmt.Sprintf("must not have more than %v nameservers", paasv1alpha2.MaxDNSNameservers)))
+		})
+		It("Normal", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				Nameservers: []string{"8.8.8.8", "1.1.1.1"},
+			}
+			Expect(bkapp.ValidateCreate()).To(BeNil())
+		})
+	})
+
+	Context("Test DomainResolution hostAliases", func() {
+		It("Invalid IP address", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{IP: "foo@invalid!"},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must be valid IP address"))
+		})
+		It("Invalid hostname", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{IP: "127.0.0.1", Hostnames: []string{"foo@invalid!"}},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must be valid hostname"))
+		})
+		It("Normal", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"foo.localhost", "bar.localhost"},
+					},
+				},
+			}
+			Expect(bkapp.ValidateCreate()).To(BeNil())
+		})
+	})
+
 	Context("Test envOverlay", func() {
 		BeforeEach(func() {
 			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{}

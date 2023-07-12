@@ -169,6 +169,7 @@ HELMIFY ?= $(LOCALBIN)/helmify
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.0
+GOCILINT_VERSION ?= v1.53.3
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -204,7 +205,8 @@ $(GOFUMPT): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOCILINT) ## 安装 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
+	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOCILINT_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOCILINT_VERSION)
 
 .PHONY: helmify
 helmify: $(HELMIFY) ## 安装 helmify 二进制

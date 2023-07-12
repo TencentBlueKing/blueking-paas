@@ -95,7 +95,7 @@ class InstanceReader(AppEntityReader[Instance]):
         unrelated items.
         """
         for inst in items:
-            if inst.name.startswith('pre-release-hook') or inst.name.startswith('pre-rel'):
+            if inst.name.startswith('pre-rel'):
                 continue
             yield inst
 

@@ -72,10 +72,14 @@ export default {
       return this.$store.state.region.access_control.module.map(e => e);
     },
     panels() {
-      let panelsData = [];
+      let panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
       // 运营者不需要访问地址
-      if (this.curAppInfo.role.name !== 'operator') {
-        panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
+      if (this.curAppInfo.role.name === 'operator') {
+        panelsData = [];
+      }
+      // 开发者只有访问地址
+      if (this.curAppInfo.role.name === 'developer') {
+        return panelsData;
       }
       if (this.accessControl.includes('user_access_control')) {   // 用户限制
         panelsData.push({ name: 'user_access_control', label: this.$t('用户限制') });

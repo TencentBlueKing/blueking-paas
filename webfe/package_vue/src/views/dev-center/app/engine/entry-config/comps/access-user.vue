@@ -3,7 +3,7 @@
     <paas-content-loader
       :is-loading="isPermissionChecking"
       placeholder="user-limit-loading"
-      :offset-top="25"
+      :offset-top="0"
       class="access-user"
     >
       <section>
@@ -43,7 +43,7 @@
           </p>
         </div>
         <template v-if="!isPermissionChecking && isUseUserPermission">
-          <div class="bk-button-group ml25 mt15">
+          <div class="bk-button-group mt15">
             <bk-button
               v-for="(panel, index) in userPanels"
               :key="index"
@@ -1537,7 +1537,7 @@ export default {
 
       .table-container{
         background: #fff;
-        padding: 0px 24px 20px;
+        padding: 0px 0px 20px;
         .ps-table-bar {
             position: relative;
             padding: 16px 0;

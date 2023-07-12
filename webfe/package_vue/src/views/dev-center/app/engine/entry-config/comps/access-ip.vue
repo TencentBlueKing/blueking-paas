@@ -3,7 +3,7 @@
     <paas-content-loader
       :is-loading="isPermissionChecking"
       placeholder="user-limit-loading"
-      :offset-top="25"
+      :offset-top="0"
       class="middle"
     >
       <section v-show="!isPermissionChecking">

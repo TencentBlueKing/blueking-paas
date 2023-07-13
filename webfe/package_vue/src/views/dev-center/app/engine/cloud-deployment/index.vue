@@ -1,8 +1,11 @@
 <template lang="html">
   <div class="right-main">
-    <div class="title">
-      {{ $t('应用编排') }}
-    </div>
+    <module-top-bar
+      :title="$t('应用编排')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
     <paas-content-loader
       :is-loading="isLoading"
       :placeholder="loaderPlaceholder"
@@ -136,11 +139,13 @@
 </template>
 
 <script>
+import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import { bus } from '@/common/bus';
 
 export default {
   components: {
+    moduleTopBar,
   },
   mixins: [appBaseMixin],
   data() {

@@ -265,472 +265,472 @@
   </paas-content-loader>
 </template>
 
-<script>
-    import _ from 'lodash';
-    import { bus } from '@/common/bus';
+<script>import _ from 'lodash';
+import { bus } from '@/common/bus';
 
-    export default {
-        components: {
-        },
-        props: {
-            moduleId: {
-                type: String,
-                default: ''
-            },
-            cloudAppData: {
-                type: Object,
-                default: {}
-            }
-        },
-        data () {
-            return {
-                panels: [],
-                active: 'mission',
-                currentType: 'card',
-                showEditIconIndex: null,
-                iconIndex: '',
-                panelActive: 0,
-                itemValue: '',
-                formData: {
-                    image: '',
-                    command: [],
-                    args: [],
-                    memory: '256Mi',
-                    cpu: '500m',
-                    replicas: 1,
-                    targetPort: 8080
-                },
-                bkappAnnotations: {},
-                preFormData: {
-                    loaclEnabled: false,
-                    command: [],
-                    args: []
-                },
-                isEdited: false,
-                command: [],
-                args: [],
-                allowCreate: true,
-                hasDeleteIcon: true,
-                processData: [],
-                localCloudAppData: {},
-                memoryData: [
-                    { key: '256 Mi', value: '256Mi' },
-                    { key: '512 Mi', value: '512Mi' },
-                    { key: '1024 Mi', value: '1024Mi' }
-                ],
-                cpuData: [
-                    { key: '500m', value: '500m' },
-                    { key: '1000m', value: '1000m' },
-                    { key: '2000m', value: '2000m' }
-                ],
-                hooks: null,
-                isLoading: true,
-                rules: {
-                    image: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            regex: /^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
-                            message: this.$t('地址格式不正确'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    replicas: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            min: 1,
-                            message: this.$t('有效值范围1-5'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 5,
-                            message: this.$t('有效值范围1-5'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                isBlur: true,
-                imageCredential: '',
-                imageCredentialList: [],
-                targetPortErrTips: '',
-                isTargetPortErrTips: false
-            };
-        },
-        computed: {
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            },
-            appCode () {
-                return this.$route.params.id;
-            },
-            imageCrdlAnnoKey () {
-                return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive].name}`;
-            }
-        },
-        watch: {
-            cloudAppData: {
-                handler (val) {
-                    if (val.spec) {
-                        this.localCloudAppData = _.cloneDeep(val);
-                        this.processData = val.spec.processes;
-                        this.hooks = val.spec.hooks;
-                        this.preFormData.loaclEnabled = !!this.hooks && !!(this.hooks.preRelease.command.length || this.hooks.preRelease.args.length);
-                        if (this.preFormData.loaclEnabled) {
-                            this.preFormData.command = (this.hooks && this.hooks.preRelease.command) || [];
-                            this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
-                        }
-                        this.formData = this.processData[this.panelActive];
-                        this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
-                    }
-                    this.setPanelsData();
-                },
-                immediate: true
-                // deep: true
-            },
-            formData: {
-                handler (val) {
-                    if (this.localCloudAppData.spec) {
-                        val.name = this.panels[this.panelActive] && this.panels[this.panelActive].name;
-                        val.replicas = val.replicas && Number(val.replicas);
-                        if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
-                            val.targetPort = Number(val.targetPort);
-                        }
-                        this.$set(this.localCloudAppData.spec.processes, this.panelActive, val);
-                        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-                    }
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 500);
-                },
-                immediate: true,
-                deep: true
-            },
-            preFormData: {
-                handler (val) {
-                    if (this.localCloudAppData.spec) {
-                        let hooks = { preRelease: { command: val.command, args: val.args } };
-                        if (!this.preFormData.loaclEnabled || (!this.preFormData.command.length && !this.preFormData.args.length)) {
-                            hooks = null;
-                        }
-                        this.$set(this.localCloudAppData.spec, 'hooks', hooks);
-                        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-                    }
-                },
-                immediate: true,
-                deep: true
-            },
-            'preFormData.loaclEnabled' (value) {
-                if (!value) {
-                    this.$set(this.localCloudAppData.spec, 'hooks', null);
-                    this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-                }
-            },
-            bkappAnnotations: {
-                handler (val) {
-                    if (val[this.imageCrdlAnnoKey]) {
-                        this.$set(this.localCloudAppData.metadata, 'annotations', val);
-                        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-                    } else {
-                        delete val[this.imageCrdlAnnoKey];
-                    }
-                },
-                deep: true
-            },
-            'formData.targetPort' (value) {
-                if (value === null || value === '') {
-                    this.isTargetPortErrTips = false;
-                    return false;
-                }
-                if (value) {
-                    if (isNaN(Number(value))) {
-                        this.isTargetPortErrTips = true;
-                        this.targetPortErrTips = this.$t('只能输入数字');
-                    } else {
-                        if (!(value >= 1 && value <= 65535)) {
-                            this.isTargetPortErrTips = true;
-                            this.targetPortErrTips = this.$t('端口有效范围1-65535');
-                        } else {
-                            this.isTargetPortErrTips = false;
-                        }
-                    }
-                }
-            },
-
-            panels: {
-              handler (val) {
-                if (!val.length) return;
-                const isDisabled = val[this.panelActive].isEdit;
-                bus.$emit('release-disabled', isDisabled);
-              },
-              deep: true
-            }
-        },
-        created () {
-            this.getImageCredentialList();
-        },
-        mounted () {
-            this.$refs.mirrorUrl.focus();
-        },
-        methods: {
-            setPanelsData () {
-                this.panels = this.processData.map(e => {
-                    e.isEdit = false;
-                    return e;
-                });
-            },
-            handlePanelClick (i, e, isAdd) {
-                this.panelActive = i;
-                this.formData = this.processData[i] || {
-                    name: this.itemValue,
-                    image: '',
-                    command: [],
-                    args: [],
-                    memory: '256Mi',
-                    cpu: '500m',
-                    replicas: 1,
-                    targetPort: null
-                };
-                if (e && e.target === document.querySelector('.bk-input-cls input')) {
-                    this.$nextTick(() => {
-                        this.$set(this.panels[i], 'isEdit', true);
-                    });
-                } else {
-                    !isAdd && this.$refs.mirrorUrl.focus();
-                }
-                // tab切换清除提示
-                this.$refs.formDeploy.clearError();
-                this.$refs.formResource.clearError();
-            },
-            handlePanelEnter (i) {
-                if (i === 0) return;
-                this.showEditIconIndex = i;
-            },
-            handlePanelLeave (i) {
-                this.showEditIconIndex = null;
-            },
-            handleIconClick (i) {
-                this.resetData();
-                this.panels[i].isEdit = true;
-                this.iconIndex = i;
-                this.itemValue = this.panels[i].name;
-                this.handlePanelClick(i, null, 'add');
-                setTimeout(() => {
-                    this.$refs.panelInput && this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-                }, 500);
-            },
-
-            // 删除item 需要重置
-            handleDelete (i) {
-                this.panelActive = 0;
-                this.processData.splice(i, 1);
-                this.setPanelsData();
-                setTimeout(() => {
-                    this.handlePanelClick(0);
-                    this.$set(this.localCloudAppData.spec, 'processes', this.processData);
-                    this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-                }, 500);
-            },
-
-            // 鼠标失去焦点
-            handleBlur () {
-                console.log('this.panels[this.iconIndex]', this.panels[this.iconIndex]);
-                if (this.panels[this.iconIndex]) { // 编辑
-                    if (!this.itemValue) {
-                        this.panels.splice(this.iconIndex, 1);
-                    } else {
-                        const canHandel = this.handleRepeatData(this.iconIndex);
-                        if (!canHandel) return;
-                        this.panels[this.iconIndex].name = this.itemValue;
-                    }
-                } else { // 新增
-                    const canHandel = this.handleRepeatData();
-                    if (!canHandel) return;
-                    if (!this.itemValue) {
-                        this.panels.splice(this.panels.length - 1, 1);
-                    } else {
-                        this.panels[this.panels.length - 1].name = this.itemValue;
-                        this.handlePanelClick(this.panels.length - 1);
-                    }
-                }
-                this.panels = this.panels.map(e => {
-                    e.isEdit = false;
-                    return e;
-                });
-            },
-
-            // 处理重复添加和正则
-            handleRepeatData (index) {
-                if (!this.isBlur) return;
-                this.isBlur = false; // 处理enter会触发两次的bug
-                let panels = this.panels;
-                if (index) {
-                    panels = this.panels.filter((e, i) => i !== index);
-                }
-                const panelName = panels.map(e => e.name);
-                if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('不允许添加同名进程')
-                    });
-                    setTimeout(() => {
-                        this.isBlur = true;
-                        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-                    }, 100);
-                    return false;
-                } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
-                    });
-                    setTimeout(() => {
-                        this.isBlur = true;
-                        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-                    }, 100);
-                    return false;
-                } else {
-                    setTimeout(() => {
-                        this.isBlur = true;
-                    }, 100);
-                }
-                return true;
-            },
-
-            // 处理回车
-            handleEnter () {
-                this.handleBlur();
-            },
-
-            // 点击icon新增数据
-            handleAddData () {
-                this.iconIndex = '';
-                this.resetData();
-                this.panels.push({
-                    name: 'name',
-                    isEdit: true
-                });
-                this.itemValue = 'name';
-                this.panelActive = this.panels.length - 1;
-                this.handlePanelClick(this.panelActive, null, 'add');
-                setTimeout(() => {
-                    this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-                }, 100);
-            },
-
-            resetData () {
-                this.panels.forEach(element => {
-                    element.isEdit = false;
-                });
-            },
-
-            // 是否开启部署前置命令
-            togglePermission () {
-                this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
-            },
-
-            async formDataValidate (index) {
-                try {
-                  await this.$refs.formResource.validate();
-                  await this.$refs.formDeploy.validate();
-                  if (index) {
-                      this.handlePanelValidateSwitch(index);
-                  }
-                  return true;
-                } catch (error) {
-                  console.error(error);
-                  return false;
-                }
-            },
-
-            // 切换至未符合规则的Panel
-            handlePanelValidateSwitch (i) {
-                this.panelActive = i;
-                this.formData = this.localCloudAppData.spec.processes[i] || {
-                    image: '',
-                    command: [],
-                    args: [],
-                    memory: '256Mi',
-                    cpu: '500m',
-                    replicas: 1,
-                    targetPort: 8080
-                };
-                this.$refs.mirrorUrl.focus();
-            },
-
-            trimStr (str) {
-                return str.replace(/(^\s*)|(\s*$)/g, '');
-            },
-
-            // 启动命令复制
-            copyStartMommand (val) {
-                const value = this.trimStr(val);
-                if (!value) {
-                    this.$bkMessage({ theme: 'error', message: this.$t('粘贴内容不能为空'), delay: 2000, dismissable: false });
-                    return [];
-                }
-                const commandArr = value.split(',');
-                commandArr.forEach(item => {
-                    if (!this.formData.command.includes(item)) {
-                        this.formData.command.push(item);
-                    }
-                });
-                return this.formData.command;
-            },
-
-            copyCommandParameter (val) {
-                const value = this.trimStr(val);
-                if (!value) {
-                    this.$bkMessage({ theme: 'error', message: this.$t('粘贴内容不能为空'), delay: 2000, dismissable: false });
-                    return [];
-                }
-                const commandArr = value.split(',');
-                commandArr.forEach(item => {
-                    if (!this.formData.args.includes(item)) {
-                        this.formData.args.push(item);
-                    }
-                });
-                return this.formData.args;
-            },
-
-            useExample () {
-                this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
-                if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
-                    this.formData.command = [];
-                    this.formData.args = [];
-                    this.formData.targetPort = 80;
-                    return;
-                }
-                this.formData.command = ['bash', '/app/start_web.sh'];
-                this.formData.args = [];
-                this.formData.targetPort = 5000;
-            },
-
-            // 获取凭证列表
-            async getImageCredentialList () {
-                try {
-                    const appCode = this.appCode;
-                    const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
-                    this.imageCredentialList = res;
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-
-            // 前往创建镜像凭证页面
-            handlerCreateImageCredential () {
-                this.$router.push({ name: 'imageCredential' });
-            }
-        }
+export default {
+  components: {
+  },
+  props: {
+    moduleId: {
+      type: String,
+      default: '',
+    },
+    cloudAppData: {
+      type: Object,
+      default: {},
+    },
+  },
+  data() {
+    return {
+      panels: [],
+      active: 'mission',
+      currentType: 'card',
+      showEditIconIndex: null,
+      iconIndex: '',
+      panelActive: 0,
+      itemValue: '',
+      formData: {
+        image: '',
+        command: [],
+        args: [],
+        memory: '256Mi',
+        cpu: '500m',
+        replicas: 1,
+        targetPort: 8080,
+      },
+      bkappAnnotations: {},
+      preFormData: {
+        loaclEnabled: false,
+        command: [],
+        args: [],
+      },
+      isEdited: false,
+      command: [],
+      args: [],
+      allowCreate: true,
+      hasDeleteIcon: true,
+      processData: [],
+      localCloudAppData: {},
+      memoryData: [
+        { key: '256 Mi', value: '256Mi' },
+        { key: '512 Mi', value: '512Mi' },
+        { key: '1024 Mi', value: '1024Mi' },
+      ],
+      cpuData: [
+        { key: '500m', value: '500m' },
+        { key: '1000m', value: '1000m' },
+        { key: '2000m', value: '2000m' },
+      ],
+      hooks: null,
+      isLoading: true,
+      rules: {
+        image: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
+            message: this.$t('地址格式不正确'),
+            trigger: 'blur',
+          },
+        ],
+        replicas: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            min: 1,
+            message: this.$t('有效值范围1-5'),
+            trigger: 'blur',
+          },
+          {
+            max: 5,
+            message: this.$t('有效值范围1-5'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      isBlur: true,
+      imageCredential: '',
+      imageCredentialList: [],
+      targetPortErrTips: '',
+      isTargetPortErrTips: false,
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    appCode() {
+      return this.$route.params.id;
+    },
+    imageCrdlAnnoKey() {
+      return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive].name}`;
+    },
+  },
+  watch: {
+    cloudAppData: {
+      handler(val) {
+        if (val.spec) {
+          this.localCloudAppData = _.cloneDeep(val);
+          this.processData = val.spec.processes;
+          this.hooks = val.spec.hooks;
+          this.preFormData.loaclEnabled = !!this.hooks && !!(this.hooks.preRelease.command.length
+          || this.hooks.preRelease.args.length);
+          if (this.preFormData.loaclEnabled) {
+            this.preFormData.command = (this.hooks && this.hooks.preRelease.command) || [];
+            this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
+          }
+          this.formData = this.processData[this.panelActive];
+          this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+        }
+        this.setPanelsData();
+      },
+      immediate: true,
+      // deep: true
+    },
+    formData: {
+      handler(val) {
+        if (this.localCloudAppData.spec) {
+          val.name = this.panels[this.panelActive] && this.panels[this.panelActive].name;
+          val.replicas = val.replicas && Number(val.replicas);
+          if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
+            val.targetPort = Number(val.targetPort);
+          }
+          this.$set(this.localCloudAppData.spec.processes, this.panelActive, val);
+          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        }
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 500);
+      },
+      immediate: true,
+      deep: true,
+    },
+    preFormData: {
+      handler(val) {
+        if (this.localCloudAppData.spec) {
+          let hooks = { preRelease: { command: val.command, args: val.args } };
+          if (!this.preFormData.loaclEnabled || (!this.preFormData.command.length && !this.preFormData.args.length)) {
+            hooks = null;
+          }
+          this.$set(this.localCloudAppData.spec, 'hooks', hooks);
+          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        }
+      },
+      immediate: true,
+      deep: true,
+    },
+    'preFormData.loaclEnabled'(value) {
+      if (!value) {
+        this.$set(this.localCloudAppData.spec, 'hooks', null);
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }
+    },
+    bkappAnnotations: {
+      handler(val) {
+        if (val[this.imageCrdlAnnoKey]) {
+          this.$set(this.localCloudAppData.metadata, 'annotations', val);
+          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        } else {
+          delete val[this.imageCrdlAnnoKey];
+        }
+      },
+      deep: true,
+    },
+    'formData.targetPort'(value) {
+      if (value === null || value === '') {
+        this.isTargetPortErrTips = false;
+        return false;
+      }
+      if (value) {
+        if (isNaN(Number(value))) {
+          this.isTargetPortErrTips = true;
+          this.targetPortErrTips = this.$t('只能输入数字');
+        } else {
+          if (!(value >= 1 && value <= 65535)) {
+            this.isTargetPortErrTips = true;
+            this.targetPortErrTips = this.$t('端口有效范围1-65535');
+          } else {
+            this.isTargetPortErrTips = false;
+          }
+        }
+      }
+    },
+
+    panels: {
+      handler(val) {
+        if (!val.length) return;
+        const isDisabled = val[this.panelActive].isEdit;
+        bus.$emit('release-disabled', isDisabled);
+      },
+      deep: true,
+    },
+  },
+  created() {
+    this.getImageCredentialList();
+  },
+  mounted() {
+    this.$refs.mirrorUrl.focus();
+  },
+  methods: {
+    setPanelsData() {
+      this.panels = this.processData.map((e) => {
+        e.isEdit = false;
+        return e;
+      });
+    },
+    handlePanelClick(i, e, isAdd) {
+      this.panelActive = i;
+      this.formData = this.processData[i] || {
+        name: this.itemValue,
+        image: '',
+        command: [],
+        args: [],
+        memory: '256Mi',
+        cpu: '500m',
+        replicas: 1,
+        targetPort: null,
+      };
+      if (e && e.target === document.querySelector('.bk-input-cls input')) {
+        this.$nextTick(() => {
+          this.$set(this.panels[i], 'isEdit', true);
+        });
+      } else {
+        !isAdd && this.$refs.mirrorUrl.focus();
+      }
+      // tab切换清除提示
+      this.$refs.formDeploy.clearError();
+      this.$refs.formResource.clearError();
+    },
+    handlePanelEnter(i) {
+      if (i === 0) return;
+      this.showEditIconIndex = i;
+    },
+    handlePanelLeave() {
+      this.showEditIconIndex = null;
+    },
+    handleIconClick(i) {
+      this.resetData();
+      this.panels[i].isEdit = true;
+      this.iconIndex = i;
+      this.itemValue = this.panels[i].name;
+      this.handlePanelClick(i, null, 'add');
+      setTimeout(() => {
+        this.$refs.panelInput && this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+      }, 500);
+    },
+
+    // 删除item 需要重置
+    handleDelete(i) {
+      this.panelActive = 0;
+      this.processData.splice(i, 1);
+      this.setPanelsData();
+      setTimeout(() => {
+        this.handlePanelClick(0);
+        this.$set(this.localCloudAppData.spec, 'processes', this.processData);
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }, 500);
+    },
+
+    // 鼠标失去焦点
+    handleBlur() {
+      console.log('this.panels[this.iconIndex]', this.panels[this.iconIndex]);
+      if (this.panels[this.iconIndex]) { // 编辑
+        if (!this.itemValue) {
+          this.panels.splice(this.iconIndex, 1);
+        } else {
+          const canHandel = this.handleRepeatData(this.iconIndex);
+          if (!canHandel) return;
+          this.panels[this.iconIndex].name = this.itemValue;
+        }
+      } else { // 新增
+        const canHandel = this.handleRepeatData();
+        if (!canHandel) return;
+        if (!this.itemValue) {
+          this.panels.splice(this.panels.length - 1, 1);
+        } else {
+          this.panels[this.panels.length - 1].name = this.itemValue;
+          this.handlePanelClick(this.panels.length - 1);
+        }
+      }
+      this.panels = this.panels.map((e) => {
+        e.isEdit = false;
+        return e;
+      });
+    },
+
+    // 处理重复添加和正则
+    handleRepeatData(index) {
+      if (!this.isBlur) return;
+      this.isBlur = false; // 处理enter会触发两次的bug
+      let { panels } = this;
+      if (index) {
+        panels = this.panels.filter((e, i) => i !== index);
+      }
+      const panelName = panels.map(e => e.name);
+      if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('不允许添加同名进程'),
+        });
+        setTimeout(() => {
+          this.isBlur = true;
+          this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+        }, 100);
+        return false;
+      } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头'),
+        });
+        setTimeout(() => {
+          this.isBlur = true;
+          this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+        }, 100);
+        return false;
+      }
+      setTimeout(() => {
+        this.isBlur = true;
+      }, 100);
+
+      return true;
+    },
+
+    // 处理回车
+    handleEnter() {
+      this.handleBlur();
+    },
+
+    // 点击icon新增数据
+    handleAddData() {
+      this.iconIndex = '';
+      this.resetData();
+      this.panels.push({
+        name: 'name',
+        isEdit: true,
+      });
+      this.itemValue = 'name';
+      this.panelActive = this.panels.length - 1;
+      this.handlePanelClick(this.panelActive, null, 'add');
+      setTimeout(() => {
+        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+      }, 100);
+    },
+
+    resetData() {
+      this.panels.forEach((element) => {
+        element.isEdit = false;
+      });
+    },
+
+    // 是否开启部署前置命令
+    togglePermission() {
+      this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
+    },
+
+    async formDataValidate(index) {
+      try {
+        await this.$refs.formResource.validate();
+        await this.$refs.formDeploy.validate();
+        if (index) {
+          this.handlePanelValidateSwitch(index);
+        }
+        return true;
+      } catch (error) {
+        console.error(error);
+        return false;
+      }
+    },
+
+    // 切换至未符合规则的Panel
+    handlePanelValidateSwitch(i) {
+      this.panelActive = i;
+      this.formData = this.localCloudAppData.spec.processes[i] || {
+        image: '',
+        command: [],
+        args: [],
+        memory: '256Mi',
+        cpu: '500m',
+        replicas: 1,
+        targetPort: 8080,
+      };
+      this.$refs.mirrorUrl.focus();
+    },
+
+    trimStr(str) {
+      return str.replace(/(^\s*)|(\s*$)/g, '');
+    },
+
+    // 启动命令复制
+    copyStartMommand(val) {
+      const value = this.trimStr(val);
+      if (!value) {
+        this.$bkMessage({ theme: 'error', message: this.$t('粘贴内容不能为空'), delay: 2000, dismissable: false });
+        return [];
+      }
+      const commandArr = value.split(',');
+      commandArr.forEach((item) => {
+        if (!this.formData.command.includes(item)) {
+          this.formData.command.push(item);
+        }
+      });
+      return this.formData.command;
+    },
+
+    copyCommandParameter(val) {
+      const value = this.trimStr(val);
+      if (!value) {
+        this.$bkMessage({ theme: 'error', message: this.$t('粘贴内容不能为空'), delay: 2000, dismissable: false });
+        return [];
+      }
+      const commandArr = value.split(',');
+      commandArr.forEach((item) => {
+        if (!this.formData.args.includes(item)) {
+          this.formData.args.push(item);
+        }
+      });
+      return this.formData.args;
+    },
+
+    useExample() {
+      this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
+      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
+        this.formData.command = [];
+        this.formData.args = [];
+        this.formData.targetPort = 80;
+        return;
+      }
+      this.formData.command = ['bash', '/app/start_web.sh'];
+      this.formData.args = [];
+      this.formData.targetPort = 5000;
+    },
+
+    // 获取凭证列表
+    async getImageCredentialList() {
+      try {
+        const { appCode } = this;
+        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+        this.imageCredentialList = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 前往创建镜像凭证页面
+    handlerCreateImageCredential() {
+      this.$router.push({ name: 'imageCredential' });
+    },
+  },
+};
 </script>
 <style lang="scss">
     .process-container{

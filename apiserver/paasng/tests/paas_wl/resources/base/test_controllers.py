@@ -21,6 +21,7 @@ from textwrap import dedent
 import pytest
 from django_dynamic_fixture import G
 
+from paas_wl.release_controller.constants import ImagePullPolicy
 from paas_wl.release_controller.hooks.entities import Command, command_kmodel
 from paas_wl.release_controller.hooks.models import Command as CommandModel
 from paas_wl.resources.base.controllers import CommandHandler
@@ -46,6 +47,7 @@ class TestCommand:
         config = wl_app.latest_config
         config.runtime.image = "busybox:latest"
         config.runtime.entrypoint = ["sh", "-c"]
+        config.runtime.image_pull_policy = ImagePullPolicy.NEVER
         config.save()
         return G(
             CommandModel,
@@ -89,7 +91,8 @@ class TestCommand:
                 {
                     "name": "sidecar",
                     "image": "busybox:latest",
-                    "command": ["sleep", "600"]
+                    "command": ["sleep", "600"],
+                    "imagePullPolicy": "Never"
                 }
             """
             ),

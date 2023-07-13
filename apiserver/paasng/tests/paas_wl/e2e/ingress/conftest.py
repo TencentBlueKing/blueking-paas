@@ -183,7 +183,7 @@ def echo_pod(namespace_maker, framework, e2e_app):
         body=pod_dict,
     )
     KPod(framework.client).wait_for_status(
-        e2e_app.scheduler_safe_name, target_statuses=["Running"], namespace=e2e_app.namespace, timeout=30
+        e2e_app.scheduler_safe_name, target_statuses=["Running"], namespace=e2e_app.namespace, timeout=60
     )
 
 

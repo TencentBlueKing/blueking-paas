@@ -25,7 +25,7 @@ from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.base.kres import KPod
 from paas_wl.resources.kube_res.base import AppEntityManager
 from paas_wl.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.processes.models import Process
+from paas_wl.workloads.processes.entities import Process
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.serializers import extract_type_from_name
 from tests.paas_wl.utils.wl_app import create_wl_release

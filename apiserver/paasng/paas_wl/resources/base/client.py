@@ -38,7 +38,7 @@ from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.base.kres import KNode, set_default_options
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
-from paas_wl.workloads.processes.models import Process
+from paas_wl.workloads.processes.entities import Process
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.base import EnhancedApiClient

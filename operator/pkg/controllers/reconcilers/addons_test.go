@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -81,7 +81,7 @@ var _ = Describe("Test AddonReconciler", func() {
 						// mock QueryAddonSpecs
 						return &http.Response{
 							StatusCode: 200,
-							Body: ioutil.NopCloser(
+							Body: io.NopCloser(
 								bytes.NewBufferString(`{"results": {"version": "5.0.0"}}`),
 							),
 							Header: make(http.Header),
@@ -90,13 +90,13 @@ var _ = Describe("Test AddonReconciler", func() {
 						// mock ProvisionAddonInstance
 						return &http.Response{
 							StatusCode: 200,
-							Body:       ioutil.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
+							Body:       io.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
 							Header:     make(http.Header),
 						}
 					default:
 						return &http.Response{
 							StatusCode: 400,
-							Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+							Body:       io.NopCloser(bytes.NewBufferString(``)),
 							Header:     make(http.Header),
 						}
 					}

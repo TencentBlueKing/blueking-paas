@@ -50,18 +50,18 @@ class PodMapper(CallThroughKresMapper[KPod]):
         # module_name 将作为日志采集的标识 label，拥有 module_name 的 pod ，app_code 将是
         # paasng_app_code，而没有 module_name 的 pod，则是 engine_app.name
         # 理论上，这里的 app_code 就应该是 paasng_app_code，label 中尽量将信息拆散，由上层组装
-        return dict(
-            pod_selector=self.pod_selector,
-            release_version=str(self.process.version),
-            app_code=mdata.get_paas_app_code(),
-            region=self.process.app.region,
-            env=mdata.environment,
-            module_name=mdata.module_name,
-            process_id=self.process.type,
+        return {
+            "pod_selector": self.pod_selector,
+            "release_version": str(self.process.version),
+            "region": self.process.app.region,
+            "app_code": mdata.get_paas_app_code(),
+            "module_name": mdata.module_name,
+            "env": mdata.environment,
+            "process_id": self.process.type,
             # mark deployment as bkapp, maybe we will have other category in the future.
-            category="bkapp",
-            mapper_version="v1",
-        )
+            "category": "bkapp",
+            "mapper_version": "v1",
+        }
 
     @property
     def match_labels(self) -> dict:
@@ -79,10 +79,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def labels(self) -> dict:
-        return dict(
-            pod_selector=self.pod_selector,
-            release_version=str(self.process.version),
-        )
+        return {"pod_selector": self.pod_selector, "release_version": str(self.process.version)}
 
     @property
     def match_labels(self) -> dict:

@@ -302,4 +302,6 @@ class ProcessSerializer(AppEntitySerializer['Process']):
             'imagePullSecrets': process.runtime.image_pull_secrets,
             'nodeSelector': process.schedule.node_selector or None,
             'tolerations': process.schedule.tolerations or None,
+            # 不默认向 Pod 中挂载 ServiceAccount Token
+            'automountServiceAccountToken': False,
         }

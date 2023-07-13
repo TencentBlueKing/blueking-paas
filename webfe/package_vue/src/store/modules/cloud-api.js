@@ -26,20 +26,24 @@ import { json2Query } from '@/common/tools';
 export default {
   namespaced: true,
   state: {
-    cloudAppData: {}
+    cloudAppData: {},
+    isPageEdit: false,
   },
   getters: {},
   mutations: {
-    updateCloudAppData (state, data) {
+    updateCloudAppData(state, data) {
       state.cloudAppData = data;
-    }
+    },
+    updatePageEdit(state, data) {
+      state.isPageEdit = data;
+    },
   },
   actions: {
     /**
          * --
          * @param {Object} params 请求参数：appCode
          */
-    getApis ({ commit, state }, { appCode }, config = {}) {
+    getApis({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/`;
       return http.get(url, config);
     },
@@ -48,7 +52,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode
          */
-    getAppPermissions ({ commit, state }, { appCode }, config = {}) {
+    getAppPermissions({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/permissions/app-permissions/`;
       return http.get(url, config);
     },
@@ -57,7 +61,7 @@ export default {
          * --
          * @param {Object} params
          */
-    getApplyRecords ({ commit, state }, params, config = {}) {
+    getApplyRecords({}, params, config = {}) {
       const requsetParams = Object.assign({}, params);
       delete requsetParams.appCode;
       const url = `${BACKEND_URL}/api/cloudapi/apps/${params.appCode}/apis/permissions/apply-records/?${json2Query(requsetParams)}`;
@@ -68,7 +72,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, recordId
          */
-    getApplyRecordDetail ({ commit, state }, { appCode, recordId }, config = {}) {
+    getApplyRecordDetail({}, { appCode, recordId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/permissions/apply-records/${recordId}/`;
       return http.get(url, config);
     },
@@ -77,7 +81,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, apiId
          */
-    getAllowApplyByApi ({ commit, state }, { appCode, apiId }, config = {}) {
+    getAllowApplyByApi({}, { appCode, apiId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/${apiId}/permissions/allow-apply-by-api/`;
       return http.get(url, config);
     },
@@ -86,7 +90,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, apiId, data
          */
-    apply ({ commit, state }, { appCode, apiId, data }, config = {}) {
+    apply({}, { appCode, apiId, data }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/${apiId}/permissions/apply/`;
       return http.post(url, data, config);
     },
@@ -95,7 +99,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, data
          */
-    renewal ({ commit, state }, { appCode, data }, config = {}) {
+    renewal({}, { appCode, data }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/permissions/renew/`;
       return http.post(url, data, config);
     },
@@ -104,7 +108,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, apiId
          */
-    getResources ({ commit, state }, { appCode, apiId }, config = {}) {
+    getResources({}, { appCode, apiId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/${apiId}/permissions/resources/`;
       return http.get(url, config);
     },
@@ -113,7 +117,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode
          */
-    getSystems ({ commit, state }, { appCode }, config = {}) {
+    getSystems({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/`;
       return http.get(url, config);
     },
@@ -122,7 +126,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode
          */
-    getSysAppPermissions ({ commit, state }, { appCode }, config = {}) {
+    getSysAppPermissions({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/app-permissions/`;
       return http.get(url, config);
     },
@@ -131,7 +135,7 @@ export default {
          * --
          * @param {Object} params
          */
-    getSysApplyRecords ({ commit, state }, params, config = {}) {
+    getSysApplyRecords({}, params, config = {}) {
       const requsetParams = Object.assign({}, params);
       delete requsetParams.appCode;
       const url = `${BACKEND_URL}/api/cloudapi/apps/${params.appCode}/esb/systems/permissions/apply-records/?${json2Query(requsetParams)}`;
@@ -142,7 +146,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, recordId
          */
-    getSysApplyRecordDetail ({ commit, state }, { appCode, recordId }, config = {}) {
+    getSysApplyRecordDetail({}, { appCode, recordId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/apply-records/${recordId}/`;
       return http.get(url, config);
     },
@@ -151,7 +155,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, systemId, data
          */
-    sysApply ({ commit, state }, { appCode, systemId, data }, config = {}) {
+    sysApply({}, { appCode, systemId, data }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/${systemId}/permissions/apply/`;
       return http.post(url, data, config);
     },
@@ -160,7 +164,7 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, data
          */
-    sysRenewal ({ commit, state }, { appCode, data }, config = {}) {
+    sysRenewal({}, { appCode, data }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/renew/`;
       return http.post(url, data, config);
     },
@@ -169,9 +173,9 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode, systemId
          */
-    getComponents ({ commit, state }, { appCode, systemId }, config = {}) {
+    getComponents({}, { appCode, systemId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/${systemId}/permissions/components/`;
       return http.get(url, config);
-    }
-  }
+    },
+  },
 };

@@ -13,7 +13,7 @@
       class="app-container middle overview"
     >
       <section class="deploy-panel deploy-main mt5">
-        <ul
+        <!-- <ul
           class="ps-tab"
           style="position: relative; z-index: 10;"
         >
@@ -48,7 +48,15 @@
           >
             {{ $t('YAML') }}
           </li>
-        </ul>
+        </ul> -->
+
+        <bk-tab ext-cls="deploy-tab-cls" :active.sync="active" @tab-change="handleGoPage">
+          <bk-tab-panel
+            v-for="(panel, index) in panels"
+            v-bind="panel"
+            :key="index">
+          </bk-tab-panel>
+        </bk-tab>
 
         <div class="deploy-content">
           <router-view
@@ -60,47 +68,17 @@
       </section>
 
       <div class="deploy-btn-wrapper">
-        <bk-dropdown-menu
-          ref="dropdown"
-          align="right"
-          trigger="click"
-          :class="[isDisabled ? 'deploy-dropdown-menu' : '']"
-          @show="dropdownShow"
-          @hide="dropdownHide"
+        <bk-button
+          :loading="buttonLoading"
+          class="pl20 pr20"
+          :theme="'primary'"
+          :disabled="isDisabled"
         >
-          <bk-button
-            slot="dropdown-trigger"
-            :loading="buttonLoading"
-            class="pl20 pr20"
-            :theme="'primary'"
-            :disabled="isDisabled"
-          >
-            {{ $t('发布') }}
-            <i
-              :class="['paasng-icon paasng-down-shape f12',{ 'paasng-up-shape': isDropdownShow }]"
-              style="top: -1px;"
-            />
-          </bk-button>
-          <ul
-            slot="dropdown-content"
-            class="bk-dropdown-list"
-          >
-            <li>
-              <a
-                href="javascript:;"
-                style="margin: 0;"
-                @click="deployDialog('stag')"
-              > {{ $t('预发布环境') }} </a>
-            </li>
-            <li>
-              <a
-                href="javascript:;"
-                style="margin: 0;"
-                @click="deployDialog('prod')"
-              > {{ $t('生产环境') }} </a>
-            </li>
-          </ul>
-        </bk-dropdown-menu>
+          {{ $t('保存') }}
+        </bk-button>
+        <bk-button class="pl20 pr20 ml20" @click="handleCancel">
+          {{ $t('取消') }}
+        </bk-button>
       </div>
 
       <bk-dialog
@@ -129,7 +107,10 @@
               v-for="(item, index) in replicasChanges"
               :key="index"
             >
-              <span class="info-label">{{ item.proc_type }}：</span>{{ item.old }}（{{ deployDialogConfig.stageTitle }}） -> {{ item.new }} {{ $t('（当前模型）') }}
+              <span class="info-label">
+                {{ item.proc_type }}：
+              </span>
+              {{ item.old }}（{{ deployDialogConfig.stageTitle }}） -> {{ item.new }} {{ $t('（当前模型）') }}
             </p>
           </div>
         </div>
@@ -153,7 +134,6 @@ export default {
       isLoading: true,
       renderIndex: 0,
       cloudAppData: {},
-      isDropdownShow: false,
       isLargeDropdownShow: false,
       buttonLoading: false,
       deployDialogConfig: {
@@ -165,6 +145,13 @@ export default {
       replicasChanges: [],
       manifestExt: {},
       isDisabled: false,
+      panels: [
+        { name: 'cloudAppDeployForProcess', label: this.$t('进程配置') },
+        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令') },
+        { name: 'cloudAppDeployForEnv', label: this.$t('环境变量') },
+      ],
+      active: 'cloudAppDeployForProcess',
+      isPageEdit: false,
     };
   },
   computed: {
@@ -205,7 +192,6 @@ export default {
     });
   },
   methods: {
-
     async init() {
       try {
         const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
@@ -250,20 +236,10 @@ export default {
 
     handleGoPage(routeName) {
       this.cloudAppData = this.$store.state.cloudApi.cloudAppData;
+      this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.$router.push({
         name: routeName,
       });
-    },
-
-    dropdownShow() {
-      if (this.isDisabled) return;
-      this.isDropdownShow = true;
-    },
-    dropdownHide() {
-      this.isDropdownShow = false;
-    },
-    triggerHandler() {
-      this.$refs.dropdown.hide();
     },
 
     async deployDialog(env) {
@@ -506,6 +482,11 @@ export default {
       await this.$nextTick();
       this.$refs.square.formDataValidate(i);
     },
+
+    // 取消改变页面状态
+    handleCancel() {
+      this.$store.commit('cloudApi/updatePageEdit', false);
+    },
   },
 };
 </script>
@@ -525,30 +506,10 @@ export default {
         // position: absolute;
         // top: 77vh;
         margin-top: 20px;
-        width: 1280px;
-        background: #E1ECFF;
         height: 50px;
         line-height: 50px;
         padding: 0 20px;
-        border-radius: 2px;
     }
-@media screen and (max-width: 1920px) {
-    .deploy-btn-wrapper {
-        width: 1180px;
-    }
-}
-
-@media screen and (max-width: 1680px) {
-    .deploy-btn-wrapper {
-        width: 1080px;
-    }
-}
-
-@media screen and (max-width: 1440px) {
-    .deploy-btn-wrapper {
-        width: 980px;
-    }
-}
 
 .deploy-dialog .stage-info {
     width: 100%;
@@ -572,6 +533,13 @@ export default {
         min-width: 65px;
     }
 }
+
+.deploy-tab-cls{
+      /deep/ .bk-tab-section{
+        padding: 10px !important;
+        border: none
+      }
+    }
 </style>
 <style lang="scss">
 .deploy-dropdown-menu .bk-dropdown-content{

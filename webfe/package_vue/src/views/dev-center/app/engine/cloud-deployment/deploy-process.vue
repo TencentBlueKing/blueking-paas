@@ -7,7 +7,7 @@
     class="deploy-action-box"
   >
     <div class="process-container">
-      <div class="tab-container">
+      <!-- <div class="tab-container">
         <div class="tab-list">
           <div
             v-for="(panel, index) in panels"
@@ -49,8 +49,27 @@
             @click="handleAddData"
           />
         </div>
+      </div> -->
+      <div class="btn-container">
+        <div class="bk-button-group">
+          <bk-button
+            v-for="(panel, index) in panels"
+            :key="index"
+            :class="btnActive === panel.name ? 'is-selected' : ''"
+            @click="handleBtnGroupClick(panel.name)"
+            size="small">{{ panel.name }}</bk-button>
+        </div>
+        <bk-button
+          v-if="!isPageEdit"
+          class="fr"
+          theme="primary"
+          title="编辑"
+          :outline="true"
+          @click="handleEditClick">
+          {{ $t('编辑') }}
+        </bk-button>
       </div>
-      <div class="form-deploy">
+      <div class="form-deploy" v-if="isPageEdit">
         <div
           class="create-item"
           data-test-id="createDefault_item_baseInfo"
@@ -261,6 +280,77 @@
           </bk-form>
         </div>
       </div>
+
+      <!-- 查看态 -->
+      <div class="form-detail mt20" v-else>
+        <bk-form
+          ref="formDeploy"
+          :model="formData">
+          <bk-form-item
+            :label="$t('容器镜像地址：')">
+            <span class="form-text">{{ formData.image || '--' }}</span>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('容器镜像地址：')">
+            <span class="form-text">{{ bkappAnnotations[imageCrdlAnnoKey] || '--' }}</span>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('启动命令：')">
+            <span class="form-text">
+              {{ formData.command.length ? formData.command.join(',') : '--' }}
+            </span>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('命令参数：')">
+            <span class="form-text">
+              {{ formData.args.length ? formData.args.join(',') : '--' }}
+            </span>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('容器端口：')">
+            <span class="form-text">{{ formData.targetPort || '--' }}</span>
+          </bk-form-item>
+          <bk-form-item :label-width="50">
+            <bk-button
+              text
+              theme="primary"
+              title="更多配置"
+              @click="ifopen = !ifopen">
+              {{ $t('更多配置') }}
+              <i
+                class="paasng-icon"
+                :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+              />
+            </bk-button>
+          </bk-form-item>
+          <section class="mt20" v-if="ifopen">
+            <bk-form-item
+              :label="$t('配置环境：')">
+              <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('资源配置方案：')">
+              <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('扩缩容方式：')">
+              <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('触发条件：')">
+              <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('最小副本数：')">
+              <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('最大副本数：')">
+              <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            </bk-form-item>
+          </section>
+        </bk-form>
+      </div>
     </div>
   </paas-content-loader>
 </template>
@@ -284,8 +374,7 @@ export default {
   data() {
     return {
       panels: [],
-      active: 'mission',
-      currentType: 'card',
+      btnActive: 'web',
       showEditIconIndex: null,
       iconIndex: '',
       panelActive: 0,
@@ -360,6 +449,7 @@ export default {
       imageCredentialList: [],
       targetPortErrTips: '',
       isTargetPortErrTips: false,
+      ifopen: false,
     };
   },
   computed: {
@@ -370,13 +460,17 @@ export default {
       return this.$route.params.id;
     },
     imageCrdlAnnoKey() {
-      return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive].name}`;
+      return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive]?.name}`;
+    },
+    isPageEdit() {
+      return this.$store.state.cloudApi.isPageEdit;
     },
   },
   watch: {
     cloudAppData: {
       handler(val) {
         if (val.spec) {
+          console.log('val.spec', val);
           this.localCloudAppData = _.cloneDeep(val);
           this.processData = val.spec.processes;
           this.hooks = val.spec.hooks;
@@ -397,7 +491,7 @@ export default {
     formData: {
       handler(val) {
         if (this.localCloudAppData.spec) {
-          val.name = this.panels[this.panelActive] && this.panels[this.panelActive].name;
+          val.name = this.panels[this.panelActive] && this.panels[this.panelActive]?.name;
           val.replicas = val.replicas && Number(val.replicas);
           if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
             val.targetPort = Number(val.targetPort);
@@ -476,7 +570,7 @@ export default {
     this.getImageCredentialList();
   },
   mounted() {
-    this.$refs.mirrorUrl.focus();
+    this.$refs.mirrorUrl?.focus();
   },
   methods: {
     setPanelsData() {
@@ -729,13 +823,23 @@ export default {
     handlerCreateImageCredential() {
       this.$router.push({ name: 'imageCredential' });
     },
+
+    // 按扭组点击
+    handleBtnGroupClick(v) {
+      this.btnActive = v;
+    },
+
+    // 编辑
+    handleEditClick() {
+      this.$store.commit('cloudApi/updatePageEdit', true);
+    },
   },
 };
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
     .process-container{
-        margin-top: 20px;
-        border: 1px solid #e6e9ea;
+        // margin-top: 20px;
+        // border: 1px solid #e6e9ea;
         border-top: none;
     }
     .tab-container {
@@ -849,5 +953,13 @@ export default {
         .form-process{
             width: 625px;
         }
+    }
+    .btn-container{
+      padding: 0 24px;
+    }
+    .form-detail{
+      .form-text{
+        color: #313238;
+      }
     }
 </style>

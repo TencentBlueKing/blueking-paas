@@ -17,25 +17,34 @@
 ## to the current version of the project delivered to anyone in the future.
 ##
 
-K8S_VERSION=$1
 current_script_path=$(dirname "$0")
+K8S_VERSION=$1
+
+
+function create_cluster() {
+    local version=$1
+    local image=$2
+    local config=$3
+    # 使用 kind 创建 集群
+    KIND_EXPERIMENTAL_DOCKER_NETWORK=${NETWORK_NAME:-apiserver-unittest} kind create cluster --name ${KIND_CLUSTER_NAME:-foo${version}} --image "$image" --config "${current_script_path}/kind-configs/${config}.yaml"
+    # 加载集成测试需要的镜像
+    kind load docker-image busybox:latest --name ${KIND_CLUSTER_NAME:-foo${version}}
+    kind load docker-image ealen/echo-server:0.7.0 --name ${KIND_CLUSTER_NAME:-foo${version}}
+}
+
 
 if [[ "$K8S_VERSION" == 1.14* ]]; then
-    KIND_EXPERIMENTAL_DOCKER_NETWORK=${NETWORK_NAME:-apiserver-unittest} kind create cluster --name ${KIND_CLUSTER_NAME:-foo114} --image "kindest/node:v1.14.10" --config ${current_script_path}/kind-configs/114.yaml
-fi
-
-if [[ "$K8S_VERSION" == 1.16* ]]; then
-    KIND_EXPERIMENTAL_DOCKER_NETWORK=${NETWORK_NAME:-apiserver-unittest} kind create cluster --name ${KIND_CLUSTER_NAME:-foo116} --image "kindest/node:v1.16.15" --config ${current_script_path}/kind-configs/116.yaml
-fi
-
-if [[ "$K8S_VERSION" == 1.18* ]]; then
-    KIND_EXPERIMENTAL_DOCKER_NETWORK=${NETWORK_NAME:-apiserver-unittest} kind create cluster --name ${KIND_CLUSTER_NAME:-foo118} --image "kindest/node:v1.18.20" --config ${current_script_path}/kind-configs/118.yaml
-fi
-
-if [[ "$K8S_VERSION" == 1.20* ]]; then
-    KIND_EXPERIMENTAL_DOCKER_NETWORK=${NETWORK_NAME:-apiserver-unittest} kind create cluster --name ${KIND_CLUSTER_NAME:-foo120} --image "kindest/node:v1.20.15" --config ${current_script_path}/kind-configs/120.yaml
-fi
-
-if [[ "$K8S_VERSION" == 1.22* ]]; then
-    KIND_EXPERIMENTAL_DOCKER_NETWORK=${NETWORK_NAME:-apiserver-unittest} kind create cluster --name ${KIND_CLUSTER_NAME:-foo122} --image "kindest/node:v1.22.9" --config ${current_script_path}/kind-configs/122.yaml
+    create_cluster "114" "kindest/node:v1.14.10" "114"
+elif [[ "$K8S_VERSION" == 1.16* ]]; then
+    create_cluster "116" "kindest/node:v1.16.15" "116"
+elif [[ "$K8S_VERSION" == 1.18* ]]; then
+    create_cluster "118" "kindest/node:v1.18.20" "118"
+elif [[ "$K8S_VERSION" == 1.20* ]]; then
+    create_cluster "120" "kindest/node:v1.20.15" "120"
+elif [[ "$K8S_VERSION" == 1.22* ]]; then
+    create_cluster "122" "kindest/node:v1.22.9" "122"
+else
+    echo "Invalid K8S_VERSION: $K8S_VERSION"
+    echo "Supported versions: 1.14, 1.16, 1.18, 1.20, 1.22"
+    exit 1
 fi

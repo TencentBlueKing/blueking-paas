@@ -20,6 +20,6 @@ nodes:
       kind: InitConfiguration
       nodeRegistration:
         kubeletExtraArgs:
-          # 标记节点允许允许 ingress-nginx, 默认情况下 ingress-nginx 的 nodeSelector 需要该标签
+          # ingress-ready=true 用于标记节点允许允许 ingress-nginx, 默认情况下 ingress-nginx 的 nodeSelector 需要该标签
           # kind-node=true 用于标记该节点上 kind 创建的, 避免其他测试修改或删除该节点
           node-labels: ingress-ready=true,kind-node=true

@@ -103,3 +103,5 @@ export const ENV_ENUM = {
   prod: '生产环境',
   stag: '预发布环境',
 };
+
+export const RESQUOTADATA = ['default', '1C512M', '2C1G', '2C2G', '4C1G', '4C2G', '4C4G'];

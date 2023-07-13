@@ -207,6 +207,102 @@
                 {{ $t('请求将会被发往容器的这个端口。推荐不指定具体端口号，让容器监听 $PORT 环境变量') }}
               </p>
             </bk-form-item>
+            <bk-form-item :label-width="40">
+              <bk-button
+                text
+                theme="primary"
+                title="更多配置"
+                @click="ifopen = !ifopen">
+                {{ $t('更多配置') }}
+                <i
+                  class="paasng-icon"
+                  :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+                />
+              </bk-button>
+            </bk-form-item>
+            <bk-form-item
+              v-if="ifopen"
+              :label="$t('配置环境')"
+              :label-width="120"
+            >
+              <div class="bk-button-group">
+                <bk-button
+                  v-for="(item, index) in envsData"
+                  :key="index"
+                  :class="envType === item.value ? 'is-selected' : ''"
+                  @click="envType = item.value"
+                  size="small">{{ item.label }}</bk-button>
+              </div>
+            </bk-form-item>
+            <bk-form-item
+              v-if="ifopen"
+              :label-width="120"
+            >
+              <div class="env-container">
+                <bk-form
+                  ref="formEnv"
+                  :model="formData"
+                  :rules="rules"
+                  ext-cls="form-envs"
+                >
+                  <bk-form-item
+                    :label="$t('资源配额方案')"
+                    :label-width="120"
+                  >
+                    <bk-select
+                      v-model="formData.resQuotaPlan"
+                      allow-create
+                      :disabled="false"
+                      style="width: 150px;"
+                      searchable
+                    >
+                      <bk-option
+                        v-for="option in resQuotaData"
+                        :id="option"
+                        :key="option"
+                        :name="option"
+                      />
+                    </bk-select>
+                  </bk-form-item>
+                  <bk-form-item
+                    :label="$t('扩缩容方式')"
+                    :label-width="120"
+                  >
+                    <bk-radio-group v-model="autoscaling" @change="handleAutoChange">
+                      <bk-radio-button class="radio-cls" :value="false">
+                        {{ $t('手动调节') }}
+                      </bk-radio-button>
+                      <bk-radio-button
+                        class="radio-cls" :value="true">
+                        {{ $t('自动调节') }}
+                      </bk-radio-button>
+                    </bk-radio-group>
+                  </bk-form-item>
+                  <bk-form-item
+                    :label="$t('最大副本数')"
+                    :label-width="120">
+                    <bk-input
+                      v-model="formData.replicas"
+                      type="number"
+                      :max="5"
+                      :min="1"
+                      style="width: 150px"
+                    />
+                  </bk-form-item>
+                  <bk-form-item
+                    :label="$t('最小副本数')"
+                    :label-width="120">
+                    <bk-input
+                      v-model="formData.replicas"
+                      type="number"
+                      :max="5"
+                      :min="1"
+                      style="width: 150px"
+                    />
+                  </bk-form-item>
+                </bk-form>
+              </div>
+            </bk-form-item>
           </bk-form>
         </div>
 
@@ -357,6 +453,7 @@
 
 <script>import _ from 'lodash';
 import { bus } from '@/common/bus';
+import { RESQUOTADATA } from '@/common/constants';
 
 export default {
   components: {
@@ -450,6 +547,10 @@ export default {
       targetPortErrTips: '',
       isTargetPortErrTips: false,
       ifopen: false,
+      envsData: [{ value: 'stag', label: this.$t('预发布环境') }, { value: 'prod', label: this.$t('生产环境') }],
+      envType: 'stag',
+      resQuotaData: RESQUOTADATA,
+      autoscaling: false,
     };
   },
   computed: {
@@ -833,6 +934,10 @@ export default {
     handleEditClick() {
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
+
+    handleAutoChange() {
+      // 切换tab 数据重置
+    },
   },
 };
 </script>
@@ -961,5 +1066,11 @@ export default {
       .form-text{
         color: #313238;
       }
+    }
+    .env-container{
+      width: 785px;
+      background: #F5F7FA;
+      border-radius: 2px;
+      padding: 20px 24px;
     }
 </style>

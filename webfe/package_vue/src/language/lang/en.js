@@ -102,7 +102,7 @@ export default {
   单据审批: 'Document approval',
   快速访问: 'Quick access',
   预发布环境: 'Staging Env',
-  生产环境: 'Staging Env',
+  生产环境: 'Production Env',
   应用暂未部署: 'The APP has not been deployed yet',
   暂无: 'No',
   独立域名: 'Domain',

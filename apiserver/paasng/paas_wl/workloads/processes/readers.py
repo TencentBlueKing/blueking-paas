@@ -56,7 +56,7 @@ class ProcessAPIAdapter:
 class ProcessReader(AppEntityReader[Process]):
     """Manager for ProcSpecs"""
 
-    def list_by_app_with_meta(self, app: WlApp, labels: Optional[Dict] = None) -> ResourceList[Process]:
+    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Process]:
         labels = labels or {}
         extra_labels = ProcessAPIAdapter.app_selector(app)
         labels.update(extra_labels)
@@ -82,12 +82,14 @@ class InstanceReader(AppEntityReader[Instance]):
         labels = ProcessAPIAdapter.process_selector(app, process_type)
         return self.list_by_app(app, labels=labels)
 
-    def list_by_app_with_meta(self, app: WlApp, labels: Optional[Dict] = None) -> ResourceList[Instance]:
+    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
         labels = labels or {}
         extra_labels = ProcessAPIAdapter.app_selector(app)
         labels.update(extra_labels)
         res = super().list_by_app_with_meta(app, labels)
         if app.type == WlAppType.DEFAULT:
+            # Ignore instances with no valid "release_version" label
+            # TODO: 云原生应用也需要添加 version 相关的字段
             res.items = [i for i in res.items if i.version > 0]
         return res
 

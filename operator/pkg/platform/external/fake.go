@@ -20,7 +20,7 @@ package external
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -52,7 +52,7 @@ func (r *SimpleResponse) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	return &http.Response{
 		StatusCode: r.StatusCode,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(r.Body)),
+		Body:       io.NopCloser(bytes.NewBufferString(r.Body)),
 		Header:     header,
 	}, nil
 }

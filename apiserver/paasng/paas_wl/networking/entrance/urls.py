@@ -50,9 +50,4 @@ urlpatterns += [
         views_enduser.AppEntranceViewSet.as_view({'get': 'list_module_available_entrances'}),
         name='api.applications.entrances.all_module_entrances',
     ),
-    re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/entrances/default/$',
-        views_enduser.AppEntranceViewSet.as_view({'post': 'set_default_entrance'}),
-        name='api.applications.entrances.set_default_entrance',
-    ),
 ]

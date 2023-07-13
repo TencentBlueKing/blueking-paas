@@ -52,6 +52,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 	}
 	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
+	volMountMap := GetVolumeMountMap(app)
 	deployList := []*appsv1.Deployment{}
 	replicasGetter := NewReplicasGetter(app)
 	for _, proc := range app.Spec.Processes {
@@ -73,7 +74,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 			resReq = resGetter.GetDefault()
 		}
 
-		deployList = append(deployList, &appsv1.Deployment{
+		deployment := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps/v1",
 				Kind:       "Deployment",
@@ -101,12 +102,24 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 						Annotations: annotations,
 					},
 					Spec: corev1.PodSpec{
+						DNSConfig:        buildDNSConfig(app),
+						HostAliases:      buildHostAliases(app),
 						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq),
 						ImagePullSecrets: buildImagePullSecrets(app),
+						// 不默认向 Pod 中挂载 ServiceAccount Token
+						AutomountServiceAccountToken: lo.ToPtr(false),
 					},
 				},
 			},
-		})
+		}
+
+		for _, mount := range volMountMap {
+			err = mount.ApplyToDeployment(deployment, mount.Name, mount.MountPath)
+			if err != nil {
+				log.Error(err, "Failed to inject mounts info to process", proc.Name)
+			}
+		}
+		deployList = append(deployList, deployment)
 	}
 	return deployList
 }
@@ -151,4 +164,29 @@ func buildImagePullSecrets(app *paasv1alpha2.BkApp) []corev1.LocalObjectReferenc
 			Name: paasv1alpha2.DefaultImagePullSecretName,
 		},
 	}
+}
+
+// Build the DNSConfig object for the application
+func buildDNSConfig(app *paasv1alpha2.BkApp) *corev1.PodDNSConfig {
+	if app.Spec.DomainResolution == nil {
+		return nil
+	}
+	if servers := app.Spec.DomainResolution.Nameservers; len(servers) > 0 {
+		return &corev1.PodDNSConfig{Nameservers: servers}
+	}
+	return nil
+}
+
+// Build the HostAliases object for the application
+func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
+	if app.Spec.DomainResolution == nil {
+		return nil
+	}
+	if aliases := app.Spec.DomainResolution.HostAliases; len(aliases) > 0 {
+		for _, alias := range aliases {
+			results = append(results, corev1.HostAlias{IP: alias.IP, Hostnames: alias.Hostnames})
+		}
+		return results
+	}
+	return nil
 }

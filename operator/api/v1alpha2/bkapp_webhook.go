@@ -20,7 +20,9 @@ package v1alpha2
 
 import (
 	"fmt"
+	"net"
 	"regexp"
+	"strings"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
@@ -28,6 +30,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -47,6 +51,9 @@ var (
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
 )
+
+// MaxDNSNameservers is the max number of nameservers in DomainResolution
+const MaxDNSNameservers = 2
 
 // SetupWebhookWithManager ...
 func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -195,6 +202,9 @@ func (r *BkApp) validateAppSpec() *field.Error {
 	if err := r.validateBuildConfig(); err != nil {
 		return err
 	}
+	if err := r.validateDomainResolution(); err != nil {
+		return err
+	}
 
 	procCounter := map[string]int{}
 	for idx, proc := range r.Spec.Processes {
@@ -219,7 +229,8 @@ func (r *BkApp) validateAppSpec() *field.Error {
 			return field.Invalid(path.Child("name"), env.Name, "name can't be empty")
 		}
 	}
-	return nil
+
+	return r.validateMounts()
 }
 
 // Get all process names
@@ -253,6 +264,52 @@ func (r *BkApp) validateBuildConfig() *field.Error {
 				proc.Name,
 				fmt.Sprintf("image not configured for process %s", proc.Name),
 			)
+		}
+	}
+	return nil
+}
+
+// Validate the domain resolution config
+func (r *BkApp) validateDomainResolution() *field.Error {
+	if r.Spec.DomainResolution == nil {
+		return nil
+	}
+	dsField := field.NewPath("spec").Child("domainResolution")
+
+	// Validate DNS nameservers
+	servers := r.Spec.DomainResolution.Nameservers
+	if len(servers) > MaxDNSNameservers {
+		return field.Invalid(
+			dsField.Child("nameservers"),
+			servers,
+			fmt.Sprintf("must not have more than %v nameservers", MaxDNSNameservers),
+		)
+	}
+	for i, ns := range servers {
+		if ip := net.ParseIP(ns); ip == nil {
+			return field.Invalid(dsField.Child("nameservers").Index(i), ns, "must be valid IP address")
+		}
+	}
+
+	// Validate host aliases
+	hostAliases := r.Spec.DomainResolution.HostAliases
+	for i, alias := range hostAliases {
+		if ip := net.ParseIP(alias.IP); ip == nil {
+			return field.Invalid(
+				dsField.Child("hostAliases").Index(i).Child("ip"),
+				alias.IP,
+				"must be valid IP address",
+			)
+		}
+		for j, hostname := range alias.Hostnames {
+			errs := validation.IsDNS1123Subdomain(hostname)
+			if len(errs) > 0 {
+				return field.Invalid(
+					dsField.Child("hostAliases").Index(i).Child("hostnames").Index(j),
+					hostname,
+					"must be valid hostname",
+				)
+			}
 		}
 	}
 	return nil
@@ -329,6 +386,62 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	return nil
 }
 
+// validate Spec.Mounts field
+// 校验部分参考 https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/apis/core/validation/validation.go
+func (r *BkApp) validateMounts() *field.Error {
+	mountPoints, mountNames := sets.String{}, sets.String{}
+
+	for idx, mount := range r.Spec.Mounts {
+		path := field.NewPath("spec").Child("mounts").Index(idx)
+		if err := r.validateMount(path, mount); err != nil {
+			return err
+		}
+
+		if mountNames.Has(mount.Name) {
+			return field.Duplicate(path.Child("name"), mount.Name)
+		}
+		mountNames.Insert(mount.Name)
+
+		if mountPoints.Has(mount.MountPath) {
+			return field.Duplicate(path.Child("mountPath"), mount.MountPath)
+		}
+		mountPoints.Insert(mount.MountPath)
+	}
+
+	return nil
+}
+
+func (r *BkApp) validateMount(path *field.Path, mount Mount) *field.Error {
+	// 校验 name
+	if len(mount.Name) == 0 {
+		return field.Required(path.Child("name"), "")
+	}
+	if errs := validation.IsDNS1123Label(mount.Name); len(errs) > 0 {
+		return field.Invalid(path.Child("name"), mount.Name, strings.Join(errs, ","))
+	}
+
+	// 校验 mountPath
+	if len(mount.MountPath) == 0 {
+		return field.Required(path.Child("mountPath"), "")
+	}
+	if matched, _ := regexp.MatchString(FilePathPattern, mount.MountPath); !matched {
+		return field.Invalid(path.Child("mountPath"), mount.MountPath, "must match regex "+FilePathPattern)
+	}
+
+	// 校验 source
+	if mount.Source == nil {
+		return field.Required(path.Child("source"), "")
+	}
+	val, err := mount.Source.ToValidator()
+	if err != nil {
+		return field.Invalid(path.Child("source"), mount.Source, err.Error())
+	}
+	if errs := val.Validate(); len(errs) > 0 {
+		return field.Invalid(path.Child("source"), mount.Source, strings.Join(errs, ","))
+	}
+	return nil
+}
+
 // Validate Spec.EnvOverlay field
 func (r *BkApp) validateEnvOverlay() *field.Error {
 	if r.Spec.EnvOverlay == nil {
@@ -384,5 +497,29 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 			)
 		}
 	}
+
+	// Validate "mounts"
+	mountPoints, mountNames := sets.String{}, sets.String{}
+	for i, mount := range r.Spec.EnvOverlay.Mounts {
+		mField := f.Child("mounts").Index(i)
+		if !mount.EnvName.IsValid() {
+			return field.Invalid(mField.Child("envName"), mount.EnvName, "envName is invalid")
+		}
+
+		if err := r.validateMount(mField, mount.Mount); err != nil {
+			return err
+		}
+
+		if mountNames.Has(mount.Mount.Name) {
+			return field.Duplicate(mField.Child("name"), mount.Mount.Name)
+		}
+		mountNames.Insert(mount.Mount.Name)
+
+		if mountPoints.Has(mount.Mount.MountPath) {
+			return field.Duplicate(mField.Child("mountPath"), mount.Mount.MountPath)
+		}
+		mountPoints.Insert(mount.Mount.MountPath)
+	}
+
 	return nil
 }

@@ -24,6 +24,7 @@ from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.cnative.specs.resource import deploy_networking
+from paas_wl.networking.entrance.addrs import URL
 from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.networking.ingress.domains.independent import (
     DomainResourceDeleteService,
@@ -38,7 +39,6 @@ from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.publish.market.models import MarketConfig
-from paasng.publish.market.utils import MarketAvailableAddressHelper
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class DftCustomDomainManager:
     @transaction.atomic
     def update(self, instance: Domain, *, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Update a custom domain object"""
-        if check_domain_used_by_market(self.application, instance.name):
+        if check_domain_used_by_market(self.application, instance):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行更新操作')
 
         env = ModuleEnvironment.objects.get(pk=instance.environment_id)
@@ -118,7 +118,7 @@ class DftCustomDomainManager:
     @transaction.atomic
     def delete(self, instance: Domain) -> None:
         """Delete a custom domain"""
-        if check_domain_used_by_market(self.application, instance.name):
+        if check_domain_used_by_market(self.application, instance):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行删除操作')
 
         env = ModuleEnvironment.objects.get(pk=instance.environment_id)
@@ -127,17 +127,17 @@ class DftCustomDomainManager:
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")
 
 
-def check_domain_used_by_market(application: Application, hostname: str) -> bool:
+def check_domain_used_by_market(application: Application, instance: Domain) -> bool:
     """Check if a domain was used as application's market entrance
 
-    :param hostname: A domain name without scheme
+    :param instance: A domain
     :return: Whether hostname was set as entrance
     """
     market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-    entrance = MarketAvailableAddressHelper(market_config).access_entrance
-    if not entrance:
+    if not market_config.custom_domain_url:
         return False
-    return entrance.hostname == hostname
+    u = URL.from_address(market_config.custom_domain_url)
+    return u.compare_with(hostname=instance.name, path=instance.path_prefix)
 
 
 # cloud-native related managers starts

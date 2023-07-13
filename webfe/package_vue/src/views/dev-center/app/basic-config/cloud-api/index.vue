@@ -35,7 +35,7 @@
         </div>
       </div>
     </div>
-    <section class="app-container middle">
+    <section class="app-container middle cloud-container">
       <paas-content-loader
         :key="pageKey"
         :is-loading="isLoading"
@@ -54,27 +54,29 @@
             v-bind="panel"
           />
         </bk-tab>
-        <render-api
-          v-if="active === 'gatewayApi'"
-          :key="comKey"
-          :app-code="appCode"
-          @data-ready="handlerDataReady"
-        />
-        <render-api
-          v-if="active === 'componentApi'"
-          :key="comKey"
-          api-type="component"
-          :app-code="appCode"
-          @data-ready="handlerDataReady"
-        />
-        <app-perm
-          v-if="active === 'appPerm'"
-          @data-ready="handlerDataReady"
-        />
-        <apply-record
-          v-if="active === 'applyRecord'"
-          @data-ready="handlerDataReady"
-        />
+        <div class="cloud-type-item">
+          <render-api
+            v-if="active === 'gatewayApi'"
+            :key="comKey"
+            :app-code="appCode"
+            @data-ready="handlerDataReady"
+          />
+          <render-api
+            v-if="active === 'componentApi'"
+            :key="comKey"
+            api-type="component"
+            :app-code="appCode"
+            @data-ready="handlerDataReady"
+          />
+          <app-perm
+            v-if="active === 'appPerm'"
+            @data-ready="handlerDataReady"
+          />
+          <apply-record
+            v-if="active === 'applyRecord'"
+            @data-ready="handlerDataReady"
+          />
+      </div>
       </paas-content-loader>
     </section>
   </div>
@@ -145,6 +147,20 @@
 </script>
 
 <style lang="scss" scoped>
+    .cloud-wrapper{
+      .ps-top-bar {
+        padding: 0px 24px;
+      }
+    }
+
+    .cloud-container{
+      background: #fff;
+      margin-top: 16px;
+      padding-top: 0px;
+      .cloud-type-item{
+        padding: 0 24px 16px 24px;
+      }
+    }
     .overview-tit {
         display: flex;
         justify-content: space-between;
@@ -176,7 +192,7 @@
 
     .plugin-cloud-box {
         .ps-top-bar {
-            padding-top: 16px;
+            padding: 16px 0 0 0 !important;
             font-size: 16px;
             color: #313238;
             line-height: 24px;

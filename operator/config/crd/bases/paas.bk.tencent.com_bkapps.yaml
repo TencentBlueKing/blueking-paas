@@ -597,6 +597,35 @@ spec:
                       type: object
                     type: array
                 type: object
+              domainResolution:
+                description: Domain name resolution config
+                properties:
+                  hostAliases:
+                    description: 'HostAliases is an optional list of hosts and IPs
+                      that will be injected into the pod''s hosts file if specified.
+                      This is only valid for non-hostNetwork pods. NOTE: Copied from
+                      Kubernetes PodSpec API.'
+                    items:
+                      description: HostAlias holds the mapping between IP and hostnames
+                        that will be injected as an entry in the pod's hosts file.
+                      properties:
+                        hostnames:
+                          description: Hostnames for the above IP address.
+                          items:
+                            type: string
+                          type: array
+                        ip:
+                          description: IP address of the host file entry.
+                          type: string
+                      type: object
+                    type: array
+                  nameservers:
+                    description: Nameservers specifies the IP addresses of the name
+                      servers
+                    items:
+                      type: string
+                    type: array
+                type: object
               envOverlay:
                 description: EnvOverlay holds environment specified configurations,
                   includes replica count and environment variables.
@@ -646,6 +675,43 @@ spec:
                       - value
                       type: object
                     type: array
+                  mounts:
+                    description: Mounts overwrite BkApp's mounts by environment
+                    items:
+                      description: MountOverlay overwrite or add application's mounts
+                        by environment
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        mountPath:
+                          description: Path of the mount
+                          type: string
+                        name:
+                          description: Name of the mount
+                          type: string
+                        source:
+                          description: Source of the mount
+                          properties:
+                            configMap:
+                              description: ConfigMapSource represents a configMap
+                                that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                          required:
+                          - configMap
+                          type: object
+                      required:
+                      - envName
+                      - mountPath
+                      - name
+                      - source
+                      type: object
+                    type: array
                   replicas:
                     description: Replicas overwrite processes's replicas count
                     items:
@@ -688,6 +754,38 @@ spec:
                         type: array
                     type: object
                 type: object
+              mounts:
+                description: Mounts is a list of mount volume
+                items:
+                  description: Mount is used to specify mount volume
+                  properties:
+                    mountPath:
+                      description: Path of the mount
+                      type: string
+                    name:
+                      description: Name of the mount
+                      type: string
+                    source:
+                      description: Source of the mount
+                      properties:
+                        configMap:
+                          description: ConfigMapSource represents a configMap that
+                            should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                      required:
+                      - configMap
+                      type: object
+                  required:
+                  - mountPath
+                  - name
+                  - source
+                  type: object
+                type: array
               processes:
                 items:
                   description: Process defines the process of BkApp

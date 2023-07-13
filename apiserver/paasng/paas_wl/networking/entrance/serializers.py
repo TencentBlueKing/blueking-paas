@@ -149,6 +149,8 @@ class CustomDomainsConfigSLZ(serializers.Serializer):
     frontend_ingress_ip = serializers.CharField(help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能')
 
 
-class SwitchDefaultEntranceSLZ(serializers.Serializer):
+class SwitchMarketEntranceSLZ(serializers.Serializer):
+    """切换市场访问地址"""
+
     module = serializers.CharField(help_text="切换模块名")
     address = AvailableEntranceSLZ(help_text="访问地址")

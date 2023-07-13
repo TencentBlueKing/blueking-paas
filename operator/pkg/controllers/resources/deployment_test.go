@@ -114,6 +114,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(webDeploy.OwnerReferences[0].Kind).To(Equal(bkapp.Kind))
 			Expect(webDeploy.OwnerReferences[0].Name).To(Equal(bkapp.Name))
 			Expect(len(webDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(*webDeploy.Spec.Template.Spec.AutomountServiceAccountToken).To(Equal(false))
 
 			hiDeploy := deploys[1]
 			Expect(hiDeploy.Name).To(Equal("bkapp-sample--hi"))
@@ -289,6 +290,62 @@ var _ = Describe("Test build deployments from BkApp", func() {
 					{Name: "ENV_NAME_2", Value: "env_value_2"},
 				},
 			))
+		})
+	})
+
+	Context("Mounts related fields", func() {
+		It("mount configmap", func() {
+			configMapName := "nginx-configmap"
+
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					MountPath: "/etc/nginx",
+					Name:      "nginx-conf",
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: configMapName},
+					},
+				},
+			}
+			deploys := GetWantedDeploys(bkapp)
+
+			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal("nginx-conf"))
+			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/etc/nginx"))
+			Expect(deploys[0].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
+
+			Expect(deploys[1].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(deploys[1].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
+		})
+	})
+
+	Context("DomainResolution field", func() {
+		It("with empty values", func() {
+			bkapp.Spec.DomainResolution = nil
+
+			web := GetWantedDeploys(bkapp)[0]
+			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
+			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
+		})
+		It("with non-empty HostAliases", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{IP: "127.0.0.1", Hostnames: []string{"foo.local", "bar.local"}},
+					{IP: "192.168.1.1", Hostnames: []string{"foobar.local"}},
+				},
+			}
+
+			web := GetWantedDeploys(bkapp)[0]
+			Expect(len(web.Spec.Template.Spec.HostAliases)).To(Equal(2))
+			Expect(web.Spec.Template.Spec.HostAliases[1].IP).To(Equal("192.168.1.1"))
+			Expect(web.Spec.Template.Spec.HostAliases[1].Hostnames).To(Equal([]string{"foobar.local"}))
+			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
+		})
+		It("with non-empty Nameservers", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{Nameservers: []string{"8.8.8.8"}}
+
+			web := GetWantedDeploys(bkapp)[0]
+			Expect(web.Spec.Template.Spec.DNSConfig.Nameservers).To(Equal([]string{"8.8.8.8"}))
+			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
 		})
 	})
 })

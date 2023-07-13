@@ -18,3 +18,16 @@ spec:
         - "echo hello; sleep 1;"
   configuration:
     env: []
+  svcDiscovery:
+    bkSaaS:
+      - bkAppCode: "bk-iam"
+      - bkAppCode: "bk-sops"
+        moduleName: "backend"
+  domainResolution:
+    nameservers:
+      - "8.8.8.8"
+    hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "foo.local"
+        - "bar.local"

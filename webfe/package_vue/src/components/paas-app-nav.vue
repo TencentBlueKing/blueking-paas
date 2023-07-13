@@ -5,7 +5,8 @@
         v-if="category.children && category.children.length"
         :key="categoryIndex"
         :class="{
-          'on': category.isActived && !category.isExpanded
+          'on': category.isActived && !category.isExpanded,
+          'expanded': category.isExpanded
         }"
       >
         <a
@@ -57,7 +58,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -96,6 +97,7 @@ export default {
         ],
 
         operator: [
+          'appEngineOperator', // 运营者应用引擎
           'appPermissions', // 权限管理
           'appMarketing', // 市场推广
           'appConfigs', // 基本设置
@@ -140,8 +142,8 @@ export default {
   },
   methods: {
     /**
-             * 侧导航初始化入口
-             */
+     * 侧导航初始化入口
+     */
     async init(isReload = true) {
       if (!this.curAppInfo.application) return;
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
@@ -155,8 +157,8 @@ export default {
     },
 
     /**
-             * 根据接口来展示对应的导航项
-             */
+     * 根据接口来展示对应的导航项
+     */
     async initNavByRegion(navTree) {
       try {
         const { region } = this.curAppInfo.application;
@@ -169,15 +171,8 @@ export default {
           navTree = this.addServiceNavItem(navTree, category.id, category.name);
         });
 
-        // 添加权限管理
-        if (res.access_control && res.access_control.module) {
-          res.access_control.module.forEach((moduleType) => {
-            navTree = this.addPermissionNavItem(navTree, moduleType);
-          });
-        }
-
-        // 添加访问入口
-        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问入口'));
+        // 添加访问管理
+        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);
 
         // 添加代码检查
         this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
@@ -209,6 +204,7 @@ export default {
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
           navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
+          this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);
         }
 
         // smart应用或lesscode应用，包管理
@@ -289,8 +285,8 @@ export default {
     },
 
     /**
-             * 根据角色，初始访问权限
-             */
+     * 根据角色，初始访问权限
+     */
     initRouterPermission() {
       const appRole = this.curAppInfo.role;
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
@@ -315,8 +311,8 @@ export default {
     },
 
     /**
-             * 根据当前routeName选中导航
-             */
+     * 根据当前routeName选中导航
+     */
     async selectRouterByName(routeName) {
       try {
         await this.checkPermission(routeName);
@@ -378,7 +374,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appSummary',
+            name: 'appBaseInfo',
             params: {
               id: this.curAppInfo.application.code,
             },
@@ -399,17 +395,18 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
+          || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
     },
 
     /**
-             * 返回导航目录对应的Icon
-             * @param {Object} navItem 导航
-             * @return {Array} Classes
-             */
+     * 返回导航目录对应的Icon
+     * @param {Object} navItem 导航
+     * @return {Array} Classes
+     */
     getIconClass(navItem) {
       const classes = ['paasng-icon', 'app-nav-icon'];
       classes.push(`paasng-${navItem.iconfontName || 'gear'}`);
@@ -431,10 +428,10 @@ export default {
     },
 
     /**
-             * 强服务添加子项
-             * @param {Number} id id
-             * @param {String} name 名称
-             */
+     * 强服务添加子项
+     * @param {Number} id id
+     * @param {String} name 名称
+     */
     addServiceNavItem(navTree, id, name) {
       const category = navTree.find(item => item.name === 'appServices');
       category.children.push({
@@ -453,50 +450,10 @@ export default {
     },
 
     /**
-             * 权限管理添加子项
-             * @param {String} type 类型
-             */
-    addPermissionNavItem(navTree, type) {
-      const nav = {
-        user_access_control: {
-          categoryName: 'appPermissions',
-          name: this.$t('用户限制'),
-          matchRouters: ['appPermissionUser', 'appPermissionPathExempt'],
-          destRoute: {
-            name: 'appPermissionUser',
-          },
-        },
-        ip_access_control: {
-          categoryName: 'appPermissions',
-          name: this.$t('IP限制'),
-          matchRouters: ['appPermissionIP'],
-          destRoute: {
-            name: 'appPermissionIP',
-          },
-        },
-        approval: {
-          categoryName: 'appPermissions',
-          name: this.$t('单据审批'),
-          matchRouters: ['appOrderAudit'],
-          destRoute: {
-            name: 'appOrderAudit',
-          },
-        },
-      };
-
-      const category = navTree.find(item => item.name === 'appPermissions');
-      if (type && nav[type]) {
-        category.children.push(nav[type]);
-      }
-
-      return navTree;
-    },
-
-    /**
-             * 切换展开状态
-             *
-             * @param {Object} category 父导航项
-             */
+     * 切换展开状态
+     *
+     * @param {Object} category 父导航项
+     */
     toggleNavCategory(category) {
       this.navTree.forEach((item) => {
         if (category.name === item.name) {
@@ -508,10 +465,10 @@ export default {
     },
 
     /**
-             * 访问相应路由
-             *
-             * @param {Object} nav 导航对象
-             */
+     * 访问相应路由
+     *
+     * @param {Object} nav 导航对象
+     */
     async goPage(navItem) {
       try {
         await this.checkPermission(navItem.destRoute?.name);
@@ -580,8 +537,11 @@ export default {
         margin-top: 1px;
 
         > li {
-            width: 100%;
+            width: 239px;
             position: relative;
+            &.expanded {
+                background: #f5f7fa;
+            }
 
             &.on {
                 .overview-text {
@@ -605,11 +565,12 @@ export default {
 
             &:hover {
                 .overview-text {
-                    color: #3A84FF;
+                    color: #63656E;
                 }
                 .app-nav-icon {
-                    color: #3A84FF;
+                    color: #63656E;
                 }
+                background: #f5f7fa;
             }
         }
     }
@@ -631,7 +592,7 @@ export default {
         width: 100%;
         position: relative;
         overflow: hidden;
-
+        background: rgb(245, 247, 250);
         > a {
             width: 240px;
             display: block;

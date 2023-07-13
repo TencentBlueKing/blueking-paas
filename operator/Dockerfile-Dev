@@ -1,5 +1,5 @@
 # -------------- unittest container --------------
-FROM golang:1.18
+FROM golang:1.20-alpine
 
 WORKDIR /workspace
 
@@ -21,6 +21,5 @@ COPY hack/ hack/
 COPY Makefile Makefile
 
 # Install dependent tools
+RUN apk --update --no-cache add bash make vim
 RUN make controller-gen envtest ginkgo golines gofumpt golangci-lint
-
-RUN apt-get update && apt-get install -y vim

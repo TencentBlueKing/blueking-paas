@@ -610,7 +610,7 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appAccessPortal",
-                "label": staticI18n.$t("访问入口"),
+                "label": staticI18n.$t("访问管理"),
                 "matchRouters": ["appAccessPortal"],
                 "iconfontName": "link",
                 "supportModule": true,
@@ -864,6 +864,13 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
             {
+                "name": "appEngineOperator",
+                "label": staticI18n.$t("应用引擎"),     //运营者视角应用引擎
+                "iconfontName": "squares",
+                "supportModule": true,
+                "children": []
+            },
+            {
                 "name": "appServices",
                 "label": staticI18n.$t("增强服务"),
                 "iconfontName": "diamond",
@@ -881,12 +888,6 @@ export const PAAS_STATIC_CONFIG = {
                 "destRoute": {
                     "name": "moduleManage"
                 },
-                "children": []
-            },
-            {
-                "name": "appPermissions",
-                "label": staticI18n.$t("权限管理"),
-                "iconfontName": "security",
                 "children": []
             },
             {

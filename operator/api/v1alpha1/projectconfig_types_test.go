@@ -19,12 +19,13 @@
 package v1alpha1
 
 import (
-	"io/ioutil"
+	"os"
+
+	"github.com/samber/lo"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var _ = Context("test init ProjectConfig", func() {
@@ -51,7 +52,7 @@ platform:
   sentryDSN: "https://sentry.example.com"
   ingressClassName: nginx
 `
-		file, err := ioutil.TempFile("", "")
+		file, err := os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = file.Write([]byte(configContent))

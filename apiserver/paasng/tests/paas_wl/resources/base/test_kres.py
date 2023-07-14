@@ -300,6 +300,7 @@ def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1")
                     labels:
                         deployment-name: {name}
                 spec:
+                    automountServiceAccountToken: false
                     containers:
                     - name: main
                       image: busybox
@@ -320,7 +321,8 @@ def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: 
             # Set "schedulerName", so the pod won't be processed by the default
             # scheduler.
             'schedulerName': 'no-running-scheduler',
-            'containers': [{'name': "main", 'image': "busybox", "imagePullPolicy": "IfNotPresent"}],
+            'containers': [{'name': "main", 'image': "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
             "restartPolicy": restart_policy,
+            "automountServiceAccountToken": False,
         },
     }

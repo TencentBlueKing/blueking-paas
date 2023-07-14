@@ -73,6 +73,7 @@
           class="pl20 pr20"
           :theme="'primary'"
           :disabled="isDisabled"
+          @click="handleSave"
         >
           {{ $t('保存') }}
         </bk-button>
@@ -486,6 +487,25 @@ export default {
     // 取消改变页面状态
     handleCancel() {
       this.$store.commit('cloudApi/updatePageEdit', false);
+    },
+
+    // 保存
+    async handleSave() {
+      try {
+        console.log(this.$store.state.cloudApi.cloudAppData);
+        debugger;
+        const params = {};
+        const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {
+          appCode: this.appCode,
+          params,
+        });
+        console.log('res', res);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
     },
   },
 };

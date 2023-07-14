@@ -225,14 +225,15 @@
               :label="$t('配置环境')"
               :label-width="120"
             >
-              <div class="bk-button-group">
-                <bk-button
+              <bk-radio-group v-model="envType">
+                <bk-radio-button
+                  class="radio-cls"
                   v-for="(item, index) in envsData"
                   :key="index"
-                  :class="envType === item.value ? 'is-selected' : ''"
-                  @click="envType = item.value"
-                  size="small">{{ item.label }}</bk-button>
-              </div>
+                  :value="item.value">
+                  {{ item.label }}
+                </bk-radio-button>
+              </bk-radio-group>
             </bk-form-item>
             <bk-form-item
               v-if="ifopen"
@@ -278,35 +279,54 @@
                       </bk-radio-button>
                     </bk-radio-group>
                   </bk-form-item>
-                  <bk-form-item
-                    :label="$t('最大副本数')"
-                    :label-width="120">
-                    <bk-input
-                      v-model="formData.replicas"
-                      type="number"
-                      :max="5"
-                      :min="1"
-                      style="width: 150px"
-                    />
-                  </bk-form-item>
-                  <bk-form-item
-                    :label="$t('最小副本数')"
-                    :label-width="120">
-                    <bk-input
-                      v-model="formData.replicas"
-                      type="number"
-                      :max="5"
-                      :min="1"
-                      style="width: 150px"
-                    />
-                  </bk-form-item>
+                  <section v-if="autoscaling" class="mt20">
+                    <bk-form-item
+                      :label="$t('最大副本数')"
+                      :label-width="120">
+                      <bk-input
+                        v-model="formData.replicas"
+                        type="number"
+                        :max="5"
+                        :min="1"
+                        style="width: 150px"
+                      />
+                    </bk-form-item>
+                    <bk-form-item
+                      :label="$t('最小副本数')"
+                      :label-width="120">
+                      <bk-input
+                        v-model="formData.replicas"
+                        type="number"
+                        :max="5"
+                        :min="1"
+                        style="width: 150px"
+                      />
+                    </bk-form-item>
+                  </section>
+                  <section v-else class="mt20">
+                    <bk-form-item
+                      :label="$t('副本数量')"
+                      :label-width="120"
+                      :required="true"
+                      :property="'replicas'"
+                      :rules="rules.replicas"
+                    >
+                      <bk-input
+                        v-model="formData.replicas"
+                        type="number"
+                        :max="5"
+                        :min="1"
+                        style="width: 150px"
+                      />
+                    </bk-form-item>
+                  </section>
                 </bk-form>
               </div>
             </bk-form-item>
           </bk-form>
         </div>
 
-        <div class="form-resource">
+        <!-- <div class="form-resource">
           <div class="item-title">
             {{ $t('副本数和资源') }}
           </div>
@@ -374,7 +394,7 @@
               <span class="whole-item-tips">{{ $t('每个容器能使用的CPU核心数量') }}</span>
             </bk-form-item>
           </bk-form>
-        </div>
+        </div> -->
       </div>
 
       <!-- 查看态 -->

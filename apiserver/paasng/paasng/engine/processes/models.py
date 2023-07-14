@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.processes.models import Process, Status
+    from paas_wl.workloads.processes.entities import Process, Status
 
 
 def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':

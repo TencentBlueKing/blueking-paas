@@ -25,7 +25,7 @@ from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.base.kres import KPod
 from paas_wl.resources.kube_res.base import AppEntityManager
 from paas_wl.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.processes.models import Process
+from paas_wl.workloads.processes.entities import Process
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.serializers import extract_type_from_name
 from tests.paas_wl.utils.wl_app import create_wl_release
@@ -122,7 +122,7 @@ class TestProcInstManager:
     def test_get_logs(self, wl_app, pod):
         # Query process instances
         inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
-        with mock.patch('paas_wl.workloads.processes.models.Instance.Meta.kres_class') as kp:
+        with mock.patch('paas_wl.workloads.processes.entities.Instance.Meta.kres_class') as kp:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 

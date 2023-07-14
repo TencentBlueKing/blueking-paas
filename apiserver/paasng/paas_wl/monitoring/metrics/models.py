@@ -39,8 +39,7 @@ from paas_wl.platform.applications.models import WlApp
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.processes.models import Process
-
+    from paas_wl.workloads.processes.entities import Process
 
 logger = logging.getLogger(__name__)
 

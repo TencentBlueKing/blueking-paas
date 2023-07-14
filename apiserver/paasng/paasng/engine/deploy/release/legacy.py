@@ -25,6 +25,7 @@ from typing import Optional, Tuple
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
 
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.configurations.building import get_processes_by_build
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
@@ -35,7 +36,6 @@ from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
-from paasng.engine.models.processes import ProcessManager
 from paasng.engine.signals import on_release_created
 from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
@@ -53,7 +53,7 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure('更新进程配置'):
-            ProcessManager(self.engine_app).sync_processes_specs(self.deployment.get_processes())
+            ProcessManager(self.engine_app.env).sync_processes_specs(self.deployment.get_processes())
 
         with self.procedure('更新应用配置'):
             update_image_runtime_config(deployment=self.deployment)

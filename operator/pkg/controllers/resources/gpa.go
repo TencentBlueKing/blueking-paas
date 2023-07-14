@@ -33,10 +33,11 @@ import (
 // GetWantedGPAs 根据应用生成对应的 GPA(general-pod-autoscaler) 配置列表
 func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler {
 	gpaList := []*autoscaling.GeneralPodAutoscaler{}
-	policyGetter := NewAutoscalingPolicyGetter(app)
+	specGetter := NewAutoscalingSpecGetter(app)
 	for _, proc := range app.Spec.Processes {
-		// 若某个进程没有自动扩缩容配置，或未启用，则跳过
-		if proc.Autoscaling == nil || !proc.Autoscaling.Enabled {
+		// 若某个进程没有自动扩缩容配置，则跳过
+		spec := specGetter.Get(proc.Name)
+		if spec == nil {
 			continue
 		}
 		gpaList = append(gpaList, &autoscaling.GeneralPodAutoscaler{
@@ -62,11 +63,11 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 			Spec: autoscaling.GeneralPodAutoscalerSpec{
 				AutoScalingDrivenMode: autoscaling.AutoScalingDrivenMode{
 					MetricMode: &autoscaling.MetricMode{
-						Metrics: buildMetricSpecs(policyGetter.Get(proc.Name)),
+						Metrics: buildMetricSpecs(spec.Policy),
 					},
 				},
-				MinReplicas: &proc.Autoscaling.MinReplicas,
-				MaxReplicas: proc.Autoscaling.MaxReplicas,
+				MinReplicas: &spec.MinReplicas,
+				MaxReplicas: spec.MaxReplicas,
 				ScaleTargetRef: autoscaling.CrossVersionObjectReference{
 					APIVersion: "apps/v1",
 					Kind:       "Deployment",

@@ -52,7 +52,6 @@ var _ = Describe("GPAResources", func() {
 					{
 						Name: "web",
 						Autoscaling: &paasv1alpha2.AutoscalingSpec{
-							Enabled:     true,
 							MinReplicas: 1,
 							MaxReplicas: 5,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -60,9 +59,6 @@ var _ = Describe("GPAResources", func() {
 					},
 					{
 						Name: "hi",
-						Autoscaling: &paasv1alpha2.AutoscalingSpec{
-							Enabled: false,
-						},
 					},
 				},
 			},
@@ -77,7 +73,7 @@ var _ = Describe("GPAResources", func() {
 
 	Context("TestGenerateGPAs", func() {
 		It("autoscaling disabled", func() {
-			bkapp.Spec.Processes[0].Autoscaling.Enabled = false
+			bkapp.Spec.Processes[0].Autoscaling = nil
 			gpaList := GetWantedGPAs(bkapp)
 			Expect(len(gpaList)).To(Equal(0))
 		})

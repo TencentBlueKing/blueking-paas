@@ -67,7 +67,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 			pullPolicy = corev1.PullIfNotPresent
 		}
 
-		resGetter := paasv1alpha2.NewProcResourcesGetter(app)
+		resGetter := NewProcResourcesGetter(app)
 		resReq, err := resGetter.Get(proc.Name)
 		if err != nil {
 			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)

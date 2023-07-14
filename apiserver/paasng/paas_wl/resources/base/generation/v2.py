@@ -65,7 +65,18 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def labels(self) -> dict:
-        return {"pod_selector": self.pod_selector, "release_version": str(self.process.version)}
+        mdata = get_metadata(self.process.app)
+        return {
+            "pod_selector": self.pod_selector,
+            "release_version": str(self.process.version),
+            "region": self.process.app.region,
+            "app_code": mdata.get_paas_app_code(),
+            "module_name": mdata.module_name,
+            "env": mdata.environment,
+            "process_id": self.process.type,
+            "category": "bkapp",
+            "mapper_version": "v2",
+        }
 
     @property
     def match_labels(self) -> dict:

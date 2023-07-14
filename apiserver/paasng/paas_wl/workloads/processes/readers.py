@@ -48,9 +48,11 @@ class ProcessAPIAdapter:
     @staticmethod
     def app_selector(app: 'WlApp') -> Dict[str, str]:
         """Return pod selector dict, useful for filter Process/Instance from k8s"""
+        # TODO: 使用 resource-type/category 来过滤
         if app.type == WlAppType.CLOUD_NATIVE:
             return {MODULE_NAME_ANNO_KEY: app.module_name}
-        return {"module_name": app.module_name}
+        # return {"module_name": app.module_name}
+        return {}
 
 
 class ProcessReader(AppEntityReader[Process]):

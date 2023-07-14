@@ -284,7 +284,7 @@
                       :label="$t('最大副本数')"
                       :label-width="120">
                       <bk-input
-                        v-model="formData.replicas"
+                        v-model="formData.autoscaling.maxReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -295,7 +295,7 @@
                       :label="$t('最小副本数')"
                       :label-width="120">
                       <bk-input
-                        v-model="formData.replicas"
+                        v-model="formData.autoscaling.minReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -602,6 +602,7 @@ export default {
             this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
           }
           this.formData = this.processData[this.panelActive];
+          console.log('this.formData', this.formData);
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
         this.setPanelsData();
@@ -686,6 +687,16 @@ export default {
       },
       deep: true,
     },
+
+    autoscaling: {
+      handler(val) {
+        if (val) {
+          this.formData.autoscaling = {
+
+          };
+        }
+      },
+    },
   },
   created() {
     this.getImageCredentialList();
@@ -711,6 +722,11 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: null,
+        autoscaling: {
+          minReplicas: '',
+          maxReplicas: '',
+          policy: 'default',
+        },
       };
       if (e && e.target === document.querySelector('.bk-input-cls input')) {
         this.$nextTick(() => {

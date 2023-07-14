@@ -492,9 +492,7 @@ export default {
     // 保存
     async handleSave() {
       try {
-        console.log(this.$store.state.cloudApi.cloudAppData);
-        debugger;
-        const params = {};
+        const params = { ... this.$store.state.cloudApi.cloudAppData };
         const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           params,

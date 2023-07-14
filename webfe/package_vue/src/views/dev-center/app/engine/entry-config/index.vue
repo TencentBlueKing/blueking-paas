@@ -69,7 +69,8 @@ export default {
   },
   computed: {
     accessControl() {
-      return this.$store.state.region.access_control.module.map(e => e);
+      return this.$store.state.region?.access_control
+        ? this.$store.state.region?.access_control?.module?.map(e => e) : [];
     },
     panels() {
       let panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];

@@ -122,7 +122,7 @@
               <div class="tab-box">
                 <li
                   v-if="notBkLesscode"
-                  :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
+                  :class="['tab-item template', { 'active': this.isNormalApp }]"
                   @click="handleCodeTypeChange(1)"
                 >
                   {{ $t('蓝鲸开发框架') }}
@@ -135,7 +135,7 @@
                 </li>
                 <!-- 蓝鲸插件创建入口 -->
                 <li
-                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION"
+                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && this.isNormalApp"
                   :class="['tab-item template', { 'active': localSourceOrigin === 3 }]"
                   @click="handleCodeTypeChange(3)"
                 >
@@ -737,6 +737,9 @@
             curUserFeature () {
                 return this.$store.state.userFeature;
             },
+            isNormalApp () {
+                return this.localSourceOrigin === 1;
+            }
         },
         watch: {
             globalErrorMessage (val) {

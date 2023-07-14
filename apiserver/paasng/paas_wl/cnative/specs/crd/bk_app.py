@@ -47,7 +47,6 @@ class MetaV1Condition(BaseModel):
 class AutoscalingSpec(BaseModel):
     """Autoscaling specification"""
 
-    enabled: bool
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
@@ -108,6 +107,14 @@ class ReplicasOverlay(BaseModel):
     count: int
 
 
+class ResQuotaOverlay(BaseModel):
+    """Overwrite process's resQuota by environment"""
+
+    envName: str
+    process: str
+    plan: str
+
+
 class EnvVarOverlay(BaseModel):
     """Overwrite or add application's environment vars by environment"""
 
@@ -121,13 +128,16 @@ class AutoscalingOverlay(BaseModel):
 
     envName: str
     process: str
-    policy: str
+    minReplicas: int
+    maxReplicas: int
+    policy: str = Field(..., min_length=1)
 
 
 class EnvOverlay(BaseModel):
     """Defines environment specified configs"""
 
     replicas: Optional[List[ReplicasOverlay]] = None
+    resQuotas: Optional[List[ResQuotaOverlay]] = None
     envVariables: Optional[List[EnvVarOverlay]] = None
     autoscaling: Optional[List[AutoscalingOverlay]] = None
 

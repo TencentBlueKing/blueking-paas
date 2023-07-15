@@ -24,8 +24,8 @@ from paas_wl.resources.base.kres import KPod
 from paas_wl.resources.kube_res.base import AppEntityReader, ResourceList
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
+from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.models import Instance, Process
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models import WlApp

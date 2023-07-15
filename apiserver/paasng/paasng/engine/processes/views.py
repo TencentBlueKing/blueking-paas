@@ -25,6 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_403_FORBIDDEN
 
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
@@ -33,7 +34,6 @@ from paasng.accounts.constants import AccountFeatureFlag as AFF
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.permissions.user import user_has_feature
 from paasng.engine.constants import RuntimeType
-from paasng.engine.models.processes import ProcessManager
 from paasng.engine.processes import serializers as slzs
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -64,8 +64,8 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
 
         application = self.get_application()
         module = self.get_module_via_path()
-        engine_app = self.get_engine_app_via_path()
-        manager = ProcessManager(engine_app)
+        env = self.get_env_via_path()
+        manager = ProcessManager(env)
 
         if not PFF.get_default_flags()[PFF.ENABLE_WEB_CONSOLE]:
             # 平台不支持 WebConsole 功能

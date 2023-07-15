@@ -28,7 +28,7 @@ from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
-from paas_wl.workloads.processes.controllers import get_proc_mgr
+from paas_wl.workloads.processes.controllers import get_proc_ctl
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.workloads.processes.readers import instance_kmodel
 from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
@@ -131,7 +131,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
         wl_app = self.get_app()
         data = request.data
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=wl_app.pk, name=process_type)
-        ctl = get_proc_mgr(get_env_by_wl_app(wl_app))
+        ctl = get_proc_ctl(get_env_by_wl_app(wl_app))
         if process_spec.target_replicas != int(data["target_replicas"]):
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
 

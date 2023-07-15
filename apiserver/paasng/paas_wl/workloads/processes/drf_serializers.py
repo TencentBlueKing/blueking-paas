@@ -31,7 +31,8 @@ from paas_wl.platform.applications.models import Release
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.models import Instance, ProcessSpec
+from paas_wl.workloads.processes.entities import Instance
+from paas_wl.workloads.processes.models import ProcessSpec
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):

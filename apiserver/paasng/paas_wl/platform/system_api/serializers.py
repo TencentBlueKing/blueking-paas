@@ -21,7 +21,7 @@ import re
 from rest_framework import serializers
 
 from paas_wl.monitoring.metrics.constants import MetricsSeriesType
-from paas_wl.workloads.processes.models import Instance
+from paas_wl.workloads.processes.entities import Instance
 
 # proc type name is alphanumeric
 # https://docs-v2.readthedocs.io/en/latest/using-workflow/process-types-and-the-procfile/#declaring-process-types

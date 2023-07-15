@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import logging
 from dataclasses import asdict
-from typing import Dict, List, Optional, Protocol
+from typing import List, Optional, Protocol
 
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -38,9 +38,10 @@ from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
+from paas_wl.workloads.processes.entities import Process
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.models import Process, ProcessSpec
+from paas_wl.workloads.processes.models import ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
@@ -208,20 +209,6 @@ class AppProcessesController:
         return ProcAutoscaling(self.app, proc_type, scaling_config, target_ref)  # type: ignore
 
 
-def list_proc_specs(wl_app: WlApp) -> List[Dict]:
-    """Return all processes specs of an app
-
-    :return: list of process specs
-    """
-    from .drf_serializers import ProcessSpecSLZ
-
-    results = []
-    for process_type in wl_app.process_specs.all().values_list("name", flat=True):
-        proc_spec = ProcessSpec.objects.get(engine_app=wl_app, name=process_type)
-        results.append(ProcessSpecSLZ(proc_spec).data)
-    return results
-
-
 def judge_operation_frequent(app: WlApp, proc_type: str, operation_interval: datetime.timedelta):
     """检查 process 操作是否频繁
 
@@ -281,7 +268,7 @@ class CNativeProcController:
             raise ProcessNotFound(str(e))
 
 
-def get_proc_mgr(env: ModuleEnvironment) -> ProcController:
+def get_proc_ctl(env: ModuleEnvironment) -> ProcController:
     """Get a process controller by env"""
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return CNativeProcController(env)
@@ -298,6 +285,7 @@ def get_processes_status(app: WlApp) -> List[Process]:
 
     try:
         release: Release = Release.objects.get_latest(app)
+        # TODO: fixme 仅托管镜像的云原生应用没有 procfile
         procfile = release.get_procfile()
     except Release.DoesNotExist:
         return results

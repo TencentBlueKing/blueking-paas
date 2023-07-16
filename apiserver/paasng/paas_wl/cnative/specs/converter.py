@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
+import logging
+
+from kubernetes.utils import parse_quantity
+
+from paas_wl.cnative.specs.constants import PLAN_TO_QUOTA_MAP, ApiVersion, ResQuotaPlan
+from paas_wl.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppResource
+
+logger = logging.getLogger(__name__)
+
+
+class BkAppResourceConverter:
+    """
+    BkApp 版本转换器
+
+    将 BkAppResource 转换成 v1alpha2 版本
+    """
+
+    def __init__(self, bkapp: BkAppResource):
+        self.bkapp = bkapp
+
+    def convert(self) -> BkAppResource:
+        # 如果已经是 v1alpha2 版本的 BkAppResource，直接跳过
+        if self.bkapp.apiVersion == ApiVersion.V1ALPHA2:
+            return self.bkapp
+
+        self._try_aggregate_images()
+        self._convert_quota_to_plan()
+        return self.bkapp
+
+    def _try_aggregate_images(self):
+        """尝试对使用的镜像进行聚合
+
+        如果使用多个镜像，则不能进行聚合，以及升级到 v1alpha2 版本
+        原因是尽管 v1alpha2 支持多镜像，但是基于注解的实现，前端交互并不支持
+        """
+        used_images = {p.image for p in self.bkapp.spec.processes if p.image}
+        if len(used_images) != 1:
+            logger.warning(f"BkAppResource {self.bkapp.metadata.name} has multiple images, cannot upgrade to v1alpha2")
+            return
+
+        for p in self.bkapp.spec.processes:
+            p.image = None
+        self.bkapp.spec.build = BkAppBuildConfig(image=used_images.pop())
+        self.bkapp.apiVersion = ApiVersion.V1ALPHA2
+
+    def _convert_quota_to_plan(self):
+        """
+        resQuotaPlan 不受 bkApp 版本影响，可以直接转换（策略为向上取整），
+        但是需要移除原有的 cpu，memory 配置，避免出现优先级覆盖问题
+        """
+        for p in self.bkapp.spec.processes:
+            for plan in ResQuotaPlan:
+                cpu, mem = PLAN_TO_QUOTA_MAP[plan]
+                if parse_quantity(p.cpu) <= parse_quantity(cpu) and parse_quantity(p.memory) <= parse_quantity(mem):
+                    p.resQuotaPlan = plan
+                    p.cpu, p.memory = "", ""
+                    break

@@ -28,7 +28,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import MODULE_NAME_ANNO_KEY
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
@@ -51,7 +50,6 @@ from paas_wl.workloads.processes.drf_serializers import (
 )
 from paas_wl.workloads.processes.entities import Instance
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
-from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.watch import ProcWatchEvent, watch_process_events
@@ -213,15 +211,10 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
     :param release_id: if given, include instances created by given release only
     :return: A dict with "processes" and "instances"
     """
-    labels = {}
-    # 由于云原生应用对命名空间进行合并（仅保留 stag/prod 两个命名空间），因此查询进程信息，需要带上模块信息的 labels
-    if wl_app.type == WlAppType.CLOUD_NATIVE:
-        labels = {MODULE_NAME_ANNO_KEY: wl_app.module_name}
-
-    procs = process_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
+    procs = process_kmodel.list_by_app_with_meta(app=wl_app)
     procs_items = ProcSpecsSerializer(procs.items, many=True)
 
-    insts = instance_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
+    insts = instance_kmodel.list_by_app_with_meta(app=wl_app)
     insts_items = InstanceForDisplaySLZ(insts.items, many=True)
 
     # Filter instances if required
@@ -237,19 +230,19 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
             proc_extra_infos.append(
                 {
                     'type': proc_spec.type,
+                    # TODO: 云原生应用展示命令信息
+                    # 'command': '???',
                     'cluster_link': f'http://{proc_spec.metadata.name}.{proc_spec.app.namespace}',  # type: ignore
                 }
             )
     else:
         for proc_spec in procs.items:
-            release = wl_app.release_set.get(version=proc_spec.version)
-            proc_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.type, release=release)
             proc_extra_infos.append(
                 {
-                    'type': proc_obj.type,
+                    'type': proc_spec.type,
                     # command 仅普通应用独有，用于页面进程信息展示，云原生应用暂不展示命令信息
-                    'command': proc_obj.runtime.proc_command,
-                    'cluster_link': 'http://' + get_service_dns_name(proc_obj.app, proc_obj.type),
+                    'command': proc_spec.runtime.proc_command,
+                    'cluster_link': 'http://' + get_service_dns_name(proc_spec.app, proc_spec.type),
                 }
             )
 

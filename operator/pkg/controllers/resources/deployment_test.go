@@ -118,7 +118,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 			hiDeploy := deploys[1]
 			Expect(hiDeploy.Name).To(Equal("bkapp-sample--hi"))
-			Expect(hiDeploy.Spec.Selector.MatchLabels).To(Equal(labels.Deployment(bkapp, "hi")))
+			Expect(hiDeploy.Spec.Selector.MatchLabels).To(Equal(labels.PodSelector(bkapp, "hi")))
 			Expect(*hiDeploy.Spec.RevisionHistoryLimit).To(Equal(int32(0)))
 			Expect(len(hiDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
 		})

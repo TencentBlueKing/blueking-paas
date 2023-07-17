@@ -121,7 +121,7 @@ export const PLATFORM_CONFIG = {
         BK_DESKTOP: '',
 
         // BK插件
-        BK_PLUGIN: '',
+        BK_PLUGIN: 'https://github.com/TencentBlueKing/bk-plugin-framework-python',
 
         //BKtemplate
         BK_PLUGIN_TEMPLATE: 'https://github.com/TencentBlueKing/bk-plugin-framework-python/tree/master/template',

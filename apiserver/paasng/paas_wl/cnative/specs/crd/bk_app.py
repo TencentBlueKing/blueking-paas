@@ -168,6 +168,20 @@ class BkAppAddon(BaseModel):
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
 
 
+class HostAlias(BaseModel):
+    """A host alias entry"""
+
+    ip: str
+    hostnames: List[str]
+
+
+class DomainResolution(BaseModel):
+    """Domain resolution config"""
+
+    nameservers: List[str] = Field(default_factory=list)
+    hostAliases: List[HostAlias] = Field(default_factory=list)
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
@@ -176,6 +190,7 @@ class BkAppSpec(BaseModel):
     hooks: Optional[BkAppHooks] = None
     addons: List[BkAppAddon] = Field(default_factory=list)
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
+    domainResolution: Optional[DomainResolution] = None
     envOverlay: Optional[EnvOverlay] = None
 
 

@@ -25,12 +25,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.release_controller.api import get_latest_build_id
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.deploy.release.legacy import release_by_engine
 from paasng.engine.models import Deployment, OfflineOperation
 from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL
-from paasng.engine.models.processes import ProcessManager
 from paasng.engine.serializers import DeploymentSLZ, GetReleasedInfoSLZ, OfflineOperationSLZ
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -60,7 +60,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             'exposed_link': {"url": entrance.address if entrance else None},
         }
         if serializer.data['with_processes']:
-            _specs = ProcessManager(module_env.engine_app).list_processes_specs()
+            _specs = ProcessManager(module_env).list_processes_specs()
             # Change structure of "specs", make it compatible with frontend client
             specs = [{spec['name']: spec} for spec in _specs]
             data['processes'] = specs
@@ -111,7 +111,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             },
         }
         if serializer.data['with_processes']:
-            _specs = ProcessManager(module_env.engine_app).list_processes_specs()
+            _specs = ProcessManager(module_env).list_processes_specs()
             # Change structure of "specs", make it compatible with frontend client
             specs = [{spec['name']: spec} for spec in _specs]
             data['processes'] = specs

@@ -28,7 +28,7 @@ from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetric
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig, MetricSpec, ScalingObjectRef
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
-from paas_wl.workloads.processes.models import Process
+from paas_wl.workloads.processes.entities import Process
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -31,7 +31,7 @@ def sidecar_template():
         {
             "name": "agent",
             "image": "blueking-fake.com:8090/gitlab-runner/agent:latest",
-            "imagePullPolicy": "Always",
+            "imagePullPolicy": "Never",
             "ports": [
                 {
                     "name": "some-config",

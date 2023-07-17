@@ -66,6 +66,7 @@ class TestCreateAppResource:
                 'hooks': None,
                 'addons': [],
                 'envOverlay': None,
+                'domainResolution': None,
                 'configuration': {'env': []},
             },
             'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},

@@ -35,7 +35,7 @@ from paas_wl.workloads.processes.utils import get_command_name
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models import Release, WlApp
     from paas_wl.resources.base.client import K8sScheduler
-    from paas_wl.workloads.processes.models import Process
+    from paas_wl.workloads.processes.entities import Process
 
 logger = logging.getLogger(__name__)
 

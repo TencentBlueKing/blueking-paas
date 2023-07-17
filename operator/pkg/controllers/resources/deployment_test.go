@@ -114,6 +114,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(webDeploy.OwnerReferences[0].Kind).To(Equal(bkapp.Kind))
 			Expect(webDeploy.OwnerReferences[0].Name).To(Equal(bkapp.Name))
 			Expect(len(webDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(*webDeploy.Spec.Template.Spec.AutomountServiceAccountToken).To(Equal(false))
 
 			hiDeploy := deploys[1]
 			Expect(hiDeploy.Name).To(Equal("bkapp-sample--hi"))

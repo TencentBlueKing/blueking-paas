@@ -22,7 +22,7 @@ import pytest
 
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.processes.controllers import env_is_running, get_processes_status
-from paas_wl.workloads.processes.models import Instance, Process
+from paas_wl.workloads.processes.entities import Instance, Process
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.paas_wl.workloads.conftest import create_release

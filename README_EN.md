@@ -12,11 +12,12 @@ easily and efficiently. It includes the following core services: Developer Cente
 Console, Low Code Development Service, etc. The platform's goal is to help developers build operation-free tools and
 systems quickly and cost-effectively.
 
-This project is "PaaS Platform - Developer Center".
+This project is `PaaS Platform - Developer Center`.
 
-> **PaaS core services open source project**
+**PaaS core services open source project**
 
 - PaaS Platform - [Developer Center](https://github.com/TencentBlueKing/blueking-paas)
+- PaaS Platform - [API Gateway](https://github.com/TencentBlueKing/blueking-apigateway)
 - PaaS Platform - [Unified Login](https://github.com/TencentBlueKing/bk-user)
 - PaaS Platform - [Console](https://github.com/TencentBlueKing/blueking-console)
 - PaaS Platform Low Code Development Services - [LessCode](https://github.com/TencentBlueKing/bk-lesscode)

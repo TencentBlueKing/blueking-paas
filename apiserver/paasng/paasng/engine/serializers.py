@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 import re
 from datetime import datetime
 from typing import List, Optional
@@ -30,7 +29,15 @@ from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.monitoring.metrics.constants import MetricsResourceType
 from paas_wl.platform.applications.models import Build, BuildProcess
-from paasng.engine.constants import ConfigVarEnvName, DeployConditions, ImagePullPolicy, JobStatus, MetricsType
+from paas_wl.workloads.processes.drf_serializers import ProcessSpecSLZ
+from paasng.engine.constants import (
+    ConfigVarEnvName,
+    DeployConditions,
+    ImagePullPolicy,
+    JobStatus,
+    MetricsType,
+    RuntimeType,
+)
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.engine.models.deployment import Deployment
@@ -38,12 +45,11 @@ from paasng.engine.models.managers import DeployDisplayBlockRenderer
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.publish.market.serializers import AvailableAddressSLZ
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField
-
-logger = logging.getLogger(__name__)
 
 
 class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
@@ -594,3 +600,26 @@ class ImageArtifactDetailSLZ(serializers.Serializer):
     image_info = ImageArtifactMinimalSLZ(help_text="镜像详情")
     build_records = ImageArtifactMinimalSLZ(many=True, default=list, help_text="构建记录")
     deploy_records = ImageDeployRecord(many=True, default=list, help_text="部署记录")
+
+
+class ModuleEnvOverviewSLZ(serializers.Serializer):
+    is_deployed = serializers.BooleanField(help_text="是否已部署")
+    address = AvailableAddressSLZ(allow_null=True, help_text="平台提供的访问地址")
+    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
+    # 版本相关信息
+    version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
+    version_name = serializers.CharField(required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name")
+    revision = serializers.CharField(
+        required=False,
+        help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",
+    )
+
+    # 进程相关信息
+    process_specs = ProcessSpecSLZ(many=True, help_text="进程规格")
+
+
+class EnvOverviewSLZ(serializers.Serializer):
+    """环境概览视图"""
+
+    environment = serializers.CharField(help_text="部署环境")
+    modules = ModuleEnvOverviewSLZ(many=True)

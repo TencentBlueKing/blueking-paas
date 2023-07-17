@@ -1,6 +1,6 @@
 # -------------- builder container --------------
 # Build the manager binary
-FROM golang:1.18 as builder
+FROM golang:1.20-alpine as builder
 
 LABEL maintainer="Tencent BlueKing"
 

@@ -24,8 +24,7 @@ from paas_wl.resources.base.kres import BaseKresource, KDeployment, KPod, KRepli
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.base import EnhancedApiClient
-    from paas_wl.workloads.processes.models import Process
-
+    from paas_wl.workloads.processes.entities import Process
 
 MapperResource = TypeVar("MapperResource", bound=BaseKresource)
 

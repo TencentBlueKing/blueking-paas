@@ -21,6 +21,7 @@ import json
 import logging
 from typing import Dict, Optional
 
+import cattrs
 from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -39,7 +40,7 @@ from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.controllers import get_proc_mgr, judge_operation_frequent
+from paas_wl.workloads.processes.controllers import get_proc_ctl, judge_operation_frequent
 from paas_wl.workloads.processes.drf_serializers import (
     CNativeProcSpecSLZ,
     InstanceForDisplaySLZ,
@@ -48,14 +49,14 @@ from paas_wl.workloads.processes.drf_serializers import (
     UpdateProcessSLZ,
     WatchProcessesSLZ,
 )
+from paas_wl.workloads.processes.entities import Instance
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.models import Instance, ProcessSpec
+from paas_wl.workloads.processes.models import ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
-from paas_wl.workloads.processes.watch import watch_process_events
+from paas_wl.workloads.processes.watch import ProcWatchEvent, watch_process_events
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.models import EngineApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.operations.constant import OperationType
@@ -125,7 +126,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         target_replicas: Optional[int] = None,
         scaling_config: Optional[AutoscalingConfig] = None,
     ):
-        ctl = get_proc_mgr(module_env)
+        ctl = get_proc_ctl(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
                 ctl.scale(process_type, autoscaling, target_replicas, scaling_config)
@@ -184,9 +185,9 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 rv_inst=data['rv_inst'],
             )
             for event in stream:
-                event = self.process_event(wl_app, event)
+                e = self.process_event(wl_app, event)
                 yield 'event: message\n'
-                yield 'data: {}\n\n'.format(json.dumps(event))
+                yield 'data: {}\n\n'.format(json.dumps(e))
 
             yield 'id: -1\n'
             yield 'event: EOF\n'
@@ -196,13 +197,14 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return StreamingHttpResponse(resp(), content_type='text/event-stream')
 
     @staticmethod
-    def process_event(wl_app: WlApp, event: Dict) -> Dict:
+    def process_event(wl_app: WlApp, event: ProcWatchEvent) -> Dict:
         """Process event payload, modifies original event"""
-        payload = event['object']
+        data = cattrs.unstructure(event)
         # Replace instance events with fewer fields
-        if event['object_type'] == 'instance':
-            event['object'] = InstanceForDisplaySLZ(Instance(app=wl_app, **payload)).data
-        return event
+        if event.object_type == 'instance':
+            payload = event.object
+            data['object'] = InstanceForDisplaySLZ(Instance(app=wl_app, **payload)).data
+        return data
 
 
 def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:

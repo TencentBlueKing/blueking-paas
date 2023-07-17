@@ -20,7 +20,7 @@ package resources
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -119,21 +119,21 @@ var _ = Describe("Get App Envs", func() {
 			Entry("addon found and get 1 extra envs", func(req *http.Request) *http.Response {
 				return &http.Response{
 					StatusCode: 200,
-					Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
+					Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
 					Header:     make(http.Header),
 				}
 			}, 3),
 			Entry("addon found but no extra envs", func(req *http.Request) *http.Response {
 				return &http.Response{
 					StatusCode: 200,
-					Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {}}`)),
+					Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {}}`)),
 					Header:     make(http.Header),
 				}
 			}, 2),
 			Entry("addon not found!", func(req *http.Request) *http.Response {
 				return &http.Response{
 					StatusCode: 404,
-					Body:       ioutil.NopCloser(bytes.NewBufferString(`Not Found`)),
+					Body:       io.NopCloser(bytes.NewBufferString(`Not Found`)),
 					Header:     make(http.Header),
 				}
 			}, 2),

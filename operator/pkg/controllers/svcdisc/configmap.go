@@ -56,6 +56,10 @@ type WorkloadsMutator struct {
 func (w *WorkloadsMutator) ApplyToDeployments(ctx context.Context, deploys []*appsv1.Deployment) bool {
 	log := logf.FromContext(ctx)
 
+	if w.bkapp.Spec.SvcDiscovery == nil {
+		return false
+	}
+
 	configmap, err := w.GetConfigMap(ctx)
 	if err != nil {
 		log.V(4).Info("unable to get configmap, skip apply.", "error", err)

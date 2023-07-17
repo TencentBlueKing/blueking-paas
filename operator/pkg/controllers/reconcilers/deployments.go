@@ -58,7 +58,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	}
 	expected := resources.GetWantedDeploys(bkapp)
 	if ret := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ret {
-		log.V(2).Info("Applied svc-discovery related changes to deployments.", "bkAppName", bkapp.Name)
+		log.V(2).Info("Applied svc-discovery related changes to deployments.")
 	}
 
 	outdated := FindExtraByName(current, expected)

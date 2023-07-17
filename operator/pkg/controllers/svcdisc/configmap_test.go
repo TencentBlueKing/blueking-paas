@@ -52,6 +52,11 @@ var _ = Describe("Test configmap related functions", func() {
 					Name:      "bkapp-sample",
 					Namespace: "default",
 				},
+				Spec: paasv1alpha2.AppSpec{
+					SvcDiscovery: &paasv1alpha2.SvcDiscConfig{
+						BkSaaS: []paasv1alpha2.SvcDiscEntryBkSaaS{{BkAppCode: "foo"}},
+					},
+				},
 			}
 
 			// Register schemas to the fake builder
@@ -64,6 +69,7 @@ var _ = Describe("Test configmap related functions", func() {
 
 		Context("test ApplyToDeployments", func() {
 			var deploys []*appsv1.Deployment
+			var configmap *v1.ConfigMap
 
 			BeforeEach(func() {
 				// An empty deployment resource
@@ -83,30 +89,34 @@ var _ = Describe("Test configmap related functions", func() {
 					},
 				}
 				deploys = []*appsv1.Deployment{&deploy}
-			})
 
-			It("Skipped, no configmap", func() {
-				ret := NewWorkloadsMutator(builder.Build(), bkapp).ApplyToDeployments(ctx, deploys)
-				Expect(ret).To(BeFalse())
-			})
-			It("Skipped, no valid key", func() {
-				// Create a configmap with no valid key
-				c := v1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Namespace: bkapp.Namespace, Name: "svc-disc-results-" + bkapp.Name},
-				}
-				ret := NewWorkloadsMutator(builder.WithObjects(&c).Build(), bkapp).ApplyToDeployments(ctx, deploys)
-				Expect(ret).To(BeFalse())
-			})
-			It("Applied successfully", func() {
-				// Create a valid configmap
-				c := v1.ConfigMap{
+				configmap = &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: bkapp.Namespace, Name: "svc-disc-results-" + bkapp.Name},
 					Data: map[string]string{
 						DataKeyBkSaaS: "some_value",
 					},
 				}
+			})
+
+			It("No configmap", func() {
+				ret := NewWorkloadsMutator(builder.Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				Expect(ret).To(BeFalse())
+			})
+			It("Configmap has no valid key", func() {
+				// Update the configmap to contain no valid keys
+				configmap.Data = map[string]string{}
+				ret := NewWorkloadsMutator(builder.WithObjects(configmap).Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				Expect(ret).To(BeFalse())
+			})
+			It("Configmap exists, but svc-discovery config is empty", func() {
+				bkapp.Spec.SvcDiscovery = nil
+				ret := NewWorkloadsMutator(builder.WithObjects(configmap).Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				Expect(ret).To(BeFalse())
+			})
+			It("Applied successfully", func() {
 				Expect(len(deploys[0].Spec.Template.Spec.Containers[0].Env)).To(BeZero())
-				ret := NewWorkloadsMutator(builder.WithObjects(&c).Build(), bkapp).ApplyToDeployments(ctx, deploys)
+
+				ret := NewWorkloadsMutator(builder.WithObjects(configmap).Build(), bkapp).ApplyToDeployments(ctx, deploys)
 				Expect(ret).To(BeTrue())
 				Expect(len(deploys[0].Spec.Template.Spec.Containers[0].Env)).To(Equal(1))
 			})

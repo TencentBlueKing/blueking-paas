@@ -43,8 +43,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--code", dest="app_code", help="应用 Code")
         parser.add_argument("--module", dest="module_name", help="模块名称")
-        parser.add_argument("--run-all", dest="run_all", help="是否检查并转换所有 BkApp", action="store_true")
-        parser.add_argument("--dry-run", dest="dry_run", help="是否只打印待转换的 BkApp 信息", action="store_true")
+        parser.add_argument("--run-all", dest="run_all", help="是否尝试转换所有 BkApp", action="store_true")
+        parser.add_argument("--dry-run", dest="dry_run", help="空转，仅打印待转换的 BkApp 信息", action="store_true")
 
     def handle(self, app_code, module_name, run_all, dry_run, *args, **options):
         self._validate_params(app_code, module_name, run_all)

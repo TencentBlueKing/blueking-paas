@@ -145,3 +145,15 @@ PLAN_TO_QUOTA_MAP = {
     ResQuotaPlan.P_4C2G: ("4000m", "2048Mi"),
     ResQuotaPlan.P_4C4G: ("4000m", "4096Mi"),
 }
+
+
+class MountEnvName(str, StructuredEnum):
+    """Environment name for managing mount volume"""
+
+    STAG = EnumField('stag', label='仅测试环境')
+    PROD = EnumField('prod', label='仅生产环境')
+    GLOBAL = EnumField('_global_', label='所有环境')
+
+
+class VolumeSourceType(str, StructuredEnum):
+    ConfigMap = EnumField('ConfigMap')

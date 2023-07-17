@@ -32,9 +32,10 @@ from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
+from paasng.utils.models import make_json_field
 
-from .constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
-from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+from .constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus, MountEnvName, VolumeSourceType
+from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata, VolumeSource
 
 logger = logging.getLogger(__name__)
 
@@ -281,3 +282,50 @@ def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
     else:
         name = f'{code}-m-{module_name}'
     return name.replace("_", "0us0")
+
+
+# TODO: 重构 models.py, 创建 models 模块, 包含 app_resource.py 和 volumes.py
+SourceConfigField = make_json_field('SourceConfigField', VolumeSource)
+
+
+class ConfigMapSourceQuerySet(models.QuerySet):
+    def get_by_mount(self, m: 'Mount'):
+        if m.source_config.configMap:
+            return self.get(module=m.module, environment_name=m.environment_name, name=m.source_config.configMap.name)
+        raise ValueError(f'Mount {m.name} is invalid: source_config.configMap is none')
+
+
+class ConfigMapSource(TimestampedModel):
+    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, db_constraint=False, null=True)
+    environment_name = models.CharField(
+        verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
+    )
+    name = models.CharField(max_length=63)
+    data = models.TextField()
+
+    objects = ConfigMapSourceQuerySet.as_manager()
+
+    class Meta:
+        unique_together = ('module', 'name', 'environment_name')
+
+
+class Mount(TimestampedModel):
+    """挂载配置"""
+
+    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, db_constraint=False, null=True)
+    environment_name = models.CharField(
+        verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
+    )
+    name = models.CharField(max_length=63)
+    mount_path = models.CharField(max_length=128)
+    source_type = models.CharField(choices=VolumeSourceType.get_choices(), max_length=32)
+    source_config: VolumeSource = SourceConfigField()
+
+    class Meta:
+        unique_together = ('module', 'mount_path', 'environment_name')
+
+    @property
+    def source(self) -> Union[ConfigMapSource]:
+        if self.source_type == VolumeSourceType.ConfigMap:
+            return ConfigMapSource.objects.get_by_mount(self)
+        raise ValueError(f'unsupported source type {self.source_type}')

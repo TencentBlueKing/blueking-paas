@@ -39,6 +39,7 @@ from paas_wl.cnative.specs.constants import (
     ApiVersion,
 )
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
+from paas_wl.cnative.specs.mounts import MountsManager
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
@@ -77,6 +78,9 @@ class BkAppManifestProcessor:
         manifest.spec.configuration.env = merge_envvars(
             manifest.spec.configuration.env, generate_builtin_configurations(env=self.env)
         )
+
+        # 注入挂载信息
+        self._inject_mounts(manifest)
 
         data = manifest.dict()
         # refresh status.conditions
@@ -135,3 +139,8 @@ class BkAppManifestProcessor:
         else:
             if ApplicationAccessControlSwitch.objects.is_enabled(application):
                 manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
+
+    def _inject_mounts(self, manifest: BkAppResource) -> None:
+        """inject mounts info"""
+        mgr = MountsManager(self.env)
+        mgr.inject_to_bkapp(manifest)

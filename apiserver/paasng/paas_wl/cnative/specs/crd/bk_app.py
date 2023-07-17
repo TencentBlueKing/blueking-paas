@@ -100,6 +100,27 @@ class BkAppConfiguration(BaseModel):
     env: List[EnvVar] = Field(default_factory=list)
 
 
+class ConfigMapSource(BaseModel):
+    name: str
+
+
+class VolumeSource(BaseModel):
+    configMap: Optional[ConfigMapSource]
+
+
+class Mount(BaseModel):
+    mountPath: str
+    name: str
+    source: VolumeSource
+
+
+class MountOverlay(BaseModel):
+    envName: str
+    mountPath: str
+    name: str
+    source: VolumeSource
+
+
 class ReplicasOverlay(BaseModel):
     """Overwrite process's replicas by environment"""
 
@@ -130,6 +151,7 @@ class EnvOverlay(BaseModel):
     replicas: Optional[List[ReplicasOverlay]] = None
     envVariables: Optional[List[EnvVarOverlay]] = None
     autoscaling: Optional[List[AutoscalingOverlay]] = None
+    mounts: Optional[List[MountOverlay]] = None
 
 
 class BkAppBuildConfig(BaseModel):
@@ -165,6 +187,7 @@ class BkAppSpec(BaseModel):
     processes: List[BkAppProcess] = Field(default_factory=list)
     hooks: Optional[BkAppHooks] = None
     addons: List[BkAppAddon] = Field(default_factory=list)
+    mounts: Optional[List[Mount]] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
     envOverlay: Optional[EnvOverlay] = None
 

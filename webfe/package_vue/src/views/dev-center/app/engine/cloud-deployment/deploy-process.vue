@@ -56,15 +56,26 @@
             v-for="(panel, index) in panels"
             :key="index"
             :class="btnActive === panel.name ? 'is-selected' : ''"
-            @click="handleBtnGroupClick(panel.name)">
-            <!-- <span @mouseenter="handleMouseEnter(index)">{{ panel.name }}</span> -->
+            @click="handleBtnGroupClick(panel.name, index)">
             {{ panel.name }}
             <i
-              v-if="btnMouseIndex === index"
+              v-if="btnActive === panel.name && index !== 0 && isPageEdit"
               class="paasng-icon paasng-edit-2 plugin-name-icon"
-              v-bk-tooltips.click="configIpTip"
+              ref="tooltipsHtml"
+              @click="handleProcessNameEdit(panel.name, index)"
+              v-bk-tooltips="'编辑'"
             />
           </bk-button>
+          <span
+            class="btn-container"
+            v-if="isPageEdit">
+            <i class="paasng-icon paasng-plus-thick" />
+            <bk-button
+              text theme="primary"
+              @click="handleProcessNameEdit('')">
+              {{ $t('新增进程') }}
+            </bk-button>
+          </span>
         </div>
         <bk-button
           v-if="!isPageEdit"
@@ -475,6 +486,22 @@
         </bk-form>
       </div>
     </div>
+
+    <bk-dialog
+      v-model="processDialog.visiable"
+      width="320"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :title="processDialog.title"
+      @confirm="handleConfirm"
+      @cancel="processDialog.visiable = false"
+    >
+      <bk-input
+        class="path-input-cls"
+        v-model="processDialog.name"
+        :placeholder="$t('请输入')"></bk-input>
+    </bk-dialog>
   </paas-content-loader>
 </template>
 
@@ -580,6 +607,12 @@ export default {
       resQuotaData: RESQUOTADATA,
       isAutoscaling: false,
       btnMouseIndex: '',
+      processDialog: {
+        visiable: false,
+        title: this.$t('进程名称'),
+        name: '',
+        index: '',
+      },
     };
   },
   computed: {
@@ -594,36 +627,6 @@ export default {
     },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
-    },
-    configIpTip() {
-      return {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `<div>
-          <div>域名解析目标IP</div>
-          <div
-            class="mt10"
-            style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px; text-align: center;">
-            1
-          </div>
-          <div class="mt10 mb10">推荐操作流程: </div>
-          <div>1. 点击右侧 “添加” 自定义域名</div>
-          <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
-          <div>3. 打开浏览器，测试访问是否正常 </div>
-          <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
-          </div>`,
-        placements: ['bottom'],
-        onHidden: () => {
-          this.tipShow = false;
-          if (this.mouseEnter) return;
-          this.tableIndex = '';
-          this.envIndex = '';
-        },
-        onShown: () => {
-          this.tipShow = true;
-        },
-      };
     },
   },
   watch: {
@@ -990,7 +993,8 @@ export default {
     },
 
     // 按扭组点击
-    handleBtnGroupClick(v) {
+    handleBtnGroupClick(v, i) {
+      this.formData = this.processData[i];
       this.btnActive = v;
     },
 
@@ -1017,8 +1021,38 @@ export default {
       }
     },
 
-    handleMouseEnter(i) {
-      console.log('1', i);
+    // 弹窗确认
+    handleConfirm() {
+      console.log('this.panels', this.panels, this.processDialog.index);
+      if (this.processDialog.index) {   // 编辑进程名
+        this.panels.forEach((e, i) => {
+          if (i === this.processDialog.index) {
+            e.name = this.processDialog.name;
+          }
+        });
+        this.handleBtnGroupClick(this.processDialog.name);
+      } else {  // 新增进程
+        this.panels.push({ name: this.processDialog.name });
+        this.btnActive = this.processDialog.name;
+        this.formData = {
+          name: this.processDialog.name,
+          image: '',
+          command: [],
+          args: [],
+          memory: '256Mi',
+          cpu: '500m',
+          replicas: 1,
+          targetPort: null,
+        };
+      }
+      this.processDialog.visiable = false;
+    },
+
+    // 编辑进程名称
+    handleProcessNameEdit(processName, i = '') {
+      this.processDialog.visiable = true;
+      this.processDialog.name = processName;
+      this.processDialog.index = i;   // 如果为空 这代表是新增
     },
   },
 };
@@ -1154,5 +1188,9 @@ export default {
       background: #F5F7FA;
       border-radius: 2px;
       padding: 20px 24px;
+    }
+    .process-name{
+      width: 280px;
+      height: 140px;
     }
 </style>

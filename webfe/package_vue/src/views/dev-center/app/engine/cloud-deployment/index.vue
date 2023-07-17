@@ -497,7 +497,7 @@ export default {
     // 保存
     async handleSave() {
       try {
-        // 处理手动、自动调节数据
+        // 处理手动调节数据
         this.$refs[this.routerRefs]?.handleAutoData && this.$refs[this.routerRefs]?.handleAutoData();
         const params = { ... this.$store.state.cloudApi.cloudAppData };
         console.log('params', params);
@@ -506,6 +506,11 @@ export default {
           params,
         });
         console.log('res', res);
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('操作成功'),
+        });
+        this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

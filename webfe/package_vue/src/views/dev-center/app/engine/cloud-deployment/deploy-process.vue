@@ -56,8 +56,15 @@
             v-for="(panel, index) in panels"
             :key="index"
             :class="btnActive === panel.name ? 'is-selected' : ''"
-            @click="handleBtnGroupClick(panel.name)"
-            size="small">{{ panel.name }}</bk-button>
+            @click="handleBtnGroupClick(panel.name)">
+            <!-- <span @mouseenter="handleMouseEnter(index)">{{ panel.name }}</span> -->
+            {{ panel.name }}
+            <i
+              v-if="btnMouseIndex === index"
+              class="paasng-icon paasng-edit-2 plugin-name-icon"
+              v-bk-tooltips.click="configIpTip"
+            />
+          </bk-button>
         </div>
         <bk-button
           v-if="!isPageEdit"
@@ -269,7 +276,7 @@
                     :label="$t('扩缩容方式')"
                     :label-width="120"
                   >
-                    <bk-radio-group v-model="formData.autoscaling">
+                    <bk-radio-group v-model="isAutoscaling" @change="handleRadioChange">
                       <bk-radio-button class="radio-cls" :value="false">
                         {{ $t('手动调节') }}
                       </bk-radio-button>
@@ -279,12 +286,12 @@
                       </bk-radio-button>
                     </bk-radio-group>
                   </bk-form-item>
-                  <section v-if="formData.autoscaling" class="mt20">
+                  <section v-if="isAutoscaling" class="mt20">
                     <bk-form-item
                       :label="$t('最大副本数')"
                       :label-width="120">
                       <bk-input
-                        v-model="formData.maxReplicas"
+                        v-model="formData.autoscaling.maxReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -295,7 +302,7 @@
                       :label="$t('最小副本数')"
                       :label-width="120">
                       <bk-input
-                        v-model="formData.minReplicas"
+                        v-model="formData.autoscaling.minReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -504,6 +511,7 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: 8080,
+        autoscaling: {},
       },
       bkappAnnotations: {},
       preFormData: {
@@ -570,6 +578,8 @@ export default {
       envsData: [{ value: 'stag', label: this.$t('预发布环境') }, { value: 'prod', label: this.$t('生产环境') }],
       envType: 'stag',
       resQuotaData: RESQUOTADATA,
+      isAutoscaling: false,
+      btnMouseIndex: '',
     };
   },
   computed: {
@@ -584,6 +594,36 @@ export default {
     },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
+    },
+    configIpTip() {
+      return {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<div>
+          <div>域名解析目标IP</div>
+          <div
+            class="mt10"
+            style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px; text-align: center;">
+            1
+          </div>
+          <div class="mt10 mb10">推荐操作流程: </div>
+          <div>1. 点击右侧 “添加” 自定义域名</div>
+          <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
+          <div>3. 打开浏览器，测试访问是否正常 </div>
+          <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
+          </div>`,
+        placements: ['bottom'],
+        onHidden: () => {
+          this.tipShow = false;
+          if (this.mouseEnter) return;
+          this.tableIndex = '';
+          this.envIndex = '';
+        },
+        onShown: () => {
+          this.tipShow = true;
+        },
+      };
     },
   },
   watch: {
@@ -692,6 +732,10 @@ export default {
   },
   mounted() {
     this.$refs.mirrorUrl?.focus();
+    setTimeout(() => {
+      console.log('this.formData', this.formData);
+      this.isAutoscaling = !!this.formData.autoscaling;
+    }, 2000);
   },
   methods: {
     setPanelsData() {
@@ -955,12 +999,26 @@ export default {
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
 
+    // 处理为手动调节的情况
     handleAutoData() {
-      if (this.formData.autoscaling) {
-
-      } else {
+      if (!this.isAutoscaling) {
         delete this.formData.autoscaling;
       }
+    },
+
+    // 处理自动调节问题
+    handleRadioChange(v) {
+      if (v && !this.formData.autoscaling) {
+        this.formData.autoscaling = {
+          maxReplicas: '',
+          minReplicas: '',
+          policy: 'default',
+        };
+      }
+    },
+
+    handleMouseEnter(i) {
+      console.log('1', i);
     },
   },
 };

@@ -269,7 +269,7 @@
                     :label="$t('扩缩容方式')"
                     :label-width="120"
                   >
-                    <bk-radio-group v-model="autoscaling" @change="handleAutoChange">
+                    <bk-radio-group v-model="formData.autoscaling" @change="handleAutoChange">
                       <bk-radio-button class="radio-cls" :value="false">
                         {{ $t('手动调节') }}
                       </bk-radio-button>
@@ -279,12 +279,12 @@
                       </bk-radio-button>
                     </bk-radio-group>
                   </bk-form-item>
-                  <section v-if="autoscaling" class="mt20">
+                  <section v-if="formData.autoscaling" class="mt20">
                     <bk-form-item
                       :label="$t('最大副本数')"
                       :label-width="120">
                       <bk-input
-                        v-model="formData.autoscaling.maxReplicas"
+                        v-model="formData.maxReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -295,7 +295,7 @@
                       :label="$t('最小副本数')"
                       :label-width="120">
                       <bk-input
-                        v-model="formData.autoscaling.minReplicas"
+                        v-model="formData.minReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -570,7 +570,6 @@ export default {
       envsData: [{ value: 'stag', label: this.$t('预发布环境') }, { value: 'prod', label: this.$t('生产环境') }],
       envType: 'stag',
       resQuotaData: RESQUOTADATA,
-      autoscaling: false,
     };
   },
   computed: {
@@ -687,16 +686,6 @@ export default {
       },
       deep: true,
     },
-
-    autoscaling: {
-      handler(val) {
-        if (val) {
-          this.formData.autoscaling = {
-
-          };
-        }
-      },
-    },
   },
   created() {
     this.getImageCredentialList();
@@ -722,11 +711,7 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: null,
-        autoscaling: {
-          minReplicas: '',
-          maxReplicas: '',
-          policy: 'default',
-        },
+        autoscaling: false,
       };
       if (e && e.target === document.querySelector('.bk-input-cls input')) {
         this.$nextTick(() => {

@@ -60,7 +60,7 @@
 
         <div class="deploy-content">
           <router-view
-            ref="square"
+            :ref="routerRefs"
             :key="renderIndex"
             :cloud-app-data="cloudAppData"
           />
@@ -147,9 +147,9 @@ export default {
       manifestExt: {},
       isDisabled: false,
       panels: [
-        { name: 'cloudAppDeployForProcess', label: this.$t('进程配置') },
-        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令') },
-        { name: 'cloudAppDeployForEnv', label: this.$t('环境变量') },
+        { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
+        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook'  },
+        { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
       ],
       active: 'cloudAppDeployForProcess',
       isPageEdit: false,
@@ -177,10 +177,15 @@ export default {
       }
       return 'deploy-top-loading';
     },
+    routerRefs() {
+      const curPenel = this.panels.find(e => e.name === this.active);
+      return curPenel ? curPenel.ref : 'process';
+    },
   },
   watch: {
     '$route'(newVal, oldVal) {
       if (newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId) {
+        // eslint-disable-next-line no-plusplus
         this.renderIndex++;
         this.init();
       }
@@ -492,7 +497,10 @@ export default {
     // 保存
     async handleSave() {
       try {
+        // 处理手动、自动调节数据
+        this.$refs[this.routerRefs]?.handleAutoData && this.$refs[this.routerRefs]?.handleAutoData();
         const params = { ... this.$store.state.cloudApi.cloudAppData };
+        console.log('params', params);
         const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           params,

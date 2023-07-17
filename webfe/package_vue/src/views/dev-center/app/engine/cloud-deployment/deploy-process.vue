@@ -269,7 +269,7 @@
                     :label="$t('扩缩容方式')"
                     :label-width="120"
                   >
-                    <bk-radio-group v-model="formData.autoscaling" @change="handleAutoChange">
+                    <bk-radio-group v-model="formData.autoscaling">
                       <bk-radio-button class="radio-cls" :value="false">
                         {{ $t('手动调节') }}
                       </bk-radio-button>
@@ -711,7 +711,6 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: null,
-        autoscaling: false,
       };
       if (e && e.target === document.querySelector('.bk-input-cls input')) {
         this.$nextTick(() => {
@@ -956,8 +955,12 @@ export default {
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
 
-    handleAutoChange() {
-      // 切换tab 数据重置
+    handleAutoData() {
+      if (this.formData.autoscaling) {
+
+      } else {
+        delete this.formData.autoscaling;
+      }
     },
   },
 };

@@ -20,6 +20,9 @@ import logging
 import time
 from typing import Optional
 
+from django.db import IntegrityError
+
+from paas_wl.cnative.specs import svc_disc
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
@@ -92,9 +95,7 @@ def release_by_k8s_operator(
     # Add current timestamp in name to avoid conflicts
     default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
 
-    app_model_deploy = None
     try:
-        # TODO: Integrity Check
         app_model_deploy = AppModelDeploy.objects.create(
             application_id=application.id,
             module_id=module.id,
@@ -104,14 +105,22 @@ def release_by_k8s_operator(
             status=DeployStatus.PENDING.value,
             operator=operator,
         )
+    except IntegrityError:
+        logger.warning("Name conflicts when creating new AppModelDeploy object, name: %s.", default_name)
+        raise
+
+    try:
+        # Apply the ConfigMap resource related with service discovery
+        svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
+
         deployed_manifest = apply_bkapp_to_k8s(
             env, BkAppManifestProcessor(app_model_deploy).build_manifest(image=image)
         )
-    except Exception as e:
-        if app_model_deploy is not None:
-            app_model_deploy.status = DeployStatus.ERROR
-            app_model_deploy.save(update_fields=["status", "updated"])
-        raise e
+    except Exception:
+        app_model_deploy.status = DeployStatus.ERROR
+        app_model_deploy.save(update_fields=["status", "updated"])
+        raise
+
     revision.deployed_value = deployed_manifest
     revision.has_deployed = True
     revision.save(update_fields=["deployed_value", "has_deployed", "updated"])

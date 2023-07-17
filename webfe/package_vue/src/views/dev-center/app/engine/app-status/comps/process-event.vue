@@ -119,6 +119,6 @@ export default {
 
 <style lang="scss" scoped>
 .event-container {
-    padding: 0 20px 20px;
+  width: calc(100% - 10px);
 }
 </style>

@@ -122,7 +122,7 @@
               <div class="tab-box">
                 <li
                   v-if="notBkLesscode"
-                  :class="['tab-item template', { 'active': this.isNormalApp }]"
+                  :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
                   @click="handleCodeTypeChange(1)"
                 >
                   {{ $t('蓝鲸开发框架') }}
@@ -738,7 +738,7 @@
                 return this.$store.state.userFeature;
             },
             isNormalApp () {
-                return this.localSourceOrigin === 1;
+                return this.curCodeSource === 'default';
             }
         },
         watch: {

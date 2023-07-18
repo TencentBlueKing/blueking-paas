@@ -498,7 +498,7 @@ export default {
     async handleSave() {
       try {
         // 处理手动调节数据
-        this.$refs[this.routerRefs]?.handleAutoData && this.$refs[this.routerRefs]?.handleAutoData();
+        this.$refs[this.routerRefs]?.handleProcessData && this.$refs[this.routerRefs]?.handleProcessData();
         const params = { ... this.$store.state.cloudApi.cloudAppData };
         console.log('params', params);
         const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {

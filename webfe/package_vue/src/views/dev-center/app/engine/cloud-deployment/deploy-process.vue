@@ -243,7 +243,7 @@
               :label="$t('配置环境')"
               :label-width="120"
             >
-              <bk-radio-group v-model="envType">
+              <bk-radio-group v-model="envName">
                 <bk-radio-button
                   class="radio-cls"
                   v-for="(item, index) in envsData"
@@ -526,12 +526,13 @@ export default {
     return {
       panels: [],
       btnActive: 'web',
+      btnIndex: 0,
       showEditIconIndex: null,
       iconIndex: '',
       panelActive: 0,
-      itemValue: '',
       formData: {
         image: '',
+        name: '',
         command: [],
         args: [],
         memory: '256Mi',
@@ -541,11 +542,6 @@ export default {
         autoscaling: {},
       },
       bkappAnnotations: {},
-      preFormData: {
-        loaclEnabled: false,
-        command: [],
-        args: [],
-      },
       isEdited: false,
       command: [],
       args: [],
@@ -603,7 +599,6 @@ export default {
       isTargetPortErrTips: false,
       ifopen: false,
       envsData: [{ value: 'stag', label: this.$t('预发布环境') }, { value: 'prod', label: this.$t('生产环境') }],
-      envType: 'stag',
       resQuotaData: RESQUOTADATA,
       isAutoscaling: false,
       btnMouseIndex: '',
@@ -613,6 +608,8 @@ export default {
         name: '',
         index: '',
       },
+      envOverlayData: {},
+      envName: 'stag',
     };
   },
   computed: {
@@ -623,7 +620,7 @@ export default {
       return this.$route.params.id;
     },
     imageCrdlAnnoKey() {
-      return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive]?.name}`;
+      return `bkapp.paas.bk.tencent.com/image-credentials.${this.btnActive}`;
     },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
@@ -635,19 +632,15 @@ export default {
         if (val.spec) {
           console.log('val.spec', val);
           this.localCloudAppData = _.cloneDeep(val);
+          this.envOverlayData = this.localCloudAppData.spec.envOverlay;
           this.processData = val.spec.processes;
-          this.hooks = val.spec.hooks;
-          this.preFormData.loaclEnabled = !!this.hooks && !!(this.hooks.preRelease.command.length
-          || this.hooks.preRelease.args.length);
-          if (this.preFormData.loaclEnabled) {
-            this.preFormData.command = (this.hooks && this.hooks.preRelease.command) || [];
-            this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
-          }
-          this.formData = this.processData[this.panelActive];
+          this.formData = this.processData[this.btnIndex];
+
+          // 更多配置信息
           console.log('this.formData', this.formData);
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
-        this.setPanelsData();
+        this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
       // deep: true
@@ -655,12 +648,12 @@ export default {
     formData: {
       handler(val) {
         if (this.localCloudAppData.spec) {
-          val.name = this.panels[this.panelActive] && this.panels[this.panelActive]?.name;
+          val.name = this.btnActive;
           val.replicas = val.replicas && Number(val.replicas);
           if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
             val.targetPort = Number(val.targetPort);
           }
-          this.$set(this.localCloudAppData.spec.processes, this.panelActive, val);
+          this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -669,26 +662,6 @@ export default {
       },
       immediate: true,
       deep: true,
-    },
-    preFormData: {
-      handler(val) {
-        if (this.localCloudAppData.spec) {
-          let hooks = { preRelease: { command: val.command, args: val.args } };
-          if (!this.preFormData.loaclEnabled || (!this.preFormData.command.length && !this.preFormData.args.length)) {
-            hooks = null;
-          }
-          this.$set(this.localCloudAppData.spec, 'hooks', hooks);
-          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        }
-      },
-      immediate: true,
-      deep: true,
-    },
-    'preFormData.loaclEnabled'(value) {
-      if (!value) {
-        this.$set(this.localCloudAppData.spec, 'hooks', null);
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-      }
     },
     bkappAnnotations: {
       handler(val) {
@@ -741,12 +714,6 @@ export default {
     }, 2000);
   },
   methods: {
-    setPanelsData() {
-      this.panels = this.processData.map((e) => {
-        e.isEdit = false;
-        return e;
-      });
-    },
     handlePanelClick(i, e, isAdd) {
       this.panelActive = i;
       this.formData = this.processData[i] || {
@@ -792,7 +759,6 @@ export default {
     handleDelete(i) {
       this.panelActive = 0;
       this.processData.splice(i, 1);
-      this.setPanelsData();
       setTimeout(() => {
         this.handlePanelClick(0);
         this.$set(this.localCloudAppData.spec, 'processes', this.processData);
@@ -889,11 +855,6 @@ export default {
       this.panels.forEach((element) => {
         element.isEdit = false;
       });
-    },
-
-    // 是否开启部署前置命令
-    togglePermission() {
-      this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
     },
 
     async formDataValidate(index) {
@@ -996,6 +957,7 @@ export default {
     handleBtnGroupClick(v, i) {
       this.formData = this.processData[i];
       this.btnActive = v;
+      this.btnIndex = i;
     },
 
     // 编辑
@@ -1004,7 +966,7 @@ export default {
     },
 
     // 处理为手动调节的情况
-    handleAutoData() {
+    handleProcessData() {
       if (!this.isAutoscaling) {
         delete this.formData.autoscaling;
       }
@@ -1030,7 +992,7 @@ export default {
             e.name = this.processDialog.name;
           }
         });
-        this.handleBtnGroupClick(this.processDialog.name);
+        // this.handleBtnGroupClick(this.processDialog.name);
       } else {  // 新增进程
         this.panels.push({ name: this.processDialog.name });
         this.btnActive = this.processDialog.name;

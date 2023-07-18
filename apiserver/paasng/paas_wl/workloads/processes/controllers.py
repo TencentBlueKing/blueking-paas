@@ -283,9 +283,9 @@ def get_processes_status(app: WlApp) -> List[Process]:
     """
     results: List[Process] = []
 
+    # TODO: fixme 云原生应用没有 Release!!!
     try:
         release: Release = Release.objects.get_latest(app)
-        # TODO: fixme 仅托管镜像的云原生应用没有 procfile
         procfile = release.get_procfile()
     except Release.DoesNotExist:
         return results

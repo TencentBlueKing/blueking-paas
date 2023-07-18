@@ -56,12 +56,12 @@ class Runtime:
     # 实际的镜像启动命令
     command: List[str]
     args: List[str]
-    # [deprecated] TODO: 删除 proc_command 以及与其相关的字段
-    # 由于 command 本身经过了镜像启动脚本的封装
+    # 由于 command/args 本身经过了镜像启动脚本的封装
     # 所以这里我们额外存储一个用户填写的启动命令
-    # 类似 procfile 中是 web: python manage.py runserver
-    # command: ./init.sh start web
-    # proc_command: python manage.py runserver
+    # 假设 procfile 中是 `web: python manage.py runserver`
+    # 则 command: ['bash', '/runner/init']
+    #    args: ["start", "web"]
+    #    proc_command: "python manage.py runserver"
     proc_command: str = ""
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
@@ -160,21 +160,12 @@ class Process(AppEntity):
     @classmethod
     def from_release(cls, type_: str, release: 'Release', extra_envs: Optional[dict] = None) -> 'Process':
         """通过 release 生成 Process"""
+        build = release.build
         config = release.config
         procfile = release.get_procfile()
         envs = AppConfigVarManager(app=release.app).get_process_envs(type_)
         envs.update(release.get_envs())
         envs.update(extra_envs or {})
-
-        entrypoint = config.runtime.get_entrypoint()
-        # cnb runtime 的 entrypoint 只需要设置成 type_ 即可
-        # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
-        # TODO: 更好的方式区分 cnb runtime 和 heroku runtime?
-        if entrypoint == ["launcher"]:
-            entrypoint = [type_]
-            command = []
-        else:
-            command = config.runtime.get_command(type_, procfile)
 
         mapper_version = AppResVerManager(release.app).curr_version
         process = Process(
@@ -186,9 +177,9 @@ class Process(AppEntity):
             replicas=release.app.get_structure().get(type_, 0),
             runtime=Runtime(
                 envs=envs,
-                image=config.get_image(),
-                command=entrypoint,
-                args=command,
+                image=build.get_image(),
+                command=build.get_entrypoint_for_proc(type_),
+                args=build.get_command_for_proc(type_, procfile[type_]),
                 proc_command=procfile[type_],
                 image_pull_policy=config.runtime.get_image_pull_policy(),
                 image_pull_secrets=[{"name": PULL_SECRET_NAME}],

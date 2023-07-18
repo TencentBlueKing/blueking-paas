@@ -182,6 +182,19 @@ class DomainResolution(BaseModel):
     hostAliases: List[HostAlias] = Field(default_factory=list)
 
 
+class SvcDiscEntryBkSaaS(BaseModel):
+    """A service discovery entry that represents an application and an optional module."""
+
+    bkAppCode: str
+    moduleName: Optional[str] = None
+
+
+class SvcDiscConfig(BaseModel):
+    """Service discovery config"""
+
+    bkSaaS: List[SvcDiscEntryBkSaaS] = Field(default_factory=list)
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
@@ -191,6 +204,7 @@ class BkAppSpec(BaseModel):
     addons: List[BkAppAddon] = Field(default_factory=list)
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
     domainResolution: Optional[DomainResolution] = None
+    svcDiscovery: Optional[SvcDiscConfig] = None
     envOverlay: Optional[EnvOverlay] = None
 
 

@@ -67,6 +67,7 @@ class TestCreateAppResource:
                 'addons': [],
                 'envOverlay': None,
                 'domainResolution': None,
+                'svcDiscovery': None,
                 'configuration': {'env': []},
             },
             'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},

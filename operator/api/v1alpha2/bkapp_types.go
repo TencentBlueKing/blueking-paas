@@ -76,6 +76,10 @@ type AppSpec struct {
 	// +optional
 	DomainResolution *DomainResConfig `json:"domainResolution,omitempty"`
 
+	// The application's service discovery config
+	// +optional
+	SvcDiscovery *SvcDiscConfig `json:"svcDiscovery,omitempty"`
+
 	// EnvOverlay holds environment specified configurations, includes replica
 	// count and environment variables.
 	// +optional
@@ -268,6 +272,22 @@ type HostAlias struct {
 	IP string `json:"ip,omitempty"`
 	// Hostnames for the above IP address.
 	Hostnames []string `json:"hostnames,omitempty"`
+}
+
+// SvcDiscConfig stores the service discovery config
+type SvcDiscConfig struct {
+	// A list of entries that contain SaaS module info
+	BkSaaS []SvcDiscEntryBkSaaS `json:"bkSaaS,omitempty"`
+}
+
+// SvcDiscEntryBkSaaS is an entry that represents an application and an optional module.
+type SvcDiscEntryBkSaaS struct {
+	// BkAppCode is the code of the application.
+	BkAppCode string `json:"bkAppCode"`
+
+	// ModuleName is the name of the module, when absent, the "main" module will be used.
+	// +optional
+	ModuleName *string `json:"moduleName,omitempty"`
 }
 
 // AppConfig is bkapp related configuration, such as environment variables, etc.

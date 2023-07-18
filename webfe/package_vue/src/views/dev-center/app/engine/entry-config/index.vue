@@ -135,6 +135,7 @@ export default {
       this.initPage = false;
     },
 
+    // 获取地址参数
     getQueryString(name) {
       const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
       const r = window.location.search.substr(1).match(reg);

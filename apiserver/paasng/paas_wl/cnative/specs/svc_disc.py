@@ -45,6 +45,8 @@ def apply_configmap(env: ModuleEnvironment, bk_app_res: BkAppResource):
     svc_disc = bk_app_res.spec.svcDiscovery
     mgr = ConfigMapManager(env, bk_app_name=bk_app_res.metadata.name)
     if not (svc_disc and svc_disc.bkSaaS):
+        # TODO: Only remove the configmap if the app previously had a valid svc-discovery
+        # config, don't perform the remove() operation every time.
         logger.debug('No service discovery config found, remove the ConfigMap if exists')
         mgr.remove()
         return
@@ -110,7 +112,7 @@ class ConfigMapManager:
         """
         with get_client_by_app(self.wl_app) as client:
             try:
-                # TODO: Write anther faster method which don't read the whole object in KRes
+                # TODO: Write another faster method which don't read the whole object in KRes
                 KConfigMap(client).get(self.resource_name, namespace=self.wl_app.namespace)
                 return True
             except ResourceMissing:

@@ -32,7 +32,7 @@ const (
 	// DataKeyBkSaaS is the key of the configmap data that contains the svc-discovery results of BK-SaaS.
 	DataKeyBkSaaS = "bk_saas_encoded_json"
 
-	// EnvKeyBkSaaS ...
+	// EnvKeyBkSaaS is the environment variable key that contains the svc-discovery results of BK-SaaS.
 	EnvKeyBkSaaS = "BKPAAS_SERVICE_ADDRESSES_BKSAAS"
 )
 
@@ -66,7 +66,7 @@ func (w *WorkloadsMutator) ApplyToDeployments(ctx context.Context, deploys []*ap
 		return false
 	}
 	if _, ok := configmap.Data[DataKeyBkSaaS]; !ok {
-		log.V(4).Info("configmap data invalid, skip apply.", "error", err)
+		log.V(4).Info("configmap data invalid, skip apply.")
 		return false
 	}
 

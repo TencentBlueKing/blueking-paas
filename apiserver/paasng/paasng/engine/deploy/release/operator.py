@@ -111,6 +111,10 @@ def release_by_k8s_operator(
 
     try:
         # Apply the ConfigMap resource related with service discovery
+        #
+        # NOTE: This action might break running pods that get svc-discovery data by
+        # mounting the configmap as file, because some data might be removed in the
+        # latest version. We should ask the application developer to handle this properly.
         svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
 
         deployed_manifest = apply_bkapp_to_k8s(

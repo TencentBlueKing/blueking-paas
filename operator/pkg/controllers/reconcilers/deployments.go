@@ -57,7 +57,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 		return r.Result.withError(err)
 	}
 	expected := resources.GetWantedDeploys(bkapp)
-	if ret := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ret {
+	if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ok {
 		log.V(2).Info("Applied svc-discovery related changes to deployments.")
 	}
 

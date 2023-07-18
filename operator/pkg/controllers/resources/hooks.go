@@ -135,7 +135,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 						Name:            "hook",
 						ImagePullPolicy: pullPolicy,
 						// pre-hook 使用默认资源配置
-						Resources: paasv1alpha2.NewProcResourcesGetter(bkapp).GetDefault(),
+						Resources: NewProcResourcesGetter(bkapp).Default(),
 						// TODO: 挂载点
 						VolumeMounts: nil,
 					},

@@ -54,27 +54,14 @@
   import stageBaseMixin from './stage-base-mixin';
   import statusBar from './comps/status-bar';
   import itsmInfoItem from './comps/itsm-info-item';
-  import i18n from "@/language/i18n";
+  import i18n from '@/language/i18n';
+  import { PLUGIN_ITSM_APPLY, PLUGIN_ITSM_LADING } from '@/common/constants';
 
   // 提单信息
-  const ladingMap = {
-    'title': i18n.t('标题'),
-    'creator': i18n.t('提单人')
-  };
+  const ladingMap = PLUGIN_ITSM_LADING;
 
   // 申请内容
-  const applyMap = {
-    'plugin_id': i18n.t('插件标识'),
-    'plugin_name': i18n.t('插件名称'),
-    'language': i18n.t('开发语言'),
-    'repository': i18n.t('代码库'),
-    'version': i18n.t('版本号'),
-    'comment': i18n.t('版本日志'),
-    'source_version_name': i18n.t('代码分支'),
-    'category': i18n.t('分类'),
-    'introduction': i18n.t('简介'),
-    'description': i18n.t('详情描述')
-  };
+  const applyMap = PLUGIN_ITSM_APPLY;
 
   const approvalStatus = {
     'pending': 'approval',
@@ -165,7 +152,7 @@
           }
         });
         this.ladingData.unshift({
-          name: this.$t('单号'),
+          name: '单号',
           value: this.itsmDetail['sn']
         });
       },

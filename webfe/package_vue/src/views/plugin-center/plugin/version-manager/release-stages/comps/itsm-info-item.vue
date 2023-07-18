@@ -3,7 +3,7 @@
     <div>
       <p class="title">{{ title }}</p>
       <div class="info-item" v-for="(item, index) in data" :key="index">
-        <div class="label">{{ item.name }}</div>
+        <div class="label">{{ $t(item.name) }}</div>
         <div class="desc">
           <template v-if="isValidURL(item.value)">
             <a

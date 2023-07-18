@@ -36,7 +36,7 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 	specGetter := NewAutoscalingSpecGetter(app)
 	for _, proc := range app.Spec.Processes {
 		// 若某个进程没有自动扩缩容配置，则跳过
-		spec := specGetter.Get(proc.Name)
+		spec := specGetter.GetByProc(proc.Name)
 		if spec == nil {
 			continue
 		}

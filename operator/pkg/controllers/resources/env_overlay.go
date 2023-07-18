@@ -48,8 +48,8 @@ func NewReplicasGetter(bkapp *paasv1alpha2.BkApp) *ReplicasGetter {
 	return obj
 }
 
-// Get replicas by process name
-func (r *ReplicasGetter) Get(name string) *int32 {
+// GetByProc return replicas by process name
+func (r *ReplicasGetter) GetByProc(name string) *int32 {
 	if v, ok := r.replicasMap[name]; ok {
 		return &v
 	}
@@ -169,8 +169,8 @@ func NewAutoscalingSpecGetter(bkapp *paasv1alpha2.BkApp) *AutoscalingSpecGetter 
 	return obj
 }
 
-// Get scalingPolicy by process name
-func (g *AutoscalingSpecGetter) Get(name string) *paasv1alpha2.AutoscalingSpec {
+// GetByProc return scalingPolicy by process name
+func (g *AutoscalingSpecGetter) GetByProc(name string) *paasv1alpha2.AutoscalingSpec {
 	if v, ok := g.specMap[name]; ok {
 		return v
 	}
@@ -207,16 +207,16 @@ func NewProcResourcesGetter(bkapp *paasv1alpha2.BkApp) *ProcResourcesGetter {
 	return &ProcResourcesGetter{bkapp: bkapp}
 }
 
-// GetDefault returns the default resources requirements for creating processes
-func (r *ProcResourcesGetter) GetDefault() corev1.ResourceRequirements {
+// Default returns the default resources requirements for creating processes
+func (r *ProcResourcesGetter) Default() corev1.ResourceRequirements {
 	return r.fromQuotaPlan(paasv1alpha2.ResQuotaPlanDefault)
 }
 
-// Get the container resources by process name
+// GetByProc return the container resources by process name
 //
 // - name: process name
 // - return: <resources requirements>, <error>
-func (r *ProcResourcesGetter) Get(name string) (result corev1.ResourceRequirements, err error) {
+func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequirements, err error) {
 	// Legacy version: try to read resources configs from legacy annotation
 	legacyProcResourcesConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
 		r.bkapp,

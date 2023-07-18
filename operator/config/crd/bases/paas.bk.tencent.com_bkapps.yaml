@@ -221,7 +221,8 @@ spec:
                   resQuotas:
                     description: ResQuotas overwrite BkApp's process resource quota
                     items:
-                      description: ResQuotaOverlay
+                      description: ResQuotaOverlay overwrite process's resQuota by
+                        environment.
                       properties:
                         envName:
                           description: EnvName is app environment name
@@ -810,7 +811,8 @@ spec:
                   resQuotas:
                     description: ResQuotas overwrite BkApp's process resource quota
                     items:
-                      description: ResQuotaOverlay
+                      description: ResQuotaOverlay overwrite process's resQuota by
+                        environment.
                       properties:
                         envName:
                           description: EnvName is app environment name

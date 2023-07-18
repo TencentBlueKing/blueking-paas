@@ -112,11 +112,11 @@ var _ = Describe("Environment overlay related functions", func() {
 
 	Context("Test ReplicasGetter without env", func() {
 		It("process normal", func() {
-			val := NewReplicasGetter(bkapp).Get("web")
+			val := NewReplicasGetter(bkapp).GetByProc("web")
 			Expect(*val).To(Equal(int32(2)))
 		})
 		It("process missing", func() {
-			val := NewReplicasGetter(bkapp).Get("web-missing")
+			val := NewReplicasGetter(bkapp).GetByProc("web-missing")
 			Expect(val).To(BeNil())
 		})
 	})
@@ -133,11 +133,11 @@ var _ = Describe("Environment overlay related functions", func() {
 			}
 		})
 		It("env overlay hit", func() {
-			val := NewReplicasGetter(bkapp).Get("web")
+			val := NewReplicasGetter(bkapp).GetByProc("web")
 			Expect(*val).To(Equal(int32(10)))
 		})
 		It("env overlay absent", func() {
-			val := NewReplicasGetter(bkapp).Get("worker")
+			val := NewReplicasGetter(bkapp).GetByProc("worker")
 			Expect(*val).To(Equal(int32(2)))
 		})
 	})
@@ -185,13 +185,13 @@ var _ = Describe("Environment overlay related functions", func() {
 
 	Context("Test AutoscalingPolicyGetter without env", func() {
 		It("process normal", func() {
-			spec := NewAutoscalingSpecGetter(bkapp).Get("web")
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("web")
 			Expect(spec.MinReplicas).To(Equal(int32(1)))
 			Expect(spec.MaxReplicas).To(Equal(int32(5)))
 			Expect(spec.Policy).To(Equal(paasv1alpha2.ScalingPolicyDefault))
 		})
 		It("process missing", func() {
-			spec := NewAutoscalingSpecGetter(bkapp).Get("web-missing")
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("web-missing")
 			Expect(spec).To(BeNil())
 		})
 	})
@@ -213,13 +213,13 @@ var _ = Describe("Environment overlay related functions", func() {
 			}
 		})
 		It("env overlay hit", func() {
-			spec := NewAutoscalingSpecGetter(bkapp).Get("web")
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("web")
 			Expect(spec.MinReplicas).To(Equal(int32(2)))
 			Expect(spec.MaxReplicas).To(Equal(int32(5)))
 			Expect(spec.Policy).To(Equal(paasv1alpha2.ScalingPolicy("custom")))
 		})
 		It("env overlay absent", func() {
-			spec := NewAutoscalingSpecGetter(bkapp).Get("worker")
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("worker")
 			Expect(spec.MinReplicas).To(Equal(int32(2)))
 			Expect(spec.MaxReplicas).To(Equal(int32(6)))
 			Expect(spec.Policy).To(Equal(paasv1alpha2.ScalingPolicyDefault))
@@ -228,7 +228,7 @@ var _ = Describe("Environment overlay related functions", func() {
 
 	Context("Test ProcResourcesGetter", func() {
 		It("Get Default", func() {
-			resReq := NewProcResourcesGetter(bkapp).GetDefault()
+			resReq := NewProcResourcesGetter(bkapp).Default()
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
@@ -242,7 +242,7 @@ var _ = Describe("Environment overlay related functions", func() {
 				},
 			)
 			getter := NewProcResourcesGetter(bkapp)
-			resReq, _ := getter.Get("web")
+			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
@@ -258,7 +258,7 @@ var _ = Describe("Environment overlay related functions", func() {
 			}
 			getter := NewProcResourcesGetter(bkapp)
 
-			resReq, _ := getter.Get("web")
+			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
@@ -269,13 +269,13 @@ var _ = Describe("Environment overlay related functions", func() {
 			bkapp.Spec.Processes[1].ResQuotaPlan = paasv1alpha2.ResQuotaPlan4C2G
 			getter := NewProcResourcesGetter(bkapp)
 
-			resReq, _ := getter.Get("web")
+			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 
-			resReq, _ = getter.Get("worker")
+			resReq, _ = getter.GetByProc("worker")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())

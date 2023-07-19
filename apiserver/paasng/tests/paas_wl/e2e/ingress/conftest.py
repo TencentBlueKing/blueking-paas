@@ -157,7 +157,7 @@ def echo_ingress(e2e_app, http_ingress_domain, echo_service):
 @pytest.fixture(scope="module")
 def echo_pod(namespace_maker, framework, e2e_app):
     """An echo server is a server that replicates the request sent by the client and sends it back."""
-    kube_selector = ProcessAPIAdapter.get_kube_pod_selector(e2e_app, "web")
+    kube_selector = ProcessAPIAdapter.process_selector(e2e_app, "web")
     pod_dict = {
         'apiVersion': 'v1',
         'kind': 'Pod',

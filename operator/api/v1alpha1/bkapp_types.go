@@ -174,9 +174,6 @@ type Process struct {
 
 // AutoscalingSpec is bkapp autoscaling config
 type AutoscalingSpec struct {
-	// Enabled indicates whether autoscaling is enabled
-	Enabled bool `json:"enabled"`
-
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
 	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
 	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
@@ -234,9 +231,17 @@ type AppEnvOverlay struct {
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
 
+	// ResQuotas overwrite BkApp's process resource quota
+	// +optional
+	ResQuotas []ResQuotaOverlay `json:"resQuotas,omitempty"`
+
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
 	EnvVariables []EnvVarOverlay `json:"envVariables,omitempty"`
+
+	// Autoscaling overwrite process's autoscaling config
+	// +optional
+	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
@@ -269,6 +274,16 @@ type ReplicasOverlay struct {
 	Count int32 `json:"count"`
 }
 
+// ResQuotaOverlay overwrite process's resQuota by environment.
+type ResQuotaOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Plan is used to specify process resource quota
+	Plan paasv1alpha2.ResQuotaPlan `json:"plan"`
+}
+
 // EnvVarOverlay overwrite or add application's environment vars by environment.
 type EnvVarOverlay struct {
 	// EnvName is app environment name
@@ -277,6 +292,16 @@ type EnvVarOverlay struct {
 	Name string `json:"name"`
 	// Value of the environment variable
 	Value string `json:"value"`
+}
+
+// AutoscalingOverlay overwrite or add application's autoscaling config by environment.
+type AutoscalingOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Spec is bkapp autoscaling config
+	Spec AutoscalingSpec `json:",inline"`
 }
 
 // AppStatus defines the observed state of BkApp

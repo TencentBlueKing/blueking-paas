@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from bkpaas_auth.models import User
 
@@ -27,23 +27,38 @@ from paasng.platform.applications.models import ModuleEnvironment
 
 
 def create_cnative_deploy(
-    env: ModuleEnvironment, user: User, status: DeployStatus = DeployStatus.READY
+    env: ModuleEnvironment,
+    user: User,
+    status: DeployStatus = DeployStatus.READY,
+    resource: Optional[BkAppResource] = None,
+    name: str = 'default-deploy-1',
 ) -> AppModelDeploy:
     """Initialize an app's model resource and create a deployment instance under
     given environment.
 
     :param env: The ModuleEnv object
+    :param user: The owner object
     :param status: The status of deploy, "READY" by default
+    :param resource: If not given, create a default one using the "nginx:latest" image
+    :param name: The name of the deploy object, optional
     """
     app = env.application
     module = env.module
-    resource = create_app_resource(app.name, 'nginx:latest')
-    model_res = AppModelResource.objects.create_from_resource(app.region, str(app.id), str(module.id), resource)
+    if not resource:
+        resource = create_app_resource(app.name, 'nginx:latest')
+
+    if not AppModelResource.objects.filter(module_id=str(module.id)).exists():
+        model_res = AppModelResource.objects.create_from_resource(app.region, str(app.id), str(module.id), resource)
+    else:
+        # If the model resource already exists, use it directly and update the revision
+        model_res = AppModelResource.objects.get(module_id=str(module.id))
+        model_res.use_resource(resource)
+
     return AppModelDeploy.objects.create(
         application_id=app.id,
         module_id=module.id,
         environment_name=env.environment,
-        name='default-deploy-1',
+        name=name,
         revision=model_res.revision,
         status=status.value,
         operator=user,

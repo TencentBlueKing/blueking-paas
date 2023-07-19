@@ -126,7 +126,7 @@ class TestProcInstManager:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 
-    def test_list_with_meta(self, wl_app, pod):
+    def test_list_by_app_with_meta(self, wl_app, pod):
         resources = instance_kmodel.list_by_app_with_meta(wl_app)
 
         assert resources.metadata is not None

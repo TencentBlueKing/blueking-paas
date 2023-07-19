@@ -19,9 +19,14 @@
 package resources
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 )
 
 // ReplicasGetter get replicas from BkApp object
@@ -43,8 +48,8 @@ func NewReplicasGetter(bkapp *paasv1alpha2.BkApp) *ReplicasGetter {
 	return obj
 }
 
-// Get replicas by process name
-func (r *ReplicasGetter) Get(name string) *int32 {
+// GetByProc return replicas by process name
+func (r *ReplicasGetter) GetByProc(name string) *int32 {
 	if v, ok := r.replicasMap[name]; ok {
 		return &v
 	}
@@ -142,16 +147,19 @@ func GetEnvName(bkapp *paasv1alpha2.BkApp) paasv1alpha2.EnvName {
 	return ""
 }
 
-// AutoscalingPolicyGetter get autoscaling policy from BkApp object
-type AutoscalingPolicyGetter struct {
+// AutoscalingSpecGetter get autoscaling spec from BkApp object
+type AutoscalingSpecGetter struct {
 	bkapp *paasv1alpha2.BkApp
-	// policyMap stores process scaling policy, "{process} -> {scalingPolicy}"
-	policyMap map[string]paasv1alpha2.ScalingPolicy
+	// specMap stores process scaling spec, "{process} -> {autoscalingSpec}"
+	specMap map[string]*paasv1alpha2.AutoscalingSpec
 }
 
-// NewAutoscalingPolicyGetter creates a AutoscalingPolicyGetter object
-func NewAutoscalingPolicyGetter(bkapp *paasv1alpha2.BkApp) *AutoscalingPolicyGetter {
-	obj := &AutoscalingPolicyGetter{bkapp: bkapp, policyMap: make(map[string]paasv1alpha2.ScalingPolicy)}
+// NewAutoscalingSpecGetter creates a AutoscalingSpecGetter object
+func NewAutoscalingSpecGetter(bkapp *paasv1alpha2.BkApp) *AutoscalingSpecGetter {
+	obj := &AutoscalingSpecGetter{
+		bkapp:   bkapp,
+		specMap: make(map[string]*paasv1alpha2.AutoscalingSpec),
+	}
 
 	// Build internal index data
 	obj.buildDefault()
@@ -161,32 +169,116 @@ func NewAutoscalingPolicyGetter(bkapp *paasv1alpha2.BkApp) *AutoscalingPolicyGet
 	return obj
 }
 
-// Get scalingPolicy by process name
-func (g *AutoscalingPolicyGetter) Get(name string) paasv1alpha2.ScalingPolicy {
-	if v, ok := g.policyMap[name]; ok {
+// GetByProc return scalingPolicy by process name
+func (g *AutoscalingSpecGetter) GetByProc(name string) *paasv1alpha2.AutoscalingSpec {
+	if v, ok := g.specMap[name]; ok {
 		return v
 	}
-	return ""
+	return nil
 }
 
 // Build policy map from default configuration
-func (g *AutoscalingPolicyGetter) buildDefault() {
+func (g *AutoscalingSpecGetter) buildDefault() {
 	for _, proc := range g.bkapp.Spec.Processes {
-		if proc.Autoscaling != nil {
-			g.policyMap[proc.Name] = proc.Autoscaling.Policy
-		}
+		g.specMap[proc.Name] = proc.Autoscaling
 	}
 }
 
-// Build policy map from env overlay configs
-func (g *AutoscalingPolicyGetter) buildEnvOverlay(env paasv1alpha2.EnvName) {
+// Build autoscaling spec map from env overlay configs
+func (g *AutoscalingSpecGetter) buildEnvOverlay(env paasv1alpha2.EnvName) {
 	if g.bkapp.Spec.EnvOverlay == nil {
 		return
 	}
 	// Pick values which matches environment
 	for _, c := range g.bkapp.Spec.EnvOverlay.Autoscaling {
 		if c.EnvName == env {
-			g.policyMap[c.Process] = c.Policy
+			g.specMap[c.Process] = &c.Spec
 		}
+	}
+}
+
+// ProcResourcesGetter help getting resources requirements for creating processes
+type ProcResourcesGetter struct {
+	bkapp *paasv1alpha2.BkApp
+}
+
+// NewProcResourcesGetter create a new ProcResourcesGetter
+func NewProcResourcesGetter(bkapp *paasv1alpha2.BkApp) *ProcResourcesGetter {
+	return &ProcResourcesGetter{bkapp: bkapp}
+}
+
+// Default returns the default resources requirements for creating processes
+func (r *ProcResourcesGetter) Default() corev1.ResourceRequirements {
+	return r.fromQuotaPlan(paasv1alpha2.ResQuotaPlanDefault)
+}
+
+// GetByProc return the container resources by process name
+//
+// - name: process name
+// - return: <resources requirements>, <error>
+func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequirements, err error) {
+	// Legacy version: try to read resources configs from legacy annotation
+	legacyProcResourcesConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
+		r.bkapp,
+		paasv1alpha2.LegacyProcResAnnoKey,
+	)
+	if cfg, ok := legacyProcResourcesConfig[name]; ok {
+		return r.fromRawString(cfg["cpu"], cfg["memory"]), nil
+	}
+
+	// Overlay: read the "ResQuotaPlan" field from envOverlay
+	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
+		for _, q := range r.bkapp.Spec.EnvOverlay.ResQuotas {
+			if q.EnvName == env && q.Process == name {
+				return r.fromQuotaPlan(q.Plan), nil
+			}
+		}
+	}
+
+	// Standard: read the "ResQuotaPlan" field from process
+	procObj := r.bkapp.Spec.FindProcess(name)
+	if procObj == nil {
+		return result, fmt.Errorf("process %s not found", name)
+	}
+	return r.fromQuotaPlan(procObj.ResQuotaPlan), nil
+}
+
+// fromQuotaPlan try to get resource requirements by the name of quota plan
+func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) corev1.ResourceRequirements {
+	var cpuRaw, memRaw string
+	switch plan {
+	case paasv1alpha2.ResQuotaPlan1C512M:
+		cpuRaw, memRaw = "1000m", "512Mi"
+	case paasv1alpha2.ResQuotaPlan2C1G:
+		cpuRaw, memRaw = "2000m", "1024Mi"
+	case paasv1alpha2.ResQuotaPlan2C2G:
+		cpuRaw, memRaw = "2000m", "2048Mi"
+	case paasv1alpha2.ResQuotaPlan4C1G:
+		cpuRaw, memRaw = "4000m", "1024Mi"
+	case paasv1alpha2.ResQuotaPlan4C2G:
+		cpuRaw, memRaw = "4000m", "2048Mi"
+	case paasv1alpha2.ResQuotaPlan4C4G:
+		cpuRaw, memRaw = "4000m", "4096Mi"
+	default:
+		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimits(), config.Global.GetProcDefaultMemLimits()
+	}
+	return r.fromRawString(cpuRaw, memRaw)
+}
+
+// fromRawString build the resource requirements from raw string
+func (r *ProcResourcesGetter) fromRawString(cpu, memory string) corev1.ResourceRequirements {
+	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
+	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
+
+	return corev1.ResourceRequirements{
+		// 目前 Requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    *quota.Div(cpuQuota, 4),
+			corev1.ResourceMemory: *quota.Div(memQuota, 2),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    *cpuQuota,
+			corev1.ResourceMemory: *memQuota,
+		},
 	}
 }

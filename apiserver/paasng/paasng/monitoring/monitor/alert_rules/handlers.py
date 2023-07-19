@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Type
 
+from django.conf import settings
 from django.dispatch import receiver
 
 from paasng.engine.models.deployment import Deployment
@@ -31,6 +32,9 @@ from .tasks import delete_rules, refresh_rules_by_module
 
 @receiver(post_appenv_deploy)
 def refresh_rules_after_deploy(sender: ApplicationEnvironment, deployment: Deployment, **kwargs):
+    if not settings.MONITOR_AS_CODE_CONF.get('token'):
+        return
+
     if not deployment.has_succeeded():
         return
 
@@ -41,6 +45,9 @@ def refresh_rules_after_deploy(sender: ApplicationEnvironment, deployment: Deplo
 def refresh_rules_after_offline(
     sender: Type[OfflineOperation], offline_instance: OfflineOperation, environment: str, **kwargs
 ):
+    if not settings.MONITOR_AS_CODE_CONF.get('token'):
+        return
+
     if not offline_instance.has_succeeded():
         return
 

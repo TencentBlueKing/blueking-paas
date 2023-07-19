@@ -632,13 +632,13 @@ export default {
         if (val.spec) {
           console.log('val.spec', val);
           this.localCloudAppData = _.cloneDeep(val);
-          this.envOverlayData = this.localCloudAppData.spec.envOverlay;
+          this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
 
           // 更多配置信息
           console.log('this.formData', this.formData);
-          this.envName = this.envOverlayData.replicas.find(e => e.process === this.processNameActive);
+          this.envName = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive);
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
         this.panels = _.cloneDeep(this.processData);

@@ -82,6 +82,7 @@ class ProcessManager:
 
     def list_processes(self) -> List[Process]:
         """Query all running processes"""
+        # TODO: 云原生应用与普通应用共用 list_processes 查询进程
         proc_status = get_processes_status(self.wl_app)
         items = []
         for proc in proc_status:

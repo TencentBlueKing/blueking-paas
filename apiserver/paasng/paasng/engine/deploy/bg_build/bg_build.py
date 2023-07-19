@@ -231,8 +231,11 @@ class BuildProcessExecutor(DeployStep):
             raise KeyError("'image' is required")
         image = metadata['image']
         artifact_type = ArtifactType.SLUG
+        artifact_metadata = {}
         if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
             artifact_type = ArtifactType.IMAGE
+            artifact_metadata["use_dockerfile"] = metadata.get("use_dockerfile", False)
+            artifact_metadata["use_cnb"] = metadata.get("use_cnb", False)
         bkapp_revision_id = metadata.get("bkapp_revision_id", None)
 
         # starting create build
@@ -249,6 +252,7 @@ class BuildProcessExecutor(DeployStep):
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
             bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,
+            artifact_metadata=artifact_metadata,
         )
         mark_as_latest_artifact(build_instance)
 
@@ -262,5 +266,5 @@ class BuildProcessExecutor(DeployStep):
         try:
             self.scheduler_client.delete_builder(namespace=self.wl_app.namespace, name=self._builder_name)
         except Exception as e:
-            # cleaning should not influenced main process
+            # cleaning should not influence main process
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)

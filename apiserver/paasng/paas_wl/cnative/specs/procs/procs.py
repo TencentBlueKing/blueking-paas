@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Main functionalities for proc module"""
-from typing import List
+from typing import Dict, List
 
 from attrs import define
 
@@ -64,4 +64,17 @@ def parse_proc_specs(res: BkAppResource, env_name: AppEnvName) -> List[CNativePr
     for name, (cnt, _) in counts.items():
         target_status = ProcessTargetStatus.START.value if cnt > 0 else ProcessTargetStatus.STOP.value
         results.append(CNativeProcSpec(name, cnt, target_status, quotas[name]['cpu'], quotas[name]['memory']))
+    return results
+
+
+def parse_procfile(res: BkAppResource) -> Dict[str, str]:
+    """Parse procfile from app model resource, useful for build_method=cnb"""
+    results = {}
+    for proc in res.spec.processes:
+        parts = []
+        if proc.command:
+            parts.extend(proc.command)
+        if proc.args:
+            parts.extend(proc.args)
+        results[proc.name] = " ".join(parts)
     return results

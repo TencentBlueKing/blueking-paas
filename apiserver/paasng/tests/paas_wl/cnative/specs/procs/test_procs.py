@@ -19,8 +19,9 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.cnative.specs.constants import DEFAULT_PROC_CPU, DEFAULT_PROC_MEM
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import create_app_resource
-from paas_wl.cnative.specs.procs import CNativeProcSpec, parse_proc_specs
+from paas_wl.cnative.specs.procs import CNativeProcSpec, parse_proc_specs, parse_procfile
 from paasng.engine.constants import AppEnvName
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -39,3 +40,45 @@ class TestParseProcSpecs:
         assert parse_proc_specs(res, AppEnvName.STAG) == [
             CNativeProcSpec('web', 0, 'stop', DEFAULT_PROC_CPU, DEFAULT_PROC_MEM)
         ]
+
+
+@pytest.mark.parametrize(
+    "res, expected",
+    [
+        (
+            BkAppResource(
+                metadata={"name": "foo"},
+                spec={"processes": [{"name": "web", "command": ["python"], "args": ["-m", "http.server"]}]},
+            ),
+            {"web": "python -m http.server"},
+        ),
+        (
+            BkAppResource(
+                metadata={"name": "foo"},
+                spec={
+                    "processes": [
+                        {"name": "web", "command": ["python"], "args": ["-m", "http.server"]},
+                        {"name": "celery", "command": ["celery"], "args": ["worker"]},
+                    ]
+                },
+            ),
+            {"web": "python -m http.server", "celery": "celery worker"},
+        ),
+        (
+            BkAppResource(
+                metadata={"name": "foo"},
+                spec={"processes": [{"name": "web", "command": ["python", "-m", "http.server"]}]},
+            ),
+            {"web": "python -m http.server"},
+        ),
+        (
+            BkAppResource(
+                metadata={"name": "foo"},
+                spec={"processes": [{"name": "web", "args": ["python", "-m", "http.server"]}]},
+            ),
+            {"web": "python -m http.server"},
+        ),
+    ],
+)
+def test_parse_procfile(res, expected):
+    assert parse_procfile(res) == expected

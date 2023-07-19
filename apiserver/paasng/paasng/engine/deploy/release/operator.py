@@ -49,15 +49,12 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure('部署应用'):
-            # 对于仅托管镜像类型的云原生应用, build.image 字段为空字符串
-            # 对于从源码构建镜像的云原生应用, build.image 字段是构建后的镜像
-            image = build.image or None
             release_id = release_by_k8s_operator(
                 self.module_environment,
                 revision,
                 operator=self.deployment.operator,
                 deployment_id=self.deployment.id,
-                image=image,
+                build=build,
             )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
@@ -73,7 +70,7 @@ def release_by_k8s_operator(
     env: ModuleEnvironment,
     revision: AppModelRevision,
     operator: str,
-    image: Optional[str] = None,
+    build: Optional[Build] = None,
     deployment_id: Optional[str] = None,
 ) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
@@ -118,7 +115,7 @@ def release_by_k8s_operator(
         svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
 
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(image=image)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build)
         )
     except Exception:
         app_model_deploy.status = DeployStatus.ERROR

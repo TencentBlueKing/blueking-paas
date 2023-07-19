@@ -52,7 +52,7 @@ class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
         """
         assert isinstance(obj, ProcessService), 'obj must be "ProcessService" type'
         service = obj
-        kube_selector = ProcessAPIAdapter.get_kube_pod_selector(service.app, service.process_type)
+        kube_selector = ProcessAPIAdapter.process_selector(service.app, service.process_type)
         body: Dict[str, Any] = {
             'metadata': {
                 'name': service.name,

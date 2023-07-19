@@ -19,6 +19,7 @@
 package resources
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -101,6 +102,15 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		}
 	}
 
+	useCNB, _ := strconv.ParseBool(bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey])
+	command := bkapp.Spec.Hooks.PreRelease.Command
+	args := bkapp.Spec.Hooks.PreRelease.Args
+	if useCNB {
+		// cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下
+		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+		command = append([]string{"launcher"}, command...)
+	}
+
 	return &HookInstance{
 		Pod: &corev1.Pod{
 			TypeMeta: metav1.TypeMeta{
@@ -129,8 +139,8 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 				Containers: []corev1.Container{
 					{
 						Image:           image,
-						Command:         bkapp.Spec.Hooks.PreRelease.Command,
-						Args:            bkapp.Spec.Hooks.PreRelease.Args,
+						Command:         command,
+						Args:            args,
 						Env:             GetAppEnvs(bkapp),
 						Name:            "hook",
 						ImagePullPolicy: pullPolicy,

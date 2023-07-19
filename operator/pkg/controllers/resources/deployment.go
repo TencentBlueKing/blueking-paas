@@ -50,11 +50,13 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 	if rev := app.Status.Revision; rev != nil {
 		newRevision = rev.Revision
 	}
+
 	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
 	volMountMap := GetVolumeMountMap(app)
-	deployList := []*appsv1.Deployment{}
 	replicasGetter := NewReplicasGetter(app)
+	deployList := []*appsv1.Deployment{}
+	useCNB, _ := strconv.ParseBool(app.Annotations[paasv1alpha2.UseCNBAnnoKey])
 	for _, proc := range app.Spec.Processes {
 		selector := labels.PodSelector(app, proc.Name)
 		objLabels := labels.Deployment(app, proc.Name)
@@ -104,7 +106,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 					Spec: corev1.PodSpec{
 						DNSConfig:        buildDNSConfig(app),
 						HostAliases:      buildHostAliases(app),
-						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq),
+						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq, useCNB),
 						ImagePullSecrets: buildImagePullSecrets(app),
 						// 不默认向 Pod 中挂载 ServiceAccount Token
 						AutomountServiceAccountToken: lo.ToPtr(false),
@@ -137,15 +139,26 @@ func buildContainers(
 	image string,
 	pullPolicy corev1.PullPolicy,
 	resRequirements corev1.ResourceRequirements,
+	useCNB bool,
 ) []corev1.Container {
+	var command, args []string
+	if useCNB {
+		// cnb 运行时启动 Process 的 entrypoint 是 `process_type`, command 是空列表
+		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+		command = append(command, proc.Name)
+	} else {
+		command = proc.Command
+		args = proc.Args
+	}
+
 	container := corev1.Container{
 		Name:            proc.Name,
 		Image:           image,
 		Resources:       resRequirements,
 		ImagePullPolicy: pullPolicy,
 		Env:             envs,
-		Command:         proc.Command,
-		Args:            proc.Args,
+		Command:         command,
+		Args:            args,
 	}
 	if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}

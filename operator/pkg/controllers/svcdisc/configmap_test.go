@@ -105,18 +105,27 @@ var _ = Describe("Test configmap related functions", func() {
 			It("Configmap has no valid key", func() {
 				// Update the configmap to contain no valid keys
 				configmap.Data = map[string]string{}
-				ret := NewWorkloadsMutator(builder.WithObjects(configmap).Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				ret := NewWorkloadsMutator(
+					builder.WithObjects(configmap).Build(),
+					bkapp,
+				).ApplyToDeployments(ctx, deploys)
 				Expect(ret).To(BeFalse())
 			})
 			It("Configmap exists, but svc-discovery config is empty", func() {
 				bkapp.Spec.SvcDiscovery = nil
-				ret := NewWorkloadsMutator(builder.WithObjects(configmap).Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				ret := NewWorkloadsMutator(
+					builder.WithObjects(configmap).Build(),
+					bkapp,
+				).ApplyToDeployments(ctx, deploys)
 				Expect(ret).To(BeFalse())
 			})
 			It("Applied successfully", func() {
 				Expect(len(deploys[0].Spec.Template.Spec.Containers[0].Env)).To(BeZero())
 
-				ret := NewWorkloadsMutator(builder.WithObjects(configmap).Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				ret := NewWorkloadsMutator(
+					builder.WithObjects(configmap).Build(),
+					bkapp,
+				).ApplyToDeployments(ctx, deploys)
 				Expect(ret).To(BeTrue())
 				Expect(len(deploys[0].Spec.Template.Spec.Containers[0].Env)).To(Equal(1))
 			})

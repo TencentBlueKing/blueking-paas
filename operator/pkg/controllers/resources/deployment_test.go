@@ -21,6 +21,7 @@ package resources
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,8 +46,9 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bkapp-sample",
-				Namespace: "default",
+				Name:        "bkapp-sample",
+				Namespace:   "default",
+				Annotations: map[string]string{},
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
@@ -347,5 +349,19 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(web.Spec.Template.Spec.DNSConfig.Nameservers).To(Equal([]string{"8.8.8.8"}))
 			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
 		})
+	})
+
+	It("test build deployment for cnb runtime image", func() {
+		bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
+		for _, item := range lo.Zip2(bkapp.Spec.Processes, GetWantedDeploys(bkapp)) {
+			proc := item.A
+			deployment := item.B
+			Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(1))
+			c := deployment.Spec.Template.Spec.Containers[0]
+			By("test Command should be override by '${proc.Name}'")
+			Expect(c.Command).To(Equal([]string{proc.Name}))
+			By("test Args shoulde be clear")
+			Expect(c.Args).To(BeNil())
+		}
 	})
 })

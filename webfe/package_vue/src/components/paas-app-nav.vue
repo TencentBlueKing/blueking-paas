@@ -97,6 +97,7 @@ export default {
         ],
 
         operator: [
+          'appEngineOperator', // 运营者应用引擎
           'appPermissions', // 权限管理
           'appMarketing', // 市场推广
           'appConfigs', // 基本设置
@@ -170,8 +171,8 @@ export default {
           navTree = this.addServiceNavItem(navTree, category.id, category.name);
         });
 
-        // 添加访问入口
-        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);
+        // 添加访问管理
+        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'));
 
         // 添加代码检查
         this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
@@ -203,6 +204,7 @@ export default {
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
           navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
+          this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'));
         }
 
         // smart应用或lesscode应用，包管理
@@ -372,7 +374,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appSummary',
+            name: 'appBaseInfo',
             params: {
               id: this.curAppInfo.application.code,
             },

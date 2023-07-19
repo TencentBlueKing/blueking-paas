@@ -20,7 +20,7 @@ package controllers
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -110,20 +110,20 @@ var _ = Describe("", func() {
 					// 查询增强服务环境变量
 					return &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
+						Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
 						Header:     make(http.Header),
 					}
 				case "POST":
 					// 分配增强服务
 					return &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
+						Body:       io.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
 						Header:     make(http.Header),
 					}
 				}
 				return &http.Response{
 					StatusCode: 400,
-					Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+					Body:       io.NopCloser(bytes.NewBufferString(``)),
 					Header:     make(http.Header),
 				}
 			})),

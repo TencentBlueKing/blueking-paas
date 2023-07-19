@@ -64,15 +64,25 @@ export default {
   data() {
     return {
       isLoading: true,
-      active: 'moduleAddress',
+      active: '',
+      initPage: false,
     };
   },
   computed: {
     accessControl() {
-      return this.$store.state.region.access_control.module.map(e => e);
+      return this.$store.state.region?.access_control
+        ? this.$store.state.region?.access_control?.module?.map(e => e) : [];
     },
     panels() {
-      const panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
+      let panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
+      // 运营者不需要访问地址
+      if (this.curAppInfo.role.name === 'operator') {
+        panelsData = [];
+      }
+      // 开发者只有访问地址
+      if (this.curAppInfo.role.name === 'developer') {
+        return panelsData;
+      }
       if (this.accessControl.includes('user_access_control')) {   // 用户限制
         panelsData.push({ name: 'user_access_control', label: this.$t('用户限制') });
       }
@@ -84,6 +94,21 @@ export default {
       }
       return panelsData;
     },
+  },
+  watch: {
+    '$route'() {
+      this.$nextTick(() => {
+        if (this.curAppInfo.role.name !== 'operator') {
+          this.active = 'moduleAddress';
+        } else {
+          this.active = 'user_access_control';
+        }
+      });
+    },
+  },
+  mounted() {
+    this.initPage = true;
+    this.tab = this.getQueryString('tab');
   },
   methods: {
     handlerDataReady() {
@@ -98,8 +123,26 @@ export default {
         },
       });
     },
-    handleTabChange() {
+    handleTabChange(v) {
+      if (this.initPage) {
+        this.active = this.tab || v;
+      } else {
+        this.active = v;
+      }
+      const newUrl = `${this.$route.path}?tab=${this.active}`;
+      window.history.replaceState('', '', newUrl);
       this.isLoading = true;
+      this.initPage = false;
+    },
+
+    // 获取地址参数
+    getQueryString(name) {
+      const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
+      const r = window.location.search.substr(1).match(reg);
+      if (r != null) {
+        return decodeURIComponent(r[2]);
+      };
+      return null;
     },
   },
 };

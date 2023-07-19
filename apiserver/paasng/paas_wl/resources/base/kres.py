@@ -644,6 +644,10 @@ class KCustomResourceDefinition(BaseKresource):
     kind = "CustomResourceDefinition"
 
 
+class KConfigMap(BaseKresource):
+    kind = 'ConfigMap'
+
+
 # Individual resource types end
 
 

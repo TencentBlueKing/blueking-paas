@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -50,35 +50,35 @@ var _ = Describe("TestClient", func() {
 		Entry("addon found and get 1 extra envs(string)", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
 				Header:     make(http.Header),
 			}
 		}, AddonInstance{Credentials: map[string]intstr.IntOrString{"FAKE_FOO": intstr.Parse("FOO")}}, nil),
 		Entry("addon found and get 1 extra envs(int)", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": 1}}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": 1}}`)),
 				Header:     make(http.Header),
 			}
 		}, AddonInstance{Credentials: map[string]intstr.IntOrString{"FAKE_FOO": intstr.FromInt(1)}}, nil),
 		Entry("addon found and get 1 extra envs(string-int)", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "1"}}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "1"}}`)),
 				Header:     make(http.Header),
 			}
 		}, AddonInstance{Credentials: map[string]intstr.IntOrString{"FAKE_FOO": intstr.FromString("1")}}, nil),
 		Entry("addon found but no extra envs", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {}}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {}}`)),
 				Header:     make(http.Header),
 			}
 		}, AddonInstance{Credentials: map[string]intstr.IntOrString{}}, nil),
 		Entry("addon not found!", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 404,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`Not Found`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`Not Found`)),
 				Header:     make(http.Header),
 			}
 		}, AddonInstance{}, ErrStatusNotOk),

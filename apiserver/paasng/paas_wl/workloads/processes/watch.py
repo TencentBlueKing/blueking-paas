@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import queue
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, Generator, Iterable, List, Optional, Tuple, Type
 
 from django.db import connection
@@ -29,7 +29,7 @@ from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.system_api.serializers import InstanceSerializer, ProcSpecsSerializer
 from paas_wl.resources.kube_res.base import AppEntity
 from paas_wl.resources.kube_res.exceptions import WatchKubeResourceError
-from paas_wl.workloads.processes.models import Instance, Process
+from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 def watch_process_events(
     app: WlApp, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
-) -> Generator[Dict, None, None]:
+) -> Generator['ProcWatchEvent', None, None]:
     """Create a watch stream to track app's all process related changes
 
     :param timeout_seconds: timeout seconds for generated event stream, recommended value: less than 120 seconds
@@ -58,7 +58,7 @@ def watch_process_events(
     parallel_gen = ParallelChainedGenerator(event_gens)
     parallel_gen.start()
     for event in parallel_gen.iter_results():
-        yield asdict(ProcWatchEvent.make_event(event))
+        yield ProcWatchEvent.make_event(event)
 
     parallel_gen.close()
 

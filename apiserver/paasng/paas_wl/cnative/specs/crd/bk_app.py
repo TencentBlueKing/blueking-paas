@@ -47,7 +47,6 @@ class MetaV1Condition(BaseModel):
 class AutoscalingSpec(BaseModel):
     """Autoscaling specification"""
 
-    enabled: bool
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
@@ -129,6 +128,14 @@ class ReplicasOverlay(BaseModel):
     count: int
 
 
+class ResQuotaOverlay(BaseModel):
+    """Overwrite process's resQuota by environment"""
+
+    envName: str
+    process: str
+    plan: str
+
+
 class EnvVarOverlay(BaseModel):
     """Overwrite or add application's environment vars by environment"""
 
@@ -142,13 +149,16 @@ class AutoscalingOverlay(BaseModel):
 
     envName: str
     process: str
-    policy: str
+    minReplicas: int
+    maxReplicas: int
+    policy: str = Field(..., min_length=1)
 
 
 class EnvOverlay(BaseModel):
     """Defines environment specified configs"""
 
     replicas: Optional[List[ReplicasOverlay]] = None
+    resQuotas: Optional[List[ResQuotaOverlay]] = None
     envVariables: Optional[List[EnvVarOverlay]] = None
     autoscaling: Optional[List[AutoscalingOverlay]] = None
     mounts: Optional[List[MountOverlay]] = None
@@ -180,6 +190,33 @@ class BkAppAddon(BaseModel):
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
 
 
+class HostAlias(BaseModel):
+    """A host alias entry"""
+
+    ip: str
+    hostnames: List[str]
+
+
+class DomainResolution(BaseModel):
+    """Domain resolution config"""
+
+    nameservers: List[str] = Field(default_factory=list)
+    hostAliases: List[HostAlias] = Field(default_factory=list)
+
+
+class SvcDiscEntryBkSaaS(BaseModel):
+    """A service discovery entry that represents an application and an optional module."""
+
+    bkAppCode: str
+    moduleName: Optional[str] = None
+
+
+class SvcDiscConfig(BaseModel):
+    """Service discovery config"""
+
+    bkSaaS: List[SvcDiscEntryBkSaaS] = Field(default_factory=list)
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
@@ -189,6 +226,8 @@ class BkAppSpec(BaseModel):
     addons: List[BkAppAddon] = Field(default_factory=list)
     mounts: Optional[List[Mount]] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
+    domainResolution: Optional[DomainResolution] = None
+    svcDiscovery: Optional[SvcDiscConfig] = None
     envOverlay: Optional[EnvOverlay] = None
 
 

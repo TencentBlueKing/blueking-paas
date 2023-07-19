@@ -50,7 +50,6 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		// Copy Autoscaling field, extra logics needs because of the pointer type
 		if proc.Autoscaling != nil {
 			dstProc.Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled:     proc.Autoscaling.Enabled,
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      paasv1alpha2.ScalingPolicy(proc.Autoscaling.Policy),
@@ -167,7 +166,6 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		// Copy Autoscaling field, extra logics needs because of the pointer type
 		if proc.Autoscaling != nil {
 			dstProc.Autoscaling = &AutoscalingSpec{
-				Enabled:     proc.Autoscaling.Enabled,
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      ScalingPolicy(proc.Autoscaling.Policy),

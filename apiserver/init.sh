@@ -128,8 +128,8 @@ ensure-python-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${python_buildpack_version}.tar" \
     --environment \
-    "BUILDPACK_S3_BASE_URL=${vendor_url}/python" \
-    "BUILDPACK_VENDOR_URL=${vendor_url}/python" \
+    "BUILDPACK_S3_BASE_URL=${vendor_url}/runtimes/python" \
+    "BUILDPACK_VENDOR_URL=${vendor_url}/runtimes/python" \
     "PIP_INDEX_URL=${pip_index_url}" \
     "PIP_EXTRA_INDEX_URL=${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/" \
     "PIP_INDEX_HOST=${pip_index_host}"
@@ -159,8 +159,8 @@ ensure-nodejs-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${nodejs_buildpack_version}.tar" \
     --environment \
-    "STDLIB_FILE_URL=${vendor_url}/common/v7/stdlib.sh" \
-    "S3_DOMAIN=${vendor_url}/nodejs" \
+    "STDLIB_FILE_URL=${vendor_url}/common/buildpack-stdlib/v7/stdlib.sh" \
+    "S3_DOMAIN=${vendor_url}/runtimes/nodejs" \
     "NPM_REGISTRY=${npm_registry}"
 }
 
@@ -186,7 +186,7 @@ ensure-golang-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${go_buildpack_version}.tar" \
     --environment \
-    "GO_BUCKET_URL=${vendor_url}/golang" \
+    "GO_BUCKET_URL=${vendor_url}/runtimes/golang" \
     "GOPROXY=${PAAS_BUILDPACK_GOLANG_GOPROXY}"
 }
 
@@ -247,8 +247,8 @@ ensure-runtimes() {
     bkrepo_project="${PAAS_BLOBSTORE_BKREPO_PROJECT:-bkpaas}"
     runtimes_url="${PAAS_RUNTIMES_URL:-${bkrepo_endpoint}/generic/${bkrepo_project}/bkpaas3-platform-assets}"
     # 此处需和 paas-stack chart 中 extraInitial.devops 参数中路径一致，否则会导致部署失败
-    buildpack_url="${runtimes_url}/runtimes/${stack}/buildpacks"
-    vendor_url="${runtimes_url}/runtimes/${stack}/vendor"
+    buildpack_url="${runtimes_url}/buildpacks"
+    vendor_url="${runtimes_url}"
     
     # apt
     apt_buildpack_name=bk-buildpack-apt

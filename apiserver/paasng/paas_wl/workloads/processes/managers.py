@@ -22,7 +22,7 @@ from typing import Iterable, Optional
 
 from paas_wl.platform.applications.models import Release, WlApp
 
-from .models import Process
+from .entities import Process
 
 logger = logging.getLogger(__name__)
 

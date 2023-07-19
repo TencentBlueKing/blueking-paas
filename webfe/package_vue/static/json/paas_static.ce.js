@@ -121,7 +121,7 @@ export const PLATFORM_CONFIG = {
         BK_DESKTOP: '',
 
         // BK插件
-        BK_PLUGIN: '',
+        BK_PLUGIN: 'https://github.com/TencentBlueKing/bk-plugin-framework-python',
 
         //BKtemplate
         BK_PLUGIN_TEMPLATE: 'https://github.com/TencentBlueKing/bk-plugin-framework-python/tree/master/template',
@@ -853,6 +853,13 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     }
                 ]
+            },
+            {
+                "name": "appEngineOperator",
+                "label": staticI18n.$t("应用引擎"),     //运营者视角应用引擎
+                "iconfontName": "squares",
+                "supportModule": true,
+                "children": []
             },
             {
                 "name": "appServices",

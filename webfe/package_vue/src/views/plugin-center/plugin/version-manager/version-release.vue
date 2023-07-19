@@ -48,6 +48,7 @@
         v-if="stageData"
         ref="curStageComponment"
         :stage-data="stageData"
+        :plugin-data="pluginDetailedData"
         @rerunStage="rerunStage"
       />
       <template v-else-if="!finalStageIsOnline">
@@ -58,16 +59,21 @@
       </template>
 
       <div class="footer-btn-warp">
-        <bk-button
-          v-if="!isFirstStage"
-          theme="default"
-          class="ml5"
-          style="width: 120px"
-          :disabled="!isAllowPrev"
-          @click="handlerPrev"
-        >
-          {{ $t('上一步') }}
-        </bk-button>
+        <bk-popover placement="top" :disabled="isAllowPrev && isItsmStage">
+          <bk-button
+            v-if="!isFirstStage"
+            theme="default"
+            class="ml5"
+            style="width: 120px"
+            :disabled="!isAllowPrev"
+            @click="handlerPrev"
+          >
+            {{ $t('上一步') }}
+          </bk-button>
+          <div slot="content" style="white-space: normal;">
+            {{ $t('单据正在审批中，无法回到上一步，如有修改需求，请先撤销提单') }}
+          </div>
+        </bk-popover>
         <!-- 构建完成可以进入下一步 -->
         <bk-button
           v-if="!isFinalStage"
@@ -94,13 +100,15 @@
     import deployStage from './release-stages/deploy';
     import marketStage from './release-stages/market';
     import onlineStage from './release-stages/online';
+    import itsmStage from './release-stages/itsm';
 
     export default {
         components: {
             paasPluginTitle,
             deploy: deployStage,
             market: marketStage,
-            online: onlineStage
+            online: onlineStage,
+            itsm: itsmStage
         },
         mixins: [pluginBaseMixin],
         data () {
@@ -109,6 +117,7 @@
                 curStep: 1,
                 isLoading: true,
                 stageData: {},
+                pluginDetailedData: {},
                 failedMessage: '',
                 stepsStatus: '',
                 isFirstStage: false,
@@ -149,20 +158,30 @@
             isSingleStage () {
               return this.curAllStages.length === 1;
             },
+            // 是否禁用上一步
             isAllowPrev () {
-              let isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
-              return !isRunningDeploy && this.status !== 'successful';
+              switch (this.curStageComponmentType) {
+                case 'itsm':
+                  const itemStatus = this.pluginDetailedData.current_stage?.status;
+                  // 已撤销、审批不通过，才显示上一步，其余情况禁用
+                  const isDisabledList = ['interrupted', 'failed'];
+                  return isDisabledList.includes(itemStatus) ? true : false;
+                  break;
+                default:
+                  const isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
+                  return !isRunningDeploy && this.status !== 'successful';
+                  break;
+              }
             },
             isAllowNext () {
               return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
+            },
+            // 是否为审批阶段
+            isItsmStage () {
+              return this.curStageComponmentType === 'itsm';
             }
         },
         watch: {
-            curRelease: {
-                handler () {
-                    this.getReleaseStageDetail();
-                }
-            },
             stageData: {
                 handler () {
                     // 获取 stage 对应的序号
@@ -173,6 +192,11 @@
                 },
                 deep: true,
                 immediate: true
+            },
+            'stageData.stage_id' () {
+                if (!Object.keys(this.pluginDetailedData).length) {
+                    this.getReleaseDetail();
+                }
             }
         },
         async created () {
@@ -249,6 +273,7 @@
                 };
                 try {
                     const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
+                    this.pluginDetailedData = releaseData
                     this.$store.commit('plugin/updateCurRelease', releaseData);
                     // 获取 stage 对应的序号
                     this.curStep = this.calStageOrder(releaseData.current_stage);
@@ -322,6 +347,7 @@
                     };
                     const releaseData = await this.$store.dispatch('plugin/nextStage', params);
                     this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseDetail();
                     await this.getReleaseStageDetail();
                   } catch (e) {
                       this.$bkMessage({
@@ -504,6 +530,15 @@
             font-size: 18px;
         }
     }
+    &.warning {
+        background: #ff9c0129;
+    }
+    &.failed {
+        background: #FFDDDD;
+    }
+    &.interrupted {
+        background: #F5F7FA;
+    }
 }
 .success {
     background: rgba(45, 203, 86, 0.16) !important;
@@ -545,7 +580,9 @@
 .release-log-warp {
     margin-left: 6px;
 }
-.success-check-wrapper {
+.success-check-wrapper,
+.interrupted-check-wrapper,
+.warning-check-wrapper {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -563,6 +600,17 @@
         line-height: 24px;
         font-weight: 500;
         margin-top: 2px;
+    }
+}
+.warning-check-wrapper {
+    color: #FFB848;
+    background: transparent;
+}
+.interrupted-check-wrapper {
+    background-color: #C4C6CC;
+    i {
+        color: #fff;
+        font-size: 16px;
     }
 }
 .info-left-warp .info-time {

@@ -17,6 +17,7 @@
 **PaaS 服务核心服务开源项目**
 
 - PaaS 平台 - [开发者中心](https://github.com/TencentBlueKing/blueking-paas)
+- PaaS 平台 - [蓝鲸 API 网关](https://github.com/TencentBlueKing/blueking-apigateway)
 - PaaS 平台 - [统一登录](https://github.com/TencentBlueKing/bk-user)
 - PaaS 平台 - [蓝鲸桌面](https://github.com/TencentBlueKing/blueking-console)
 - 低代码开发 - [可视化开发平台](https://github.com/TencentBlueKing/bk-lesscode)

@@ -110,7 +110,7 @@ class AppModelRevision(TimestampedModel):
     # data fields
     version = models.CharField(verbose_name=_('模型版本'), max_length=64)
     yaml_value = models.TextField(verbose_name=_('应用模型（YAML 格式）'))
-    # `json_value` is a duplication with `yaml_value`
+    # `json_value` is a duplicate of `yaml_value`
     json_value = models.JSONField(verbose_name=_('应用模型（JSON 格式）'))
 
     # status fields
@@ -182,6 +182,11 @@ class AppModelDeploy(TimestampedModel):
 
     def has_succeeded(self):
         return self.status == DeployStatus.READY
+
+    @property
+    def bk_app_resource(self) -> BkAppResource:
+        """Get the BkAppResource object of the current revision"""
+        return BkAppResource(**self.revision.json_value)
 
 
 def create_app_resource(

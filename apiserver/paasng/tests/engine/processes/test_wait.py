@@ -40,7 +40,7 @@ from paasng.engine.deploy.bg_wait.wait_deployment import (
 )
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.processes.models import Process
+    from paas_wl.workloads.processes.entities import Process
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

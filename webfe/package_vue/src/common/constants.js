@@ -103,3 +103,21 @@ export const ENV_ENUM = {
   prod: '生产环境',
   stag: '预发布环境',
 };
+
+export const PLUGIN_ITSM_APPLY = {
+  plugin_id: '插件标识',
+  plugin_name: '插件名称',
+  language: '开发语言',
+  repository: '代码库',
+  version: '版本号',
+  comment: '版本日志',
+  source_version_name: '代码分支',
+  category: '分类',
+  introduction: '简介',
+  description: '详情描述'
+};
+
+export const PLUGIN_ITSM_LADING = {
+  title: '标题',
+  creator: '提单人'
+};

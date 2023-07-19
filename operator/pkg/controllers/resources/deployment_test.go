@@ -114,10 +114,11 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(webDeploy.OwnerReferences[0].Kind).To(Equal(bkapp.Kind))
 			Expect(webDeploy.OwnerReferences[0].Name).To(Equal(bkapp.Name))
 			Expect(len(webDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(*webDeploy.Spec.Template.Spec.AutomountServiceAccountToken).To(Equal(false))
 
 			hiDeploy := deploys[1]
 			Expect(hiDeploy.Name).To(Equal("bkapp-sample--hi"))
-			Expect(hiDeploy.Spec.Selector.MatchLabels).To(Equal(labels.Deployment(bkapp, "hi")))
+			Expect(hiDeploy.Spec.Selector.MatchLabels).To(Equal(labels.PodSelector(bkapp, "hi")))
 			Expect(*hiDeploy.Spec.RevisionHistoryLimit).To(Equal(int32(0)))
 			Expect(len(hiDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
 		})

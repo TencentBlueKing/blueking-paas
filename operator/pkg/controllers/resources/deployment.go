@@ -67,11 +67,11 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 			pullPolicy = corev1.PullIfNotPresent
 		}
 
-		resGetter := paasv1alpha2.NewProcResourcesGetter(app)
-		resReq, err := resGetter.Get(proc.Name)
+		resGetter := NewProcResourcesGetter(app)
+		resReq, err := resGetter.GetByProc(proc.Name)
 		if err != nil {
 			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
-			resReq = resGetter.GetDefault()
+			resReq = resGetter.Default()
 		}
 
 		deployment := &appsv1.Deployment{
@@ -95,7 +95,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 			Spec: appsv1.DeploymentSpec{
 				Selector:             &metav1.LabelSelector{MatchLabels: selector},
 				RevisionHistoryLimit: lo.ToPtr(DeployRevisionHistoryLimit),
-				Replicas:             replicasGetter.Get(proc.Name),
+				Replicas:             replicasGetter.GetByProc(proc.Name),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels:      objLabels,
@@ -106,6 +106,8 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 						HostAliases:      buildHostAliases(app),
 						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq),
 						ImagePullSecrets: buildImagePullSecrets(app),
+						// 不默认向 Pod 中挂载 ServiceAccount Token
+						AutomountServiceAccountToken: lo.ToPtr(false),
 					},
 				},
 			},

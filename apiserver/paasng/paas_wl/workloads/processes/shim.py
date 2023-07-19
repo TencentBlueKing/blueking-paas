@@ -16,80 +16,46 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from dataclasses import asdict
 from typing import Dict, List, Optional
 
 import cattr
-from attrs import define
 from django.utils.functional import cached_property
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.bcs_client import BCSClient
-from paas_wl.workloads.processes.controllers import get_processes_status, list_proc_specs
+from paas_wl.workloads.processes.controllers import get_processes_status
+from paas_wl.workloads.processes.drf_serializers import CNativeProcSpecSLZ, ProcessSpecSLZ
 from paas_wl.workloads.processes.models import ProcessSpecManager, ProcessTmpl
+from paas_wl.workloads.processes.processes import Process
 from paas_wl.workloads.processes.readers import process_kmodel
-from paasng.engine.models import EngineApp
-
-logger = logging.getLogger(__name__)
-
-
-@define
-class Instance:
-    """A Process instance object"""
-
-    name: str
-    host_ip: str
-    start_time: str
-    state: str
-    ready: bool
-    image: str
-    restart_count: int
-    version: int
-    process_type: Optional[str] = None
-    namespace: Optional[str] = None
-
-    def __str__(self):
-        return f'Instance<{self.name}-{self.state}>'
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ModuleEnvironment
 
 
-@define
-class Process:
+def _list_proc_specs(env: ModuleEnvironment) -> List[Dict]:
+    """Return all processes specs of an app
+
+    :return: list of process specs
     """
-    Q: What's the differences between Process and ProcessSpec?
-    A: Process represents the actual data from engine backend, and ProcessSpec represents the expectation of user.
-    """
-
-    type: str
-    app_name: str
-    version: int
-    command: str
-    process_status: Dict
-    desired_replicas: str
-    instances: List[Instance]
-
-    @property
-    def available_instance_count(self):
-        return len([instance for instance in self.instances if instance.ready and instance.version == self.version])
-
-    @property
-    def engine_app_name(self):
-        return self.app_name
-
-    def __repr__(self):
-        return f'Process<{self.type}>'
+    # TODO: 统一返回值的字段？
+    if env.application.type == ApplicationType.CLOUD_NATIVE:
+        return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
+    wl_app = env.wl_app
+    return ProcessSpecSLZ(wl_app.process_specs.all(), many=True).data
 
 
 class ProcessManager:
     """Manager for engine processes"""
 
-    def __init__(self, app: EngineApp):
-        self.app = app
+    def __init__(self, env: ModuleEnvironment):
+        self.env = env
 
     @cached_property
     def wl_app(self) -> WlApp:
-        return self.app.to_wl_obj()
+        return self.env.wl_app
 
     def sync_processes_specs(self, processes: List[ProcessTmpl]):
         """Sync specs by plain ProcessSpec structure
@@ -105,7 +71,7 @@ class ProcessManager:
 
         :param target_status: if given, filter results by given target_status
         """
-        specs = list_proc_specs(self.wl_app)
+        specs = _list_proc_specs(self.env)
         results = []
         for item in specs:
             # Filter by given conditions
@@ -133,10 +99,9 @@ class ProcessManager:
         return [cattr.structure(x, Process) for x in items]
 
     def get_running_image(self) -> str:
-        manager = ProcessManager(self.app)
-        images = {instance.image for process in manager.list_processes() for instance in process.instances}
+        images = {instance.image for process in self.list_processes() for instance in process.instances}
         if len(images) == 0:
-            raise RuntimeError(f"Can't find running image for App<{self.app}>")
+            raise RuntimeError(f"Can't find running image for Env<{self.env}>")
         elif len(images) > 1:
             raise RuntimeError("multiple image found!")
         return images.pop()

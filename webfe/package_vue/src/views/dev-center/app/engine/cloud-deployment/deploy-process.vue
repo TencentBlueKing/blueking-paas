@@ -55,11 +55,11 @@
           <bk-button
             v-for="(panel, index) in panels"
             :key="index"
-            :class="btnActive === panel.name ? 'is-selected' : ''"
+            :class="processNameActive === panel.name ? 'is-selected' : ''"
             @click="handleBtnGroupClick(panel.name, index)">
             {{ panel.name }}
             <i
-              v-if="btnActive === panel.name && index !== 0 && isPageEdit"
+              v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
               class="paasng-icon paasng-edit-2 plugin-name-icon"
               ref="tooltipsHtml"
               @click="handleProcessNameEdit(panel.name, index)"
@@ -525,7 +525,7 @@ export default {
   data() {
     return {
       panels: [],
-      btnActive: 'web',
+      processNameActive: 'web',
       btnIndex: 0,
       showEditIconIndex: null,
       iconIndex: '',
@@ -620,7 +620,7 @@ export default {
       return this.$route.params.id;
     },
     imageCrdlAnnoKey() {
-      return `bkapp.paas.bk.tencent.com/image-credentials.${this.btnActive}`;
+      return `bkapp.paas.bk.tencent.com/image-credentials.${this.processNameActive}`;
     },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
@@ -638,6 +638,7 @@ export default {
 
           // 更多配置信息
           console.log('this.formData', this.formData);
+          this.envName = this.envOverlayData.replicas.find(e => e.process === this.processNameActive);
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
         this.panels = _.cloneDeep(this.processData);
@@ -648,7 +649,7 @@ export default {
     formData: {
       handler(val) {
         if (this.localCloudAppData.spec) {
-          val.name = this.btnActive;
+          val.name = this.processNameActive;
           val.replicas = val.replicas && Number(val.replicas);
           if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
             val.targetPort = Number(val.targetPort);
@@ -956,7 +957,7 @@ export default {
     // 按扭组点击
     handleBtnGroupClick(v, i) {
       this.formData = this.processData[i];
-      this.btnActive = v;
+      this.processNameActive = v;
       this.btnIndex = i;
     },
 
@@ -995,7 +996,7 @@ export default {
         // this.handleBtnGroupClick(this.processDialog.name);
       } else {  // 新增进程
         this.panels.push({ name: this.processDialog.name });
-        this.btnActive = this.processDialog.name;
+        this.processNameActive = this.processDialog.name;
         this.formData = {
           name: this.processDialog.name,
           image: '',

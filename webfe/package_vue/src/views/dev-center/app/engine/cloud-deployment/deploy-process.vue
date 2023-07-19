@@ -548,7 +548,6 @@ export default {
         autoscaling: {},
       },
       bkappAnnotations: {},
-      isEdited: false,
       command: [],
       args: [],
       allowCreate: true,

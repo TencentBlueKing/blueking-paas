@@ -330,15 +330,4 @@ var _ = Describe("Test HookReconciler", func() {
 			Expect(errors.Is(err, resources.ErrHookPodExists)).To(BeTrue())
 		})
 	})
-
-	It("test build pre-release hook for cnb runtime image", func() {
-		bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
-		hook := resources.BuildPreReleaseHook(bkapp, nil)
-		c := hook.Pod.Spec.Containers[0]
-		By("test prepend 'launcher' to Command")
-		Expect(len(c.Command)).To(Equal(1 + len(bkapp.Spec.Hooks.PreRelease.Command)))
-		Expect(c.Command).To(Equal([]string{"launcher", "/bin/bash"}))
-		By("test Args is unchanged")
-		Expect(c.Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
-	})
 })

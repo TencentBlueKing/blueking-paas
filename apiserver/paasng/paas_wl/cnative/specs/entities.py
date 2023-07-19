@@ -58,7 +58,9 @@ class BkAppManifestProcessor:
     def build_manifest(self, build: Optional[Build] = None) -> Dict:
         """inject bkpaas-specific properties to annotations
 
-        :param build: optional, image build by platform, will overwrite the image filed in manifest
+        :param build: optional, artifact build by platform
+            if build.image is not None, will overwrite the image filed in manifest
+            if the image is built by CNB runtime, will set `use-cnb` annotation to "true"
         """
         wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
         manifest = BkAppResource(**self.model_deploy.revision.json_value)
@@ -125,7 +127,7 @@ class BkAppManifestProcessor:
                 # cnb 运行时启动 Process 的 entrypoint 是 `process_type`, command 是空列表
                 # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
                 # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-                USE_CNB_ANNO_KEY: str(use_cnb),
+                USE_CNB_ANNO_KEY: ("true" if use_cnb else "false"),
             }
         )
 

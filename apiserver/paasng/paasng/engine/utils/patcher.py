@@ -35,16 +35,14 @@ from paasng.platform.modules.specs import ModuleSpecs
 class SourceCodePatcherWithDBDriver:
     """基于数据库记录驱动的源码 Patcher"""
 
-    def __init__(self, module: 'Module', source_dir: Path, deployment: Deployment, relative_path: str = "./"):
+    def __init__(self, module: 'Module', source_dir: Path, deployment: Deployment):
         """
         :param module: 模块
         :param source_dir: 源码根路径
         :param deployment :Deployment obj
-        :param relative_path: app_description file 的相对源代码的路径(只有在上传 S-Mart 包前的 patch, 才需要传递这个参数.)
         """
         self.module = module
         self.source_dir = source_dir
-        self.relative_path = relative_path
         self.deployment = deployment
 
     def add_procfile(self):
@@ -97,12 +95,12 @@ class SourceCodePatcherWithDBDriver:
     def module_dir(self) -> Path:
         """当前模块代码的路径"""
         if not ModuleSpecs(self.module).deploy_via_package:
-            return self.source_dir / self.relative_path / self.module.get_source_obj().get_source_dir()
+            return self.source_dir / self.module.get_source_obj().get_source_dir()
 
-        return self.source_dir / self.relative_path / self.deploy_description.source_dir
+        return self.source_dir / self.deploy_description.source_dir
 
     def _make_key(self, key: str) -> Path:
         # 如果源码目录已加密, 则生成至应用描述文件的目录下.
         if self.module_dir.is_file():
-            return self.source_dir / self.relative_path / key
+            return self.source_dir / key
         return self.module_dir / key

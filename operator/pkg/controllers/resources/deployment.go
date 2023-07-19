@@ -143,7 +143,7 @@ func buildContainers(
 ) []corev1.Container {
 	var command, args []string
 	if useCNB {
-		// cnb 运行时启动 Process 的 entrypoint 是 `process_type`, command 是空列表
+		// cnb 运行时启动 Process 的 entrypoint 是 `Process.Name`, command 是空列表
 		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
 		command = append(command, proc.Name)
 	} else {

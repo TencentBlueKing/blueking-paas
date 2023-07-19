@@ -737,6 +737,9 @@ export default {
   },
   mounted() {
     this.$refs.mirrorUrl?.focus();
+    setTimeout(() => {
+      this.isAutoscaling = !!this.formData.autoscaling;
+    }, 1000);
   },
   methods: {
     handlePanelClick(i, e, isAdd) {

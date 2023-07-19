@@ -512,6 +512,7 @@ export default {
         });
         this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (e) {
+        console.log(e);
         this.$paasMessage({
           theme: 'error',
           message: e.message || e.detail || this.$t('接口异常'),

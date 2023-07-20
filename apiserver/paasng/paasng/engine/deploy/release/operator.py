@@ -26,6 +26,7 @@ from paas_wl.cnative.specs import svc_disc
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
+from paas_wl.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.platform.applications.models import Build
 from paasng.engine.constants import JobStatus
@@ -116,6 +117,9 @@ def release_by_k8s_operator(
         # mounting the configmap as file, because some data might be removed in the
         # latest version. We should ask the application developer to handle this properly.
         svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
+
+        # 下发待挂载的 volume source
+        VolumeSourceManager(env).deploy()
 
         deployed_manifest = apply_bkapp_to_k8s(
             env, BkAppManifestProcessor(app_model_deploy).build_manifest(image=image)

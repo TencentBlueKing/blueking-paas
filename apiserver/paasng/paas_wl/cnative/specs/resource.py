@@ -34,7 +34,6 @@ from paas_wl.cnative.specs.constants import (
 )
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.cnative.specs.models import generate_bkapp_name
-from paas_wl.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.exceptions import ResourceMissing
@@ -85,9 +84,6 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         # 下发镜像访问凭证(secret)
         image_credentials = ImageCredentials.load_from_app(wl_app)
         credentials.ImageCredentialsManager(client).upsert(image_credentials)
-
-        # 下发待挂载的 volume source
-        VolumeSourceManager(env).deploy()
 
         # 创建或更新 BkApp
         bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(

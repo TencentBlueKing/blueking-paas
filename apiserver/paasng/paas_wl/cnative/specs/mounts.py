@@ -44,8 +44,6 @@ class MountsManager:
 
 
 class VolumeSourceManager:
-    """"""
-
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.wl_app = env.wl_app

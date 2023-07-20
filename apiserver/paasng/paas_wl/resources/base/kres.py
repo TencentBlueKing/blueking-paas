@@ -628,10 +628,6 @@ class KServiceAccount(BaseKresource):
     kind = 'ServiceAccount'
 
 
-class KConfigMap(BaseKresource):
-    kind = 'ConfigMap'
-
-
 class KSecret(BaseKresource):
     kind = 'Secret'
 

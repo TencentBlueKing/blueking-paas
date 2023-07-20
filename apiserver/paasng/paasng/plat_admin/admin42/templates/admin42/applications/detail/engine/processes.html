@@ -56,7 +56,7 @@
             </template>
         </bk-table-column>
         <bk-table-column label="资源方案" prop="process_spec.plan.name" v-if="application.type === 'cloud_native'"></bk-table-column>
-        <bk-table-column label="操作" v-if="application.type === 'cloud_native'">
+        <bk-table-column label="操作" v-if="application.type !== 'cloud_native'">
             <template slot-scope="props">
                 <a class="bk-text-button mr10" href="javascript:void(0);" @click="editProcessSpecPlan(props.row)">修改资源方案</a>
                 <a class="bk-text-button mr10" href="javascript:void(0);" @click="scale(props.row)" v-if="props.row.command !== null">调整实例数</a>

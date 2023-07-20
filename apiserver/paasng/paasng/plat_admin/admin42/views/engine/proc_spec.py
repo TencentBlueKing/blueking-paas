@@ -106,7 +106,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
                     "available_instance_count": process.available_instance_count,
                     "instances": cattr.unstructure(process.instances),
                 }
-                if application.type == ApplicationType.CLOUD_NATIVE:
+                if application.type != ApplicationType.CLOUD_NATIVE:
                     process_map[process.type]["process_spec"] = {
                         "plan": {
                             "id": process_spec["plan_id"],

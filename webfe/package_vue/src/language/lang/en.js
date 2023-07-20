@@ -2193,5 +2193,5 @@ export default {
   已撤销提单: 'Cancelled bill of lading',
   撤销提单: 'Revocation of bill of lading',
   '单据正在审批中，无法回到上一步，如有修改需求，请先撤销提单': 'The document is being approved and cannot go back to the previous step. If there is a need to modify it, please cancel the bill of lading first',
-  无该应用访问权限: 'No access permission for this application.'
+  无该应用访问权限: 'No access permission for this application.',
 };

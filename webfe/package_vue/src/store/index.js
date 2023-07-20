@@ -79,7 +79,8 @@ const state = {
   localLanguage: localLanguage,
   navType: {},
   applyUrl: '',
-  envEventData: ['stag', 'prod']
+  envEventData: ['stag', 'prod'],
+  errorDetail: {}
 };
 
 const getters = {
@@ -229,6 +230,9 @@ const mutations = {
   },
   updateApplyUrl (state, data) {
     state.applyUrl = data;
+  },
+  updateErrorDetail (state, data) {
+    state.errorDetail = data;
   },
   updataEnvEventData (state, data) {
     if (data.length) {

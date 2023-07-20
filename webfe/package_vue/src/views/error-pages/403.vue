@@ -4,6 +4,16 @@
       <h2>403</h2>
     </div>
     <div
+      v-if="errorDetail.code === 1302403"
+      class="no-app-permissions"
+    >
+      <bk-exception class="exception-wrap-item" type="403">
+        <span>{{ $t('无该应用访问权限') }}</span>
+        <div class="text-subtitle">{{ errorDetail.detail }}</div>
+      </bk-exception>
+    </div>
+    <div
+      v-else
       class="log-middle"
       style="width: 1180px; margin: 0 auto; padding-bottom: 0"
     >
@@ -44,6 +54,9 @@
             },
             pluginTypeId () {
                 return this.$route.params.pluginTypeId;
+            },
+            errorDetail () {
+                return this.$store.state.errorDetail;
             }
         },
         async created () {
@@ -63,7 +76,7 @@
     };
 </script>
 
-<style lang="css" scoped>
+<style lang="scss" scoped>
     .nofound {
         width: 939px;
         padding-top: 150px;
@@ -74,5 +87,16 @@
         font-size: 20px;
         color: #979797;
         line-height: 80px;
+    }
+
+    .no-app-permissions {
+        margin-top: 150px;
+
+        .text-subtitle {
+            color: #979ba5;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 14px;
+        }
     }
 </style>

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.engine.processes.models import PlainInstance, PlainProcess
+from paas_wl.workloads.processes.processes import PlainInstance, PlainProcess
 
 
 @pytest.fixture

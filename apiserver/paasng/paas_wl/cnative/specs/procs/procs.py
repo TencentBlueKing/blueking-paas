@@ -67,6 +67,14 @@ def parse_proc_specs(res: BkAppResource, env_name: AppEnvName) -> List[CNativePr
     return results
 
 
+def get_procfile(env: ModuleEnvironment) -> Dict[str, str]:
+    """Get procfile for env"""
+    res = get_mres_from_cluster(env)
+    if not res:
+        return {}
+    return parse_procfile(res)
+
+
 def parse_procfile(res: BkAppResource) -> Dict[str, str]:
     """Parse procfile from app model resource, useful for build_method=cnb"""
     results = {}

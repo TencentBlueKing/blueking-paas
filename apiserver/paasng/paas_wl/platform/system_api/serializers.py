@@ -32,34 +32,6 @@ TAGVAL_MATCH = re.compile(r'^(?:[a-zA-Z\d][-\.\w]{0,61})?[a-zA-Z\d]$')
 CONFIGKEY_MATCH = re.compile(r'^[a-z_]+[a-z0-9_]*$', re.IGNORECASE)
 
 
-##########################
-# Process & ProcInstance #
-##########################
-# TODO: 移到 admin42 目录
-class InstanceSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    process_type = serializers.CharField()
-    host_ip = serializers.CharField()
-    start_time = serializers.CharField()
-    image = serializers.CharField()
-    state = serializers.CharField()
-    state_message = serializers.CharField(required=False)
-    ready = serializers.BooleanField()
-    restart_count = serializers.IntegerField()
-    version = serializers.IntegerField()
-
-
-class ProcSpecsSerializer(serializers.Serializer):
-    """Representing ProcSpecs object"""
-
-    name = serializers.CharField(source='metadata.name')
-    type = serializers.CharField()
-    replicas = serializers.IntegerField(source="status.replicas")
-    success = serializers.IntegerField(source="status.success")
-    failed = serializers.IntegerField(source="status.failed")
-    version = serializers.IntegerField()
-
-
 ####################
 # Resource Metrics #
 ####################

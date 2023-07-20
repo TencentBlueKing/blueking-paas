@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Dict, Iterator, List, Tuple
 
-from paasng.engine.processes.models import PlainInstance, PlainProcess
+from paas_wl.workloads.processes.processes import PlainInstance, PlainProcess
 from paasng.engine.processes.utils import diff_list
 
 logger = logging.getLogger(__name__)

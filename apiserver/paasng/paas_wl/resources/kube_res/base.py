@@ -25,7 +25,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     ContextManager,
     Dict,
@@ -35,7 +34,6 @@ from typing import (
     NamedTuple,
     Optional,
     Type,
-    TypedDict,
     TypeVar,
 )
 
@@ -263,10 +261,11 @@ class ResourceList(Generic[AET]):
         return self.metadata.resourceVersion
 
 
-class WatchResultDict(TypedDict):
+@dataclass
+class WatchEvent(Generic[AET]):
     type: str
-    raw_object: ResourceInstance
-    res_object: Any
+    res_object: Optional[AET] = None
+    message: str = ""
 
 
 class AppEntityReader(Generic[AET]):
@@ -317,7 +316,7 @@ class AppEntityReader(Generic[AET]):
             items.append(item)
         return ResourceList[AET](items=items, metadata=ret.metadata)
 
-    def watch_by_app(self, app: WlApp, labels: Optional[Dict] = None, *args, **kwargs) -> Iterator[WatchResultDict]:
+    def watch_by_app(self, app: WlApp, labels: Optional[Dict] = None, **kwargs) -> Iterator[WatchEvent[AET]]:
         """Get notified when resource changes
 
         :raises: WatchKubeResourceError when an ERROR event was received
@@ -326,20 +325,26 @@ class AppEntityReader(Generic[AET]):
         # Remove "resource_version" param when it's value is None because None value will trigger apiserver error
         if 'resource_version' in kwargs and kwargs['resource_version'] is None:
             kwargs.pop('resource_version')
+        # watch_by_app must use namespace of app
+        if "namespace" in kwargs:
+            kwargs.pop("namespace")
 
         deserializer = self._make_deserializer(app)
         with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
-            kwargs.update({"namespace": self._get_namespace(app), "labels": labels})
             try:
-                for obj in kres_client.ops_label.create_watch_stream(*args, **kwargs):
+                for raw_event in kres_client.ops_label.create_watch_stream(
+                    namespace=self._get_namespace(app), labels=labels, **kwargs
+                ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event
-                    if obj['type'] == 'ERROR':
-                        msg = obj['raw_object'].get('message', 'Unknown')
+                    if raw_event["type"] == 'ERROR':
+                        raw_object = raw_event["raw_object"]
+                        msg = raw_object.get("message", "Unknown")
                         raise WatchKubeResourceError(msg)
 
-                    obj['res_object'] = deserializer.deserialize(app, obj['object'])
-                    obj['res_object']._kube_data = obj['object']
-                    yield obj
+                    event = WatchEvent[AET](type=raw_event["type"])
+                    event.res_object = deserializer.deserialize(app, raw_event["object"])
+                    event.res_object._kube_data = raw_event["object"]
+                    yield event
             except ApiException as exc:
                 if self._exc_is_expired_rv(exc):
                     raise WatchKubeResourceError(exc.reason)

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import logging
 from dataclasses import asdict
-from typing import List, Optional, Protocol
+from typing import List, NamedTuple, Optional, Protocol
 
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -27,12 +27,13 @@ from django.utils.translation import ugettext_lazy as _
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.models import AppModelDeploy
+from paas_wl.cnative.specs.procs import get_procfile
 from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release, WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KDeployment
-from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
@@ -209,21 +210,6 @@ class AppProcessesController:
         return ProcAutoscaling(self.app, proc_type, scaling_config, target_ref)  # type: ignore
 
 
-def judge_operation_frequent(app: WlApp, proc_type: str, operation_interval: datetime.timedelta):
-    """检查 process 操作是否频繁
-
-    - Only normal app which owns ProcessSpec objects is supported
-    - Last operated time was stored in ProcessSpec.updated
-    """
-    try:
-        spec = ProcessSpec.objects.get(engine_app_id=app.uuid, name=proc_type)
-    except ProcessSpec.DoesNotExist:
-        return
-
-    if (timezone.now() - spec.updated) < operation_interval:
-        raise ProcessOperationTooOften(_(f"进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"))
-
-
 class CNativeProcController:
     """Process controller for cloud-native applications"""
 
@@ -275,31 +261,70 @@ def get_proc_ctl(env: ModuleEnvironment) -> ProcController:
     return AppProcessesController(env)
 
 
-def get_processes_status(app: WlApp) -> List[Process]:
-    """Get the real-time processes status
+def judge_operation_frequent(app: WlApp, proc_type: str, operation_interval: datetime.timedelta):
+    """检查 process 操作是否频繁
 
-    1. Get current process structure from `release.structure`
+    - Only normal app which owns ProcessSpec objects is supported
+    - Last operated time was stored in ProcessSpec.updated
+    """
+    try:
+        spec = ProcessSpec.objects.get(engine_app_id=app.uuid, name=proc_type)
+    except ProcessSpec.DoesNotExist:
+        return
+
+    if (timezone.now() - spec.updated) < operation_interval:
+        raise ProcessOperationTooOften(_(f"进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"))
+
+
+class ProcessesSnapshot(NamedTuple):
+    """real-time processes info"""
+
+    processes: List[Process]
+    processes_resource_version: str
+    instances_resource_version: str
+
+
+def take_processes_snapshot(env: ModuleEnvironment) -> ProcessesSnapshot:
+    """take a snapshot for the real-time processes
+
+    1. Get current process structure
+        1.1 for default apps, will get process structure from `release.structure`
+        1.2 for cnative apps, will get process structure from app model resource
     2. Get process status from `process_kmodel` & `instance_kmodel`
     """
-    results: List[Process] = []
+    processes: List[Process] = []
+    procfile = {}
 
-    # TODO: fixme 云原生应用没有 Release!!!
-    try:
-        release: Release = Release.objects.get_latest(app)
-        procfile = release.get_procfile()
-    except Release.DoesNotExist:
-        return results
-
-    for process_type in procfile:
+    wl_app = env.wl_app
+    if wl_app.type == WlAppType.CLOUD_NATIVE:
+        procfile = get_procfile(env)
+    else:
         try:
-            process = process_kmodel.get_by_type(app, process_type)
-            process.instances = instance_kmodel.list_by_process_type(app, process_type)
-        except AppEntityNotFound:
-            logger.info("process<%s/%s> missing in k8s cluster" % (app.name, process_type))
+            release: Release = Release.objects.get_latest(wl_app)
+            procfile = release.get_procfile()
+        except Release.DoesNotExist:
+            logger.warning("Not any available Release")
+
+    procs_in_k8s = process_kmodel.list_by_app_with_meta(wl_app)
+    insts_in_k8s = instance_kmodel.list_by_app_with_meta(wl_app)
+    for process in procs_in_k8s.items:
+        if process.type not in procfile:
+            logger.warning("Process %s is undefined in procfile", process.type)
             continue
 
-        results.append(process)
-    return results
+        process.instances = [inst for inst in insts_in_k8s.items if inst.process_type == process.type]
+        if len(process.instances) == 0:
+            logger.warning("Process %s have no instances", process.type)
+            continue
+        processes.append(process)
+
+    if missing := procfile.keys() - {process.type for process in processes}:
+        logger.warning("Process %s in procfile missing in k8s cluster", missing)
+    return ProcessesSnapshot(
+        processes=processes,
+        processes_resource_version=procs_in_k8s.get_resource_version(),
+        instances_resource_version=insts_in_k8s.get_resource_version(),
+    )
 
 
 def env_is_running(env: ModuleEnvironment) -> bool:

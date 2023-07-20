@@ -12,7 +12,7 @@ aenum = "==2.1.2"
 apscheduler = "==3.6.0"
 arrow = "==0.12.1"
 bk-iam = "==1.1.20"
-bkpaas-auth = {version = ">=2.0.2"}
+bkpaas-auth = "==2.0.5" 
 apigw-manager = {version = ">=1.0.14"}
 bkstorages = {version = "==1.0.8"}
 bleach = "==2.0.0"

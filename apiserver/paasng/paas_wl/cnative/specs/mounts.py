@@ -23,24 +23,20 @@ from paas_wl.configuration.configmap.entities import ConfigMap, configmap_kmodel
 from paasng.platform.applications.models import ModuleEnvironment
 
 
-class MountsManager:
-    def __init__(self, env: ModuleEnvironment):
-        self.env = env
-
-    def inject_to_bkapp(self, manifest: BkAppResource):
-        """将 mounts 配置注入到 BkApp 模型中"""
-        if mount_queryset := Mount.objects.filter(
-            module=self.env.module, environment_name__in=[self.env.environment, MountEnvName.GLOBAL.value]
-        ):
-            # TODO 处理用户可能在 bkapp.yaml 中定义 mounts 的场景
-            manifest.spec.mounts = [
-                bk_app.Mount(
-                    name=m.name,
-                    mountPath=m.mount_path,
-                    source=m.source_config,
-                )
-                for m in mount_queryset
-            ]
+def inject_to_app_resource(env: ModuleEnvironment, app_resource: BkAppResource):
+    """将 mounts 配置注入到 BkAppResource 模型中"""
+    if mount_queryset := Mount.objects.filter(
+        module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
+    ):
+        # TODO 处理用户可能在 bkapp.yaml 中定义 mounts 的场景
+        app_resource.spec.mounts = [
+            bk_app.Mount(
+                name=m.name,
+                mountPath=m.mount_path,
+                source=m.source_config,
+            )
+            for m in mount_queryset
+        ]
 
 
 class VolumeSourceManager:
@@ -49,9 +45,8 @@ class VolumeSourceManager:
         self.wl_app = env.wl_app
 
     def deploy(self):
-        """部署卷"""
         mount_queryset = Mount.objects.filter(
-            module=self.env.module, environment_name__in=[self.env.environment, MountEnvName.GLOBAL.value]
+            module_id=self.env.module.id, environment_name__in=[self.env.environment, MountEnvName.GLOBAL.value]
         )
         for m in mount_queryset:
             self._upsert(m)

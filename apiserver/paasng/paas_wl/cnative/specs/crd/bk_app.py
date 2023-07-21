@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field, validator
 from paas_wl.cnative.specs.apis import ObjectMetadata
 from paas_wl.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.release_controller.constants import ImagePullPolicy
+from paasng.utils.structure import register
 
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = '500m'
@@ -99,10 +100,12 @@ class BkAppConfiguration(BaseModel):
     env: List[EnvVar] = Field(default_factory=list)
 
 
+@register
 class ConfigMapSource(BaseModel):
     name: str
 
 
+@register
 class VolumeSource(BaseModel):
     configMap: Optional[ConfigMapSource]
 

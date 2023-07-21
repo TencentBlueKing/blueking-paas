@@ -19,10 +19,12 @@ to the current version of the project delivered to anyone in the future.
 from typing import Union
 
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.cnative.specs.crd.bk_app import VolumeSource
+from paas_wl.platform.applications.relationship import ModuleAttrFromID
 from paas_wl.utils.models import TimestampedModel
 from paasng.utils.models import make_json_field
 
@@ -32,28 +34,34 @@ SourceConfigField = make_json_field('SourceConfigField', VolumeSource)
 class ConfigMapSourceQuerySet(models.QuerySet):
     def get_by_mount(self, m: 'Mount'):
         if m.source_config.configMap:
-            return self.get(module=m.module, environment_name=m.environment_name, name=m.source_config.configMap.name)
+            return self.get(
+                module_id=m.module_id, environment_name=m.environment_name, name=m.source_config.configMap.name
+            )
         raise ValueError(f'Mount {m.name} is invalid: source_config.configMap is none')
 
 
 class ConfigMapSource(TimestampedModel):
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, db_constraint=False, null=True)
+    module_id = models.UUIDField(verbose_name=_('所属模块'), null=False)
+    module = ModuleAttrFromID()
+
     environment_name = models.CharField(
         verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
     name = models.CharField(max_length=63)
-    data = models.TextField()
+    data = models.JSONField(default=dict)
 
     objects = ConfigMapSourceQuerySet.as_manager()
 
     class Meta:
-        unique_together = ('module', 'name', 'environment_name')
+        unique_together = ('module_id', 'name', 'environment_name')
 
 
 class Mount(TimestampedModel):
     """挂载配置"""
 
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, db_constraint=False, null=True)
+    module_id = models.UUIDField(verbose_name=_('所属模块'), null=False)
+    module = ModuleAttrFromID()
+
     environment_name = models.CharField(
         verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
@@ -63,9 +71,9 @@ class Mount(TimestampedModel):
     source_config: VolumeSource = SourceConfigField()
 
     class Meta:
-        unique_together = ('module', 'mount_path', 'environment_name')
+        unique_together = ('module_id', 'mount_path', 'environment_name')
 
-    @property
+    @cached_property
     def source(self) -> Union[ConfigMapSource]:
         if self.source_type == VolumeSourceType.ConfigMap:
             return ConfigMapSource.objects.get_by_mount(self)

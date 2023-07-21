@@ -20,6 +20,7 @@ import json
 import logging
 from typing import Dict, Optional
 
+from paas_wl.cnative.specs import mounts
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -39,7 +40,6 @@ from paas_wl.cnative.specs.constants import (
     ApiVersion,
 )
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
-from paas_wl.cnative.specs.mounts import MountsManager
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
@@ -80,7 +80,7 @@ class BkAppManifestProcessor:
         )
 
         # 注入挂载信息
-        self._inject_mounts(manifest)
+        mounts.inject_to_app_resource(self.env, manifest)
 
         data = manifest.dict()
         # refresh status.conditions
@@ -139,8 +139,3 @@ class BkAppManifestProcessor:
         else:
             if ApplicationAccessControlSwitch.objects.is_enabled(application):
                 manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
-
-    def _inject_mounts(self, manifest: BkAppResource) -> None:
-        """inject mounts info"""
-        mgr = MountsManager(self.env)
-        mgr.inject_to_bkapp(manifest)

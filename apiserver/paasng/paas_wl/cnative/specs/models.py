@@ -26,6 +26,8 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.engine.constants import AppEnvName
@@ -268,6 +270,11 @@ def generate_bkapp_name(obj: ModuleEnvironment) -> str:
     ...
 
 
+@overload
+def generate_bkapp_name(obj: WlApp) -> str:
+    ...
+
+
 def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
     """Generate name of the BkApp resource by env.
 
@@ -277,12 +284,16 @@ def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
     if isinstance(obj, Module):
         module_name = obj.name
         code = obj.application.code
-    else:
+    elif isinstance(obj, ModuleEnvironment):
         module_name = obj.module.name
         code = obj.application.code
+    else:
+        mdata = get_metadata(obj)
+        module_name = mdata.module_name
+        code = mdata.get_paas_app_code()
     # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
     if module_name == ModuleName.DEFAULT.value:
-        name = f'{code}'
+        name = code
     else:
         name = f'{code}-m-{module_name}'
     return name.replace("_", "0us0")

@@ -202,6 +202,10 @@ class Process(AppEntity):
             return f"{self.app.region}-{self.app.scheduler_safe_name}"
         return self.type
 
+    @property
+    def available_instance_count(self):
+        return sum(1 for instance in self.instances if instance.ready and instance.version == self.version)
+
     def fulfill_runtime(self, replicas: int, success: int, metadata: 'ResourceField' = None):
         """填充运行时具体信息"""
         self.status = Status(replicas=replicas, success=success, failed=max(replicas - success, 0))

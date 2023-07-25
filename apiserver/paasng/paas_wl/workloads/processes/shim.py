@@ -16,20 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from dataclasses import asdict
 from typing import Dict, List, Optional
 
-import cattr
 from django.utils.functional import cached_property
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.bcs_client import BCSClient
-from paas_wl.workloads.processes.controllers import get_processes_status
+from paas_wl.workloads.processes.controllers import Process, list_processes
 from paas_wl.workloads.processes.drf_serializers import CNativeProcSpecSLZ, ProcessSpecSLZ
 from paas_wl.workloads.processes.models import ProcessSpecManager, ProcessTmpl
-from paas_wl.workloads.processes.processes import Process
+from paas_wl.workloads.processes.processes import PlainProcess, condense_processes
 from paas_wl.workloads.processes.readers import process_kmodel
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
@@ -44,7 +42,7 @@ def _list_proc_specs(env: ModuleEnvironment) -> List[Dict]:
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
     wl_app = env.wl_app
-    return ProcessSpecSLZ(wl_app.process_specs.all(), many=True).data
+    return ProcessSpecSLZ(wl_app.process_specs.select_related("plan").all(), many=True).data
 
 
 class ProcessManager:
@@ -81,23 +79,20 @@ class ProcessManager:
         return results
 
     def list_processes(self) -> List[Process]:
-        """Query all running processes"""
-        # TODO: 云原生应用与普通应用共用 list_processes 查询进程
-        proc_status = get_processes_status(self.wl_app)
-        items = []
-        for proc in proc_status:
-            items.append(
-                {
-                    'type': proc.type,
-                    'app_name': proc.app.name,
-                    'instances': [asdict(inst) for inst in proc.instances],
-                    'command': proc.runtime.proc_command,
-                    'process_status': proc.status.to_dict() if proc.status else {},
-                    'desired_replicas': proc.replicas,
-                    'version': proc.version,
-                }
-            )
-        return [cattr.structure(x, Process) for x in items]
+        """Query all running processes.
+
+        :return: List[Process]:
+                    A list of Process objects representing the status of each running process.
+        """
+        return list_processes(self.env).processes
+
+    def list_plain_processes(self) -> List[PlainProcess]:
+        """Query all running processes and return simplified status.
+
+        :return: List[PlainProcess]:
+                    A list of PlainProcess objects representing simplified status of each running process.
+        """
+        return condense_processes(self.list_processes())
 
     def get_running_image(self) -> str:
         images = {instance.image for process in self.list_processes() for instance in process.instances}

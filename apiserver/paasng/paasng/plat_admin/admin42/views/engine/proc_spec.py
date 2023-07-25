@@ -101,8 +101,8 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
                         "module": env.module.name,
                         "env": env.environment,
                     },
-                    "desired_replicas": process.desired_replicas,
-                    "command": process.command,
+                    "desired_replicas": process.replicas,
+                    "command": process.runtime.proc_command,
                     "available_instance_count": process.available_instance_count,
                     "instances": cattr.unstructure(process.instances),
                 }

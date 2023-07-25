@@ -43,7 +43,7 @@ from paas_wl.workloads.processes.entities import Process
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import ProcessSpec
-from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
+from paas_wl.workloads.processes.readers import instance_kmodel, ns_instance_kmodel, ns_process_kmodel, process_kmodel
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -280,12 +280,35 @@ class ProcessesInfo(NamedTuple):
     """real-time processes info"""
 
     processes: List[Process]
-    processes_resource_version: str
-    instances_resource_version: str
+    rv_proc: str
+    rv_inst: str
+
+
+def list_ns_processes(cluster_name: str, namespace: str) -> ProcessesInfo:
+    """list the real-time processes in given namespace"""
+    processes: List[Process] = []
+
+    procs_in_k8s = ns_process_kmodel.list_by_ns_with_mdata(cluster_name, namespace)
+    insts_in_k8s = ns_instance_kmodel.list_by_ns_with_mdata(cluster_name, namespace)
+    for process in procs_in_k8s.items:
+        process.instances = [
+            inst for inst in insts_in_k8s.items if inst.process_type == process.type and inst.app == process.app
+        ]
+        if len(process.instances) == 0:
+            logger.debug("Process %s have no instances", process.type)
+            continue
+        processes.append(process)
+
+    return ProcessesInfo(
+        processes=processes,
+        rv_proc=procs_in_k8s.get_resource_version(),
+        rv_inst=insts_in_k8s.get_resource_version(),
+    )
 
 
 def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
-    """take a snapshot for the real-time processes
+    """list the real-time processes of given env
+
 
     1. Get current process structure
         1.1 for default apps, will get process structure from `release.structure`
@@ -322,8 +345,8 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
         logger.warning("Process %s in procfile missing in k8s cluster", missing)
     return ProcessesInfo(
         processes=processes,
-        processes_resource_version=procs_in_k8s.get_resource_version(),
-        instances_resource_version=insts_in_k8s.get_resource_version(),
+        rv_proc=procs_in_k8s.get_resource_version(),
+        rv_inst=insts_in_k8s.get_resource_version(),
     )
 
 

@@ -21,13 +21,14 @@ import json
 import logging
 from typing import Dict, Optional
 
-import cattrs
 from django.http import StreamingHttpResponse
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.external.client import get_local_plat_client
@@ -37,10 +38,16 @@ from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.controllers import get_proc_ctl, judge_operation_frequent
-from paas_wl.workloads.processes.drf_serializers import ListProcessesQuerySLZ, UpdateProcessSLZ, WatchProcessesQuerySLZ
+from paas_wl.workloads.processes.drf_serializers import (
+    ListProcessesQuerySLZ,
+    ListWatcherRespSLZ,
+    UniversalWatchEventSLZ,
+    UpdateProcessSLZ,
+    WatchProcessesQuerySLZ,
+)
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.shim import ProcessManager
-from paas_wl.workloads.processes.watch import ProcessInstanceListWatcher, ProcWatchEvent
+from paas_wl.workloads.processes.watch import ProcessInstanceListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -136,20 +143,51 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     # Use special negotiation class to accept "text/event-stream" content type
     content_negotiation_class = IgnoreClientContentNegotiation
 
+    @swagger_auto_schema(response_serializer=ListWatcherRespSLZ, query_serializer=ListProcessesQuerySLZ)
     def list(self, request, code, module_name, environment):
         """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
         env = self.get_env_via_path()
         wl_app = self.get_wl_app_via_path()
         slz = ListProcessesQuerySLZ(data=request.query_params, context={'wl_app': wl_app})
         slz.is_valid(raise_exception=True)
+        release_id = slz.validated_data['release_id']
 
-        data = ProcessInstanceListWatcher(env).list(release_id=slz.validated_data['release_id'])
+        processes_status = ProcessInstanceListWatcher(env).list()
+        # Get extra infos
+        proc_extra_infos = []
+        for proc_spec in processes_status.processes:
+            proc_extra_infos.append(
+                {
+                    'type': proc_spec.type,
+                    'command': proc_spec.runtime.proc_command,
+                    'cluster_link': f'http://{get_service_dns_name(proc_spec.app, proc_spec.type)}',
+                }
+            )
+
+        insts = [inst for proc in processes_status.processes for inst in proc.instances]
+        # Filter instances if required
+        if release_id:
+            release = wl_app.release_set.get(pk=release_id)
+            insts = [inst for inst in insts if inst.version == release.version]
+
+        data = {
+            'processes': {
+                'items': processes_status.processes,
+                'extra_infos': proc_extra_infos,
+                'metadata': {'resource_version': processes_status.rv_proc},
+            },
+            'instances': {
+                'items': insts,
+                'metadata': {'resource_version': processes_status.rv_inst},
+            },
+        }
         processes_specs = ProcessManager(env).list_processes_specs()
         if wl_app.type == WlAppType.CLOUD_NATIVE:
             data["cnative_proc_specs"] = processes_specs
         else:
             data["process_packages"] = processes_specs
-        return Response(data)
+
+        return Response(ListWatcherRespSLZ(data).data)
 
     @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)
     def watch(self, request, code, module_name, environment):
@@ -162,6 +200,11 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         def resp():
             logger.debug('Start watching process, app=%s, params=%s', wl_app.name, dict(data))
+            # 发送初始 ping 事件
+            # 避免 stream 无新事件时, 前端请求表现为服务端长时间挂起(无法查看响应头)
+            yield 'event: ping\n'
+            yield 'data: \n\n'
+
             stream = ProcessInstanceListWatcher(env).watch(
                 timeout_seconds=data["timeout_seconds"], rv_proc=data["rv_proc"], rv_inst=data["rv_inst"]
             )
@@ -178,7 +221,6 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return StreamingHttpResponse(resp(), content_type='text/event-stream')
 
     @staticmethod
-    def process_event(wl_app: WlApp, event: ProcWatchEvent) -> Dict:
-        """Process event payload, modifies original event"""
-        data = cattrs.unstructure(event)
-        return data
+    def process_event(wl_app: WlApp, event: WatchEvent) -> Dict:
+        """Process event payload to Dict of primitive datatypes."""
+        return UniversalWatchEventSLZ(event, context={"wl_app": wl_app}).data

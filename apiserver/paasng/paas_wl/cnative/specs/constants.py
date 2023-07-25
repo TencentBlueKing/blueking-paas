@@ -41,6 +41,8 @@ BKAPP_CODE_ANNO_KEY = "bkapp.paas.bk.tencent.com/code"
 MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 # 注解中存储当前部署环境的键名
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
+# 注解中存储当前 WlApp 名称的键名
+WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 # 注解中存储镜像凭证引用的键名
 IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 # 注解中存储数据统计站点ID的键名

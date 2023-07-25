@@ -276,7 +276,7 @@ def judge_operation_frequent(app: WlApp, proc_type: str, operation_interval: dat
         raise ProcessOperationTooOften(_(f"进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"))
 
 
-class ProcessesSnapshot(NamedTuple):
+class ProcessesInfo(NamedTuple):
     """real-time processes info"""
 
     processes: List[Process]
@@ -284,7 +284,7 @@ class ProcessesSnapshot(NamedTuple):
     instances_resource_version: str
 
 
-def take_processes_snapshot(env: ModuleEnvironment) -> ProcessesSnapshot:
+def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
     """take a snapshot for the real-time processes
 
     1. Get current process structure
@@ -314,13 +314,13 @@ def take_processes_snapshot(env: ModuleEnvironment) -> ProcessesSnapshot:
 
         process.instances = [inst for inst in insts_in_k8s.items if inst.process_type == process.type]
         if len(process.instances) == 0:
-            logger.warning("Process %s have no instances", process.type)
+            logger.debug("Process %s have no instances", process.type)
             continue
         processes.append(process)
 
     if missing := procfile.keys() - {process.type for process in processes}:
         logger.warning("Process %s in procfile missing in k8s cluster", missing)
-    return ProcessesSnapshot(
+    return ProcessesInfo(
         processes=processes,
         processes_resource_version=procs_in_k8s.get_resource_version(),
         instances_resource_version=insts_in_k8s.get_resource_version(),

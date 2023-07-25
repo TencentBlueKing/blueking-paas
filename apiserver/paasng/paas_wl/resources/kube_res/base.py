@@ -265,7 +265,8 @@ class ResourceList(Generic[AET]):
 class WatchEvent(Generic[AET]):
     type: str
     res_object: Optional[AET] = None
-    message: str = ""
+    # 错误信息, 只有 type = ERROR 时有该字段
+    error_message: str = ""
 
 
 class AppEntityReader(Generic[AET]):
@@ -326,8 +327,9 @@ class AppEntityReader(Generic[AET]):
         if 'resource_version' in kwargs and kwargs['resource_version'] is None:
             kwargs.pop('resource_version')
         # watch_by_app must use namespace of app
-        if "namespace" in kwargs:
-            kwargs.pop("namespace")
+        if kwargs.get("namespace"):
+            # Setting "namespace" is not allowed, this function use the namespace of "app"
+            raise ValueError('"namespace" is not supported')
 
         deserializer = self._make_deserializer(app)
         with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:

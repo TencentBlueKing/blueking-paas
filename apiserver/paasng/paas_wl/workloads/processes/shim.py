@@ -24,7 +24,7 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.bcs_client import BCSClient
-from paas_wl.workloads.processes.controllers import Process, take_processes_snapshot
+from paas_wl.workloads.processes.controllers import Process, list_processes
 from paas_wl.workloads.processes.drf_serializers import CNativeProcSpecSLZ, ProcessSpecSLZ
 from paas_wl.workloads.processes.models import ProcessSpecManager, ProcessTmpl
 from paas_wl.workloads.processes.processes import PlainProcess, condense_processes
@@ -84,7 +84,7 @@ class ProcessManager:
         :return: List[Process]:
                     A list of Process objects representing the status of each running process.
         """
-        return take_processes_snapshot(self.env).processes
+        return list_processes(self.env).processes
 
     def list_plain_processes(self) -> List[PlainProcess]:
         """Query all running processes and return simplified status.

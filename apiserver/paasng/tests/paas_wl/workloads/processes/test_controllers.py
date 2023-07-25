@@ -23,7 +23,7 @@ import pytest
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.kube_res.base import ResourceField, ResourceList
-from paas_wl.workloads.processes.controllers import env_is_running, take_processes_snapshot
+from paas_wl.workloads.processes.controllers import env_is_running, list_processes
 from paas_wl.workloads.processes.entities import Instance, Process, Runtime, Schedule
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 from tests.paas_wl.workloads.conftest import create_release
@@ -75,45 +75,48 @@ def mock_reader():
         yield setter(list_processes, list_instances)
 
 
+def test_list_processes(bk_stag_env, wl_app, wl_release, mock_reader):
+    mock_reader.set_processes([make_process(wl_app, "web"), make_process(wl_app, "worker")])
+    mock_reader.set_instances(
+        [
+            Instance(app=wl_app, name="web", process_type="web"),
+            Instance(app=wl_app, name="worker", process_type="worker"),
+        ]
+    )
+
+    web_proc = make_process(wl_app, "web")
+    web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+    worker_proc = make_process(wl_app, "worker")
+    worker_proc.instances = [Instance(process_type='worker', app=wl_app, name='worker')]
+    assert list_processes(bk_stag_env).processes == [web_proc, worker_proc]
+
+
+def test_list_processes_boundary_case(bk_stag_env, wl_app, wl_release, mock_reader):
+    mock_reader.set_processes(
+        # worker 没有实例, 也会被忽略
+        # beat 未定义在 Procfile, 会被忽略
+        [
+            make_process(wl_app, "web"),
+            make_process(wl_app, "worker"),
+            make_process(wl_app, "beat"),
+        ]
+    )
+    mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
+
+    web_proc = make_process(wl_app, "web")
+    web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+    assert list_processes(bk_stag_env).processes == [web_proc]
+
+
+def test_list_processes_without_release(bk_stag_env, wl_app, wl_release, mock_reader):
+    """没有发布过的 WlApp，无法获取进程信息"""
+    mock_reader.set_processes([make_process(wl_app, "web")])
+    mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
+    wl_release.delete()
+    assert len(list_processes(bk_stag_env).processes) == 0
+
+
 class TestController:
-    def test_take_processes_snapshot(self, bk_stag_env, wl_app, wl_release, mock_reader):
-        mock_reader.set_processes([make_process(wl_app, "web"), make_process(wl_app, "worker")])
-        mock_reader.set_instances(
-            [
-                Instance(app=wl_app, name="web", process_type="web"),
-                Instance(app=wl_app, name="worker", process_type="worker"),
-            ]
-        )
-
-        web_proc = make_process(wl_app, "web")
-        web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
-        worker_proc = make_process(wl_app, "worker")
-        worker_proc.instances = [Instance(process_type='worker', app=wl_app, name='worker')]
-        assert take_processes_snapshot(bk_stag_env).processes == [web_proc, worker_proc]
-
-    def test_take_processes_snapshot_boundary_case(self, bk_stag_env, wl_app, wl_release, mock_reader):
-        mock_reader.set_processes(
-            # worker 没有实例, 也会被忽略
-            # beat 未定义在 Procfile, 会被忽略
-            [
-                make_process(wl_app, "web"),
-                make_process(wl_app, "worker"),
-                make_process(wl_app, "beat"),
-            ]
-        )
-        mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
-
-        web_proc = make_process(wl_app, "web")
-        web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
-        assert take_processes_snapshot(bk_stag_env).processes == [web_proc]
-
-    def test_take_processes_snapshot_without_release(self, bk_stag_env, wl_app, wl_release, mock_reader):
-        """没有发布过的 WlApp，无法获取进程信息"""
-        mock_reader.set_processes([make_process(wl_app, "web")])
-        mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
-        wl_release.delete()
-        assert len(take_processes_snapshot(bk_stag_env).processes) == 0
-
     def test_default_app_env_is_running(self, bk_app, bk_stag_env, bk_user, with_wl_apps):
         assert env_is_running(bk_stag_env) is False
         # Create a failed release at first, it should not affect the result

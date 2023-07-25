@@ -30,7 +30,7 @@ from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.base import AppEntity, WatchEvent
 from paas_wl.resources.kube_res.exceptions import WatchKubeResourceError
-from paas_wl.workloads.processes.controllers import take_processes_snapshot
+from paas_wl.workloads.processes.controllers import list_processes
 from paas_wl.workloads.processes.drf_serializers import InstanceForDisplaySLZ, ListWatcherRespSLZ, ProcessForDisplaySLZ
 from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.readers import ProcessAPIAdapter, instance_kmodel, process_kmodel
@@ -57,7 +57,7 @@ class ProcessInstanceListWatcher:
         :return: A dict with "processes" and "instances"
         """
         # TODO: 支持根据命名空间 list
-        processes_status = take_processes_snapshot(self.env)
+        processes_status = list_processes(self.env)
 
         # Get extra infos
         proc_extra_infos = []
@@ -153,7 +153,7 @@ class ParallelChainedGenerator:
                 self.queue.put(value)
         except WatchKubeResourceError as e:
             logger.warning('Watch resource error: %s', str(e))
-            self.queue.put(WatchEvent(type="ERROR", message=str(e)))
+            self.queue.put(WatchEvent(type="ERROR", error_message=str(e)))
         except Exception as e:
             logger.exception('Error while consuming generator: %s', str(e))
         finally:

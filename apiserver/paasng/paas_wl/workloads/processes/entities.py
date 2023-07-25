@@ -204,7 +204,7 @@ class Process(AppEntity):
 
     @property
     def available_instance_count(self):
-        return len([instance for instance in self.instances if instance.ready and instance.version == self.version])
+        return sum(1 for instance in self.instances if instance.ready and instance.version == self.version)
 
     def fulfill_runtime(self, replicas: int, success: int, metadata: 'ResourceField' = None):
         """填充运行时具体信息"""

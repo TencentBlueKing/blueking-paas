@@ -28,9 +28,11 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
@@ -48,11 +50,17 @@ type DeploymentReconciler struct {
 
 // Reconcile ...
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
+	log := logf.FromContext(ctx)
+
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return r.Result.withError(err)
 	}
 	expected := resources.GetWantedDeploys(bkapp)
+	if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ok {
+		log.V(2).Info("Applied svc-discovery related changes to deployments.")
+	}
+
 	outdated := FindExtraByName(current, expected)
 
 	if len(outdated) != 0 {

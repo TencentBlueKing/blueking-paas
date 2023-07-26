@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import shlex
 from typing import List, Optional
 
 from django.conf import settings
@@ -33,6 +34,9 @@ from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.platform.applications.models import ModuleEnvironment
+
+# Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
+DEFAULT_SLUG_RUNNER_ENTRYPOINT = ['bash', '/runner/init']
 
 
 def get_app_docker_registry_client() -> DockerRegistryV2Client:
@@ -62,7 +66,9 @@ class Build(UuidAuditedModel):
 
     # Slug path
     slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push", null=True)
-    image = models.TextField(help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物", null=True)
+    image = models.TextField(
+        help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物; 如果构建产物是 Slug, 则返回 SlugRunner 的镜像", null=True
+    )
 
     # 源码信息
     source_type = models.CharField(max_length=128, null=True)
@@ -75,12 +81,57 @@ class Build(UuidAuditedModel):
     bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)
 
     artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
-    artifact_detail = models.JSONField(default={}, help_text="构件详情")
+    artifact_detail = models.JSONField(default={}, help_text="构件详情(展示信息)")
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
+    artifact_metadata = models.JSONField(default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile 等信息")
 
     class Meta:
         get_latest_by = 'created'
         ordering = ['-created']
+
+    def get_image(self) -> str:
+        """运行 Build 的镜像地址"""
+        if self.image:
+            return self.image
+        # 兜底逻辑, 兼容未绑定运行时的迁移应用或历史数据
+        return self.app.latest_config.get_image()
+
+    def get_universal_entrypoint(self) -> List[str]:
+        """获取使用 Build 运行 hook 等命令的 entrypoint"""
+        if self.artifact_type == ArtifactType.SLUG:
+            return self.artifact_metadata.get("entrypoint") or DEFAULT_SLUG_RUNNER_ENTRYPOINT
+        elif self.artifact_metadata.get("use_cnb"):
+            # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
+            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+            return ["launcher"]
+        # 旧镜像应用分支
+        # Note: 关于为什么要使用 env 命令作为 entrypoint, 而不是直接将用户的命令作为 entrypoint.
+        # 虽然实际上绝大部分 CRI 实现会在当 Command 非空时 忽略镜像的 CMD(即认为 ENTRYPOINT 和 CMD 是绑定的, 只要 ENTRYPOINT 被修改, 就会忽略 CMD)
+        # 但是, 根据 k8s 的文档, 如果 Command/Args 是空值，就会使用镜像的 ENTRYPOINT 和 CMD.
+        # 而 Heroku 风格的 Procfile 不是以 entrypoint/cmd 这样的格式描述, 如果只将 procfile 作为 Container 的 Command/Args 都会有潜在风险.
+        # 风险点在于: Command/Args 为空时, 有可能会使用镜像的 ENTRYPOINT 和 CMD.
+        # ref: https://github.com/containerd/containerd/blob/main/pkg/cri/opts/spec_opts.go#L63
+        return ["env"]
+
+    def get_entrypoint_for_proc(self, process_type: str) -> List[str]:
+        """获取使用 Build 运行 process_type 的 entrypoint"""
+        if self.artifact_type == ArtifactType.SLUG:
+            return self.get_universal_entrypoint()
+        elif self.artifact_metadata.get("use_cnb"):
+            # cnb 运行时的 entrypoint 是 process_type
+            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
+            return [process_type]
+        return self.get_universal_entrypoint()
+
+    def get_command_for_proc(self, process_type: str, proc_command: str) -> List[str]:
+        """获取运行 Build 的 command"""
+        if self.artifact_type == ArtifactType.SLUG:
+            return ["start", process_type]
+        elif self.artifact_metadata.get("use_cnb"):
+            # cnb 运行时的 command 是空列表
+            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
+            return []
+        return shlex.split(proc_command)
 
     @property
     def image_repository(self) -> Optional[str]:

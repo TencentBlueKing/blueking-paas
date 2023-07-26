@@ -35,12 +35,12 @@ from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.repo_controller import get_repo_controller
 from paasng.dev_resources.sourcectl.utils import DockerIgnore
 from paasng.engine.configurations.source_file import get_metadata_reader
-from paasng.engine.exceptions import DeployShouldAbortError
+from paasng.engine.exceptions import DeployShouldAbortError, SkipPatchCode
 from paasng.engine.models import Deployment, EngineApp
 from paasng.engine.utils.output import DeployStream, Style
+from paasng.engine.utils.patcher import SourceCodePatcherWithDBDriver
 from paasng.extensions.declarative.handlers import DescriptionHandler, get_desc_handler
 from paasng.extensions.declarative.models import DeploymentDescription
-from paasng.extensions.smart_app.patcher import SourceCodePatcherWithDBDriver
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
@@ -240,8 +240,8 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
 
     try:
         SourceCodePatcherWithDBDriver(module, working_path, deployment).add_procfile()
-    except Exception:
-        logger.exception("Unexpected exception occurred when injecting Procfile.")
+    except SkipPatchCode as e:
+        logger.warning("skip the injection process: %s", e.reason)
         return
 
 

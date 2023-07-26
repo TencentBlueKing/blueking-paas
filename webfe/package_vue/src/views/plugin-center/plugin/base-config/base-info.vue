@@ -372,6 +372,7 @@
         </bk-button>
         <bk-button
           theme="default"
+          class="ml10"
           @click="delPluginDialog.visiable = false"
         >
           {{ $t('取消') }}

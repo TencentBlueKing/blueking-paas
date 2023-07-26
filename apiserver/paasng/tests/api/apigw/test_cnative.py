@@ -92,12 +92,14 @@ class TestMresDeploymentsViewSet:
                 ],
             },
         }
+        # Mock out the interactions with k8s cluster
         with mock.patch("paasng.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest), mock.patch(
             'paasng.engine.deploy.release.operator.AppModelDeployStatusPoller.start',
             return_value=None,
-        ):
+        ), mock.patch("paasng.engine.deploy.release.operator.svc_disc"):
             response = api_client.post(url, data={"manifest": manifest})
 
+        assert response.status_code == 200
         assert response.data['apiVersion'] == "paas.bk.tencent.com/v1alpha2"
         assert response.data['kind'] == "BkApp"
         assert response.data['metadata']['name'] == bk_app.code
@@ -165,7 +167,10 @@ class TestMresStatusViewSet:
         ]
         with mock.patch(
             "paas_wl.cnative.specs.views_enduser.get_mres_from_cluster", return_value=bkapp_res
-        ), mock.patch('paas_wl.cnative.specs.views_enduser.list_events', return_value=events,), mock.patch(
+        ), mock.patch(
+            'paas_wl.cnative.specs.views_enduser.list_events',
+            return_value=events,
+        ), mock.patch(
             'paas_wl.cnative.specs.views_enduser.get_exposed_url',
             return_value=Address(type=AddressType.SUBDOMAIN, url="http://example.com").to_exposed_url(),
         ):

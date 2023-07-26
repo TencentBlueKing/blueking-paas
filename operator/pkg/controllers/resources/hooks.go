@@ -19,6 +19,7 @@
 package resources
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -101,6 +102,15 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		}
 	}
 
+	useCNB, _ := strconv.ParseBool(bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey])
+	command := bkapp.Spec.Hooks.PreRelease.Command
+	args := bkapp.Spec.Hooks.PreRelease.Args
+	if useCNB {
+		// cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下
+		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+		command = append([]string{"launcher"}, command...)
+	}
+
 	return &HookInstance{
 		Pod: &corev1.Pod{
 			TypeMeta: metav1.TypeMeta{
@@ -111,6 +121,8 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 				Name:      names.PreReleaseHook(bkapp),
 				Namespace: bkapp.Namespace,
 				Labels: map[string]string{
+					// 由于 Process 一开始没添加 ResourceTypeKey label, 通过命名空间过滤 Pod 会查询到 HookInstance 的 Pod
+					// 所以 HookInstance 暂时不添加 ModuleNameKey, 以区分 Process 创建的 pod 和 HookInstance 创建的 pod
 					paasv1alpha2.BkAppNameKey:    bkapp.GetName(),
 					paasv1alpha2.ResourceTypeKey: "hook",
 					paasv1alpha2.HookTypeKey:     string(paasv1alpha2.HookPreRelease),
@@ -127,13 +139,13 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 				Containers: []corev1.Container{
 					{
 						Image:           image,
-						Command:         bkapp.Spec.Hooks.PreRelease.Command,
-						Args:            bkapp.Spec.Hooks.PreRelease.Args,
+						Command:         command,
+						Args:            args,
 						Env:             GetAppEnvs(bkapp),
 						Name:            "hook",
 						ImagePullPolicy: pullPolicy,
 						// pre-hook 使用默认资源配置
-						Resources: paasv1alpha2.NewProcResourcesGetter(bkapp).GetDefault(),
+						Resources: NewProcResourcesGetter(bkapp).Default(),
 						// TODO: 挂载点
 						VolumeMounts: nil,
 					},

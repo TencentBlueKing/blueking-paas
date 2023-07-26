@@ -57,7 +57,6 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 					{
 						Name: "web",
 						Autoscaling: &paasv1alpha2.AutoscalingSpec{
-							Enabled:     true,
 							MinReplicas: 2,
 							MaxReplicas: 5,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,

@@ -559,14 +559,9 @@ const router = new Router({
           name: 'appMobileMarket',
         },
         {
-          path: ':id/:moduleId/app_entry_config',
-          component: appEntryConfig,
-          name: 'appEntryConfig',
-        },
-        {
           path: ':id/app_entry_config',
           component: appEntryConfig,
-          name: 'appEntryConfigWithModule',
+          name: 'appEntryConfig',
         },
         {
           path: ':id/:moduleId/log',

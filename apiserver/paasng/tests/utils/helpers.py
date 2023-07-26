@@ -383,12 +383,17 @@ def _mock_wl_services_in_creation():
 
     def fake_update_metadata_by_env(env, metadata_part):
         # Store params in global, so we can manually update the metadata later.
-        _faked_env_metadata[env.id] = metadata_part
+        if env.id not in _faked_env_metadata:
+            _faked_env_metadata[env.id] = metadata_part
+        else:
+            _faked_env_metadata[env.id].update(metadata_part)
 
     with mock.patch(
         'paasng.platform.modules.manager.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
     ), mock.patch(
         'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
+    ), mock.patch(
+        'paasng.cnative.services.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
         "paasng.platform.modules.manager.EnvClusterService"
     ), mock.patch(

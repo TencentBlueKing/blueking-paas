@@ -29,8 +29,9 @@ const domainGroupMappingKey = "bkapp.paas.bk.tencent.com/domain-group-mapping-na
 // Deployment 为应用的不同进程生成关联 Deployment 的标签
 func Deployment(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
 	labels := map[string]string{
-		paasv1alpha2.BkAppNameKey:   bkapp.Name,
-		paasv1alpha2.ProcessNameKey: process,
+		paasv1alpha2.BkAppNameKey:    bkapp.Name,
+		paasv1alpha2.ProcessNameKey:  process,
+		paasv1alpha2.ResourceTypeKey: "process",
 	}
 	if appInfo, err := applications.GetBkAppInfo(bkapp); err == nil {
 		labels[paasv1alpha2.BkAppRegionKey] = appInfo.Region

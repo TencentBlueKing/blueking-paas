@@ -22,7 +22,11 @@ import pytest
 from paasng.extensions.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.extensions.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.extensions.declarative.deployment.resources import BkSaaSItem
-from paasng.extensions.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory, get_services_as_env_variables
+from paasng.extensions.declarative.deployment.svc_disc import (
+    BkSaaSAddrDiscoverer,
+    BkSaaSEnvVariableFactory,
+    get_services_as_env_variables,
+)
 from paasng.extensions.declarative.deployment.validations import DeploymentDescSLZ
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.extensions.declarative.models import DeploymentDescription
@@ -191,7 +195,7 @@ class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:
             BkSaaSItem(bk_app_code='foo-app', module_name='bar-module'),
         ]
         # clusters 类型为 Dict，这里直接判断是否为空
-        cluster_states = [bool(clusters) for _, clusters in BkSaaSEnvVariableFactory.extend_with_clusters(items)]
+        cluster_states = [bool(clusters) for _, clusters in BkSaaSAddrDiscoverer.extend_with_clusters(items)]
         # App which is not existed in the database should not has any cluster
         # object returned.
         assert cluster_states == [False, False]
@@ -202,7 +206,7 @@ class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:
             BkSaaSItem(bk_app_code=bk_app.code, module_name=bk_module.name),
             BkSaaSItem(bk_app_code=bk_app.code, module_name='wrong-name'),
         ]
-        cluster_states = [bool(clusters) for _, clusters in BkSaaSEnvVariableFactory.extend_with_clusters(items)]
+        cluster_states = [bool(clusters) for _, clusters in BkSaaSAddrDiscoverer.extend_with_clusters(items)]
         # Item which did not specify module_name and specified a right module name
         # should has a cluster object returned.
         assert cluster_states == [True, True, False]

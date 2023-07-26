@@ -126,7 +126,7 @@ class TestProcInstManager:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 
-    def test_list_with_meta(self, wl_app, pod):
+    def test_list_by_app_with_meta(self, wl_app, pod):
         resources = instance_kmodel.list_by_app_with_meta(wl_app)
 
         assert resources.metadata is not None
@@ -160,8 +160,9 @@ class TestProcSpecsManager:
         events = list(process_kmodel.watch_by_app(process.app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0
         event = events[0]
-        assert event['type'] == 'ADDED'
-        assert event['res_object'].type == 'web'
+        assert event.type == "ADDED"
+        assert event.res_object is not None
+        assert event.res_object.type == "web"
 
 
 class TestExtractTypeFromName:

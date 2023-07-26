@@ -20,8 +20,7 @@ from rest_framework import serializers
 
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
-from paas_wl.platform.system_api.serializers import InstanceSerializer as _InstanceSerializer
-from paas_wl.workloads.processes.drf_serializers import HumanizeDateTimeField
+from paas_wl.workloads.processes.drf_serializers import HumanizeDateTimeField, InstanceForDisplaySLZ
 from paas_wl.workloads.processes.models import ProcessSpecPlan
 
 
@@ -51,5 +50,5 @@ class ProcessSpecPlanSLZ(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class InstanceSerializer(_InstanceSerializer):
+class InstanceSerializer(InstanceForDisplaySLZ):
     envs = serializers.DictField(child=serializers.CharField(), help_text="环境变量", required=False, default=dict)

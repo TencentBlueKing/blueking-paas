@@ -547,8 +547,6 @@ BK_COMPONENT_API_URL = settings.get('BK_COMPONENT_API_URL', '')
 COMPONENT_SYSTEM_HOST = settings.get('COMPONENT_SYSTEM_HOST', BK_COMPONENT_API_URL)
 # 蓝鲸的组件 API 测试环境地址
 COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'http://localhost:8080')
-# APIGW-Dashboard 接口地址
-APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 # 网关运行环境
@@ -556,6 +554,12 @@ BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
+# 网关 API 默认网关环境
+BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
+
+# bk-apigateway-inner 接口地址
+BK_APIGATEWAY_INNER_GATEWAY_STAGE = BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway-inner", "prod")
+BK_APIGATEWAY_INNER_API_URL = f"{BK_API_URL_TMPL.format(api_name='bk-apigateway-inner').rstrip('/')}/{BK_APIGATEWAY_INNER_GATEWAY_STAGE}"
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系
 REGION_TO_USER_AUTH_TYPE_MAP = settings.get('REGION_TO_USER_AUTH_TYPE_MAP', {'default': 'default'})

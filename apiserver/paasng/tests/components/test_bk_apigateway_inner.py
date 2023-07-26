@@ -20,10 +20,10 @@ import json
 
 import pytest
 
-from paasng.dev_resources.cloudapi.components.apigw_dashboard import APIGWDashboardComponent
+from apiserver.paasng.paasng.dev_resources.cloudapi.components.bk_apigateway_inner import BkApigatewayInnerComponent
 
 
-class TestAPIGWDashboardComponent:
+class TestBkApigatewayInnerComponent:
     @pytest.mark.parametrize(
         "fake_language, expected",
         [
@@ -59,11 +59,11 @@ class TestAPIGWDashboardComponent:
         settings.BK_APP_SECRET = "app-secret"
 
         mocker.patch(
-            "paasng.dev_resources.cloudapi.components.apigw_dashboard.get_language",
+            "paasng.dev_resources.cloudapi.components.bk_apigateway_inner.get_language",
             return_value=fake_language,
         )
 
-        comp = APIGWDashboardComponent()
+        comp = BkApigatewayInnerComponent()
         result = comp._prepare_headers("admin")
 
         assert result == expected

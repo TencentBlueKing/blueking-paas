@@ -149,8 +149,8 @@
 # COMPONENT_SYSTEM_HOST: http://localhost:8080
 ## 蓝鲸的组件 API 测试环境地址
 # COMPONENT_SYSTEM_HOST_IN_TEST: http://localhost:8080
-## API Gateway Dashboard 地址
-# APIGW_DASHBOARD_URL: http://localhost:8080
+## bk-apigateway-inner 网关 API 地址
+# BK_APIGATEWAY_INNER_API_URL: http://bkapi.example.com/api/bk-apigateway-inner/prod/
 ## （Apigw Manager SDK）PaaS 服务 API Gateway 注册网关名称
 ## 更多参考：https://github.com/TencentBlueKing/bkpaas-python-sdk/tree/master/sdks/apigw-manager
 # BK_APIGW_NAME: paasv3

@@ -53,7 +53,7 @@ class TestCloudAPIViewSet:
             return_value='test',
         )
         mocker.patch(
-            'paasng.dev_resources.cloudapi.views.apigw_dashboard_component.get',
+            'paasng.dev_resources.cloudapi.views.bk_apigateway_inner_component.get',
             return_value=mocked_result,
         )
 
@@ -89,7 +89,7 @@ class TestCloudAPIViewSet:
             return_value='test',
         )
         mocker.patch(
-            'paasng.dev_resources.cloudapi.views.apigw_dashboard_component.post',
+            'paasng.dev_resources.cloudapi.views.bk_apigateway_inner_component.post',
             return_value=mocked_result,
         )
 
@@ -117,13 +117,13 @@ class TestCloudAPIViewSet:
             ),
         ],
     )
-    def test_get_apigw_dashboard_path(self, path, app_code, expected, will_error):
+    def test_get_bk_apigateway_inner_api_path(self, path, app_code, expected, will_error):
         viewset = views.CloudAPIViewSet()
         if will_error:
             with pytest.raises(APIError):
-                viewset._get_apigw_dashboard_path(path, app_code)
+                viewset._get_bk_apigateway_inner_api_path(path, app_code)
 
             return
 
-        result = viewset._get_apigw_dashboard_path(path, app_code)
+        result = viewset._get_bk_apigateway_inner_api_path(path, app_code)
         assert result == expected

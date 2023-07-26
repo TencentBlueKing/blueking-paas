@@ -20,7 +20,7 @@ import json
 
 import pytest
 
-from apiserver.paasng.paasng.dev_resources.cloudapi.components.bk_apigateway_inner import BkApigatewayInnerComponent
+from paasng.dev_resources.cloudapi.components.bk_apigateway_inner import BkApigatewayInnerComponent
 
 
 class TestBkApigatewayInnerComponent:

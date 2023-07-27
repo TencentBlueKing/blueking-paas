@@ -60,10 +60,17 @@
             {{ panel.name }}
             <i
               v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
-              class="paasng-icon paasng-edit-2 plugin-name-icon"
+              class="paasng-icon paasng-edit-2 pl5 pr5"
               ref="tooltipsHtml"
               @click="handleProcessNameEdit(panel.name, index)"
-              v-bk-tooltips="'编辑'"
+              v-bk-tooltips="$t('编辑')"
+            />
+
+            <i
+              v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
+              class="paasng-icon paasng-icon-close item-close-icon"
+              v-bk-tooltips="$t('删除')"
+              @click.stop="handleDelete(panel.name, index)"
             />
           </bk-button>
           <span v-if="isPageEdit" class="pl10">
@@ -635,8 +642,9 @@ export default {
   watch: {
     cloudAppData: {
       handler(val) {
+        console.log(1111233, val);
         if (val.spec) {
-          console.log('val.spec', val);
+          console.log('val.spec111111', val);
           this.localCloudAppData = _.cloneDeep(val);
           this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
           this.processData = val.spec.processes;
@@ -647,12 +655,12 @@ export default {
         this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
-      // deep: true
+      deep: true,
     },
     formData: {
       handler(val) {
         if (this.localCloudAppData.spec) {
-          console.log(11111, val, this.processNameActive);
+          console.log(11111, val, this.formData, this.processNameActive);
           val.name = this.processNameActive;
           val.replicas = val.replicas && Number(val.replicas);
           if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
@@ -770,17 +778,6 @@ export default {
       this.handlePanelClick(i, null, 'add');
       setTimeout(() => {
         this.$refs.panelInput && this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-      }, 500);
-    },
-
-    // 删除item 需要重置
-    handleDelete(i) {
-      this.panelActive = 0;
-      this.processData.splice(i, 1);
-      setTimeout(() => {
-        this.handlePanelClick(0);
-        this.$set(this.localCloudAppData.spec, 'processes', this.processData);
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
       }, 500);
     },
 
@@ -1150,6 +1147,26 @@ export default {
       this.processDialog.index = i;   // 如果为空 这代表是新增
     },
 
+    // 删除某个进程
+    handleDelete(processName, i = '') {
+      // console.log('this.localCloudAppData.spec.processes', this.localCloudAppData.spec.processes, processName, i);
+      // this.localCloudAppData.spec.processes.splice(i, 1);
+      this.formData = this.processData[0];
+      // console.log('this.formData', this.formData);
+      this.processNameActive = 'web';
+      const processData = JSON.parse(JSON.stringify(this.processData));
+      processData.splice(i, 1);
+      console.log('processData', processData);
+      this.$set(this.localCloudAppData.spec, 'processes', processData);
+      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      // this.localCloudAppData.spec.processes.splice(i, 1);
+      console.log('this.localCloudAppData.spec.processes', this.localCloudAppData.spec.processes);
+      // this.processData.splice(i, 1);
+      // setTimeout(() => {
+      //   this.$set(this.localCloudAppData.spec, 'processes', this.processData);
+      // }, 5000);
+    },
+
     // 过滤当前进程当前环境envOverlay中autoscaling
     handleFilterAutoscalingData(data, process) {
       this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || [])
@@ -1199,14 +1216,6 @@ export default {
             .add-icon{
                 font-size: 18px;
                 padding-left: 10px;
-                cursor: pointer;
-            }
-            .item-close-icon{
-                position: absolute;
-                top: 1px;
-                right: 0px;
-                font-size: 20px;
-                color: #ea3636;
                 cursor: pointer;
             }
         }
@@ -1282,6 +1291,14 @@ export default {
       .bk-button-group-cls{
         display: flex !important;
         align-items: center;
+         .item-close-icon{
+            position: absolute;
+            top: -1px;
+            right: 0px;
+            font-size: 20px;
+            color: #ea3636;
+            cursor: pointer;
+        }
       }
     }
     .form-detail{

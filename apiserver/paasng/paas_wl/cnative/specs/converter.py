@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Tuple
 
 from kubernetes.utils import parse_quantity
 
@@ -37,7 +38,7 @@ class BkAppResourceConverter:
     def __init__(self, bkapp: BkAppResource):
         self.bkapp = bkapp
 
-    def convert(self) -> (BkAppResource, bool, bool):
+    def convert(self) -> Tuple[BkAppResource, bool, bool]:
         """
         :returns: BkAppResource, converted, upgrade_version，分别对应转换后的 BkAppResource，是否发生转换，是否更新 apiVersion
         """

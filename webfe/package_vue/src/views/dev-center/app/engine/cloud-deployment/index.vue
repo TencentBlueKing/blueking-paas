@@ -67,7 +67,7 @@
         </div>
       </section>
 
-      <div class="deploy-btn-wrapper">
+      <div class="deploy-btn-wrapper" v-if="isPageEdit">
         <bk-button
           :loading="buttonLoading"
           class="pl20 pr20"
@@ -152,7 +152,6 @@ export default {
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
       ],
       active: 'cloudAppDeployForProcess',
-      isPageEdit: false,
     };
   },
   computed: {
@@ -180,6 +179,10 @@ export default {
     routerRefs() {
       const curPenel = this.panels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
+    },
+
+    isPageEdit() {
+      return this.$store.state.cloudApi.isPageEdit;
     },
   },
   watch: {

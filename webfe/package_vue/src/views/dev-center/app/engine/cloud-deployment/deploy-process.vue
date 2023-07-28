@@ -266,7 +266,6 @@
                 <bk-form
                   ref="formEnv"
                   :model="formData"
-                  :rules="rules"
                   ext-cls="form-envs"
                 >
                   <bk-form-item
@@ -304,10 +303,13 @@
                   </bk-form-item>
                   <section v-if="isAutoscaling" class="mt20">
                     <bk-form-item
-                      :label="$t('最大副本数')"
-                      :label-width="120">
+                      :label="$t('最小副本数')"
+                      :label-width="120"
+                      :required="true"
+                      :property="'autoscaling.minReplicas'"
+                      :rules="rules.minReplicas">
                       <bk-input
-                        v-model="formData.autoscaling.maxReplicas"
+                        v-model="formData.autoscaling.minReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -315,10 +317,13 @@
                       />
                     </bk-form-item>
                     <bk-form-item
-                      :label="$t('最小副本数')"
-                      :label-width="120">
+                      :label="$t('最大副本数')"
+                      :label-width="120"
+                      :required="true"
+                      :property="'autoscaling.maxReplicas'"
+                      :rules="rules.maxReplicas">
                       <bk-input
-                        v-model="formData.autoscaling.minReplicas"
+                        v-model="formData.autoscaling.maxReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -603,6 +608,50 @@ export default {
             trigger: 'blur',
           },
         ],
+        minReplicas: [
+          {
+            required: true,
+            message: this.$t('请填写最小副本数'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[1-9][0-9]*$/,
+            message: this.$t('请填写大于0的整数'),
+            trigger: 'blur',
+          },
+          {
+            validator: (v) => {
+              const minReplicas = Number(v);
+              const maxReplicas = Number(this.formData.autoscaling.maxReplicas);
+              return minReplicas <= maxReplicas;
+            },
+            message: () => `${this.$t('最小副本数不可大于最大副本数')}`,
+            trigger: 'blur',
+          },
+        ],
+        maxReplicas: [
+          {
+            required: true,
+            message: this.$t('请填写最大副本数'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[1-9][0-9]*$/,
+            message: this.$t('请填写大于0的整数'),
+            trigger: 'blur',
+          },
+          {
+            validator: (v) => {
+              const maxReplicas = Number(v);
+              const minReplicas = Number(this.formData.autoscaling.minReplicas);
+              return maxReplicas >= minReplicas;
+            },
+            message() {
+              return `${this.$t('最大副本数不可小于最小副本数')}`;
+            },
+            trigger: 'blur',
+          },
+        ],
       },
       isBlur: true,
       imageCredential: '',
@@ -642,9 +691,7 @@ export default {
   watch: {
     cloudAppData: {
       handler(val) {
-        console.log(1111233, val);
         if (val.spec) {
-          console.log('val.spec111111', val);
           this.localCloudAppData = _.cloneDeep(val);
           this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
           this.processData = val.spec.processes;
@@ -660,7 +707,6 @@ export default {
     formData: {
       handler(val) {
         if (this.localCloudAppData.spec) {
-          console.log(11111, val, this.formData, this.processNameActive);
           val.name = this.processNameActive;
           val.replicas = val.replicas && Number(val.replicas);
           if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
@@ -669,7 +715,6 @@ export default {
 
           // 更多配置信息
           const processConfig = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive);
-          console.log('processConfig', processConfig);
           this.envName = processConfig ? processConfig.envName : 'stag';
 
           // 如果没有自动调节相关数据结构 则前端需要做兼容处理
@@ -728,6 +773,17 @@ export default {
         bus.$emit('release-disabled', isDisabled);
       },
       deep: true,
+    },
+
+    'formData.autoscaling.maxReplicas'(val) {
+      if (val && val >= this.formData.autoscaling.minReplicas) {
+        this.$refs.formEnv?.clearError();
+      }
+    },
+    'formData.autoscaling.minReplicas'(val) {
+      if (val && val <= this.formData.autoscaling.maxReplicas) {
+        this.$refs.formEnv?.clearError();
+      }
     },
   },
   created() {
@@ -1096,6 +1152,7 @@ export default {
 
     // 处理自动调节问题
     handleRadioChange(v) {
+      this.$refs.formEnv?.clearError();
       if (v && !this.formData.autoscaling) {
         this.formData.autoscaling = {
           maxReplicas: '',
@@ -1107,18 +1164,17 @@ export default {
 
     // 弹窗确认
     handleConfirm() {
-      console.log('this.panels', this.panels, this.processDialog.index);
       if (this.processDialog.index) {   // 编辑进程名
         this.panels.forEach((e, i) => {
           if (i === this.processDialog.index) {
             e.name = this.processDialog.name;
           }
         });
+        this.localCloudAppData.spec.processes[this.btnIndex].name = this.processDialog.name; // 需要更新cloudAppData
         // this.handleBtnGroupClick(this.processDialog.name);
       } else {  // 新增进程
         this.panels.push({ name: this.processDialog.name });
         console.log('this.panels111', this.panels);
-        this.processNameActive = this.processDialog.name;
         this.btnIndex = this.panels.length - 1;
         this.formData = {
           name: this.processDialog.name,
@@ -1133,9 +1189,11 @@ export default {
             replicas: [],
           },
         };
+        this.localCloudAppData.spec.processes.push(this.formData);
       }
-      console.log(123, this.localCloudAppData.spec.processes, this.formData);
-      this.localCloudAppData.spec.processes.push(this.formData);
+      console.log('this.panels', this.panels, this.formData, this.localCloudAppData);
+      debugger;
+      this.processNameActive = this.processDialog.name; // 选中当前点击tab
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
       this.processDialog.visiable = false;
     },
@@ -1149,22 +1207,14 @@ export default {
 
     // 删除某个进程
     handleDelete(processName, i = '') {
-      // console.log('this.localCloudAppData.spec.processes', this.localCloudAppData.spec.processes, processName, i);
-      // this.localCloudAppData.spec.processes.splice(i, 1);
-      this.formData = this.processData[0];
-      // console.log('this.formData', this.formData);
       this.processNameActive = 'web';
-      const processData = JSON.parse(JSON.stringify(this.processData));
-      processData.splice(i, 1);
-      console.log('processData', processData);
-      this.$set(this.localCloudAppData.spec, 'processes', processData);
+      this.btnIndex = 0;
+      // eslint-disable-next-line prefer-destructuring
+      this.formData = this.processData[0];
+      this.localCloudAppData.spec.processes.splice(i, 1);
+      this.processData = this.localCloudAppData.spec.processes;
+      this.panels = _.cloneDeep(this.processData);
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-      // this.localCloudAppData.spec.processes.splice(i, 1);
-      console.log('this.localCloudAppData.spec.processes', this.localCloudAppData.spec.processes);
-      // this.processData.splice(i, 1);
-      // setTimeout(() => {
-      //   this.$set(this.localCloudAppData.spec, 'processes', this.processData);
-      // }, 5000);
     },
 
     // 过滤当前进程当前环境envOverlay中autoscaling
@@ -1315,5 +1365,12 @@ export default {
     .process-name{
       width: 280px;
       height: 140px;
+    }
+
+    .form-envs{
+      /deep/ .tooltips-icon{
+        right: 440px !important;
+        top: 7px !important;
+      }
     }
 </style>

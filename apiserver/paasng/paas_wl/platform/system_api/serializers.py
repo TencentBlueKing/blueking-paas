@@ -21,7 +21,7 @@ import re
 from rest_framework import serializers
 
 from paas_wl.monitoring.metrics.constants import MetricsSeriesType
-from paas_wl.workloads.processes.models import Instance
+from paas_wl.workloads.processes.entities import Instance
 
 # proc type name is alphanumeric
 # https://docs-v2.readthedocs.io/en/latest/using-workflow/process-types-and-the-procfile/#declaring-process-types
@@ -30,34 +30,6 @@ MEMLIMIT_MATCH = re.compile(r'^(?P<mem>(([0-9]+(MB|KB|GB|[BKMG])|0)(/([0-9]+(MB|
 CPUSHARE_MATCH = re.compile(r'^(?P<cpu>(([-+]?[0-9]*\.?[0-9]+[m]?)(/([-+]?[0-9]*\.?[0-9]+[m]?))?))$')
 TAGVAL_MATCH = re.compile(r'^(?:[a-zA-Z\d][-\.\w]{0,61})?[a-zA-Z\d]$')
 CONFIGKEY_MATCH = re.compile(r'^[a-z_]+[a-z0-9_]*$', re.IGNORECASE)
-
-
-##########################
-# Process & ProcInstance #
-##########################
-# TODO: 移到 admin42 目录
-class InstanceSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    process_type = serializers.CharField()
-    host_ip = serializers.CharField()
-    start_time = serializers.CharField()
-    image = serializers.CharField()
-    state = serializers.CharField()
-    state_message = serializers.CharField(required=False)
-    ready = serializers.BooleanField()
-    restart_count = serializers.IntegerField()
-    version = serializers.IntegerField()
-
-
-class ProcSpecsSerializer(serializers.Serializer):
-    """Representing ProcSpecs object"""
-
-    name = serializers.CharField(source='metadata.name')
-    type = serializers.CharField()
-    replicas = serializers.IntegerField(source="status.replicas")
-    success = serializers.IntegerField(source="status.success")
-    failed = serializers.IntegerField(source="status.failed")
-    version = serializers.IntegerField()
 
 
 ####################

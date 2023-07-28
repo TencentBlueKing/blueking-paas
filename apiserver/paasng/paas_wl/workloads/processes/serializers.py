@@ -35,7 +35,7 @@ from paas_wl.workloads.resource_templates.utils import AddonManager
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.generation.mapper import MapperPack
-    from paas_wl.workloads.processes.models import Instance, Process
+    from paas_wl.workloads.processes.entities import Instance, Process
 
 
 def extract_type_from_name(name: str, namespace: str) -> Optional[str]:
@@ -85,7 +85,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
 
     def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
         """deserialize process info for cloud native type app"""
-        from paas_wl.workloads.processes.models import Runtime, Schedule
+        from paas_wl.workloads.processes.entities import Runtime, Schedule
 
         main_container = self._get_main_container(app, kube_data)
 

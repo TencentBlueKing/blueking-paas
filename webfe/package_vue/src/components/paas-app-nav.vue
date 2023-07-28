@@ -172,7 +172,7 @@ export default {
         });
 
         // 添加访问管理
-        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);
+        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问管理'));
 
         // 添加代码检查
         this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
@@ -204,7 +204,7 @@ export default {
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
           navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
-          this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'), ['appEntryConfig', 'appPermissionPathExempt']);
+          this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'));
         }
 
         // smart应用或lesscode应用，包管理

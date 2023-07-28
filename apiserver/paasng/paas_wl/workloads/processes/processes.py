@@ -16,11 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
-if TYPE_CHECKING:
-    from paas_wl.workloads.processes.models import Process, Status
+from attrs import define, field
+
+from paas_wl.workloads.processes.entities import Process, Status
 
 
 def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':
@@ -43,6 +43,7 @@ def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':
                         state=inst.state,
                         ready=inst.ready,
                         restart_count=inst.restart_count,
+                        image=inst.image,
                     )
                     for inst in p.instances
                 ],
@@ -51,7 +52,7 @@ def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':
     return plain
 
 
-@dataclass
+@define
 class PlainInstance:
     name: str
     version: int
@@ -59,13 +60,13 @@ class PlainInstance:
     state: str = ""
     ready: bool = True
     restart_count: int = 0
+    image: str = ""
 
     @property
     def shorter_name(self) -> str:
         """Return a simplified name
 
-        >>>simplify_name('default-gunicorn-deployment-59b9789f76wk82')
-        '59b9789f76wk82'
+        'ieod-x-gunicorn-deployment-59b9789f76wk82' -> '59b9789f76wk82'
         """
         return self.name.split('-')[-1]
 
@@ -74,15 +75,15 @@ class PlainInstance:
         return self.ready and self.version == expected_version
 
 
-@dataclass
+@define
 class PlainProcess:
     name: str
     version: int
     replicas: int
     type: str
     command: str
-    status: 'Optional[Status]' = None
-    instances: List[PlainInstance] = field(default_factory=list)
+    status: Optional[Status] = None
+    instances: List[PlainInstance] = field(factory=list)
 
     def is_all_ready(self, expected_version: int) -> bool:
         """detect if all instances are ready"""

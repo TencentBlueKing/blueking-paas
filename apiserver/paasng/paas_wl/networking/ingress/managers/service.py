@@ -26,7 +26,7 @@ from paas_wl.networking.ingress.managers import AppDefaultIngresses
 from paas_wl.networking.ingress.utils import make_service_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.workloads.processes.models import Process
+from paas_wl.workloads.processes.entities import Process
 
 logger = logging.getLogger(__name__)
 

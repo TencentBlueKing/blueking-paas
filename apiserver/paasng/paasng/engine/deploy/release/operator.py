@@ -20,6 +20,9 @@ import logging
 import time
 from typing import Optional
 
+from django.db import IntegrityError
+
+from paas_wl.cnative.specs import svc_disc
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
@@ -46,15 +49,12 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure('部署应用'):
-            # 对于仅托管镜像类型的云原生应用, build.image 字段为空字符串
-            # 对于从源码构建镜像的云原生应用, build.image 字段是构建后的镜像
-            image = build.image or None
             release_id = release_by_k8s_operator(
                 self.module_environment,
                 revision,
                 operator=self.deployment.operator,
                 deployment_id=self.deployment.id,
-                image=image,
+                build=build,
             )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
@@ -70,7 +70,7 @@ def release_by_k8s_operator(
     env: ModuleEnvironment,
     revision: AppModelRevision,
     operator: str,
-    image: Optional[str] = None,
+    build: Optional[Build] = None,
     deployment_id: Optional[str] = None,
 ) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
@@ -92,9 +92,7 @@ def release_by_k8s_operator(
     # Add current timestamp in name to avoid conflicts
     default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
 
-    app_model_deploy = None
     try:
-        # TODO: Integrity Check
         app_model_deploy = AppModelDeploy.objects.create(
             application_id=application.id,
             module_id=module.id,
@@ -104,14 +102,26 @@ def release_by_k8s_operator(
             status=DeployStatus.PENDING.value,
             operator=operator,
         )
+    except IntegrityError:
+        logger.warning("Name conflicts when creating new AppModelDeploy object, name: %s.", default_name)
+        raise
+
+    try:
+        # Apply the ConfigMap resource related with service discovery
+        #
+        # NOTE: This action might break running pods that get svc-discovery data by
+        # mounting the configmap as file, because some data might be removed in the
+        # latest version. We should ask the application developer to handle this properly.
+        svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
+
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(image=image)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build)
         )
-    except Exception as e:
-        if app_model_deploy is not None:
-            app_model_deploy.status = DeployStatus.ERROR
-            app_model_deploy.save(update_fields=["status", "updated"])
-        raise e
+    except Exception:
+        app_model_deploy.status = DeployStatus.ERROR
+        app_model_deploy.save(update_fields=["status", "updated"])
+        raise
+
     revision.deployed_value = deployed_manifest
     revision.has_deployed = True
     revision.save(update_fields=["deployed_value", "has_deployed", "updated"])

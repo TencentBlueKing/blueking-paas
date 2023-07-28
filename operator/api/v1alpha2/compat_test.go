@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -113,53 +112,6 @@ var _ = Describe("test compat", func() {
 			image, _, err = getter.Get("hello")
 			Expect(image).To(Equal(""))
 			Expect(pullPolicy).To(Equal(corev1.PullIfNotPresent))
-			Expect(err).NotTo(BeNil())
-		})
-	})
-
-	Context("Test ProcResourcesGetter", func() {
-		It("Get Default", func() {
-			resReq := paasv1alpha2.NewProcResourcesGetter(bkapp).GetDefault()
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
-			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
-		})
-
-		It("Get Legacy", func() {
-			_ = kubetypes.SetJsonAnnotation(
-				bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
-					"web": {"cpu": "2", "memory": "2Gi"},
-				},
-			)
-			getter := paasv1alpha2.NewProcResourcesGetter(bkapp)
-			resReq, _ := getter.Get("web")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
-			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
-		})
-
-		It("Get Standard", func() {
-			bkapp.Spec.Processes[1].ResQuotaPlan = paasv1alpha2.ResQuotaPlan4C2G
-			getter := paasv1alpha2.NewProcResourcesGetter(bkapp)
-
-			resReq, _ := getter.Get("web")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
-			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
-
-			resReq, _ = getter.Get("hi")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
-			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
-		})
-
-		It("Get Nothing", func() {
-			bkapp.Spec.Processes[0].ResQuotaPlan = ""
-			_, err := paasv1alpha2.NewProcResourcesGetter(bkapp).Get("web")
 			Expect(err).NotTo(BeNil())
 		})
 	})

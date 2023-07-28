@@ -134,6 +134,46 @@ spec:
                 description: EnvOverlay holds environment specified configurations,
                   includes replica count and environment variables.
                 properties:
+                  autoscaling:
+                    description: Autoscaling overwrite process's autoscaling config
+                    items:
+                      description: AutoscalingOverlay overwrite or add application's
+                        autoscaling config by environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        maxReplicas:
+                          description: maxReplicas is the upper limit for the number
+                            of replicas to which the autoscaler can scale up. It cannot
+                            be less that minReplicas.
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          description: minReplicas is the lower limit for the number
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
+                          format: int32
+                          type: integer
+                        policy:
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - envName
+                      - maxReplicas
+                      - minReplicas
+                      - policy
+                      - process
+                      type: object
+                    type: array
                   envVariables:
                     description: EnvVariables overwrite BkApp's environment vars
                     items:
@@ -178,6 +218,27 @@ spec:
                       - process
                       type: object
                     type: array
+                  resQuotas:
+                    description: ResQuotas overwrite BkApp's process resource quota
+                    items:
+                      description: ResQuotaOverlay overwrite process's resQuota by
+                        environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        plan:
+                          description: Plan is used to specify process resource quota
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - envName
+                      - plan
+                      - process
+                      type: object
+                    type: array
                 type: object
               hooks:
                 description: Hook commands of current BkApp resource
@@ -210,9 +271,6 @@ spec:
                     autoscaling:
                       description: Autoscaling specifies the autoscaling configuration
                       properties:
-                        enabled:
-                          description: Enabled indicates whether autoscaling is enabled
-                          type: boolean
                         maxReplicas:
                           description: maxReplicas is the upper limit for the number
                             of replicas to which the autoscaler can scale up. It cannot
@@ -234,7 +292,6 @@ spec:
                             the operator.
                           type: string
                       required:
-                      - enabled
                       - maxReplicas
                       - minReplicas
                       - policy
@@ -639,6 +696,21 @@ spec:
                         envName:
                           description: EnvName is app environment name
                           type: string
+                        maxReplicas:
+                          description: maxReplicas is the upper limit for the number
+                            of replicas to which the autoscaler can scale up. It cannot
+                            be less that minReplicas.
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          description: minReplicas is the lower limit for the number
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
+                          format: int32
+                          type: integer
                         policy:
                           description: Policy defines the policy for autoscaling,
                             its optional values depend on the policies supported by
@@ -649,6 +721,8 @@ spec:
                           type: string
                       required:
                       - envName
+                      - maxReplicas
+                      - minReplicas
                       - policy
                       - process
                       type: object
@@ -713,7 +787,7 @@ spec:
                       type: object
                     type: array
                   replicas:
-                    description: Replicas overwrite processes's replicas count
+                    description: Replicas overwrite process's replicas count
                     items:
                       description: ReplicasOverlay overwrite process's replicas by
                         environment.
@@ -731,6 +805,27 @@ spec:
                       required:
                       - count
                       - envName
+                      - process
+                      type: object
+                    type: array
+                  resQuotas:
+                    description: ResQuotas overwrite BkApp's process resource quota
+                    items:
+                      description: ResQuotaOverlay overwrite process's resQuota by
+                        environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        plan:
+                          description: Plan is used to specify process resource quota
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - envName
+                      - plan
                       - process
                       type: object
                     type: array
@@ -798,9 +893,6 @@ spec:
                     autoscaling:
                       description: Autoscaling specifies the autoscaling configuration
                       properties:
-                        enabled:
-                          description: Enabled indicates whether autoscaling is enabled
-                          type: boolean
                         maxReplicas:
                           description: maxReplicas is the upper limit for the number
                             of replicas to which the autoscaler can scale up. It cannot
@@ -822,7 +914,6 @@ spec:
                             the operator.
                           type: string
                       required:
-                      - enabled
                       - maxReplicas
                       - minReplicas
                       - policy
@@ -852,6 +943,27 @@ spec:
                   - replicas
                   type: object
                 type: array
+              svcDiscovery:
+                description: The application's service discovery config
+                properties:
+                  bkSaaS:
+                    description: A list of entries that contain SaaS module info
+                    items:
+                      description: SvcDiscEntryBkSaaS is an entry that represents
+                        an application and an optional module.
+                      properties:
+                        bkAppCode:
+                          description: BkAppCode is the code of the application.
+                          type: string
+                        moduleName:
+                          description: ModuleName is the name of the module, when
+                            absent, the "main" module will be used.
+                          type: string
+                      required:
+                      - bkAppCode
+                      type: object
+                    type: array
+                type: object
             required:
             - build
             - configuration

@@ -63,7 +63,6 @@ class DeployShouldAbortError(Exception):
     Using this exception means that the error reason can be displayed to users directly.
 
     :param reason: The user-friendly reason to be displayed on screen and recorded in database
-    :param exc: Raw exception object
     """
 
     def __init__(self, reason: str):
@@ -72,3 +71,11 @@ class DeployShouldAbortError(Exception):
 
     def __str__(self):
         return self.reason
+
+
+class SkipPatchCode(Exception):
+    """Raise this exception when should skip patch source code"""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(self.reason)

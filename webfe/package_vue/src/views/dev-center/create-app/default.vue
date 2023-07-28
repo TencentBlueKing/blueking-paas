@@ -135,7 +135,7 @@
                 </li>
                 <!-- 蓝鲸插件创建入口 -->
                 <li
-                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION"
+                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && this.isNormalApp"
                   :class="['tab-item template', { 'active': localSourceOrigin === 3 }]"
                   @click="handleCodeTypeChange(3)"
                 >
@@ -737,6 +737,9 @@
             curUserFeature () {
                 return this.$store.state.userFeature;
             },
+            isNormalApp () {
+                return this.curCodeSource === 'default';
+            }
         },
         watch: {
             globalErrorMessage (val) {

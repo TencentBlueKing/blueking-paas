@@ -50,19 +50,31 @@ var _ = Describe("Get resource labels", func() {
 				"normal",
 				"foo",
 				"web",
-				map[string]string{paasv1alpha2.BkAppNameKey: "foo", paasv1alpha2.ProcessNameKey: "web"},
+				map[string]string{
+					paasv1alpha2.BkAppNameKey:    "foo",
+					paasv1alpha2.ProcessNameKey:  "web",
+					paasv1alpha2.ResourceTypeKey: "process",
+				},
 			),
 			Entry(
 				"_ in app",
 				"foo_app",
 				"web",
-				map[string]string{paasv1alpha2.BkAppNameKey: "foo_app", paasv1alpha2.ProcessNameKey: "web"},
+				map[string]string{
+					paasv1alpha2.BkAppNameKey:    "foo_app",
+					paasv1alpha2.ProcessNameKey:  "web",
+					paasv1alpha2.ResourceTypeKey: "process",
+				},
 			),
 			Entry(
 				"_ in process",
 				"foo",
 				"backend_worker",
-				map[string]string{paasv1alpha2.BkAppNameKey: "foo", paasv1alpha2.ProcessNameKey: "backend_worker"},
+				map[string]string{
+					paasv1alpha2.BkAppNameKey:    "foo",
+					paasv1alpha2.ProcessNameKey:  "backend_worker",
+					paasv1alpha2.ResourceTypeKey: "process",
+				},
 			),
 		)
 	})

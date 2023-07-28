@@ -53,6 +53,10 @@ LEGACY_PROC_IMAGE_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-image-config
 # memory resources. This behaviour was changed in "v1alpha2", but we still need to save the
 # legacy resource configs in annotations to maintain backward compatibility.
 LEGACY_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
+# 注解中存储资源类型的键名
+RESOURCE_TYPE_KEY = "bkapp.paas.bk.tencent.com/resource-type"
+# 注解中声明镜像类型是否 cnb 的键名
+USE_CNB_ANNO_KEY = "bkapp.paas.bk.tencent.com/use-cnb"
 
 # 部署云原生应用时，等待 ServiceAccount 就绪的超时时间（单位：秒）
 SERVICE_ACCOUNT_READY_TIMEOUT = 15

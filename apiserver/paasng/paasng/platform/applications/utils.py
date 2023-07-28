@@ -20,15 +20,13 @@ import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Optional
 
 from django.db import transaction
 
 from paas_wl.cnative.specs.models import AppModelDeploy
-from paas_wl.cnative.specs.procs import get_proc_specs
-from paas_wl.workloads.processes.drf_serializers import CNativeProcSpecSLZ
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.processes import ProcessManager
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application, pre_delete_module
@@ -230,7 +228,7 @@ def get_app_overview(application: Application) -> dict:
             exposed_link = get_exposed_url(module_env)
 
             # 进程信息
-            _specs = get_processes_specs(application, module_env)
+            _specs = ProcessManager(module_env).list_processes_specs()
             specs = [{spec['name']: spec} for spec in _specs]
 
             latest_dp = None
@@ -268,14 +266,6 @@ def get_latest_deployment_basic_info(application: Application, env: ModuleEnviro
     }
 
 
-def get_processes_specs(application: Application, env: ModuleEnvironment) -> List[Dict]:
-    """获取应用的进程配置信息"""
-    if application.type != ApplicationType.CLOUD_NATIVE.value:
-        return ProcessManager(env.engine_app).list_processes_specs()
-
-    return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
-
-
 @dataclass
 class ResQuotasAggregation:
     app: Application
@@ -283,7 +273,7 @@ class ResQuotasAggregation:
     def get_resource_quotas(self) -> dict:
         quotas: dict = {"prod": defaultdict(int), "stag": defaultdict(int)}
         for app_env in self.app.get_app_envs():
-            processes_specs = get_processes_specs(self.app, app_env)
+            processes_specs = ProcessManager(app_env).list_processes_specs()
 
             for _specs in processes_specs:
                 quotas[app_env.environment]["memory_total"] += (

@@ -90,6 +90,8 @@ const (
 	RevisionAnnoKey = "bkapp.paas.bk.tencent.com/revision"
 	// ResourceTypeKey 注解中存储资源类型的键名
 	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
+	// UseCNBAnnoKey 注解中声明镜像类型是否 cnb 的键名
+	UseCNBAnnoKey = "bkapp.paas.bk.tencent.com/use-cnb"
 	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"
 )

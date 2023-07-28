@@ -19,15 +19,18 @@
 package resources
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
 var _ = Describe("Environment overlay related functions", func() {
@@ -51,23 +54,23 @@ var _ = Describe("Environment overlay related functions", func() {
 				},
 				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Replicas:   paasv1alpha2.ReplicasTwo,
-						TargetPort: 80,
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 						Autoscaling: &paasv1alpha2.AutoscalingSpec{
-							Enabled:     true,
 							MinReplicas: 1,
 							MaxReplicas: 5,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
 						},
 					},
 					{
-						Name:     "worker",
-						Replicas: paasv1alpha2.ReplicasTwo,
+						Name:         "worker",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						Autoscaling: &paasv1alpha2.AutoscalingSpec{
-							Enabled:     true,
-							MinReplicas: 1,
-							MaxReplicas: 5,
+							MinReplicas: 2,
+							MaxReplicas: 6,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
 						},
 					},
@@ -109,11 +112,11 @@ var _ = Describe("Environment overlay related functions", func() {
 
 	Context("Test ReplicasGetter without env", func() {
 		It("process normal", func() {
-			val := NewReplicasGetter(bkapp).Get("web")
+			val := NewReplicasGetter(bkapp).GetByProc("web")
 			Expect(*val).To(Equal(int32(2)))
 		})
 		It("process missing", func() {
-			val := NewReplicasGetter(bkapp).Get("web-missing")
+			val := NewReplicasGetter(bkapp).GetByProc("web-missing")
 			Expect(val).To(BeNil())
 		})
 	})
@@ -130,11 +133,11 @@ var _ = Describe("Environment overlay related functions", func() {
 			}
 		})
 		It("env overlay hit", func() {
-			val := NewReplicasGetter(bkapp).Get("web")
+			val := NewReplicasGetter(bkapp).GetByProc("web")
 			Expect(*val).To(Equal(int32(10)))
 		})
 		It("env overlay absent", func() {
-			val := NewReplicasGetter(bkapp).Get("worker")
+			val := NewReplicasGetter(bkapp).GetByProc("worker")
 			Expect(*val).To(Equal(int32(2)))
 		})
 	})
@@ -182,12 +185,14 @@ var _ = Describe("Environment overlay related functions", func() {
 
 	Context("Test AutoscalingPolicyGetter without env", func() {
 		It("process normal", func() {
-			val := NewAutoscalingPolicyGetter(bkapp).Get("web")
-			Expect(val).To(Equal(paasv1alpha2.ScalingPolicyDefault))
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("web")
+			Expect(spec.MinReplicas).To(Equal(int32(1)))
+			Expect(spec.MaxReplicas).To(Equal(int32(5)))
+			Expect(spec.Policy).To(Equal(paasv1alpha2.ScalingPolicyDefault))
 		})
 		It("process missing", func() {
-			val := NewAutoscalingPolicyGetter(bkapp).Get("web-missing")
-			Expect(val).To(Equal(paasv1alpha2.ScalingPolicy("")))
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("web-missing")
+			Expect(spec).To(BeNil())
 		})
 	})
 
@@ -197,17 +202,84 @@ var _ = Describe("Environment overlay related functions", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
 			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
 				Autoscaling: []paasv1alpha2.AutoscalingOverlay{
-					{EnvName: "stag", Process: "web", Policy: "custom"},
+					{
+						EnvName: "stag",
+						Process: "web",
+						Spec: paasv1alpha2.AutoscalingSpec{
+							MinReplicas: 2, MaxReplicas: 5, Policy: "custom",
+						},
+					},
 				},
 			}
 		})
 		It("env overlay hit", func() {
-			val := NewAutoscalingPolicyGetter(bkapp).Get("web")
-			Expect(val).To(Equal(paasv1alpha2.ScalingPolicy("custom")))
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("web")
+			Expect(spec.MinReplicas).To(Equal(int32(2)))
+			Expect(spec.MaxReplicas).To(Equal(int32(5)))
+			Expect(spec.Policy).To(Equal(paasv1alpha2.ScalingPolicy("custom")))
 		})
 		It("env overlay absent", func() {
-			val := NewAutoscalingPolicyGetter(bkapp).Get("worker")
-			Expect(val).To(Equal(paasv1alpha2.ScalingPolicyDefault))
+			spec := NewAutoscalingSpecGetter(bkapp).GetByProc("worker")
+			Expect(spec.MinReplicas).To(Equal(int32(2)))
+			Expect(spec.MaxReplicas).To(Equal(int32(6)))
+			Expect(spec.Policy).To(Equal(paasv1alpha2.ScalingPolicyDefault))
+		})
+	})
+
+	Context("Test ProcResourcesGetter", func() {
+		It("Get Default", func() {
+			resReq := NewProcResourcesGetter(bkapp).Default()
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+		})
+
+		It("Get Legacy", func() {
+			_ = kubetypes.SetJsonAnnotation(
+				bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
+					"web": {"cpu": "2", "memory": "2Gi"},
+				},
+			)
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
+		})
+
+		It("Get Overlay", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+				},
+			}
+			getter := NewProcResourcesGetter(bkapp)
+
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+		})
+
+		It("Get Standard", func() {
+			bkapp.Spec.Processes[1].ResQuotaPlan = paasv1alpha2.ResQuotaPlan4C2G
+			getter := NewProcResourcesGetter(bkapp)
+
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+
+			resReq, _ = getter.GetByProc("worker")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
 		})
 	})
 })

@@ -51,6 +51,11 @@
         </ul> -->
 
         <bk-tab ext-cls="deploy-tab-cls" :active.sync="active" @tab-change="handleGoPage">
+          <template slot="setting">
+            <bk-button class="pr20" text @click="handleYamlView">
+              {{ $t('查看YAML') }}
+            </bk-button>
+          </template>
           <bk-tab-panel
             v-for="(panel, index) in panels"
             v-bind="panel"
@@ -500,7 +505,7 @@ export default {
     // 保存
     async handleSave() {
       try {
-        // 处理手动调节数据
+        // 处理进程配置数据
         this.$refs[this.routerRefs]?.handleProcessData && this.$refs[this.routerRefs]?.handleProcessData();
         const params = { ... this.$store.state.cloudApi.cloudAppData };
         console.log('params', params);
@@ -521,6 +526,12 @@ export default {
           message: e.message || e.detail || this.$t('接口异常'),
         });
       }
+    },
+
+
+    // 查看yaml
+    handleYamlView() {
+
     },
   },
 };

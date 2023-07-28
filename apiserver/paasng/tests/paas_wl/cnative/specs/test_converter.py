@@ -26,7 +26,7 @@ from paas_wl.cnative.specs.models import create_app_resource
 class TestBkAppResourceConverter:
     def test_do_nothing(self):
         obj = create_app_resource('foo-app', 'nginx:latest')
-        assert BkAppResourceConverter(obj).convert() == obj
+        assert BkAppResourceConverter(obj).convert() == (obj, False, False)
 
     def test_normal(self):
         obj = BkAppResource(
@@ -67,7 +67,7 @@ class TestBkAppResourceConverter:
                 ],
             ),
         )
-        assert BkAppResourceConverter(obj).convert() == excepted
+        assert BkAppResourceConverter(obj).convert() == (excepted, True, True)
 
     def test_convert_resQuotaPlan_only(self):
         obj = BkAppResource(
@@ -122,4 +122,4 @@ class TestBkAppResourceConverter:
                 ],
             ),
         )
-        assert BkAppResourceConverter(obj).convert() == excepted
+        assert BkAppResourceConverter(obj).convert() == (excepted, True, False)

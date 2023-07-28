@@ -36,30 +36,35 @@ class BkAppResourceConverter:
     def __init__(self, bkapp: BkAppResource):
         self.bkapp = bkapp
 
-    def convert(self) -> BkAppResource:
+    def convert(self) -> (BkAppResource, bool, bool):
+        """
+        :returns: BkAppResource, converted, upgrade_version，分别对应转换后的 BkAppResource，是否发生转换，是否更新 apiVersion
+        """
         # 如果已经是 v1alpha2 版本的 BkAppResource，直接跳过
         if self.bkapp.apiVersion == ApiVersion.V1ALPHA2:
-            return self.bkapp
+            return self.bkapp, False, False
 
-        self._try_aggregate_images()
+        upgrade_version = self._try_aggregate_images()
         self._convert_quota_to_plan()
-        return self.bkapp
+        return self.bkapp, True, upgrade_version
 
-    def _try_aggregate_images(self):
+    def _try_aggregate_images(self) -> bool:
         """尝试对使用的镜像进行聚合
 
         如果使用多个镜像，则不能进行聚合，以及升级到 v1alpha2 版本
         原因是尽管 v1alpha2 支持多镜像，但是基于注解的实现，前端交互并不支持
+        :returns: upgrade_version 是否更新了 apiVersion
         """
         used_images = {p.image for p in self.bkapp.spec.processes if p.image}
         if len(used_images) != 1:
             logger.warning(f"BkAppResource {self.bkapp.metadata.name} has multiple images, cannot upgrade to v1alpha2")
-            return
+            return False
 
         for p in self.bkapp.spec.processes:
             p.image = None
         self.bkapp.spec.build = BkAppBuildConfig(image=used_images.pop())
         self.bkapp.apiVersion = ApiVersion.V1ALPHA2
+        return True
 
     def _convert_quota_to_plan(self):
         """

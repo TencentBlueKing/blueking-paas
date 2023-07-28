@@ -24,10 +24,10 @@ Examples:
     python manage.py convert_bkapp_version --code app-code-1 --module default
 
     # 检查所有存量 BkApp 配置，打印可转换的 BkApp 信息
-    python manage.py convert_bkapp_version --run-all --dry-run
+    python manage.py convert_bkapp_version --all-bkapp --dry-run
 
     # 检查并转换所有符合条件的 BkApp 配置
-    python manage.py convert_bkapp_version --run-all
+    python manage.py convert_bkapp_version --all-bkapp
 """
 from django.core.management.base import BaseCommand
 
@@ -43,11 +43,11 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--code", dest="app_code", help="应用 Code")
         parser.add_argument("--module", dest="module_name", help="模块名称")
-        parser.add_argument("--run-all", dest="run_all", help="是否检查并转换所有 BkApp", action="store_true")
+        parser.add_argument("--all-bkapp", dest="all_bkapp", help="是否检查并转换所有 BkApp", action="store_true")
         parser.add_argument("--dry-run", dest="dry_run", help="是否只打印待转换的 BkApp 信息", action="store_true")
 
-    def handle(self, app_code, module_name, run_all, dry_run, *args, **options):
-        self._validate_params(app_code, module_name, run_all)
+    def handle(self, app_code, module_name, all_bkapp, dry_run, *args, **options):
+        self._validate_params(app_code, module_name, all_bkapp)
 
         resources = AppModelResource.objects.all()
         if app_code and module_name:
@@ -56,7 +56,8 @@ class Command(BaseCommand):
             resources = resources.filter(application_id=app.id, module_id=module.id)
 
         for res in resources:
-            print(f"will try convert app: {res.application_id}, module: {res.module_id}")
+            bkapp_res = BkAppResource(**res.revision.json_value)
+            print(f"will try convert BkApp {bkapp_res.metadata.name}")
 
         if dry_run:
             print("============ dry run ============")
@@ -64,9 +65,15 @@ class Command(BaseCommand):
 
         for res in resources:
             bkapp_res = BkAppResource(**res.revision.json_value)
-            bkapp_res = BkAppResourceConverter(bkapp_res).convert()
+            bkapp_res, converted, upgrade_version = BkAppResourceConverter(bkapp_res).convert()
             res.use_resource(bkapp_res)
 
-    def _validate_params(self, app_code: str, module_name: str, run_all: bool):
-        if not run_all and not (app_code and module_name):
-            raise ValueError("code and module is required when run-all is False")
+            bkapp_name = bkapp_res.metadata.name
+            if converted:
+                print(f"BkApp {bkapp_name} converted")
+            if not upgrade_version:
+                print(f"BkApp {bkapp_name} still in v1alpha1 version due to use multi-images")
+
+    def _validate_params(self, app_code: str, module_name: str, all_bkapp: bool):
+        if not all_bkapp and not (app_code and module_name):
+            raise ValueError("code and module is required when all-bkapp is False")

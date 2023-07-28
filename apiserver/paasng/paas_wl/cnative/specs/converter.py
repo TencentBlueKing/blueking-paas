@@ -30,7 +30,8 @@ class BkAppResourceConverter:
     """
     BkApp 版本转换器
 
-    将 BkAppResource 转换成 v1alpha2 版本
+    功能：尝试将 BkAppResource 转换成 v1alpha2 版本
+    注意：当 BkApp 中使用多个不同镜像，则无法升到 v1alpha2 版本，但是资源配额转套餐不受影响
     """
 
     def __init__(self, bkapp: BkAppResource):
@@ -67,7 +68,8 @@ class BkAppResourceConverter:
         return True
 
     def _convert_quota_to_plan(self):
-        """
+        """将资源配额转换成套餐
+
         resQuotaPlan 不受 bkApp 版本影响，可以直接转换（策略为向上取整），
         但是需要移除原有的 cpu，memory 配置，避免出现优先级覆盖问题
         """

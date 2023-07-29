@@ -1066,12 +1066,12 @@ export default {
           this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
         } else {
           // 有replicas数据
-          const replicasProcess = this.localCloudAppData.spec.envOverlay.replicas.map(e => e.process);
           this.localCloudAppData.spec.envOverlay.replicas.forEach((e) => {
             if (e.process === replicasData.process) {
               e.envName = replicasData.envName;
               e.count = replicasData.count;
             } else {
+              const replicasProcess = (this.localCloudAppData.spec?.envOverlay?.replicas || []).map(e => e.process);
               if (!replicasProcess.includes(replicasData.process)) {
                 this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
               }
@@ -1096,21 +1096,20 @@ export default {
           this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
         } else {
           // 有autoscaling数据
-          // const autoscalingProcess = this.localCloudAppData.spec.envOverlay.autoscaling.map(e => e.process) || [];
-          // this.localCloudAppData.spec.envOverlay.autoscaling
-          //   .forEach((e) => {
-          //     if (e.process === autoscalingData.process) {
-          //       e.envName = autoscalingData.envName;
-          //       e.minReplicas =  autoscalingData.minReplicas;
-          //       e.maxReplicas = autoscalingData.maxReplicas;
-          //     } else {
-          //       console.log(autoscalingProcess, autoscalingData, autoscalingData.process);
-          //       if (!autoscalingProcess.includes(autoscalingData.process)) {   // 如果没包含就需要添加一条数据
-          //         this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
-          //         console.log('this.localCloudAppData.spec.envOverlay.autoscaling', this.localCloudAppData.spec.envOverlay.autoscaling);
-          //       }
-          //     }
-          //   });
+          this.localCloudAppData.spec.envOverlay.autoscaling
+            .forEach((e) => {
+              if (e.process === autoscalingData.process) {
+                e.envName = autoscalingData.envName;
+                e.minReplicas =  autoscalingData.minReplicas;
+                e.maxReplicas = autoscalingData.maxReplicas;
+              } else {
+                const autoscalingProcess = (this.localCloudAppData.spec?.envOverlay?.autoscaling || [])
+                  .map(e => e.process) || [];
+                if (!autoscalingProcess.includes(autoscalingData.process)) {   // 如果没包含就需要添加一条数据
+                  this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
+                }
+              }
+            });
         }
         // delete this.localCloudAppData.spec.envOverlay && this.localCloudAppData.spec.envOverlay.autoscaling;
       } else { // // 手动调节
@@ -1126,13 +1125,14 @@ export default {
         this.localCloudAppData.spec.envOverlay.resQuotas = [];
         this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
       } else {
-        const resQuotasProcess = this.localCloudAppData.spec.envOverlay.resQuotas.map(e => e.process) || [];
         this.localCloudAppData.spec.envOverlay.resQuotas
           .forEach((e) => {
             if (e.process === resQuotaPlanData.process) {
               e.envName = resQuotaPlanData.envName;
               e.plan = resQuotaPlanData.plan;
             } else {
+              const resQuotasProcess = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
+                .map(e => e.process) || [];
               if (!resQuotasProcess.includes(resQuotaPlanData.process)) {   // 如果没包含就需要添加一条数据
                 this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
               }

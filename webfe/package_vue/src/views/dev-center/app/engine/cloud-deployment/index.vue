@@ -87,7 +87,7 @@
         </bk-button>
       </div>
 
-      <bk-dialog
+      <!-- <bk-dialog
         v-model="deployDialogConfig.visible"
         theme="primary"
         width="700"
@@ -120,6 +120,15 @@
             </p>
           </div>
         </div>
+      </bk-dialog> -->
+      <bk-dialog
+        v-model="deployDialogConfig.visible" theme="primary"
+        width="1200"
+        ext-cls="deploy-dialog"
+        title="YAML"
+        header-position="left"
+        :show-footer="false">
+        <deployYaml :cloud-app-data="cloudAppData"></deployYaml>
       </bk-dialog>
     </paas-content-loader>
   </div>
@@ -128,11 +137,13 @@
 <script>
 import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
+import deployYaml from '@/views/dev-center/app/engine/cloud-deployment/deploy-yaml';
 import { bus } from '@/common/bus';
 
 export default {
   components: {
     moduleTopBar,
+    deployYaml,
   },
   mixins: [appBaseMixin],
   data() {
@@ -508,12 +519,10 @@ export default {
         // 处理进程配置数据
         this.$refs[this.routerRefs]?.handleProcessData && this.$refs[this.routerRefs]?.handleProcessData();
         const params = { ... this.$store.state.cloudApi.cloudAppData };
-        console.log('params', params);
-        const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {
+        await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           params,
         });
-        console.log('res', res);
         this.$paasMessage({
           theme: 'success',
           message: this.$t('操作成功'),
@@ -531,7 +540,7 @@ export default {
 
     // 查看yaml
     handleYamlView() {
-
+      this.deployDialogConfig.visible = true;
     },
   },
 };

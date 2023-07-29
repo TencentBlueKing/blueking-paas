@@ -486,12 +486,12 @@
             </bk-form-item> -->
             <section v-if="isAutoscaling" class="mt20">
               <bk-form-item
-                :label="$t('最大副本数：')">
-                <span class="form-text">{{ formData.autoscaling.maxReplicas || '--' }}</span>
-              </bk-form-item>
-              <bk-form-item
                 :label="$t('最小副本数：')">
                 <span class="form-text">{{ formData.autoscaling.minReplicas || '--' }}</span>
+              </bk-form-item>
+              <bk-form-item
+                :label="$t('最大副本数：')">
+                <span class="form-text">{{ formData.autoscaling.maxReplicas || '--' }}</span>
               </bk-form-item>
             </section>
             <section v-else class="mt20">
@@ -557,7 +557,7 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: 8080,
-        autoscaling: {},
+        autoscaling: { minReplicas: '', maxReplicas: '' },
       },
       bkappAnnotations: {},
       command: [],
@@ -646,9 +646,7 @@ export default {
               const minReplicas = Number(this.formData.autoscaling.minReplicas);
               return maxReplicas >= minReplicas;
             },
-            message() {
-              return `${this.$t('最大副本数不可小于最小副本数')}`;
-            },
+            message: `${this.$t('最大副本数不可小于最小副本数')}`,
             trigger: 'blur',
           },
         ],
@@ -672,6 +670,7 @@ export default {
       envOverlayData: { replicas: [] },
       envName: 'stag',
       ENV_ENUM,
+      localProcessNameActive: '',
     };
   },
   computed: {
@@ -1028,6 +1027,7 @@ export default {
     handleBtnGroupClick(v, i) {
       // 选中的进程信息
       this.formData = this.localCloudAppData.spec.processes[i];
+      this.localProcessNameActive = v;    // 点击的tab名，编辑数据时需要用到
       this.processNameActive = v;
       this.btnIndex = i;
     },
@@ -1096,19 +1096,21 @@ export default {
           this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
         } else {
           // 有autoscaling数据
-          const autoscalingProcess = this.localCloudAppData.spec.envOverlay.autoscaling.map(e => e.process) || [];
-          this.localCloudAppData.spec.envOverlay.autoscaling
-            .forEach((e) => {
-              if (e.process === autoscalingData.process) {
-                e.envName = autoscalingData.envName;
-                e.minReplicas =  autoscalingData.minReplicas;
-                e.maxReplicas = autoscalingData.maxReplicas;
-              } else {
-                if (!autoscalingProcess.includes(autoscalingData.process)) {   // 如果没包含就需要添加一条数据
-                  this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
-                }
-              }
-            });
+          // const autoscalingProcess = this.localCloudAppData.spec.envOverlay.autoscaling.map(e => e.process) || [];
+          // this.localCloudAppData.spec.envOverlay.autoscaling
+          //   .forEach((e) => {
+          //     if (e.process === autoscalingData.process) {
+          //       e.envName = autoscalingData.envName;
+          //       e.minReplicas =  autoscalingData.minReplicas;
+          //       e.maxReplicas = autoscalingData.maxReplicas;
+          //     } else {
+          //       console.log(autoscalingProcess, autoscalingData, autoscalingData.process);
+          //       if (!autoscalingProcess.includes(autoscalingData.process)) {   // 如果没包含就需要添加一条数据
+          //         this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
+          //         console.log('this.localCloudAppData.spec.envOverlay.autoscaling', this.localCloudAppData.spec.envOverlay.autoscaling);
+          //       }
+          //     }
+          //   });
         }
         // delete this.localCloudAppData.spec.envOverlay && this.localCloudAppData.spec.envOverlay.autoscaling;
       } else { // // 手动调节
@@ -1170,7 +1172,25 @@ export default {
             e.name = this.processDialog.name;
           }
         });
+        console.log('this.localCloudAppData.spec', this.localCloudAppData.spec, this.localProcessNameActive);
         this.localCloudAppData.spec.processes[this.btnIndex].name = this.processDialog.name; // 需要更新cloudAppData
+
+        // 需要更新外层envOverlay中的自动调节数据
+        (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).map((e) => {
+          if (e.process === this.localProcessNameActive) {
+            e.process = this.processDialog.name;
+          }
+          return e;
+        });
+
+        // 需要更新外层envOverlay中配额数据
+        (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).map((e) => {
+          if (e.process === this.localProcessNameActive) {
+            e.process = this.processDialog.name;
+          }
+          return e;
+        });
+
         // this.handleBtnGroupClick(this.processDialog.name);
       } else {  // 新增进程
         this.panels.push({ name: this.processDialog.name });
@@ -1188,11 +1208,12 @@ export default {
           envOverlay: {
             replicas: [],
           },
+          autoscaling: { policy: 'default' },
         };
         this.localCloudAppData.spec.processes.push(this.formData);
       }
       console.log('this.panels', this.panels, this.formData, this.localCloudAppData);
-      debugger;
+      // debugger;
       this.processNameActive = this.processDialog.name; // 选中当前点击tab
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
       this.processDialog.visiable = false;
@@ -1207,14 +1228,29 @@ export default {
 
     // 删除某个进程
     handleDelete(processName, i = '') {
-      this.processNameActive = 'web';
-      this.btnIndex = 0;
+      console.log('this.processNameActive', this.processNameActive);
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
       this.localCloudAppData.spec.processes.splice(i, 1);
+
+      // 过滤外层envOverlay中的自动调节数据
+      this.localCloudAppData.spec.envOverlay.autoscaling = (this.localCloudAppData.spec.envOverlay.autoscaling || [])
+        .filter(e => e.process !== this.processNameActive);
+
+      // 过滤外层envOverlay中配额数据
+      this.localCloudAppData.spec.envOverlay.resQuotas = (this.localCloudAppData.spec.envOverlay.resQuotas || [])
+        .filter(e => e.process !== this.processNameActive);
+
+      // 过滤外层envOverlay中副本数量
+      this.localCloudAppData.spec.envOverlay.replicas = (this.localCloudAppData.spec.envOverlay?.replicas || [])
+        .filter(e => e.process !== this.processNameActive);
+
       this.processData = this.localCloudAppData.spec.processes;
       this.panels = _.cloneDeep(this.processData);
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+
+      this.processNameActive = 'web';
+      this.btnIndex = 0;
     },
 
     // 过滤当前进程当前环境envOverlay中autoscaling

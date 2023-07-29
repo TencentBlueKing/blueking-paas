@@ -128,7 +128,7 @@
         title="YAML"
         header-position="left"
         :show-footer="false">
-        <deployYaml :cloud-app-data="cloudAppData"></deployYaml>
+        <deployYaml :cloud-app-data="dialogCloudAppData"></deployYaml>
       </bk-dialog>
     </paas-content-loader>
   </div>
@@ -199,6 +199,11 @@ export default {
 
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
+    },
+
+    dialogCloudAppData() {
+      console.log('this.$store.state.cloudApi.cloudAppData', this.$store.state.cloudApi.cloudAppData);
+      return this.$store.state.cloudApi.cloudAppData;
     },
   },
   watch: {
@@ -518,11 +523,13 @@ export default {
       try {
         // 处理进程配置数据
         this.$refs[this.routerRefs]?.handleProcessData && this.$refs[this.routerRefs]?.handleProcessData();
+
         const params = { ... this.$store.state.cloudApi.cloudAppData };
-        await this.$store.dispatch('deploy/saveCloudAppInfo', {
+        const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           params,
         });
+        console.log('res', res);
         this.$paasMessage({
           theme: 'success',
           message: this.$t('操作成功'),

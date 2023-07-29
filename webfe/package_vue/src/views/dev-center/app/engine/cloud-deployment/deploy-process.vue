@@ -701,7 +701,6 @@ export default {
         this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
-      deep: true,
     },
     formData: {
       handler(val) {
@@ -732,7 +731,7 @@ export default {
         }, 500);
       },
       immediate: true,
-      // deep: true,
+      deep: true,
     },
     bkappAnnotations: {
       handler(val) {
@@ -774,13 +773,16 @@ export default {
       deep: true,
     },
 
+    // 需要做的事，1.如果是手动调节也需要添加formData.autoscaling 2. 需要同步修改envOverlay中的值
+
+
     'formData.autoscaling.maxReplicas'(val) {
       if (val && val >= this.formData.autoscaling.minReplicas) {
         this.$refs.formEnv?.clearError();
       }
     },
     'formData.autoscaling.minReplicas'(val) {
-      if (val && val <= this.formData.autoscaling.maxReplicas) {
+      if (val && val <=  this.formData.autoscaling.maxReplicas) {
         this.$refs.formEnv?.clearError();
       }
     },
@@ -1082,7 +1084,6 @@ export default {
       // 自动调节
       if (this.isAutoscaling) {
         // 自动调节相关数据
-        delete this.localCloudAppData.spec.envOverlay.replicas;
         const autoscalingData = {
           envName: this.envName,
           process: this.processNameActive,
@@ -1111,13 +1112,19 @@ export default {
               }
             });
         }
-        // delete this.localCloudAppData.spec.envOverlay && this.localCloudAppData.spec.envOverlay.autoscaling;
+
+        // 需要删除手动调节相关信息
+        delete this.localCloudAppData.spec.processes[this.btnIndex].replicas;
+        // 过滤当前进程当前环境envOverlay中replicas
+        const { envOverlay } = this.localCloudAppData.spec;
+        this.handleFilterAutoscalingData(envOverlay, this.processNameActive, this.isAutoscaling);  // 传入envOverlay、当前进程名
       } else { // // 手动调节
         // 需要删除当前进程base中的autoscaling
         delete this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
         // 过滤当前进程当前环境envOverlay中autoscaling
         const { envOverlay } = this.localCloudAppData.spec;
-        this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
+        // eslint-disable-next-line max-len
+        this.handleFilterAutoscalingData(envOverlay, this.processNameActive, !this.isAutoscaling);  // 传入envOverlay、当前进程名
       }
 
       // 资源配额方案
@@ -1191,6 +1198,15 @@ export default {
           return e;
         });
 
+
+        // 需要更新外层envOverlay中副本数量
+        (this.localCloudAppData.spec?.envOverlay?.replicas || []).map((e) => {
+          if (e.process === this.localProcessNameActive) {
+            e.process = this.processDialog.name;
+          }
+          return e;
+        });
+
         // this.handleBtnGroupClick(this.processDialog.name);
       } else {  // 新增进程
         this.panels.push({ name: this.processDialog.name });
@@ -1254,9 +1270,16 @@ export default {
     },
 
     // 过滤当前进程当前环境envOverlay中autoscaling
-    handleFilterAutoscalingData(data, process) {
-      this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || [])
-        .filter(e => !(e.process === process));
+    handleFilterAutoscalingData(data, process, isAutoscaling) {
+      if (isAutoscaling) {
+        // 自动调节 需要过滤手动调节相关数据
+        this.localCloudAppData.spec.envOverlay.replicas = (data?.replicas || [])
+          .filter(e => !(e.process === process));
+      } else {
+        // 手动调节 需要过滤自动调节相关数据
+        this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || [])
+          .filter(e => !(e.process === process));
+      }
     },
   },
 };

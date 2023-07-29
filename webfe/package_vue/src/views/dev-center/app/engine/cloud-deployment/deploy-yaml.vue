@@ -84,6 +84,7 @@ export default {
         }
       },
       immediate: true,
+      deep: true,
     },
     detail: {
       handler(val) {
@@ -94,7 +95,6 @@ export default {
             this.handleEditorErr('至少需要一个web进程');
           } else {
             this.handleEditorErr();
-            this.$store.commit('cloudApi/updateCloudAppData', val);
             setTimeout(() => {
               this.screenIsLoading = false;
             }, 500);

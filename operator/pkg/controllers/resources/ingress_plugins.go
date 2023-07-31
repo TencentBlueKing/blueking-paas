@@ -131,7 +131,7 @@ func init() {
 	accessControlTemplate, err = template.New("acl").Parse(dedent.Dedent(`
         # Blow content was configured by access-control plugin, do not edit
         
-        set $bkapp_app_code '{{ .Region }}-{{ .EngineAppName }}';
+        set $bkapp_app_code '{{ .Region }}-{{ .WlAppName }}';
         set $bkapp_bk_app_code '{{ .AppCode }}';
         set $bkapp_region '{{ .Region }}';
         set $bkapp_env_name '{{ .Environment }}';

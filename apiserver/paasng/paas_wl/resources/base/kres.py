@@ -459,7 +459,7 @@ class LabelBasedOperations(BaseOperations):
         for item in self.list(labels, namespace=namespace).items:
             name_ops.delete(item.metadata.name, namespace=namespace, non_grace_period=non_grace_period)
 
-    def create_watch_stream(self, labels: Dict, namespace: Namespace = None, *args, **kwargs) -> Iterator:
+    def create_watch_stream(self, labels: Dict, namespace: Namespace = None, **kwargs) -> Iterator:
         """Create a stream object to watch changes
 
         :param int timeout_seconds/timeout: the total timeout for this watch request
@@ -467,9 +467,7 @@ class LabelBasedOperations(BaseOperations):
         kwargs = {**self.default_kwargs, **kwargs}
         # be compatible with timeout_seconds parameter
         kwargs.setdefault('timeout', kwargs.pop('timeout_seconds', None))
-        return self.resource.watch(
-            label_selector=self.make_labels_string(labels), namespace=namespace, *args, **kwargs
-        )
+        return self.resource.watch(label_selector=self.make_labels_string(labels), namespace=namespace, **kwargs)
 
     @staticmethod
     def make_labels_string(labels: Dict) -> str:
@@ -638,6 +636,10 @@ class KEvent(BaseKresource):
 
 class KCustomResourceDefinition(BaseKresource):
     kind = "CustomResourceDefinition"
+
+
+class KConfigMap(BaseKresource):
+    kind = 'ConfigMap'
 
 
 # Individual resource types end

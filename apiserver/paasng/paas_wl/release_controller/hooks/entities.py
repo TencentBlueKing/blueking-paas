@@ -245,10 +245,8 @@ class Command(AppEntity):
             app=command.app,
             name=CommandKubeAdaptor(command).get_pod_name(),
             runtime=ContainerRuntimeSpec(
-                image=command.config.get_image(),
-                # 平台镜像默认的 command 应当是 bash /runner/init, 这里应该如何兼容用户自定义镜像呢？
-                # 例如, 将 command 覆盖为 exec ?
-                command=command.config.runtime.get_entrypoint(),
+                image=command.build.get_image(),
+                command=command.build.get_universal_entrypoint(),
                 args=command.split_command,
                 envs=envs,
                 image_pull_policy=command.config.runtime.get_image_pull_policy(),

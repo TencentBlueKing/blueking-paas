@@ -342,46 +342,43 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	}
 
 	// 4. 如果启用扩缩容，需要符合规范
-	if proc.Autoscaling != nil && proc.Autoscaling.Enabled {
-		// 目前不支持缩容到 0
-		if proc.Autoscaling.MinReplicas <= 0 {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("minReplicas"),
-				proc.Autoscaling.MinReplicas,
-				"minReplicas must be greater than 0",
-			)
+	if proc.Autoscaling != nil {
+		if err := r.validateAutoscaling(
+			pField.Child("autoscaling"),
+			*proc.Autoscaling,
+		); err != nil {
+			return err
 		}
-		// 扩缩容最大副本数不可超过上限
-		if proc.Autoscaling.MaxReplicas > config.Global.GetProcMaxReplicas() {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("maxReplicas"),
-				proc.Autoscaling.MaxReplicas,
-				fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
-			)
-		}
-		// 最大副本数需大于等于最小副本数
-		if proc.Autoscaling.MinReplicas > proc.Autoscaling.MaxReplicas {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("maxReplicas"),
-				proc.Autoscaling.MaxReplicas,
-				"maxReplicas must be greater than or equal to minReplicas",
-			)
-		}
-		// 目前必须配置扩缩容策略
-		if proc.Autoscaling.Policy == "" {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("policy"),
-				proc.Autoscaling.Policy,
-				"autoscaling policy is required",
-			)
-		}
-		// 配置的扩缩容策略必须是受支持的
-		if !lo.Contains(AllowedScalingPolicies, proc.Autoscaling.Policy) {
-			return field.NotSupported(
-				pField.Child("autoscaling").Child("policy"),
-				proc.Autoscaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
-			)
-		}
+	}
+	return nil
+}
+
+func (r *BkApp) validateAutoscaling(pPath *field.Path, spec AutoscalingSpec) *field.Error {
+	// 目前不支持缩容到 0
+	if spec.MinReplicas <= 0 {
+		return field.Invalid(pPath.Child("minReplicas"), spec.MinReplicas, "minReplicas must be greater than 0")
+	}
+	// 扩缩容最大副本数不可超过上限
+	if spec.MaxReplicas > config.Global.GetProcMaxReplicas() {
+		return field.Invalid(
+			pPath.Child("maxReplicas"),
+			spec.MaxReplicas,
+			fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
+		)
+	}
+	// 最大副本数需大于等于最小副本数
+	if spec.MinReplicas > spec.MaxReplicas {
+		return field.Invalid(
+			pPath.Child("maxReplicas"), spec.MaxReplicas, "maxReplicas must be greater than or equal to minReplicas",
+		)
+	}
+	// 目前必须配置扩缩容策略
+	if spec.Policy == "" {
+		return field.Invalid(pPath.Child("policy"), spec.Policy, "autoscaling policy is required")
+	}
+	// 配置的扩缩容策略必须是受支持的
+	if !lo.Contains(AllowedScalingPolicies, spec.Policy) {
+		return field.NotSupported(pPath.Child("policy"), spec.Policy, stringx.ToStrArray(AllowedScalingPolicies))
 	}
 	return nil
 }
@@ -392,18 +389,18 @@ func (r *BkApp) validateMounts() *field.Error {
 	mountPoints, mountNames := sets.String{}, sets.String{}
 
 	for idx, mount := range r.Spec.Mounts {
-		path := field.NewPath("spec").Child("mounts").Index(idx)
-		if err := r.validateMount(path, mount); err != nil {
+		pPath := field.NewPath("spec").Child("mounts").Index(idx)
+		if err := r.validateMount(pPath, mount); err != nil {
 			return err
 		}
 
 		if mountNames.Has(mount.Name) {
-			return field.Duplicate(path.Child("name"), mount.Name)
+			return field.Duplicate(pPath.Child("name"), mount.Name)
 		}
 		mountNames.Insert(mount.Name)
 
 		if mountPoints.Has(mount.MountPath) {
-			return field.Duplicate(path.Child("mountPath"), mount.MountPath)
+			return field.Duplicate(pPath.Child("mountPath"), mount.MountPath)
 		}
 		mountPoints.Insert(mount.MountPath)
 	}
@@ -411,33 +408,33 @@ func (r *BkApp) validateMounts() *field.Error {
 	return nil
 }
 
-func (r *BkApp) validateMount(path *field.Path, mount Mount) *field.Error {
+func (r *BkApp) validateMount(pPath *field.Path, mount Mount) *field.Error {
 	// 校验 name
 	if len(mount.Name) == 0 {
-		return field.Required(path.Child("name"), "")
+		return field.Required(pPath.Child("name"), "")
 	}
 	if errs := validation.IsDNS1123Label(mount.Name); len(errs) > 0 {
-		return field.Invalid(path.Child("name"), mount.Name, strings.Join(errs, ","))
+		return field.Invalid(pPath.Child("name"), mount.Name, strings.Join(errs, ","))
 	}
 
 	// 校验 mountPath
 	if len(mount.MountPath) == 0 {
-		return field.Required(path.Child("mountPath"), "")
+		return field.Required(pPath.Child("mountPath"), "")
 	}
 	if matched, _ := regexp.MatchString(FilePathPattern, mount.MountPath); !matched {
-		return field.Invalid(path.Child("mountPath"), mount.MountPath, "must match regex "+FilePathPattern)
+		return field.Invalid(pPath.Child("mountPath"), mount.MountPath, "must match regex "+FilePathPattern)
 	}
 
 	// 校验 source
 	if mount.Source == nil {
-		return field.Required(path.Child("source"), "")
+		return field.Required(pPath.Child("source"), "")
 	}
 	val, err := mount.Source.ToValidator()
 	if err != nil {
-		return field.Invalid(path.Child("source"), mount.Source, err.Error())
+		return field.Invalid(pPath.Child("source"), mount.Source, err.Error())
 	}
 	if errs := val.Validate(); len(errs) > 0 {
-		return field.Invalid(path.Child("source"), mount.Source, strings.Join(errs, ","))
+		return field.Invalid(pPath.Child("source"), mount.Source, strings.Join(errs, ","))
 	}
 	return nil
 }
@@ -477,6 +474,22 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		}
 	}
 
+	// Validate "resQuota": envName and process
+	for i, q := range r.Spec.EnvOverlay.ResQuotas {
+		resQuotaField := f.Child("resQuota").Index(i)
+		if !q.EnvName.IsValid() {
+			return field.Invalid(resQuotaField.Child("envName"), q.EnvName, "envName is invalid")
+		}
+		if !lo.Contains(r.getProcNames(), q.Process) {
+			return field.Invalid(resQuotaField.Child("process"), q.Process, "process name is invalid")
+		}
+		if !lo.Contains(AllowedResQuotaPlans, q.Plan) {
+			return field.NotSupported(
+				resQuotaField.Child("plan"), q.Plan, stringx.ToStrArray(AllowedResQuotaPlans),
+			)
+		}
+	}
+
 	// Validate "autoscaling": envName, process and policy
 	for i, scaling := range r.Spec.EnvOverlay.Autoscaling {
 		pField := f.Child("autoscaling").Index(i)
@@ -486,15 +499,8 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), scaling.Process) {
 			return field.Invalid(pField.Child("process"), scaling.Process, "process name is invalid")
 		}
-		// 添加的 envOverlay 需要配置扩缩容策略
-		if scaling.Policy == "" {
-			return field.Invalid(pField.Child("policy"), scaling.Policy, "autoscaling policy is required")
-		}
-		// 配置的扩缩容策略必须是受支持的
-		if !lo.Contains(AllowedScalingPolicies, scaling.Policy) {
-			return field.NotSupported(
-				pField.Child("policy"), scaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
-			)
+		if err := r.validateAutoscaling(pField, scaling.Spec); err != nil {
+			return err
 		}
 	}
 

@@ -18,7 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
@@ -27,6 +29,10 @@ logger = logging.getLogger(__name__)
 
 def make_service_name(app: WlApp, process_type: str) -> str:
     """Return the service name for each process"""
+    if app.type == WlAppType.CLOUD_NATIVE:
+        # pkg/controllers/resources/names/names.go
+        # return DNSSafeName(bkapp.GetName() + "--" + process)
+        return f"{generate_bkapp_name(app)}--{process_type}"
     return f"{app.region}-{app.scheduler_safe_name}-{process_type}"
 
 
@@ -37,6 +43,8 @@ def parse_process_type(app: WlApp, service_name: str) -> str:
     :param service_name: Name of Service resource.
     :raise ValueError: When given service_name is not parsable.
     """
+    if app.type == WlAppType.CLOUD_NATIVE:
+        return service_name.rsplit("--")[-1]
     parts = service_name.split(app.scheduler_safe_name)
     if len(parts) == 1:
         raise ValueError(f'Service name "{service_name}" invalid')

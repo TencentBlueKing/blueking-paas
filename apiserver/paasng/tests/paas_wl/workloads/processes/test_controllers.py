@@ -20,57 +20,103 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.workloads.processes.controllers import env_is_running, get_processes_status
-from paas_wl.workloads.processes.models import Instance, Process
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
+from paas_wl.resources.kube_res.base import ResourceField, ResourceList
+from paas_wl.workloads.processes.controllers import env_is_running, list_processes
+from paas_wl.workloads.processes.entities import Instance, Process, Runtime, Schedule
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
-from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.paas_wl.workloads.conftest import create_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+def make_process(wl_app: WlApp, process_type: str) -> Process:
+    process = Process(
+        app=wl_app,
+        name="should-set-by-mapper",
+        version=1,
+        replicas=1,
+        type=process_type,
+        schedule=Schedule(cluster_name="", tolerations=[], node_selector={}),
+        runtime=Runtime(
+            envs={},
+            image=process_type,
+            command=[],
+            args=[],
+        ),
+    )
+    process.name = AppResVerManager(wl_app).curr_version.deployment(process).name
+    return process
+
+
+@pytest.fixture
+def mock_reader():
+    class setter:
+        def __init__(self, list_processes, list_instances):
+            self.list_processes = list_processes
+            self.list_instances = list_instances
+
+        def set_processes(self, processes):
+            self.list_processes.return_value = ResourceList(
+                items=processes, metadata=ResourceField({"resourceVersion": "1"})
+            )
+
+        def set_instances(self, instances):
+            self.list_instances.return_value = ResourceList(
+                items=instances, metadata=ResourceField({"resourceVersion": "1"})
+            )
+
+    with mock.patch(
+        "paas_wl.workloads.processes.readers.ProcessReader.list_by_app_with_meta"
+    ) as list_processes, mock.patch(
+        "paas_wl.workloads.processes.readers.InstanceReader.list_by_app_with_meta"
+    ) as list_instances:
+        yield setter(list_processes, list_instances)
+
+
+def test_list_processes(bk_stag_env, wl_app, wl_release, mock_reader):
+    mock_reader.set_processes([make_process(wl_app, "web"), make_process(wl_app, "worker")])
+    mock_reader.set_instances(
+        [
+            Instance(app=wl_app, name="web", process_type="web"),
+            Instance(app=wl_app, name="worker", process_type="worker"),
+        ]
+    )
+
+    web_proc = make_process(wl_app, "web")
+    web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+    worker_proc = make_process(wl_app, "worker")
+    worker_proc.instances = [Instance(process_type='worker', app=wl_app, name='worker')]
+    assert list_processes(bk_stag_env).processes == [web_proc, worker_proc]
+
+
+def test_list_processes_boundary_case(bk_stag_env, wl_app, wl_release, mock_reader):
+    mock_reader.set_processes(
+        # worker 没有实例, 也会被忽略
+        # beat 未定义在 Procfile, 会被忽略
+        [
+            make_process(wl_app, "web"),
+            make_process(wl_app, "worker"),
+            make_process(wl_app, "beat"),
+        ]
+    )
+    mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
+
+    web_proc = make_process(wl_app, "web")
+    web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+    assert list_processes(bk_stag_env).processes == [web_proc]
+
+
+def test_list_processes_without_release(bk_stag_env, wl_app, wl_release, mock_reader):
+    """没有发布过的 WlApp，无法获取进程信息"""
+    mock_reader.set_processes([make_process(wl_app, "web")])
+    mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
+    wl_release.delete()
+    assert len(list_processes(bk_stag_env).processes) == 0
+
+
 class TestController:
-    def test_get_processes_status(self, wl_app, wl_release):
-        with mock.patch(
-            'paas_wl.workloads.processes.readers.ProcessReader.get_by_type',
-            new=lambda _self, app, process_type: Process.from_release(process_type, wl_release),
-        ), mock.patch(
-            'paas_wl.workloads.processes.readers.InstanceReader.list_by_process_type',
-            new=lambda _self, app, process_type: [Instance(process_type=process_type, app=wl_app, name=process_type)],
-        ):
-            web_proc = Process.from_release('web', wl_release)
-            web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
-            worker_proc = Process.from_release('worker', wl_release)
-            worker_proc.instances = [Instance(process_type='worker', app=wl_app, name='worker')]
-            assert get_processes_status(wl_app) == [web_proc, worker_proc]
-
-    def test_get_processes_status_without_release(self):
-        """没有发布过的 WlApp，无法获取进程信息"""
-        not_release_wl_app = create_wl_app()
-        assert len(get_processes_status(not_release_wl_app)) == 0
-
-    def test_get_processes_status_with_app_entity_not_found(self, wl_app, wl_release):
-        """任意进程获取状态失败，应该跳过，不影响获取其他进程状态"""
-
-        def fake_list_by_process_type(_self, app, process_type):
-            """测试用函数，若进程类型不是 web，抛出异常"""
-            if process_type != 'web':
-                raise AppEntityNotFound
-
-            return [Instance(process_type=process_type, app=wl_app, name=process_type)]
-
-        with mock.patch(
-            'paas_wl.workloads.processes.readers.ProcessReader.get_by_type',
-            new=lambda _self, app, process_type: Process.from_release(process_type, wl_release),
-        ), mock.patch(
-            'paas_wl.workloads.processes.readers.InstanceReader.list_by_process_type',
-            new=fake_list_by_process_type,
-        ):
-            web_proc = Process.from_release('web', wl_release)
-            web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
-            assert get_processes_status(wl_app) == [web_proc]
-
     def test_default_app_env_is_running(self, bk_app, bk_stag_env, bk_user, with_wl_apps):
         assert env_is_running(bk_stag_env) is False
         # Create a failed release at first, it should not affect the result

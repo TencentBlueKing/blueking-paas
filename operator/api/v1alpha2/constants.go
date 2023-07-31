@@ -55,8 +55,8 @@ const (
 	ModuleNameKey = "bkapp.paas.bk.tencent.com/module-name"
 	// EnvironmentKey 注解中存储当前部署环境的键名
 	EnvironmentKey = "bkapp.paas.bk.tencent.com/environment"
-	// EngineAppNameKey 注解中存储当前 EngineApp 名称的键名
-	EngineAppNameKey = "bkapp.paas.bk.tencent.com/engine-app-name"
+	// WlAppNameKey 注解中存储当前 EngineApp 名称的键名
+	WlAppNameKey = "bkapp.paas.bk.tencent.com/wl-app-name"
 
 	// LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.
 	// This behaviour was changed in "v1alpha2", but we still need to save the legacy images configs
@@ -90,6 +90,8 @@ const (
 	RevisionAnnoKey = "bkapp.paas.bk.tencent.com/revision"
 	// ResourceTypeKey 注解中存储资源类型的键名
 	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
+	// UseCNBAnnoKey 注解中声明镜像类型是否 cnb 的键名
+	UseCNBAnnoKey = "bkapp.paas.bk.tencent.com/use-cnb"
 	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"
 )

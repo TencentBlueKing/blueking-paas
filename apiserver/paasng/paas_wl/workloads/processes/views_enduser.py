@@ -22,40 +22,34 @@ import logging
 from typing import Dict, Optional
 
 from django.http import StreamingHttpResponse
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import MODULE_NAME_ANNO_KEY
-from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.external.client import get_local_plat_client
-from paas_wl.platform.system_api.serializers import ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.controllers import get_proc_mgr, judge_operation_frequent
+from paas_wl.workloads.processes.controllers import get_proc_ctl, judge_operation_frequent
 from paas_wl.workloads.processes.drf_serializers import (
-    CNativeProcSpecSLZ,
-    InstanceForDisplaySLZ,
-    ListProcessesSLZ,
-    ProcessSpecSLZ,
+    ListProcessesQuerySLZ,
+    ListWatcherRespSLZ,
     UpdateProcessSLZ,
-    WatchProcessesSLZ,
+    WatchEventSLZ,
+    WatchProcessesQuerySLZ,
 )
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
-from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.models import Instance, ProcessSpec
-from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
-from paas_wl.workloads.processes.watch import watch_process_events
+from paas_wl.workloads.processes.shim import ProcessManager
+from paas_wl.workloads.processes.watch import ProcInstByModuleEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.models import EngineApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.operations.constant import OperationType
@@ -125,7 +119,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         target_replicas: Optional[int] = None,
         scaling_config: Optional[AutoscalingConfig] = None,
     ):
-        ctl = get_proc_mgr(module_env)
+        ctl = get_proc_ctl(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
                 ctl.scale(process_type, autoscaling, target_replicas, scaling_config)
@@ -149,44 +143,75 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     # Use special negotiation class to accept "text/event-stream" content type
     content_negotiation_class = IgnoreClientContentNegotiation
 
+    @swagger_auto_schema(response_serializer=ListWatcherRespSLZ, query_serializer=ListProcessesQuerySLZ)
     def list(self, request, code, module_name, environment):
         """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
         env = self.get_env_via_path()
         wl_app = self.get_wl_app_via_path()
-        serializer = ListProcessesSLZ(data=request.query_params, context={'wl_app': wl_app})
-        serializer.is_valid(raise_exception=True)
+        slz = ListProcessesQuerySLZ(data=request.query_params, context={'wl_app': wl_app})
+        slz.is_valid(raise_exception=True)
+        release_id = slz.validated_data['release_id']
 
-        data = get_proc_insts(wl_app, release_id=serializer.validated_data['release_id'])
+        processes_status = ProcInstByModuleEnvListWatcher(env).list()
+        # Get extra infos
+        proc_extra_infos = []
+        for proc_spec in processes_status.processes:
+            proc_extra_infos.append(
+                {
+                    'type': proc_spec.type,
+                    'command': proc_spec.runtime.proc_command,
+                    'cluster_link': f'http://{get_service_dns_name(proc_spec.app, proc_spec.type)}',
+                }
+            )
 
-        # For default apps: Attach ProcessSpec related data
-        packages = ProcessSpec.objects.filter(engine_app=wl_app).select_related('plan')
-        data['process_packages'] = ProcessSpecSLZ(packages, many=True).data
+        insts = [inst for proc in processes_status.processes for inst in proc.instances]
+        # Filter instances if required
+        if release_id:
+            release = wl_app.release_set.get(pk=release_id)
+            insts = [inst for inst in insts if inst.version == release.version]
 
-        # For cloud-native apps: Attach ProcessSpec-like data which have fewer
-        # properties, it's useful for the client when implementing process actions
-        data['cnative_proc_specs'] = CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
-        return Response(data)
+        data = {
+            'processes': {
+                'items': processes_status.processes,
+                'extra_infos': proc_extra_infos,
+                'metadata': {'resource_version': processes_status.rv_proc},
+            },
+            'instances': {
+                'items': insts,
+                'metadata': {'resource_version': processes_status.rv_inst},
+            },
+        }
+        processes_specs = ProcessManager(env).list_processes_specs()
+        if wl_app.type == WlAppType.CLOUD_NATIVE:
+            data["cnative_proc_specs"] = processes_specs
+        else:
+            data["process_packages"] = processes_specs
+
+        return Response(ListWatcherRespSLZ(data).data)
 
     @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)
     def watch(self, request, code, module_name, environment):
         """实时监听进程与进程实例变动情况"""
+        env = self.get_env_via_path()
         wl_app = self.get_wl_app_via_path()
-        serializer = WatchProcessesSLZ(data=request.query_params)
+        serializer = WatchProcessesQuerySLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
         def resp():
             logger.debug('Start watching process, app=%s, params=%s', wl_app.name, dict(data))
-            stream = watch_process_events(
-                wl_app,
-                timeout_seconds=data['timeout_seconds'],
-                rv_proc=data['rv_proc'],
-                rv_inst=data['rv_inst'],
+            # 发送初始 ping 事件
+            # 避免 stream 无新事件时, 前端请求表现为服务端长时间挂起(无法查看响应头)
+            yield 'event: ping\n'
+            yield 'data: \n\n'
+
+            stream = ProcInstByModuleEnvListWatcher(env).watch(
+                timeout_seconds=data["timeout_seconds"], rv_proc=data["rv_proc"], rv_inst=data["rv_inst"]
             )
             for event in stream:
-                event = self.process_event(wl_app, event)
+                e = self.process_event(wl_app, event)
                 yield 'event: message\n'
-                yield 'data: {}\n\n'.format(json.dumps(event))
+                yield 'data: {}\n\n'.format(json.dumps(e))
 
             yield 'id: -1\n'
             yield 'event: EOF\n'
@@ -196,69 +221,6 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return StreamingHttpResponse(resp(), content_type='text/event-stream')
 
     @staticmethod
-    def process_event(wl_app: WlApp, event: Dict) -> Dict:
-        """Process event payload, modifies original event"""
-        payload = event['object']
-        # Replace instance events with fewer fields
-        if event['object_type'] == 'instance':
-            event['object'] = InstanceForDisplaySLZ(Instance(app=wl_app, **payload)).data
-        return event
-
-
-def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
-    """Build a structured data including processes and instances
-
-    :param release_id: if given, include instances created by given release only
-    :return: A dict with "processes" and "instances"
-    """
-    labels = {}
-    # 由于云原生应用对命名空间进行合并（仅保留 stag/prod 两个命名空间），因此查询进程信息，需要带上模块信息的 labels
-    if wl_app.type == WlAppType.CLOUD_NATIVE:
-        labels = {MODULE_NAME_ANNO_KEY: wl_app.module_name}
-
-    procs = process_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
-    procs_items = ProcSpecsSerializer(procs.items, many=True)
-
-    insts = instance_kmodel.list_by_app_with_meta(app=wl_app, labels=labels)
-    insts_items = InstanceForDisplaySLZ(insts.items, many=True)
-
-    # Filter instances if required
-    insts_data = insts_items.data
-    if release_id:
-        release = wl_app.release_set.get(pk=release_id)
-        insts_data = [inst for inst in insts_data if inst['version'] == str(release.version)]
-
-    # Get extra infos
-    proc_extra_infos = []
-    if wl_app.type == WlAppType.CLOUD_NATIVE:
-        for proc_spec in procs.items:
-            proc_extra_infos.append(
-                {
-                    'type': proc_spec.type,
-                    'cluster_link': f'http://{proc_spec.metadata.name}.{proc_spec.app.namespace}',  # type: ignore
-                }
-            )
-    else:
-        for proc_spec in procs.items:
-            release = wl_app.release_set.get(version=proc_spec.version)
-            proc_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.type, release=release)
-            proc_extra_infos.append(
-                {
-                    'type': proc_obj.type,
-                    # command 仅普通应用独有，用于页面进程信息展示，云原生应用暂不展示命令信息
-                    'command': proc_obj.runtime.proc_command,
-                    'cluster_link': 'http://' + get_service_dns_name(proc_obj.app, proc_obj.type),
-                }
-            )
-
-    return {
-        'processes': {
-            'items': procs_items.data,
-            'extra_infos': proc_extra_infos,
-            'metadata': {'resource_version': procs.get_resource_version()},
-        },
-        'instances': {
-            'items': insts_data,
-            'metadata': {'resource_version': insts.get_resource_version()},
-        },
-    }
+    def process_event(wl_app: WlApp, event: WatchEvent) -> Dict:
+        """Process event payload to Dict of primitive datatypes."""
+        return WatchEventSLZ(event, context={"wl_app": wl_app}).data

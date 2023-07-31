@@ -16,40 +16,70 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, cast
+from typing import Dict, List, Optional, cast
 
+from django.core.exceptions import ObjectDoesNotExist
+from kubernetes.dynamic import ResourceInstance
+
+from paas_wl.cnative.specs.constants import (
+    BKAPP_CODE_ANNO_KEY,
+    ENVIRONMENT_ANNO_KEY,
+    MODULE_NAME_ANNO_KEY,
+    RESOURCE_TYPE_KEY,
+    WLAPP_NAME_ANNO_KEY,
+)
 from paas_wl.platform.applications.constants import WlAppType
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
+from paas_wl.resources.base.exceptions import NotAppScopedResource
 from paas_wl.resources.base.kres import KPod
-from paas_wl.resources.kube_res.base import AppEntityReader, ResourceList
+from paas_wl.resources.kube_res.base import AppEntityReader, NamespaceScopedReader, ResourceList
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
+from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.models import Instance, Process
-
-if TYPE_CHECKING:
-    from paas_wl.platform.applications.models import WlApp
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 class ProcessAPIAdapter:
     """Data adapter for Process"""
 
     @staticmethod
-    def get_kube_pod_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
-        """Return pod selector dict, useful for construct Deployment body and related Service"""
+    def process_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
+        """Return labels selector dict, useful for construct Deployment body and related Service"""
         if app.type == WlAppType.CLOUD_NATIVE:
-            return {PROCESS_NAME_KEY: process_type}
+            return {MODULE_NAME_ANNO_KEY: app.module_name, PROCESS_NAME_KEY: process_type}
 
         proc = AppProcessManager(app).assemble_process(process_type)
         return {"pod_selector": AppResVerManager(app).curr_version.deployment(proc).pod_selector}
+
+    @staticmethod
+    def app_selector(app: 'WlApp') -> Dict[str, str]:
+        """Return labels selector dict, useful for filter Process/Instance from k8s"""
+        # TODO: 使用 resource-type/category 来过滤
+        if app.type == WlAppType.CLOUD_NATIVE:
+            return {MODULE_NAME_ANNO_KEY: app.module_name}
+        # return {"module_name": app.module_name}
+        return {}
+
+    @staticmethod
+    def type_selector() -> Dict[str, str]:
+        """Return labels selector dict, useful for filter Process/Instance from k8s"""
+        return {RESOURCE_TYPE_KEY: "process"}
 
 
 class ProcessReader(AppEntityReader[Process]):
     """Manager for ProcSpecs"""
 
+    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Process]:
+        labels = labels or {}
+        extra_labels = ProcessAPIAdapter.app_selector(app)
+        labels.update(extra_labels)
+        return super().list_by_app_with_meta(app, labels)
+
     def get_by_type(self, app: 'WlApp', type: str) -> 'Process':
         """Get object by process type"""
-        labels = ProcessAPIAdapter.get_kube_pod_selector(app, type)
+        labels = ProcessAPIAdapter.process_selector(app, type)
         objs = self.list_by_app(app, labels=labels)
         if objs:
             return objs[0]
@@ -64,18 +94,19 @@ class InstanceReader(AppEntityReader[Instance]):
 
     def list_by_process_type(self, app: 'WlApp', process_type: str) -> List[Instance]:
         """List instances by process type"""
-        labels = ProcessAPIAdapter.get_kube_pod_selector(app, process_type)
+        labels = ProcessAPIAdapter.process_selector(app, process_type)
         return self.list_by_app(app, labels=labels)
 
     def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
-        """Overwrite original method to remove slugbuilder pods"""
-        resources = super().list_by_app_with_meta(app, labels=labels)
-        if app.type == WlAppType.CLOUD_NATIVE:
-            resources.items = list(self.filter_cnative_instances(resources.items))
-        else:
+        labels = labels or {}
+        extra_labels = ProcessAPIAdapter.app_selector(app)
+        labels.update(extra_labels)
+        res = super().list_by_app_with_meta(app, labels)
+        if app.type == WlAppType.DEFAULT:
             # Ignore instances with no valid "release_version" label
-            resources.items = [r for r in resources.items if r.version > 0]
-        return resources
+            # TODO: 云原生应用也需要添加 version 相关的字段
+            res.items = [i for i in res.items if i.version > 0]
+        return res
 
     def get_logs(self, obj: Instance, tail_lines: Optional[int] = None, **kwargs):
         """Get logs from kubernetes api"""
@@ -89,15 +120,63 @@ class InstanceReader(AppEntityReader[Instance]):
                 **kwargs,
             )
 
-    @staticmethod
-    def filter_cnative_instances(items: Iterable[Instance]) -> Iterable[Instance]:
-        """Filter instances for cloud-native applications, remove hooks and other
-        unrelated items.
-        """
-        for inst in items:
-            if inst.name.startswith('pre-rel'):
-                continue
-            yield inst
-
 
 instance_kmodel = InstanceReader(Instance)
+
+
+def retrieve_associated_wl_app(labels: Dict[str, str]) -> WlApp:
+    if wl_app_name := labels.get(WLAPP_NAME_ANNO_KEY):
+        try:
+            return WlApp.objects.get(name=wl_app_name)
+        except ObjectDoesNotExist:
+            raise NotAppScopedResource
+
+    # 兜底, 根据 app code, module name, environment 查询 wl_app
+    app_code = labels.get(BKAPP_CODE_ANNO_KEY)
+    module_name = labels.get(MODULE_NAME_ANNO_KEY)
+    environment = labels.get(ENVIRONMENT_ANNO_KEY)
+
+    if not app_code or not module_name or not environment:
+        raise NotAppScopedResource
+    try:
+        return ModuleEnvironment.objects.get(
+            application__code=app_code, module__name=module_name, environment=environment
+        ).wl_app
+    except ObjectDoesNotExist:
+        raise NotAppScopedResource
+
+
+class ProcessNamespaceScopedReader(NamespaceScopedReader[Process]):
+    entity_type = Process
+
+    def list_by_ns_with_mdata(
+        self, cluster_name: str, namespace: str, labels: Optional[Dict] = None
+    ) -> ResourceList[Process]:
+        labels = labels or {}
+        extra_labels = ProcessAPIAdapter.type_selector()
+        labels.update(extra_labels)
+        return super().list_by_ns_with_mdata(cluster_name, namespace, labels)
+
+    def retrieve_associated_wl_app(self, kube_data: ResourceInstance) -> WlApp:
+        labels: Dict[str, str] = kube_data.metadata.labels or {}
+        return retrieve_associated_wl_app(labels)
+
+
+class InstanceNamespaceScopeReader(NamespaceScopedReader[Instance]):
+    entity_type = Instance
+
+    def list_by_ns_with_mdata(
+        self, cluster_name: str, namespace: str, labels: Optional[Dict] = None
+    ) -> ResourceList[Instance]:
+        labels = labels or {}
+        extra_labels = ProcessAPIAdapter.type_selector()
+        labels.update(extra_labels)
+        return super().list_by_ns_with_mdata(cluster_name, namespace, labels)
+
+    def retrieve_associated_wl_app(self, kube_data: ResourceInstance) -> WlApp:
+        labels: Dict[str, str] = kube_data.metadata.labels or {}
+        return retrieve_associated_wl_app(labels)
+
+
+ns_process_kmodel = ProcessNamespaceScopedReader()
+ns_instance_kmodel = InstanceNamespaceScopeReader()

@@ -51,8 +51,9 @@ var _ = Describe("Test HookReconciler", func() {
 				APIVersion: "paas.bk.tencent.com/v1alpha2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-app",
-				Namespace: "default",
+				Name:        "fake-app",
+				Namespace:   "default",
+				Annotations: map[string]string{},
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{

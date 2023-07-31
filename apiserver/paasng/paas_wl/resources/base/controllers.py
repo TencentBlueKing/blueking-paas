@@ -49,7 +49,7 @@ from paas_wl.utils.kubestatus import (
     parse_pod,
 )
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.workloads.processes.models import Process
+from paas_wl.workloads.processes.entities import Process
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.base import EnhancedApiClient

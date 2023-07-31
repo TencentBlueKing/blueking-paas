@@ -227,7 +227,7 @@ var _ = Describe("test webhook.Validator", func() {
 	Context("Test process autoscaling", func() {
 		It("Invalid minReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: paasv1alpha2.ScalingPolicyDefault,
+				MinReplicas: 0, MaxReplicas: 5, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("minReplicas must be greater than 0"))
@@ -235,7 +235,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("Invalid maxReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: paasv1alpha2.ScalingPolicyDefault,
+				MinReplicas: 1, MaxReplicas: 6, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("at most support 5 replicas"))
@@ -243,7 +243,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("maxReplicas < minReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: paasv1alpha2.ScalingPolicyDefault,
+				MinReplicas: 3, MaxReplicas: 2, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("maxReplicas must be greater than or equal to minReplicas"))
@@ -251,7 +251,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("policy required", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "",
+				MinReplicas: 1, MaxReplicas: 3, Policy: "",
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("autoscaling policy is required"))
@@ -259,17 +259,10 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("policy must supported", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
+				MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
-		})
-
-		It("disable autoscaling cause skip validate", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: "fake",
-			}
-			Expect(bkapp.ValidateCreate()).To(BeNil())
 		})
 	})
 
@@ -453,11 +446,22 @@ var _ = Describe("test webhook.Validator", func() {
 				Replicas: []paasv1alpha2.ReplicasOverlay{
 					{EnvName: "stag", Process: "web", Count: 1},
 				},
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "prod", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+				},
 				EnvVariables: []paasv1alpha2.EnvVarOverlay{
 					{EnvName: "stag", Name: "foo", Value: "foo-value"},
 				},
 				Autoscaling: []paasv1alpha2.AutoscalingOverlay{
-					{EnvName: "stag", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
+					{
+						EnvName: "stag",
+						Process: "web",
+						Spec: paasv1alpha2.AutoscalingSpec{
+							MinReplicas: 2,
+							MaxReplicas: 5,
+							Policy:      paasv1alpha2.ScalingPolicyDefault,
+						},
+					},
 				},
 			}
 
@@ -485,6 +489,27 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("count can't be greater than "))
 		})
+		It("[resQuota] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
+				{EnvName: "invalid-env", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[resQuota] invalid process name", func() {
+			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
+				{EnvName: "stag", Process: "invalid-proc", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
+		})
+		It("[resQuota] invalid resource quota plan", func() {
+			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
+				{EnvName: "stag", Process: "web", Plan: "invalid-plan"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"1C512M\""))
+		})
 		It("[envVariables] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{
 				{EnvName: "invalid-env", Name: "foo", Value: "bar"},
@@ -494,21 +519,43 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 		It("[autoscaling] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
-				{EnvName: "invalid-env", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
+				{
+					EnvName: "invalid-env",
+					Process: "web",
+					Spec: paasv1alpha2.AutoscalingSpec{
+						MinReplicas: 2,
+						MaxReplicas: 5,
+						Policy:      paasv1alpha2.ScalingPolicyDefault,
+					},
+				},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
 		It("[autoscaling] invalid process name", func() {
 			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
-				{EnvName: "stag", Process: "invalid-proc", Policy: paasv1alpha2.ScalingPolicyDefault},
+				{
+					EnvName: "stag",
+					Process: "invalid-proc",
+					Spec: paasv1alpha2.AutoscalingSpec{
+						MinReplicas: 2,
+						MaxReplicas: 5,
+						Policy:      paasv1alpha2.ScalingPolicyDefault,
+					},
+				},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
 		})
 		It("[autoscaling] invalid policy", func() {
 			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
-				{EnvName: "stag", Process: "web", Policy: "fake"},
+				{
+					EnvName: "stag",
+					Process: "web",
+					Spec: paasv1alpha2.AutoscalingSpec{
+						MinReplicas: 2, MaxReplicas: 5, Policy: "fake",
+					},
+				},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))

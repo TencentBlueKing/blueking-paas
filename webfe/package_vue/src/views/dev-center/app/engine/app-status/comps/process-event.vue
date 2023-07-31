@@ -50,75 +50,75 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 export default {
-    mixins: [appBaseMixin],
-    props: {
-        environment: {
-            type: String,
-            default: ''
-        },
-        events: {
-            type: Array,
-            default: () => []
-        }
+  mixins: [appBaseMixin],
+  props: {
+    environment: {
+      type: String,
+      default: '',
     },
-    data () {
-        return {
-            isLoading: true,
-            pagination: {
-                current: 1,
-                count: 0,
-                limit: 10
-            },
-            isPageLoading: false,
-            currentPageData: [],
-            allEvents: []
-        };
+    events: {
+      type: Array,
+      default: () => [],
     },
-    watch: {
-        events: {
-            handler (newEvents) {
-                this.allEvents = newEvents;
-                this.pagination.count = newEvents.length;
-                this.getCurrentPageList();
-            },
-            deep: true
-        }
+  },
+  data() {
+    return {
+      isLoading: true,
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      isPageLoading: false,
+      currentPageData: [],
+      allEvents: [],
+    };
+  },
+  watch: {
+    events: {
+      handler(newEvents) {
+        this.allEvents = newEvents;
+        this.pagination.count = newEvents.length;
+        this.getCurrentPageList();
+      },
+      deep: true,
     },
-    created () {
-        this.init();
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.allEvents = this.events;
+      this.getCurrentPageList();
+      this.pagination.count = this.allEvents.length;
+      setTimeout(() => {
+        this.isLoading = false;
+      }, 500);
     },
-    methods: {
-        init () {
-            this.allEvents = this.events;
-            this.getCurrentPageList();
-            this.pagination.count = this.allEvents.length;
-            setTimeout(() => {
-                this.isLoading = false;
-            }, 500);
-        },
-        handlePageLimitChange (limit) {
-            this.pagination.limit = limit;
-            this.pagination.current = 1;
-            this.getCurrentPageList();
-        },
-        handlePageChange (newPage) {
-            this.pagination.current = newPage;
-            this.getCurrentPageList();
-        },
-        // 分页
-        getCurrentPageList () {
-            this.isPageLoading = true;
-            this.currentPageData = this.allEvents.slice((this.pagination.current - 1) * this.pagination.limit, this.pagination.current * this.pagination.limit);
-            setTimeout(() => {
-                this.isPageLoading = false;
-            }, 300);
-        }
-    }
+    handlePageLimitChange(limit) {
+      this.pagination.limit = limit;
+      this.pagination.current = 1;
+      this.getCurrentPageList();
+    },
+    handlePageChange(newPage) {
+      this.pagination.current = newPage;
+      this.getCurrentPageList();
+    },
+    // 分页
+    getCurrentPageList() {
+      this.isPageLoading = true;
+      this.currentPageData = this.allEvents.slice((this.pagination.current - 1) * this.pagination.limit, this.pagination.current * this.pagination.limit);
+      setTimeout(() => {
+        this.isPageLoading = false;
+      }, 300);
+    },
+  },
 };
 </script>
 
 <style lang="scss" scoped>
 .event-container {
-    padding: 0 20px 20px;
+    width: calc(100% - 10px);
 }
 </style>

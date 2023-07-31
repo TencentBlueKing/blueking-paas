@@ -557,7 +557,7 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: 8080,
-        autoscaling: { minReplicas: '', maxReplicas: '' },
+        autoscaling: { minReplicas: '', maxReplicas: '', policy: 'default' },
       },
       bkappAnnotations: {},
       command: [],
@@ -695,7 +695,7 @@ export default {
           this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
-          console.log('this.formData', this.formData);
+          this.isAutoscaling = !!this.formData.autoscaling;
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
         this.panels = _.cloneDeep(this.processData);
@@ -704,7 +704,6 @@ export default {
     },
     formData: {
       handler(val) {
-        console.log('val11', val, this.localCloudAppData.spec);
         if (this.localCloudAppData.spec) {
           val.name = this.processNameActive;
           val.replicas = val.replicas && Number(val.replicas);
@@ -716,14 +715,10 @@ export default {
           const processConfig = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive);
           this.envName = processConfig ? processConfig.envName : 'stag';
 
-          // 如果没有自动调节相关数据结构 则前端需要做兼容处理
-          this.isAutoscaling = !!val.autoscaling;
-
           console.log('val', val);
 
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
           this.handlerExtraConfig();   // 处理额外的配置
-          console.log('this.localCloudAppData11', this.localCloudAppData);
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -773,8 +768,9 @@ export default {
       deep: true,
     },
 
-    // 需要做的事，1.如果是手动调节也需要添加formData.autoscaling 2. 需要同步修改envOverlay中的值
-
+    envName() {
+      this.handlerExtraConfig();   // 处理额外的配置
+    },
 
     'formData.autoscaling.maxReplicas'(val) {
       if (val && val >= this.formData.autoscaling.minReplicas) {
@@ -791,7 +787,7 @@ export default {
     this.getImageCredentialList();
   },
   mounted() {
-    this.$refs.mirrorUrl?.focus();
+    // this.$refs.mirrorUrl?.focus();
     setTimeout(() => {
       this.isAutoscaling = !!this.formData.autoscaling;
     }, 1000);
@@ -1029,6 +1025,7 @@ export default {
     handleBtnGroupClick(v, i) {
       // 选中的进程信息
       this.formData = this.localCloudAppData.spec.processes[i];
+      this.isAutoscaling = !!this.formData.autoscaling;
       this.localProcessNameActive = v;    // 点击的tab名，编辑数据时需要用到
       this.processNameActive = v;
       this.btnIndex = i;
@@ -1048,11 +1045,6 @@ export default {
     handleRadioChange(v) {
       this.$refs.formEnv?.clearError();
       if (v && !this.formData.autoscaling) {
-        // this.formData.autoscaling = {
-        //   maxReplicas: '',
-        //   minReplicas: '',
-        //   policy: 'default',
-        // };
         const initAutoscaling = {
           maxReplicas: '',
           minReplicas: '',
@@ -1413,7 +1405,7 @@ export default {
         align-items: center;
          .item-close-icon{
             position: absolute;
-            top: -1px;
+            top: 5px;
             right: 0px;
             font-size: 20px;
             color: #ea3636;

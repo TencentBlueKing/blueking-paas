@@ -28,12 +28,8 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.utils.views import IgnoreClientContentNegotiation
-from paas_wl.workloads.processes.drf_serializers import (
-    ListWatcherRespSLZ,
-    UniversalWatchEventSLZ,
-    WatchProcessesQuerySLZ,
-)
-from paas_wl.workloads.processes.watch import ProcessInstanceListWatcherNG, WatchEvent
+from paas_wl.workloads.processes.drf_serializers import ListWatcherRespSLZ, WatchEventSLZ, WatchProcessesQuerySLZ
+from paas_wl.workloads.processes.watch import ProcInstByEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -54,7 +50,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
         application = self.get_application()
 
-        processes_status = ProcessInstanceListWatcherNG(application, environment).list()
+        processes_status = ProcInstByEnvListWatcher(application, environment).list()
         # Get extra infos
         proc_extra_infos = []
         for proc_spec in processes_status.processes:
@@ -82,7 +78,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(ListWatcherRespSLZ(data).data)
 
     @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)
-    def watch(self, request, code, module_name, environment):
+    def watch(self, request, code, environment):
         """实时监听进程与进程实例变动情况"""
         application = self.get_application()
         serializer = WatchProcessesQuerySLZ(data=request.query_params)
@@ -101,7 +97,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             yield 'event: ping\n'
             yield 'data: \n\n'
 
-            stream = ProcessInstanceListWatcherNG(application, environment).watch(
+            stream = ProcInstByEnvListWatcher(application, environment).watch(
                 timeout_seconds=data["timeout_seconds"], rv_proc=data["rv_proc"], rv_inst=data["rv_inst"]
             )
             for event in stream:
@@ -121,4 +117,4 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def process_event(event: WatchEvent) -> Dict:
         """Process event payload to Dict of primitive datatypes."""
-        return UniversalWatchEventSLZ(event).data
+        return WatchEventSLZ(event).data

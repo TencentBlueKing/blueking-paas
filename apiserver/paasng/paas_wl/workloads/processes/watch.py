@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 _EVENT_TYPE = WatchEvent[Union[Process, Instance]]
 
 
-class ProcessInstanceListWatcherNG:
+class ProcInstByEnvListWatcher:
     """ListWatcher for Process(Deployment) & Instance(Pod) of all modules in given environment"""
 
     def __init__(self, application, environment: str):
@@ -112,7 +112,7 @@ class ProcessInstanceListWatcherNG:
         parallel_gen.close()
 
 
-class ProcessInstanceListWatcher:
+class ProcInstByModuleEnvListWatcher:
     """ListWatcher for Process(Deployment) & Instance(Pod) in given ModuleEnvironment"""
 
     def __init__(self, env: ModuleEnvironment):
@@ -196,12 +196,11 @@ class ParallelChainedGenerator:
                 if value.type == 'ERROR':
                     logger.warning('Watch resource error: %s', value.error_message)
                 self.queue.put(value)
-        except StopIteration:
-            logger.debug("generator stopped")
         except Exception as e:
             logger.exception('Error while consuming generator: %s', str(e))
         finally:
             # Always close connection in every thread to avoid leaking of database connections
+            logger.debug("generator stopped")
             connection.close()
 
     def iter_results(self) -> Generator[WatchEvent[Any], None, None]:

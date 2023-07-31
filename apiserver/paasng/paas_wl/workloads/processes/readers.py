@@ -47,7 +47,6 @@ class ProcessAPIAdapter:
     @staticmethod
     def process_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
         """Return labels selector dict, useful for construct Deployment body and related Service"""
-        # TODO: 由于云原生应用对命名空间进行合并（仅保留 stag/prod 两个命名空间），因此查询进程信息，需要带上模块信息的 labels
         if app.type == WlAppType.CLOUD_NATIVE:
             return {MODULE_NAME_ANNO_KEY: app.module_name, PROCESS_NAME_KEY: process_type}
 

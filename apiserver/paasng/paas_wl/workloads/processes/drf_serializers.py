@@ -128,7 +128,7 @@ class ErrorEventSLZ(serializers.Serializer):
     error_message = serializers.CharField()
 
 
-class UniversalWatchEventSLZ(serializers.Serializer):
+class WatchEventSLZ(serializers.Serializer):
     """SLZ for ProcessInstanceListWatcher.watch"""
 
     type = serializers.CharField()
@@ -141,7 +141,6 @@ class UniversalWatchEventSLZ(serializers.Serializer):
         if instance.type == 'ERROR':
             data["object_type"] = "error"
             data["object"] = ErrorEventSLZ(instance).data
-        assert instance.res_object is not None
         if isinstance(instance.res_object, Process):
             data["object_type"] = "process"
             data["object"] = ProcessForDisplaySLZ(instance.res_object).data

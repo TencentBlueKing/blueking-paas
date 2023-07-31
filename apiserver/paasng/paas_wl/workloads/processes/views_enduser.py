@@ -41,13 +41,13 @@ from paas_wl.workloads.processes.controllers import get_proc_ctl, judge_operatio
 from paas_wl.workloads.processes.drf_serializers import (
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
-    UniversalWatchEventSLZ,
     UpdateProcessSLZ,
+    WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.shim import ProcessManager
-from paas_wl.workloads.processes.watch import ProcessInstanceListWatcher, WatchEvent
+from paas_wl.workloads.processes.watch import ProcInstByModuleEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -152,7 +152,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         release_id = slz.validated_data['release_id']
 
-        processes_status = ProcessInstanceListWatcher(env).list()
+        processes_status = ProcInstByModuleEnvListWatcher(env).list()
         # Get extra infos
         proc_extra_infos = []
         for proc_spec in processes_status.processes:
@@ -205,7 +205,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             yield 'event: ping\n'
             yield 'data: \n\n'
 
-            stream = ProcessInstanceListWatcher(env).watch(
+            stream = ProcInstByModuleEnvListWatcher(env).watch(
                 timeout_seconds=data["timeout_seconds"], rv_proc=data["rv_proc"], rv_inst=data["rv_inst"]
             )
             for event in stream:
@@ -223,4 +223,4 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def process_event(wl_app: WlApp, event: WatchEvent) -> Dict:
         """Process event payload to Dict of primitive datatypes."""
-        return UniversalWatchEventSLZ(event, context={"wl_app": wl_app}).data
+        return WatchEventSLZ(event, context={"wl_app": wl_app}).data

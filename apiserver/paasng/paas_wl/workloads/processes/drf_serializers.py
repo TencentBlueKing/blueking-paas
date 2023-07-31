@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 import arrow
@@ -28,10 +28,11 @@ from rest_framework.serializers import ValidationError
 
 from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
+from paas_wl.resources.kube_res.base import WatchEvent
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.entities import Instance
+from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.models import ProcessSpec
 
 
@@ -42,6 +43,9 @@ class HumanizeDateTimeField(serializers.DateTimeField):
 
 class ProcessForDisplaySLZ(serializers.Serializer):
     """Common serializer for representing Process object"""
+
+    # Warning: 这个字段需要查询数据库
+    module_name = serializers.CharField(source="app.module_name")
 
     name = serializers.CharField(source='metadata.name')
     type = serializers.CharField()
@@ -54,6 +58,9 @@ class ProcessForDisplaySLZ(serializers.Serializer):
 class InstanceForDisplaySLZ(serializers.Serializer):
     """Common serializer for representing Instance object, removes some extra
     large and sensitive fields such as "envs" """
+
+    # Warning: 这个字段需要查询数据库
+    module_name = serializers.CharField(source="app.module_name")
 
     name = serializers.CharField(read_only=True)
     process_type = serializers.CharField(read_only=True)
@@ -110,6 +117,39 @@ class ListWatcherRespSLZ(serializers.Serializer):
 
     processes = ProcessListSLZ()
     instances = InstanceListSLZ()
+    cnative_proc_specs = serializers.ListField(required=False, child=serializers.DictField())
+    process_packages = serializers.ListField(required=False, child=serializers.DictField())
+
+
+class ErrorEventSLZ(serializers.Serializer):
+    """SLZ for WatchEvent which type == 'ERROR'"""
+
+    type = serializers.CharField()
+    error_message = serializers.CharField()
+
+
+class WatchEventSLZ(serializers.Serializer):
+    """SLZ for ProcessInstanceListWatcher.watch"""
+
+    type = serializers.CharField()
+    object_type = serializers.CharField()
+    object = serializers.DictField()
+    resource_version = serializers.CharField(allow_null=True, help_text="仅 object_type != 'error' 时有该字段")
+
+    def to_representation(self, instance: WatchEvent):
+        data: Dict[str, Any] = {"type": instance.type}
+        if instance.type == 'ERROR':
+            data["object_type"] = "error"
+            data["object"] = ErrorEventSLZ(instance).data
+        if isinstance(instance.res_object, Process):
+            data["object_type"] = "process"
+            data["object"] = ProcessForDisplaySLZ(instance.res_object).data
+            data["resource_version"] = instance.res_object.get_resource_version()
+        elif isinstance(instance.res_object, Instance):
+            data["object_type"] = "instance"
+            data["object"] = InstanceForDisplaySLZ(instance.res_object).data
+            data["resource_version"] = instance.res_object.get_resource_version()
+        return super().to_representation(data)
 
 
 class ProcessSpecSLZ(serializers.Serializer):

@@ -16,25 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
+from paasng.utils.basic import make_app_pattern, re_path
 
-from . import views_enduser
+from . import views, views_enduser
 
 urlpatterns = [
-    # TODO: replace `api.processes` with `api.processes.update`
     re_path(
-        make_app_pattern_with_applications_prefix(r'/processes/$'),
+        make_app_pattern(r'/processes/$'),
         views_enduser.ProcessesViewSet.as_view({'post': 'update'}),
-        name='api.processes',
+        name='api.processes.update',
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/processes/list/$'),
-        views_enduser.ListAndWatchProcsViewSet.as_view({'get': 'list'}),
-        name='api.list_processes',
+        r'api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/list/$',
+        views.ListAndWatchProcsViewSet.as_view({'get': 'list'}),
+        name='api.list_processes.namespace_scoped',
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/processes/watch/$'),
-        views_enduser.ListAndWatchProcsViewSet.as_view({'get': 'watch'}),
-        name='api.watch_processes',
+        r'api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/watch/$',
+        views.ListAndWatchProcsViewSet.as_view({'get': 'watch'}),
+        name='api.watch_processes.namespace_scoped',
     ),
 ]

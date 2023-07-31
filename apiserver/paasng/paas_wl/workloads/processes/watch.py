@@ -19,29 +19,101 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import queue
 import threading
-from dataclasses import asdict, dataclass
-from typing import Any, ClassVar, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import Any, Generator, List, Optional, Union
 
 from django.db import connection
 from django.utils.functional import cached_property
-from rest_framework.serializers import Serializer
 
-from paas_wl.networking.ingress.utils import get_service_dns_name
+from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.resources.kube_res.base import AppEntity, WatchEvent
-from paas_wl.resources.kube_res.exceptions import WatchKubeResourceError
-from paas_wl.workloads.processes.controllers import list_processes
-from paas_wl.workloads.processes.drf_serializers import InstanceForDisplaySLZ, ListWatcherRespSLZ, ProcessForDisplaySLZ
+from paas_wl.resources.kube_res.base import WatchEvent
+from paas_wl.workloads.processes.controllers import ProcessesInfo, list_ns_processes, list_processes
 from paas_wl.workloads.processes.entities import Instance, Process
-from paas_wl.workloads.processes.readers import ProcessAPIAdapter, instance_kmodel, process_kmodel
+from paas_wl.workloads.processes.readers import (
+    ProcessAPIAdapter,
+    instance_kmodel,
+    ns_instance_kmodel,
+    ns_process_kmodel,
+    process_kmodel,
+)
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 _EVENT_TYPE = WatchEvent[Union[Process, Instance]]
 
 
-class ProcessInstanceListWatcher:
-    """ListWatcher for Process(Deployment) & Instance(Pod) in given env"""
+class ProcInstByEnvListWatcher:
+    """ListWatcher for Process(Deployment) & Instance(Pod) of all modules in given environment"""
+
+    def __init__(self, application, environment: str):
+        self.application = application
+        self.environment = environment
+        self.module_envs = application.envs.filter(environment=environment)
+
+    @cached_property
+    def cluster_name(self):
+        cluster_name = None
+        module_cluster_names = {}
+        for env in self.module_envs:
+            cluster_name = module_cluster_names[env.module_id] = EnvClusterService(env).get_cluster_name()
+        if len(module_cluster_names) != 1:
+            # TODO: 讨论解决方案, 如何解决不同集群/命名空间有不同的 rv 的问题
+            raise RuntimeError("当前应用不支持 list-watch 进程信息")
+        return cluster_name
+
+    @cached_property
+    def namespace(self):
+        namespace = None
+        module_namespaces = {}
+        for env in self.module_envs:  # type: ModuleEnvironment
+            namespace = module_namespaces[env.module_id] = env.wl_app.namespace
+        if len(module_namespaces) != 1:
+            # TODO: 讨论解决方案, 如何解决不同集群/命名空间有不同的 rv 的问题
+            raise RuntimeError("当前应用不支持 list-watch 进程信息")
+        return namespace
+
+    def list(self) -> ProcessesInfo:
+        return list_ns_processes(self.cluster_name, self.namespace)
+
+    def watch(
+        self, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
+    ) -> Generator['WatchEvent', None, None]:
+        """Create a watch stream to track app's all process related changes
+
+        :param timeout_seconds: timeout seconds for generated event stream, recommended value: less than 120 seconds
+        :param rv_proc: if given, only events with greater resource_version will be returned
+        :param rv_inst: same as rv_proc, but for ProcInst type
+        """
+
+        event_gens: List = [
+            ns_process_kmodel.watch_by_ns(
+                cluster_name=self.cluster_name,
+                namespace=self.namespace,
+                resource_version=rv_proc,
+                timeout_seconds=timeout_seconds,
+            ),
+            ns_instance_kmodel.watch_by_ns(
+                cluster_name=self.cluster_name,
+                namespace=self.namespace,
+                resource_version=rv_inst,
+                timeout_seconds=timeout_seconds,
+            ),
+        ]
+        # NOTE: Using of ThreadPoolExecutor/Multi-Threading may cause apiserver connections leak because every
+        # `procinst_kmodel.watch_by_app` call will create a brand new kubernetes client object which holding a urllib3
+        # connection pool manager.
+        #
+        # Use with caution.
+        parallel_gen = ParallelChainedGenerator(event_gens)
+        parallel_gen.start()
+        for event in parallel_gen.iter_results():
+            yield event
+        parallel_gen.close()
+
+
+class ProcInstByModuleEnvListWatcher:
+    """ListWatcher for Process(Deployment) & Instance(Pod) in given ModuleEnvironment"""
 
     def __init__(self, env: ModuleEnvironment):
         self.env = env
@@ -50,65 +122,37 @@ class ProcessInstanceListWatcher:
     def wl_app(self) -> WlApp:
         return self.env.wl_app
 
-    def list(self, release_id: Optional[str] = None) -> Dict:
+    def list(self) -> ProcessesInfo:
         """Build a structured data including processes and instances
 
-        :param release_id: if given, include instances created by given release only
         :return: A dict with "processes" and "instances"
         """
-        # TODO: 支持根据命名空间 list
-        processes_status = list_processes(self.env)
-
-        # Get extra infos
-        proc_extra_infos = []
-        for proc_spec in processes_status.processes:
-            proc_extra_infos.append(
-                {
-                    'type': proc_spec.type,
-                    # TODO: 云原生应用添加 proc_command 字段
-                    'command': proc_spec.runtime.proc_command,
-                    'cluster_link': f'http://{get_service_dns_name(proc_spec.app, proc_spec.type)}',
-                }
+        if self.wl_app.type == WlAppType.CLOUD_NATIVE:
+            return list_ns_processes(
+                cluster_name=EnvClusterService(self.env).get_cluster_name(), namespace=self.wl_app.namespace
             )
-
-        insts = [inst for proc in processes_status.processes for inst in proc.instances]
-        # Filter instances if required
-        if release_id:
-            release = self.wl_app.release_set.get(pk=release_id)
-            insts = [inst for inst in insts if inst.version == release.version]
-
-        result = {
-            'processes': {
-                'items': processes_status.processes,
-                'extra_infos': proc_extra_infos,
-                'metadata': {'resource_version': processes_status.processes_resource_version},
-            },
-            'instances': {
-                'items': insts,
-                'metadata': {'resource_version': processes_status.instances_resource_version},
-            },
-        }
-        return ListWatcherRespSLZ(result).data
+        # namespace scoped reader 需要云原生应用新增的 labels 才能使用, 否则会查询不到进程(需要重新部署才会有新的 labels)
+        # 因此普通应用仍然使用 wl_app scoped reader 查询进程信息
+        return list_processes(self.env)
 
     def watch(
         self, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
-    ) -> Generator['ProcWatchEvent', None, None]:
+    ) -> Generator['WatchEvent', None, None]:
         """Create a watch stream to track app's all process related changes
 
         :param timeout_seconds: timeout seconds for generated event stream, recommended value: less than 120 seconds
         :param rv_proc: if given, only events with greater resource_version will be returned
         :param rv_inst: same as rv_proc, but for ProcInst type
         """
-        # TODO: 支持根据命名空间 watch
         event_gens: List = [
             process_kmodel.watch_by_app(
-                self.wl_app,
+                app=self.wl_app,
                 labels=ProcessAPIAdapter.app_selector(self.wl_app),
                 resource_version=rv_proc,
                 timeout_seconds=timeout_seconds,
             ),
             instance_kmodel.watch_by_app(
-                self.wl_app,
+                app=self.wl_app,
                 labels=ProcessAPIAdapter.app_selector(self.wl_app),
                 resource_version=rv_inst,
                 timeout_seconds=timeout_seconds,
@@ -122,8 +166,7 @@ class ProcessInstanceListWatcher:
         parallel_gen = ParallelChainedGenerator(event_gens)
         parallel_gen.start()
         for event in parallel_gen.iter_results():
-            yield ProcWatchEvent.make_event(event)
-
+            yield event
         parallel_gen.close()
 
 
@@ -150,14 +193,14 @@ class ParallelChainedGenerator:
         """Consumes generator and put result to queue"""
         try:
             for value in gen:
+                if value.type == 'ERROR':
+                    logger.warning('Watch resource error: %s', value.error_message)
                 self.queue.put(value)
-        except WatchKubeResourceError as e:
-            logger.warning('Watch resource error: %s', str(e))
-            self.queue.put(WatchEvent(type="ERROR", error_message=str(e)))
         except Exception as e:
             logger.exception('Error while consuming generator: %s', str(e))
         finally:
             # Always close connection in every thread to avoid leaking of database connections
+            logger.debug("generator stopped")
             connection.close()
 
     def iter_results(self) -> Generator[WatchEvent[Any], None, None]:
@@ -180,46 +223,3 @@ class ParallelChainedGenerator:
 
     def close(self):
         pass
-
-
-@dataclass
-class ProcWatchEvent:
-    """Process related watch event object"""
-
-    # Instance variables
-    type: str
-    object_type: str
-    object: Dict
-    resource_version: Optional[str] = None
-
-    # Class variables
-    type_error: ClassVar[str] = 'ERROR'
-    config: ClassVar[Dict[Type[AppEntity], Tuple[str, Serializer]]] = {
-        Process: ('process', ProcessForDisplaySLZ),
-        Instance: ('instance', InstanceForDisplaySLZ),
-    }
-
-    @classmethod
-    def make_event(cls, raw_event: _EVENT_TYPE) -> 'ProcWatchEvent':
-        """Make an event instance from raw event object"""
-        if raw_event.type == cls.type_error:
-            return cls.make_error_event(raw_event)
-
-        res_obj = raw_event.res_object
-        assert res_obj is not None
-        try:
-            object_type, slz = cls.config[type(res_obj)]
-        except KeyError:
-            raise TypeError('Unsupported type {}'.format(type(res_obj)))
-
-        return cls(
-            type=raw_event.type,
-            object_type=object_type,
-            object=dict(slz(res_obj).data),
-            resource_version=res_obj.get_resource_version(),
-        )
-
-    @classmethod
-    def make_error_event(cls, raw_event: _EVENT_TYPE) -> 'ProcWatchEvent':
-        """Make an error event"""
-        return cls(type=cls.type_error, object_type='error', object=asdict(raw_event))

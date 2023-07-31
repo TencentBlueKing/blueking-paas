@@ -25,6 +25,7 @@ import cattr
 from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
+from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release, WlApp
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
@@ -75,11 +76,47 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
 
     def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
         """deserialize process info for default type(Heroku) app"""
+        from paas_wl.workloads.processes.entities import Resources, Runtime, Schedule
+
+        main_container = self._get_main_container(app, kube_data)
+        pod_spec = kube_data.spec.template.spec
         pod_labels = kube_data.spec.template.metadata.labels
         version = int(pod_labels.get('release_version', 0))
+        process_type = self._get_process_type(kube_data)
 
-        process = self.entity_type.from_release(
-            type_=self._get_process_type(kube_data), release=Release.objects.get_by_version(app, version)
+        try:
+            release = Release.objects.get_by_version(app, version=version)
+            proc_command = release.get_procfile()[process_type]
+        except (KeyError, Release.DoesNotExist):
+            proc_command = ""
+
+        process = self.entity_type(
+            app=app,
+            type=process_type,
+            name=kube_data.metadata.name,
+            version=version,
+            replicas=kube_data.spec.replicas,
+            runtime=cattr.structure(
+                {
+                    "envs": {env.name: env.value for env in main_container.env if getattr(env, "value", None)},
+                    "image": main_container.image,
+                    "command": getattr(main_container, "command", []),
+                    "args": getattr(main_container, "args", []),
+                    "proc_command": proc_command,
+                    "image_pull_policy": main_container.imagePullPolicy,
+                    "image_pull_secrets": pod_spec.imagePullSecrets,
+                },
+                Runtime,
+            ),
+            schedule=cattr.structure(
+                {
+                    "cluster_name": get_cluster_by_app(app).name,
+                    "tolerations": getattr(pod_spec, "tolerations", []),
+                    "node_selector": getattr(pod_spec, "nodeSelector", {}),
+                },
+                Schedule,
+            ),
+            resources=cattr.structure(getattr(main_container, "resources", None), Resources),
         )
         return process
 
@@ -88,7 +125,6 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
         from paas_wl.workloads.processes.entities import Runtime, Schedule
 
         main_container = self._get_main_container(app, kube_data)
-
         process = self.entity_type(
             app=app,
             name=self._get_process_type(kube_data),

@@ -25,7 +25,6 @@ from django.db import connection
 from django.utils.functional import cached_property
 
 from paas_wl.cluster.shim import EnvClusterService
-from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.base import WatchEvent
 from paas_wl.workloads.processes.controllers import ProcessesInfo, list_ns_processes, list_processes
@@ -127,12 +126,8 @@ class ProcInstByModuleEnvListWatcher:
 
         :return: A dict with "processes" and "instances"
         """
-        if self.wl_app.type == WlAppType.CLOUD_NATIVE:
-            return list_ns_processes(
-                cluster_name=EnvClusterService(self.env).get_cluster_name(), namespace=self.wl_app.namespace
-            )
-        # namespace scoped reader 需要云原生应用新增的 labels 才能使用, 否则会查询不到进程(需要重新部署才会有新的 labels)
-        # 因此普通应用仍然使用 wl_app scoped reader 查询进程信息
+        # namespace scoped reader 需要新增的 labels 才能使用, 否则会查询不到进程(需要重新部署才会有新的 labels)
+        # 因此 ProcInstByModuleEnvListWatcher 仍然使用 wl_app scoped reader 查询进程信息
         return list_processes(self.env)
 
     def watch(

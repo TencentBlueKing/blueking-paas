@@ -202,7 +202,6 @@ export default {
     },
 
     dialogCloudAppData() {
-      console.log('this.$store.state.cloudApi.cloudAppData', this.$store.state.cloudApi.cloudAppData);
       return this.$store.state.cloudApi.cloudAppData;
     },
   },
@@ -547,6 +546,7 @@ export default {
 
     // 查看yaml
     handleYamlView() {
+      console.log('dialogCloudAppData', this.dialogCloudAppData);
       this.deployDialogConfig.visible = true;
     },
   },

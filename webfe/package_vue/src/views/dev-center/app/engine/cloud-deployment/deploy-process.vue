@@ -329,15 +329,17 @@
           </bk-form-item>
           <bk-form-item
             :label="$t('启动命令：')">
-            <span class="form-text">
-              {{ formData.command.length ? formData.command.join(',') : '--' }}
+            <span v-if="formData.command.length">
+              <bk-tag v-for="item in formData.command" :key="item">{{ item }}</bk-tag>
             </span>
+            <span class="form-text" v-else>--</span>
           </bk-form-item>
           <bk-form-item
             :label="$t('命令参数：')">
-            <span class="form-text">
-              {{ formData.args.length ? formData.args.join(',') : '--' }}
+            <span v-if="formData.args.length">
+              <bk-tag v-for="item in formData.args" :key="item">{{ item }}</bk-tag>
             </span>
+            <span class="form-text" v-else>--</span>
           </bk-form-item>
           <bk-form-item
             :label="$t('容器端口：')">
@@ -1248,6 +1250,7 @@ export default {
     .form-detail{
       .form-text{
         color: #313238;
+        padding-left: 10px;
       }
     }
     .env-container{

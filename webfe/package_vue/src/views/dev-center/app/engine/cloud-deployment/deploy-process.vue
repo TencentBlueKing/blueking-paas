@@ -7,49 +7,6 @@
     class="deploy-action-box"
   >
     <div class="process-container">
-      <!-- <div class="tab-container">
-        <div class="tab-list">
-          <div
-            v-for="(panel, index) in panels"
-            :key="index"
-            class="tab-item"
-            :class="[{ 'isActive': panelActive === index }]"
-            @click="handlePanelClick(index, $event, 'add')"
-            @mouseenter="handlePanelEnter(index)"
-            @mouseleave="handlePanelLeave"
-          >
-            <div v-if="panel.isEdit">
-              <bk-input
-                ref="panelInput"
-                v-model="itemValue"
-                style="width: 100px"
-                :placeholder="$t('进程名称')"
-                ext-cls="bk-input-cls"
-                @enter="handleEnter"
-                @blur="handleBlur"
-              />
-            </div>
-            <span
-              v-else
-              class="panel-name"
-            >{{ panel.name }}</span>
-            <i
-              v-if="showEditIconIndex === index && !panel.isEdit"
-              class="paasng-icon paasng-icon-close item-close-icon"
-              @click.stop="handleDelete(index)"
-            />
-            <i
-              v-if="showEditIconIndex === index && !panel.isEdit && panelActive !== index"
-              class="paasng-icon paasng-edit2 edit-name-icon"
-              @click.stop="handleIconClick(index)"
-            />
-          </div>
-          <i
-            class="paasng-icon paasng-plus-thick add-icon"
-            @click="handleAddData"
-          />
-        </div>
-      </div> -->
       <div class="btn-container flex-row align-items-center justify-content-between">
         <div class="bk-button-group bk-button-group-cls">
           <bk-button
@@ -355,75 +312,6 @@
           </bk-form>
         </div>
 
-        <!-- <div class="form-resource">
-          <div class="item-title">
-            {{ $t('副本数和资源') }}
-          </div>
-          <bk-form
-            ref="formResource"
-            :model="formData"
-            form-type="inline"
-            style="padding-left: 30px"
-          >
-            <bk-form-item
-              :label="$t('副本数量')"
-              :required="true"
-              :property="'replicas'"
-              class="mb20"
-              :rules="rules.replicas"
-            >
-              <bk-input
-                v-model="formData.replicas"
-                type="number"
-                :max="5"
-                :min="1"
-                style="width: 150px"
-              />
-            </bk-form-item>
-            <br>
-            <bk-form-item
-              class="pl20"
-              :label="$t('内存')"
-              :property="'memory'"
-            >
-              <bk-select
-                v-model="formData.memory"
-                allow-create
-                :disabled="false"
-                style="width: 150px;"
-                searchable
-              >
-                <bk-option
-                  v-for="option in memoryData"
-                  :id="option.value"
-                  :key="option.key"
-                  :name="option.value"
-                />
-              </bk-select>
-              <span class="whole-item-tips">{{ $t('每个容器能使用的最大内存') }}</span>
-            </bk-form-item>
-            <bk-form-item
-              :label="$t('CPU(核数)')"
-              :property="'cpu'"
-            >
-              <bk-select
-                v-model="formData.cpu"
-                allow-create
-                :disabled="false"
-                style="width: 150px;"
-                searchable
-              >
-                <bk-option
-                  v-for="option in cpuData"
-                  :id="option.value"
-                  :key="option.key"
-                  :name="option.value"
-                />
-              </bk-select>
-              <span class="whole-item-tips">{{ $t('每个容器能使用的CPU核心数量') }}</span>
-            </bk-form-item>
-          </bk-form>
-        </div> -->
       </div>
 
       <!-- 查看态 -->
@@ -587,7 +475,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
+            regex: /^(?:(?=[^:\\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
             message: this.$t('地址格式不正确'),
             trigger: 'blur',
           },
@@ -778,24 +666,11 @@ export default {
     envName() {
       this.handleExtraConfig();   // 处理额外的配置
     },
-
-    // 'formData.autoscaling.maxReplicas'(val) {
-    //   console.log('val', val);
-    //   if (val && val >= this.formData.autoscaling.minReplicas) {
-    //     this.$refs.formEnv?.clearError();
-    //   }
-    // },
-    // 'formData.autoscaling.minReplicas'(val) {
-    //   if (val && val <=  this.formData.autoscaling.maxReplicas) {
-    //     this.$refs.formEnv?.clearError();
-    //   }
-    // },
   },
   created() {
     this.getImageCredentialList();
   },
   mounted() {
-    // this.$refs.mirrorUrl?.focus();
     setTimeout(() => {
       this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
     }, 1000);
@@ -830,43 +705,6 @@ export default {
     },
     handlePanelLeave() {
       this.showEditIconIndex = null;
-    },
-    handleIconClick(i) {
-      this.resetData();
-      this.panels[i].isEdit = true;
-      this.iconIndex = i;
-      this.itemValue = this.panels[i].name;
-      this.handlePanelClick(i, null, 'add');
-      setTimeout(() => {
-        this.$refs.panelInput && this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-      }, 500);
-    },
-
-    // 鼠标失去焦点
-    handleBlur() {
-      console.log('this.panels[this.iconIndex]', this.panels[this.iconIndex]);
-      if (this.panels[this.iconIndex]) { // 编辑
-        if (!this.itemValue) {
-          this.panels.splice(this.iconIndex, 1);
-        } else {
-          const canHandel = this.handleRepeatData(this.iconIndex);
-          if (!canHandel) return;
-          this.panels[this.iconIndex].name = this.itemValue;
-        }
-      } else { // 新增
-        const canHandel = this.handleRepeatData();
-        if (!canHandel) return;
-        if (!this.itemValue) {
-          this.panels.splice(this.panels.length - 1, 1);
-        } else {
-          this.panels[this.panels.length - 1].name = this.itemValue;
-          this.handlePanelClick(this.panels.length - 1);
-        }
-      }
-      this.panels = this.panels.map((e) => {
-        e.isEdit = false;
-        return e;
-      });
     },
 
     // 处理重复添加和正则
@@ -904,33 +742,6 @@ export default {
       }, 100);
 
       return true;
-    },
-
-    // 处理回车
-    handleEnter() {
-      this.handleBlur();
-    },
-
-    // 点击icon新增数据
-    handleAddData() {
-      this.iconIndex = '';
-      this.resetData();
-      this.panels.push({
-        name: 'name',
-        isEdit: true,
-      });
-      this.itemValue = 'name';
-      this.panelActive = this.panels.length - 1;
-      this.handlePanelClick(this.panelActive, null, 'add');
-      setTimeout(() => {
-        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-      }, 100);
-    },
-
-    resetData() {
-      this.panels.forEach((element) => {
-        element.isEdit = false;
-      });
     },
 
     async formDataValidate(index) {

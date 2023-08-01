@@ -1,9 +1,9 @@
-<template>
+<template lang="html">
   <div class="env-container">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-env-loading"
-      class="middle"
+      class="app-container middle"
     >
       <section v-show="!isLoading">
         <bk-alert type="info">
@@ -15,133 +15,165 @@
             >{{ $t('查看内置环境变量') }}</span>
           </span>
         </bk-alert>
-        <div class="flex-row align-items-center justify-content-between mt20">
-          <div>
-            <bk-button
-              :theme="'default'"
-              :outline="true"
-              class="mr10"
-              @click.stop.prevent="addEnvData"
-            >
-              {{ $t('批量导入') }}
-            </bk-button>
-            <bk-button
-              :theme="'default'"
-              :outline="true"
-              @click.stop.prevent="addEnvData"
-            >
-              {{ $t('批量导出') }}
-            </bk-button>
+        <div class="filter-list">
+          <div class="label">
+            <i class="paasng-icon paasng-funnel" />
+            {{ $t('生效环境：') }}
           </div>
-          <div>
+          <div class="bk-button-group">
             <bk-button
-              v-if="!isPageEdit"
-              class="fr"
               theme="primary"
-              title="编辑"
-              :outline="true"
-              @click="handleEditClick">
-              {{ $t('编辑') }}
+              style="width: 130px;"
+              :outline="curStage !== '_global_'"
+              @click="changeConfigVarByEnv('_global_')"
+            >
+              {{ $t('所有环境') }}
+            </bk-button>
+            <bk-button
+              theme="primary"
+              style="width: 130px;"
+              :outline="curStage !== 'stag'"
+              @click="changeConfigVarByEnv('stag')"
+            >
+              {{ $t('仅预发布环境') }}
+            </bk-button>
+            <bk-button
+              theme="primary"
+              style="width: 130px;"
+              :outline="curStage !== 'prod'"
+              @click="changeConfigVarByEnv('prod')"
+            >
+              {{ $t('仅生产环境') }}
             </bk-button>
           </div>
+          <!-- 默认不展示 -->
+          <bk-button
+            v-if="curStage !== ''"
+            ext-cls="reset-button"
+            theme="primary"
+            text
+            @click="handleReset"
+          >
+            {{ $t('重置') }}
+          </bk-button>
         </div>
-        <bk-table
+        <table
           v-if="envVarList.length"
-          v-bkloading="{ isLoading: isTableLoading }"
-          :data="envVarList"
-          class="table-cls mt20">
-          <bk-table-column :label="$t('Key')" class-name="table-colum-module-cls">
-            <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
-                <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
-                  class="url-from-cls">
-                  <bk-form-item :required="true" :property="'url'">
-                    <bk-input behavior="simplicity" v-model="row.name" class="url-input-cls">
-                    </bk-input>
-                  </bk-form-item>
-                </bk-form>
-              </div>
-              <div v-else>{{ row.name }}</div>
-            </template>
-          </bk-table-column>
-
-          <bk-table-column :label="$t('Value')" class-name="table-colum-module-cls">
-            <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
-                <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
-                  class="url-from-cls">
-                  <bk-form-item :required="true" :property="'url'">
-                    <bk-input behavior="simplicity" v-model="row.value" class="url-input-cls">
-                    </bk-input>
-                  </bk-form-item>
-                </bk-form>
-              </div>
-              <div v-else>{{ row.value }}</div>
-            </template>
-          </bk-table-column>
-
-          <bk-table-column :label="$t('生效环境')" class-name="table-colum-module-cls">
-            <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
-                <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
-                  class="url-from-cls">
-                  <bk-form-item :required="true" :property="'url'">
-                    <bk-select
-                      v-model="row.envName"
-                      :placeholder="$t('请选择')"
-                      :clearable="false"
+          v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+          class="ps-table ps-table-default ps-table-width-overflowed"
+          style="margin-bottom: 24px;"
+        >
+          <tr
+            v-for="(varItem, index) in envVarList"
+            :key="index"
+          >
+            <td>
+              <bk-form
+                ref="envRef"
+                form-type="inline"
+                :model="varItem"
+              >
+                <bk-form-item
+                  :rules="varRules.name"
+                  :property="'name'"
+                  style="flex: 1 1 25%;"
+                >
+                  <bk-input
+                    v-model="varItem.name"
+                    placeholder="NAME"
+                    :clearable="false"
+                    :readonly="isReadOnlyRow(index)"
+                    @enter="handleEnter(index)"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :rules="varRules.value"
+                  :property="'value'"
+                  style="flex: 1 1 25%;"
+                >
+                  <template v-if="isReadOnlyRow(index)">
+                    <div
+                      v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      class="desc-form-content"
                     >
-                      <bk-option
-                        v-for="(option, optionIndex) in envSelectList"
-                        :id="option.id"
-                        :key="optionIndex"
-                        :name="option.text"
+                      {{ varItem.value }}
+                    </div>
+                  </template>
+                  <template v-else>
+                    <bk-input
+                      v-model="varItem.value"
+                      placeholder="VALUE"
+                      :clearable="false"
+                      :readonly="isReadOnlyRow(index)"
+                      @enter="handleEnter(index)"
+                    />
+                  </template>
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 18%;">
+                  <bk-select
+                    v-model="varItem.envName"
+                    :disabled="isReadOnlyRow(index)"
+                    :placeholder="$t('请选择')"
+                    :clearable="false"
+                  >
+                    <bk-option
+                      v-for="(option, optionIndex) in envSelectList"
+                      :id="option.id"
+                      :key="optionIndex"
+                      :name="option.text"
+                    />
+                  </bk-select>
+                </bk-form-item>
+                <bk-form-item style="text-align: right; min-width: 80px;">
+                  <template v-if="isReadOnlyRow(index)">
+                    <a
+                      class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
+                      @click="editingRowToggle(varItem, index)"
+                    />
+                    <tooltip-confirm
+                      ref="deleteTooltip"
+                      :ok-text="$t('确定')"
+                      :cancel-text="$t('取消')"
+                      :theme="'ps-tooltip'"
+                      @ok="deleteEnvData(index, varItem)"
+                    >
+                      <a
+                        v-show="isReadOnlyRow(index)"
+                        slot="trigger"
+                        class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
                       />
-                    </bk-select>
-                  </bk-form-item>
-                </bk-form>
-              </div>
-              <div v-else>{{ row.envName }}</div>
-            </template>
-          </bk-table-column>
-
-          <bk-table-column :label="$t('描述')" class-name="table-colum-module-cls">
-            <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
-                <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
-                  class="url-from-cls">
-                  <bk-form-item :required="true" :property="'url'">
-                    <bk-input behavior="simplicity" v-model="row.desc" class="url-input-cls">
-                    </bk-input>
-                  </bk-form-item>
-                </bk-form>
-              </div>
-              <div v-else>{{ row.desc || '--' }}</div>
-            </template>
-          </bk-table-column>
-
-          <bk-table-column :label="$t('操作')" class-name="table-colum-module-cls">
-            <template slot-scope="{ $index }">
-              <div v-if="isPageEdit" class="env-table-icon">
-                <i class="icon paasng-icon paasng-plus-circle-shape" @click="handleEnvTableListData('add', $index)"></i>
-                <i
-                  class="icon paasng-icon paasng-minus-circle-shape pl20"
-                  v-if="envVarList.length > 1"
-                  @click="handleEnvTableListData('reduce', $index)"></i>
-              </div>
-            </template>
-          </bk-table-column>
-        </bk-table>
+                    </tooltip-confirm>
+                  </template>
+                  <template v-else>
+                    <a
+                      class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
+                      type="submit"
+                      @click="updateEnvData(index, varItem)"
+                    />
+                    <a
+                      class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
+                      style="margin-left: 0;"
+                      @click="editingRowToggle(varItem, index, 'cancel')"
+                    />
+                  </template>
+                </bk-form-item>
+              </bk-form>
+            </td>
+          </tr>
+        </table>
         <div
           v-else
           class="ps-no-result"
         >
           <table-empty empty />
         </div>
+        <bk-button
+          theme="primary"
+          :outline="true"
+          @click.stop.prevent="addEnvData"
+        >
+          {{ $t('添加') }}
+        </bk-button>
       </section>
     </paas-content-loader>
 
@@ -217,11 +249,15 @@
 </template>
 
 <script>import _ from 'lodash';
+// import dropdown from '@/components/ui/Dropdown';
+import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 
 export default {
   components: {
+    // dropdown,
+    tooltipConfirm,
   },
   mixins: [appBaseMixin],
   props: {
@@ -402,10 +438,6 @@ export default {
     envLoading() {
       return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
     },
-
-    isPageEdit() {
-      return this.$store.state.cloudApi.isPageEdit;
-    },
   },
   watch: {
     '$route'() {
@@ -435,7 +467,6 @@ export default {
             this.envVarList = all;
           }
 
-          console.log('this.envVarList', this.envVarList);
 
           setTimeout(() => {
             this.isLoading = false;
@@ -482,14 +513,14 @@ export default {
     },
     fetchReleaseInfo() {
       // 这里分别调用预发布环境 和 生产环境的 API，只要有一个返回 200，isReleased 就要设置为 True
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag` + '/released_state/?with_processes=true').then(() => {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag` + '/released_state/?with_processes=true').then((response) => {
         this.isReleased = true;
         this.availableEnv.push('stag');
       }, (errRes) => {
         console.error(errRes);
       });
 
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod` + '/released_state/?with_processes=true').then(() => {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod` + '/released_state/?with_processes=true').then((response) => {
         this.isReleased = true;
         this.availableEnv.push('prod');
       }, (errRes) => {
@@ -715,7 +746,7 @@ export default {
     },
     releaseEnv(envName) {
       this.$refs.releaseDropDown.close();
-      this.$http.post(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${envName}/releases/`).then(() => {
+      this.$http.post(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${envName}/releases/`).then((response) => {
         this.$paasMessage({
           theme: 'success',
           message: this.$t('发布提交成功，请在进程管理查看发布情况'),
@@ -896,482 +927,446 @@ export default {
       this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
       this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
     },
-
-
-    // 编辑页面
-    handleEditClick() {
-      if (!this.envVarList.length) {
-        this.envVarList.push({
-          name: '',
-          value: '',
-          envName: 'stag',
-          isAdd: true,
-        });
-      }
-      this.$store.commit('cloudApi/updatePageEdit', true);
-    },
-
-    handleEnvTableListData(v, i) {
-      if (v === 'add') {
-        this.envVarList.push({
-          name: '',
-          value: '',
-          envName: 'stag',
-          isAdd: true,
-        });
-      } else {
-        this.envVarList.splice(i, 1);
-      }
-    },
   },
 };
 </script>
 
-  <style media="screen">
-      .query-button {
-          width: auto;
-          padding-right: 30px;
-      }
-  </style>
+<style media="screen">
+    .query-button {
+        width: auto;
+        padding-right: 30px;
+    }
+</style>
 
-  <style lang="scss">
-      .ps-table-default {
-          .bk-form-item {
-              .bk-form-content {
-                  width: 100%;
-                  float: none !important;
-                  display: block !important;
-              }
-          }
-      }
-  </style>
-
-  <style lang="scss" scoped>
-
-      .env-container{
-          padding: 0 20px 20px;
-          min-height: 200px;
-      }
-      .variable-instruction {
-          font-size: 14px;
-          color: #7b7d8a;
-          padding: 15px 30px;
-          line-height: 28px;
-          border-bottom: 1px solid #eaeeee;
-      }
-
-      .paas-env-var-upload-dialog {
-          .header {
-              font-size: 24px;
-              color: #313238;
-          }
-          .title {
-              max-width: 150px;
-              margin: 0;
-              display: inline-block;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              vertical-align: bottom;
-          }
-          .download-tips {
-              display: flex;
-              justify-content: space-between;
-              padding: 0 10px;
-              line-height: 40px;
-              background: #fefaf2;
-              font-size: 12px;
-              color: #ffb400;
-          }
-      }
-
-      a.is-disabled {
-          color: #dcdee5 !important;
-          cursor: not-allowed !important;
-          &:hover {
-              background: #fff !important;
-          }
-      }
-
-      .upload-content {
-          margin-top: 15px;
-          text-align: center;
-          .file-icon {
-              font-size: 40px;
-              color: #dae1e8;
-          }
-          .cur-upload-file {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #3a84ff;
-              border-bottom: 1px solid #3a84ff;
-          }
-          .file-error-tips {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #ff4d4d;
-          }
-      }
-
-      .ps-table-width-overflowed {
-          width: 100%;
-          margin-left: 0;
-
-          td {
-              border-bottom: 0;
-              padding: 15px 0 0 0;
-          }
-
-          .desc-form-content {
-              display: inline-block;
-              padding: 0 10px;
-              width: 100%;
-              height: 32px;
-              border: 1px solid #dcdee5;
-              border-radius: 2px;
-              text-align: left;
-              font-size: 12px;
-              color: #63656e;
-              overflow: hidden;
-              background-color: #fafbfd;
-              vertical-align: middle;
-              cursor: default;
-          }
-          .bk-inline-form {
-              display: flex;
-          }
-      }
-
-      .variable-main {
-          border-bottom: 0;
-
-          h3 {
-              line-height: 1;
-              padding: 10px 0;
-          }
-
-          .ps-alert-content {
-              color: #666;
-          }
-      }
-
-      .variable-input {
-          margin-right: 10px;
-
-          input {
-              height: 36px;
-          }
-      }
-
-      .variable-select {
-          margin-right: 10px;
-      }
-
-      .variable-operation {
-          font-size: 0;
-
-          button {
-              width: 72px;
-              line-height: 18px;
-              -webkit-box-sizing: border-box;
-              -moz-box-sizing: border-box;
-              -ms-box-sizing: border-box;
-              box-sizing: border-box;
-              -webkit-transition: 0s all;
-              -moz-transition: 0s all;
-              -ms-transition: 0s all;
-              transition: 0s all;
-          }
-
-          a {
-              &.paasng-delete {
-                  font-size: 16px;
-              }
-
-              &.paasng-check-1 {
-                  font-size: 15px;
-              }
-          }
-      }
-
-      .middle {
-          > p {
-              line-height: 46px;
-          }
-      }
-
-      .variabletext {
-          width: 100%;
-          box-sizing: border-box;
-          line-height: 30px;
-          height: 34px;
-      }
-
-      .filter-list {
-          position: relative;
-          font-size: 0;
-          letter-spacing: -5px;
-          margin: 25px 0 5px 0;
-
-          .label {
-              position: relative;
-              display: inline-block;
-              top: 4px;
-              letter-spacing: 0;
-              font-size: 14px;
-          }
-
-          .reset-button {
-              position: relative;
-              top: 4px;
-              padding-left: 10px;
-          }
-
-          .env-export-wrapper {
-              position: absolute;
-              right: 80px;
-          }
-
-          .env-sort-wrapper {
-              position: absolute;
-              left: 410px;
-              .sort-icon {
-                  position: absolute;
-                  // width: 26px;
-                  font-size: 26px;
-                  left: 5px;
-                  top: 2px;
-              }
-              .text {
-                  padding-left: 15px;
-              }
-              a.active {
-                  background-color: #eaf3ff;
-                  color: #3a84ff;
-              }
-          }
-
-          a {
-              letter-spacing: 0;
-              font-size: 14px;
-              padding: 8px 20px;
-              line-height: 14px;
-              margin-right: 10px;
-
-              &.ps-btn {
-                  border: 1px solid #ccc;
-                  color: #999;
-
-                  &:hover {
-                      border: 1px solid #3c96ff;
-                      color: #3c96ff;
-                  }
-              }
-
-              &.ps-btn-primary {
-                  background: #3c96ff;
-                  border: 1px solid #3A84FF;
-                  color: #FFF;
-
-                  &:hover {
-                      color: #FFF;
-                  }
-              }
-          }
-
-          .env-sort-btn {
-              position: absolute;
-              right: 0;
-              .sort-icon {
-                  position: absolute;
-                  font-size: 26px;
-                  left: 5px;
-                  top: 2px;
-              }
-              .text {
-                  padding-left: 15px;
-              }
-              &:hover {
-                  color: #3a84ff;
-                  border-color: #3a84ff;
-              }
-          }
-      }
-
-      .selectize-control * {
-          cursor: pointer;
-      }
-
-      .editingEnvRow {
-          color: #3a84ff;
-      }
-
-      .disabledButton:hover {
-          cursor: pointer;
-          color: #666;
-          background: #fafafa;
-      }
-
-      .releasebg {
-          padding: 0 20px 20px 20px;
-          position: relative;
-          border: solid 1px #e5e5e5;
-
-          &-compact {
-              padding-bottom: 5px;
-          }
-
-          .warningIcon {
-              position: absolute;
-              left: 20px;
-              top: 28px;
-              width: 24px;
-              height: 24px;
-
-              img {
-                  width: 100%;
-              }
-          }
-
-          .warningText {
-              margin-left: 10px;
-              padding-bottom: 20px;
-              position: relative;
-              top: 0;
-              right: 0;
-
-              h2 {
-                  padding-left: 0;
-              }
-
-              &-compact {
-                  padding-bottom: 5px;
-              }
-          }
-      }
-
-      .ps-btn-xs {
-          line-height: 34px;
-      }
-
-      .ps-form-control[readonly] {
-          background-color: #fafafa;
-      }
-
-      .middle h4 {
-          padding-top: 0;
-      }
-
-      .ps-alert h4 {
-          margin: 0;
-      }
-
-      .ps-btn-dropdown,
-      .ps-btn-l {
-          box-sizing: border-box;
-          height: 36px;
-      }
-
-      .form-grid {
-          display: flex;
-      }
-
-      .builder-item {
-          padding: 0 10px;
-          line-height: 20px;
-          position: relative;
-
-          &:before {
-              content: '';
-              font-size: 12px;
-              position: absolute;
-              left: 0;
-              top: 8px;
-              width: 3px;
-              height: 3px;
-              display: inline-block;
-              background: #656565;
-          }
-      }
-
-      .export-by-module-tips {
-          padding: 4px 0 0 37px;
-          line-height: 32px;
-          color: #979ba5;
-          font-size: 12px;
-      }
-
-      .paas-env-var-export {
-          display: flex;
-          justify-content: flex-start;
-          .title {
-              line-height: 30px;
-          }
-      }
-
-      .link-a:hover {
-          color: #699df4;
-      }
-
-      .img-exception {
-          width: 300px;
-      }
-      .text-exception {
-          color: #979ba5;
-          font-size: 14px;
-          text-align: center;
-          margin-top: 14px;
-      }
-      .built-in-env {
-          text-decoration: none !important;
-          color: #699df4;
-
-          &:hover {
-              cursor: pointer;
-          }
-      }
-
-      .slider-env-content {
-          padding: 30px;
-          min-height: calc(100vh - 50px);
-      }
-      .env-title {
-          font-size: 14px;
-          font-weight: bold;
-          margin-bottom: 5px;
-          color: #313238;
-          line-height: 1;
-      }
-
-      .env-item {
-          font-size: 12px;
-          line-height: 24px;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-      }
-
-      .reminder {
-          margin-top: 15px;
-          line-height: 24px;
-          font-size: 13px;
-          color: #ff9c01;
-      }
-
-      .desc-env {
-          font-size: 12px;
-          color: #979BA5;
-          margin-bottom: 10px;
-      }
-
-      .env-table-icon{
-        color: #C4C6CC;
-        font-size: 14px;
-        .icon{
-          cursor: pointer;
+<style lang="scss">
+    .ps-table-default {
+        .bk-form-item {
+            .bk-form-content {
+                width: 100%;
+                float: none !important;
+                display: block !important;
+            }
         }
-      }
-  </style>
+    }
+</style>
 
+<style lang="scss" scoped>
+
+    .env-container{
+        padding: 0 20px 20px;
+        min-height: 200px;
+    }
+    .variable-instruction {
+        font-size: 14px;
+        color: #7b7d8a;
+        padding: 15px 30px;
+        line-height: 28px;
+        border-bottom: 1px solid #eaeeee;
+    }
+
+    .paas-env-var-upload-dialog {
+        .header {
+            font-size: 24px;
+            color: #313238;
+        }
+        .title {
+            max-width: 150px;
+            margin: 0;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: bottom;
+        }
+        .download-tips {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            line-height: 40px;
+            background: #fefaf2;
+            font-size: 12px;
+            color: #ffb400;
+        }
+    }
+
+    a.is-disabled {
+        color: #dcdee5 !important;
+        cursor: not-allowed !important;
+        &:hover {
+            background: #fff !important;
+        }
+    }
+
+    .upload-content {
+        margin-top: 15px;
+        text-align: center;
+        .file-icon {
+            font-size: 40px;
+            color: #dae1e8;
+        }
+        .cur-upload-file {
+            display: inline-block;
+            line-height: 1;
+            font-size: 12px;
+            color: #3a84ff;
+            border-bottom: 1px solid #3a84ff;
+        }
+        .file-error-tips {
+            display: inline-block;
+            line-height: 1;
+            font-size: 12px;
+            color: #ff4d4d;
+        }
+    }
+
+    .ps-table-width-overflowed {
+        width: 100%;
+        margin-left: 0;
+
+        td {
+            border-bottom: 0;
+            padding: 15px 0 0 0;
+        }
+
+        .desc-form-content {
+            display: inline-block;
+            padding: 0 10px;
+            width: 100%;
+            height: 32px;
+            border: 1px solid #dcdee5;
+            border-radius: 2px;
+            text-align: left;
+            font-size: 12px;
+            color: #63656e;
+            overflow: hidden;
+            background-color: #fafbfd;
+            vertical-align: middle;
+            cursor: default;
+        }
+        .bk-inline-form {
+            display: flex;
+        }
+    }
+
+    .variable-main {
+        border-bottom: 0;
+
+        h3 {
+            line-height: 1;
+            padding: 10px 0;
+        }
+
+        .ps-alert-content {
+            color: #666;
+        }
+    }
+
+    .variable-input {
+        margin-right: 10px;
+
+        input {
+            height: 36px;
+        }
+    }
+
+    .variable-select {
+        margin-right: 10px;
+    }
+
+    .variable-operation {
+        font-size: 0;
+
+        button {
+            width: 72px;
+            line-height: 18px;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            box-sizing: border-box;
+            -webkit-transition: 0s all;
+            -moz-transition: 0s all;
+            -ms-transition: 0s all;
+            transition: 0s all;
+        }
+
+        a {
+            &.paasng-delete {
+                font-size: 16px;
+            }
+
+            &.paasng-check-1 {
+                font-size: 15px;
+            }
+        }
+    }
+
+    .middle {
+        > p {
+            line-height: 46px;
+        }
+    }
+
+    .variabletext {
+        width: 100%;
+        box-sizing: border-box;
+        line-height: 30px;
+        height: 34px;
+    }
+
+    .filter-list {
+        position: relative;
+        font-size: 0;
+        letter-spacing: -5px;
+        margin: 25px 0 5px 0;
+
+        .label {
+            position: relative;
+            display: inline-block;
+            top: 4px;
+            letter-spacing: 0;
+            font-size: 14px;
+        }
+
+        .reset-button {
+            position: relative;
+            top: 4px;
+            padding-left: 10px;
+        }
+
+        .env-export-wrapper {
+            position: absolute;
+            right: 80px;
+        }
+
+        .env-sort-wrapper {
+            position: absolute;
+            left: 410px;
+            .sort-icon {
+                position: absolute;
+                // width: 26px;
+                font-size: 26px;
+                left: 5px;
+                top: 2px;
+            }
+            .text {
+                padding-left: 15px;
+            }
+            a.active {
+                background-color: #eaf3ff;
+                color: #3a84ff;
+            }
+        }
+
+        a {
+            letter-spacing: 0;
+            font-size: 14px;
+            padding: 8px 20px;
+            line-height: 14px;
+            margin-right: 10px;
+
+            &.ps-btn {
+                border: 1px solid #ccc;
+                color: #999;
+
+                &:hover {
+                    border: 1px solid #3c96ff;
+                    color: #3c96ff;
+                }
+            }
+
+            &.ps-btn-primary {
+                background: #3c96ff;
+                border: 1px solid #3A84FF;
+                color: #FFF;
+
+                &:hover {
+                    color: #FFF;
+                }
+            }
+        }
+
+        .env-sort-btn {
+            position: absolute;
+            right: 0;
+            .sort-icon {
+                position: absolute;
+                font-size: 26px;
+                left: 5px;
+                top: 2px;
+            }
+            .text {
+                padding-left: 15px;
+            }
+            &:hover {
+                color: #3a84ff;
+                border-color: #3a84ff;
+            }
+        }
+    }
+
+    .selectize-control * {
+        cursor: pointer;
+    }
+
+    .editingEnvRow {
+        color: #3a84ff;
+    }
+
+    .disabledButton:hover {
+        cursor: pointer;
+        color: #666;
+        background: #fafafa;
+    }
+
+    .releasebg {
+        padding: 0 20px 20px 20px;
+        position: relative;
+        border: solid 1px #e5e5e5;
+
+        &-compact {
+            padding-bottom: 5px;
+        }
+
+        .warningIcon {
+            position: absolute;
+            left: 20px;
+            top: 28px;
+            width: 24px;
+            height: 24px;
+
+            img {
+                width: 100%;
+            }
+        }
+
+        .warningText {
+            margin-left: 10px;
+            padding-bottom: 20px;
+            position: relative;
+            top: 0;
+            right: 0;
+
+            h2 {
+                padding-left: 0;
+            }
+
+            &-compact {
+                padding-bottom: 5px;
+            }
+        }
+    }
+
+    .ps-btn-xs {
+        line-height: 34px;
+    }
+
+    .ps-form-control[readonly] {
+        background-color: #fafafa;
+    }
+
+    .middle h4 {
+        padding-top: 0;
+    }
+
+    .ps-alert h4 {
+        margin: 0;
+    }
+
+    .ps-btn-dropdown,
+    .ps-btn-l {
+        box-sizing: border-box;
+        height: 36px;
+    }
+
+    .form-grid {
+        display: flex;
+    }
+
+    .builder-item {
+        padding: 0 10px;
+        line-height: 20px;
+        position: relative;
+
+        &:before {
+            content: '';
+            font-size: 12px;
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 3px;
+            height: 3px;
+            display: inline-block;
+            background: #656565;
+        }
+    }
+
+    .export-by-module-tips {
+        padding: 4px 0 0 37px;
+        line-height: 32px;
+        color: #979ba5;
+        font-size: 12px;
+    }
+
+    .paas-env-var-export {
+        display: flex;
+        justify-content: flex-start;
+        .title {
+            line-height: 30px;
+        }
+    }
+
+    .link-a:hover {
+        color: #699df4;
+    }
+
+    .img-exception {
+        width: 300px;
+    }
+    .text-exception {
+        color: #979ba5;
+        font-size: 14px;
+        text-align: center;
+        margin-top: 14px;
+    }
+    .built-in-env {
+        text-decoration: none !important;
+        color: #699df4;
+
+        &:hover {
+            cursor: pointer;
+        }
+    }
+
+    .slider-env-content {
+        padding: 30px;
+        min-height: calc(100vh - 50px);
+    }
+    .env-title {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #313238;
+        line-height: 1;
+    }
+
+    .env-item {
+        font-size: 12px;
+        line-height: 24px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .reminder {
+        margin-top: 15px;
+        line-height: 24px;
+        font-size: 13px;
+        color: #ff9c01;
+    }
+
+    .desc-env {
+        font-size: 12px;
+        color: #979BA5;
+        margin-bottom: 10px;
+    }
+</style>

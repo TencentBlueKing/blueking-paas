@@ -206,12 +206,10 @@ export default {
     },
   },
   watch: {
-    '$route'(newVal, oldVal) {
-      if (newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId) {
-        // eslint-disable-next-line no-plusplus
-        this.renderIndex++;
-        this.init();
-      }
+    '$route'() {
+      // eslint-disable-next-line no-plusplus
+      this.renderIndex++;
+      this.init();
     },
   },
   created() {
@@ -528,7 +526,6 @@ export default {
           appCode: this.appCode,
           params,
         });
-        console.log('res', res);
         this.$paasMessage({
           theme: 'success',
           message: this.$t('操作成功'),

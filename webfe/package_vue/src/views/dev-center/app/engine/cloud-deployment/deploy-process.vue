@@ -60,7 +60,7 @@
             {{ panel.name }}
             <i
               v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
-              class="paasng-icon paasng-edit-2 pl5 pr5"
+              class="paasng-icon paasng-edit-2 pl5 pr10"
               ref="tooltipsHtml"
               @click="handleProcessNameEdit(panel.name, index)"
               v-bk-tooltips="$t('编辑')"
@@ -149,6 +149,7 @@
                 ext-cls="select-custom"
                 ext-popover-cls="select-popover-custom"
                 searchable
+                @change="handleImageChange"
               >
                 <bk-option
                   v-for="option in imageCredentialList"
@@ -683,6 +684,9 @@ export default {
     imageCrdlAnnoKey() {
       return `bkapp.paas.bk.tencent.com/image-credentials.${this.processNameActive}`;
     },
+    imageLocalCrdlAnnoKey() {
+      return `bkapp.paas.bk.tencent.com/image-credentials.${this.localProcessNameActive}`;
+    },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },
@@ -691,19 +695,22 @@ export default {
     cloudAppData: {
       handler(val) {
         if (val.spec) {
+          console.log(1, val.spec);
           this.localCloudAppData = _.cloneDeep(val);
           this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
-          this.isAutoscaling = !!this.formData.autoscaling;
+          this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
         this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
+      deep: true,
     },
     formData: {
       handler(val) {
+        console.log('this.isAutoscaling', this.isAutoscaling);
         if (this.localCloudAppData.spec) {
           val.name = this.processNameActive;
           val.replicas = val.replicas && Number(val.replicas);
@@ -718,7 +725,18 @@ export default {
           console.log('val', val);
 
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
-          this.handlerExtraConfig();   // 处理额外的配置
+          this.handleExtraConfig();   // 处理额外的配置
+
+
+          // 扩缩容
+          if (val?.autoscaling?.maxReplicas >= val?.autoscaling?.minReplicas) {
+            this.$refs.formEnv?.clearError();
+          }
+
+          if (val?.autoscaling?.minReplicas <= val?.autoscaling?.maxReplicas) {
+            this.$refs.formEnv?.clearError();
+          }
+
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -726,17 +744,6 @@ export default {
         }, 500);
       },
       immediate: true,
-      deep: true,
-    },
-    bkappAnnotations: {
-      handler(val) {
-        if (val[this.imageCrdlAnnoKey]) {
-          this.$set(this.localCloudAppData.metadata, 'annotations', val);
-          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        } else {
-          delete val[this.imageCrdlAnnoKey];
-        }
-      },
       deep: true,
     },
     'formData.targetPort'(value) {
@@ -769,19 +776,20 @@ export default {
     },
 
     envName() {
-      this.handlerExtraConfig();   // 处理额外的配置
+      this.handleExtraConfig();   // 处理额外的配置
     },
 
-    'formData.autoscaling.maxReplicas'(val) {
-      if (val && val >= this.formData.autoscaling.minReplicas) {
-        this.$refs.formEnv?.clearError();
-      }
-    },
-    'formData.autoscaling.minReplicas'(val) {
-      if (val && val <=  this.formData.autoscaling.maxReplicas) {
-        this.$refs.formEnv?.clearError();
-      }
-    },
+    // 'formData.autoscaling.maxReplicas'(val) {
+    //   console.log('val', val);
+    //   if (val && val >= this.formData.autoscaling.minReplicas) {
+    //     this.$refs.formEnv?.clearError();
+    //   }
+    // },
+    // 'formData.autoscaling.minReplicas'(val) {
+    //   if (val && val <=  this.formData.autoscaling.maxReplicas) {
+    //     this.$refs.formEnv?.clearError();
+    //   }
+    // },
   },
   created() {
     this.getImageCredentialList();
@@ -789,7 +797,7 @@ export default {
   mounted() {
     // this.$refs.mirrorUrl?.focus();
     setTimeout(() => {
-      this.isAutoscaling = !!this.formData.autoscaling;
+      this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
     }, 1000);
   },
   methods: {
@@ -1025,7 +1033,7 @@ export default {
     handleBtnGroupClick(v, i) {
       // 选中的进程信息
       this.formData = this.localCloudAppData.spec.processes[i];
-      this.isAutoscaling = !!this.formData.autoscaling;
+      this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
       this.localProcessNameActive = v;    // 点击的tab名，编辑数据时需要用到
       this.processNameActive = v;
       this.btnIndex = i;
@@ -1057,6 +1065,7 @@ export default {
 
     // 弹窗确认
     handleConfirm() {
+      this.processNameActive = this.processDialog.name; // 选中当前点击tab
       if (this.processDialog.index) {   // 编辑进程名
         this.panels.forEach((e, i) => {
           if (i === this.processDialog.index) {
@@ -1091,10 +1100,13 @@ export default {
           return e;
         });
 
+        this.bkappAnnotations[this.imageCrdlAnnoKey] = this.bkappAnnotations
+          [this.imageLocalCrdlAnnoKey];   // 旧的bkappAnnotations数据需要赋值给新的
+        delete this.bkappAnnotations[this.imageLocalCrdlAnnoKey];
+
         // this.handleBtnGroupClick(this.processDialog.name);
       } else {  // 新增进程
         this.panels.push({ name: this.processDialog.name });
-        console.log('this.panels111', this.panels);
         this.btnIndex = this.panels.length - 1;
         this.formData = {
           name: this.processDialog.name,
@@ -1109,13 +1121,10 @@ export default {
           envOverlay: {
             replicas: [],
           },
-          autoscaling: { policy: 'default' },
+          autoscaling: { policy: 'default', maxReplicas: '', minReplicas: '' },
         };
         this.localCloudAppData.spec.processes.push(this.formData);
       }
-      console.log('this.panels', this.panels, this.formData, this.localCloudAppData);
-      // debugger;
-      this.processNameActive = this.processDialog.name; // 选中当前点击tab
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
       this.processDialog.visiable = false;
     },
@@ -1133,6 +1142,7 @@ export default {
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
       this.localCloudAppData.spec.processes.splice(i, 1);
+      this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
 
       // 过滤外层envOverlay中的自动调节数据
       this.localCloudAppData.spec.envOverlay.autoscaling = (this.localCloudAppData.spec.envOverlay.autoscaling || [])
@@ -1148,6 +1158,9 @@ export default {
 
       this.processData = this.localCloudAppData.spec.processes;
       this.panels = _.cloneDeep(this.processData);
+
+      // 手动删除镜像凭证
+      delete this.localCloudAppData.metadata.annotations[this.imageCrdlAnnoKey];
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
 
       this.processNameActive = 'web';
@@ -1169,7 +1182,7 @@ export default {
 
 
     // 处理资源配额相关
-    handlerExtraConfig() {
+    handleExtraConfig() {
       // 副本数量相关数据
       const replicasData = {
         envName: this.envName,
@@ -1283,6 +1296,15 @@ export default {
           e.autoscaling.maxReplicas = e.autoscaling.maxReplicas ? Number(e.autoscaling.maxReplicas) : '';
         }
       });
+    },
+
+    // 镜像选择
+    handleImageChange(val) {
+      console.log(val, this.bkappAnnotations);
+      if (this.bkappAnnotations[this.imageCrdlAnnoKey]) {
+        this.$set(this.localCloudAppData.metadata, 'annotations', this.bkappAnnotations);
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }
     },
   },
 };
@@ -1407,8 +1429,7 @@ export default {
             position: absolute;
             top: 5px;
             right: 0px;
-            font-size: 20px;
-            color: #ea3636;
+            font-size: 22px;
             cursor: pointer;
         }
       }

@@ -56,7 +56,7 @@ class ProcInstByEnvListWatcher:
         module_cluster_names = {}
         for env in self.module_envs:
             cluster_name = module_cluster_names[env.module_id] = EnvClusterService(env).get_cluster_name()
-        if len(module_cluster_names) != 1:
+        if len(set(module_cluster_names.values())) != 1:
             # TODO: 讨论解决方案, 如何解决不同集群/命名空间有不同的 rv 的问题
             raise RuntimeError("当前应用不支持 list-watch 进程信息")
         return cluster_name
@@ -67,7 +67,7 @@ class ProcInstByEnvListWatcher:
         module_namespaces = {}
         for env in self.module_envs:  # type: ModuleEnvironment
             namespace = module_namespaces[env.module_id] = env.wl_app.namespace
-        if len(module_namespaces) != 1:
+        if len(set(module_namespaces.values())) != 1:
             # TODO: 讨论解决方案, 如何解决不同集群/命名空间有不同的 rv 的问题
             raise RuntimeError("当前应用不支持 list-watch 进程信息")
         return namespace

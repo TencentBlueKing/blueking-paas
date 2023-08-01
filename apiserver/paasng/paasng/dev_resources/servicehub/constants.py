@@ -21,13 +21,13 @@ from enum import Enum
 
 from blue_krill.data_types.enum import StructuredEnum
 
-SERVICE_SENSITIVE_FIELDS = {
-    'gcs_mysql': ['GCS_MYSQL_PASSWORD'],
-    'mysql': ['MYSQL_PASSWORD'],
-    'rabbitmq': ['RABBITMQ_PASSWORD', 'LEGACY_RABBITMQ_PASSWORD'],
-}
+# 需要在平台侧完全隐藏的字段名称，用户无法在产品上查看该字段内容，只能通过环境变量查看
+SERVICE_SENSITIVE_FIELDS: dict = {}
 
-SERVICE_HIDDEN_FIELDS = {'ceph': ['CEPH_AWS_SECRET_ACCESS_KEY']}
+# 需要在平台侧隐藏展示的字段名称，用户可在产品上点击确认按钮后查看字段内容
+# 该配置仅对本地增强服务生效，远程增强服务的设置可参考：
+# https://github.com/TencentBlueKing/bkpaas-python-sdk/blob/master/sdks/paas-service/paas_service/models.py#L196
+SERVICE_HIDDEN_FIELDS: dict = {'redis': ['REDIS_PASSWORD']}
 
 # 迁移服务的 plan 占位符
 LEGACY_PLAN_ID = uuid.UUID('{00000000-0000-0000-0000-000000000000}')

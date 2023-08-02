@@ -215,6 +215,7 @@ export default {
   },
   created() {
     this.init();
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
     bus.$on('release-disabled', (value) => {
       this.isDisabled = value;
     });

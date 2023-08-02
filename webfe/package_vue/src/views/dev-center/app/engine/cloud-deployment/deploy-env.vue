@@ -46,18 +46,21 @@
           </div>
         </div>
         <bk-table
-          v-if="envVarList.length"
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
+          v-if="envVarList.length"
           class="table-cls mt20">
-          <bk-table-column :label="$t('Key')" class-name="table-colum-module-cls">
-            <template slot-scope="{ row }">
+          <bk-table-column :label="$t('Key')" class-name="table-colum-module-cls" sortable>
+            <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit" class="table-colum-cls">
                 <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
+                  :label-width="0" form-type="inline" :ref="`envRefName${$index}`"
                   class="env-from-cls" :model="row">
                   <bk-form-item :required="true" :property="'name'" :rules="rules.name">
-                    <bk-input v-model="row.name" class="env-input-cls" @enter="handleEnter(row)">
+                    <bk-input
+                      v-model="row.name" class="env-input-cls"
+                      @enter="handleInputEvent(row, $index)"
+                      @blur="handleInputEvent(row, $index)">
                     </bk-input>
                   </bk-form-item>
                 </bk-form>
@@ -70,7 +73,7 @@
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
+                  :label-width="0" form-type="inline" :ref="`envRefValue`"
                   class="env-from-cls" :model="row">
                   <bk-form-item :required="true" :property="'value'" :rules="rules.value">
                     <bk-input v-model="row.value" class="env-input-cls">
@@ -86,14 +89,15 @@
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
-                  form-type="inline" ref="urlInfoForm"
+                  form-type="inline"
                   class="env-from-cls">
-                  <bk-form-item :required="true" :property="'url'">
+                  <bk-form-item :required="true">
                     <bk-select
                       v-model="row.envName"
                       :placeholder="$t('请选择')"
                       :clearable="false"
                       style="width: 200px"
+                      @change="handleEnvChange(row)"
                     >
                       <bk-option
                         v-for="(option, optionIndex) in envSelectList"
@@ -113,8 +117,8 @@
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
-                  :label-width="0" form-type="inline" ref="urlInfoForm"
-                  class="env-from-cls" :model="row">
+                  form-type="inline" :ref="`envRefDescription`"
+                  class="env-from-cls">
                   <bk-form-item :required="true" :property="'description'" :rules="rules.description">
                     <bk-input v-model="row.description" class="env-input-cls">
                     </bk-input>
@@ -233,23 +237,9 @@ export default {
   },
   data() {
     return {
+      curItem: {},
       envVarList: [],
-      envVarListBackup: [],
       runtimeImageList: [],
-      buildpackValueList: [],
-      runtimeImage: '',
-      runtimeBuild: [],
-      isRuntimeUpdaing: false,
-      availableEnv: [],
-      isEdited: false,
-      isReleased: false,
-      deleteToolTipShow: false,
-      newVarConfig: {
-        key: '',
-        value: '',
-        env: 'stag',
-        description: '',
-      },
       rules: {
         name: [
           {
@@ -260,6 +250,20 @@ export default {
           {
             regex: /^[-._a-zA-Z][-._a-zA-Z0-9]*$/,
             message: i18n.t('环境变量名称必须由字母字符、数字、下划线（_）、连接符（-）、点（.）组成，并且不得以数字开头（例如“my.env-name”或“MY_ENV.NAME”, 或 “MyEnvName1”）'),
+            trigger: 'blur',
+          },
+          {
+            validator: () => {
+              const flag = this.envVarList.filter(item => item.name === this.curItem.name
+              && item.envName === this.curItem.envName);
+              if (flag.length <= 1) {   // 如果符合要求需要清除错误
+                this.envVarList.forEach((e, i) => {
+                  this.$refs[`envRefName${i}`].clearError();
+                });
+              }
+              return flag.length <= 1;
+            },
+            message: () => this.$t(`该环境下名称为 ${this.curItem.name} 的变量已经存在，不能重复添加。`),
             trigger: 'blur',
           },
         ],
@@ -291,37 +295,7 @@ export default {
       editRowList: [],
       isLoading: true,
       isVarLoading: true,
-      activeEnvTab: '',
-      updateFormList: [],
-      runtimeDialogConf: {
-        visiable: false,
-        image: '',
-        buildpacks: [],
-        buildpackValueList: [],
-      },
 
-      isDropdownShow: false,
-      curSortKey: '-created',
-
-      exportDialog: {
-        visiable: false,
-        width: 480,
-        headerPosition: 'center',
-        loading: false,
-        isLoading: false,
-        count: 0,
-      },
-      exportFileDialog: {
-        visiable: false,
-        width: 540,
-        headerPosition: 'center',
-        loading: false,
-      },
-      moduleValue: '',
-      curSelectModuleName: '',
-      curFile: {},
-      isFileTypeError: false,
-      envItemBackUp: {},
       envSidesliderConf: {
         visiable: false,
       },
@@ -333,71 +307,16 @@ export default {
         appRuntimeLoading: false,
         bkPlatformLoading: false,
       },
-      globalSelectList: [
-
-      ],
       envSelectList: [
         { id: '_global_', text: this.$t('所有环境') },
         { id: 'stag', text: this.$t('预发布环境') },
         { id: 'prod', text: this.$t('生产环境') },
       ],
-      allReplicaList: [],
-      envReplicaList: [],
       isTableLoading: true,
-      allEnvVarList: [],
+      localCloudAppData: {},
     };
   },
   computed: {
-    runtimeBuildpacks() {
-      let result = [];
-      const image = this.runtimeImageList.find(item => item.image === this.runtimeDialogConf.image);
-      const buildpacks = image ? [...image.buildpacks] : [];
-
-      // 兼容穿梭框右侧排序问题，后续调整组件
-      this.runtimeBuild.forEach((id) => {
-        buildpacks.forEach((item, index) => {
-          if (item.id === id) {
-            result.push(item);
-            buildpacks.splice(index, 1);
-          }
-        });
-      });
-      result = result.concat(buildpacks);
-
-      return result;
-    },
-    runtimeBuildpacksId() {
-      return this.runtimeBuildpacks.map(item => item.id);
-    },
-    runtimeImageText() {
-      const result = this.runtimeImageList.find(item => item.image === this.runtimeImage);
-      if (result) {
-        return result.name || result.image;
-      }
-      return '';
-    },
-    runtimeBuildTexts() {
-      const builds = [];
-      const image = this.runtimeImageList.find(item => item.image === this.runtimeImage);
-      const buildpacks = image ? image.buildpacks : [];
-      this.runtimeBuild.forEach((item) => {
-        buildpacks.forEach((pack) => {
-          if (pack.id === item) {
-            builds.push(pack);
-          }
-        });
-      });
-      return builds;
-    },
-    globalEnvName() {
-      if (_.includes(this.availableEnv, 'stag') && _.includes(this.availableEnv, 'prod')) {
-        return '_global_';
-      }
-      return this.availableEnv[0];
-    },
-    curModuleList() {
-      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
-    },
     envLoading() {
       return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
     },
@@ -407,15 +326,12 @@ export default {
     },
   },
   watch: {
-    '$route'() {
-      // this.init();
-    },
     cloudAppData: {
       handler(val) {
         if (val.spec) {
+          this.localCloudAppData = _.cloneDeep(val);
           this.envVarList = [...val.spec.configuration.env, ...val.spec.envOverlay.envVariables];
-
-          console.log('this.envVarList', this.envVarList);
+          this.envLocalVarList = _.cloneDeep(this.envVarList);
 
           setTimeout(() => {
             this.isLoading = false;
@@ -437,32 +353,11 @@ export default {
     },
   },
   created() {
-    // this.init();
   },
   methods: {
     init() {
       this.isLoading = true;
-      this.isEdited = false;
-      this.curSortKey = '-created';
-      // this.loadConfigVar();
-      this.fetchReleaseInfo();
       this.getAllImages();
-    },
-    fetchReleaseInfo() {
-      // 这里分别调用预发布环境 和 生产环境的 API，只要有一个返回 200，isReleased 就要设置为 True
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/stag` + '/released_state/?with_processes=true').then(() => {
-        this.isReleased = true;
-        this.availableEnv.push('stag');
-      }, (errRes) => {
-        console.error(errRes);
-      });
-
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/prod` + '/released_state/?with_processes=true').then(() => {
-        this.isReleased = true;
-        this.availableEnv.push('prod');
-      }, (errRes) => {
-        console.error(errRes);
-      });
     },
     async getAllImages() {
       try {
@@ -488,37 +383,10 @@ export default {
         });
       }
     },
-    isReadOnlyRow(rowIndex) {
-      return !_.includes(this.editRowList, rowIndex);
-    },
-    isEnvAvailable(envName) {
-      return _.includes(this.availableEnv, envName);
-    },
-    editingRowToggle(rowItem, rowIndex, type = '') {
-      if (rowItem.isAdd) {
-        // 直接删除
-        this.envVarList.splice(rowIndex, 1);
-      } else {
-        if (type === 'cancel') {
-          if (Object.keys(this.envItemBackUp).length === 0) { // 如果没有任何内容 则删除
-            this.envVarList.splice(rowIndex, 1);
-          } else {
-            this.envVarList.splice(rowIndex, 1, this.envItemBackUp);
-          }
-          this.editRowList = this.editRowList.filter(e => e !== rowIndex);
-        } else {
-          this.envItemBackUp = _.cloneDeep(rowItem);
-          if (_.includes(this.editRowList, rowIndex)) {
-            this.editRowList = this.editRowList.filter(e => e !== rowIndex);
-          } else {
-            this.editRowList.push(rowIndex);
-          }
-        }
-      }
-    },
-    // 处理回车
-    handleEnter(rowItem) {
-      const isExist = this.isExistsVarName(rowItem);
+    // 处理input事件
+    handleInputEvent(rowItem, rowIndex) {
+      this.curItem = rowItem;
+      console.log('this.curItem', this.curItem, rowIndex);
     },
     addEnvData() {
       const isAdd = this.envVarList.find(item => item.isAdd);
@@ -534,8 +402,27 @@ export default {
       this.editRowList.push(this.envVarList.length - 1);
     },
 
-    formDataValidate(index) {
-      this.$refs.envRef[index].validate();
+    async formDataValidate() {
+      console.log('this.$refs.envRefName', this.$refs.envRefName);
+      // 提交时需要检验,拿到需要检验的数据下标
+      const flag = this.envVarList.reduce((p, v, i) => {
+        if (v.name === this.curItem.name && v.envName === this.curItem.envName) {
+          p.push({ ...v, i });
+        }
+        return p;
+      }, []);
+      if (flag.length > 1) {
+        flag.forEach(async (e) => {
+          try {
+            await this.$refs[`envRefName${e.i}`].validate();
+            return true;
+          } catch (error) {
+            return false;
+          }
+        });
+      } else {
+        return true;
+      }
     },
 
     handleShoEnvDialog() {
@@ -627,32 +514,7 @@ export default {
       });
     },
 
-    isExistsVarName(curItem) {
-      const flag = this.envVarList.find(item => item.name === curItem.name && item.envName === curItem.envName);
-      if (flag) {
-        this.$paasMessage({
-          theme: 'error',
-          message: `该环境下名称为 ${curItem.name} 的变量已经存在，不能重复添加。`,
-        });
-        return false;
-      }
-      return 'single';
-    },
-
     handleSort() {
-      this.isTableLoading = true;
-      if (this.curStage === '_global_') {
-        if (this.envVarList.length > 1) {
-          this.alphabeticalOrder(this.envVarList);
-        }
-      } else {
-        if (this.allReplicaList.length > 1) {
-          this.alphabeticalOrder(this.allReplicaList);
-        }
-      }
-      setTimeout(() => {
-        this.isTableLoading = false;
-      }, 200);
     },
 
     // 首字母排序
@@ -663,22 +525,6 @@ export default {
         return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
       });
     },
-
-    redisplay() {
-      if (!this.curStage) {
-        this.envVarList = this.allEnvVarList;
-      } else {
-        this.envVarList = this.allEnvVarList.filter(item => item.envName === this.curStage);
-      }
-    },
-
-    setLocalCloudAppData() {
-      const allEnvList = this.allEnvVarList.filter(item => item.envName === '_global_');
-      const otherEnvList = this.allEnvVarList.filter(item => item.envName !== '_global_');
-      this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
-      this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
-    },
-
 
     // 编辑页面
     handleEditClick() {
@@ -693,6 +539,7 @@ export default {
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
 
+    // 新增一条数据
     handleEnvTableListData(v, i) {
       if (v === 'add') {
         this.envVarList.push({
@@ -706,6 +553,18 @@ export default {
       }
       this.localCloudAppData.spec.envOverlay.envVariables = [...this.envVarList];
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+    },
+
+    // 选中环境
+    handleEnvChange(curItem) {
+      this.curItem = curItem;
+      const flag = this.envVarList.filter(item => item.name === this.curItem.name
+              && item.envName === this.curItem.envName);
+      if (flag.length <= 1) {   // 如果符合要求需要清除错误
+        this.envVarList.forEach((e, i) => {
+          this.$refs[`envRefName${i}`].clearError();
+        });
+      }
     },
   },
 };

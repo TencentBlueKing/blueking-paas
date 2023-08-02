@@ -168,6 +168,7 @@ export default {
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
       ],
       active: 'cloudAppDeployForProcess',
+      envValidate: true,
     };
   },
   computed: {
@@ -520,9 +521,14 @@ export default {
       try {
         // 处理进程配置数据
         this.$refs[this.routerRefs]?.handleProcessData && this.$refs[this.routerRefs]?.handleProcessData();
-
+        // 处理环境变量校验
+        this.envValidate = await (this.$refs[this.routerRefs]?.formDataValidate
+        && this.$refs[this.routerRefs]?.formDataValidate());
+        if (!this.envValidate) return;   // 没通过校验不提交
+        console.log('this.envValidate', this.envValidate);
+        debugger;
         const params = { ... this.$store.state.cloudApi.cloudAppData };
-        const res = await this.$store.dispatch('deploy/saveCloudAppInfo', {
+        await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           params,
         });

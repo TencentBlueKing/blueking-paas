@@ -17,18 +17,44 @@
         </bk-alert>
         <div class="flex-row align-items-center justify-content-between mt20">
           <div>
-            <bk-button
-              :theme="'default'"
-              :outline="true"
-              class="mr10"
-              @click.stop.prevent="addEnvData"
+            <bk-dropdown-menu
+              ref="largeDropdown"
+              trigger="click"
+              ext-cls="env-export-wrapper"
             >
-              {{ $t('批量导入') }}
-            </bk-button>
+              <bk-button
+                slot="dropdown-trigger"
+                class="mr10"
+              >
+                {{ $t('批量导入') }}
+              </bk-button>
+              <ul
+                slot="dropdown-content"
+                class="bk-dropdown-list"
+              >
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0;"
+                    :class="(curModuleList.length < 1 || !canModifyEnvVariable) ? 'is-disabled' : ''"
+                    @click="handleCloneFromModule"
+                  > {{ $t('从模块导入') }} </a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0;"
+                    :class="!canModifyEnvVariable ? 'is-disabled' : ''"
+                    @click="handleImportFromFile"
+                  > {{ $t('从文件导入') }} </a>
+                </li>
+              </ul>
+            </bk-dropdown-menu>
             <bk-button
               :theme="'default'"
               :outline="true"
-              @click.stop.prevent="addEnvData"
+              class="export-btn-cls"
+              @click="handleExportToFile"
             >
               {{ $t('批量导出') }}
             </bk-button>
@@ -324,6 +350,14 @@ export default {
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },
+
+    canModifyEnvVariable() {
+      return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
+    },
+
+    curModuleList() {
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
+    },
   },
   watch: {
     cloudAppData: {
@@ -565,6 +599,28 @@ export default {
           this.$refs[`envRefName${i}`].clearError();
         });
       }
+    },
+
+    handleCloneFromModule() {},
+
+    handleImportFromFile() {},
+
+
+    handleExportToFile() {
+      this.exportLoading = true;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
+      this.$http.get(url).then((response) => {
+        this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.exportLoading = false;
+        });
     },
   },
 };
@@ -1030,6 +1086,10 @@ export default {
       /deep/ .bk-form-input{
         width: 90%;
       }
+    }
+
+    .export-btn-cls{
+      font-size: 12px;
     }
   </style>
 

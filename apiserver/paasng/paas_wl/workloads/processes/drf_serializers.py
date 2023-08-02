@@ -16,7 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import arrow
@@ -35,6 +36,8 @@ from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.models import ProcessSpec
+from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.engine.constants import RuntimeType
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):
@@ -149,6 +152,33 @@ class NamespaceScopedListWatchRespPartSLZ(serializers.Serializer):
     total_available_instance_count = serializers.IntegerField(help_text="总运行实例数")
     total_desired_replicas = serializers.IntegerField(help_text="总期望实例数")
     total_failed = serializers.IntegerField(help_text="总异常实例数")
+
+
+@dataclass
+class ModuleScopedData:
+    module_name: str
+    build_method: RuntimeType
+    is_deployed: bool
+    exposed_url: Optional[str]
+    version_info: Optional[VersionInfo] = None
+
+    processes: List[Process] = field(default_factory=list)
+    instances: List[Instance] = field(default_factory=list)
+    proc_specs: List[Dict] = field(default_factory=list)
+
+    @property
+    def total_available_instance_count(self) -> int:
+        return sum(p.status.success for p in self.processes if p.status)
+
+    @property
+    def total_desired_replicas(self) -> int:
+        # Q: 为什么不使用 process_specs 的 target_replicas
+        # A: 因为该字段对自动扩缩容的进程无效
+        return sum(p.status.replicas for p in self.processes if p.status)
+
+    @property
+    def total_failed(self) -> int:
+        return sum(p.status.failed for p in self.processes if p.status)
 
 
 class NamespaceScopedListWatchRespSLZ(serializers.Serializer):

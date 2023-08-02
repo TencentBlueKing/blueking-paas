@@ -90,7 +90,10 @@ def parse_procfile(res: BkAppResource) -> Dict[str, str]:
 
 
 def parse_image(res: BkAppResource) -> Tuple[str, str]:
-    """Parse image from app model resource"""
+    """Parse image from app model resource
+
+    :return: Tuple[image_name, image_tag]
+    """
     image = ""
     if res.apiVersion == ApiVersion.V1ALPHA2:
         if res.spec.build and res.spec.build.image:
@@ -102,15 +105,13 @@ def parse_image(res: BkAppResource) -> Tuple[str, str]:
     # 兼容 V1ALPHA1
     # 优先使用 web 进程的镜像, 如无 web 进程, 则使用第一个进程的镜像
     images = []
-    proc_web_image = None
     for proc in res.spec.processes:
         if proc.image:
             images.append(proc.image)
             if proc.name == "web":
-                proc_web_image = proc.image
-    if proc_web_image:
-        image = proc_web_image
-    elif images:
-        image = images[0]
+                part = proc.name.partition(":")
+                return part[0], part[2]
+
+    image = images[0] if images else image
     part = image.partition(":")
     return part[0], part[2]

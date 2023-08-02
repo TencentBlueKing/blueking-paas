@@ -18,9 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from dataclasses import dataclass, field
 from operator import attrgetter
-from typing import Dict, List, Optional
+from typing import Dict
 
 from django.http import StreamingHttpResponse
 from drf_yasg.utils import swagger_auto_schema
@@ -28,57 +27,24 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.models import AppModelRevision, BkAppResource
-from paas_wl.cnative.specs.procs import parse_image
 from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.processes.drf_serializers import (
+    ModuleScopedData,
     NamespaceScopedListWatchRespSLZ,
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
-from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.shim import ProcessManager
 from paas_wl.workloads.processes.watch import ProcInstByEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.dev_resources.sourcectl.models import VersionInfo
-from paasng.engine.constants import RuntimeType
-from paasng.engine.models.deployment import Deployment
-from paasng.platform.applications.constants import ApplicationType
+from paasng.engine.utils.version import get_env_deployed_version_info
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.modules.models import BuildConfig
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ModuleScopedData:
-    module_name: str
-    build_method: RuntimeType
-    is_deployed: bool
-    exposed_url: Optional[str]
-    version_info: Optional[VersionInfo] = None
-
-    processes: List[Process] = field(default_factory=list)
-    instances: List[Instance] = field(default_factory=list)
-    proc_specs: List[Dict] = field(default_factory=list)
-
-    @property
-    def total_available_instance_count(self) -> int:
-        return sum(p.status.success for p in self.processes if p.status)
-
-    @property
-    def total_desired_replicas(self) -> int:
-        # Q: 为什么不使用 process_specs 的 target_replicas
-        # A: 因为该字段对自动扩缩容的进程无效
-        return sum(p.status.replicas for p in self.processes if p.status)
-
-    @property
-    def total_failed(self) -> int:
-        return sum(p.status.failed for p in self.processes if p.status)
 
 
 class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
@@ -103,31 +69,15 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             module_name = module_env.module.name
             is_living, addr = get_builtin_addr_preferred(module_env)
             exposed_url = None
-            version_info = None
             if is_living and addr:
                 exposed_url = addr.url
 
-            build_config = BuildConfig.objects.get_or_create_by_module(module_env.module)
-            try:
-                deployment = Deployment.objects.filter_by_env(module_env).latest_succeeded()
-                if (
-                    application.type == ApplicationType.CLOUD_NATIVE
-                    and build_config.build_method == RuntimeType.CUSTOM_IMAGE
-                ):
-                    bkapp_revision = AppModelRevision.objects.get(pk=deployment.bkapp_revision_id)
-                    res = BkAppResource(**bkapp_revision.json_value)
-                    image_name, image_tag = parse_image(res)
-                    version_info = VersionInfo(revision="", version_name=image_tag, version_type="tag")
-                else:
-                    version_info = deployment.version_info
-            except Deployment.DoesNotExist:
-                logger.debug("Module: %s Env: %s is not deployed", module_name, environment)
-
+            build_method, version_info = get_env_deployed_version_info(module_env)
             grouped_data[module_name] = ModuleScopedData(
                 module_name=module_name,
                 is_deployed=is_living,
                 exposed_url=exposed_url,
-                build_method=build_config.build_method,
+                build_method=build_method,
                 version_info=version_info,
                 proc_specs=grouped_proc_specs.get(module_name) or [],
             )

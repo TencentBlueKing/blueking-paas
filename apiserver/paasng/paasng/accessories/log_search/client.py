@@ -61,7 +61,12 @@ class BkLogClient:
         self.client = client
 
     def create_custom_collector_config(self, bk_biz_id: int, config: CustomCollectorConfig):
-        """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值"""
+        """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
+
+        :param int bk_biz_id: 业务ID，或空间ID
+        :param config: 自定采集项配置
+        :return: 创建的自定采集项配置
+        """
         data: Dict[str, Any] = {
             "bk_biz_id": bk_biz_id,
             "collector_config_name_en": config.name_en,

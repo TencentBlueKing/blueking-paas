@@ -340,6 +340,7 @@ export default {
       ],
       isTableLoading: true,
       localCloudAppData: {},
+      curSortKey: '-created',
     };
   },
   computed: {
@@ -608,6 +609,7 @@ export default {
 
     handleExportToFile() {
       this.exportLoading = true;
+      console.log('this.curSortKey', this.curSortKey);
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
       this.$http.get(url).then((response) => {
         this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
@@ -621,6 +623,16 @@ export default {
         .finally(() => {
           this.exportLoading = false;
         });
+    },
+
+    invokeBrowserDownload(content, filename) {
+      const a = document.createElement('a');
+      const blob = new Blob([content], { type: 'text/plain' });
+      a.download = filename;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blob);
     },
   },
 };

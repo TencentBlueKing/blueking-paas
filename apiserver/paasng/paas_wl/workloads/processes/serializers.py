@@ -28,6 +28,7 @@ from kubernetes.dynamic import ResourceField, ResourceInstance
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release, WlApp
+from paas_wl.release_controller.constants import ImagePullPolicy
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.processes.constants import PROCESS_MAPPER_VERSION_KEY, PROCESS_NAME_KEY
@@ -103,8 +104,8 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
                     "command": getattr(main_container, "command", []),
                     "args": getattr(main_container, "args", []),
                     "proc_command": proc_command,
-                    "image_pull_policy": main_container.imagePullPolicy,
-                    "image_pull_secrets": pod_spec.imagePullSecrets,
+                    "image_pull_policy": getattr(main_container, "imagePullPolicy", ImagePullPolicy.IF_NOT_PRESENT),
+                    "image_pull_secrets": getattr(pod_spec, "imagePullSecrets", []),
                 },
                 Runtime,
             ),

@@ -50,7 +50,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
     def get_resource_quotas(self, instance: Application) -> dict:
         default_quotas = {'memory': '--', 'cpu': '--'}
         if app_resource_quotas := self.context.get('app_resource_quotas'):
-            return app_resource_quotas.get(instance.code)
+            return app_resource_quotas.get(instance.code, default_quotas)
         return default_quotas
 
     class Meta:

@@ -53,7 +53,7 @@ class ConfigMapSource(TimestampedModel):
     objects = ConfigMapSourceQuerySet.as_manager()
 
     class Meta:
-        unique_together = ('module_id', 'name', 'environment_name')
+        unique_together = ('name', 'environment_name')
 
 
 class Mount(TimestampedModel):

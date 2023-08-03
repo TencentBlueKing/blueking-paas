@@ -233,21 +233,26 @@ def update_or_create_custom_collector_config(
     return custom_collector_config
 
 
-def update_or_create_es_search_config(env: ModuleEnvironment, collector_config: AppLogCollectorConfig):
-    """初始化日志查询相关的数据库模型"""
+def update_or_create_es_search_config(
+    env: ModuleEnvironment, collector_config: AppLogCollectorConfig, message_field: str = "log"
+):
+    """初始化日志查询相关的数据库模型
+
+    :param str message_field: 日志查询字段, 默认值 log 是日志平台的原始日志字段
+    """
     module = env.module
     assert collector_config.collector_config
     # 与 ELK 方案共用 ES 存储, 需要预先在日志平台配置
     host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
     search_params = ElasticSearchParams(
         # 日志平台的索引规则: ${biz_id}_bklog_${name_en}_*
+        # TODO: 修改成蓝鲸应用命名空间后, 需要注意 index 规则是否一致
         indexPattern=f"{BKLogConfigProvider(module).bk_biz_id}_bklog_{collector_config.collector_config.name_en}_*",
         # time 是日志平台默认的时间字段
         timeField="time",
         timeFormat="timestamp[ns]",
-        # log 是日志平台的原始日志字段
-        messageField="log",
-        # 已根据 index 区分日志, 无需额外的搜索条件
+        messageField=message_field,
+        # 已根据 index 区分不同应用-模块的日志, 无需额外的搜索条件
         termTemplate={},
         builtinFilters={},
         builtinExcludes={},
@@ -284,7 +289,8 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     json_config.collector_config = update_or_create_custom_collector_config(env, json_config, skip_update=True)
     stdout_config.collector_config = update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
     # 绑定日志查询的配置
-    update_or_create_es_search_config(env, json_config)
+    # TODO: 日志平台支持存储将日志内容本身存储为 json 后, 修改成类似于 json.message 的字段
+    update_or_create_es_search_config(env, json_config, message_field="message")
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案

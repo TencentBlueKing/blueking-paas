@@ -210,6 +210,7 @@ export default {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
+      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
       this.init();
     },
   },

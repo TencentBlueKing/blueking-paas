@@ -36,7 +36,7 @@
                   <a
                     href="javascript:;"
                     style="margin: 0;"
-                    :class="(curModuleList.length < 1 || !canModifyEnvVariable) ? 'is-disabled' : ''"
+                    :class="(addedModuleList.length < 1 || !canModifyEnvVariable) ? 'is-disabled' : ''"
                     @click="handleCloneFromModule"
                   > {{ $t('从模块导入') }} </a>
                 </li>
@@ -244,6 +244,147 @@
         </p>
       </div>
     </bk-sideslider>
+
+    <bk-dialog
+      v-model="exportDialog.visiable"
+      :title="$t('从其它模块导入环境变量')"
+      :header-position="exportDialog.headerPosition"
+      :width="exportDialog.width"
+      @after-leave="handleAfterLeave"
+    >
+      <div>
+        <div class="paas-env-var-export">
+          <label class="title"> {{ $t('模块：') }} </label>
+          <bk-select
+            v-model="moduleValue"
+            :disabled="false"
+            :clearable="false"
+            searchable
+            style="flex: 0 0 390px;"
+            @selected="handleModuleSelected"
+          >
+            <bk-option
+              v-for="option in addedModuleList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+        <div
+          v-bkloading="{ isLoading: exportDialog.isLoading, opacity: 1 }"
+          class="export-by-module-tips"
+        >
+          <p
+            v-if="exportDialog.count"
+            style="line-height: 20px;"
+          >
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }}
+            {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+          </p>
+          <p v-else>
+            【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}
+          </p>
+        </div>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          class="mr10"
+          :disabled="exportDialog.count < 1"
+          :loading="exportDialog.loading"
+          @click="handleExportConfirm"
+        >
+          {{ $t('确定导入') }}
+        </bk-button>
+        <bk-button @click="handleExportCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="importFileDialog.visiable"
+      :header-position="importFileDialog.headerPosition"
+      :loading="importFileDialog.loading"
+      :width="importFileDialog.width"
+      :ok-text="$t('确定导入')"
+      ext-cls="paas-env-var-upload-dialog"
+      @after-leave="handleImportFileLeave"
+    >
+      <div
+        slot="header"
+        class="header"
+      >
+        {{ $t('从文件导入环境变量到') }}【<span
+          class="title"
+          :title="curModuleId"
+        >{{ curModuleId }}</span> 】{{ $t('模块') }}
+      </div>
+      <div>
+        <div class="download-tips">
+          <span>
+            <i class="paasng-icon paasng-exclamation-circle" />
+            {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
+          </span>
+          <bk-button
+            text
+            theme="primary"
+            size="small"
+            style="line-height: 40px;"
+            @click="handleDownloadTemplate"
+          >
+            {{ $t('下载模板') }}
+          </bk-button>
+        </div>
+        <div class="upload-content">
+          <p><i class="paasng-icon paasng-file-fill file-icon" /></p>
+          <p>
+            <bk-button
+              text
+              theme="primary"
+              ext-cls="env-var-upload-btn-cls"
+              @click="handleTriggerUpload"
+            >
+              {{ $t('选择文件') }}
+            </bk-button>
+          </p>
+          <p
+            v-if="curFile.name"
+            class="cur-upload-file"
+          >
+            {{ $t('已选择文件：') }} {{ curFile.name }}
+          </p>
+          <p
+            v-if="isFileTypeError"
+            class="file-error-tips"
+          >
+            {{ $t('请选择yaml文件') }}
+          </p>
+        </div>
+
+        <input
+          ref="upload"
+          type="file"
+          style="position: absolute; width: 0; height: 0;"
+          @change="handleStartUpload"
+        >
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          class="mr10"
+          :loading="importFileDialog.loading"
+          :disabled="!curFile.name"
+          @click="handleImportFileConfirm"
+        >
+          {{ $t('确定导入') }}
+        </bk-button>
+        <bk-button @click="handleImportFileCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
   </div>
 </template>
 
@@ -275,10 +416,11 @@ export default {
           {
             validator: () => {
               const flag = this.envVarList.filter(item => item.key === this.curItem.key
-              && item.envName === this.curItem.envName);
+              && item.environment_name === this.curItem.environment_name);
+              console.log(flag);
               if (flag.length <= 1) {   // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
-                  this.$refs[`envRefName${i}`].clearError();
+                  this.$refs[`envRefKey${i}`].clearError();
                 });
               }
               return flag.length <= 1;
@@ -333,6 +475,24 @@ export default {
       ],
       localCloudAppData: {},
       curSortKey: '-created',
+      exportDialog: {
+        visiable: false,
+        width: 480,
+        headerPosition: 'center',
+        loading: false,
+        isLoading: false,
+        count: 0,
+      },
+      importFileDialog: {
+        visiable: false,
+        width: 540,
+        headerPosition: 'center',
+        loading: false,
+      },
+      moduleValue: '',
+      curSelectModuleName: '',
+      curFile: {},
+      isFileTypeError: false,
     };
   },
   computed: {
@@ -348,7 +508,7 @@ export default {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
     },
 
-    curModuleList() {
+    addedModuleList() {
       return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
@@ -386,7 +546,7 @@ export default {
     },
 
     async saveEnvData() {
-      // console.log('this.$refs.envRefName', this.$refs.envRefName);
+      // console.log('this.$refs.envRefKey', this.$refs.envRefKey);
       // // 提交时需要检验,拿到需要检验的数据下标
       // const flag = this.envVarList.reduce((p, v, i) => {
       //   if (v.name === this.curItem.name && v.envName === this.curItem.envName) {
@@ -397,7 +557,7 @@ export default {
       // if (flag.length > 1) {
       //   flag.forEach(async (e) => {
       //     try {
-      //       await this.$refs[`envRefName${e.i}`].validate();
+      //       await this.$refs[`envRefKey${e.i}`].validate();
       //       this.save();
       //     } catch (error) {
       //       return false;
@@ -419,7 +579,7 @@ export default {
       //       theme: 'success',
       //       message: this.$t('添加环境变量成功'),
       //     });
-      //     this.loadConfigVar();
+      //     this.getEnvVarList();
       //     this.newVarConfig = {
       //       key: '',
       //       value: '',
@@ -440,7 +600,7 @@ export default {
           'envVar/saveEnvItem',
           { appCode: this.appCode,
             moduleId: this.curModuleId,
-            data: createForm,
+            data: this.envVarList,
           },
         );
         this.$paasMessage({
@@ -591,14 +751,121 @@ export default {
               && item.envName === this.curItem.envName);
       if (flag.length <= 1) {   // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {
-          this.$refs[`envRefName${i}`].clearError();
+          this.$refs[`envRefKey${i}`].clearError();
         });
       }
     },
 
-    handleCloneFromModule() {},
+    handleCloneFromModule() {
+      if (!this.canModifyEnvVariable) {
+        return;
+      }
+      if (this.addedModuleList.length < 1) {
+        return;
+      }
+      this.exportDialog.visiable = true;
+      this.moduleValue = this.addedModuleList[0].id;
+      this.curSelectModuleName = this.addedModuleList[0].name;
+      this.handleModuleSelected('', { name: this.curSelectModuleName });
+    },
 
-    handleImportFromFile() {},
+    handleModuleSelected(value, { name }) {
+      this.curSelectModuleName = name;
+      this.exportDialog.isLoading = true;
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`).then((response) => {
+        this.exportDialog.count = (response || []).length;
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.exportDialog.isLoading = false;
+        });
+    },
+
+    async handleExportConfirm() {
+      this.exportDialog.loading = true;
+      try {
+        const res = await this.$store.dispatch('envVar/exportModuleEnv', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          sourceModuleName: this.curSelectModuleName,
+        });
+        const createNum = res.create_num;
+        const overwritedNum = res.overwrited_num;
+        const ignoreNum = res.ignore_num;
+        this.isEdited = createNum > 0 || overwritedNum > 0;
+        const message = (
+          () => {
+            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+            let messageText = '';
+            switch (numStr) {
+              case '111':
+                messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '110':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '100':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
+                break;
+              case '101':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '011':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '010':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '001':
+                messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
+                break;
+              default:
+                messageText = `${this.$t('导入成功')}`;
+            }
+            return messageText;
+          }
+        )();
+        this.$paasMessage({
+          theme: 'success',
+          message,
+        });
+        this.handleExportCancel();
+        this.getEnvVarList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.exportDialog.loading = false;
+      }
+    },
+    handleExportCancel() {
+      this.exportDialog.visiable = false;
+    },
+
+    handleImportFileCancel() {
+      this.importFileDialog.visiable = false;
+    },
+
+    handleAfterLeave() {
+      this.moduleValue = '';
+      this.curSelectModuleName = '';
+      this.exportDialog.count = 0;
+    },
+
+    // 从文件导入
+    handleImportFromFile() {
+      if (!this.canModifyEnvVariable) {
+        return;
+      }
+      this.importFileDialog.visiable = true;
+    },
 
 
     handleExportToFile() {
@@ -619,6 +886,103 @@ export default {
         });
     },
 
+    handleImportFileLeave() {
+      this.curFile = {};
+      this.isFileTypeError = false;
+    },
+
+    handleDownloadTemplate() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/template/`;
+      this.$http.get(url).then((response) => {
+        this.invokeBrowserDownload(response, 'bk_paas3_env_vars_import_template.yaml');
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
+        });
+      });
+    },
+
+    handleTriggerUpload() {
+      this.$refs.upload.click();
+    },
+
+    handleStartUpload(payload) {
+      const files = Array.from(payload.target.files);
+      const curFile = files[0];
+      const fileExtension = curFile.name.substring(curFile.name.lastIndexOf('.') + 1);
+      if (fileExtension !== 'yaml') {
+        this.isFileTypeError = true;
+        return;
+      }
+      this.isFileTypeError = false;
+      this.curFile = curFile;
+      this.$refs.upload.value = '';
+    },
+
+    handleImportFileConfirm() {
+      this.importFileDialog.loading = true;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/import/`;
+      const params = new FormData();
+      params.append('file', this.curFile);
+      this.$http.post(url, params).then((response) => {
+        const createNum = response.create_num;
+        const overwritedNum = response.overwrited_num;
+        const ignoreNum = response.ignore_num;
+        this.isEdited = createNum > 0 || overwritedNum > 0;
+        const message = (
+          () => {
+            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+            let messageText = '';
+            switch (numStr) {
+              case '111':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '110':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '100':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
+                break;
+              case '101':
+                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '011':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                break;
+              case '010':
+                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                break;
+              case '001':
+                messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
+                break;
+              default:
+                messageText = `${this.$t('导入成功')}`;
+            }
+            return messageText;
+          }
+        )();
+        this.$paasMessage({
+          theme: 'success',
+          message,
+        });
+        this.getEnvVarList();
+      }, (errRes) => {
+        const errorMsg = errRes.detail;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
+        });
+      })
+        .finally(() => {
+          this.importFileDialog.loading = false;
+          this.importFileDialog.visiable = false;
+        });
+    },
+
+
+    // 处理下载
     invokeBrowserDownload(content, filename) {
       const a = document.createElement('a');
       const blob = new Blob([content], { type: 'text/plain' });

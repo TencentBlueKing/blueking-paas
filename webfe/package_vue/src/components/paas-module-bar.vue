@@ -43,19 +43,30 @@ export default defineComponent({
       },
     },
   },
-  setup(props) {
+  setup(props, { root }) {
+    const { $store, $route, $router } = root;
+    console.log(root, root.data);
     const active = ref(props.curModule.name || '');
-    // const { theme } = toRefs(props);
-    // const icon = computed(() => {
-    //   const iconMap = {
-    //     error: 'close-circle-shape',
-    //     default: 'info-circle-shape',
-    //   };
-    //   return iconMap[theme.value] || 'info-circle-shape';
-    // });
     const handleTabChange = () => {
-      // console.log('active', active);
-      // this.isLoading = true;
+      const curModule = (props.moduleList || []).find(e => e.name === active.value);
+      $store.commit('updateCurAppModule', curModule);
+
+      const routeName = $route.name;
+      let { query } = $route;
+      if (routeName === 'appLog') {
+        query = {
+          tab: $route.query.tab || '',
+        };
+      }
+
+      $router.push({
+        name: routeName,
+        params: {
+          id: $route.params.id,
+          moduleId: curModule.name,
+        },
+        query,
+      });
     };
     return {
       handleTabChange,

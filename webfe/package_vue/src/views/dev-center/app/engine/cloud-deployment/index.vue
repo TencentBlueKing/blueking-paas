@@ -211,6 +211,7 @@ export default {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
+      this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
@@ -516,6 +517,9 @@ export default {
     // 取消改变页面状态
     handleCancel() {
       this.$store.commit('cloudApi/updatePageEdit', false);
+      if (this.$refs[this.routerRefs]?.handleCancel) {
+        this.$refs[this.routerRefs]?.handleCancel();
+      }
     },
 
     // 保存

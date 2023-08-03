@@ -76,7 +76,8 @@
           :data="envVarList"
           v-if="envVarList.length"
           class="table-cls mt20">
-          <bk-table-column :label="$t('Key')" class-name="table-colum-module-cls" sortable>
+          <bk-table-column
+            :label="$t('Key')" class-name="table-colum-module-cls" :sortable="!isPageEdit">
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit" class="table-colum-cls">
                 <bk-form
@@ -111,7 +112,11 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column :label="$t('生效环境')" class-name="table-colum-module-cls">
+          <bk-table-column
+            :label="$t('生效环境')"
+            class-name="table-colum-module-cls"
+            :filters="envSelectList"
+            :filter-method="sourceFilterMethod">
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
@@ -127,7 +132,7 @@
                     >
                       <bk-option
                         v-for="(option, optionIndex) in envSelectList"
-                        :id="option.id"
+                        :id="option.value"
                         :key="optionIndex"
                         :name="option.text"
                       />
@@ -135,7 +140,7 @@
                   </bk-form-item>
                 </bk-form>
               </div>
-              <div v-else>{{ row.environment_name }}</div>
+              <div v-else>{{ envEnums[row.environment_name] || $t('所有环境') }}</div>
             </template>
           </bk-table-column>
 
@@ -391,6 +396,7 @@
 <script>import _ from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
+import { ENV_ENUM } from '@/common/constants';
 
 export default {
   components: {
@@ -405,19 +411,23 @@ export default {
         key: [
           {
             required: true,
-            message: i18n.t('NAME是必填项'),
+            message: this.$t('KEY是必填项'),
             trigger: 'blur',
           },
           {
-            regex: /^[-._a-zA-Z][-._a-zA-Z0-9]*$/,
-            message: i18n.t('环境变量名称必须由字母字符、数字、下划线（_）、连接符（-）、点（.）组成，并且不得以数字开头（例如“my.env-name”或“MY_ENV.NAME”, 或 “MyEnvName1”）'),
+            max: 64,
+            message: this.$t('不能超过64个字符'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[A-Z][A-Z0-9_]*$/,
+            message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
             trigger: 'blur',
           },
           {
             validator: () => {
               const flag = this.envVarList.filter(item => item.key === this.curItem.key
               && item.environment_name === this.curItem.environment_name);
-              console.log(flag);
               if (flag.length <= 1) {   // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
                   this.$refs[`envRefKey${i}`].clearError();
@@ -425,7 +435,7 @@ export default {
               }
               return flag.length <= 1;
             },
-            message: () => this.$t(`该环境下名称为 ${this.curItem.name} 的变量已经存在，不能重复添加。`),
+            message: () => this.$t(`该环境下名称为 ${this.curItem.key} 的变量已经存在，不能重复添加。`),
             trigger: 'blur',
           },
         ],
@@ -444,7 +454,8 @@ export default {
         description: [
           {
             validator: (value) => {
-              if (value === '') {
+              console.log(value);
+              if (!value) {
                 return true;
               }
               return value.trim().length <= 200;
@@ -469,9 +480,9 @@ export default {
         bkPlatformLoading: false,
       },
       envSelectList: [
-        { id: '_global_', text: this.$t('所有环境') },
-        { id: 'stag', text: this.$t('预发布环境') },
-        { id: 'prod', text: this.$t('生产环境') },
+        { value: '_global_', text: this.$t('所有环境') },
+        { value: 'stag', text: this.$t('预发布环境') },
+        { value: 'prod', text: this.$t('生产环境') },
       ],
       localCloudAppData: {},
       curSortKey: '-created',
@@ -493,6 +504,8 @@ export default {
       curSelectModuleName: '',
       curFile: {},
       isFileTypeError: false,
+      envEnums: ENV_ENUM,
+      statusFilters: [{ text: '正常', value: '正常' }, { text: '创建中', value: '创建中' }],
     };
   },
   computed: {
@@ -546,27 +559,25 @@ export default {
     },
 
     async saveEnvData() {
-      // console.log('this.$refs.envRefKey', this.$refs.envRefKey);
-      // // 提交时需要检验,拿到需要检验的数据下标
-      // const flag = this.envVarList.reduce((p, v, i) => {
-      //   if (v.name === this.curItem.name && v.envName === this.curItem.envName) {
-      //     p.push({ ...v, i });
-      //   }
-      //   return p;
-      // }, []);
-      // if (flag.length > 1) {
-      //   flag.forEach(async (e) => {
-      //     try {
-      //       await this.$refs[`envRefKey${e.i}`].validate();
-      //       this.save();
-      //     } catch (error) {
-      //       return false;
-      //     }
-      //   });
-      // } else {
-      //   return true;
-      // }
-      this.save();
+      // 提交时需要检验,拿到需要检验的数据下标
+      const flag = this.envVarList.reduce((p, v, i) => {
+        if (v.key === this.curItem.key && v.environment_name === this.curItem.environment_name) {
+          p.push({ ...v, i });
+        }
+        return p;
+      }, []);
+      console.log('flag', flag);
+      if (flag.length > 1) {
+        flag.forEach(async (e) => {
+          try {
+            await this.$refs[`envRefKey${e.i}`].validate();
+          } catch (error) {
+            return false;
+          }
+        });
+      } else {
+        this.save();
+      }
     },
 
     // 保存
@@ -702,18 +713,6 @@ export default {
         if (item.offsetWidth > containerWitch) {
           this.$set(data[index], 'isTips', false);
         }
-      });
-    },
-
-    handleSort() {
-    },
-
-    // 首字母排序
-    alphabeticalOrder(targetArr) {
-      targetArr.sort((a, b) => {
-        const textA = a.name.toUpperCase();
-        const textB = b.name.toUpperCase();
-        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
       });
     },
 
@@ -991,6 +990,18 @@ export default {
       a.click();
       a.remove();
       URL.revokeObjectURL(blob);
+    },
+
+    // 取消
+    handleCancel() {
+      this.envVarList = _.cloneDeep(this.envLocalVarList);
+    },
+
+
+    sourceFilterMethod(value, row, column) {
+      console.log(value, row, column);
+      const { property } = column;
+      return row[property] === value;
     },
   },
 };
@@ -1449,6 +1460,9 @@ export default {
           width: 100%;
           .bk-form-content{
             width: 100%;
+            .tooltips-icon {
+              right: 1% !important;
+            }
           }
         }
       }

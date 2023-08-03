@@ -84,7 +84,7 @@
                               v-for="(key, fieldsIndex) in item.service_instance.sensitive_fields"
                               :key="fieldsIndex"
                             >
-                              <i class="gray">{{ key }}: </i>************
+                              <i class="gray">{{ key }}: </i>******
                               <i
                                 v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
                                 class="paasng-icon paasng-question-circle"
@@ -104,7 +104,7 @@
                               <span
                                 v-else
                                 class="break-all"
-                              >********</span>
+                              >******</span>
                               <button
                                 v-bk-tooltips="$t('敏感字段，点击后显示')"
                                 class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"

@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 import arrow
@@ -28,10 +28,11 @@ from rest_framework.serializers import ValidationError
 
 from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
+from paas_wl.resources.kube_res.base import WatchEvent
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.entities import Instance
+from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.models import ProcessSpec
 
 
@@ -40,9 +41,26 @@ class HumanizeDateTimeField(serializers.DateTimeField):
         return arrow.get(value).humanize(locale="zh")
 
 
+class ProcessForDisplaySLZ(serializers.Serializer):
+    """Common serializer for representing Process object"""
+
+    # Warning: 这个字段需要查询数据库
+    module_name = serializers.CharField(source="app.module_name")
+
+    name = serializers.CharField(source='metadata.name')
+    type = serializers.CharField()
+    replicas = serializers.IntegerField(source="status.replicas")
+    success = serializers.IntegerField(source="status.success")
+    failed = serializers.IntegerField(source="status.failed")
+    version = serializers.IntegerField()
+
+
 class InstanceForDisplaySLZ(serializers.Serializer):
     """Common serializer for representing Instance object, removes some extra
     large and sensitive fields such as "envs" """
+
+    # Warning: 这个字段需要查询数据库
+    module_name = serializers.CharField(source="app.module_name")
 
     name = serializers.CharField(read_only=True)
     process_type = serializers.CharField(read_only=True)
@@ -52,6 +70,7 @@ class InstanceForDisplaySLZ(serializers.Serializer):
     state = serializers.SerializerMethodField(read_only=True, help_text='实例状态')
     state_message = serializers.CharField(read_only=True)
     ready = serializers.BooleanField(read_only=True)
+    restart_count = serializers.IntegerField()
     version = serializers.CharField(read_only=True)
 
     def get_state(self, obj: Instance) -> str:
@@ -62,6 +81,75 @@ class InstanceForDisplaySLZ(serializers.Serializer):
             # Not using word "Pending" because it's already an Kubernetes Pod state
             return "Starting"
         return obj.state
+
+
+class ProcessExtraInfoSLZ(serializers.Serializer):
+    """part of SLZ for ProcessInstanceListWatcher.list"""
+
+    type = serializers.CharField(help_text="进程类型")
+    command = serializers.CharField(help_text="进程命令")
+    cluster_link = serializers.CharField(help_text="集群内访问地址")
+
+
+class ListRespMetaDataSLZ(serializers.Serializer):
+    """part of SLZ for ProcessInstanceListWatcher.list"""
+
+    resource_version = serializers.CharField(help_text="k8s 资源版本")
+
+
+class ProcessListSLZ(serializers.Serializer):
+    """part of SLZ for ProcessInstanceListWatcher.list"""
+
+    items = ProcessForDisplaySLZ(many=True)
+    extra_infos = ProcessExtraInfoSLZ(many=True)
+    metadata = ListRespMetaDataSLZ()
+
+
+class InstanceListSLZ(serializers.Serializer):
+    """part of SLZ for ProcessInstanceListWatcher.list"""
+
+    items = InstanceForDisplaySLZ(many=True)
+    metadata = ListRespMetaDataSLZ()
+
+
+class ListWatcherRespSLZ(serializers.Serializer):
+    """SLZ for ProcessInstanceListWatcher.list"""
+
+    processes = ProcessListSLZ()
+    instances = InstanceListSLZ()
+    cnative_proc_specs = serializers.ListField(required=False, child=serializers.DictField())
+    process_packages = serializers.ListField(required=False, child=serializers.DictField())
+
+
+class ErrorEventSLZ(serializers.Serializer):
+    """SLZ for WatchEvent which type == 'ERROR'"""
+
+    type = serializers.CharField()
+    error_message = serializers.CharField()
+
+
+class WatchEventSLZ(serializers.Serializer):
+    """SLZ for ProcessInstanceListWatcher.watch"""
+
+    type = serializers.CharField()
+    object_type = serializers.CharField()
+    object = serializers.DictField()
+    resource_version = serializers.CharField(allow_null=True, help_text="仅 object_type != 'error' 时有该字段")
+
+    def to_representation(self, instance: WatchEvent):
+        data: Dict[str, Any] = {"type": instance.type}
+        if instance.type == 'ERROR':
+            data["object_type"] = "error"
+            data["object"] = ErrorEventSLZ(instance).data
+        if isinstance(instance.res_object, Process):
+            data["object_type"] = "process"
+            data["object"] = ProcessForDisplaySLZ(instance.res_object).data
+            data["resource_version"] = instance.res_object.get_resource_version()
+        elif isinstance(instance.res_object, Instance):
+            data["object_type"] = "instance"
+            data["object"] = InstanceForDisplaySLZ(instance.res_object).data
+            data["resource_version"] = instance.res_object.get_resource_version()
+        return super().to_representation(data)
 
 
 class ProcessSpecSLZ(serializers.Serializer):
@@ -175,8 +263,8 @@ class UpdateProcessSLZ(serializers.Serializer):
             raise ValidationError(_('scaling_config 配置格式有误：{}').format(e))
 
 
-class ListProcessesSLZ(serializers.Serializer):
-    """Serializer for listing processes"""
+class ListProcessesQuerySLZ(serializers.Serializer):
+    """Serializer for query params of list API"""
 
     release_id = serializers.UUIDField(default=None, help_text="用于过滤实例的发布ID")
 
@@ -192,8 +280,8 @@ class ListProcessesSLZ(serializers.Serializer):
         return release_id
 
 
-class WatchProcessesSLZ(serializers.Serializer):
-    """Serializer for watching processes"""
+class WatchProcessesQuerySLZ(serializers.Serializer):
+    """Serializer for query params of watch API"""
 
     timeout_seconds = serializers.IntegerField(required=False, default=30, max_value=120)
     rv_proc = serializers.CharField(required=True)

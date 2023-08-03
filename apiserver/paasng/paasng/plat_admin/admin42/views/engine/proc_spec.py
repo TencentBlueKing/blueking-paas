@@ -101,12 +101,12 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
                         "module": env.module.name,
                         "env": env.environment,
                     },
-                    "desired_replicas": process.desired_replicas,
-                    "command": process.command,
+                    "desired_replicas": process.replicas,
+                    "command": process.runtime.proc_command,
                     "available_instance_count": process.available_instance_count,
                     "instances": cattr.unstructure(process.instances),
                 }
-                if application.type == ApplicationType.CLOUD_NATIVE:
+                if application.type != ApplicationType.CLOUD_NATIVE:
                     process_map[process.type]["process_spec"] = {
                         "plan": {
                             "id": process_spec["plan_id"],

@@ -16,53 +16,78 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-from attrs import define
+from attrs import define, field
 
-logger = logging.getLogger(__name__)
+from paas_wl.workloads.processes.entities import Process, Status
+
+
+def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':
+    """Condense processes by removing unrelated fields to save space."""
+    plain = []
+    for p in processes:
+        plain.append(
+            PlainProcess(
+                name=p.name,
+                version=p.version,
+                replicas=p.replicas,
+                type=p.type,
+                command=p.runtime.proc_command,
+                status=p.status,
+                instances=[
+                    PlainInstance(
+                        name=inst.name,
+                        version=inst.version,
+                        process_type=inst.process_type,
+                        state=inst.state,
+                        ready=inst.ready,
+                        restart_count=inst.restart_count,
+                        image=inst.image,
+                    )
+                    for inst in p.instances
+                ],
+            )
+        )
+    return plain
 
 
 @define
-class Instance:
-    """A Process instance object
-    TODO: 与 PlainInstance 统一
-    """
-
+class PlainInstance:
     name: str
-    host_ip: str
-    start_time: str
-    state: str
-    ready: bool
-    image: str
-    restart_count: int
     version: int
-    process_type: Optional[str] = None
-    namespace: Optional[str] = None
-
-    def __str__(self):
-        return f'Instance<{self.name}-{self.state}>'
-
-
-@define
-class Process:
-    """
-    Q: What's the differences between Process and ProcessSpec?
-    A: Process represents the actual data from engine backend, and ProcessSpec represents the expectation of user.
-    TODO: 与 PlainProcess 统一
-    """
-
-    type: str
-    version: int
-    command: str
-    process_status: Dict
-    desired_replicas: str
-    instances: List[Instance]
+    process_type: str
+    state: str = ""
+    ready: bool = True
+    restart_count: int = 0
+    image: str = ""
 
     @property
-    def available_instance_count(self):
-        return len([instance for instance in self.instances if instance.ready and instance.version == self.version])
+    def shorter_name(self) -> str:
+        """Return a simplified name
 
-    def __repr__(self):
-        return f'Process<{self.type}>'
+        'ieod-x-gunicorn-deployment-59b9789f76wk82' -> '59b9789f76wk82'
+        """
+        return self.name.split('-')[-1]
+
+    def is_ready_for(self, expected_version: int) -> bool:
+        """detect if the instance if ready for the given version"""
+        return self.ready and self.version == expected_version
+
+
+@define
+class PlainProcess:
+    name: str
+    version: int
+    replicas: int
+    type: str
+    command: str
+    status: Optional[Status] = None
+    instances: List[PlainInstance] = field(factory=list)
+
+    def is_all_ready(self, expected_version: int) -> bool:
+        """detect if all instances are ready"""
+        if expected_version != self.version:
+            return False
+
+        return sum(inst.is_ready_for(expected_version) for inst in self.instances) == self.replicas

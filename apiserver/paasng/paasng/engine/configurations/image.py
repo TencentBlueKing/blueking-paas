@@ -146,45 +146,29 @@ class RuntimeImageInfo:
             return f"{app_image_repository}:{app_image_tag}"
         return getattr(slug_runner, "full_image", '')
 
-    @property
-    def entrypoint(self) -> List:
-        """返回当前 engine_app 镜像启动的 entrypoint"""
-        if self.type == RuntimeType.CUSTOM_IMAGE or self.type == RuntimeType.DOCKERFILE:
-            # Note: 关于为什么要使用 env 命令作为 entrypoint, 而不是直接将用户的命令作为 entrypoint.
-            # 虽然实际上绝大部分 CRI 实现会在当 Command 非空时 忽略镜像的 CMD(即认为 ENTRYPOINT 和 CMD 是绑定的, 只要 ENTRYPOINT 被修改, 就会忽略 CMD)
-            # 但是, 根据 k8s 的文档, 如果 Command/Args 是空值，就会使用镜像的 ENTRYPOINT 和 CMD.
-            # 而 Heroku 风格的 Procfile 不是以 entrypoint/cmd 这样的格式描述, 如果只将 procfile 作为 Container 的 Command/Args 都会有潜在风险.
-            # 风险点在于: Command/Args 为空时, 有可能会使用镜像的 ENTRYPOINT 和 CMD.
-            # ref: https://github.com/containerd/containerd/blob/main/pkg/cri/opts/spec_opts.go#L63
-            return ["env"]
-        # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
-        mgr = ModuleRuntimeManager(self.module)
-        if mgr.is_cnb_runtime:
-            return ["launcher"]
-        slug_runner = mgr.get_slug_runner(raise_exception=False)
-        metadata: Dict = getattr(slug_runner, "metadata", {})
-        return metadata.get("entrypoint", ['bash', '/runner/init'])
-
 
 def update_image_runtime_config(deployment: Deployment):
     """Update the image runtime config of the given engine app"""
-    # TODO: runtime 信息应该与 Build 关联(如果需要支持 cnb <-> docker build 互相切换)
     engine_app = deployment.get_engine_app()
     build_obj = Build.objects.get(pk=deployment.build_id)
     image_pull_policy = deployment.advanced_options.image_pull_policy
     runtime = RuntimeImageInfo(engine_app=engine_app)
     runtime_dict = {
-        "image": build_obj.image,
         "type": runtime.type,
-        "entrypoint": runtime.entrypoint,
         "image_pull_policy": image_pull_policy,
     }
+    # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
+    mgr = ModuleRuntimeManager(deployment.app_environment.module)
+    slug_runner = mgr.get_slug_runner(raise_exception=False)
+    metadata: Dict = getattr(slug_runner, "metadata", {})
+    if entrypoint := metadata.get("entrypoint"):
+        build_obj.artifact_metadata.update(entrypoint=entrypoint)
+        build_obj.save(update_fields=["artifact_metadata", "updated"])
 
     # Update the config property of WlApp object
     wl_app = engine_app.to_wl_obj()
     config = wl_app.latest_config
     config.runtime = runtime_dict
     config.save(update_fields=['runtime', 'updated'])
-
     # Refresh resource requirements
     config.refresh_res_reqs()

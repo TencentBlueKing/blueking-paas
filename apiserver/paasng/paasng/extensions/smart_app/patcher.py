@@ -26,10 +26,8 @@ from django.utils.functional import cached_property
 from paasng.dev_resources.sourcectl.models import SPStat
 from paasng.dev_resources.sourcectl.package.client import BinaryTarClient
 from paasng.dev_resources.sourcectl.utils import compress_directory, generate_temp_dir
-from paasng.engine.models import Deployment
 from paasng.extensions.declarative.constants import AppDescPluginType
 from paasng.extensions.declarative.handlers import DescriptionHandler, get_desc_handler
-from paasng.extensions.declarative.models import DeploymentDescription
 from paasng.extensions.smart_app.detector import ManifestDetector
 from paasng.extensions.smart_app.path import LocalFSPath, PathProtocol
 from paasng.platform.applications.constants import AppLanguage
@@ -163,59 +161,3 @@ class SourceCodePatcher:
             source_dir=str(self.module_dir.relative_to(self.source_dir / self.relative_path)),
         ).detect()
         key.write_text(yaml.safe_dump(manifest))
-
-
-class SourceCodePatcherWithDBDriver:
-    """基于数据库记录驱动的源码 Patcher"""
-
-    def __init__(self, module: 'Module', source_dir: Path, deployment: Deployment, relative_path: str = "./"):
-        """
-        :param module: 模块
-        :param source_dir: 源码根路径
-        :param deployment :Deployment obj
-        :param relative_path: app_description file 的相对源代码的路径(只有在上传 S-Mart 包前的 patch, 才需要传递这个参数.)
-        """
-        self.module = module
-        self.source_dir = source_dir
-        self.relative_path = relative_path
-        self.deployment = deployment
-
-    def add_procfile(self):
-        """尝试往应用源码目录创建 Procfile 文件, 如果源码已加密, 则注入至应用描述文件目录下"""
-        try:
-            procfile = self.deploy_description.get_procfile()
-        except DeploymentDescription.DoesNotExist:
-            logger.warning("DeploymentDescription record does not exist, skip the injection process")
-            return
-
-        key = self._make_key("Procfile")
-        if key.exists():
-            logger.warning("Procfile already exists, skip the injection process")
-            return
-
-        if not procfile:
-            logger.warning("Procfile not defined, skip injection process")
-            return
-
-        key.parent.mkdir(parents=True, exist_ok=True)
-        key.write_text(yaml.safe_dump(procfile))
-
-    @cached_property
-    def deploy_description(self) -> DeploymentDescription:
-        return DeploymentDescription.objects.get(deployment=self.deployment)
-
-    @cached_property
-    def module_dir(self) -> Path:
-        """当前模块代码的路径"""
-        # TODO: 让 RepositoryInstance.get_source_dir 屏蔽 source_origin 这个差异
-        # 由于 Package 的 source_dir 是由与 VersionInfo 绑定的. 需要调整 API.
-        if not ModuleSpecs(self.module).deploy_via_package:
-            return self.source_dir / self.relative_path / self.module.get_source_obj().get_source_dir()
-
-        return self.source_dir / self.relative_path / self.deploy_description.source_dir
-
-    def _make_key(self, key: str) -> Path:
-        # 如果源码目录已加密, 则生成至应用描述文件的目录下.
-        if self.module_dir.is_file():
-            return self.source_dir / self.relative_path / key
-        return self.module_dir / key

@@ -16,30 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
+from paasng.utils.basic import make_app_pattern, re_path
 
-from paas_wl.workloads.processes.processes import PlainInstance, PlainProcess
-from paasng.engine.processes.utils import ProcessesSnapshotStore
+from . import views, views_enduser
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
-
-
-@pytest.fixture
-def process():
-    """A Process object"""
-    inst = PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)
-    return PlainProcess(
-        name="web",
-        version=1,
-        replicas=1,
-        type="web",
-        command="foo",
-        instances=[inst],
-    )
-
-
-class TestProcessesSnapshotStore:
-    def test_save_then_get(self, bk_stag_env, process):
-        store = ProcessesSnapshotStore(bk_stag_env)
-        store.save([process])
-        assert store.get() == [process]
+urlpatterns = [
+    re_path(
+        make_app_pattern(r'/processes/$'),
+        views_enduser.ProcessesViewSet.as_view({'post': 'update'}),
+        name='api.processes.update',
+    ),
+    re_path(
+        r'api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/list/$',
+        views.ListAndWatchProcsViewSet.as_view({'get': 'list'}),
+        name='api.list_processes.namespace_scoped',
+    ),
+    re_path(
+        r'api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/watch/$',
+        views.ListAndWatchProcsViewSet.as_view({'get': 'watch'}),
+        name='api.watch_processes.namespace_scoped',
+    ),
+]

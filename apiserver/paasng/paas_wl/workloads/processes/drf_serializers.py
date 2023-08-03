@@ -16,7 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import arrow
@@ -27,6 +28,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
 from paas_wl.cnative.specs.procs import CNativeProcSpec
+from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.models import Release
 from paas_wl.resources.kube_res.base import WatchEvent
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
@@ -34,6 +36,8 @@ from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.models import ProcessSpec
+from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.engine.constants import RuntimeType
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):
@@ -45,14 +49,21 @@ class ProcessForDisplaySLZ(serializers.Serializer):
     """Common serializer for representing Process object"""
 
     # Warning: 这个字段需要查询数据库
-    module_name = serializers.CharField(source="app.module_name")
+    module_name = serializers.CharField(source="app.module_name", help_text="模块名")
 
     name = serializers.CharField(source='metadata.name')
-    type = serializers.CharField()
-    replicas = serializers.IntegerField(source="status.replicas")
-    success = serializers.IntegerField(source="status.success")
-    failed = serializers.IntegerField(source="status.failed")
-    version = serializers.IntegerField()
+    type = serializers.CharField(help_text="进程类型(名称)")
+    command = serializers.CharField(source="runtime.proc_command", help_text="进程命令")
+
+    replicas = serializers.IntegerField(source="status.replicas", help_text="期望实例数")
+    success = serializers.IntegerField(source="status.success", help_text="成功进程个数")
+    failed = serializers.IntegerField(source="status.failed", help_text="失败进程个数")
+    version = serializers.IntegerField(help_text="release version")
+
+    cluster_link = serializers.SerializerMethodField()
+
+    def get_cluster_link(self, process: Process) -> str:
+        return f'http://{get_service_dns_name(process.app, process.type)}'
 
 
 class InstanceForDisplaySLZ(serializers.Serializer):
@@ -101,7 +112,7 @@ class ProcessListSLZ(serializers.Serializer):
     """part of SLZ for ProcessInstanceListWatcher.list"""
 
     items = ProcessForDisplaySLZ(many=True)
-    extra_infos = ProcessExtraInfoSLZ(many=True)
+    extra_infos = ProcessExtraInfoSLZ(many=True, required=False, help_text="[deprecated] 相关信息移动到 ProcessForDisplaySLZ")
     metadata = ListRespMetaDataSLZ()
 
 
@@ -119,6 +130,61 @@ class ListWatcherRespSLZ(serializers.Serializer):
     instances = InstanceListSLZ()
     cnative_proc_specs = serializers.ListField(required=False, child=serializers.DictField())
     process_packages = serializers.ListField(required=False, child=serializers.DictField())
+
+
+class VersionInfoSLZ(serializers.Serializer):
+    revision = serializers.CharField(help_text="版本hash")
+    version_name = serializers.CharField(help_text="版本名称")
+    version_type = serializers.CharField(help_text="版本类型(tag/branch)")
+
+
+class NamespaceScopedListWatchRespPartSLZ(serializers.Serializer):
+    module_name = serializers.CharField()
+    is_deployed = serializers.BooleanField(help_text="是否已部署")
+    exposed_url = serializers.CharField(required=False, help_text="访问地址")
+    build_method = serializers.CharField(help_text="构建方式")
+    version_info = VersionInfoSLZ(required=False)
+
+    processes = ProcessForDisplaySLZ(many=True)
+    instances = InstanceForDisplaySLZ(many=True)
+    proc_specs = serializers.ListField(child=serializers.DictField())
+
+    total_available_instance_count = serializers.IntegerField(help_text="总运行实例数")
+    total_desired_replicas = serializers.IntegerField(help_text="总期望实例数")
+    total_failed = serializers.IntegerField(help_text="总异常实例数")
+
+
+@dataclass
+class ModuleScopedData:
+    module_name: str
+    build_method: RuntimeType
+    is_deployed: bool
+    exposed_url: Optional[str]
+    version_info: Optional[VersionInfo] = None
+
+    processes: List[Process] = field(default_factory=list)
+    instances: List[Instance] = field(default_factory=list)
+    proc_specs: List[Dict] = field(default_factory=list)
+
+    @property
+    def total_available_instance_count(self) -> int:
+        return sum(p.status.success for p in self.processes if p.status)
+
+    @property
+    def total_desired_replicas(self) -> int:
+        # Q: 为什么不使用 process_specs 的 target_replicas
+        # A: 因为该字段对自动扩缩容的进程无效
+        return sum(p.status.replicas for p in self.processes if p.status)
+
+    @property
+    def total_failed(self) -> int:
+        return sum(p.status.failed for p in self.processes if p.status)
+
+
+class NamespaceScopedListWatchRespSLZ(serializers.Serializer):
+    data = NamespaceScopedListWatchRespPartSLZ(many=True)
+    rv_proc = serializers.CharField(required=True)
+    rv_inst = serializers.CharField(required=True)
 
 
 class ErrorEventSLZ(serializers.Serializer):

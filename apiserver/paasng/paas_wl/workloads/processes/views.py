@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
+from operator import attrgetter
 from typing import Dict
 
 from django.http import StreamingHttpResponse
@@ -26,12 +27,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.networking.ingress.utils import get_service_dns_name
+from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.utils.views import IgnoreClientContentNegotiation
-from paas_wl.workloads.processes.drf_serializers import ListWatcherRespSLZ, WatchEventSLZ, WatchProcessesQuerySLZ
+from paas_wl.workloads.processes.drf_serializers import (
+    ModuleScopedData,
+    NamespaceScopedListWatchRespSLZ,
+    WatchEventSLZ,
+    WatchProcessesQuerySLZ,
+)
+from paas_wl.workloads.processes.shim import ProcessManager
 from paas_wl.workloads.processes.watch import ProcInstByEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.engine.utils.version import get_env_deployed_version_info
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
@@ -45,37 +53,50 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     # Use special negotiation class to accept "text/event-stream" content type
     content_negotiation_class = IgnoreClientContentNegotiation
 
-    @swagger_auto_schema(response_serializer=ListWatcherRespSLZ)
+    @swagger_auto_schema(response_serializer=NamespaceScopedListWatchRespSLZ)
     def list(self, request, code, environment):
         """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
         application = self.get_application()
+        module_envs = application.envs.filter(environment=environment)
 
+        grouped_data: Dict[str, ModuleScopedData] = {}
+        grouped_proc_specs = {
+            module_env.module.name: ProcessManager(module_env).list_processes_specs() for module_env in module_envs
+        }
         processes_status = ProcInstByEnvListWatcher(application, environment).list()
-        # Get extra infos
-        proc_extra_infos = []
-        for proc_spec in processes_status.processes:
-            proc_extra_infos.append(
-                {
-                    # TODO: 添加 cnative_proc_specs/process_packages 字段
-                    'type': proc_spec.type,
-                    'command': proc_spec.runtime.proc_command,
-                    'cluster_link': f'http://{get_service_dns_name(proc_spec.app, proc_spec.type)}',
-                }
+
+        for module_env in module_envs:
+            module_name = module_env.module.name
+            is_living, addr = get_builtin_addr_preferred(module_env)
+            exposed_url = None
+            if is_living and addr:
+                exposed_url = addr.url
+
+            build_method, version_info = get_env_deployed_version_info(module_env)
+            grouped_data[module_name] = ModuleScopedData(
+                module_name=module_name,
+                is_deployed=is_living,
+                exposed_url=exposed_url,
+                build_method=build_method,
+                version_info=version_info,
+                proc_specs=grouped_proc_specs.get(module_name) or [],
             )
 
-        insts = [inst for proc in processes_status.processes for inst in proc.instances]
-        data = {
-            'processes': {
-                'items': processes_status.processes,
-                'extra_infos': proc_extra_infos,
-                'metadata': {'resource_version': processes_status.rv_proc},
-            },
-            'instances': {
-                'items': insts,
-                'metadata': {'resource_version': processes_status.rv_inst},
-            },
-        }
-        return Response(ListWatcherRespSLZ(data).data)
+        for process in processes_status.processes:
+            module_name = process.app.module_name
+            container = grouped_data[module_name]
+            container.processes.append(process)
+            container.instances.extend(process.instances)
+
+        return Response(
+            NamespaceScopedListWatchRespSLZ(
+                {
+                    "data": sorted(grouped_data.values(), key=attrgetter("module_name")),
+                    "rv_proc": processes_status.rv_proc,
+                    "rv_inst": processes_status.rv_inst,
+                },
+            ).data
+        )
 
     @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)
     def watch(self, request, code, environment):

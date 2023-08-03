@@ -40,7 +40,7 @@ from paasng.engine.models.config_var import add_prefix_to_key
 from paasng.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.engine.serializers import (
     ConfigVarApplyResultSLZ,
-    ConfigVarFormatSLZ,
+    ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
     ListConfigVarsSLZ,
@@ -89,18 +89,18 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        request_body=ConfigVarFormatSLZ,
+        request_body=ConfigVarFormatWithIdSLZ(many=True),
         tags=['环境配置'],
         responses={201: ConfigVarApplyResultSLZ()},
     )
     def batch(self, request, **kwargs):
         """批量保存环境变量"""
         module = self.get_module_via_path()
-        slz = ConfigVarFormatSLZ(data=request.data, context={"module": module}, many=True)
+        slz = ConfigVarFormatWithIdSLZ(data=request.data, context={"module": module}, many=True)
         slz.is_valid(raise_exception=True)
         env_variables = slz.validated_data
 
-        apply_result = ConfigVarManager().apply_vars_to_module(module, env_variables)
+        apply_result = ConfigVarManager().batch_save(module, env_variables)
         res = ConfigVarApplyResultSLZ(apply_result)
         return Response(res.data, status=status.HTTP_201_CREATED)
 

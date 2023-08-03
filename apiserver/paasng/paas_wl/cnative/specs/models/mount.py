@@ -47,7 +47,7 @@ class ConfigMapSource(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
-    name = models.CharField(max_length=63)
+    name = models.CharField(max_length=63, help_text=_('ConfigMap 名'))
     data = models.JSONField(default=dict)
 
     objects = ConfigMapSourceQuerySet.as_manager()
@@ -65,7 +65,7 @@ class Mount(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
-    name = models.CharField(max_length=63, help_text=_('挂载点的名字'))
+    name = models.CharField(max_length=63, help_text=_('挂载点的名称'))
     mount_path = models.CharField(max_length=128)
     source_type = models.CharField(choices=VolumeSourceType.get_choices(), max_length=32)
     source_config: VolumeSource = SourceConfigField()

@@ -80,18 +80,18 @@
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit" class="table-colum-cls">
                 <bk-form
-                  :label-width="0" form-type="inline" :ref="`envRefName${$index}`"
+                  :label-width="0" form-type="inline" :ref="`envRefKey${$index}`"
                   class="env-from-cls" :model="row">
-                  <bk-form-item :required="true" :property="'name'" :rules="rules.name">
+                  <bk-form-item :required="true" :property="'key'" :rules="rules.key">
                     <bk-input
-                      v-model="row.name" class="env-input-cls"
+                      v-model="row.key" class="env-input-cls"
                       @enter="handleInputEvent(row, $index)"
                       @blur="handleInputEvent(row, $index)">
                     </bk-input>
                   </bk-form-item>
                 </bk-form>
               </div>
-              <div v-else>{{ row.name }}</div>
+              <div v-else>{{ row.key }}</div>
             </template>
           </bk-table-column>
 
@@ -119,7 +119,7 @@
                   class="env-from-cls">
                   <bk-form-item :required="true">
                     <bk-select
-                      v-model="row.envName"
+                      v-model="row.environment_name"
                       :placeholder="$t('请选择')"
                       :clearable="false"
                       style="width: 200px"
@@ -135,7 +135,7 @@
                   </bk-form-item>
                 </bk-form>
               </div>
-              <div v-else>{{ row.envName }}</div>
+              <div v-else>{{ row.environment_name }}</div>
             </template>
           </bk-table-column>
 
@@ -255,19 +255,13 @@ export default {
   components: {
   },
   mixins: [appBaseMixin],
-  props: {
-    cloudAppData: {
-      type: Object,
-      default: {},
-    },
-  },
   data() {
     return {
       curItem: {},
       envVarList: [],
       runtimeImageList: [],
       rules: {
-        name: [
+        key: [
           {
             required: true,
             message: i18n.t('NAME是必填项'),
@@ -280,7 +274,7 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter(item => item.name === this.curItem.name
+              const flag = this.envVarList.filter(item => item.key === this.curItem.key
               && item.envName === this.curItem.envName);
               if (flag.length <= 1) {   // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
@@ -318,9 +312,8 @@ export default {
           },
         ],
       },
-      editRowList: [],
       isLoading: true,
-      isVarLoading: true,
+      isTableLoading: true,
 
       envSidesliderConf: {
         visiable: false,
@@ -338,7 +331,6 @@ export default {
         { id: 'stag', text: this.$t('预发布环境') },
         { id: 'prod', text: this.$t('生产环境') },
       ],
-      isTableLoading: true,
       localCloudAppData: {},
       curSortKey: '-created',
     };
@@ -361,102 +353,106 @@ export default {
     },
   },
   watch: {
-    cloudAppData: {
-      handler(val) {
-        if (val.spec) {
-          this.localCloudAppData = _.cloneDeep(val);
-          this.envVarList = [...val.spec.configuration.env, ...val.spec.envOverlay.envVariables];
-          this.envLocalVarList = _.cloneDeep(this.envVarList);
-
-          setTimeout(() => {
-            this.isLoading = false;
-            this.isTableLoading = false;
-          }, 500);
-        }
-      },
-      immediate: true,
-    },
-
-    envVarList: {
-      handler(val) {
-        if (val.spec) {
-          this.localCloudAppData.spec.envOverlay.envVariables = [...val];
-          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        }
-      },
-      deep: true,
-    },
   },
   created() {
+    this.init();
   },
   methods: {
     init() {
       this.isLoading = true;
-      this.getAllImages();
+      this.getEnvVarList();
     },
-    async getAllImages() {
-      try {
-        const res = await this.$store.dispatch('envVar/getAllImages', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-
-        if (res.results) {
-          res.results.forEach((item) => {
-            item.name = `${item.slugbuilder.display_name || item.image} (${item.slugbuilder.description || '--'})`;
-
-            item.buildpacks.forEach((item) => {
-              item.name = `${item.display_name || item.name} (${item.description || '--'})`;
-            });
-          });
-          this.runtimeImageList = res.results;
-        }
-      } catch (e) {
+    getEnvVarList() {
+      this.isTableLoading = true;
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
+        this.envVarList = [...response];
+        this.envLocalVarList = _.cloneDeep(this.envVarList);
+      }, (errRes) => {
+        const errorMsg = errRes.message;
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
         });
-      }
+      })
+        .finally(() => {
+          this.isTableLoading = false;
+          this.isLoading = false;
+        });
     },
     // 处理input事件
     handleInputEvent(rowItem, rowIndex) {
       this.curItem = rowItem;
       console.log('this.curItem', this.curItem, rowIndex);
     },
-    addEnvData() {
-      const isAdd = this.envVarList.find(item => item.isAdd);
-      if (isAdd) {
-        return;
-      }
-      this.envVarList.push({
-        name: '',
-        value: '',
-        envName: this.curStage || '_global_',
-        isAdd: true,
-      });
-      this.editRowList.push(this.envVarList.length - 1);
+
+    async saveEnvData() {
+      // console.log('this.$refs.envRefName', this.$refs.envRefName);
+      // // 提交时需要检验,拿到需要检验的数据下标
+      // const flag = this.envVarList.reduce((p, v, i) => {
+      //   if (v.name === this.curItem.name && v.envName === this.curItem.envName) {
+      //     p.push({ ...v, i });
+      //   }
+      //   return p;
+      // }, []);
+      // if (flag.length > 1) {
+      //   flag.forEach(async (e) => {
+      //     try {
+      //       await this.$refs[`envRefName${e.i}`].validate();
+      //       this.save();
+      //     } catch (error) {
+      //       return false;
+      //     }
+      //   });
+      // } else {
+      //   return true;
+      // }
+      this.save();
     },
 
-    async formDataValidate() {
-      console.log('this.$refs.envRefName', this.$refs.envRefName);
-      // 提交时需要检验,拿到需要检验的数据下标
-      const flag = this.envVarList.reduce((p, v, i) => {
-        if (v.name === this.curItem.name && v.envName === this.curItem.envName) {
-          p.push({ ...v, i });
-        }
-        return p;
-      }, []);
-      if (flag.length > 1) {
-        flag.forEach(async (e) => {
-          try {
-            await this.$refs[`envRefName${e.i}`].validate();
-            return true;
-          } catch (error) {
-            return false;
-          }
+    // 保存
+    async save() {
+      // this.$refs.newVarForm.validate().then(() => {
+      //   const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/`;
+      //   const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
+      //   this.$http.post(url, createForm).then(() => {
+      //     this.$paasMessage({
+      //       theme: 'success',
+      //       message: this.$t('添加环境变量成功'),
+      //     });
+      //     this.loadConfigVar();
+      //     this.newVarConfig = {
+      //       key: '',
+      //       value: '',
+      //       env: this.newVarConfig.env,
+      //       description: '',
+      //     };
+      //     this.isEdited = true;
+      //   }, (errRes) => {
+      //     const errorMsg = errRes.message;
+      //     this.$paasMessage({
+      //       theme: 'error',
+      //       message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
+      //     });
+      //   });
+      // });
+      try {
+        await this.$store.dispatch(
+          'envVar/saveEnvItem',
+          { appCode: this.appCode,
+            moduleId: this.curModuleId,
+            data: createForm,
+          },
+        );
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('添加环境变量成功'),
         });
-      } else {
-        return true;
+      } catch (error) {
+        const errorMsg = error.message;
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
+        });
       }
     },
 
@@ -565,10 +561,10 @@ export default {
     handleEditClick() {
       if (!this.envVarList.length) {
         this.envVarList.push({
-          name: '',
+          key: '',
           value: '',
-          envName: 'stag',
-          isAdd: true,
+          environment_name: 'stag',
+          description: '',
         });
       }
       this.$store.commit('cloudApi/updatePageEdit', true);
@@ -578,16 +574,14 @@ export default {
     handleEnvTableListData(v, i) {
       if (v === 'add') {
         this.envVarList.push({
-          name: '',
+          key: '',
           value: '',
-          envName: 'stag',
-          isAdd: true,
+          environment_name: 'stag',
+          description: '',
         });
       } else {
         this.envVarList.splice(i, 1);
       }
-      this.localCloudAppData.spec.envOverlay.envVariables = [...this.envVarList];
-      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
     },
 
     // 选中环境

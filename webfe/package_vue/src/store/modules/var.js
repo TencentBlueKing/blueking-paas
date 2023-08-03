@@ -30,7 +30,7 @@ export default {
     /**
          * 获取所有运行时基础镜像
          */
-    getAllImages ({ commit, state }, { appCode, moduleId }) {
+    getAllImages({  }, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/list/`;
       return http.get(url);
     },
@@ -38,7 +38,7 @@ export default {
     /**
          * 获取运行时基础信息
          */
-    getRuntimeInfo ({ commit, state }, { appCode, moduleId }) {
+    getRuntimeInfo({  }, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
       return http.get(url);
     },
@@ -46,7 +46,7 @@ export default {
     /**
          * 保存运行时基础信息
          */
-    updateRuntimeInfo ({ commit, state }, { appCode, moduleId, data }) {
+    updateRuntimeInfo({  }, { appCode, moduleId, data }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
       return http.post(url, data);
     },
@@ -55,7 +55,7 @@ export default {
          * 从模块导入环境变量
          * @param {Object} params 包括appCode, moduleId, sourceModuleName
          */
-    exportModuleEnv ({ commit, state }, { appCode, moduleId, sourceModuleName }) {
+    exportModuleEnv({  }, { appCode, moduleId, sourceModuleName }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/clone_from/${sourceModuleName}`;
       return http.post(url, {});
     },
@@ -63,7 +63,7 @@ export default {
     /**
          * 应用基本信息
          */
-    getBasicInfo ({ commit, state }, { appCode }) {
+    getBasicInfo({  }, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/app/`;
       return http.get(url);
     },
@@ -71,7 +71,7 @@ export default {
     /**
          * 应用运行时信息
          */
-    getBkPlatformInfo ({ commit, state }, { appCode }) {
+    getBkPlatformInfo({  }, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/bk_platform/`;
       return http.get(url);
     },
@@ -79,9 +79,18 @@ export default {
     /**
          * 蓝鲸体系内平台信息
          */
-    getAppRuntimeInfo ({ commit, state }, { appCode }) {
+    getAppRuntimeInfo({  }, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/runtime/`;
       return http.get(url);
-    }
-  }
+    },
+
+
+    /**
+     * 保存一条环境变量
+     */
+    saveEnvItem({ }, { appCode, moduleId, data }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/`;
+      return http.post(url, data);
+    },
+  },
 };

@@ -60,16 +60,16 @@ class BkLogClient:
     def __init__(self, client: BKLogAPIProtocol):
         self.client = client
 
-    def create_custom_collector_config(self, cc_or_space_id: Union[int, str], config: CustomCollectorConfig):
+    def create_custom_collector_config(self, biz_or_space_id: Union[int, str], config: CustomCollectorConfig):
         """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
 
-        :param int/str cc_or_space_id: 业务ID(bkcmdb)，或空间ID(space_id)
+        :param int/str biz_or_space_id: 业务ID(bkcmdb)，或空间ID(space_id)
         :param config: 自定采集项配置
         :return: 创建的自定采集项配置
         """
         data: Dict[str, Any] = {
             # 日志侧的接口参数未调整, 虽然参数名是 bk_biz_id, 实际上空间ID也通过这个参数传递
-            "bk_biz_id": cc_or_space_id,
+            "bk_biz_id": biz_or_space_id,
             "collector_config_name_en": config.name_en,
             "collector_config_name": config.name_zh_cn,
             "custom_type": config.custom_type,

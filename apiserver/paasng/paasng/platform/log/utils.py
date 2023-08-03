@@ -39,39 +39,41 @@ logger = logging.getLogger(__name__)
 # 平台保留的日志字段与不同日志采集方案的映射关系
 # ELK 方案与 k8s 相关的字段收集到 kubernetes
 # bklog 方案与 k8s 相关的字段收集到 __ext
+# 由于 ELK 方案是所有应用共用一个 ES index, 存在 mappings 互相干扰的问题
+# 因此需要将保留字段同名的字段优先级提高, 避免在 ELK 方案中无法正常过滤(ELK 方案在 logstash 中有清洗保留字段的逻辑)
 RESERVED_FIELDS = {
     # TODO: 移除 region 字段
     "region": [
+        "region",
         "kubernetes.labels.region",
         "kubernetes.labels.bkapp_paas_bk_tencent_com_region",
         "__ext.labels.region",
         "__ext.labels.bkapp_paas_bk_tencent_com_region",
-        "region",
     ],
     "app_code": [
+        "app_code",
         "kubernetes.labels.bkapp_paas_bk_tencent_com_code",
         "__ext.labels.bkapp_paas_bk_tencent_com_code",
-        "app_code",
     ],
     "module_name": [
+        "module_name",
         "kubernetes.labels.bkapp_paas_bk_tencent_com_module_name",
         "__ext.labels.bkapp_paas_bk_tencent_com_module_name",
-        "module_name",
     ],
     "environment": [
+        "environment",
         "kubernetes.labels.bkapp_paas_bk_tencent_com_environment",
         "__ext.labels.bkapp_paas_bk_tencent_com_environment",
-        "environment",
     ],
     "process_id": [
         # 普通应用记录进程名的 label 是 process_id
         # 云原生应用新增的记录进程名的 label 是 bkapp.paas.bk.tencent.com/process-name
+        "process_id",
         "kubernetes.labels.process_id",
         "kubernetes.labels.bkapp_paas_bk_tencent_com_process_name",
         "__ext.labels.process_id",
         "__ext.labels.bkapp_paas_bk_tencent_com_process_name",
         "process_type",
-        "process_id",
     ],
     "pod_name": ["kubernetes.pod.name", "__ext.io_kubernetes_pod", "pod_name"],
 }

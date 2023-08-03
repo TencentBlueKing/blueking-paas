@@ -217,7 +217,7 @@ def update_or_create_custom_collector_config(
         else:
             # create_custom_collector_config will fill `id`, `index_set_id`, `bk_data_id` fields
             custom_collector_config = client.create_custom_collector_config(
-                bk_biz_id=BKLogConfigProvider(module).bk_biz_id, config=custom_collector_config
+                cc_or_space_id=BKLogConfigProvider(module).bk_biz_id, config=custom_collector_config
             )
             CustomCollectorConfigModel.objects.update_or_create(
                 module=module,

@@ -163,7 +163,7 @@
                 :paste-fn="copyCommandParameter"
               />
               <p class="whole-item-tips">
-                {{ $t('示例：--env prod，多个参数可用回车键分隔') }}
+                {{ $t('示例： -listen $PORT，多个参数可用回车键分隔') }}
               </p>
             </bk-form-item>
 
@@ -185,7 +185,7 @@
                 style="right: 8px;"
               />
               <p class="whole-item-tips">
-                {{ $t('请求将会被发往容器的这个端口。推荐不指定具体端口号，让容器监听 $PORT 环境变量') }}
+                {{ $t('接收HTTP请求的端口号．建议镜像直接监听$PORT环境变量不修改本值') }}
               </p>
             </bk-form-item>
             <bk-form-item :label-width="40">
@@ -249,15 +249,42 @@
                     :label="$t('扩缩容方式')"
                     :label-width="120"
                   >
-                    <bk-radio-group v-model="isAutoscaling" @change="handleRadioChange">
-                      <bk-radio-button class="radio-cls" :value="false">
-                        {{ $t('手动调节') }}
-                      </bk-radio-button>
-                      <bk-radio-button
-                        class="radio-cls" :value="true">
-                        {{ $t('自动调节') }}
-                      </bk-radio-button>
-                    </bk-radio-group>
+                    <section class="flex-row">
+                      <bk-radio-group v-model="isAutoscaling" @change="handleRadioChange" style="flex: 1">
+                        <bk-radio-button class="radio-cls" :value="false">
+                          {{ $t('手动调节') }}
+                        </bk-radio-button>
+                        <bk-radio-button
+                          class="radio-cls" :value="true">
+                          {{ $t('自动调节') }}
+                        </bk-radio-button>
+                      </bk-radio-group>
+
+                      <bk-alert type="info" v-if="isAutoscaling">
+                        <span slot="title">
+                          {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
+                          <a
+                            target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
+                            style="color: #3a84ff">
+                            {{$t('查看动态扩缩容计算规则')}}
+                          </a>
+                        </span>
+                      </bk-alert>
+                    </section>
+                  </bk-form-item>
+                  <bk-form-item
+                    v-if="isAutoscaling"
+                    :label="$t('触发方式')"
+                    :label-width="120"
+                    class="desc-form-item">
+                    <div class="desc-container">
+                      <p>
+                        {{$t('CPU 使用率')}} = 85%
+                      </p>
+                      <p>
+                        {{$t('响应时间')}} = 1000ms
+                      </p>
+                    </div>
                   </bk-form-item>
                   <section v-if="isAutoscaling" class="mt20">
                     <bk-form-item
@@ -317,14 +344,13 @@
       <!-- 查看态 -->
       <div class="form-detail mt20" v-else>
         <bk-form
-          ref="formDeploy"
           :model="formData">
           <bk-form-item
             :label="$t('容器镜像地址：')">
             <span class="form-text">{{ formData.image || '--' }}</span>
           </bk-form-item>
           <bk-form-item
-            :label="$t('容器镜像地址：')">
+            :label="$t('镜像凭证：')">
             <span class="form-text">{{ bkappAnnotations[imageCrdlAnnoKey] || '--' }}</span>
           </bk-form-item>
           <bk-form-item
@@ -403,13 +429,22 @@
       :header-position="'left'"
       :mask-close="false"
       :title="processDialog.title"
+      :loading="processDialog.loading"
       @confirm="handleConfirm"
-      @cancel="processDialog.visiable = false"
+      @cancel="handleCancel"
     >
-      <bk-input
-        class="path-input-cls"
-        v-model="processDialog.name"
-        :placeholder="$t('请输入')"></bk-input>
+      <bk-form
+        ref="formDialog"
+        :model="processDialog"
+        :label-width="0">
+        <bk-form-item :required="true" :property="'name'" :rules="rules.processName">
+          <bk-input
+            class="path-input-cls"
+            v-model="processDialog.name"
+            :placeholder="$t('请输入进程名称')">
+          </bk-input>
+        </bk-form-item>
+      </bk-form>
     </bk-dialog>
   </paas-content-loader>
 </template>
@@ -457,16 +492,7 @@ export default {
       hasDeleteIcon: true,
       processData: [],
       localCloudAppData: {},
-      memoryData: [
-        { key: '256 Mi', value: '256Mi' },
-        { key: '512 Mi', value: '512Mi' },
-        { key: '1024 Mi', value: '1024Mi' },
-      ],
-      cpuData: [
-        { key: '500m', value: '500m' },
-        { key: '1000m', value: '1000m' },
-        { key: '2000m', value: '2000m' },
-      ],
+
       hooks: null,
       isLoading: true,
       rules: {
@@ -474,7 +500,7 @@ export default {
           {
             required: true,
             message: this.$t('该字段是必填项'),
-            trigger: 'blur',
+            trigger: 'blur change',
           },
           {
             regex: /^(?:(?=[^:\\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
@@ -541,6 +567,26 @@ export default {
             trigger: 'blur',
           },
         ],
+        processName: [
+          {
+            required: true,
+            message: this.$t('请输入进程名'),
+            trigger: 'blur',
+          },
+          {
+            validator: v => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
+            message: `${this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')}`,
+            trigger: 'blur',
+          },
+          {
+            validator: (v) => {
+              const panelName = this.panels.map(e => e.name);
+              return !panelName.includes(v);
+            },
+            message: `${this.$t('不允许添加同名进程')}`,
+            trigger: 'blur',
+          },
+        ],
       },
       isBlur: true,
       imageCredential: '',
@@ -553,6 +599,7 @@ export default {
       isAutoscaling: false,
       btnMouseIndex: '',
       processDialog: {
+        loading: false,
         visiable: false,
         title: this.$t('进程名称'),
         name: '',
@@ -596,7 +643,7 @@ export default {
         this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
-      deep: true,
+      // deep: true,
     },
     formData: {
       handler(val) {
@@ -625,6 +672,10 @@ export default {
 
           if (val?.autoscaling?.minReplicas <= val?.autoscaling?.maxReplicas) {
             this.$refs.formEnv?.clearError();
+          }
+
+          if (val?.image) {
+            this.$refs.formDeploy?.clearError();
           }
 
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
@@ -678,103 +729,6 @@ export default {
     }, 1000);
   },
   methods: {
-    handlePanelClick(i, e, isAdd) {
-      this.panelActive = i;
-      this.formData = this.processData[i] || {
-        name: this.itemValue,
-        image: '',
-        command: [],
-        args: [],
-        memory: '256Mi',
-        cpu: '500m',
-        replicas: 1,
-        targetPort: null,
-      };
-      if (e && e.target === document.querySelector('.bk-input-cls input')) {
-        this.$nextTick(() => {
-          this.$set(this.panels[i], 'isEdit', true);
-        });
-      } else {
-        !isAdd && this.$refs.mirrorUrl.focus();
-      }
-      // tab切换清除提示
-      this.$refs.formDeploy.clearError();
-      this.$refs.formResource.clearError();
-    },
-    handlePanelEnter(i) {
-      if (i === 0) return;
-      this.showEditIconIndex = i;
-    },
-    handlePanelLeave() {
-      this.showEditIconIndex = null;
-    },
-
-    // 处理重复添加和正则
-    handleRepeatData(index) {
-      if (!this.isBlur) return;
-      this.isBlur = false; // 处理enter会触发两次的bug
-      let { panels } = this;
-      if (index) {
-        panels = this.panels.filter((e, i) => i !== index);
-      }
-      const panelName = panels.map(e => e.name);
-      if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('不允许添加同名进程'),
-        });
-        setTimeout(() => {
-          this.isBlur = true;
-          this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-        }, 100);
-        return false;
-      } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头'),
-        });
-        setTimeout(() => {
-          this.isBlur = true;
-          this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
-        }, 100);
-        return false;
-      }
-      setTimeout(() => {
-        this.isBlur = true;
-      }, 100);
-
-      return true;
-    },
-
-    async formDataValidate(index) {
-      try {
-        await this.$refs.formResource.validate();
-        await this.$refs.formDeploy.validate();
-        if (index) {
-          this.handlePanelValidateSwitch(index);
-        }
-        return true;
-      } catch (error) {
-        console.error(error);
-        return false;
-      }
-    },
-
-    // 切换至未符合规则的Panel
-    handlePanelValidateSwitch(i) {
-      this.panelActive = i;
-      this.formData = this.localCloudAppData.spec.processes[i] || {
-        image: '',
-        command: [],
-        args: [],
-        memory: '256Mi',
-        cpu: '500m',
-        replicas: 1,
-        targetPort: 8080,
-      };
-      this.$refs.mirrorUrl.focus();
-    },
-
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');
     },
@@ -858,7 +812,8 @@ export default {
     },
 
     // 处理保存时数据问题
-    handleProcessData() {
+    async handleProcessData() {
+      await this.$refs.formEnv.validate();
       console.log('提交了');
     },
 
@@ -877,69 +832,84 @@ export default {
     },
 
     // 弹窗确认
-    handleConfirm() {
-      this.processNameActive = this.processDialog.name; // 选中当前点击tab
-      if (this.processDialog.index) {   // 编辑进程名
-        this.panels.forEach((e, i) => {
-          if (i === this.processDialog.index) {
-            e.name = this.processDialog.name;
-          }
-        });
-        console.log('this.localCloudAppData.spec', this.localCloudAppData.spec, this.localProcessNameActive);
-        this.localCloudAppData.spec.processes[this.btnIndex].name = this.processDialog.name; // 需要更新cloudAppData
+    async handleConfirm() {
+      this.processDialog.loading = true;
+      console.log('this.$refs.formDialog', this.$refs.formDialog);
+      try {
+        await this.$refs.formDialog.validate(); // 校验进程名
+        this.processNameActive = this.processDialog.name; // 选中当前点击tab
+        if (this.processDialog.index) {   // 编辑进程名
+          this.panels.forEach((e, i) => {
+            if (i === this.processDialog.index) {
+              e.name = this.processDialog.name;
+            }
+          });
+          console.log('this.localCloudAppData.spec', this.localCloudAppData.spec, this.localProcessNameActive);
+          this.localCloudAppData.spec.processes[this.btnIndex].name = this.processDialog.name; // 需要更新cloudAppData
 
-        // 需要更新外层envOverlay中的自动调节数据
-        (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).map((e) => {
-          if (e.process === this.localProcessNameActive) {
-            e.process = this.processDialog.name;
-          }
-          return e;
-        });
+          // 需要更新外层envOverlay中的自动调节数据
+          (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).map((e) => {
+            if (e.process === this.localProcessNameActive) {
+              e.process = this.processDialog.name;
+            }
+            return e;
+          });
 
-        // 需要更新外层envOverlay中配额数据
-        (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).map((e) => {
-          if (e.process === this.localProcessNameActive) {
-            e.process = this.processDialog.name;
-          }
-          return e;
-        });
+          // 需要更新外层envOverlay中配额数据
+          (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).map((e) => {
+            if (e.process === this.localProcessNameActive) {
+              e.process = this.processDialog.name;
+            }
+            return e;
+          });
 
 
-        // 需要更新外层envOverlay中副本数量
-        (this.localCloudAppData.spec?.envOverlay?.replicas || []).map((e) => {
-          if (e.process === this.localProcessNameActive) {
-            e.process = this.processDialog.name;
-          }
-          return e;
-        });
+          // 需要更新外层envOverlay中副本数量
+          (this.localCloudAppData.spec?.envOverlay?.replicas || []).map((e) => {
+            if (e.process === this.localProcessNameActive) {
+              e.process = this.processDialog.name;
+            }
+            return e;
+          });
 
-        this.bkappAnnotations[this.imageCrdlAnnoKey] = this.bkappAnnotations
-          [this.imageLocalCrdlAnnoKey];   // 旧的bkappAnnotations数据需要赋值给新的
-        delete this.bkappAnnotations[this.imageLocalCrdlAnnoKey];
+          this.bkappAnnotations[this.imageCrdlAnnoKey] = this.bkappAnnotations
+            [this.imageLocalCrdlAnnoKey];   // 旧的bkappAnnotations数据需要赋值给新的
+          delete this.bkappAnnotations[this.imageLocalCrdlAnnoKey];
 
         // this.handleBtnGroupClick(this.processDialog.name);
-      } else {  // 新增进程
-        this.panels.push({ name: this.processDialog.name });
-        this.btnIndex = this.panels.length - 1;
-        this.formData = {
-          name: this.processDialog.name,
-          image: '',
-          command: [],
-          args: [],
-          memory: '256Mi',
-          cpu: '500m',
-          replicas: 1,
-          targetPort: null,
-          resQuotaPlan: 'default',
-          envOverlay: {
-            replicas: [],
-          },
-          autoscaling: { policy: 'default', maxReplicas: '', minReplicas: '' },
-        };
-        this.localCloudAppData.spec.processes.push(this.formData);
+        } else {  // 新增进程
+          this.panels.push({ name: this.processDialog.name });
+          this.btnIndex = this.panels.length - 1;
+          this.formData = {
+            name: this.processDialog.name,
+            image: '',
+            command: [],
+            args: [],
+            memory: '256Mi',
+            cpu: '500m',
+            replicas: 1,
+            targetPort: null,
+            resQuotaPlan: 'default',
+            envOverlay: {
+              replicas: [],
+            },
+            autoscaling: { policy: 'default', maxReplicas: '', minReplicas: '' },
+          };
+          this.localCloudAppData.spec.processes.push(this.formData);
+        }
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        this.processDialog.visiable = false;
+      } catch (error) {
+        console.log('error', error);
+      } finally {
+        this.processDialog.loading = false;
       }
-      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+    },
+
+    // 弹窗取消
+    handleCancel() {
       this.processDialog.visiable = false;
+      this.$refs?.formDialog.clearError();
     },
 
     // 编辑进程名称
@@ -1254,7 +1224,7 @@ export default {
       }
     }
     .env-container{
-      width: 785px;
+      width: 885px;
       background: #F5F7FA;
       border-radius: 2px;
       padding: 20px 24px;

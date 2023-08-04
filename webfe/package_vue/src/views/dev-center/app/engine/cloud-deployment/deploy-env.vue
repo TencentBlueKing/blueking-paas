@@ -116,7 +116,9 @@
             :label="$t('生效环境')"
             class-name="table-colum-module-cls"
             :filters="envSelectList"
-            :filter-method="sourceFilterMethod">
+            :filter-method="sourceFilterMethod"
+            :filter-multiple="false"
+            prop="environment_name">
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
@@ -505,7 +507,6 @@ export default {
       curFile: {},
       isFileTypeError: false,
       envEnums: ENV_ENUM,
-      statusFilters: [{ text: '正常', value: '正常' }, { text: '创建中', value: '创建中' }],
     };
   },
   computed: {
@@ -999,7 +1000,6 @@ export default {
 
 
     sourceFilterMethod(value, row, column) {
-      console.log(value, row, column);
       const { property } = column;
       return row[property] === value;
     },

@@ -20,6 +20,7 @@ import json
 import logging
 from typing import Dict, Optional
 
+from paas_wl.cnative.specs import mounts
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -87,6 +88,9 @@ class BkAppManifestProcessor:
         manifest.spec.configuration.env = merge_envvars(
             manifest.spec.configuration.env, generate_builtin_configurations(env=self.env)
         )
+
+        # 注入挂载信息
+        mounts.inject_to_app_resource(self.env, manifest)
 
         data = manifest.dict()
         # refresh status.conditions

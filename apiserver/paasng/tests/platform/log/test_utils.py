@@ -158,6 +158,7 @@ _default_log: dict = {
     "environment": NOT_SET,
     "process_id": NOT_SET,
     "pod_name": NOT_SET,
+    "stream": NOT_SET,
 }
 
 
@@ -194,6 +195,7 @@ _default_log: dict = {
                 "environment": "stag",
                 "process_id": "web",
                 "pod_name": "bkapp-code-stag--web-8449579sh9d2",
+                "stream": NOT_SET,
             },
         ),
     ],

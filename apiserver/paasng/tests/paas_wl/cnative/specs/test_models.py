@@ -65,6 +65,7 @@ class TestCreateAppResource:
                 ],
                 'hooks': None,
                 'addons': [],
+                'mounts': None,
                 'envOverlay': None,
                 'domainResolution': None,
                 'svcDiscovery': None,

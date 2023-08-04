@@ -35,12 +35,15 @@ class ConfigMapSourceQuerySet(models.QuerySet):
     def get_by_mount(self, m: 'Mount'):
         if m.source_config.configMap:
             return self.get(
-                module_id=m.module_id, environment_name=m.environment_name, name=m.source_config.configMap.name
+                application_id=m.module.application_id,
+                environment_name=m.environment_name,
+                name=m.source_config.configMap.name,
             )
         raise ValueError(f'Mount {m.name} is invalid: source_config.configMap is none')
 
 
 class ConfigMapSource(TimestampedModel):
+    application_id = models.UUIDField(verbose_name=_('所属应用'), null=False)
     module_id = models.UUIDField(verbose_name=_('所属模块'), null=False)
     module = ModuleAttrFromID()
 
@@ -53,7 +56,7 @@ class ConfigMapSource(TimestampedModel):
     objects = ConfigMapSourceQuerySet.as_manager()
 
     class Meta:
-        unique_together = ('name', 'environment_name')
+        unique_together = ('name', 'application_id', 'environment_name')
 
 
 class Mount(TimestampedModel):

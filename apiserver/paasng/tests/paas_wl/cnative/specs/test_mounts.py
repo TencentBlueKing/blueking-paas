@@ -91,12 +91,14 @@ class TestVolumeSourceManager:
     @pytest.fixture(autouse=True)
     def create_configmap_resource(self, bk_module):
         ConfigMapSource.objects.create(
+            application_id=bk_module.application_id,
             name='nginx-configmap',
             module_id=bk_module.id,
             environment_name=MountEnvName.STAG,
             data={"nginx.conf": "location / { }"},
         )
         ConfigMapSource.objects.create(
+            application_id=bk_module.application_id,
             name='redis-configmap',
             module_id=bk_module.id,
             environment_name=MountEnvName.GLOBAL,

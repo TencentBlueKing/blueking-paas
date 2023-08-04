@@ -29,7 +29,7 @@ from pydantic import BaseModel
 from paasng.engine.constants import JobStatus, RuntimeType
 from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
-from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
+from paasng.engine.models.config_var import CONFIG_VAR_INPUT_FIELDS, ENVIRONMENT_ID_FOR_GLOBAL
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
@@ -262,18 +262,23 @@ class ConfigVarManager:
         instance_list = module.configvar_set.filter(is_builtin=False).select_related('environment')
         instance_mapping = {obj.id: obj for obj in instance_list}
 
+        # Create new instance if id is not provided
+        create_list = [item for item in config_vars if not item.id]
+
         # Perform updates and remove ids from instance_mapping.
         update_config_vars = {item.id: item for item in config_vars if item.id}
         overwrited_num = 0
         for var_id, var_data in update_config_vars.items():
             obj = instance_mapping.get(var_id, None)
-            if obj is not None:
+            # If the id is provided, but if the id is not in the db, need to create a new data
+            if obj is None:
+                var_data.id = None
+                create_list.append(var_data)
+            else:
                 instance_mapping.pop(var_id)
                 # If it is inconsistent with existing data, it needs to be updated
                 if not obj.is_equivalent_to(var_data):
-                    _update_data_dict = model_to_dict(
-                        var_data, fields=['is_global', 'environment_id', 'key', 'value', 'description']
-                    )
+                    _update_data_dict = model_to_dict(var_data, fields=CONFIG_VAR_INPUT_FIELDS)
                     ConfigVar.objects.filter(id=var_id).update(**_update_data_dict)
                     overwrited_num += 1
 
@@ -282,8 +287,6 @@ class ConfigVarManager:
         for _, obj in instance_mapping.items():
             obj.delete()
 
-        # Create new instance if id is not provided
-        create_list = [item for item in config_vars if not item.id]
         ConfigVar.objects.bulk_create(create_list)
 
         return ApplyResult(

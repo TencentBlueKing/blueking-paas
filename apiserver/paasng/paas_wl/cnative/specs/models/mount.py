@@ -50,6 +50,7 @@ class ConfigMapSource(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
+    # TODO name 的生成规则在具体的创建接口中定义
     name = models.CharField(max_length=63, help_text=_('ConfigMap 名'))
     data = models.JSONField(default=dict)
 

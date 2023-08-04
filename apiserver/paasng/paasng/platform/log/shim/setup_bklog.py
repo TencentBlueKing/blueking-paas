@@ -256,6 +256,8 @@ def update_or_create_es_search_config(
         termTemplate={},
         builtinFilters={},
         builtinExcludes={},
+        filedMatcher="message|levelname|pathname|funcName|otelSpanID"
+        "|otelServiceName|otelTraceID|environment|process_id|stream",
     )
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,

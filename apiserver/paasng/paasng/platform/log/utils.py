@@ -89,8 +89,17 @@ def parse_request_to_es_dsl(dsl: 'SearchRequestSchema', mappings: dict) -> Query
         Q("query_string", query=dsl.query.query_string, analyze_wildcard=True) if dsl.query.query_string else Q()
     )
     # 空数组不进行过滤
-    terms = [Q("terms", **{get_es_term(k, mappings): v}) for k, v in dsl.query.terms.items() if len(v) != 0]
-    excludes = [~Q("terms", **{get_es_term(k, mappings): v}) for k, v in dsl.query.exclude.items() if len(v) != 0]
+    # 当 _expand__to_dot=True 时, 会将 bklog 的保留字段 __ext 转成 .ext, 导致查询异常
+    terms = [
+        Q("terms", **{get_es_term(k, mappings): v}, _expand__to_dot=False)
+        for k, v in dsl.query.terms.items()
+        if len(v) != 0
+    ]
+    excludes = [
+        ~Q("terms", **{get_es_term(k, mappings): v}, _expand__to_dot=False)
+        for k, v in dsl.query.exclude.items()
+        if len(v) != 0
+    ]
     return reduce(and_, [query_string, *terms, *excludes])
 
 

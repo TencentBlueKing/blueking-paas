@@ -137,7 +137,7 @@
 <script>
 import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
-import deployYaml from '@/views/dev-center/app/engine/cloud-deployment/deploy-yaml';
+import deployYaml from './deploy-yaml';
 import { bus } from '@/common/bus';
 
 export default {
@@ -166,6 +166,7 @@ export default {
         { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
         { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook'  },
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
+        { name: 'imageCredential', label: this.$t('镜像凭证'), ref: 'ticket'  },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,

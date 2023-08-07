@@ -86,10 +86,10 @@ export default {
 
 
     /**
-     * 保存一条环境变量
+     * 保存环境变量数据
      */
     saveEnvItem({ }, { appCode, moduleId, data }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/batch/`;
       return http.post(url, data);
     },
   },

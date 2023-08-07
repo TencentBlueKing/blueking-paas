@@ -57,7 +57,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -69,6 +69,7 @@ export default {
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
+        'imageCredential',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -349,6 +350,7 @@ export default {
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
+        'imageCredential',
       ];
 
       this.navTree.forEach((nav) => {

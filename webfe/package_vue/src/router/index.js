@@ -187,7 +187,7 @@ const appCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/vi
   window.showDeployTip(error);
 });
 
-const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/image-credential').then(module => module).catch((error) => {
+const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/image-credential').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -506,6 +506,14 @@ const router = new Router({
                 module: 'resource',
               },
             },
+            {
+              path: 'ticket',
+              component: imageCredential,
+              name: 'imageCredential',
+              meta: {
+                module: 'ticket',
+              },
+            },
           ],
         },
         {
@@ -537,11 +545,6 @@ const router = new Router({
           path: ':id/cloudapi',
           component: appCloudAPI,
           name: 'appCloudAPI',
-        },
-        {
-          path: ':id/ticket',
-          component: imageCredential,
-          name: 'imageCredential',
         },
         {
           path: ':id/access-portal',

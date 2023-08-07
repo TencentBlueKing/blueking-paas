@@ -583,30 +583,6 @@ export default {
 
     // 保存
     async save() {
-      // this.$refs.newVarForm.validate().then(() => {
-      //   const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/`;
-      //   const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
-      //   this.$http.post(url, createForm).then(() => {
-      //     this.$paasMessage({
-      //       theme: 'success',
-      //       message: this.$t('添加环境变量成功'),
-      //     });
-      //     this.getEnvVarList();
-      //     this.newVarConfig = {
-      //       key: '',
-      //       value: '',
-      //       env: this.newVarConfig.env,
-      //       description: '',
-      //     };
-      //     this.isEdited = true;
-      //   }, (errRes) => {
-      //     const errorMsg = errRes.message;
-      //     this.$paasMessage({
-      //       theme: 'error',
-      //       message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
-      //     });
-      //   });
-      // });
       try {
         await this.$store.dispatch(
           'envVar/saveEnvItem',
@@ -619,6 +595,7 @@ export default {
           theme: 'success',
           message: this.$t('添加环境变量成功'),
         });
+        this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (error) {
         const errorMsg = error.message;
         this.$paasMessage({

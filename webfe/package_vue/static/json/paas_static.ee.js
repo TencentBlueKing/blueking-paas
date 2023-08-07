@@ -577,7 +577,8 @@ export const PAAS_STATIC_CONFIG = {
                     "cloudAppDeployForEnv",
                     "cloudAppDeployForYaml",
                     "cloudAppDeployForHook",
-                    "cloudAppDeployForResource"
+                    "cloudAppDeployForResource",
+                    'imageCredential',
                 ],
                 "iconfontName": "squares",
                 "supportModule": false,
@@ -639,17 +640,6 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     }
                 ]
-            },
-            {
-                "name": "imageCredential",
-                "label": staticI18n.$t("镜像凭证"),
-                "matchRouters": ["imageCredential"],
-                "iconfontName": "key-2",
-                "supportModule": false,
-                "destRoute": {
-                  "name": "imageCredential"
-                },
-                "children": []
             },
             {
                 "name": "appMarketing",

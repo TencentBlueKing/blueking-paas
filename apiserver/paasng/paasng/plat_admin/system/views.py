@@ -291,5 +291,10 @@ class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
         application = self.get_application()
         wl_apps = [env.wl_app for env in application.envs.all()]
 
-        data = [{'namespace': wl_app.namespace, 'cluster_id': get_cluster_by_app(wl_app).name} for wl_app in wl_apps]
+        namespace_cluster_map: Dict[str, str] = {}
+        for wl_app in wl_apps:
+            if (ns := wl_app.namespace) not in namespace_cluster_map:
+                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).name
+
+        data = [{'namespace': ns, 'cluster_id': cluster_id} for ns, cluster_id in namespace_cluster_map.items()]
         return Response(ClusterNamespaceSLZ(data, many=True).data)

@@ -224,9 +224,12 @@ class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
+        application_features = ApplicationFeatureFlag.objects.get_application_features(
+            application=self.get_application()
+        )
         kwargs["APP_FEATUREFLAG_CHOICES"] = dict(AppFeatureFlag.get_django_choices())
         kwargs["feature_flag_list"] = ApplicationFeatureFlagSLZ(
-            ApplicationFeatureFlag.objects.filter(application=self.get_application()), many=True
+            [{"name": key, "effect": value} for key, value in application_features.items()], many=True
         ).data
         return kwargs
 
@@ -238,9 +241,12 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def list(self, request, code):
+        application_features = ApplicationFeatureFlag.objects.get_application_features(
+            application=self.get_application()
+        )
         return Response(
             ApplicationFeatureFlagSLZ(
-                ApplicationFeatureFlag.objects.filter(application=self.get_application()), many=True
+                [{"name": key, "effect": value} for key, value in application_features.items()], many=True
             ).data
         )
 

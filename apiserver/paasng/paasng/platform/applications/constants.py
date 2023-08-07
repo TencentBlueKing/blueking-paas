@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Type
 
 from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
 class ApplicationType(str, StructuredEnum):
@@ -98,8 +99,10 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     PA_CUSTOM_EVENT_ANALYTICS = FeatureFlagField(label="自定义事件统计功能")
     PA_INGRESS_ANALYTICS = FeatureFlagField(label="访问日志统计功能")
     PA_USER_DIMENSION_SHOW_DEPT = FeatureFlagField(label="按用户维度拆分展示部门字段")
+
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
     MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
+    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
 
 
 class LightApplicationViewSetErrorCode(str, StructuredEnum):

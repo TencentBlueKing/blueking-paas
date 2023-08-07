@@ -5,27 +5,6 @@
 <div id="app-memberships-wrapper">
     <h3>特性管理</h3>
 
-    <bk-form form-type="inline">
-        <bk-form-item label="应用特性">
-            <bk-select v-model="form.feature" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" searchable>
-                <bk-option v-for="(value, key) in APP_FEATUREFLAG_CHOICES"
-                    :key="key"
-                    :id="key"
-                    :name="value">
-                </bk-option>
-            </bk-select>
-        </bk-form-item>
-        <bk-form-item label="状态">
-            <bk-select v-model="form.isEffect" :clearable=false style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom">
-                <bk-option :key="true" :id="true" name="允许"></bk-option>
-                <bk-option :key="false" :id="false" name="拒绝"></bk-option>
-            </bk-select>
-        </bk-form-item>
-        <bk-form-item>
-            <bk-button theme="primary" title="添加特性" @click="updateOrCreate">添加特性</bk-button>
-        </bk-form-item>
-    </bk-form>
-
     <bk-table style="margin-top: 15px;"
         :data="featureFlagList">
         <bk-table-column type="index" label="序列" align="center" width="60"></bk-table-column>

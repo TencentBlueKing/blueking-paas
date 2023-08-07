@@ -16,6 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .deploy import DeployAction, ZombieProcessesKiller
+import logging
 
-__all__ = ['DeployAction', 'ZombieProcessesKiller']
+from paas_wl.monitoring.bklog.managers import AppLogConfigController, NullController
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.log.constants import LogCollectorType
+from paasng.platform.log.shim import get_log_collector_type
+
+logger = logging.getLogger(__name__)
+
+
+def make_bk_log_controller(env: ModuleEnvironment):
+    if get_log_collector_type(env) == LogCollectorType.ELK:
+        logger.warning("BkLog is not ready, skip apply BkLogConfig")
+        return NullController()
+    else:
+        return AppLogConfigController(env)

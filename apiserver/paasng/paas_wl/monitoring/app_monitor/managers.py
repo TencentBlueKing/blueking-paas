@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from typing import Optional
 
 from django.conf import settings
@@ -27,8 +26,6 @@ from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-
-logger = logging.getLogger(__name__)
 
 
 def build_service_monitor_name(app: WlApp) -> str:
@@ -78,14 +75,6 @@ def build_service_monitor(monitor: AppMetricsMonitor) -> ServiceMonitor:
         ),
         match_namespaces=[monitor.app.namespace],
     )
-
-
-def make_bk_monitor_controller(app: WlApp):
-    if not settings.ENABLE_BK_MONITOR:
-        logger.warning("BKMonitor is not ready, skip apply ServiceMonitor")
-        return NullController()
-    else:
-        return AppMonitorController(app)
 
 
 class AppMonitorController:

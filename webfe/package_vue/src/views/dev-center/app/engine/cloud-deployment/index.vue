@@ -535,6 +535,7 @@ export default {
         const params = { ... this.$store.state.cloudApi.cloudAppData };
         await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
+          moduleId: this.curModuleId,
           params,
         });
         this.$paasMessage({

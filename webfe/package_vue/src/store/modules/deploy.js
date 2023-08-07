@@ -445,8 +445,8 @@ const actions = {
    *
    * @param {Object} params 请求参数：appCode, moduleId, env
    */
-  saveCloudAppInfo({}, { appCode, params }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/mres/`;
+  saveCloudAppInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
     return http.put(url, params, config);
   },
 };

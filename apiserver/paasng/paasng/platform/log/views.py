@@ -80,7 +80,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         # LOG_SEARCH_COUNTER.labels(
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
-        log_config = self._get_log_query_config(process_type=self.request.query_params.get("process_type"))
+        log_config = self._get_log_query_config()
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
     def parse_time_range(self) -> SmartTimeRange:
@@ -108,7 +108,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
-        query_config = self._get_log_query_config(process_type=params.get("process_type"))
+        query_config = self._get_log_query_config()
         search = self._make_base_search(
             search_params=query_config.search_params,
             time_range=smart_time_range,
@@ -157,7 +157,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         search = es_filter.filter_by_builtin_excludes(search)
         return search.limit_offset(limit=limit, offset=offset)
 
-    def _get_log_query_config(self, process_type: Optional[str] = None):
+    def _get_log_query_config(self):
         """获取日志查询配置"""
         env = self.get_env_via_path()
         log_type = self.log_type
@@ -167,7 +167,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
         else:
             try:
-                log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
+                log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
             except ProcessLogQueryConfig.DoesNotExist:
                 raise ValueError("structured log must provide `process_type` field")
         return log_config
@@ -362,7 +362,7 @@ class ModuleLogAPIMixin(_MixinBase):
     def aggregate_fields_filters(self, request, code, module_name, environment=None):
         return super().aggregate_fields_filters(request, code, module_name, environment)
 
-    def _get_log_query_config_by_env(self, env: ModuleEnvironment, process_type: Optional[str] = None):
+    def _get_log_query_config_by_env(self, env: ModuleEnvironment):
         log_type = self.log_type
         if log_type == LogType.INGRESS:
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
@@ -370,20 +370,20 @@ class ModuleLogAPIMixin(_MixinBase):
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
         else:
             try:
-                log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
+                log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
             except ProcessLogQueryConfig.DoesNotExist:
                 raise ValueError("structured log must provide `process_type` field")
         return log_config
 
-    def _get_log_query_config(self, process_type: Optional[str] = None):
+    def _get_log_query_config(self):
         module = self.get_module_via_path()
         stag = module.get_envs("stag")
         prod = module.get_envs("prod")
         # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
         setup_env_log_model(stag)
         setup_env_log_model(prod)
-        stag_config = self._get_log_query_config_by_env(stag, process_type=process_type)
-        prod_config = self._get_log_query_config_by_env(prod, process_type=process_type)
+        stag_config = self._get_log_query_config_by_env(stag)
+        prod_config = self._get_log_query_config_by_env(prod)
         if stag_config != prod_config:
             raise ValueError("`env` field must be specified for this module")
         return prod_config

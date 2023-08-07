@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Dict, Optional, Protocol, Union
 
 import cattr
 from bkapi_client_core.exceptions import APIGatewayResponseError
@@ -60,10 +60,16 @@ class BkLogClient:
     def __init__(self, client: BKLogAPIProtocol):
         self.client = client
 
-    def create_custom_collector_config(self, bk_biz_id: int, config: CustomCollectorConfig):
-        """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值"""
+    def create_custom_collector_config(self, biz_or_space_id: Union[int, str], config: CustomCollectorConfig):
+        """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
+
+        :param int/str biz_or_space_id: 业务ID(bkcmdb)，或空间ID(space_id)
+        :param config: 自定采集项配置
+        :return: 创建的自定采集项配置
+        """
         data: Dict[str, Any] = {
-            "bk_biz_id": bk_biz_id,
+            # 日志侧的接口参数未调整, 虽然参数名是 bk_biz_id, 实际上空间ID也通过这个参数传递
+            "bk_biz_id": biz_or_space_id,
             "collector_config_name_en": config.name_en,
             "collector_config_name": config.name_zh_cn,
             "custom_type": config.custom_type,

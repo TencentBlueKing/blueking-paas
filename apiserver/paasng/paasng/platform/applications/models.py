@@ -451,7 +451,7 @@ class ApplicationEnvironment(TimestampedModel):
         if self.is_offlined:
             return False
 
-        # Check if latest deployment has been succeed
+        # Check if latest deployment has been succeeded
         try:
             Deployment.objects.filter_by_env(self).latest_succeeded()
             return True

@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <div class="right-main">
     <module-top-bar
       :title="$t('应用编排')"

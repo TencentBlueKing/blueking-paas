@@ -579,6 +579,7 @@ export const PAAS_STATIC_CONFIG = {
                     "cloudAppDeployForHook",
                     "cloudAppDeployForResource",
                     'imageCredential',
+                    'moduleInfo',
                 ],
                 "iconfontName": "squares",
                 "supportModule": false,

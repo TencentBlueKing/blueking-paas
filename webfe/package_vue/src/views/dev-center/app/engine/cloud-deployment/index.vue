@@ -167,6 +167,7 @@ export default {
         { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook'  },
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
         { name: 'imageCredential', label: this.$t('镜像凭证'), ref: 'ticket'  },
+        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info'  },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,

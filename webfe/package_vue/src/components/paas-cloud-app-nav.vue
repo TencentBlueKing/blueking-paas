@@ -70,6 +70,7 @@ export default {
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
         'imageCredential',
+        'moduleInfo',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -351,6 +352,7 @@ export default {
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
         'imageCredential',
+        'moduleInfo',
       ];
 
       this.navTree.forEach((nav) => {

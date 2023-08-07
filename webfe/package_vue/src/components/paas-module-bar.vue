@@ -45,7 +45,6 @@ export default defineComponent({
   },
   setup(props, { root }) {
     const { $store, $route, $router } = root;
-    console.log(root, root.data);
     const active = ref(props.curModule.name || '');
     const handleTabChange = () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);

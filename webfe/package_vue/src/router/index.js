@@ -191,6 +191,10 @@ const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'
   window.showDeployTip(error);
 });
 
+const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/module-info').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appAccessPortal = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/entry-config').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -512,6 +516,14 @@ const router = new Router({
               name: 'imageCredential',
               meta: {
                 module: 'ticket',
+              },
+            },
+            {
+              path: 'module-info',
+              component: moduleInfo,
+              name: 'moduleInfo',
+              meta: {
+                module: 'module-info',
               },
             },
           ],

@@ -98,7 +98,7 @@
           </div>
         </div>
         <!-- 查看态 -->
-        <div class="address-info-url" v-if="avaliableAddress[0] && !isEditAddress">
+        <div class="address-info-url" v-if="!isEditAddress">
           {{ curAddress }}
         </div>
         <bk-button
@@ -331,9 +331,6 @@ export default {
         4: this.$t('主模块生产环境独立域名：'),
         5: this.$t('与主模块生产环境一致，并启用 HTTPS'),
       },
-      avaliableAddress: [],
-      avaliableAddressValue: 2,
-      avaliableAddressValueBackup: null,
       switchAddressDialog: {
         visiable: false,
         loading: false,
@@ -437,33 +434,10 @@ export default {
       this.checkAppPrepare();
       this.getEntryList();
       this.engineAbled = this.curAppInfo.web_config.engine_enabled;
-
-      if (this.engineAbled) {
-        await this.fetchAvaliableAddress();
-      }
     },
 
     visitAppMarket() {
       window.open(this.marketAddress);
-    },
-
-    async fetchAvaliableAddress() {
-      try {
-        const res = await this.$store.dispatch('market/getAppMarketAvaliableAddress', this.appCode)
-                    ;(res || []).forEach((item) => {
-          if (item.type === 2 || item.type === 5) {
-            this.$set(item, 'value', item.type);
-          } else {
-            this.$set(item, 'value', item.address);
-          }
-        });
-        this.avaliableAddress = [...res];
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message,
-        });
-      }
     },
 
     afterAddressDialogClose() {
@@ -490,7 +464,6 @@ export default {
           theme: 'success',
           message: this.$t('访问地址更改成功'),
         });
-        this.avaliableAddressValueBackup = this.currentAddress.value;
         this.switchAddressDialog.visiable = false;
         this.isEditAddress = false;
         this.initMarketConfig();      // 重新请求数据
@@ -570,12 +543,6 @@ export default {
       try {
         const res = await this.$store.dispatch('market/getAppMarketConfig', this.appCode);
         this.appMarketConfig = Object.assign(this.appMarketConfig, res);
-        if (this.appMarketConfig.source_url_type === 2) {
-          this.avaliableAddressValue = 2;
-        } else {
-          this.avaliableAddressValue = this.appMarketConfig.custom_domain_url;
-        }
-        this.avaliableAddressValueBackup = this.avaliableAddressValue;
         this.marketAddress = this.appMarketConfig.market_address;
 
         // 当前选中的模块、当前选中的地址

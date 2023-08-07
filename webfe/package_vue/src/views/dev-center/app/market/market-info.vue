@@ -114,7 +114,7 @@
           class="pl10"
           theme="primary"
           text
-          @click="isEditAddress = false"
+          @click="handlerCancel"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -346,6 +346,7 @@ export default {
       moduleList: [],
       sourceUrlLocal: '',
       curAddressType: '',
+      oldAddress: ''
     };
   },
   computed: {
@@ -646,6 +647,7 @@ export default {
         }
         this.switchAddressDialog.visiable = true;
       } else {
+        this.oldAddress = this.curAddress;
         this.isEditAddress = true;
       }
     },
@@ -686,6 +688,11 @@ export default {
     handleModuleChange() {
       this.curAddress = '';
     },
+
+    handlerCancel() {
+      this.isEditAddress = false;
+      this.curAddress = this.oldAddress;
+    }
   },
 };
 </script>

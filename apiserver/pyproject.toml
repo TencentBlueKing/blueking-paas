@@ -16,7 +16,7 @@ bkpaas-auth = {version = ">=2.0.2"}
 apigw-manager = {version = ">=1.0.14"}
 bkstorages = {version = "==1.0.8"}
 bleach = "==2.0.0"
-blue-krill = {version = "==1.2.2"}
+blue-krill = {version = "==1.2.5"}
 bkapi-component-open = {version = ">=1.0.0"}
 boto = "==2.43.0"
 boto3 = "<1.15.0"

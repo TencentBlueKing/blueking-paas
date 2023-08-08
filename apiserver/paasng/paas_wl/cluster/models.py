@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 from urllib import parse
 
 from attrs import Factory, asdict, define
+from blue_krill.models.fields import EncryptField
 from cattr import register_structure_hook, structure_attrs_fromdict
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
@@ -242,13 +243,13 @@ class Cluster(UuidAuditedModel):
     ingress_config: IngressConfig = IngressConfigField()
     annotations = JSONField(default={}, help_text="Annotations are used to add metadata to describe the cluster.")
 
-    ca_data = models.TextField(null=True)
+    ca_data = EncryptField(null=True)
     # Auth type 1. Client-side certificate
-    cert_data = models.TextField(null=True)
-    key_data = models.TextField(null=True)
+    cert_data = EncryptField(null=True)
+    key_data = EncryptField(null=True)
     # Auth type 2. Bearer token
     token_type = models.IntegerField(null=True)
-    token_value = models.TextField(null=True)
+    token_value = EncryptField(null=True)
 
     # App related default configs
     default_node_selector = JSONField(default={}, help_text="default value for app's 'node_selector' field")

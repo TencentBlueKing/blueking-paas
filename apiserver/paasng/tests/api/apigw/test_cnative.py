@@ -167,10 +167,7 @@ class TestMresStatusViewSet:
         ]
         with mock.patch(
             "paas_wl.cnative.specs.views_enduser.get_mres_from_cluster", return_value=bkapp_res
-        ), mock.patch(
-            'paas_wl.cnative.specs.views_enduser.list_events',
-            return_value=events,
-        ), mock.patch(
+        ), mock.patch('paas_wl.cnative.specs.views_enduser.list_events', return_value=events,), mock.patch(
             'paas_wl.cnative.specs.views_enduser.get_exposed_url',
             return_value=Address(type=AddressType.SUBDOMAIN, url="http://example.com").to_exposed_url(),
         ):

@@ -78,13 +78,23 @@ export default {
       if (data.status === 403 || data.response?.status === 403) {
         return;
       }
-      // 跳转概览/默认模块
-      this.$router.push({
-        name: 'appSummary',
-        params: {
-          id: this.id
-        }
-      });
+      if (this.isPlugin) {
+        this.$router.push({
+          name: 'pluginSummary',
+          params: {
+            id: this.id,
+            pluginTypeId: this.pluginTypeId
+          }
+        });
+      } else {
+        // 跳转概览/默认模块
+        this.$router.push({
+          name: 'appSummary',
+          params: {
+            id: this.id
+          }
+        });
+      }
     }
   },
 };

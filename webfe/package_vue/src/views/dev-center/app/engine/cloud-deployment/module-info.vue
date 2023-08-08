@@ -5,12 +5,12 @@
         <span class="base-info-title">
           {{ $t('基本信息-title') }}
         </span>
-        <div class="edit-container" @click="handleProcessNameEdit">
+        <div class="edit-container" @click="handleEdit('isBasePageEdit')" v-if="!isBasePageEdit">
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
         </div>
       </div>
-      <div class="form-detail mt20 pb20 border-b">
+      <div class="form-detail mt20 pb20 border-b" v-if="!isBasePageEdit">
         <bk-form
           :model="buildData">
           <bk-form-item
@@ -27,24 +27,77 @@
           </bk-form-item>
         </bk-form>
       </div>
+
+      <div class="form-edit mt20 pb20 border-b" v-else>
+        <bk-form
+          :model="buildData">
+          <bk-form-item
+            :label="$t('托管方式：')">
+            <span class="form-text">{{ artifactType || '--' }}</span>
+          </bk-form-item>
+
+          <bk-form-item
+            :label="$t('镜像仓库：')">
+            <bk-input
+              v-model="buildData.image"
+              style="width: 250px;"
+              :placeholder="$t('请输入')"
+            />
+          </bk-form-item>
+
+          <bk-form-item
+            :label="$t('镜像凭证：')">
+            <bk-select
+              v-model="buildData.imagePullPolicy"
+              style="width: 250px;"
+              searchable
+            >
+              <bk-option
+                v-for="option in credentialList"
+                :id="option.name"
+                :key="option.name"
+                :name="option.name"
+              />
+            </bk-select>
+          </bk-form-item>
+        </bk-form>
+
+        <div class="ml150">
+          <bk-button
+            theme="primary"
+            title="保存"
+            class="mr20 mt20"
+            @click="handleSave">
+            {{ $t('保存') }}
+          </bk-button>
+
+          <bk-button
+            :theme="'default'"
+            title="取消"
+            class="mt20"
+            @click="handleCancel">
+            {{ $t('取消') }}
+          </bk-button>
+        </div>
+      </div>
     </div>
 
     <!-- 部署限制 -->
-    <div class="base-info-container" v-if="isV1alpha2">
+    <div class="base-info-container">
       <div class="flex-row align-items-center mt20">
         <span class="base-info-title">
           {{ $t('部署限制') }}
         </span>
-        <div class="edit-container" @click="handleProcessNameEdit">
+        <div class="edit-container" @click="handleEdit('isDeployLimitEdit')" v-if="!isDeployLimitEdit">
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
         </div>
 
-        <div class="info">
+        <div class="info pl20" v-else>
           {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
         </div>
       </div>
-      <div class="form-detail mt20 pb20 border-b">
+      <div class="form-detail mt20 pb20 border-b" v-if="!isDeployLimitEdit">
         <bk-form
           :model="buildData">
           <bk-form-item
@@ -58,30 +111,30 @@
         </bk-form>
       </div>
 
-      <div class="form-edit mt20 pb20 border-b">
-        <bk-checkbox-group v-model="demo1">
-          <bk-checkbox :value="'value1'">{{ $t('预发布环境') }}</bk-checkbox>
-          <bk-checkbox :value="'value2'">{{ $t('生产环境') }}</bk-checkbox>
-        </bk-checkbox-group>
+      <div class="form-edit mt20 pb20 border-b" v-else>
+        <div class="ml80">
+          <bk-checkbox :value="deployLimit.stag" @change="handleEnvsChange('stag')">{{ $t('预发布环境') }}</bk-checkbox>
+          <bk-checkbox :value="deployLimit.prod" @change="handleEnvsChange('prod')">{{ $t('生产环境') }}</bk-checkbox>
+        </div>
       </div>
     </div>
 
     <!-- 出口IP -->
-    <div class="base-info ip-info-container" v-if="isV1alpha2">
+    <div class="base-info ip-info-container">
       <div class="flex-row align-items-center mt20">
         <span class="base-info-title">
           {{ $t('出口IP') }}
         </span>
-        <div class="edit-container" @click="handleProcessNameEdit">
+        <div class="edit-container" @click="handleEdit('isIpInfoEdit')" v-if="!isIpInfoEdit">
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
         </div>
 
-        <div class="info">
+        <div class="info pl20" v-else>
           {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
         </div>
       </div>
-      <div class="form-detail mt20 pb20">
+      <div class="form-detail mt20 pb20" v-if="!isIpInfoEdit">
         <bk-form
           :model="buildData">
           <bk-form-item
@@ -95,7 +148,7 @@
         </bk-form>
       </div>
 
-      <div class="form-edit">
+      <div class="form-edit" v-else>
         <div class="content no-border">
           <div class="pre-release-wrapper">
             <div class="header">
@@ -227,8 +280,13 @@ export default {
     return {
       isLoading: false,
       buildData: {},
+      buildDataBackUp: {},
       localCloudAppData: {},
+      localCloudAppDataBackUp: {},
       deployLimit: {},
+      isDeployLimitEdit: false,
+      isBasePageEdit: false,
+      isIpInfoEdit: false,
       gatewayInfos: {
         stag: {
           created: '',
@@ -243,6 +301,7 @@ export default {
         stag: false,
         prod: false,
       },
+      gatewayInfosStagLoading: false,
     };
   },
   computed: {
@@ -287,7 +346,22 @@ export default {
       handler(val) {
         if (val.spec) {
           this.localCloudAppData = _.cloneDeep(val);
+          this.localCloudAppDataBackUp = _.cloneDeep(val);
           this.buildData = this.localCloudAppData.spec.build || {};
+          this.buildDataBackUp = _.cloneDeep(this.buildData);   // 取消时需要用原来的数据
+        }
+      },
+      immediate: true,
+      deep: true,
+    },
+
+    buildData: {
+      handler(val) {
+        console.log('val', val);
+        if (val.image || val.imagePullPolicy) {
+          this.localCloudAppData.spec.build.image = val.image;
+          this.localCloudAppData.spec.build.imagePullPolicy = val.imagePullPolicy;
+          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
       },
       immediate: true,
@@ -299,6 +373,9 @@ export default {
     // 部署限制
     this.fetchEnvProtection();
 
+    // 镜像凭证列表
+    this.getCredentialList();
+
     // 出口IP管理
     this.getGatewayInfos('stag');
     this.getGatewayInfos('prod');
@@ -306,13 +383,58 @@ export default {
   methods: {
     handleProcessNameEdit() {},
 
+    // 编辑
+    handleEdit(value) {
+      this[value] = true;
+    },
+
+
+    async handleSave() {
+      // 基本信息页面保存
+      if (this.isBasePageEdit) {
+        const params = { ... this.$store.state.cloudApi.cloudAppData };
+        try {
+          await this.$store.dispatch('deploy/saveCloudAppInfo', {
+            appCode: this.appCode,
+            moduleId: this.curModuleId,
+            params,
+          });
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('操作成功'),
+          });
+
+          this.isBasePageEdit = false;
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    },
+
+    handleCancel() {
+      if (this.isBasePageEdit) {
+        this.buildData = this.buildDataBackUp;
+        this.localCloudAppData = this.localCloudAppDataBackUp;
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        this.isBasePageEdit = false;
+      }
+    },
+
+    // 选择
+    handleEnvsChange(v) {
+      this.fetchSetDeployLimit(v);
+    },
+
+    stopCapturing(event) {
+      event.stopPropagation();
+    },
+
     async fetchEnvProtection() {
       try {
         const res = await this.$store.dispatch('module/getEnvProtection', {
           appCode: this.appCode,
           modelName: this.curModuleId,
         });
-        console.log('res', res);
         if (res.length) {
           if (res.length === 2) {
             res.forEach((item) => {
@@ -354,8 +476,14 @@ export default {
             env,
           },
         });
+        // 部署限制信息
+        this.fetchEnvProtection();
+
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('操作成功'),
+        });
       } catch (res) {
-        this.deployLimit[env] = !this.deployLimit[env];
         this.$paasMessage({
           limit: 1,
           theme: 'error',
@@ -386,6 +514,30 @@ export default {
           };
           this.gatewayEnabled[env] = false;
         });
+    },
+
+
+    // 获取凭证列表
+    async getCredentialList() {
+      this.tableLoading = true;
+      try {
+        const { appCode } = this;
+        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+        this.credentialList = res;
+        this.credentialList.forEach((item) => {
+          item.password = '';
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.tableLoading = false;
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 500);
+      }
     },
   },
 };
@@ -544,6 +696,14 @@ export default {
     .info {
         color: #979ba5;
         font-size: 12px;
+    }
+
+    .ml80{
+      margin-left: 80px;
+    }
+
+    .ml150{
+      margin-left: 150px;
     }
   }
 </style>

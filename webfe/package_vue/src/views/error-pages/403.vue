@@ -60,18 +60,32 @@ export default {
     },
   },
   async created() {
-    if (!this.applyUrl) {
-      if (this.isPlugin) {
-        await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.id, pluginTypeId: this.pluginTypeId });
-      } else {
-        await this.$store.dispatch('getAppInfo', { appCode: this.id });
-      }
+    let appInfo = {}
+    if (this.isPlugin) {
+      appInfo = await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.id, pluginTypeId: this.pluginTypeId });
+    } else {
+      appInfo = await this.$store.dispatch('getAppInfo', { appCode: this.id });
     }
+    this.isPermission(appInfo);
   },
   methods: {
     toApplication() {
       window.open(this.applyUrl, '_blank');
     },
+    // 应用是否有权限
+    isPermission (data) {
+      // 403 无权限
+      if (data.status === 403 || data.response?.status === 403) {
+        return;
+      }
+      // 跳转概览/默认模块
+      this.$router.push({
+        name: 'appSummary',
+        params: {
+          id: this.id
+        }
+      });
+    }
   },
 };
 </script>

@@ -426,7 +426,6 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId
      */
   getManifestExt({}, { appCode, moduleId, env }, config = {}) {
-    console.log('BACKEND_URL', moduleId, env);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/manifest_ext/`;
     return http.get(url, config);
   },

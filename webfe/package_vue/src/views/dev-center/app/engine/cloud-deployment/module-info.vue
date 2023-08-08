@@ -1,5 +1,5 @@
 <template>
-  <div class="module-info-container">
+  <div class="module-info-container" v-bkloading="{ isLoading: pageLoading, opacity: 1 }">
     <div class="base-info-container" v-if="isV1alpha2">
       <div class="flex-row align-items-center">
         <span class="base-info-title">
@@ -97,7 +97,7 @@
           {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
         </div>
       </div>
-      <div class="form-detail mt20 pb20 border-b" v-if="!isDeployLimitEdit">
+      <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
         <bk-form
           :model="buildData">
           <bk-form-item
@@ -115,6 +115,15 @@
         <div class="ml80">
           <bk-checkbox :value="deployLimit.stag" @change="handleEnvsChange('stag')">{{ $t('预发布环境') }}</bk-checkbox>
           <bk-checkbox :value="deployLimit.prod" @change="handleEnvsChange('prod')">{{ $t('生产环境') }}</bk-checkbox>
+        </div>
+        <div class="ml80">
+          <bk-button
+            :theme="'default'"
+            title="取消"
+            class="mt20"
+            @click="handleCancel">
+            {{ $t('取消') }}
+          </bk-button>
         </div>
       </div>
     </div>
@@ -134,16 +143,29 @@
           {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
         </div>
       </div>
-      <div class="form-detail mt20 pb20" v-if="!isIpInfoEdit">
-        <bk-form
-          :model="buildData">
+      <div class="form-detail mt20 pb20 pl40 flex-row" v-if="!isIpInfoEdit">
+        <bk-form>
           <bk-form-item
             :label="$t('预发布环境：')">
-            <div class="form-text">{{ deployLimit.stag ? $t('已开启') : $t('未开启') }}</div>
+            <div v-if="gatewayInfos.stag.node_ip_addresses.length" class="ip-address">
+              <div
+                class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
+                :key="nodeIpIndex">{{ nodeIp.internal_ip_address }}</div>
+            </div>
+            <div v-else>{{ $t('无') }}</div>
           </bk-form-item>
+        </bk-form>
+        <bk-form>
           <bk-form-item
             :label="$t('生产环境：')">
-            <div class="form-text">{{ deployLimit.prod ? $t('已开启') : $t('未开启') }}</div>
+            <div v-if="gatewayInfos.prod.node_ip_addresses.length">
+              <div
+                class="form-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
+                :key="nodeIpIndex">
+                {{ nodeIp.internal_ip_address }}
+              </div>
+            </div>
+            <div v-else>{{ $t('无') }}</div>
           </bk-form-item>
         </bk-form>
       </div>
@@ -261,6 +283,15 @@
             {{ $t('注意：重复获取列表可能会获得不一样的结果，请及时刷新外部服务白名单列表') }}
           </div>
         </div>
+        <div class="ml80">
+          <bk-button
+            :theme="'default'"
+            title="取消"
+            class="mt20"
+            @click="handleCancel">
+            {{ $t('取消') }}
+          </bk-button>
+        </div>
       </div>
     </div>
   </div>
@@ -302,6 +333,7 @@ export default {
         prod: false,
       },
       gatewayInfosStagLoading: false,
+      pageLoading: true,
     };
   },
   computed: {
@@ -312,7 +344,6 @@ export default {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
     },
     artifactType() {
-      console.log('this.curAppModule.web_config', this.curAppModule.web_config);
       if (this.curAppModule.web_config.artifact_type === 'image') {
         if (this.curAppModule.web_config.build_method === 'custom_image') {
           return this.$t('仅镜像');
@@ -357,7 +388,6 @@ export default {
 
     buildData: {
       handler(val) {
-        console.log('val', val);
         if (val.image || val.imagePullPolicy) {
           this.localCloudAppData.spec.build.image = val.image;
           this.localCloudAppData.spec.build.imagePullPolicy = val.imagePullPolicy;
@@ -412,6 +442,8 @@ export default {
     },
 
     handleCancel() {
+      this.isDeployLimitEdit = false;
+      this.isIpInfoEdit = false;
       if (this.isBasePageEdit) {
         this.buildData = this.buildDataBackUp;
         this.localCloudAppData = this.localCloudAppDataBackUp;
@@ -468,6 +500,7 @@ export default {
     // 设置部署限制环境
     async fetchSetDeployLimit(env) {
       try {
+        this.pageLoading = true;
         await this.$store.dispatch('module/setDeployLimit', {
           appCode: this.appCode,
           modelName: this.curModuleId,
@@ -489,6 +522,8 @@ export default {
           theme: 'error',
           message: res.message,
         });
+      } finally {
+        this.pageLoading = false;
       }
     },
 
@@ -513,6 +548,105 @@ export default {
             node_ip_addresses: [],
           };
           this.gatewayEnabled[env] = false;
+        })
+        .finally(() => {
+          this.pageLoading = false;
+        });
+    },
+
+
+    gatewayInfosHandler(payload, env) {
+      this.curEnv = env;
+      if (!payload) {
+        const title = this.curEnv === 'stag' ? this.$t('确认清除预发布环境出口 IP 信息？') : this.$t('确认清除生产环境出口 IP 信息？');
+
+        const _self = this;
+        _self.$bkInfo({
+          title,
+          subTitle: this.$t('IP 列表可能会在下次重新获取时更新，届时请及时刷新外部服务白名单。'),
+          maskClose: true,
+          width: 420,
+          extCls: 'paas-module-manager-switch-cls',
+          confirmFn() {
+            const appCode = _self.$route.params.id;
+            const env = _self.curEnv;
+            _self.isGatewayInfosBeClearing = true;
+            _self.$store.dispatch('baseInfo/clearGatewayInfos', {
+              appCode,
+              env,
+              moduleName: _self.curAppModule.name,
+            }).then(() => {
+              _self.gatewayInfos[env] = {
+                created: '',
+                node_ip_addresses: [],
+              };
+              _self.gatewayEnabled[env] = false;
+            })
+              .catch((res) => {
+                _self.$paasMessage({
+                  limit: 1,
+                  theme: 'error',
+                  message: res.detail || this.$t('服务暂不可用，请稍后再试'),
+                });
+              })
+              .finally(() => {
+                _self.isGatewayInfosBeClearing = false;
+              });
+          },
+          cancelFn() {
+            if (_self.curEnv === 'stag') {
+              _self.gatewayEnabled.stag = true;
+            } else {
+              _self.gatewayEnabled.prod = true;
+            }
+          },
+        });
+      } else {
+        this.enableGatewayInfos();
+      }
+    },
+
+
+    enableGatewayInfos() {
+      const appCode = this.$route.params.id;
+      const env = this.curEnv;
+
+      if (env === 'stag') {
+        this.gatewayInfosStagLoading = true;
+      } else {
+        this.gatewayInfosProdLoading = true;
+      }
+
+      this.$store.dispatch('baseInfo/enableGatewayInfos', {
+        appCode,
+        env,
+        moduleName: this.curAppModule.name,
+      }).then((res) => {
+        this.gatewayInfos[env] = {
+          created: moment(res.rcs_binding_data.created).startOf('minute')
+            .fromNow(),
+          node_ip_addresses: res.rcs_binding_data.state.node_ip_addresses,
+        };
+        this.gatewayEnabled[env] = true;
+      })
+        .catch((res) => {
+          if (env === 'stag') {
+            this.gatewayEnabled.stag = false;
+          } else {
+            this.gatewayEnabled.prod = false;
+          }
+          this.$paasMessage({
+            limit: 1,
+            theme: 'error',
+            message: res.detail || this.$t('服务暂不可用，请稍后再试'),
+          });
+        })
+        .finally(() => {
+          if (env === 'stag') {
+            this.gatewayInfosStagLoading = false;
+          } else {
+            this.gatewayInfosProdLoading = false;
+          }
         });
     },
 
@@ -539,6 +673,27 @@ export default {
         }, 500);
       }
     },
+
+
+    // 复制功能
+    handleCopyIp(env) {
+      const copyIp = this.gatewayInfos[env].node_ip_addresses.map(item => item.internal_ip_address).join(';');
+      const el = document.createElement('textarea');
+      el.value = copyIp;
+      el.setAttribute('readonly', '');
+      el.style.position = 'absolute';
+      el.style.left = '-9999px';
+      document.body.appendChild(el);
+      const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      if (selected) {
+        document.getSelection().removeAllRanges();
+        document.getSelection().addRange(selected);
+      }
+      this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+    },
   },
 };
 </script>
@@ -549,11 +704,14 @@ export default {
       color: #313238;
       font-size: 14px;
       font-weight: bold;
+      width: 70px;
+      text-align: right;
     }
     .edit-container{
       color: #3A84FF;
       font-size: 12px;
       cursor: pointer;
+      padding-left: 10px;
     }
 
     .form-detail{
@@ -568,7 +726,7 @@ export default {
 
     .ip-info-container{
         .content {
-            margin-top: 20px;
+            margin: 20px 40px 0 80px;
             border: 1px solid #dcdee5;
             border-radius: 2px;
             &.no-border {
@@ -701,9 +859,20 @@ export default {
     .ml80{
       margin-left: 80px;
     }
+    .ml60{
+      margin-left: 60px;
+    }
 
     .ml150{
       margin-left: 150px;
+    }
+    .ip-address{
+      width: 280px;
+      display: flex;
+      flex-wrap: wrap;
+      &-text{
+        width: 140px;
+      }
     }
   }
 </style>

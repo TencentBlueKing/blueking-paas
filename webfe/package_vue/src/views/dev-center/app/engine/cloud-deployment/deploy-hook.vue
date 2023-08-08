@@ -86,14 +86,20 @@
           class="pt20"
           style="position:relative; margin-left: 5px"
         >
-          <bk-tag v-for="item in preFormData.command" :key="item">{{ item }}</bk-tag>
+          <div v-if="preFormData.command.length">
+            <bk-tag v-for="item in preFormData.command" :key="item">{{ item }}</bk-tag>
+          </div>
+          <div v-else class="pl10">--</div>
         </bk-form-item>
         <bk-form-item
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
           style="position:relative; margin-left: 5px"
         >
-          <bk-tag v-for="item in preFormData.args" :key="item">{{ item }}</bk-tag>
+          <div v-if="preFormData.args.length">
+            <bk-tag v-for="item in preFormData.args" :key="item">{{ item }}</bk-tag>
+          </div>
+          <div v-else class="pl10">--</div>
         </bk-form-item>
       </bk-form>
     </div>

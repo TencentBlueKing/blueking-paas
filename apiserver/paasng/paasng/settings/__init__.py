@@ -89,6 +89,9 @@ BKKRILL_ENCRYPT_SECRET_KEY = force_bytes(settings.get('BKKRILL_ENCRYPT_SECRET_KE
 # Django 项目使用的 SECRET_KEY，如未配置，使用 BKKRILL 的 secret key 替代
 SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 
+# 选择加密数据库内容的算法，可选择：'FernetCipher' , 'SM4CTR'
+ENCRYPT_CIPHER_TYPE = settings.get('ENCRYPT_CIPHER_TYPE', '')
+
 DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
@@ -400,7 +403,6 @@ if settings.get('LOGGING_ENABLE_SQL_QUERIES', False):
         'propagate': True,
     }
 
-
 # 通知插件
 NOTIFICATION_PLUGIN_CLASSES = settings.get(
     'NOTIFICATION_PLUGIN_CLASSES',
@@ -410,7 +412,6 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
         "wechat": "paasng.utils.notification_plugins.WeChatNotificationPlugin",
     },
 )
-
 
 # ------------------------
 # Django 基础配置（自定义）
@@ -512,7 +513,6 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
 
 # Celery 队列名称
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
-
 
 # --------
 # 系统配置
@@ -841,7 +841,6 @@ AUTH_ENV_NAME = settings.get('AUTH_ENV_NAME', 'prod')
 CLI_AUTH_CODE = settings.get('CLI_AUTH_CODE', '')
 CLI_AUTH_SECRET = settings.get('CLI_AUTH_SECRET', '')
 
-
 # === 插件应用相关
 # 是否允许创建蓝鲸插件应用
 IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
@@ -855,7 +854,6 @@ BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': IS_ALLOW_
 # 管理插件应用的 API 网关时所使用的配置：
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get('BK_PLUGIN_APIGW_SERVICE_STAGE', 'prod')  # 环境（stage）
 BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE = settings.get('BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE', 'default')  # 用户类型
-
 
 # -------------
 # 引擎相关配置项
@@ -889,16 +887,13 @@ BLOBSTORE_BUCKET_AP_PACKAGES = settings.get('BLOBSTORE_BUCKET_AP_PACKAGES', 'bkp
 # S-Mart 应用默认增强服务配置信息
 SMART_APP_DEFAULT_SERVICES_CONFIG = settings.get('SMART_APP_DEFAULT_SERVICES_CONFIG', {"mysql": {}})
 
-
 # 针对 slug 环境对敏感信息加密密钥
 SLUG_ENCRYPT_SECRET_KEY = settings.get("SLUG_ENCRYPT_SECRET_KEY", BKKRILL_ENCRYPT_SECRET_KEY)
-
 
 # 默认进程规格套餐名称
 DEFAULT_PROC_SPEC_PLAN = 'Starter'
 PREMIUM_PROC_SPEC_PLAN = "4C2G5R"
 ULTIMATE_PROC_SPEC_PLAN = "4C4G5R"
-
 
 # 应用副本数相关配置：
 
@@ -914,7 +909,6 @@ ENGINE_APP_SOURCE_SIZE_WARNING_THRESHOLD_MB = 300
 
 # 可恢复下架操作的最长时限
 ENGINE_OFFLINE_RESUMABLE_SECS = 60
-
 
 # == 应用运行时相关配置
 #
@@ -975,7 +969,6 @@ PHALANX_URL = settings.get('PHALANX_URL', "http://localhost:8080")
 # 监控服务 phalanx 访问 token
 PHALANX_AUTH_TOKEN = settings.get('PHALANX_AUTH_TOKEN', '')
 
-
 # --------------
 # 平台日志相关配置
 # --------------
@@ -991,7 +984,6 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
         'tags': [],
     },
 )
-
 
 # --------------
 # 应用日志相关配置
@@ -1022,7 +1014,6 @@ ES_JSON_FIELD_BLACKLIST = ["json.message", "json.asctime", "json.process"]
 # 日志高亮标签，用于前端高亮显示结果
 BK_LOG_HIGHLIGHT_TAG = ("[bk-mark]", "[/bk-mark]")
 
-
 # ---------------
 # 访问控制相关配置
 # ---------------
@@ -1041,7 +1032,6 @@ ACCESS_CONTROL_CONFIG = settings.get(
     },
 )
 
-
 # 白名单策略默认生效时长，单位为天
 # NOTE: 根据业务层的反馈, 白名单申请时间过短会导致开发商需要频发申请权限. 反馈建议默认时间设置成 90d - 180d 比较合适. 因此这里取值 90d
 ACCESS_CONTROL_STRATEGY_DEFAULT_EXPIRES_DAYS = 90
@@ -1052,7 +1042,6 @@ ACCESS_CONTROL_STRATEGY_DEFAULT_EXPIRES_DAYS = 90
 
 PAAS_ANALYSIS_BASE_URL = settings.get('PAAS_ANALYSIS_BASE_URL', 'http://localhost:8085')
 PAAS_ANALYSIS_JWT_CONF = settings.get('PAAS_ANALYSIS_JWT_CONF', {})
-
 
 # ---------------
 # 搜索服务相关配置
@@ -1067,7 +1056,6 @@ IWIKI_API_RIO_GW_TOKEN = settings.get('IWIKI_API_RIO_GW_TOKEN', '')
 MK_SEARCH_API_BASE_URL = settings.get('MK_SEARCH_API_BASE_URL', 'http://localhost:8080')
 MK_SEARCH_API_RIO_GW_TOKEN = settings.get('MK_SEARCH_API_RIO_GW_TOKEN', '')
 MK_SEARCH_API_PRIVATE_TOKEN = settings.get('MK_SEARCH_API_PRIVATE_TOKEN', '')
-
 
 # ---------------
 # 应用一键迁移配置
@@ -1148,7 +1136,6 @@ APP_DOCKER_REGISTRY_NAMESPACE = settings.get('APP_DOCKER_NAMESPACE', 'bkpaas/doc
 APP_DOCKER_REGISTRY_USERNAME = settings.get('APP_DOCKER_USERNAME', 'bkpaas')
 # 用于访问 Registry 的密码
 APP_DOCKER_REGISTRY_PASSWORD = settings.get('APP_DOCKER_PASSWORD', 'blueking')
-
 
 # ------------------
 # bk-lesscode 相关配置

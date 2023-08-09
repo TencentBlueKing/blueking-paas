@@ -210,6 +210,11 @@ export default {
     .row-icon{
       cursor: pointer;
     }
+
+    .success-icon{
+      font-size: 24px;
+      color: #2DCB56;
+    }
   }
     .header-title {
         display: flex;

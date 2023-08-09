@@ -518,10 +518,9 @@ class ApplicationFeatureFlagManager(models.Manager):
     def _build_queryset(self, application: Optional[Application] = None):
         """处理 QuerySet 与 Application 对象."""
         qs = self.get_queryset()
-        if self.instance is None:
+        if not hasattr(self, "instance"):
             qs = qs.filter(application=application)
-
-        if application is None:
+        else:
             application = self.instance
 
         if not isinstance(application, Application):

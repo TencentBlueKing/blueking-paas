@@ -428,7 +428,6 @@ class BKIAMClient:
         :param app_code: 蓝鲸应用 ID
         :param app_name: 蓝鲸应用名称
         :param bk_space_id: 蓝鲸监控的空间ID，注意这是这一个负数
-        :returns: 分级管理员 ID
         """
         data = {
             'system': settings.IAM_PAAS_V3_SYSTEM_ID,

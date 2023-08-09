@@ -30,7 +30,7 @@ class Group(OperationGroup):
         Operation, name="management_grade_managers", method="POST", path="/api/v1/open/management/grade_managers/"
     )
 
-    # 修改级管理员
+    # 修改分级管理员
     management_grade_managers_update = bind_property(
         Operation,
         name="management_grade_managers_update",

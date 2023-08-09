@@ -421,6 +421,8 @@ export default {
   watch: {
     '$route'() {
       this.init();
+      this.handlerCancel();
+      this.oldAddress = ''
     },
   },
   mounted() {

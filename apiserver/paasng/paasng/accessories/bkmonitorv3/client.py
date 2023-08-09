@@ -31,6 +31,7 @@ from paasng.accessories.bkmonitorv3.exceptions import (
     BkMonitorSpaceDoesNotExist,
 )
 from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
+from paasng.accessories.iam.tasks import add_monitoring_space_permission
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,14 @@ class BkMonitorClient:
             logger.error(f'Failed to create app space on BK Monitor, resp:{resp} \ndata: {data}')
             raise BkMonitorApiError(resp['message'])
 
-        return resp.get('data', {}).get('space_uid')
+        resp_data = resp.get('data', {})
+        # 蓝鲸监控注册在 iam 上的空间资源 ID 为返回数据里面的 id 取负
+        bk_space_id = f"-{resp_data['id']}"
+
+        # 给应用添加蓝鲸监控空间相关的权限
+        add_monitoring_space_permission.delay(app_code, app_name, bk_space_id)
+        # 空间创建成功后，需要同步更新应用的权限
+        return resp_data['space_uid']
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """

@@ -71,6 +71,7 @@ export default {
         'cloudAppDeployForResource',
         'imageCredential',
         'moduleInfo',
+        'appServices',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -340,8 +341,8 @@ export default {
     },
 
     /**
-             * 根据角色，初始访问权限
-             */
+     * 根据角色，初始访问权限
+     */
     initRouterPermission() {
       const appRole = this.curAppInfo.role;
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
@@ -353,6 +354,7 @@ export default {
         'cloudAppDeployForResource',
         'imageCredential',
         'moduleInfo',
+        'appServices',
       ];
 
       this.navTree.forEach((nav) => {

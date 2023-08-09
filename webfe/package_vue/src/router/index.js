@@ -207,7 +207,7 @@ const moduleManage = () => import(/* webpackChunkName: 'app-basic-config' */'@/v
 });
 
 // App: Services
-const appServicesByCategory = () => import(/* webpackChunkName: 'app-services' */'@/views/dev-center/app/services/category').then(module => module).catch((error) => {
+const appServices = () => import(/* webpackChunkName: 'app-services' */'@/views/dev-center/app/engine/cloud-deployment/app-services').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -526,6 +526,14 @@ const router = new Router({
                 module: 'module-info',
               },
             },
+            {
+              path: 'services',
+              component: appServices,
+              name: 'appServices',
+              meta: {
+                module: 'services',
+              },
+            },
           ],
         },
         {
@@ -655,12 +663,12 @@ const router = new Router({
         },
         {
           path: ':id/:moduleId/service/:category_id',
-          component: appServicesByCategory,
+          component: appServices,
           name: 'appService',
         },
         {
           path: ':id/service/:category_id',
-          component: appServicesByCategory,
+          component: appServices,
           name: 'appServiceWithModule',
         },
         {

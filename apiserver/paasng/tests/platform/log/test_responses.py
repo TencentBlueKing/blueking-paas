@@ -118,7 +118,6 @@ class TestStructureLogLine:
         "deleting_field",
         [
             ["region"],
-            ["stream"],
             ["app_code"],
             ["environment"],
             ["@timestamp"],

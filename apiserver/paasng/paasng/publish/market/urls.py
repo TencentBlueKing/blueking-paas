@@ -68,11 +68,6 @@ urlpatterns += [
         name='api.market.application.config',
     ),
     re_path(
-        r'^api/market/applications/(?P<code>[^/]+)/available_address/$',
-        views.MarketAvailableAddressViewSet.as_view({'get': 'list'}),
-        name='api.market.application.available_address.list',
-    ),
-    re_path(
         r'^api/market/applications/(?P<code>[^/]+)/publish/preparations/$',
         views.PublishViewSet.as_view({'get': 'check_preparations'}),
         name='api.market.application.publish.preparations',

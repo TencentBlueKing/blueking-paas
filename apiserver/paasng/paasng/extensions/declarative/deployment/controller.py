@@ -21,7 +21,7 @@ import logging
 import cattr
 from django.db.transaction import atomic
 
-from paas_wl.platform.api import upsert_app_monitor
+from paas_wl.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
 from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
@@ -64,9 +64,8 @@ class DeploymentDeclarativeController:
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
-        engine_app = self.deployment.get_engine_app()
         upsert_app_monitor(
-            engine_app_name=engine_app.name,
+            env=self.deployment.app_environment,
             port=bk_monitor.port,
             target_port=bk_monitor.target_port,  # type: ignore
         )

@@ -25,6 +25,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
+from paas_wl.cluster.utils import get_cluster_by_app
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.accounts.utils import ForceAllowAuthedApp
@@ -41,6 +42,7 @@ from paasng.plat_admin.system.applications import (
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
     AddonSpecsSLZ,
+    ClusterNamespaceSLZ,
     ContactInfo,
     MinimalAppSLZ,
     QueryUniApplicationsByID,
@@ -277,3 +279,22 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         if svc is None:
             raise Http404("DB Service Not Found!")
         return svc
+
+
+class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
+    """System api for query app cluster/namespace info"""
+
+    @swagger_auto_schema(tags=["SYSTEMAPI"], responses={"200": ClusterNamespaceSLZ(many=True)})
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    def list_by_app_code(self, request, code):
+        """list app cluster/namespace info"""
+        application = self.get_application()
+        wl_apps = [env.wl_app for env in application.envs.all()]
+
+        namespace_cluster_map: Dict[str, str] = {}
+        for wl_app in wl_apps:
+            if (ns := wl_app.namespace) not in namespace_cluster_map:
+                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).name
+
+        data = [{'namespace': ns, 'cluster_id': cluster_id} for ns, cluster_id in namespace_cluster_map.items()]
+        return Response(ClusterNamespaceSLZ(data, many=True).data)

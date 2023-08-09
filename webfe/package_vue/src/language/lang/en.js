@@ -1108,7 +1108,7 @@ export default {
   隐藏时间: 'Hide time',
   显示时间: 'Display time',
   已加载该时间段内所有日志: 'All logs for this time period have been loaded',
-  仅展示该实例: 'Show only this instance',
+  '点击后，仅展示该实例日志': 'After clicking, Show only this instance log',
   '请重新选择时间范围，最长不超过一天': 'Please select a new time range, no longer than one day',
   输入关键字: 'Enter keywords',
   告警开始时间: 'Alarm start time',

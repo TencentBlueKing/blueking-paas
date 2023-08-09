@@ -94,15 +94,17 @@ def extra_field(source: Optional[Union[str, _GetterType]] = None, converter: Opt
     return field(init=False, metadata=metadata, converter=converter)
 
 
-def field_extractor_factory(field_key: str) -> _GetterType:
+def field_extractor_factory(field_key: str, raise_exception: bool = True) -> _GetterType:
     """返回一个函数，用于从原始日志字典中提取指定字段的值
 
     :param field_key: 要提取值的字段名称(ES语法, 例如 json.message)
+    :param raise_exception: 如果字段不存在或是 NOT_SET, 则抛异常
     """
 
     def core(raw_log: Dict[str, Any]) -> Any:
         if field_key not in raw_log or raw_log[field_key] is NOT_SET:
-            raise LogLineInfoBrokenError(field_key)
+            if raise_exception:
+                raise LogLineInfoBrokenError(field_key)
         return raw_log[field_key]
 
     return core

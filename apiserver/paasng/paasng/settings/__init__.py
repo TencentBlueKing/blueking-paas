@@ -90,7 +90,7 @@ BKKRILL_ENCRYPT_SECRET_KEY = force_bytes(settings.get('BKKRILL_ENCRYPT_SECRET_KE
 SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 
 # 选择加密数据库内容的算法，可选择：'FernetCipher' , 'SM4CTR'
-ENCRYPT_CIPHER_TYPE = settings.get('ENCRYPT_CIPHER_TYPE', '')
+ENCRYPT_CIPHER_TYPE = settings.get('ENCRYPT_CIPHER_TYPE', 'FernetCipher')
 
 DEBUG = settings.get('DEBUG', False)
 

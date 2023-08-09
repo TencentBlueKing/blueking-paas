@@ -16,60 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List
+
 import pytest
-from blue_krill.encrypt.handler import EncryptHandler
-from django.core.management import call_command
-from django.db import connections
-from django_dynamic_fixture import G
 
 from paas_wl.cluster.models import Cluster
-from tests.utils.random_str import random_string
+from tests.utils.assert_migration_cmd import assert_migration_command
 
-pytestmark = pytest.mark.django_db(databases=['workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.parametrize('model_name', ['Cluster', ''])
 class TestCommand:
-    def test_conmmand_with_appusercredential(self):
-        with connections['workloads'].cursor() as cursor:
-            name = random_string(10)
-            ca_data = random_string(10)
-            cert_data = random_string(10)
-            key_data = random_string(10)
-            token_value = random_string(10)
-            handler = EncryptHandler('FernetCipher')
-            encryped_ca_data = handler.encrypt(ca_data)
-            encryped_cert_data = handler.encrypt(cert_data)
-            encryped_key_data = handler.encrypt(key_data)
-            encryped_token_value = handler.encrypt(token_value)
-            G(
-                Cluster,
-                name=name,
-                ca_data=encryped_ca_data,
-                cert_data=encryped_cert_data,
-                key_data=encryped_key_data,
-                token_value=encryped_token_value,
-            )
-
-            table_name = Cluster._meta.db_table
-            sql = "SELECT ca_data,cert_data,key_data,token_value FROM {0} WHERE name = '{1}'".format(table_name, name)
-            cursor.execute(sql)
-            results = cursor.fetchall()
-
-            call_command("encryption_migration_cluster", model="Cluster")
-            cursor.execute(sql)
-            results_after_migrate = cursor.fetchall()
-
-            instance = Cluster.objects.get(name=name)
-
-            assert results[0][0].startswith("bkcrypt$")
-            assert results[0][1].startswith("bkcrypt$")
-            assert results[0][2].startswith("bkcrypt$")
-            assert results[0][3].startswith("bkcrypt$")
-            assert results_after_migrate[0][0].startswith("sm4ctr$")
-            assert results_after_migrate[0][1].startswith("sm4ctr$")
-            assert results_after_migrate[0][2].startswith("sm4ctr$")
-            assert results_after_migrate[0][3].startswith("sm4ctr$")
-            assert instance.ca_data == ca_data
-            assert instance.cert_data == cert_data
-            assert instance.key_data == key_data
-            assert instance.token_value == token_value
+    def test_command(self, model_name):
+        app_models: List = [Cluster]
+        cmd = "encryption_migration_cluster"
+        assert_migration_command(model_name=model_name, app_models=app_models, cmd=cmd)

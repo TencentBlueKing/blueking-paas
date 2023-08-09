@@ -16,33 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import apps
-from django.core.management.base import BaseCommand
-
-from paasng.accounts.models import Oauth2TokenHolder, PrivateTokenHolder
+from paasng.utils.encrypt_cmd import ReEncryptCommand
 
 
-class Command(BaseCommand):
-    """数据加密迁移"""
-
+class Command(ReEncryptCommand):
     help = "accounts 存量数据加密迁移"
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--model",
-            dest="model_name",
-            required=False,
-            help="name of the model for encryption migration",
-        )
-
-    def handle(self, **options):
-        model_name = options.get("model_name")
-        if model_name:
-            model = apps.get_model(app_label="accounts", model_name=model_name)
-            for obj in model.objects.all():
-                obj.save()
-        else:
-            for obj in PrivateTokenHolder.objects.all():
-                obj.save()
-            for obj in Oauth2TokenHolder.objects.all():
-                obj.save()
+    app_label = 'accounts'

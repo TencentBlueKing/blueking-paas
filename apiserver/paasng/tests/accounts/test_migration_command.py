@@ -16,73 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List
+
 import pytest
-from blue_krill.encrypt.handler import EncryptHandler
-from django.core.management import call_command
-from django.db import connections
-from django_dynamic_fixture import G
 
 from paasng.accounts.models import Oauth2TokenHolder, PrivateTokenHolder
-from tests.utils.random_str import random_string
+from tests.utils.assert_migration_cmd import assert_migration_command
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.parametrize('model_name', ['Oauth2TokenHolder', 'PrivateTokenHolder', ''])
 class TestCommand:
-    def test_conmmand_with_privatetokenholder(self):
-        with connections['default'].cursor() as cursor:
-            provider = random_string(10)
-            private_token = random_string(10)
-            handler = EncryptHandler('FernetCipher')
-            encryped = handler.encrypt(private_token)
-            G(PrivateTokenHolder, provider=provider, private_token=encryped)
-
-            table_name = PrivateTokenHolder._meta.db_table
-            sql = "SELECT private_token FROM {0} WHERE provider = '{1}'".format(table_name, provider)
-            cursor.execute(sql)
-            results = cursor.fetchall()
-
-            call_command("encryption_migration_accounts", model="PrivateTokenHolder")
-
-            cursor.execute(sql)
-            results_after_migrate = cursor.fetchall()
-
-            instance = PrivateTokenHolder.objects.get(provider=provider)
-
-            assert results[0][0].startswith("bkcrypt$")
-            assert results_after_migrate[0][0].startswith("sm4ctr$")
-            assert instance.private_token == private_token
-
-    def test_conmmand_with_oauth2tokenholder(self):
-        with connections['default'].cursor() as cursor:
-            provider = random_string(10)
-            access_token = random_string(10)
-            refresh_token = random_string(10)
-            handler = EncryptHandler('FernetCipher')
-            encryped_access_token = handler.encrypt(access_token)
-            encryped_refresh_token = handler.encrypt(refresh_token)
-            G(
-                Oauth2TokenHolder,
-                provider=provider,
-                access_token=encryped_access_token,
-                refresh_token=encryped_refresh_token,
-            )
-
-            table_name = Oauth2TokenHolder._meta.db_table
-            sql = "SELECT access_token,refresh_token FROM {0} WHERE provider = '{1}'".format(table_name, provider)
-            cursor.execute(sql)
-            results = cursor.fetchall()
-
-            call_command("encryption_migration_accounts", model="Oauth2TokenHolder")
-
-            cursor.execute(sql)
-            results_after_migrate = cursor.fetchall()
-
-            instance = Oauth2TokenHolder.objects.get(provider=provider)
-
-            assert results[0][0].startswith("bkcrypt$")
-            assert results[0][1].startswith("bkcrypt$")
-            assert results_after_migrate[0][0].startswith("sm4ctr$")
-            assert results_after_migrate[0][1].startswith("sm4ctr$")
-            assert instance.access_token == access_token
-            assert instance.refresh_token == refresh_token
+    def test_command(self, model_name):
+        app_models: List = [Oauth2TokenHolder, PrivateTokenHolder]
+        cmd = "encryption_migration_accounts"
+        assert_migration_command(model_name=model_name, app_models=app_models, cmd=cmd)

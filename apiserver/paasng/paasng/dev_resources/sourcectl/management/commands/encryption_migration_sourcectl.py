@@ -16,34 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import apps
-from django.core.management.base import BaseCommand
-
-from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder, SourceTypeSpecConfig
+from paasng.utils.encrypt_cmd import ReEncryptCommand
 
 
-class Command(BaseCommand):
-    """数据加密迁移"""
-
+class Command(ReEncryptCommand):
     help = "sourcectl 存量数据加密迁移"
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--model",
-            dest="model_name",
-            required=False,
-            help="name of the model for encryption migration",
-        )
-
-    def handle(self, **options):
-        model_name = options.get("model_name")
-
-        if model_name:
-            model = apps.get_model(app_label="sourcectl", model_name=model_name)
-            for obj in model.objects.all():
-                obj.save()
-        else:
-            for obj in RepoBasicAuthHolder.objects.all():
-                obj.save()
-            for obj in SourceTypeSpecConfig.objects.all():
-                obj.save()
+    app_label = 'sourcectl'

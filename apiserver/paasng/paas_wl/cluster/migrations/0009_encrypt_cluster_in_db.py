@@ -30,7 +30,7 @@ def encrypt_cluster_in_db(apps, schema_editor):
 
     logger.info("start encrypt Cluster in database...")
     for obj in Cluster.objects.using(schema_editor.connection.alias).all():
-        obj.save()
+        obj.save(update_fields=['ca_data', 'cert_data', 'key_data', 'token_value'])
 
     logger.info("Cluster encrypt done!")
 

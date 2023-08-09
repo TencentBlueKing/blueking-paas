@@ -16,14 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List
+
+import pytest
+
+from paas_wl.networking.ingress.models import AppDomainSharedCert
+from tests.utils.assert_migration_cmd import assert_migration_command
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def random_string(length):
-    import random
-    import string
-
-    # 定义用于生成随机字符串的字符集
-    characters = string.ascii_letters + string.digits
-    # 生成随机字符串
-    random_str = ''.join(random.choice(characters) for i in range(length))
-    return random_str
+@pytest.mark.parametrize('model_name', ['AppDomainSharedCert', ''])
+class TestCommand:
+    def test_command(self, model_name):
+        app_models: List = [AppDomainSharedCert]
+        cmd = "encryption_migration_ingress"
+        assert_migration_command(model_name=model_name, app_models=app_models, cmd=cmd)

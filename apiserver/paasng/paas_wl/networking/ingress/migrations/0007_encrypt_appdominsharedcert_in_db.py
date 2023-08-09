@@ -31,15 +31,11 @@ def encrypt_appdomainsharedcert_in_db(apps, schema_editor):
 
     logger.info("start encrypt AppDomainSharedCert in database...")
     for obj in AppDomainSharedCert.objects.using(schema_editor.connection.alias).all():
-        obj.save()
+        obj.save(update_fields=['cert_data', 'key_data'])
 
     logger.info("AppDomainSharedCert encrypt done!")
 
 
-# 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress
-# 为避免 migrations 重复执行, 使用 skip_if_found_record 声明该 migration 的历史名称
-# 如果 django_migrations 表中存在重命名前的执行记录, 则跳过执行该 Migration
-@skip_if_found_record(sentinel=("services", "0006_encrypt_appdominsharedcert_in_db.py"))
 class Migration(migrations.Migration):
     dependencies = [
         ('ingress', '0006_auto_20230807_1730'),

@@ -16,10 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.encrypt_cmd import ReEncryptCommand
+from typing import List
+
+import pytest
+
+from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
+from tests.utils.assert_migration_cmd import assert_migration_command
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class Command(ReEncryptCommand):
-    help = "oauth2 存量数据加密迁移"
-
-    app_label = 'oauth2'
+@pytest.mark.parametrize('model_name', ['AppUserCredential', 'AppImageCredential', ''])
+class TestCommand:
+    def test_command(self, model_name):
+        app_models: List = [AppUserCredential, AppImageCredential]
+        cmd = "encryption_migration_images"
+        assert_migration_command(model_name=model_name, app_models=app_models, cmd=cmd)

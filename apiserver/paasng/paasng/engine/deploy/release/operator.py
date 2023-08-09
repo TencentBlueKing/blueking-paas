@@ -147,12 +147,12 @@ def release_by_k8s_operator(
     return str(app_model_deploy.id)
 
 
-def ensure_namespace(env: ModuleEnvironment, max_wait_seconds: int = 15):
+def ensure_namespace(env: ModuleEnvironment, max_wait_seconds: int = 15) -> bool:
     """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
 
     :param env: ModuleEnvironment
     :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
-    :return:
+    :return: whether an namespace was created.
     """
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
@@ -160,6 +160,7 @@ def ensure_namespace(env: ModuleEnvironment, max_wait_seconds: int = 15):
         _, created = namespace_client.get_or_create(name=wl_app.namespace)
         if created:
             namespace_client.wait_for_default_sa(namespace=wl_app.namespace, timeout=max_wait_seconds)
+        return created
 
 
 def ensure_bk_log_if_need(env: ModuleEnvironment):

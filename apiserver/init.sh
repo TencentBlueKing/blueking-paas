@@ -160,7 +160,7 @@ ensure-nodejs-buildpack() {
     --address "${buildpack_url}/${buildpack_name}-${nodejs_buildpack_version}.tar" \
     --environment \
     "STDLIB_FILE_URL=${vendor_url}/common/buildpack-stdlib/v7/stdlib.sh" \
-    "S3_DOMAIN=${vendor_url}/runtimes/nodejs" \
+    "S3_DOMAIN=${vendor_url}/runtimes/nodejs/node/release/linux-x64" \
     "NPM_REGISTRY=${npm_registry}"
 }
 

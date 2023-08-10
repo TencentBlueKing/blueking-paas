@@ -16,10 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from functools import partial
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Dict, List, Literal, Optional, Union
 
-import cattr
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
@@ -28,12 +26,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
-
-
-def register(pydantic_model: Type[BaseModel]):
-    cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-    cattr.register_unstructure_hook(pydantic_model, partial(pydantic_model.dict, by_alias=True))
-    return pydantic_model
+from paasng.utils.structure import register
 
 
 @register
@@ -121,19 +114,6 @@ class ProcessLogQueryConfigManager(models.Manager):
             else:
                 raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
         return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
-
-    def get_by_process_type(self, process_type: Optional[str], env: Optional[ModuleEnvironment] = None):
-        # 兼容关联查询(RelatedManager)的接口
-        if env is None:
-            if hasattr(self, "instance"):
-                env = self.instance
-            else:
-                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
-        try:
-            self.filter(env=env, process_type=process_type).get()
-        except ProcessLogQueryConfig.DoesNotExist:
-            # get all process placeholder as fallback
-            return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
 
 class ProcessLogQueryConfig(UuidAuditedModel):

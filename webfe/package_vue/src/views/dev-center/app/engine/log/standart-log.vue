@@ -95,7 +95,7 @@
               @click="handleAddStreamLogFilters(log)"
             >
               <span
-                v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }"
+                v-bk-tooltips.right="{ theme: 'light', content: $t('点击后，仅展示该实例日志') }"
                 v-dashed="9"
               >{{ log.podShortName }}</span>
             </div>
@@ -969,6 +969,6 @@
     .mouseStyle {
         cursor: default;
         display: inline-block;
-        min-width: 33px;
+        width: 46px;
     }
 </style>

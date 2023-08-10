@@ -41,6 +41,8 @@ BKAPP_CODE_ANNO_KEY = "bkapp.paas.bk.tencent.com/code"
 MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 # 注解中存储当前部署环境的键名
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
+# 注解中存储当前 WlApp 名称的键名
+WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 # 注解中存储镜像凭证引用的键名
 IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 # 注解中存储数据统计站点ID的键名
@@ -57,9 +59,6 @@ LEGACY_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 RESOURCE_TYPE_KEY = "bkapp.paas.bk.tencent.com/resource-type"
 # 注解中声明镜像类型是否 cnb 的键名
 USE_CNB_ANNO_KEY = "bkapp.paas.bk.tencent.com/use-cnb"
-
-# 部署云原生应用时，等待 ServiceAccount 就绪的超时时间（单位：秒）
-SERVICE_ACCOUNT_READY_TIMEOUT = 15
 
 # 轮询云原生应用的部署状态时，如果获取到失败状态的次数超过最大容忍次数，就认为部署失败
 CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
@@ -149,3 +148,15 @@ PLAN_TO_QUOTA_MAP = {
     ResQuotaPlan.P_4C2G: ("4000m", "2048Mi"),
     ResQuotaPlan.P_4C4G: ("4000m", "4096Mi"),
 }
+
+
+class MountEnvName(str, StructuredEnum):
+    """Environment name for managing mount volume"""
+
+    STAG = EnumField('stag', label='仅测试环境')
+    PROD = EnumField('prod', label='仅生产环境')
+    GLOBAL = EnumField('_global_', label='所有环境')
+
+
+class VolumeSourceType(str, StructuredEnum):
+    ConfigMap = EnumField('ConfigMap')

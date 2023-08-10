@@ -117,6 +117,9 @@ def setup_saas_elk_model(env: ModuleEnvironment):
     structured_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID)
     ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
 
+    if ProcessLogQueryConfig.objects.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).exists():
+        return
+
     try:
         ProcessLogQueryConfig.objects.update_or_create(
             env=env,

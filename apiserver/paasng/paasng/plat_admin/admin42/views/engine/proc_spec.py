@@ -18,12 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List
 
-import cattr
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
-from paas_wl.admin.serializers.processes import ProcessSpecPlanSLZ
+from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecPlanSLZ
 from paas_wl.workloads.processes.models import ProcessSpecPlan
 from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.accounts.permissions.constants import SiteAction
@@ -101,12 +100,12 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
                         "module": env.module.name,
                         "env": env.environment,
                     },
-                    "desired_replicas": process.desired_replicas,
-                    "command": process.command,
+                    "desired_replicas": process.replicas,
+                    "command": process.runtime.proc_command,
                     "available_instance_count": process.available_instance_count,
-                    "instances": cattr.unstructure(process.instances),
+                    "instances": InstanceSerializer(process.instances, many=True).data,
                 }
-                if application.type == ApplicationType.CLOUD_NATIVE:
+                if application.type != ApplicationType.CLOUD_NATIVE:
                     process_map[process.type]["process_spec"] = {
                         "plan": {
                             "id": process_spec["plan_id"],

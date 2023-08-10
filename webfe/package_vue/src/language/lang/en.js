@@ -1108,7 +1108,7 @@ export default {
   隐藏时间: 'Hide time',
   显示时间: 'Display time',
   已加载该时间段内所有日志: 'All logs for this time period have been loaded',
-  仅展示该实例: 'Show only this instance',
+  '点击后，仅展示该实例日志': 'After clicking, Show only this instance log',
   '请重新选择时间范围，最长不超过一天': 'Please select a new time range, no longer than one day',
   输入关键字: 'Enter keywords',
   告警开始时间: 'Alarm start time',
@@ -2205,5 +2205,6 @@ export default {
   审批不通过: 'Approval failed',
   已撤销提单: 'Cancelled bill of lading',
   撤销提单: 'Revocation of bill of lading',
-  '单据正在审批中，无法回到上一步，如有修改需求，请先撤销提单': 'The document is being approved and cannot go back to the previous step. If there is a need to modify it, please cancel the bill of lading first'
+  '单据正在审批中，无法回到上一步，如有修改需求，请先撤销提单': 'The document is being approved and cannot go back to the previous step. If there is a need to modify it, please cancel the bill of lading first',
+  无该应用访问权限: 'No access permission for this application.',
 };

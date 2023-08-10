@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 
 	ctx, cancel = context.WithCancel(context.Background())
 
-	// Build the scheme first, it will used when building the envtest environment in
+	// Build the scheme first, it will be used when building the envtest environment in
 	// order to enable the conversion webhook.
 	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/1882
 	scheme := runtime.NewScheme()

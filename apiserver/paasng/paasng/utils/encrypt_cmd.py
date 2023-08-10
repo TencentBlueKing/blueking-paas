@@ -28,6 +28,13 @@ class ReEncryptCommand(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--app_label",
+            dest="app_label",
+            default=self.app_label,
+            help="name of the model for encryption migration",
+        )
+
+        parser.add_argument(
             "--model",
             dest="model_name",
             default="",
@@ -36,25 +43,25 @@ class ReEncryptCommand(BaseCommand):
 
         parser.add_argument('--no-dry-run', dest="dry_run", help="dry run", action="store_false")
 
-    def handle(self, model_name: str, dry_run: bool = True, **options):
-        cfg = apps
-        if self.app_label:
-            cfg = apps.get_app_config(self.app_label)
-        if model_name and self.app_label:
-            models = [cfg.get_model(model_name)]
-        else:
-            models = cfg.get_models()
+    def handle(self, app_label: str, model_name: str, dry_run: bool = True, **options):
+        models = self._get_model_classes(model_name)
         for model_class in models:
             self.refresh_encrypt_fields(model_class, dry_run=dry_run)
 
     def refresh_encrypt_fields(self, model_class, dry_run: bool = True):
-        update_fields = []
-        for field in model_class._meta.fields:
-            if isinstance(field, EncryptField):
-                update_fields.append(field.name)
+        update_fields = [field.name for field in model_class._meta.fields if isinstance(field, EncryptField)]
         if update_fields:
             for instance in model_class.objects.all():
                 if not dry_run:
                     instance.save(update_fields=update_fields)
                 else:
                     self.stdout.write(self.style.NOTICE(f"DRY-RUN: refreshing EncryptField for {instance}"))
+
+    def _get_model_classes(self, model_name: str):
+        if not self.app_label:
+            return apps.get_models()
+
+        cfg = apps.get_app_config(self.app_label)
+        if model_name:
+            return [cfg.get_model(model_name)]
+        return cfg.get_models()

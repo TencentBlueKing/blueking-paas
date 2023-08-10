@@ -16,19 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
-
 import pytest
 
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
-from tests.utils.assert_migration_cmd import assert_migration_command
+from tests.utils.encrypt_cmd_base_test import BaseTestEnctrypMigrationCmd
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.parametrize('model_name', ['AppUserCredential', 'AppImageCredential', ''])
-class TestCommand:
-    def test_command(self, model_name):
-        app_models: List = [AppUserCredential, AppImageCredential]
-        cmd = "encryption_migration_images"
-        assert_migration_command(model_name=model_name, app_models=app_models, cmd=cmd)
+@pytest.mark.parametrize('model_name', ['AppImageCredential', 'AppUserCredential', ''])
+class TestCommand(BaseTestEnctrypMigrationCmd):
+    @pytest.fixture(autouse=True)
+    def command_name(self):
+        return "encryption_migration_images"
+
+    @pytest.fixture(autouse=True)
+    def app_models(self):
+        return [AppImageCredential, AppUserCredential]

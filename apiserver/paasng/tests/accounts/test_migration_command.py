@@ -16,19 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
-
 import pytest
 
 from paasng.accounts.models import Oauth2TokenHolder, PrivateTokenHolder
-from tests.utils.assert_migration_cmd import assert_migration_command
+from tests.utils.encrypt_cmd_base_test import BaseTestEnctrypMigrationCmd
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize('model_name', ['Oauth2TokenHolder', 'PrivateTokenHolder', ''])
-class TestCommand:
-    def test_command(self, model_name):
-        app_models: List = [Oauth2TokenHolder, PrivateTokenHolder]
-        cmd = "encryption_migration_accounts"
-        assert_migration_command(model_name=model_name, app_models=app_models, cmd=cmd)
+class TestCommand(BaseTestEnctrypMigrationCmd):
+    @pytest.fixture(autouse=True)
+    def command_name(self):
+        return "encryption_migration_accounts"
+
+    @pytest.fixture(autouse=True)
+    def app_models(self):
+        return [Oauth2TokenHolder, PrivateTokenHolder]

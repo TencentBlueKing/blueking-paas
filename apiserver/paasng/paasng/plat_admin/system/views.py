@@ -285,7 +285,7 @@ class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
     """System api for query app cluster/namespace info"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI"], responses={"200": ClusterNamespaceSLZ(many=True)})
-    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_by_app_code(self, request, code):
         """list app cluster/namespace info"""
         application = self.get_application()

@@ -85,7 +85,7 @@
             <template slot-scope="{row}">
               <div
                 class="ps-switcher-wrapper"
-                @click="toggleSwitch"
+                @click="toggleSwitch(row)"
                 v-if="row.isStartUp">
                 <bk-switcher
                   v-model="row.isStartUp"
@@ -159,6 +159,57 @@
           </bk-form-item>
         </bk-form>
       </bk-dialog>
+
+
+      <bk-dialog
+        v-model="delAppDialog.visiable"
+        width="540"
+        :title="$t('确认删除实例？')"
+        :theme="'primary'"
+        :mask-close="false"
+        :header-position="'left'"
+        :loading="delAppDialog.isLoading"
+        @after-leave="hookAfterClose"
+      >
+        <form
+          class="ps-form"
+          style="min-height: 63px;"
+          @submit.prevent="submitRemoveInstance"
+        >
+          <div class="spacing-x1">
+            {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
+          </div>
+          <div class="ps-form-group">
+            <input
+              v-model="formRemoveConfirmCode"
+              type="text"
+              class="ps-form-control"
+            >
+          </div>
+          <bk-alert
+            v-if="delAppDialog.moduleList.length > 0"
+            style="margin-top: 10px;"
+            type="error"
+            :title="errorTips"
+          />
+        </form>
+        <template slot="footer">
+          <bk-button
+            theme="primary"
+            :disabled="!formRemoveValidated"
+            @click="submitRemoveInstance"
+            class="mr10"
+          >
+            {{ $t('确定') }}
+          </bk-button>
+          <bk-button
+            theme="default"
+            @click="delAppDialog.visiable = false"
+          >
+            {{ $t('取消') }}
+          </bk-button>
+        </template>
+      </bk-dialog>
     </paas-content-loader>
   </div>
 </template>
@@ -198,6 +249,13 @@ export default {
       curData: {},
       startFormData: {},
       definitions: [],
+      serviceStates: {},
+      delAppDialog: {
+        visiable: false,
+        isLoading: false,
+        moduleList: [],
+      },
+      formRemoveConfirmCode: '',
     };
   },
   computed: {
@@ -209,6 +267,9 @@ export default {
     },
     region() {
       return this.curAppInfo.application.region;
+    },
+    formRemoveValidated() {
+      return this.appCode === this.formRemoveConfirmCode;
     },
   },
   watch: {
@@ -288,13 +349,42 @@ export default {
     toggleSwitch(payload) {
       console.log('payload', payload);
       this.curData = payload;
+      if (payload.isStartUp) {
+        this.delAppDialog.visiable = true;
+      }
     },
 
 
     handleSwitcherOpen(payload) {
       if (payload.value === 'start') {  // 直接启动
-        this.isShowStartDialog = true;
-        this.fetchServicesSpecsDetail();
+        console.log('payload', payload);
+        if (this.curData.specifications.length) { // 配置并启动
+          this.isShowStartDialog = true;
+          this.fetchServicesSpecsDetail();
+        } else {  // 直接启动
+          this.$set(this.serviceStates, this.curData.uuid, 'applying');
+          const formData = {
+            service_id: this.curData.uuid,
+            code: this.appCode,
+            module_name: this.curModuleId,
+          };
+          const url = `${BACKEND_URL}/api/services/service-attachments/`;
+          this.$http.post(url, formData).then(() => {
+            this.serviceListBound.push(this.curData);
+            _.remove(this.serviceListUnbound, this.curData);
+            this.serviceStates[this.curData.uuid] = 'applied';
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('服务启用成功'),
+            });
+          }, (resp) => {
+            this.serviceStates[this.curData.uuid] = 'default';
+            this.$paasMessage({
+              theme: 'error',
+              message: resp.detail || this.$t('接口异常'),
+            });
+          });
+        }
       } else {    // 从其他模块中共享
         this.isShowDialog = true;
       }
@@ -383,6 +473,40 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+
+
+    hookAfterClose() {
+      this.formRemoveConfirmCode = '';
+    },
+
+    submitRemoveInstance() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.curData.uuid}/`;
+
+      this.$http.delete(url).then(
+        () => {
+          this.delAppDialog.visiable = false;
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('删除服务实例成功'),
+          });
+          this.init();
+          // this.$router.push({
+          //   name: 'appService',
+          //   params: {
+          //     category_id: this.$route.params.category_id,
+          //     id: this.$route.params.id,
+          //   },
+          // });
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: res.detail,
+          });
+          this.delAppDialog.visiable = false;
+        },
+      );
     },
 
   },

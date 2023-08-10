@@ -33,6 +33,7 @@
           theme="primary"
           :disabled="disbaled"
           :loading="loading"
+          class="mr10"
           @click="handleSumbit"
         >
           {{ $t('确定') }}

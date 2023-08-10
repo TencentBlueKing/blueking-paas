@@ -20,7 +20,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 
-from bkapi_client_core.exceptions import APIGatewayResponseError
+from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError
 from django.conf import settings
 
 from paasng.accessories.iam.apigw.client import Client
@@ -45,9 +45,9 @@ class BKIAMClient:
     """bk-iam 通过 APIGW 提供的 API"""
 
     def __init__(self):
-        self.client: BKIAMGroup = Client(
-            endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_APIGW_SERVICE_STAGE
-        ).api
+        self._client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_APIGW_SERVICE_STAGE)
+        self._client.update_headers(self._prepare_headers())
+        self.client: BKIAMGroup = self._client.api
 
     def _prepare_headers(self) -> dict:
         headers = {
@@ -110,7 +110,6 @@ class BKIAMClient:
 
         try:
             resp = self.client.management_grade_managers(
-                headers=self._prepare_headers(),
                 data=data,
             )
         except APIGatewayResponseError as e:
@@ -135,7 +134,6 @@ class BKIAMClient:
 
         try:
             resp = self.client.v2_management_delete_grade_manager(
-                headers=self._prepare_headers(),
                 path_params=path_params,
             )
         except APIGatewayResponseError as e:
@@ -157,7 +155,6 @@ class BKIAMClient:
         manager_name = utils.gen_grade_manager_name(app_code)
         try:
             resp = self.client.management_grade_managers_list(
-                headers=self._prepare_headers(),
                 params={
                     'name': manager_name,
                     'system': settings.IAM_PAAS_V3_SYSTEM_ID,
@@ -187,7 +184,6 @@ class BKIAMClient:
         """
         try:
             resp = self.client.management_grade_manager_members(
-                headers=self._prepare_headers(),
                 path_params={'id': grade_manager_id},
             )
         except APIGatewayResponseError as e:
@@ -219,7 +215,6 @@ class BKIAMClient:
 
         try:
             resp = self.client.management_add_grade_manager_members(
-                headers=self._prepare_headers(),
                 path_params=path_params,
                 data=data,
             )
@@ -245,7 +240,6 @@ class BKIAMClient:
 
         try:
             resp = self.client.management_delete_grade_manager_members(
-                headers=self._prepare_headers(),
                 path_params=path_params,
                 params=params,
             )
@@ -281,12 +275,17 @@ class BKIAMClient:
         ]
         data = {'groups': groups}
 
+        conflict = False
         try:
             resp = self.client.v2_management_grade_manager_create_groups(
-                headers=self._prepare_headers(),
                 path_params=path_params,
                 data=data,
             )
+        except HTTPResponseError as e:
+            if e.response.status_code != 409:
+                raise BKIAMGatewayServiceError(f'create user groups error, detail: {e}')
+            conflict = True
+            resp = self.client.v2_management_grade_manager_list_groups(path_params=path_params)
         except APIGatewayResponseError as e:
             raise BKIAMGatewayServiceError(f'create user groups error, detail: {e}')
 
@@ -297,6 +296,13 @@ class BKIAMClient:
                 )
             )
             raise BKIAMApiError(resp['message'], resp['code'])
+
+        if conflict:
+            all_groups = {group["name"]: group for group in resp["data"]["results"]}
+            return [
+                {**all_groups[expected_group["name"]], "role": role}
+                for expected_group, role in zip(groups, APP_DEFAULT_ROLES)
+            ]
 
         # 按照顺序，填充申请创建得到的各个用户组的 ID
         user_group_ids = resp.get('data', [])
@@ -310,7 +316,6 @@ class BKIAMClient:
             path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': group_id}
             try:
                 resp = self.client.v2_management_grade_manager_delete_group(
-                    headers=self._prepare_headers(),
                     path_params=path_params,
                 )
             except APIGatewayResponseError as e:
@@ -331,9 +336,7 @@ class BKIAMClient:
         params = {'page': DEFAULT_PAGE, 'page_size': FETCH_USER_GROUP_MEMBERS_LIMIT}
 
         try:
-            resp = self.client.v2_management_group_members(
-                headers=self._prepare_headers(), path_params=path_params, params=params
-            )
+            resp = self.client.v2_management_group_members(path_params=path_params, params=params)
         except APIGatewayResponseError as e:
             raise BKIAMGatewayServiceError(f'get user group members error, detail: {e}')
 
@@ -368,7 +371,6 @@ class BKIAMClient:
 
         try:
             resp = self.client.v2_management_add_group_members(
-                headers=self._prepare_headers(),
                 path_params=path_params,
                 data=data,
             )
@@ -395,7 +397,6 @@ class BKIAMClient:
 
         try:
             resp = self.client.v2_management_delete_group_members(
-                headers=self._prepare_headers(),
                 path_params=path_params,
                 params=params,
             )
@@ -443,7 +444,6 @@ class BKIAMClient:
 
             try:
                 resp = self.client.v2_management_groups_policies_grant(
-                    headers=self._prepare_headers(),
                     path_params=path_params,
                     data=data,
                 )

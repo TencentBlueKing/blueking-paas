@@ -70,6 +70,22 @@ class Group(OperationGroup):
         path="/api/v2/open/management/systems/{system_id}/grade_managers/{id}/groups/",
     )
 
+    # 分级管理员用户组列表
+    v2_management_grade_manager_list_groups = bind_property(
+        Operation,
+        name="v2_management_grade_manager_list_groups",
+        method="GET",
+        path="/api/v2/open/management/systems/{system_id}/grade_managers/{id}/groups/",
+    )
+
+    # 分级管理员更新用户组
+    v2_management_grade_manager_update_group = bind_property(
+        Operation,
+        name="v2_management_grade_manager_update_group",
+        method="POST",
+        path="/api/v2/open/management/systems/{system_id}/groups/{id}/",
+    )
+
     # 删除用户组
     v2_management_grade_manager_delete_group = bind_property(
         Operation,

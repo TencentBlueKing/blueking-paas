@@ -136,7 +136,8 @@
         :title="$t('配置信息')"
         :mask-close="false"
         ext-cls="paasng-service-export-dialog-cls"
-        header-position="left">
+        header-position="left"
+        @confirm="handleConfigChange">
         <bk-form
           :model="startFormData">
           <bk-form-item
@@ -364,14 +365,15 @@ export default {
           theme: 'success',
           message: this.$t('服务启用成功'),
         });
-        this.$router.push({
-          name: 'appServiceInner',
-          params: {
-            id: this.curAppCode,
-            service: this.service,
-            category_id: this.$route.params.category_id,
-          },
-        });
+        this.init();
+        // this.$router.push({
+        //   name: 'appServiceInner',
+        //   params: {
+        //     id: this.curAppCode,
+        //     service: this.curData.uuid,
+        //     category_id: this.$route.params.category_id,
+        //   },
+        // });
       } catch (res) {
         this.$paasMessage({
           limit: 1,

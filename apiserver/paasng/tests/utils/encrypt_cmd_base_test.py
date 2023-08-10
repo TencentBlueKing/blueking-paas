@@ -30,7 +30,7 @@ from tests.utils.helpers import generate_random_string
 def generate_fernet_encrypted_instance(model_class):
     """创建一个加密模型，并生成加密字段"""
 
-    unencryped_field_dict = {}
+    unencryped_field_dict: Dict[str, str] = {}
     instance = G(model_class)
     update_fields = []
 
@@ -89,7 +89,7 @@ class BaseTestEnctrypMigrationCmd:
 
         for model_class in app_models:
             instance, unencryped_field_dict = generate_fernet_encrypted_instance(model_class)
-            unencrypted_dict[model_class] = [instance.pk, unencryped_field_dict]
+            unencrypted_dict[model_class] = (instance.pk, unencryped_field_dict)
 
         return unencrypted_dict
 

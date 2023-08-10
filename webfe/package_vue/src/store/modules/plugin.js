@@ -213,6 +213,7 @@ export default {
           if (err.apply_url_for_dev) {
             commit('updatePluginApplyUrl', err.apply_url_for_dev);
           }
+          return err;
         })
         .finally(() => {
           commit('updateAppLoading', false, { root: true });

@@ -92,26 +92,6 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
             self.env = self.module.get_envs("prod")
 
     @property
-    def addresses(self) -> List['AvailableAddress']:
-        """应用市场所有可选的访问入口
-
-        [deprecated] TODO: 移除该协议
-        """
-        if (
-            not self.market_config.prefer_https
-            and self.default_access_entrance.address
-            and self.default_access_entrance.address == self.default_access_entrance_with_https.address
-        ):
-            # Return both HTTP and HTTPS options when current default address is
-            # using HTTPS protocol.
-            return [
-                self.default_access_entrance_with_http,
-                self.default_access_entrance_with_https,
-            ] + self.domain_addresses
-
-        return [self.default_access_entrance] + self.domain_addresses
-
-    @property
     def default_access_entrance_with_http(self) -> AvailableAddress:
         """由平台提供的首选默认访问入口(HTTP协议)"""
         entrance = self.transform_protocol(get_exposed_url(self.env), protocol="http")
@@ -121,25 +101,16 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
         )
 
     @property
-    def default_access_entrance_with_https(self) -> AvailableAddress:
-        """由平台提供的首选默认访问入口(HTTPS协议)"""
-        entrance = self.transform_protocol(get_exposed_url(self.env), protocol="https")
-        return AvailableAddress(
-            address=entrance.url.as_address() if entrance else None,
-            type=ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS.value,
-        )
-
-    @property
     def access_entrance(self) -> Optional[AvailableAddress]:
         """应用市场最终设置的主访问入口"""
         source_url_type = ProductSourceUrlType(self.market_config.source_url_type)
 
         if source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV:
-            if not self.market_config.prefer_https:
+            if self.market_config.prefer_https is False:
                 return self.default_access_entrance_with_http
             return self.default_access_entrance
         elif source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS:
-            return self.default_access_entrance_with_https
+            return self.default_access_entrance
         elif source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN:
             return self.filter_domain_address(self.market_config.custom_domain_url)
         elif source_url_type == ProductSourceUrlType.THIRD_PARTY:

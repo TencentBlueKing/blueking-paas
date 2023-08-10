@@ -96,7 +96,9 @@ class TestMresDeploymentsViewSet:
         with mock.patch("paasng.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest), mock.patch(
             'paasng.engine.deploy.release.operator.AppModelDeployStatusPoller.start',
             return_value=None,
-        ), mock.patch("paasng.engine.deploy.release.operator.svc_disc"):
+        ), mock.patch("paasng.engine.deploy.release.operator.svc_disc"), mock.patch(
+            "paasng.engine.deploy.release.operator.ensure_namespace"
+        ):
             response = api_client.post(url, data={"manifest": manifest})
 
         assert response.status_code == 200

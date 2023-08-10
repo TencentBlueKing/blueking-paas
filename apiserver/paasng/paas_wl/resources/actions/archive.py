@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Archive related deploy functions"""
 import logging
 
-from paas_wl.monitoring.app_monitor.managers import make_bk_monitor_controller
+from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.workloads.processes.controllers import get_proc_ctl
 from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment

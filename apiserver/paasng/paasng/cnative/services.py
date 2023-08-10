@@ -22,13 +22,17 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
 from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.platform.api import create_app_ignore_duplicated, create_cnative_app_model_resource
+from paas_wl.platform.api import (
+    create_app_ignore_duplicated,
+    create_cnative_app_model_resource,
+    update_metadata_by_env,
+)
 from paas_wl.platform.applications.constants import WlAppType
 from paasng.engine.constants import AppEnvName
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.log.shim import setup_env_log_model
-from paasng.platform.modules.manager import make_engine_app_name
+from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
 from paasng.platform.modules.models import Module
 from paasng.utils.configs import get_region_aware
 from paasng.utils.error_codes import error_codes
@@ -80,6 +84,10 @@ def create_engine_apps(
         )
         EnvClusterService(env).bind_cluster(cluster_name)
         setup_env_log_model(env)
+
+        # Update metadata
+        engine_app_meta_info = ModuleInitializer(module).make_engine_meta_info(env)
+        update_metadata_by_env(env, engine_app_meta_info)
 
 
 def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:

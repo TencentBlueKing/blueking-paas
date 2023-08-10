@@ -42,12 +42,14 @@ class SmartSearch:
 
     def filter(self, *args, **kwargs):
         """add filter to search dsl"""
-        self.search = self.search.filter(*args, **kwargs)
+        # 当 _expand__to_dot=True 时, 会将 bklog 的保留字段 __ext 转成 .ext, 导致查询异常
+        self.search = self.search.filter(*args, **kwargs, _expand__to_dot=False)
         return self
 
     def exclude(self, *args, **kwargs):
         """add ~filter to search dsl"""
-        self.search = self.search.exclude(*args, **kwargs)
+        # 当 _expand__to_dot=True 时, 会将 bklog 的保留字段 __ext 转成 .ext, 导致查询异常
+        self.search = self.search.exclude(*args, **kwargs, _expand__to_dot=False)
         return self
 
     def limit_offset(self, limit: int = 100, offset: int = 0):

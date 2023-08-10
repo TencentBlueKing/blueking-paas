@@ -19,6 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 from collections import defaultdict
+from functools import reduce
+from operator import add
 from typing import Counter, Dict, List, Optional
 
 import jinja2
@@ -48,6 +50,48 @@ def agg_builtin_filters(search: SmartSearch, mappings: dict):
             ),
         )
     return search
+
+
+def parse_properties_filters(mappings: dict) -> Dict[str, FieldFilter]:
+    """从 mappings 中解析出 field filter"""
+    # 为了简化 _clean_property 的递归代码, 传递给 _clean_property 时需要加上 {"properties": mappings} 这层封装
+    all_properties_filters = {f.name: f for f in _clean_property([], {"properties": mappings})}
+    # 从命名内置过滤条件, 内置过滤条件有 environment, process_id, stream
+    for field_name in ["environment", "process_id", "stream"]:
+        es_term = get_es_term(field_name, mappings)
+        if field := all_properties_filters.get(es_term):
+            field.name = field_name
+    return all_properties_filters
+
+
+def _clean_property(nested_name: List[str], mapping: Dict) -> List[FieldFilter]:
+    """transform ES mapping to List[FieldFilter], will handle nested property by recursion
+
+    Example Mapping:
+    {
+        "properties": {
+            "age": {
+                "type": "integer"
+            },
+            "email": {
+                "type": "keyword"
+            },
+            "name": {
+                "type": "text"
+            },
+            "nested": {
+                "properties": {...}
+            }
+        }
+    }
+    """
+    if "type" in mapping:
+        field_name = ".".join(nested_name)
+        return [FieldFilter(name=field_name, key=field_name if mapping["type"] != "text" else f"{field_name}.keyword")]
+    if "properties" in mapping:
+        nested_fields = [_clean_property(nested_name + [name], value) for name, value in mapping["properties"].items()]
+        return reduce(add, nested_fields)
+    return []
 
 
 def count_filters_options_from_agg(aggregations: dict, properties: Dict[str, FieldFilter]) -> Dict[str, FieldFilter]:

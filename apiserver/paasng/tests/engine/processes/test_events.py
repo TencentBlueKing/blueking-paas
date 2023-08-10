@@ -20,8 +20,8 @@ import copy
 import logging
 from typing import List
 
+from paas_wl.workloads.processes.processes import PlainProcess
 from paasng.engine.processes.events import ProcessEventType, ProcEventsProducer, ProcInstEventType
-from paasng.engine.processes.models import PlainProcess
 
 logger = logging.getLogger(__name__)
 

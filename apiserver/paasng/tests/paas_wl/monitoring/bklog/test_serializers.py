@@ -62,7 +62,7 @@ def bklog_manifest(wl_app) -> Dict[str, Any]:
             "dataId": 123,
             "encoding": "utf-8",
             "path": ["/", "/foo"],
-            "filters": None,
+            "filters": [],
             "extMeta": {},
             "logConfigType": "container_log_config",
         },

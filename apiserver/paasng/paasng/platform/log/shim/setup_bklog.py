@@ -52,12 +52,15 @@ logger = logging.getLogger(__name__)
 
 
 class BKLogConfigProvider:
+    def __init__(self, module: Module):
+        self.module = module
+
     @property
     def timezone(self) -> int:
         if timezone := settings.BKLOG_CONFIG.get("TIME_ZONE"):
             return timezone
         tz = get_default_timezone()
-        return tz.utcoffset(datetime.datetime.now()).total_seconds() // 60 // 60
+        return int(tz.utcoffset(datetime.datetime.now()).total_seconds() // 60 // 60)
 
     @property
     def storage_cluster_id(self) -> int:
@@ -65,14 +68,35 @@ class BKLogConfigProvider:
 
     @property
     def bk_biz_id(self) -> int:
+        # TODO: 替换成蓝鲸应用命名空间
+        # bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
+        #     self.db_application.code, self.db_application.name, owner_username
+        # )
         return settings.BKLOG_CONFIG["BK_BIZ_ID"]
+
+
+def _add_wildcard_suffix(path: str) -> str:
+    """add '/*' suffix to path
+
+    >>> _add_wildcard_suffix("/app/v3logs")
+    "/app/v3logs/*"
+
+    >>> _add_wildcard_suffix("/app/v3logs/")
+    "/app/v3logs/*"
+    """
+    if not path.endswith("/") and not path.endswith("/*"):
+        path += "/"
+    if not path.endswith("*"):
+        path += "*"
+    return path
 
 
 def build_python_json_collector_config():
     return AppLogCollectorConfig(
+        # 平台配置的采集项是采集目录的所有日志文件, 需要添加通配符 '*' 才能在日志平台使用
         log_paths=[
-            settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
-            settings.VOLUME_MOUNT_APP_LOGGING_DIR,
+            _add_wildcard_suffix(settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR),
+            _add_wildcard_suffix(settings.VOLUME_MOUNT_APP_LOGGING_DIR),
         ],
         log_type="json",
         etl_type=ETLType.JSON,
@@ -136,7 +160,7 @@ def to_custom_collector_config(
                     is_time=True,
                     is_dimension=False,
                     option={
-                        "time_zone": BKLogConfigProvider().timezone,
+                        "time_zone": BKLogConfigProvider(module).timezone,
                         "time_format": collector_config.time_format,
                     },
                 ),
@@ -160,7 +184,7 @@ def to_custom_collector_config(
         name_zh_cn=name,
         etl_config=etl_config,
         storage_config=StorageConfig(
-            storage_cluster_id=BKLogConfigProvider().storage_cluster_id,
+            storage_cluster_id=BKLogConfigProvider(module).storage_cluster_id,
         ),
     )
     # fill persistence fields from db
@@ -193,7 +217,7 @@ def update_or_create_custom_collector_config(
         else:
             # create_custom_collector_config will fill `id`, `index_set_id`, `bk_data_id` fields
             custom_collector_config = client.create_custom_collector_config(
-                bk_biz_id=BKLogConfigProvider().bk_biz_id, config=custom_collector_config
+                biz_or_space_id=BKLogConfigProvider(module).bk_biz_id, config=custom_collector_config
             )
             CustomCollectorConfigModel.objects.update_or_create(
                 module=module,
@@ -209,23 +233,31 @@ def update_or_create_custom_collector_config(
     return custom_collector_config
 
 
-def update_or_create_es_search_config(env: ModuleEnvironment, collector_config: AppLogCollectorConfig):
-    """初始化日志查询相关的数据库模型"""
+def update_or_create_es_search_config(
+    env: ModuleEnvironment, collector_config: AppLogCollectorConfig, message_field: str = "log"
+):
+    """初始化日志查询相关的数据库模型
+
+    :param str message_field: 日志查询字段, 默认值 log 是日志平台的原始日志字段
+    """
+    module = env.module
     assert collector_config.collector_config
     # 与 ELK 方案共用 ES 存储, 需要预先在日志平台配置
     host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
     search_params = ElasticSearchParams(
         # 日志平台的索引规则: ${biz_id}_bklog_${name_en}_*
-        indexPattern=f"{BKLogConfigProvider().bk_biz_id}_bklog_{collector_config.collector_config.name_en}_*",
+        # TODO: 修改成蓝鲸应用命名空间后, 需要注意 index 规则是否一致
+        indexPattern=f"{BKLogConfigProvider(module).bk_biz_id}_bklog_{collector_config.collector_config.name_en}_*",
         # time 是日志平台默认的时间字段
         timeField="time",
         timeFormat="timestamp[ns]",
-        # log 是日志平台的原始日志字段
-        messageField="log",
-        # 已根据 index 区分日志, 无需额外的搜索条件
+        messageField=message_field,
+        # 已根据 index 区分不同应用-模块的日志, 无需额外的搜索条件
         termTemplate={},
         builtinFilters={},
         builtinExcludes={},
+        filedMatcher="message|levelname|pathname|funcName|otelSpanID"
+        "|otelServiceName|otelTraceID|environment|process_id|stream",
     )
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,
@@ -259,7 +291,8 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     json_config.collector_config = update_or_create_custom_collector_config(env, json_config, skip_update=True)
     stdout_config.collector_config = update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
     # 绑定日志查询的配置
-    update_or_create_es_search_config(env, json_config)
+    # TODO: 日志平台支持存储将日志内容本身存储为 json 后, 修改成类似于 json.message 的字段
+    update_or_create_es_search_config(env, json_config, message_field="message")
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案

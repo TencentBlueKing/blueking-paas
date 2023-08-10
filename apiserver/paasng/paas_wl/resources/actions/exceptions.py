@@ -18,10 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class ReleaseMissingError(Exception):
-    """release missing"""
-
-
 class BuildMissingError(Exception):
     """build missing"""
 

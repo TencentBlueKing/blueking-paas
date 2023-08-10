@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field, validator
 from paas_wl.cnative.specs.apis import ObjectMetadata
 from paas_wl.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.release_controller.constants import ImagePullPolicy
+from paasng.utils.structure import register
 
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = '500m'
@@ -99,6 +100,29 @@ class BkAppConfiguration(BaseModel):
     env: List[EnvVar] = Field(default_factory=list)
 
 
+@register
+class ConfigMapSource(BaseModel):
+    name: str
+
+
+@register
+class VolumeSource(BaseModel):
+    configMap: Optional[ConfigMapSource]
+
+
+class Mount(BaseModel):
+    mountPath: str
+    name: str
+    source: VolumeSource
+
+
+class MountOverlay(BaseModel):
+    envName: str
+    mountPath: str
+    name: str
+    source: VolumeSource
+
+
 class ReplicasOverlay(BaseModel):
     """Overwrite process's replicas by environment"""
 
@@ -140,6 +164,7 @@ class EnvOverlay(BaseModel):
     resQuotas: Optional[List[ResQuotaOverlay]] = None
     envVariables: Optional[List[EnvVarOverlay]] = None
     autoscaling: Optional[List[AutoscalingOverlay]] = None
+    mounts: Optional[List[MountOverlay]] = None
 
 
 class BkAppBuildConfig(BaseModel):
@@ -202,6 +227,7 @@ class BkAppSpec(BaseModel):
     processes: List[BkAppProcess] = Field(default_factory=list)
     hooks: Optional[BkAppHooks] = None
     addons: List[BkAppAddon] = Field(default_factory=list)
+    mounts: Optional[List[Mount]] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
     domainResolution: Optional[DomainResolution] = None
     svcDiscovery: Optional[SvcDiscConfig] = None

@@ -23,12 +23,13 @@ from typing import TYPE_CHECKING, List, Optional, Type
 import yaml
 from django.db import transaction
 from django.db.models import Model
+from django.forms.models import model_to_dict
 from pydantic import BaseModel
 
 from paasng.engine.constants import JobStatus, RuntimeType
 from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
-from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
+from paasng.engine.models.config_var import CONFIG_VAR_INPUT_FIELDS, ENVIRONMENT_ID_FOR_GLOBAL
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
@@ -165,6 +166,7 @@ class ApplyResult(BaseModel):
     create_num: int = 0
     overwrited_num: int = 0
     ignore_num: int = 0
+    deleted_num: int = 0
 
 
 class PlainConfigVar(BaseModel):
@@ -253,3 +255,42 @@ class ConfigVarManager:
     def clone_vars(self, source: 'Module', dest: 'Module') -> ApplyResult:
         """Clone All Config Vars from `source` Module  to `dest` Module, but ignore all built-in ones."""
         return self.apply_vars_to_module(dest, list(source.configvar_set.filter(is_builtin=False)))
+
+    @transaction.atomic
+    def batch_save(self, module: 'Module', config_vars: List[ConfigVar]) -> ApplyResult:
+        """Save environment variables in batches, including adding, updating, and deleting"""
+        instance_list = module.configvar_set.filter(is_builtin=False).select_related('environment')
+        instance_mapping = {obj.id: obj for obj in instance_list}
+
+        # Create new instance if id is not provided
+        create_list = [item for item in config_vars if not item.id]
+
+        # Perform updates and remove ids from instance_mapping.
+        update_config_vars = {item.id: item for item in config_vars if item.id}
+        overwrited_num = 0
+        for var_id, var_data in update_config_vars.items():
+            obj = instance_mapping.get(var_id, None)
+            # If the id is provided, but if the id is not in the db, need to create a new data
+            if obj is None:
+                var_data.id = None
+                create_list.append(var_data)
+            else:
+                instance_mapping.pop(var_id)
+                # If it is inconsistent with existing data, it needs to be updated
+                if not obj.is_equivalent_to(var_data):
+                    _update_data_dict = model_to_dict(var_data, fields=CONFIG_VAR_INPUT_FIELDS)
+                    ConfigVar.objects.filter(id=var_id).update(**_update_data_dict)
+                    overwrited_num += 1
+
+        # Perform deletions.
+        deleted_num = len(instance_mapping)
+        for _, obj in instance_mapping.items():
+            obj.delete()
+
+        ConfigVar.objects.bulk_create(create_list)
+
+        return ApplyResult(
+            create_num=len(create_list),
+            overwrited_num=overwrited_num,
+            deleted_num=deleted_num,
+        )

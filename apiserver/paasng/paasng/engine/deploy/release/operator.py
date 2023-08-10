@@ -26,8 +26,12 @@ from paas_wl.cnative.specs import svc_disc
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
+from paas_wl.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.cnative.specs.resource import deploy as apply_bkapp_to_k8s
+from paas_wl.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.platform.applications.models import Build
+from paas_wl.resources.base.kres import KNamespace
+from paas_wl.resources.utils.basic import get_client_by_app
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.bg_wait.wait_bkapp import AppModelDeployStatusPoller, DeployStatusHandler
 from paasng.engine.exceptions import StepNotInPresetListError
@@ -107,6 +111,9 @@ def release_by_k8s_operator(
         raise
 
     try:
+        # 下发 k8s 资源前需要确保命名空间存在
+        ensure_namespace(env)
+
         # Apply the ConfigMap resource related with service discovery
         #
         # NOTE: This action might break running pods that get svc-discovery data by
@@ -114,9 +121,15 @@ def release_by_k8s_operator(
         # latest version. We should ask the application developer to handle this properly.
         svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
 
+        # 下发待挂载的 volume source
+        VolumeSourceManager(env).deploy()
+
         deployed_manifest = apply_bkapp_to_k8s(
             env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build)
         )
+
+        # 下发日志采集配置
+        ensure_bk_log_if_need(env)
     except Exception:
         app_model_deploy.status = DeployStatus.ERROR
         app_model_deploy.save(update_fields=["status", "updated"])
@@ -132,3 +145,28 @@ def release_by_k8s_operator(
         {'deploy_id': app_model_deploy.id, 'deployment_id': deployment_id}, DeployStatusHandler
     )
     return str(app_model_deploy.id)
+
+
+def ensure_namespace(env: ModuleEnvironment, max_wait_seconds: int = 15) -> bool:
+    """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
+
+    :param env: ModuleEnvironment
+    :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
+    :return: whether an namespace was created.
+    """
+    wl_app = env.wl_app
+    with get_client_by_app(wl_app) as client:
+        namespace_client = KNamespace(client)
+        _, created = namespace_client.get_or_create(name=wl_app.namespace)
+        if created:
+            namespace_client.wait_for_default_sa(namespace=wl_app.namespace, timeout=max_wait_seconds)
+        return created
+
+
+def ensure_bk_log_if_need(env: ModuleEnvironment):
+    """如果集群支持且应用声明了 BkLogConfig, 则尝试下发日志采集配置"""
+    try:
+        # 下发 BkLogConfig
+        make_bk_log_controller(env).create_or_patch()
+    except Exception:
+        logger.exception("An error occur when creating BkLogConfig")

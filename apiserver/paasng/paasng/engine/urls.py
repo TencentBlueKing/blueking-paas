@@ -66,6 +66,11 @@ urlpatterns = [
         name='api.config_vars.clone',
     ),
     re_path(
+        make_app_pattern(r'/config_vars/batch/$', include_envs=False),
+        views.ConfigVarViewSet.as_view({'post': 'batch'}),
+        name='api.config_vars.batch',
+    ),
+    re_path(
         make_app_pattern(r'/config_vars/import/$', include_envs=False),
         views.ConfigVarImportExportViewSet.as_view(
             {

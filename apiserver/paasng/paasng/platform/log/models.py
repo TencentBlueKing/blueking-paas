@@ -115,19 +115,6 @@ class ProcessLogQueryConfigManager(models.Manager):
                 raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
         return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
-    def get_by_process_type(self, process_type: Optional[str], env: Optional[ModuleEnvironment] = None):
-        # 兼容关联查询(RelatedManager)的接口
-        if env is None:
-            if hasattr(self, "instance"):
-                env = self.instance
-            else:
-                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
-        try:
-            self.filter(env=env, process_type=process_type).get()
-        except ProcessLogQueryConfig.DoesNotExist:
-            # get all process placeholder as fallback
-            return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
-
 
 class ProcessLogQueryConfig(UuidAuditedModel):
     """进程日志查询配置"""

@@ -22,7 +22,7 @@ from typing import Dict, Optional
 from attrs import converters, define
 
 from paasng.platform.log.exceptions import LogLineInfoBrokenError
-from paasng.utils.es_log.models import LogLine, extra_field
+from paasng.utils.es_log.models import LogLine, extra_field, field_extractor_factory
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,9 @@ class StandardOutputLogLine(LogLine):
     module_name: Optional[str] = extra_field(converter=converters.optional(str))
     environment: Optional[str] = extra_field(converter=converters.optional(str))
     process_id: Optional[str] = extra_field(converter=converters.optional(str))
-    stream: Optional[str] = extra_field(converter=converters.optional(str))
+    stream: Optional[str] = extra_field(
+        source=field_extractor_factory(field_key="stream", raise_exception=False), converter=converters.optional(str)
+    )
     pod_name: str = extra_field(converter=str)
 
 
@@ -64,7 +66,9 @@ class StructureLogLine(LogLine):
     module_name: Optional[str] = extra_field(converter=converters.optional(str))
     environment: Optional[str] = extra_field(converter=converters.optional(str))
     process_id: Optional[str] = extra_field(converter=converters.optional(str))
-    stream: Optional[str] = extra_field(converter=converters.optional(str))
+    stream: Optional[str] = extra_field(
+        source=field_extractor_factory(field_key="stream", raise_exception=False), converter=converters.optional(str)
+    )
 
 
 def get_engine_app_name(raw_log: Dict):

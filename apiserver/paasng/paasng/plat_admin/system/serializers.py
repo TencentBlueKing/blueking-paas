@@ -150,3 +150,8 @@ class AddonSpecsSLZ(serializers.Serializer):
             raise ValidationError(f'{specs} is invalid for addon service {svc.name}')
 
         return specs
+
+
+class ClusterNamespaceSLZ(serializers.Serializer):
+    cluster_id = serializers.CharField(help_text="集群 ID")
+    namespace = serializers.CharField(help_text="命名空间名称")

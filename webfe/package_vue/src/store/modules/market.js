@@ -154,17 +154,6 @@ export default {
     },
 
     /**
-         * 获取引用市场可用的访问地址列表
-         *
-         * @param {String} appCode 应用id
-         * @param {Object} config ajax配置
-         */
-    getAppMarketAvaliableAddress({}, appCode, config) {
-      const url = `${BACKEND_URL}/api/market/applications/${appCode}/available_address/`;
-      return http.get(url, config);
-    },
-
-    /**
          * 切换应用市场访问地址
          *
          * @param {String} params 请求参数

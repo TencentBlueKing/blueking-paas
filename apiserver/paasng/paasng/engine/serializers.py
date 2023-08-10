@@ -218,6 +218,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
     create_num = serializers.IntegerField()
     overwrited_num = serializers.IntegerField()
     ignore_num = serializers.IntegerField()
+    deleted_num = serializers.IntegerField()
 
 
 def field_env_var_key():
@@ -262,6 +263,12 @@ class ConfigVarFormatSLZ(serializers.Serializer):
             data['is_global'] = False
             data['environment_id'] = module.envs.get(environment=env_name).pk
         return ConfigVar(**data, module=module)
+
+
+class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
+    """When batch editing, need to pass in the id."""
+
+    id = serializers.IntegerField(required=False)
 
 
 class ConfigVarImportSLZ(serializers.Serializer):

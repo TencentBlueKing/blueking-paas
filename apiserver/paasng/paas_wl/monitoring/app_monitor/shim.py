@@ -16,31 +16,40 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Archive related deploy functions"""
 import logging
 
-from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
-from paas_wl.workloads.processes.controllers import get_proc_ctl
-from paas_wl.workloads.processes.shim import ProcessManager
+from django.conf import settings
+
+from paas_wl.monitoring.app_monitor.managers import AppMonitorController, NullController
+from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
+from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
 
-class ArchiveOperationController:
-    """Controller for offline operation"""
+def make_bk_monitor_controller(app: WlApp):
+    if not settings.ENABLE_BK_MONITOR:
+        logger.warning("BKMonitor is not ready, skip apply ServiceMonitor")
+        return NullController()
+    else:
+        return AppMonitorController(app)
 
-    def __init__(self, env: ModuleEnvironment):
-        self.env = env
 
-    def start(self):
-        self.stop_all_processes()
-        make_bk_monitor_controller(self.env.wl_app).remove()
+def upsert_app_monitor(
+    env: ModuleEnvironment,
+    port: int,
+    target_port: int,
+):
+    """更新或创建蓝鲸监控相关资源(ServiceMonitor)的配置
 
-    def stop_all_processes(self):
-        """Stop all processes"""
-        ctl = get_proc_ctl(env=self.env)
-        lister = ProcessManager(env=self.env)
-        for proc_spec in lister.list_processes_specs():
-            proc_type = proc_spec["name"]
-            ctl.stop(proc_type=proc_type)
+    - AppMetricsMonitor 创建后需要在应用部署时才会真正下发到 k8s 集群
+    """
+    instance, _ = AppMetricsMonitor.objects.update_or_create(
+        defaults={
+            "port": port,
+            "target_port": target_port,
+            "is_enabled": True,
+        },
+        app=env.wl_app,
+    )

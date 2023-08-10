@@ -266,7 +266,10 @@ class TestClusterNamespaceInfoViewSet:
     def create_cluster_obj(self, bk_app, with_wl_apps):
         wl_apps = [app.wl_app for app in bk_app.envs.all()]
         for wl_app in wl_apps:
-            Cluster.objects.get_or_create(name=wl_app.latest_config.cluster)
+            Cluster.objects.get_or_create(
+                name=wl_app.latest_config.cluster,
+                defaults={'annotations': {'bcs_cluster_id': generate_random_string()}},
+            )
 
     def test_list_by_code(self, bk_app, with_wl_apps, sys_api_client):
         url = f'/sys/api/bkapps/applications/{bk_app.code}/cluster_namespaces/'
@@ -275,4 +278,4 @@ class TestClusterNamespaceInfoViewSet:
         assert response.status_code == 200
         assert len(response.data) == 2
         assert response.data[0]['namespace']
-        assert response.data[0]['cluster_id']
+        assert response.data[0]['bcs_cluster_id']

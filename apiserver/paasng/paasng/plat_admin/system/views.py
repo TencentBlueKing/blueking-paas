@@ -294,7 +294,9 @@ class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
         namespace_cluster_map: Dict[str, str] = {}
         for wl_app in wl_apps:
             if (ns := wl_app.namespace) not in namespace_cluster_map:
-                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).name
+                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).bcs_cluster_id or ''
 
-        data = [{'namespace': ns, 'cluster_id': cluster_id} for ns, cluster_id in namespace_cluster_map.items()]
+        data = [
+            {'namespace': ns, 'bcs_cluster_id': bcs_cluster_id} for ns, bcs_cluster_id in namespace_cluster_map.items()
+        ]
         return Response(ClusterNamespaceSLZ(data, many=True).data)

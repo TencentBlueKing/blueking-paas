@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder, SourceTypeSpecConfig
-from tests.utils.encrypt_cmd_base_test import BaseTestEnctrypMigrationCmd
+from tests.utils.encrypt_cmd_base import BaseTestEnctrypMigrationCmd
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

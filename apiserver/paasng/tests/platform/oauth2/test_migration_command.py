@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.platform.oauth2.models import OAuth2Client
-from tests.utils.encrypt_cmd_base_test import BaseTestEnctrypMigrationCmd
+from tests.utils.encrypt_cmd_base import BaseTestEnctrypMigrationCmd
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

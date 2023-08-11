@@ -23,7 +23,7 @@
             <template slot-scope="{row, $index}">
               <div class="flex-row align-items-center">
                 <img class="row-img mr10" :src="row.logo" alt="">
-                <bk-button text>{{ row.name || '--' }}</bk-button>
+                <bk-button text>{{ row.display_name || '--' }}</bk-button>
                 <router-link
                   v-if="$index === rowIndex"
                   target="_blank"
@@ -69,11 +69,11 @@
           </bk-table-column>
           <bk-table-column :label="$t('共享信息')">
             <template slot-scope="{row}">
-              <span v-if="row.type === 'bound' && row.ref_modules && row.ref_modules.length">
-                {{ $t('被') }} {{ row.ref_modules.map(e => e.name).join(',') }} {{ $t('模块共享使用这个字段') }}
+              <span v-if="row.type === 'bound' && row.ref_module && row.ref_module.length">
+                {{ $t('被') }} {{ row.ref_module.map(e => e.name).join(',') }} {{ $t('共享') }}
               </span>
-              <span v-else-if="row.type === 'shared' && row.ref_modules && row.ref_modules.length">
-                {{ $t('共享来自') }} {{ row.ref_modules.map(e => e.name).join(',') }} {{ $t('使用这个字段') }}
+              <span v-else-if="row.type === 'shared' && row.ref_module">
+                {{ $t('共享来自') }} {{row.ref_module.name }}
               </span>
               <span v-else>--</span>
             </template>
@@ -160,11 +160,11 @@
         </bk-form>
       </bk-dialog>
 
-
+      <!-- 直接启动删除实例 -->
       <bk-dialog
         v-model="delAppDialog.visiable"
         width="540"
-        :title="$t('确认删除实例？')"
+        :title="$t(`确认停用${curData.display_name}`)"
         :theme="'primary'"
         :mask-close="false"
         :header-position="'left'"
@@ -210,6 +210,56 @@
           </bk-button>
         </template>
       </bk-dialog>
+
+      <!-- 关联实例需要解绑 -->
+      <bk-dialog
+        v-model="removeSharedDialog.visiable"
+        width="540"
+        :title="$t('确认解除服务共享')"
+        :header-position="'left'"
+        :theme="'primary'"
+        :mask-close="false"
+        :loading="removeSharedDialog.isLoading"
+        @after-leave="hookAfterClose"
+      >
+        <form
+          class="ps-form"
+          @submit.prevent="submitRemoveShared"
+        >
+          <bk-alert
+            type="error"
+            :title="errorTips"
+            class="mb20"
+          />
+          <div class="spacing-x1">
+            {{ $t('请完整输入应用 ID ') }}<code>{{ appCode }}</code> {{ $t('确认：') }}
+          </div>
+          <div class="ps-form-group">
+            <input
+              v-model="formRemoveConfirmCode"
+              type="text"
+              class="ps-form-control"
+            >
+          </div>
+        </form>
+        <template slot="footer">
+          <bk-button
+            theme="primary"
+            :loading="removeSharedDialog.isLoading"
+            :disabled="!formRemoveValidated"
+            @click="submitRemoveShared"
+            class="mr10"
+          >
+            {{ $t('确定') }}
+          </bk-button>
+          <bk-button
+            theme="default"
+            @click="removeSharedDialog.visiable = false"
+          >
+            {{ $t('取消') }}
+          </bk-button>
+        </template>
+      </bk-dialog>
     </paas-content-loader>
   </div>
 </template>
@@ -249,11 +299,14 @@ export default {
       curData: {},
       startFormData: {},
       definitions: [],
-      serviceStates: {},
       delAppDialog: {
         visiable: false,
         isLoading: false,
         moduleList: [],
+      },
+      removeSharedDialog: {
+        visiable: false,
+        isLoading: false,
       },
       formRemoveConfirmCode: '',
     };
@@ -270,6 +323,12 @@ export default {
     },
     formRemoveValidated() {
       return this.appCode === this.formRemoveConfirmCode;
+    },
+    errorTips() {
+      if (this.curData.type === 'bound' && this.delAppDialog.moduleList.length) {
+        return '该实例被共享，删除后这些模块将无法获取相关环境变量；删除会导致预发布环境和生产环境的实例都将被删除，且该操作不可撤销，请谨慎操作';
+      }
+      return `${this.$t('解除后，当前模块将无法获取 ')}${this.curModuleId} ${this.$t('模块的')} ${this.curData.display_name} ${this.$t('服务的所有环境变量')}`;
     },
   },
   watch: {
@@ -292,17 +351,18 @@ export default {
       try {
         const { appCode } = this;
         const res = await this.$store.dispatch('service/getServicesList', { appCode, moduleId: this.curModuleId });
+        // 新增一个字段isStartUp true代表是启动状态 false代表停止状态
         // 改造bound数据
         res.bound = (res.bound || []).reduce((p, v) => {
           p.push({ ...v, ...v.service, type: 'bound', isStartUp: true });
           return p;
         }, []);
+
         // 改造shared数据
-        res.shared = (res.shared || []).map((e) => {
-          e.type = 'shared';
-          e.isStartUp = true;
-          return e;
-        });
+        res.shared = (res.shared || []).reduce((p, v) => {
+          p.push({ ...v, ...v.service, type: 'shared', isStartUp: true });
+          return p;
+        }, []);
 
         // 改造shared数据
         res.unbound = (res.unbound || []).map((e) => {
@@ -349,8 +409,13 @@ export default {
     toggleSwitch(payload) {
       console.log('payload', payload);
       this.curData = payload;
-      if (payload.isStartUp) {
-        this.delAppDialog.visiable = true;
+      if (payload.isStartUp) {    // 已经启动的状态
+        if (payload.type === 'shared') {    // 解绑弹窗
+          this.removeSharedDialog.visiable = true;
+        } else {
+          this.delAppDialog.visiable = true;    // 停用弹窗
+          this.fetchServicesShareDetail();
+        }
       }
     },
 
@@ -362,7 +427,6 @@ export default {
           this.isShowStartDialog = true;
           this.fetchServicesSpecsDetail();
         } else {  // 直接启动
-          this.$set(this.serviceStates, this.curData.uuid, 'applying');
           const formData = {
             service_id: this.curData.uuid,
             code: this.appCode,
@@ -370,15 +434,12 @@ export default {
           };
           const url = `${BACKEND_URL}/api/services/service-attachments/`;
           this.$http.post(url, formData).then(() => {
-            this.serviceListBound.push(this.curData);
-            _.remove(this.serviceListUnbound, this.curData);
-            this.serviceStates[this.curData.uuid] = 'applied';
             this.$paasMessage({
               theme: 'success',
               message: this.$t('服务启用成功'),
             });
+            this.init();
           }, (resp) => {
-            this.serviceStates[this.curData.uuid] = 'default';
             this.$paasMessage({
               theme: 'error',
               message: resp.detail || this.$t('接口异常'),
@@ -422,13 +483,6 @@ export default {
           theme: 'error',
           message: res.message,
         });
-        this.$router.push({
-          name: 'appService',
-          params: {
-            id: this.curAppCode,
-            moduleId: this.curModuleId,
-          },
-        });
       } finally {
         this.isLoading = false;
       }
@@ -456,14 +510,6 @@ export default {
           message: this.$t('服务启用成功'),
         });
         this.init();
-        // this.$router.push({
-        //   name: 'appServiceInner',
-        //   params: {
-        //     id: this.curAppCode,
-        //     service: this.curData.uuid,
-        //     category_id: this.$route.params.category_id,
-        //   },
-        // });
       } catch (res) {
         this.$paasMessage({
           limit: 1,
@@ -480,6 +526,7 @@ export default {
       this.formRemoveConfirmCode = '';
     },
 
+    // 删除实例确认
     submitRemoveInstance() {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.curData.uuid}/`;
 
@@ -491,13 +538,6 @@ export default {
             message: this.$t('删除服务实例成功'),
           });
           this.init();
-          // this.$router.push({
-          //   name: 'appService',
-          //   params: {
-          //     category_id: this.$route.params.category_id,
-          //     id: this.$route.params.id,
-          //   },
-          // });
         },
         (res) => {
           this.$paasMessage({
@@ -507,6 +547,51 @@ export default {
           this.delAppDialog.visiable = false;
         },
       );
+    },
+
+    // 解绑实例确认
+    async submitRemoveShared() {
+      this.removeSharedDialog.isLoading = true;
+      try {
+        await this.$store.dispatch('service/deleteSharedAttachment', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.curData.uuid,
+        });
+        this.removeSharedDialog.visiable = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('解除服务共享成功'),
+          delay: 1500,
+        });
+        this.init();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.removeSharedDialog.isLoading = false;
+      }
+    },
+
+
+    // 停用服务时需要展示的error数据
+    async fetchServicesShareDetail() {
+      try {
+        const res = await this.$store.dispatch('service/getServicesShareDetail', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.curData.uuid,
+        });
+        this.delAppDialog.moduleList = [...res];
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      }
     },
 
   },

@@ -437,8 +437,6 @@ export default {
           this.delAppDialog.visiable = true;    // 停用弹窗
           this.fetchServicesShareDetail();
         }
-      } else {
-        this.showTips = true;
       }
     },
 
@@ -626,11 +624,25 @@ export default {
 
     // 处理跳转逻辑
     handleToPage(payload) {
-      this.$router.push({
-        name: 'serviceInnerPage',
-        params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
-        query: { name: payload.display_name },
-      });
+      if (payload.isStartUp) {
+        if (payload.type === 'shared') {    // 共享
+          this.$router.push({
+            name: 'appServiceInnerShared',
+            params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+          });
+        } else {    // 直接启动
+          this.$router.push({
+            name: 'appServiceInner',
+            params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+          });
+        }
+      } else {    // 未开启的时候跳转详情
+        this.$router.push({
+          name: 'serviceInnerPage',
+          params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
+          query: { name: payload.display_name },
+        });
+      }
     },
 
     // 获取使用指南

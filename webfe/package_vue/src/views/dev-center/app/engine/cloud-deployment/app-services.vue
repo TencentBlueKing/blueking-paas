@@ -23,17 +23,12 @@
             <template slot-scope="{row, $index}">
               <div class="flex-row align-items-center">
                 <img class="row-img mr10" :src="row.logo" alt="">
-                <bk-button text>{{ row.display_name || '--' }}</bk-button>
-                <router-link
+                <p class="row-title-text" @click="handleToPage(row)">{{ row.display_name || '--' }}</p>
+                <i
                   v-if="$index === rowIndex"
-                  target="_blank"
-                  :to="{ name: 'serviceInnerPage',
-                         params: { category_id: row.category ? row.category.id : '', name: row.name },
-                         query: { name: row.display_name } }">
-                  <i
-                    class="row-icon paasng-icon paasng-page-fill pl5 mt5"
-                    v-bk-tooltips="{content: '使用指南'}" />
-                </router-link>
+                  class="row-icon paasng-icon paasng-page-fill pl5 mt5"
+                  v-bk-tooltips="{content: '使用指南'}"
+                  @click="handleShowGuideDialog(row)" />
               </div>
             </template>
           </bk-table-column>
@@ -82,10 +77,10 @@
             width="180"
             :label="$t('启/停')"
           >
-            <template slot-scope="{row}">
+            <template slot-scope="{row, $index}">
               <div
                 class="ps-switcher-wrapper"
-                @click="toggleSwitch(row)"
+                @click="toggleSwitch(row, $index)"
                 v-if="row.isStartUp">
                 <bk-switcher
                   v-model="row.isStartUp"
@@ -96,29 +91,20 @@
               <div
                 class="ps-switcher-wrapper"
                 v-else
-                @click="toggleSwitch(row)"
+                @click="toggleSwitch(row, $index)"
                 v-bk-tooltips="switcherTips"
+                :ref="`tooltipsHtml${$index}`"
               >
                 <bk-switcher
                   v-model="row.isStartUp"
                   class="bk-small-switcher"
                 />
               </div>
-
               <div id="switcher-tooltip">
                 <div v-for="item in startData" :key="item.id" class="item" @click="handleSwitcherOpen(item)">
                   {{ item.label }}
                 </div>
               </div>
-              <!-- <bk-dropdown-menu ref="dropdown" v-else>
-                <div class="dropdown-trigger-text" slot="dropdown-trigger">
-
-                </div>
-                <ul class="bk-dropdown-list" slot="dropdown-content">
-                  <li><a href="javascript:;">生产环境</a></li>
-                  <li><a href="javascript:;">预发布环境</a></li>
-                </ul>
-              </bk-dropdown-menu> -->
 
             </template>
           </bk-table-column>
@@ -260,12 +246,31 @@
           </bk-button>
         </template>
       </bk-dialog>
+
+      <!-- 使用指南 -->
+      <bk-sideslider
+        :is-show.sync="isShowGuideDialog"
+        :title="$t('使用指南')"
+        :width="640"
+        :quick-close="true"
+        @hidden="hookAfterClose"
+      >
+        <div slot="content">
+          <div id="markdown" v-bkloading="{ isLoading: guideLoading, opacity: 1 }">
+            <div
+              class="markdown-body"
+              v-html="compiledMarkdown"
+            />
+          </div>
+        </div>
+      </bk-sideslider>
     </paas-content-loader>
   </div>
 </template>
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import SharedDialog from './comps/shared-dialog';
+import { marked } from 'marked';
 
 export default {
   components: {
@@ -297,6 +302,7 @@ export default {
       startData: [{ value: 'start', label: this.$t('直接启用') }, { value: 'shared', label: this.$t('从其他模块共享') }],
       isShowDialog: false,
       curData: {},
+      curIndex: '',
       startFormData: {},
       definitions: [],
       delAppDialog: {
@@ -309,6 +315,9 @@ export default {
         isLoading: false,
       },
       formRemoveConfirmCode: '',
+      isShowGuideDialog: false,
+      serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
+      guideLoading: false,
     };
   },
   computed: {
@@ -329,6 +338,17 @@ export default {
         return '该实例被共享，删除后这些模块将无法获取相关环境变量；删除会导致预发布环境和生产环境的实例都将被删除，且该操作不可撤销，请谨慎操作';
       }
       return `${this.$t('解除后，当前模块将无法获取 ')}${this.curModuleId} ${this.$t('模块的')} ${this.curData.display_name} ${this.$t('服务的所有环境变量')}`;
+    },
+
+    compiledMarkdown() {
+      // eslint-disable-next-line vue/no-async-in-computed-properties
+      this.$nextTick(() => {
+        $('#markdown').find('a')
+          .each(function () {
+            $(this).attr('target', '_blank');
+          });
+      });
+      return marked(this.serviceMarkdown, { sanitize: true });
     },
   },
   watch: {
@@ -406,9 +426,10 @@ export default {
       this.rowIndex = '';
     },
 
-    toggleSwitch(payload) {
+    toggleSwitch(payload, index) {
       console.log('payload', payload);
       this.curData = payload;
+      this.curIndex = index;
       if (payload.isStartUp) {    // 已经启动的状态
         if (payload.type === 'shared') {    // 解绑弹窗
           this.removeSharedDialog.visiable = true;
@@ -416,11 +437,16 @@ export default {
           this.delAppDialog.visiable = true;    // 停用弹窗
           this.fetchServicesShareDetail();
         }
+      } else {
+        this.showTips = true;
       }
     },
 
 
     handleSwitcherOpen(payload) {
+      console.log(this.curIndex, this.$refs[`tooltipsHtml${this.curIndex}`]);
+      // eslint-disable-next-line no-underscore-dangle
+      this.$refs[`tooltipsHtml${this.curIndex}`]._tippy.hide();
       if (payload.value === 'start') {  // 直接启动
         console.log('payload', payload);
         if (this.curData.specifications.length) { // 配置并启动
@@ -524,6 +550,7 @@ export default {
 
     hookAfterClose() {
       this.formRemoveConfirmCode = '';
+      this.serviceMarkdown = `## ${this.$t('暂无使用说明')}`;
     },
 
     // 删除实例确认
@@ -565,6 +592,8 @@ export default {
           delay: 1500,
         });
         this.init();
+        console.log(this.curIndex, this.$refs.tooltipsHtml3);
+        this.$refs.tooltipsHtml3._tippy.hide();
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -594,6 +623,35 @@ export default {
       }
     },
 
+
+    // 处理跳转逻辑
+    handleToPage(payload) {
+      this.$router.push({
+        name: 'serviceInnerPage',
+        params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
+        query: { name: payload.display_name },
+      });
+    },
+
+    // 获取使用指南
+    getGuideData() {
+      this.guideLoading = true;
+      this.$http.get(`${BACKEND_URL}/api/services/${this.curData.uuid}/`).then((response) => {
+        const resData = response.result;
+        if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
+          this.serviceMarkdown = resData.instance_tutorial;
+        }
+        this.guideLoading = false;
+        this.isShowGuideDialog = true;
+      });
+    },
+
+    // 处理使用指南侧边栏
+    handleShowGuideDialog(payload) {
+      this.curData = payload;
+      this.getGuideData();
+    },
+
   },
 };
 </script>
@@ -612,8 +670,17 @@ export default {
       height: 22px;
       border-radius: 50%;
     }
+
+    .row-title-text{
+      overflow:hidden; //超出的文本隐藏
+      text-overflow:ellipsis; //溢出用省略号显示
+      white-space:nowrap; //溢出不换行
+      cursor: pointer;
+      color: #3A84FF;
+    }
     .row-icon{
       cursor: pointer;
+      color: #3A84FF;
     }
 
     .success-icon{
@@ -654,5 +721,173 @@ export default {
       .tippy-tooltip{
         padding: 0 !important;
       }
+    }
+
+    #markdown {
+      padding: 0 20px 20px 20px;
+    }
+
+    #markdown h2 {
+        padding-bottom: 0.3em;
+        font-size: 1.5em;
+        border-bottom: 1px solid #eaecef;
+        padding: 0;
+        padding-bottom: 10px;
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+    }
+
+    #markdown h3 {
+        color: #333;
+        line-height: 52px;
+        font-size: 14px;
+        position: relative;
+    }
+
+    #markdown h2 .octicon-link {
+        color: #1b1f23;
+        vertical-align: middle;
+        visibility: hidden;
+    }
+
+    #markdown h2:hover .anchor {
+        text-decoration: none;
+    }
+
+    #markdown h2:hover .anchor .octicon-link {
+        visibility: visible;
+    }
+
+    #markdown code,
+    #markdown kbd,
+    #markdown pre {
+        font-size: 1em;
+    }
+
+    #markdown code {
+        font-size: 12px;
+    }
+
+    #markdown pre {
+        margin-top: 0;
+        margin-bottom: 16px;
+        font-size: 12px;
+    }
+
+    #markdown pre {
+        word-wrap: normal;
+    }
+
+    #markdown code {
+        padding: 0.2em 0.4em;
+        margin: 0;
+        font-size: 85%;
+        background-color: rgba(27, 31, 35, 0.05);
+        border-radius: 3px;
+        color: inherit;
+    }
+
+    #markdown pre>code {
+        padding: 0;
+        margin: 0;
+        font-size: 100%;
+        word-break: normal;
+        white-space: pre;
+        background: transparent;
+        border: 0;
+    }
+
+    #markdown .highlight {
+        margin-bottom: 16px;
+    }
+
+    #markdown .highlight pre {
+        margin-bottom: 0;
+        word-break: normal;
+    }
+
+    #markdown .highlight pre,
+    #markdown pre {
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+        background-color: #f6f8fa;
+        border-radius: 3px;
+    }
+
+    #markdown pre code {
+        display: inline;
+        max-width: auto;
+        padding: 0;
+        margin: 0;
+        overflow: visible;
+        line-height: inherit;
+        word-wrap: normal;
+        background-color: transparent;
+        border: 0;
+    }
+
+    #markdown p {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    #markdown a {
+        background-color: transparent;
+    }
+
+    #markdown a:active,
+    #markdown a:hover {
+        outline-width: 0;
+    }
+
+    #markdown a {
+        color: #0366d6;
+        text-decoration: none;
+    }
+
+    #markdown a:hover {
+        text-decoration: underline;
+    }
+
+    #markdown a:not([href]) {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    #markdown ul,
+    #markdown ol {
+        padding-left: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+        list-style: unset !important;
+    }
+
+    #markdown ol ol,
+    #markdown ul ol {
+        list-style-type: lower-roman;
+    }
+
+    #markdown ul ul ol,
+    #markdown ul ol ol,
+    #markdown ol ul ol,
+    #markdown ol ol ol {
+        list-style-type: lower-alpha;
+    }
+
+    #markdown ul,
+    #markdown ol {
+        padding-left: 2em;
+    }
+
+    #markdown ul ul,
+    #markdown ul ol,
+    #markdown ol ol,
+    #markdown ol ul {
+        margin-top: 0;
+        margin-bottom: 0;
     }
 </style>

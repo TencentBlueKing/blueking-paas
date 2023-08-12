@@ -147,22 +147,41 @@
         <bk-form>
           <bk-form-item
             :label="$t('预发布环境：')">
-            <div v-if="gatewayInfos.stag.node_ip_addresses.length" class="ip-address">
+            <div class="flex-row" v-if="gatewayInfos.stag.node_ip_addresses.length">
+              <div class="ip-address">
+                <div
+                  class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
+                  :key="nodeIpIndex">{{ nodeIp.internal_ip_address }}</div>
+
+              </div>
               <div
-                class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
-                :key="nodeIpIndex">{{ nodeIp.internal_ip_address }}</div>
+                class="copy-icon"
+                :title="$t('复制')"
+                @click="handleCopyIp('stag')"
+              >
+                <i class="paasng-icon paasng-general-copy" />
+              </div>
             </div>
             <div v-else>{{ $t('无') }}</div>
           </bk-form-item>
         </bk-form>
-        <bk-form>
+        <bk-form class="ml60">
           <bk-form-item
             :label="$t('生产环境：')">
-            <div v-if="gatewayInfos.prod.node_ip_addresses.length">
+            <div class="flex-row" v-if="gatewayInfos.prod.node_ip_addresses.length">
+              <div class="ip-address">
+                <div
+                  class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
+                  :key="nodeIpIndex">
+                  {{ nodeIp.internal_ip_address }}
+                </div>
+              </div>
               <div
-                class="form-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
-                :key="nodeIpIndex">
-                {{ nodeIp.internal_ip_address }}
+                class="copy-icon"
+                :title="$t('复制')"
+                @click="handleCopyIp('prod')"
+              >
+                <i class="paasng-icon paasng-general-copy" />
               </div>
             </div>
             <div v-else>{{ $t('无') }}</div>
@@ -722,6 +741,14 @@ export default {
 
     .border-b{
       border-bottom: 1px solid #dcdee5;
+    }
+
+    .copy-icon {
+        font-size: 16px;
+        cursor: pointer;
+        &:hover {
+            color: #3a84ff;
+        }
     }
 
     .ip-info-container{

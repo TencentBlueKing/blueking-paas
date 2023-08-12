@@ -7,7 +7,7 @@
     class="deploy-action-box"
   >
     <div class="process-container">
-      <div class="btn-container flex-row align-items-baseline justify-content-between">
+      <div class="btn-container flex-row align-items-baseline" :class="[isPageEdit? '' : 'justify-content-between']">
         <div class="bk-button-group bk-button-group-cls">
           <bk-button
             v-for="(panel, index) in panels"
@@ -592,7 +592,7 @@ export default {
       imageCredentialList: [],
       targetPortErrTips: '',
       isTargetPortErrTips: false,
-      ifopen: true,
+      ifopen: false,
       envsData: [{ value: 'stag', label: this.$t('预发布环境') }, { value: 'prod', label: this.$t('生产环境') }],
       resQuotaData: RESQUOTADATA,
       isAutoscaling: false,
@@ -608,6 +608,14 @@ export default {
       envName: 'stag',
       ENV_ENUM,
       localProcessNameActive: '',
+      formDataBackUp: {
+        autoscaling: {
+          maxReplicas: '',
+          minReplicas: 1,
+          policy: 'default',
+        },
+        replicas: 1,
+      },
     };
   },
   computed: {
@@ -646,7 +654,6 @@ export default {
     },
     formData: {
       handler(val) {
-        console.log('this.isAutoscaling', this.isAutoscaling);
         if (this.localCloudAppData.spec) {
           val.name = this.processNameActive;
           val.replicas = val.replicas && Number(val.replicas);
@@ -658,11 +665,9 @@ export default {
           const processConfig = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive);
           this.envName = processConfig ? processConfig.envName : 'stag';
 
-          console.log('val', val);
 
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
           this.handleExtraConfig();   // 处理额外的配置
-
 
           // 扩缩容
           if (val?.autoscaling?.maxReplicas >= val?.autoscaling?.minReplicas) {
@@ -677,6 +682,7 @@ export default {
             this.$refs.formDeploy?.clearError();
           }
 
+          console.log('val', val);
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -824,15 +830,12 @@ export default {
     // 处理自动调节问题
     handleRadioChange(v) {
       this.$refs.formEnv?.clearError();
-      if (v && !this.formData.autoscaling) {
-        const initAutoscaling = {
-          maxReplicas: '',
-          minReplicas: '',
-          policy: 'default',
-        };
-        this.$set(this.formData, 'autoscaling', initAutoscaling);
+      if (v) {
+        this.$set(this.formData, 'autoscaling', this.formDataBackUp.autoscaling);
+      } else {
+        // 切换成手动需要将原来副本数量渲染到页面
+        this.$set(this.formData, 'replicas', this.formDataBackUp.replicas);
       }
-      console.log('this.formData.autoscaling', this.formData);
     },
 
     // 弹窗确认
@@ -896,7 +899,7 @@ export default {
             envOverlay: {
               replicas: [],
             },
-            autoscaling: { policy: 'default', maxReplicas: '', minReplicas: '' },
+            autoscaling: { policy: 'default', maxReplicas: '', minReplicas: 1 },
           };
           this.localCloudAppData.spec.processes.push(this.formData);
           this.isAutoscaling = false;   // 新增进程默认为手动调节
@@ -1029,7 +1032,6 @@ export default {
         }
       }
 
-      console.log('this.isAutoscaling', this.isAutoscaling);
       // 自动调节
       if (this.isAutoscaling) {
         // 自动调节相关数据
@@ -1037,7 +1039,7 @@ export default {
           envName: this.envName,
           process: this.processNameActive,
           policy: 'default',
-          minReplicas: this.formData.autoscaling.minReplicas ? Number(this.formData.autoscaling.minReplicas) : '',
+          minReplicas: this.formData.autoscaling.minReplicas ? Number(this.formData.autoscaling.minReplicas) : 1,
           maxReplicas: this.formData.autoscaling.maxReplicas ? Number(this.formData.autoscaling.maxReplicas) : '',
         };
         // 没有autoscaling时
@@ -1062,12 +1064,20 @@ export default {
             });
         }
 
+        // replicas做一次备份
+        if (this.localCloudAppData.spec.processes[this.btnIndex].replicas) {
+          this.formDataBackUp.replicas = this.localCloudAppData.spec.processes[this.btnIndex].replicas;
+        }
         // 需要删除手动调节相关信息
         delete this.localCloudAppData.spec.processes[this.btnIndex].replicas;
         // 过滤当前进程当前环境envOverlay中replicas
         const { envOverlay } = this.localCloudAppData.spec;
         this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
       } else { // // 手动调节
+        // autoscaling做一次备份
+        if (this.localCloudAppData.spec.processes[this.btnIndex].autoscaling) {
+          this.formDataBackUp.autoscaling = this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
+        }
         // 需要删除当前进程base中的autoscaling
         delete this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
         // 过滤当前进程当前环境envOverlay中autoscaling

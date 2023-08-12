@@ -19,7 +19,7 @@
           <div slot="empty">
             <table-empty empty />
           </div>
-          <bk-table-column :label="$t('服务名称')">
+          <bk-table-column :label="$t('服务名称')" width="300">
             <template slot-scope="{row, $index}">
               <div class="flex-row align-items-center">
                 <img class="row-img mr10" :src="row.logo" alt="">
@@ -32,7 +32,7 @@
               </div>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('预发布环境')">
+          <bk-table-column :label="$t('预发布环境')" width="100">
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.stag">
                 <i
@@ -42,7 +42,7 @@
               <span v-else>--</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('生产环境')">
+          <bk-table-column :label="$t('生产环境')" width="100">
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.prod">
                 <i
@@ -76,6 +76,7 @@
           <bk-table-column
             width="180"
             :label="$t('启/停')"
+            class-name="services-table-cloumn"
           >
             <template slot-scope="{row, $index}">
               <div
@@ -590,8 +591,6 @@ export default {
           delay: 1500,
         });
         this.init();
-        console.log(this.curIndex, this.$refs.tooltipsHtml3);
-        this.$refs.tooltipsHtml3._tippy.hide();
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -624,25 +623,30 @@ export default {
 
     // 处理跳转逻辑
     handleToPage(payload) {
-      if (payload.isStartUp) {
-        if (payload.type === 'shared') {    // 共享
-          this.$router.push({
-            name: 'appServiceInnerShared',
-            params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
-          });
-        } else {    // 直接启动
-          this.$router.push({
-            name: 'appServiceInner',
-            params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
-          });
-        }
-      } else {    // 未开启的时候跳转详情
-        this.$router.push({
-          name: 'serviceInnerPage',
-          params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
-          query: { name: payload.display_name },
-        });
-      }
+      // if (payload.isStartUp) {
+      //   if (payload.type === 'shared') {    // 共享
+      //     this.$router.push({
+      //       name: 'appServiceInnerShared',
+      //       params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+      //     });
+      //   } else {    // 直接启动
+      //     this.$router.push({
+      //       name: 'appServiceInner',
+      //       params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+      //     });
+      //   }
+      // } else {    // 未开启的时候跳转详情
+      //   this.$router.push({
+      //     name: 'serviceInnerPage',
+      //     params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
+      //     query: { name: payload.display_name },
+      //   });
+      // }
+      this.$router.push({
+        name: 'serviceInnerPage',
+        params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
+        query: { name: payload.display_name },
+      });
     },
 
     // 获取使用指南
@@ -724,6 +728,7 @@ export default {
         }
       }
     }
+
 </style>
 <style lang="scss">
     .tips-cls{
@@ -732,6 +737,12 @@ export default {
         }
       .tippy-tooltip{
         padding: 0 !important;
+      }
+    }
+
+    .services-table-cloumn{
+      .cell {
+        width: 60px !important;
       }
     }
 

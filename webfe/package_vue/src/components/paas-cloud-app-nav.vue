@@ -491,10 +491,10 @@ export default {
     },
 
     /**
-             * 强服务添加子项
-             * @param {Number} id id
-             * @param {String} name 名称
-             */
+     * 强服务添加子项
+     * @param {Number} id id
+     * @param {String} name 名称
+     */
     addServiceNavItem(navTree, id, name) {
       const category = navTree.find(item => item.name === 'appServices');
       category.children.push({

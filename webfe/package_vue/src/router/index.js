@@ -211,6 +211,11 @@ const appServices = () => import(/* webpackChunkName: 'app-services' */'@/views/
   window.showDeployTip(error);
 });
 
+// App: Services
+const appServicesByCategory = () => import(/* webpackChunkName: 'app-services' */'@/views/dev-center/app/services/category').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appServicesInstance = () => import(/* webpackChunkName: 'app-services' */'@/views/dev-center/app/services/instance').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -663,12 +668,12 @@ const router = new Router({
         },
         {
           path: ':id/:moduleId/service/:category_id',
-          component: appServices,
+          component: appServicesByCategory,
           name: 'appService',
         },
         {
           path: ':id/service/:category_id',
-          component: appServices,
+          component: appServicesByCategory,
           name: 'appServiceWithModule',
         },
         {

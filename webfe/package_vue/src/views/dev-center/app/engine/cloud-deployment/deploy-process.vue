@@ -838,7 +838,6 @@ export default {
     // 弹窗确认
     async handleConfirm() {
       this.processDialog.loading = true;
-      console.log('this.$refs.formDialog', this.$refs.formDialog);
       try {
         await this.$refs.formDialog.validate(); // 校验进程名
         this.processNameActive = this.processDialog.name; // 选中当前点击tab
@@ -900,6 +899,7 @@ export default {
             autoscaling: { policy: 'default', maxReplicas: '', minReplicas: '' },
           };
           this.localCloudAppData.spec.processes.push(this.formData);
+          this.isAutoscaling = false;   // 新增进程默认为手动调节
         }
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         this.processDialog.visiable = false;
@@ -1211,7 +1211,7 @@ export default {
       .bk-button-group-cls{
         display: flex !important;
         align-items: center;
-        width: calc(100% - 85px);
+        max-width: calc(100% - 85px);
         flex-flow: wrap;
          .item-close-icon{
             position: absolute;

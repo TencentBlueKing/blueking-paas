@@ -202,7 +202,10 @@ export default {
           return;
         }
         // 处理进程配置、钩子命令数据
-        this.$refs[this.routerRefs]?.handleProcessData && this.$refs[this.routerRefs]?.handleProcessData();
+        if (this.$refs[this.routerRefs]?.handleProcessData) {
+          const res = await this.$refs[this.routerRefs]?.handleProcessData();
+          if (!res) return;
+        }
         const params = { ... this.$store.state.cloudApi.cloudAppData };
         await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,

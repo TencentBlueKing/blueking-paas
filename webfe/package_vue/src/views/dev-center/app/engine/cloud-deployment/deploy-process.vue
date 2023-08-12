@@ -812,8 +812,13 @@ export default {
 
     // 处理保存时数据问题
     async handleProcessData() {
-      await this.$refs.formEnv.validate();
-      console.log('提交了');
+      try {
+        await this.$refs.formEnv.validate();
+        return true;
+      } catch (error) {
+        console.log('error', error);
+        return false;
+      }
     },
 
     // 处理自动调节问题

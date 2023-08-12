@@ -256,9 +256,7 @@ export default {
         }
 
         .item-title{
-            font-weight: Bold;
             font-size: 14px;
-            color: #313238;
         }
 
         .item-info{

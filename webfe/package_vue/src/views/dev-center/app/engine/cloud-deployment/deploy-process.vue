@@ -7,12 +7,12 @@
     class="deploy-action-box"
   >
     <div class="process-container">
-      <div class="btn-container flex-row align-items-center justify-content-between">
+      <div class="btn-container flex-row align-items-baseline justify-content-between">
         <div class="bk-button-group bk-button-group-cls">
           <bk-button
             v-for="(panel, index) in panels"
             :key="index"
-            :class="processNameActive === panel.name ? 'is-selected' : ''"
+            :class="[processNameActive === panel.name ? 'is-selected' : '', 'mb10']"
             @click="handleBtnGroupClick(panel.name, index)">
             {{ panel.name }}
             <i
@@ -30,15 +30,15 @@
               @click.stop="handleDelete(panel.name, index)"
             />
           </bk-button>
-          <span v-if="isPageEdit" class="pl10">
-            <bk-button
-              text theme="primary"
-              @click="handleProcessNameEdit('')">
-              <i class="paasng-icon paasng-plus-thick add-icon" />
-              {{ $t('新增进程') }}
-            </bk-button>
-          </span>
         </div>
+        <span v-if="isPageEdit" class="pl10">
+          <bk-button
+            text theme="primary"
+            @click="handleProcessNameEdit('')">
+            <i class="paasng-icon paasng-plus-thick add-icon" />
+            {{ $t('新增进程') }}
+          </bk-button>
+        </span>
         <bk-button
           v-if="!isPageEdit"
           class="fr"
@@ -232,7 +232,6 @@
                   >
                     <bk-select
                       v-model="formData.resQuotaPlan"
-                      allow-create
                       :disabled="false"
                       style="width: 150px;"
                       searchable
@@ -1143,7 +1142,7 @@ export default {
     }
 
     .form-deploy{
-        margin: 20px 40px;
+        margin: 10px 40px 20px;
         .item-title{
             font-weight: Bold;
             font-size: 14px;
@@ -1167,7 +1166,6 @@ export default {
         }
         .create-item{
             padding-bottom: 10px;
-            border-bottom: 1px solid #DCDEE5;
            .form-group-dir{
             display: flex;
             .form-label {
@@ -1208,6 +1206,8 @@ export default {
       .bk-button-group-cls{
         display: flex !important;
         align-items: center;
+        width: calc(100% - 85px);
+        flex-flow: wrap;
          .item-close-icon{
             position: absolute;
             top: 5px;
@@ -1236,7 +1236,7 @@ export default {
 
     .form-envs{
       /deep/ .tooltips-icon{
-        right: 440px !important;
+        right: 540px !important;
         top: 7px !important;
       }
     }

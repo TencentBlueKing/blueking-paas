@@ -197,7 +197,6 @@ export default {
     async handleSave() {
       try {
         // 环境变量保存
-        console.log('this.$refs[this.routerRefs]?.saveEnvData', this.$refs[this.routerRefs]?.saveEnvData());
         if (this.$refs[this.routerRefs]?.saveEnvData) {
           this.$refs[this.routerRefs]?.saveEnvData();
           return;

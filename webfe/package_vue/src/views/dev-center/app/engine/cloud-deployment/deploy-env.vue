@@ -97,13 +97,17 @@
           </bk-table-column>
 
           <bk-table-column :label="$t('Value')" class-name="table-colum-module-cls">
-            <template slot-scope="{ row }">
+            <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit">
                 <bk-form
-                  :label-width="0" form-type="inline" :ref="`envRefValue`"
+                  :label-width="0" form-type="inline" :ref="`envRefValue${$index}`"
                   class="env-from-cls" :model="row">
                   <bk-form-item :required="true" :property="'value'" :rules="rules.value">
-                    <bk-input v-model="row.value" class="env-input-cls">
+                    <bk-input
+                      v-model="row.value"
+                      @enter="handleInputEvent(row, $index)"
+                      @blur="handleInputEvent(row, $index)"
+                      class="env-input-cls">
                     </bk-input>
                   </bk-form-item>
                 </bk-form>
@@ -162,7 +166,7 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column :label="$t('操作')" width="200" class-name="table-colum-module-cls" v-if="isPageEdit">
+          <bk-table-column :label="$t('操作')" width="100" class-name="table-colum-module-cls" v-if="isPageEdit">
             <template slot-scope="{ $index }">
               <div v-if="isPageEdit" class="env-table-icon">
                 <i class="icon paasng-icon paasng-plus-circle-shape" @click="handleEnvTableListData('add', $index)"></i>
@@ -560,6 +564,7 @@ export default {
     },
 
     async saveEnvData() {
+      let validate = true;
       // 提交时需要检验,拿到需要检验的数据下标
       const flag = this.envVarList.reduce((p, v, i) => {
         if (v.key === this.curItem.key && v.environment_name === this.curItem.environment_name) {
@@ -568,15 +573,27 @@ export default {
         return p;
       }, []);
       console.log('flag', flag);
-      if (flag.length > 1) {
-        flag.forEach(async (e) => {
+      if (flag.length) {  // 有数据时
+        for (let index = 0; index < flag.length; index++) {
+          console.log(index);
           try {
-            await this.$refs[`envRefKey${e.i}`].validate();
+            await this.$refs[`envRefKey${flag[index].i}`].validate();
+            await this.$refs[`envRefValue${flag[index].i}`].validate();
           } catch (error) {
-            return false;
+            validate = false;
+            break;
           }
-        });
+        }
       } else {
+        // 新增第一条数据时
+        try {
+          await this.$refs.envRefKey0.validate();
+          await this.$refs.envRefValue0.validate();
+        } catch (error) {
+          validate = false;
+        }
+      }
+      if (validate) {   // 通过检验才可以保存
         this.save();
       }
     },

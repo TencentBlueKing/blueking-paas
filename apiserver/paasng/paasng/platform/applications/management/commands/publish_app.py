@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 
 from django.core.management.base import BaseCommand
 
+from paas_wl.networking.entrance.serializers import DomainSLZ, validate_domain_payload
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paasng.platform.applications.models import Application
 from paasng.publish.market.constant import ProductSourceUrlType
@@ -44,6 +45,22 @@ class Command(BaseCommand):
             help="APP Domain",
         )
         parser.add_argument(
+            "--module_name",
+            dest="module_name",
+            required=False,
+            type=str,
+            default="default",
+            help="",
+        )
+        parser.add_argument(
+            "--environment_name",
+            dest="environment_name",
+            required=False,
+            type=str,
+            default="prod",
+            help="",
+        )
+        parser.add_argument(
             "--path_prefix",
             dest="path_prefix",
             default="/",
@@ -59,10 +76,33 @@ class Command(BaseCommand):
             required=False,
             help="The protocol of the APP market address, default is HTTP.",
         )
+        parser.add_argument(
+            "--force",
+            dest="force",
+            default=False,
+            type=bool,
+            required=False,
+            help="The protocol of the APP market address, default is HTTP.",
+        )
 
-    def handle(self, app_code, app_domain, path_prefix, scheme, *args, **options):
+    def handle(
+        self, app_code, app_domain, module_name, environment_name, path_prefix, scheme, force, *args, **options
+    ):
         application = Application.objects.get(code=app_code)
-        env = application.get_module('default').get_envs('prod')
+        if not force:
+            # 校验应用访问地址合法性
+            validate_domain_payload(
+                {
+                    "domain_name": app_domain,
+                    "path_prefix": path_prefix,
+                    "module_name": module_name,
+                    "environment_name": environment_name,
+                },
+                application,
+                serializer_cls=DomainSLZ,
+            )
+
+        env = application.get_module(module_name).get_envs(environment_name)
         # 开启 HTTPS 需要在集群内配置证书，暂时不对用户暴露这个参数
         get_custom_domain_mgr(application).create(
             env=env, host=app_domain, path_prefix=path_prefix, https_enabled=False

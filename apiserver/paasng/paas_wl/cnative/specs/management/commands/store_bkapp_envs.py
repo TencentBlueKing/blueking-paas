@@ -57,7 +57,7 @@ class Command(BaseCommand):
         )
         parser.add_argument("--no-dry-run", dest="dry_run", default=True, action="store_false", help="是否只打印带存储的环境变量信息")
 
-    def handle(self, app_code, module_name, region, cluster_name, all_clusters, dry_run, *args, **options):
+    def handle(self, app_code, module_name, region, cluster_name, all_clusters, verbosity, dry_run, **options):
         try:
             filtered_envs = self._validate_params(app_code, module_name, region, cluster_name, all_clusters)
         except ObjectDoesNotExist:
@@ -80,18 +80,19 @@ class Command(BaseCommand):
                     )
                 )
                 continue
-            module_bkapp_pairs[module_id] = (module_env.module, BkAppResource(**res.revision.json_value))
+            module_bkapp_pairs[module_id] = (module_env.module, res)
 
         if not module_bkapp_pairs:
             self.stdout.write(self.style.WARNING("nothing to handle"))
             return
 
-        for module, bkapp in module_bkapp_pairs.values():
-            self.store_envs_to_db(module, bkapp, dry_run=dry_run)
+        for module, revision in module_bkapp_pairs.values():
+            self.store_envs_to_db(module, revision, verbosity=verbosity, dry_run=dry_run)
 
-    def store_envs_to_db(self, module: Module, bkapp: BkAppResource, dry_run: bool = True):
+    def store_envs_to_db(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
         """Store all env var defined at bkapp to db"""
         config_vars = []
+        bkapp = BkAppResource(**res.revision.json_value)
         for env_name in AppEnvName.get_values():
             module_env = module.get_envs(env_name)
             for env in EnvVarsReader(bkapp).read_all(env_name):
@@ -106,19 +107,41 @@ class Command(BaseCommand):
                 )
 
         if not dry_run:
-            ConfigVarManager().apply_vars_to_module(module, config_vars=config_vars)
-        else:
-            for config_var in config_vars:
-                self.stdout.write(
-                    self.style.WARNING(
-                        "DRY-RUN: saving for app<{app_code}> module<{module_name}> env<{env}> key<{key}>".format(
-                            app_code=module.application.code,
-                            module_name=module.name,
-                            env=config_var.environment_name,
-                            key=config_var.key,
-                        )
+            self.stdout.write(
+                self.style.NOTICE(
+                    "apply vars to app<{app_code}> module<{module_name}>".format(
+                        app_code=module.application.code,
+                        module_name=module.name,
                     )
                 )
+            )
+            ConfigVarManager().apply_vars_to_module(module, config_vars=config_vars)
+            # clear Configration.env and envOverlay.envVariables
+            bkapp.spec.configuration.env = []
+            if bkapp.spec.envOverlay:
+                bkapp.spec.envOverlay.envVariables = []
+            # save as new revision
+            res.use_resource(bkapp)
+        else:
+            self.stdout.write(
+                self.style.NOTICE(
+                    "DRY-RUN: apply vars to app<{app_code}> module<{module_name}>".format(
+                        app_code=module.application.code,
+                        module_name=module.name,
+                    )
+                )
+            )
+            # Verbosity level, 2=verbose output
+            if verbosity >= 2:
+                for config_var in config_vars:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            "DRY-RUN: saving for env<{env}> key<{key}>".format(
+                                env=config_var.environment_name,
+                                key=config_var.key,
+                            )
+                        )
+                    )
 
     def _validate_params(self, app_code, module_name, region, cluster_name, all_clusters) -> QuerySet:
         """Validate all parameter combinations, return the filtered ModuleEnvironment QuerySet"""

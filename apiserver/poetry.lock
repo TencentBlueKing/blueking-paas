@@ -398,6 +398,7 @@ optional = false
 python-versions = ">=3.6,<4.0"
 files = [
     {file = "bkpaas-auth-2.0.6.tar.gz", hash = "sha256:3cf0168784c0c8763b5630de05464041d255fef4dbcd8ba08e6dc31ce997a5b4"},
+    {file = "bkpaas_auth-2.0.6-py3-none-any.whl", hash = "sha256:4bf02a06c13eef0c24008306f397b738b55995dbda74e18614cf6a9446fc3bfa"},
 ]
 
 [package.dependencies]
@@ -489,14 +490,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "blue-krill"
-version = "1.2.5"
+version = "2.0.1"
 description = "Tools and common packages for blueking paas"
 category = "main"
 optional = false
-python-versions = ">=3.6.2,<3.11"
+python-versions = ">=3.8,<3.11"
 files = [
-    {file = "blue-krill-1.2.5.tar.gz", hash = "sha256:fc6548fdbbb049fcfe8ffaf42b450e8a686849abab318b386b7446312b7b452c"},
-    {file = "blue_krill-1.2.5-py3-none-any.whl", hash = "sha256:eb8f3ed86022f3ee2d9835bfe78ca18f6a485cc888e966fe6ccac8d79e8341f5"},
+    {file = "blue_krill-2.0.1-py3-none-any.whl", hash = "sha256:a05e8dee4f7a479a4ece1f5f219dae4cd0db429ee2f2fbcbd95f5b308ed5cf5d"},
+    {file = "blue_krill-2.0.1.tar.gz", hash = "sha256:015a4abebee9f0e622e07b44234d4e8a28f6d0badda1f61c4ea6f6be9a47e914"},
 ]
 
 [package.dependencies]
@@ -505,7 +506,7 @@ click = "*"
 cryptography = ">=3.0.0,<4.0.0"
 curlify = ">=2.2.1,<3.0.0"
 django-environ = ">=0.8.1,<0.9.0"
-pydantic = ">=1.7,<2.0"
+pydantic = "*"
 pyjwt = ">=1.7.1"
 python-editor = ">=1.0.4,<2.0.0"
 requests = "*"
@@ -1088,7 +1089,7 @@ files = [
 cffi = ">=1.12"
 
 [package.extras]
-docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx_rtd_theme"]
+docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
 docstest = ["doc8", "pyenchant (>=1.6.11)", "sphinxcontrib-spelling (>=4.0.1)", "twine (>=1.12.0)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
 sdist = ["setuptools-rust (>=0.11.4)"]
@@ -5320,4 +5321,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "e0872e82a2df450896391fe66b6b179dd1c19d2bd01cd69d89d919d4f8771222"
+content-hash = "5027ba8c610a24a4d0cabee65cade5095d1031de2158d72b71376506e097ba63"

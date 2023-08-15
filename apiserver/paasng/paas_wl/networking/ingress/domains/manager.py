@@ -168,14 +168,13 @@ class CNativeCustomDomainManager:
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
         # Create the domain object first, so the later deploy process can read it
-        domain = Domain.objects.create(
+        domain, _ = Domain.objects.update_or_create(
             module_id=env.module.id,
             environment_id=env.id,
             name=host,
             path_prefix=path_prefix,
-            https_enabled=https_enabled,
+            defaults={"https_enabled": https_enabled},
         )
-
         try:
             deploy_networking(env)
         except Exception:

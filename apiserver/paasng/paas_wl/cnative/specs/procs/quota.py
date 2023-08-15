@@ -20,10 +20,55 @@ import json
 import logging
 from typing import Dict
 
-from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, PLAN_TO_QUOTA_MAP, ApiVersion, ResQuotaPlan
-from paas_wl.cnative.specs.crd.bk_app import DEFAULT_PROC_CPU, DEFAULT_PROC_MEM, BkAppResource
+from attrs import define
+
+from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, ApiVersion, ResQuotaPlan
+from paas_wl.cnative.specs.crd.bk_app import (
+    DEFAULT_PROC_CPU,
+    DEFAULT_PROC_CPU_REQUEST,
+    DEFAULT_PROC_MEM,
+    DEFAULT_PROC_MEM_REQUEST,
+    BkAppResource,
+)
 
 logger = logging.getLogger(__name__)
+
+
+@define
+class ResourceQuota:
+    cpu: str
+    memory: str
+
+
+# 资源配额方案到资源限制的映射表
+PLAN_TO_LIMIT_QUOTA_MAP = {
+    ResQuotaPlan.P_DEFAULT: ResourceQuota(
+        cpu=DEFAULT_PROC_CPU,
+        memory=DEFAULT_PROC_MEM,
+    ),
+    ResQuotaPlan.P_1C512M: ResourceQuota(cpu="1000m", memory="512Mi"),
+    ResQuotaPlan.P_2C1G: ResourceQuota(cpu="2000m", memory="1024Mi"),
+    ResQuotaPlan.P_2C2G: ResourceQuota(cpu="2000m", memory="2048Mi"),
+    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="4000m", memory="1024Mi"),
+    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="4000m", memory="2048Mi"),
+    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="4000m", memory="4096Mi"),
+}
+
+# 资源配额方案到资源请求的映射表
+# CPU REQUEST = CPU LIMIT / 4
+# MEMORY REQUEST = MEMORY LIMIT / 2
+PLAN_TO_REQUEST_QUOTA_MAP = {
+    ResQuotaPlan.P_DEFAULT: ResourceQuota(
+        cpu=DEFAULT_PROC_CPU_REQUEST,
+        memory=DEFAULT_PROC_MEM_REQUEST,
+    ),
+    ResQuotaPlan.P_1C512M: ResourceQuota(cpu="256m", memory="256Mi"),
+    ResQuotaPlan.P_2C1G: ResourceQuota(cpu="512m", memory="512Mi"),
+    ResQuotaPlan.P_2C2G: ResourceQuota(cpu="512m", memory="1024Mi"),
+    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="1000m", memory="512Mi"),
+    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="1000m", memory="1024Mi"),
+    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="1000m", memory="2048Mi"),
+}
 
 
 class ResourceQuotaReader:
@@ -35,7 +80,7 @@ class ResourceQuotaReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self) -> Dict[str, Dict[str, str]]:
+    def read_all(self) -> Dict[str, ResourceQuota]:
         """Read all resource quota defined
 
         :returns: A dict contains resource limit for all processes, value format: {"cpu": "1000m", "memory": "128Mi"}
@@ -48,18 +93,15 @@ class ResourceQuotaReader:
 
         raise ValueError(f"Unsupported api version: {self.res.apiVersion}")
 
-    def from_v1alpha2_bkapp(self) -> Dict[str, Dict[str, str]]:
+    def from_v1alpha2_bkapp(self) -> Dict[str, ResourceQuota]:
         # legacyProcResConfig 优先级更高
         if LEGACY_PROC_RES_ANNO_KEY in self.res.metadata.annotations:
             return json.loads(self.res.metadata.annotations[LEGACY_PROC_RES_ANNO_KEY])
 
         # 根据资源配额方案, 获取每个进程的配额
-        return {p.name: self._get_quota_by_plan(p.resQuotaPlan) for p in self.res.spec.processes}  # type: ignore
+        return {
+            p.name: PLAN_TO_LIMIT_QUOTA_MAP[p.resQuotaPlan or ResQuotaPlan.P_DEFAULT] for p in self.res.spec.processes
+        }
 
-    @staticmethod
-    def _get_quota_by_plan(res_quota_plan: ResQuotaPlan) -> Dict[str, str]:
-        cpu, mem = PLAN_TO_QUOTA_MAP.get(res_quota_plan, (DEFAULT_PROC_CPU, DEFAULT_PROC_MEM))
-        return {"cpu": cpu, "memory": mem}
-
-    def from_v1alpha1_bkapp(self) -> Dict[str, Dict[str, str]]:
-        return {p.name: {"cpu": p.cpu, "memory": p.memory} for p in self.res.spec.processes}
+    def from_v1alpha1_bkapp(self) -> Dict[str, ResourceQuota]:
+        return {p.name: ResourceQuota(cpu=p.cpu, memory=p.memory) for p in self.res.spec.processes}

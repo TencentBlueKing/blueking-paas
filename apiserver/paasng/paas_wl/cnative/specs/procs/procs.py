@@ -64,7 +64,7 @@ def parse_proc_specs(res: BkAppResource, env_name: AppEnvName) -> List[CNativePr
     quotas = ResourceQuotaReader(res).read_all()
     for name, (cnt, _) in counts.items():
         target_status = ProcessTargetStatus.START.value if cnt > 0 else ProcessTargetStatus.STOP.value
-        results.append(CNativeProcSpec(name, cnt, target_status, quotas[name]['cpu'], quotas[name]['memory']))
+        results.append(CNativeProcSpec(name, cnt, target_status, quotas[name].cpu, quotas[name].memory))
     return results
 
 

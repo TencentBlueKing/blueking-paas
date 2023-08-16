@@ -128,3 +128,17 @@ class MresStatusSLZ(serializers.Serializer):
     ingress = MresIngressInfoSLZ()
     conditions = MresConditionSLZ(many=True)
     events = KubeEventSLZ(many=True)
+
+
+class ResourceQuotaSLZ(serializers.Serializer):
+    cpu = serializers.CharField()
+    memory = serializers.CharField()
+
+
+class ResQuotaPlanSLZ(serializers.Serializer):
+    """Serializer for ResQuotaPlan option"""
+
+    name = serializers.CharField(help_text="选项名称")
+    value = serializers.CharField(help_text="选项值")
+    request = ResourceQuotaSLZ(help_text="资源请求")
+    limit = ResourceQuotaSLZ(help_text="资源限制")

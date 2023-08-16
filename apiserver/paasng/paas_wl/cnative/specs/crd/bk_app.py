@@ -33,6 +33,9 @@ from paasng.utils.structure import register
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = '500m'
 DEFAULT_PROC_MEM = '256Mi'
+# Default resource request for each process
+DEFAULT_PROC_CPU_REQUEST = '125m'
+DEFAULT_PROC_MEM_REQUEST = '126Mi'
 
 
 class MetaV1Condition(BaseModel):

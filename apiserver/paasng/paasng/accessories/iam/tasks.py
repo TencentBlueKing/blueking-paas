@@ -38,6 +38,6 @@ def add_monitoring_space_permission(app_code: str, app_name: str, bk_space_id: s
     cli.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
 
     # 2. 给应用的管理员、开发者、运营者添加监控平台、日志平台权限
-    user_groups = ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role')
+    user_groups = list(ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role').values("id"))
     cli.grant_user_group_policies_in_bk_monitor(bk_space_id, app_name, user_groups)
     cli.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups)

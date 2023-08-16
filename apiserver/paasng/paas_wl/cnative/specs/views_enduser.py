@@ -30,15 +30,17 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
+from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
@@ -48,6 +50,7 @@ from paas_wl.cnative.specs.serializers import (
     DeploySerializer,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    ResQuotaPlanSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential
@@ -58,6 +61,27 @@ from paasng.platform.applications.views import ApplicationCodeInPathMixin
 from paasng.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
+
+
+class ResQuotaPlanOptionsView(APIView):
+    """资源配额方案 选项视图"""
+
+    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
+    def get(self, request):
+        return Response(
+            data=ResQuotaPlanSLZ(
+                [
+                    {
+                        "name": ResQuotaPlan.get_choice_label(plan),
+                        "value": str(plan),
+                        "limit": PLAN_TO_LIMIT_QUOTA_MAP[plan],
+                        "request": PLAN_TO_REQUEST_QUOTA_MAP[plan],
+                    }
+                    for plan in ResQuotaPlan.get_values()
+                ],
+                many=True,
+            ).data
+        )
 
 
 class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):

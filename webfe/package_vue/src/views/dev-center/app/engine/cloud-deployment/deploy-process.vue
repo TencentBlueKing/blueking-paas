@@ -23,12 +23,20 @@
               v-bk-tooltips="$t('编辑')"
             />
 
-            <i
-              v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
-              class="paasng-icon paasng-icon-close item-close-icon"
-              v-bk-tooltips="$t('删除')"
-              @click.stop="handleDelete(panel.name, index)"
-            />
+
+            <bk-popconfirm
+              content="确认删除该进程"
+              width="288"
+              style="display: inline-block;"
+              class="item-close-icon"
+              trigger="click"
+              @confirm="handleDelete(panel.name, index)">
+              <i
+                v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
+                class="paasng-icon paasng-icon-close"
+                v-bk-tooltips="$t('删除')"
+              />
+            </bk-popconfirm>
           </bk-button>
         </div>
         <span v-if="isPageEdit" class="pl10">
@@ -449,7 +457,7 @@
       :title="processDialog.title"
       :loading="processDialog.loading"
       @confirm="handleConfirm"
-      @cancel="handleCancel"
+      @cancel="handleDialogCancel"
     >
       <bk-form
         ref="formDialog"
@@ -510,7 +518,7 @@ export default {
       hasDeleteIcon: true,
       processData: [],
       localCloudAppData: {},
-
+      localCloudAppDataBackUp: {},
       hooks: null,
       isLoading: true,
       rules: {
@@ -662,8 +670,8 @@ export default {
     cloudAppData: {
       handler(val) {
         if (val.spec) {
-          console.log(1, val.spec);
           this.localCloudAppData = _.cloneDeep(val);
+          this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
           this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
           this.buildData = this.localCloudAppData.spec.build || {};
           this.processData = val.spec.processes;
@@ -938,9 +946,19 @@ export default {
     },
 
     // 弹窗取消
-    handleCancel() {
+    handleDialogCancel() {
       this.processDialog.visiable = false;
       this.$refs?.formDialog.clearError();
+    },
+
+    // 页面取消
+    handleCancel() {
+      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppDataBackUp);
+      if (this.localCloudAppDataBackUp.spec) {
+        this.localCloudAppData = _.cloneDeep(this.localCloudAppDataBackUp);
+        this.processData = this.localCloudAppDataBackUp.spec.processes;
+        this.panels = _.cloneDeep(this.processData);
+      }
     },
 
     // 编辑进程名称
@@ -1249,9 +1267,12 @@ export default {
         flex-flow: wrap;
          .item-close-icon{
             position: absolute;
-            top: 5px;
+            top: 4px;
             right: 0px;
             font-size: 22px;
+            width: 22px;
+            height: 22px;
+            line-height: 22px;
             cursor: pointer;
         }
       }

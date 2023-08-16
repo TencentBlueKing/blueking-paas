@@ -20,6 +20,7 @@ import json
 import logging
 from typing import Dict
 
+import cattrs
 from attrs import define
 
 from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, ApiVersion, ResQuotaPlan
@@ -96,7 +97,9 @@ class ResourceQuotaReader:
     def from_v1alpha2_bkapp(self) -> Dict[str, ResourceQuota]:
         # legacyProcResConfig 优先级更高
         if LEGACY_PROC_RES_ANNO_KEY in self.res.metadata.annotations:
-            return json.loads(self.res.metadata.annotations[LEGACY_PROC_RES_ANNO_KEY])
+            return cattrs.structure(
+                json.loads(self.res.metadata.annotations[LEGACY_PROC_RES_ANNO_KEY]), Dict[str, ResourceQuota]
+            )
 
         # 根据资源配额方案, 获取每个进程的配额
         return {

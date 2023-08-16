@@ -51,7 +51,7 @@ class MonitorV3Group(OperationGroup):
     # 查询空间实例详情
     metadata_get_space_detail = bind_property(
         Operation,
-        name="metadata_create_space",
+        name="metadata_get_space_detail",
         method="GET",
         path="/api/c/compapi/v2/monitor_v3/metadata_get_space_detail/",
     )

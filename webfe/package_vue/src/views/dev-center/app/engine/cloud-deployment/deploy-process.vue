@@ -62,9 +62,18 @@
           >
             <bk-form-item
               :label="$t('容器镜像地址')"
+              :label-width="120"
+              v-if="isV1alpha2"
+            >
+              {{ buildData.image }}
+            </bk-form-item>
+
+            <bk-form-item
+              :label="$t('容器镜像地址')"
               :required="true"
               :label-width="120"
               :property="'image'"
+              v-else
             >
               <bk-input
                 ref="mirrorUrl"
@@ -92,9 +101,17 @@
               </p>
             </bk-form-item>
 
+            <bk-form-item
+              :label="$t('镜像凭证')"
+              :label-width="120"
+              v-if="isV1alpha2"
+            >
+              {{ buildData.imagePullPolicy }}
+            </bk-form-item>
+
             <!-- 镜像凭证 -->
             <bk-form-item
-              v-if="panels[panelActive]"
+              v-if="panels[panelActive] && !isV1alpha2"
               :label="$t('镜像凭证')"
               :label-width="120"
               :property="'command'"
@@ -217,7 +234,7 @@
               </bk-radio-group>
             </bk-form-item>
             <bk-form-item
-              v-if="ifopen"
+              v-show="ifopen"
               :label-width="120"
             >
               <div class="env-container">
@@ -346,11 +363,13 @@
           :model="formData">
           <bk-form-item
             :label="$t('容器镜像地址：')">
-            <span class="form-text">{{ formData.image || '--' }}</span>
+            <span class="form-text">{{ isV1alpha2 ? buildData.image : (formData.image || '--') }}</span>
           </bk-form-item>
           <bk-form-item
             :label="$t('镜像凭证：')">
-            <span class="form-text">{{ bkappAnnotations[imageCrdlAnnoKey] || '--' }}</span>
+            <span class="form-text">
+              {{ isV1alpha2 ? buildData.imagePullPolicy : (bkappAnnotations[imageCrdlAnnoKey] || '--') }}
+            </span>
           </bk-form-item>
           <bk-form-item
             :label="$t('启动命令：')">
@@ -616,6 +635,7 @@ export default {
         },
         replicas: 1,
       },
+      buildData: {},
     };
   },
   computed: {
@@ -634,6 +654,9 @@ export default {
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },
+    isV1alpha2() {
+      return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
+    },
   },
   watch: {
     cloudAppData: {
@@ -642,6 +665,7 @@ export default {
           console.log(1, val.spec);
           this.localCloudAppData = _.cloneDeep(val);
           this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
+          this.buildData = this.localCloudAppData.spec.build || {};
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);

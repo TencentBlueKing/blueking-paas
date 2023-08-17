@@ -93,27 +93,32 @@ def test_list_processes(bk_stag_env, wl_app, wl_release, mock_reader):
 
 def test_list_processes_boundary_case(bk_stag_env, wl_app, wl_release, mock_reader):
     mock_reader.set_processes(
-        # worker 没有实例, 也会被忽略
-        # beat 未定义在 Procfile, 会被忽略
+        # worker 没有实例, 不会被忽略
+        # beat 未定义在 Procfile, 不会被忽略
         [
             make_process(wl_app, "web"),
             make_process(wl_app, "worker"),
             make_process(wl_app, "beat"),
         ]
     )
-    mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
+    mock_reader.set_instances(
+        [Instance(app=wl_app, name="web", process_type="web"), Instance(app=wl_app, name="beat", process_type="beat")]
+    )
 
     web_proc = make_process(wl_app, "web")
-    web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
-    assert list_processes(bk_stag_env).processes == [web_proc]
+    web_proc.instances = [Instance(app=wl_app, name="web", process_type="web")]
+    worker_proc = make_process(wl_app, "worker")
+    beat_proc = make_process(wl_app, "beat")
+    beat_proc.instances = [Instance(app=wl_app, name="beat", process_type="beat")]
+    assert list_processes(bk_stag_env).processes == [web_proc, worker_proc, beat_proc]
 
 
 def test_list_processes_without_release(bk_stag_env, wl_app, wl_release, mock_reader):
-    """没有发布过的 WlApp，无法获取进程信息"""
+    """没有发布过的 WlApp，也能获取进程信息"""
     mock_reader.set_processes([make_process(wl_app, "web")])
     mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
     wl_release.delete()
-    assert len(list_processes(bk_stag_env).processes) == 0
+    assert len(list_processes(bk_stag_env).processes) == 1
 
 
 class TestController:

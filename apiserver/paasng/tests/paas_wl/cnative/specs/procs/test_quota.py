@@ -20,7 +20,7 @@ import pytest
 
 from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, ApiVersion, ResQuotaPlan
 from paas_wl.cnative.specs.models import create_app_resource
-from paas_wl.cnative.specs.procs.quota import ResourceQuotaReader
+from paas_wl.cnative.specs.procs.quota import ResourceQuota, ResourceQuotaReader
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -31,16 +31,16 @@ class TestResourceQuotaReader:
         res.apiVersion = ApiVersion.V1ALPHA1
         res.spec.processes[0].cpu = "200m"
         res.spec.processes[0].memory = "128Mi"
-        assert ResourceQuotaReader(res).read_all() == {'web': {'cpu': '200m', 'memory': '128Mi'}}
+        assert ResourceQuotaReader(res).read_all() == {'web': ResourceQuota(cpu="200m", memory="128Mi")}
 
     def test_v1alpha2_legacy(self, bk_stag_wl_app):
         res = create_app_resource(bk_stag_wl_app.name, 'busybox')
         res.apiVersion = ApiVersion.V1ALPHA2
         res.metadata.annotations[LEGACY_PROC_RES_ANNO_KEY] = '{"web": {"cpu": "300m", "memory": "512Mi"}}'
-        assert ResourceQuotaReader(res).read_all() == {'web': {'cpu': '300m', 'memory': '512Mi'}}
+        assert ResourceQuotaReader(res).read_all() == {"web": ResourceQuota(cpu="300m", memory="512Mi")}
 
     def test_v1alpha2_quota_plan(self, bk_stag_wl_app):
         res = create_app_resource(bk_stag_wl_app.name, 'busybox')
         res.apiVersion = ApiVersion.V1ALPHA2
         res.spec.processes[0].resQuotaPlan = ResQuotaPlan.P_2C2G
-        assert ResourceQuotaReader(res).read_all() == {'web': {'cpu': '2000m', 'memory': '2048Mi'}}
+        assert ResourceQuotaReader(res).read_all() == {"web": ResourceQuota(cpu="2000m", memory="2048Mi")}

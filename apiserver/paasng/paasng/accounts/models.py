@@ -195,7 +195,7 @@ class SessionCodeVerifier:
         self.storage_key = storage_key or 'verification_code'
 
     def generate_code(self):
-        return str(random.randint(10 ** (self.numbers - 1), 10**self.numbers - 1))
+        return str(random.randint(10 ** (self.numbers - 1), 10 ** self.numbers - 1))
 
     def set_current_code(self):
         code = self.generate_code()

@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from typing import Dict, List, Optional, Union, overload
 
 import yaml
@@ -26,6 +25,8 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.cnative.specs.constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
+from paas_wl.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
@@ -34,11 +35,6 @@ from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
-
-from .constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
-from .crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
-
-logger = logging.getLogger(__name__)
 
 
 class AppModelResourceManager(models.Manager):

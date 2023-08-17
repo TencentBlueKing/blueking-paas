@@ -26,6 +26,7 @@ from django.conf import settings
 from django.utils.translation import override
 from django_dynamic_fixture import G
 
+from paas_wl.cluster.models import Cluster
 from paasng.dev_resources.servicehub.constants import Category
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound
 from paasng.dev_resources.services.models import Plan, Service, ServiceCategory
@@ -43,7 +44,7 @@ from tests.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
 from tests.utils.helpers import create_legacy_application, generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestQueryDefaultApps:
@@ -258,3 +259,23 @@ class TestSysAddonsAPIViewSet:
         url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service.name}/'
         response = sys_api_client.post(url, data={'specs': specs})
         assert response.status_code == expected_code
+
+
+class TestClusterNamespaceInfoViewSet:
+    @pytest.fixture(autouse=True)
+    def create_cluster_obj(self, bk_app, with_wl_apps):
+        wl_apps = [app.wl_app for app in bk_app.envs.all()]
+        for wl_app in wl_apps:
+            Cluster.objects.get_or_create(
+                name=wl_app.latest_config.cluster,
+                defaults={'annotations': {'bcs_cluster_id': generate_random_string()}},
+            )
+
+    def test_list_by_code(self, bk_app, with_wl_apps, sys_api_client):
+        url = f'/sys/api/bkapps/applications/{bk_app.code}/cluster_namespaces/'
+        response = sys_api_client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.data) == 2
+        assert response.data[0]['namespace']
+        assert response.data[0]['bcs_cluster_id']

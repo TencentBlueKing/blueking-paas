@@ -306,6 +306,7 @@ const actions = {
         if (err.apply_url_for_dev) {
           commit('updateApplyUrl', err.apply_url_for_dev);
         }
+        return err;
       })
       .finally(() => {
         commit('updateAppLoading', false);

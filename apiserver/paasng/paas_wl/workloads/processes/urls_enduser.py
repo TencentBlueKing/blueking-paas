@@ -21,6 +21,7 @@ from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_pat
 from . import views_enduser
 
 urlpatterns = [
+    # TODO: replace `api.processes` with `api.processes.update`
     re_path(
         make_app_pattern_with_applications_prefix(r'/processes/$'),
         views_enduser.ProcessesViewSet.as_view({'post': 'update'}),

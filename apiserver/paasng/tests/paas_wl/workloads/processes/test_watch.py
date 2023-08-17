@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.workloads.processes.watch import ParallelChainedGenerator
+from paas_wl.workloads.processes.watch import ParallelChainedGenerator, WatchEvent
 
 pytestmark = pytest.mark.django_db
 
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db
 class TestParallelChainedGenerators:
     def test_normal(self):
         def lazy_range():
-            yield from range(5)
+            yield from [WatchEvent(type='ERROR', error_message="") for _ in range(5)]
 
         gen = ParallelChainedGenerator([lazy_range(), lazy_range()])
         gen.start()

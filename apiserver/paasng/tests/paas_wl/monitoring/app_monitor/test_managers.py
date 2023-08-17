@@ -27,12 +27,9 @@ from dynaconf.utils.parse_conf import parse_conf_data
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.monitoring.app_monitor import constants
-from paas_wl.monitoring.app_monitor.managers import (
-    build_service_monitor,
-    make_bk_monitor_controller,
-    service_monitor_kmodel,
-)
+from paas_wl.monitoring.app_monitor.managers import build_service_monitor, service_monitor_kmodel
 from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
+from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base.kres import KCustomResourceDefinition
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound

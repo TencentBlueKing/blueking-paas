@@ -576,7 +576,6 @@ class ModuleEnvSLZ(serializers.Serializer):
 
 
 class ApplicationFeatureFlagSLZ(serializers.Serializer):
-    application = ApplicationRelationSLZ()
     name = serializers.CharField()
     effect = serializers.BooleanField()
 

@@ -32,7 +32,7 @@ from paas_wl.resources.kube_res.base import (
     EntitySerializerPicker,
     GVKConfig,
 )
-from paas_wl.resources.kube_res.exceptions import APIServerVersionIncompatible, WatchKubeResourceError
+from paas_wl.resources.kube_res.exceptions import APIServerVersionIncompatible
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -77,22 +77,23 @@ class TestDummyReader:
             mocked_kres().__enter__().ops_label.create_watch_stream.return_value = [
                 {'type': 'ERROR', 'raw_object': {}}
             ]
+            event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
+            assert event.type == 'ERROR'
+            assert event.error_message == 'Unknown'
 
-            with pytest.raises(WatchKubeResourceError):
-                list(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
-
-    @pytest.mark.parametrize(
-        'status,reason,expected_exc_type',
-        [
-            (410, 'Expired: too old resource version: 1 (1)"', WatchKubeResourceError),
-            (500, 'Internal error', ApiException),
-        ],
-    )
-    def test_watch_with_expired_exception(self, status, reason, expected_exc_type, wl_app):
         with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(status, reason)
-            with pytest.raises(expected_exc_type):
-                list(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
+            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(
+                410, 'Expired: too old resource version: 1 (1)"'
+            )
+            event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
+            assert event.type == 'ERROR'
+            assert event.error_message == 'Expired: too old resource version: 1 (1)"'
+
+    def test_watch_with_expired_exception(self, wl_app):
+        with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
+            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(500, 'Internal error')
+            with pytest.raises(ApiException):
+                next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 
 
 dummy_kmodel = AppEntityManager(DummyObj)

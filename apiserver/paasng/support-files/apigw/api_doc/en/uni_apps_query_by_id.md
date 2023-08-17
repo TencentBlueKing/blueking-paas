@@ -1,18 +1,25 @@
-### Resource Description
+### Feature Description
 
-Query app basic information according to app ID, which is only used by internal system
+Query application basic information based on the application ID, for internal system use only.
 
-### Authentication mode
+### Request Parameters
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 1. Path Parameters:
+None.
 
-### Input parameter Description
-| Field | Type | Required | Description                |
-|---------------|--------------|-----|--------------------------------|
-| private_token | string       | no | Token allocated by PaaS platform, which must be provided when the app identity of requester is not authenticated by PaaS platform |
-| id            | List [string] |yes   | Comma-separated list of app IDs|
+#### 2. Interface Parameters:
 
-### Return result
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| id             | List[string]   | Yes      | Comma-separated list of application IDs (bk_app_code) |
+
+### Request Example
+
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/uni_applications/query/by_id/?id={bk_app_code}'
+```
+
+### Response Result Example
 
 ```javascript
 [
@@ -20,6 +27,7 @@ Use Bearer method for authentication. Please apply to the administrator for spec
         "source": 1,
         "name": "Batman",
         "code": "batman",
+        "region": "default",
         "logo_url": "http://example.com/app-logo/blueking_app_default.png",
         "developers": [
             "username",
@@ -27,9 +35,9 @@ Use Bearer method for authentication. Please apply to the administrator for spec
         "creator": "username",
         "created": "2019-08-13 19:15:38",
 		"contact_info": {
-		    // Recent Operators
+		    // Latest operator
             "latest_operator": "username",
-			// People deployed in the last 1 month, in no particular order
+			// People who have deployed in the last 1 month, ranking is not in order
             "recent_deployment_operators": [
                 "username"
             ]
@@ -38,11 +46,21 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 ]
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-- The contents of the result list are in the same order as the AppID of the request parameters
-- When an App ID can not find any information, the location content is null
+- The content in the result list is consistent with the order of AppID in the request parameters.
+- When no information can be found for a certain application ID, the content at that position is null.
 
-| Field | Type | Description      |
-|----------|----------|----------------------|
-| source   | App source platform | 1 default (v3), 2 old version|
+| Parameter Name | Parameter Type | Parameter Description |
+| -------------- | -------------- | --------------------- |
+| source         | int            | Application source platform, 1 - Default (v3), 2 - Old version |
+| name           | string         | Application name |
+| code           | string         | Application code |
+| region         | string         | Application region, default is "default" |
+| logo_url       | string         | Application Logo URL |
+| developers     | List[string]   | List of application developers |
+| creator        | string         | Application creator |
+| created        | string         | Application creation time |
+| contact_info   | dict           | Contact information |
+| contact_info.latest_operator | string | Latest operator |
+| contact_info.recent_deployment_operators | List[string] | People who have deployed in the last 1 month, ranking is not in order |

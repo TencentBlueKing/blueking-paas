@@ -1,40 +1,34 @@
-### Resource Description
+### Feature Description
 
-Query the total number of visits to the app in the time interval.
+Query the total access volume of the application within the specified time range.
 
-### Input parameter Description
+### Request Parameters
 
-|   Field   | Type | Required | Description                                                  |
+#### 1. Path Parameters:
+
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-| app_code   |  string |yes| App ID (app id), you can get it from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
-| app_secret | string |no| The security key (app secret) can be obtained from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
+| app_code   | string | Yes | Application ID, e.g. "monitor" |
+| module   | string | Yes | Module name, e.g. "default" |
+| env   | string | Yes | Environment name, e.g. "stag", "prod" |
+| source_type   | string | Yes | Access value source, optional values "ingress" (access log statistics), "user_tracker" (website access statistics) |
 
-### Path parameter
+#### 2. Interface Parameters:
 
-|   Field   | Type | Required |     Description     |
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-| app_code   |  string |yes| App ID, e.g. "Monitor" |
-| module   |  string | yes      | Module name, such as "default"|
-| env   |  string | yes      | Environment name, e.g. "Stag,""prod"|
-| source_type   |  string | yes      | Access value source, optional values "ingress"(access log statistics), "user_tracker"(web site access statistics)|
+| start_time   | date | Yes | Start time, e.g. "2020-05-20" |
+| end_time   | date | Yes | End time, e.g. "2020-05-22" |
 
-### Parameter Description
-
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-| start_time   |  date |yes| Start time, e.g. "2020-05-20"|
-| end_time   |  date |yes| End time, e.g. "2020-05-22"|
-
-### Call example
+### Request Example
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/total?start_time={start_time}&end_time={end_time}
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Enter your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/total?start_time={start_time}&end_time={end_time}
 ```
 
+### Response Result Example
 
-### Return result
-
-```javascirpt
+```javascript
 {
   "site": {
     "type": "app",
@@ -47,7 +41,19 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
       "uv": 12
     },
     "source_type": "tracked_pv_by_site",
-    "display_name": "Total site visits"
+    "display_name": "Total site access volume"
   }
 }
 ```
+
+### Response Result Parameter Description
+
+| Field |   Type |  Description |
+| ------ | ------ | ------ |
+| site.type | string | Site type |
+| site.name | string | Site name |
+| site.id | int | Site ID |
+| result.results.pv | int | Page views |
+| result.results.uv | int | Unique visitors |
+| result.source_type | string | Access value source |
+| result.display_name | string | Display name |

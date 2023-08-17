@@ -1,15 +1,25 @@
-### Resource Description
+### Feature Description
 Get deployment history
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Call example
+#### 1. Path Parameters:
+None.
+
+#### 2. Interface Parameters:
+None.
+
+### Request Example
+
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}'  http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{你的appcode}/deployments/lists
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}'  http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{your_appcode}/deployments/lists
 ```
 
-### Return result
+#### Get your access_token
+
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### Response Result Example
 ```json
 {
     "count": 2,
@@ -55,3 +65,38 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}'  
 	]
 }
 ```
+
+### Response Result Parameter Description
+
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| count | int | Deployment history count |
+| next | string/null | Next page link |
+| previous | string/null | Previous page link |
+| results | array | Deployment history list |
+
+results
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| id | string | Deployment history ID |
+| status | string | Deployment status |
+| operator | object | Operator information |
+| created | string | Creation time |
+| environment | string | Environment |
+| repo | object | Repository information |
+| deployment_id | string | Deployment ID |
+
+operator
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| username | string | Username |
+| id | string | User ID |
+
+repo
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| url | string | Repository URL |
+| comment | string | Comment |
+| type | string | Type |
+| name | string | Name |
+| revision | string | Revision number |

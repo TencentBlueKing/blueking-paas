@@ -1,15 +1,27 @@
-### 资源描述
+### 功能描述
 获取部署历史
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 调用示例
+#### 1、路径参数：
+
+|   参数名称   |    参数类型  |  必须  |     参数说明     |
+| ------------ | ------------ | ------ | ---------------- |
+| app_code   | string | 是 | 应用 ID，如 "vision" |
+| module   | string | 是 | 模块名称，如 "default" |
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
 ```bash
 curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{你的appcode}/modules/{你的模块名}/deployments/lists/
 ```
 
-### 返回结果
+#### 获取你的 access_token
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### 返回结果示例
 ```json
 {
     "count": 27,
@@ -40,5 +52,39 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
 }
 ```
 
-### 返回结果说明
-<div class="model-box"><span class="model"><span class=""><span class="inner-object"><table class="model"><tbody><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5069 -->count<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">integer</span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em;"><!-- react-text: 5077 -->next<!-- /react-text --></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span class="prop-format"><!-- react-text: 5083 -->($<!-- /react-text --><!-- react-text: 5084 -->uri<!-- /react-text --><!-- react-text: 5085 -->)<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5088 -->x-nullable<!-- /react-text --><!-- react-text: 5089 -->: <!-- /react-text --><!-- react-text: 5090 -->true<!-- /react-text --></span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em;"><!-- react-text: 5093 -->previous<!-- /react-text --></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span class="prop-format"><!-- react-text: 5099 -->($<!-- /react-text --><!-- react-text: 5100 -->uri<!-- /react-text --><!-- react-text: 5101 -->)<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5104 -->x-nullable<!-- /react-text --><!-- react-text: 5105 -->: <!-- /react-text --><!-- react-text: 5106 -->true<!-- /react-text --></span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5109 -->results<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class=""><span><span class="model"><span class=""><span><span class="model"><span class=""><span class="inner-object"><table class="model"><tbody><tr class="false"><td style="vertical-align: top; padding-right: 0.2em;"><!-- react-text: 5150 -->id<!-- /react-text --></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span class="prop-format"><!-- react-text: 5156 -->($<!-- /react-text --><!-- react-text: 5157 -->uuid<!-- /react-text --><!-- react-text: 5158 -->)<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5161 -->title<!-- /react-text --><!-- react-text: 5162 -->: <!-- /react-text --><!-- react-text: 5163 -->UUID<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5166 -->readOnly<!-- /react-text --><!-- react-text: 5167 -->: <!-- /react-text --><!-- react-text: 5168 -->true<!-- /react-text --></span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em;"><!-- react-text: 5171 -->status<!-- /react-text --></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5178 -->title<!-- /react-text --><!-- react-text: 5179 -->: <!-- /react-text --><!-- react-text: 5180 -->部署状态<!-- /react-text --></span><span class="prop-enum"><!-- react-text: 5182 -->Enum:<!-- /react-text --><br><span class=""><span style="cursor: pointer;"><span class="model-toggle"></span></span><!-- react-text: 5231 -->[ <!-- /react-text --><!-- react-text: 5232 -->successful, failed, pending<!-- /react-text --><!-- react-text: 5233 --> ]<!-- /react-text --></span></span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em;"><!-- react-text: 5193 -->operator<!-- /react-text --></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5200 -->title<!-- /react-text --><!-- react-text: 5201 -->: <!-- /react-text --><!-- react-text: 5202 -->Operator<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5205 -->readOnly<!-- /react-text --><!-- react-text: 5206 -->: <!-- /react-text --><!-- react-text: 5207 -->true<!-- /react-text --></span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em;"><!-- react-text: 5210 -->created<!-- /react-text --></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span class="prop-format"><!-- react-text: 5216 -->($<!-- /react-text --><!-- react-text: 5217 -->date-time<!-- /react-text --><!-- react-text: 5218 -->)<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5221 -->title<!-- /react-text --><!-- react-text: 5222 -->: <!-- /react-text --><!-- react-text: 5223 -->Created<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5226 -->readOnly<!-- /react-text --><!-- react-text: 5227 -->: <!-- /react-text --><!-- react-text: 5228 -->true<!-- /react-text --></span></span></span></td></tr><tr>&nbsp;</tr></tbody></table></span></span></span></span></span></span></span></span></span></td></tr><tr>&nbsp;</tr></tbody></table></span></span></span></div>
+### 返回结果参数说明
+
+| 字段 |   类型 |  是否必填 | 描述 |
+| ------ | ------ | ------ | ------ |
+| count | integer | 是 | 部署历史总数 |
+| next | string | 否 | 下一页链接 |
+| previous | string | 否 | 上一页链接 |
+| results | array | 是 | 部署历史列表 |
+
+results
+| 字段 |   类型 |  是否必填 | 描述 |
+| ------ | ------ | ------ | ------ |
+| id | string | 是 | 部署历史ID |
+| status | string | 是 | 部署状态（successful, failed, pending） |
+| operator | object | 是 | 操作者信息 |
+| created | string | 是 | 创建时间 |
+| deployment_id | string | 是 | 部署ID |
+| environment | string | 是 | 部署环境 |
+| repo | object | 是 | 仓库信息 |
+
+operator
+| 字段 |   类型 |  是否必填 | 描述 |
+| ------ | ------ | ------ | ------ |
+| id | string | 是 | 操作者ID |
+| username | string | 是 | 操作者用户名 |
+| provider_type | integer | 是 | 提供者类型 |
+
+repo
+| 字段 |   类型 |  是否必填 | 描述 |
+| ------ | ------ | ------ | ------ |
+| source_type | string | 是 | 仓库源类型 |
+| type | string | 是 | 分支类型 |
+| name | string | 是 | 分支名称 |
+| url | string | 是 | 仓库地址 |
+| revision | string | 是 | 版本号 |
+| comment | string | 是 | 备注 |

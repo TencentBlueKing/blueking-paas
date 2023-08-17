@@ -1,28 +1,41 @@
-### Resource Description
-Upload the source code packet to the platform according to the download link
+### Feature Description
+Upload the source code package to the platform according to the download link.
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### Call example
+### Request Parameters
+
+#### 1. Path Parameters:
+
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| code           | string         | Yes      | Application ID        |
+| module_name    | string         | Yes      | Module name           |
+
+#### 2. Interface Parameters:
+
+| Field           | Type    | Required | Description                 |
+| --------------- | ------- | -------- | --------------------------- |
+| package_url     | string  | Yes      | Source code package download path |
+| version         | string  | No       | Source code package version number |
+| allow_overwrite | boolean | No       | Whether to allow overwriting the original source code package |
+
+### Request Example
 ```bash
 curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sundy820/modules/default/source_package/link/' \
-  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your access_token"}' \
+  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' \
   -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohLfLFHX1EPDP7rB' \
-  --data-binary $'------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="package_url"\r\n\r\n   Link to your source code package  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="version"\r\n\r\n  Your version number  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="allow_overwrite"\r\n\r\nfalse\r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB--\r\n'
+  --data-binary $'------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="package_url"\r\n\r\n   your source code package link  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="version"\r\n\r\n  your version number  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="allow_overwrite"\r\n\r\nfalse\r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB--\r\n'
 ```
 
-### Request parameter Description
+### Request Example
+```bash
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_info/
+```
 
-| Name                                                         | Description                                                  |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| package_url *<br/>string($uri)<br/>(formData)<br/>minLength: 1 | Source code package download path<br/>package_url - Source code package download path |
-| version<br/>string<br/>(formData)<br/>minLength: 1           | Source package version number<br/>v1                         |
-| allow_overwrite<br/>boolean<br/>(formData)<br/>x-nullable: true | Whether to allow overwriting of the original source code package<br/>Default value : false |
-| code *<br/>string<br/>(path)                                 | code                                                         |
-| module_name *<br/>string<br/>(path)                          | module_name                                                  |
+#### Get your access_token
+Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### Return result
+### Response Result Example
 ```json
 {
   "version": "v1",
@@ -34,12 +47,13 @@ curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sund
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| version*          | string <br/>title: Version <br/><br/>minlength: 1<br/>version information |
-| ----------------- | ------------------------------------------------------------ |
-| package_name*     | string <br/>title: Package name <br/>minlength: 1<br/><br/>source package name |
-| package_size*     | string <br/>title: Package size <br/>minlength: 1<br/><br/>source package size |
-| sha256_signature* | string <br/>title: Sha256 signature <br/>minlength: 1<br/><br/>SHA256 digital signature |
-| updated*          | string ($date-time) <br/>title: updated<br/><br/>update time |
-| created*          | string ($date-time) <br/>title: created<br/><br/>creation time |
+| Field             | Type   | Description       |
+| ----------------- | ------ | ----------------- |
+| version           | string | Version information |
+| package_name      | string | Source code package name |
+| package_size      | string | Source code package size |
+| sha256_signature  | string | sha256 digital signature |
+| updated           | string | Update time       |
+| created           | string | Creation time     |

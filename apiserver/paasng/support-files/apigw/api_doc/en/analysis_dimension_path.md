@@ -1,41 +1,34 @@
-### Resource Description
+### Feature Description
+Query the access data aggregated by the application according to the path dimension within this time range.
 
-Query the access data grouped and aggregated by path dimension in the time interval
+### Request Parameters
 
-### Input parameter Description
+#### 1. Path Parameters:
 
-|   Field   | Type | Required |     Description     |
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-| app_code   |  string |yes| App ID (app id), you can get it from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
-| app_secret | string |no| The security key (app secret) can be obtained from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
+| app_code   | string | Yes | Application ID, such as "monitor" |
+| module   | string | Yes | Module name, such as "default" |
+| env   | string | Yes | Environment name, such as "stag", "prod" |
+| source_type   | string | Yes | Access value source, optional values "ingress" (access log statistics), "user_tracker" (website access statistics) |
 
-### Path parameter
+#### 2. Interface Parameters:
 
-|   Field   | Type | Required |     Description     |
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-| app_code   |  string |yes| App ID, e.g. "Monitor" |
-| module   |  string |yes| Module name, such as "default"|
-| env   |  string | yes      | Environment name, e.g. 'Stag','prod'|
-| source_type   |  string |yes| Access value source, optional values "ingress"(access log statistics), "user_tracker"(web site access statistics)|
+| start_time   | date | Yes | Start time, such as "2020-05-20" |
+| end_time   | date | Yes | End time, such as "2020-05-22" |
+| ordering | string | Yes | Sorting option, recommended value "-pv" |
+| offset  | int | No | Pagination parameter, default is 0 |
+| limit   | int | No | Pagination parameter, default is 30, maximum 100 |
 
-### Parameter Description
-
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-| start_time   |  date |yes| Start time, e.g. "2020-05-20"|
-| end_time   |  date |yes| End time, e.g. "2020-05-22"|
-| ordering | string |yes| Sorting options, recommended value "sort pv"|
-| offset  | int |no| Paging parameter, default is 0|
-| limit   |  int |no| Paging parameter, default is 30, maximum is 100|
-
-### Call example
+### Request Example
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/path?start_time={start_time}&end_time={end_time}&ordering=-pv
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/path?start_time={start_time}&end_time={end_time}&ordering=-pv
 ```
 
-
-### Return result
+### Response Result Example
 
 ```javascirpt
 {
@@ -47,12 +40,12 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
       },
       "values_type": [{
           "name": "pv",
-          "display_name": "Access",
+          "display_name": "Page Views",
           "sortable": true
         },
         {
           "name": "uv",
-          "display_name": "Number of unique visitors",
+          "display_name": "Unique Visitors",
           "sortable": true
         }
       ]
@@ -62,7 +55,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
     }
   },
   "resources": [{
-    // Path Name
+    // Path name
     "name": "/",
     "values": {
       "pv": 348,
@@ -71,3 +64,24 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
   }]
 }
 ```
+
+### Response Result Parameter Description
+
+| Field |   Type |  Description |
+| ------ | ------ | ------ |
+| meta | object | Metadata information |
+| meta.schemas | object | Data structure information |
+| meta.schemas.resource_type | object | Resource type information |
+| meta.schemas.resource_type.name | string | Resource type name |
+| meta.schemas.resource_type.display_name | string | Resource type display name |
+| meta.schemas.values_type | array | Value type information |
+| meta.schemas.values_type[].name | string | Value type name |
+| meta.schemas.values_type[].display_name | string | Value type display name |
+| meta.schemas.values_type[].sortable | boolean | Whether it can be sorted |
+| meta.pagination | object | Pagination information |
+| meta.pagination.total | int | Total number |
+| resources | array | Resource list |
+| resources[].name | string | Path name |
+| resources[].values | object | Value information |
+| resources[].values.pv | int | Page views |
+| resources[].values.uv | int | Unique visitors |

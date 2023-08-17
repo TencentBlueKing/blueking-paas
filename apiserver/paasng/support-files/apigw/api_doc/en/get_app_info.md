@@ -1,59 +1,67 @@
-### Resource Description
+### Feature Description
 View application information
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### Path parameter
+### Request Parameters
 
-|   Field   |    Type  |  Required  |     Description     |
-|----------|----------|-----|--------|
-| app_code | string   | yes   |  App ID, e.g. "Monitor"  |
+#### 1. Path Parameters:
 
-### Call example
+| Parameter Name | Parameter Type | Required | Parameter Description |
+|----------------|----------------|----------|-----------------------|
+| app_code       | string         | Yes      | Application ID        |
+
+#### 2. Interface Parameters:
+None.
+
+### Request Example
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{YourAppCode}}/
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{Fill in your AppCode}}/
 ```
 
-### 返回结果
+#### Get your access_token
+
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+
+### Response Result Example
 
 ```json
-// The content is too long and is temporarily omitted. Please view the field details directly through the form below
+// Content is too long, temporarily omitted. Please refer to the table below for field details.
 ```
 
-### 返回结果说明
+### Response Result Parameter Description
 
-`.application` 成员对象各字段说明:
+`.application` member object field description:
 
-| Name          | Type          | Description                               |
-|--------------------|-------------------|----------------------------------------|
-| id                 | string(uuid)      | UUID                                   |
-| name               | string            |                                        |
-| region_name        | string            |                            |
-| logo_url           | string            |                       |
-| config_info        |                   |                      |
-| modules            |                   |                      |
-| region             | string            |                                |
-| created            | string(date-time) |                                        |
-| updated            | string(date-time) |                                        |
-| owner              | string            |                                        |
-| code               | string            |                                |
-| name_en            | string            |  |
-| type               | string            |                                |
-| is_smart_app       | boolean           |                    |
-| language           | string            |                                |
-| creator            | string            |                                        |
-| is_active          | boolean           |                                |
-| is_deleted         | boolean           |                                |
-| last_deployed_date | string(date-time) |                            |
+| Parameter Name           | Parameter Type    | Parameter Description                  |
+|--------------------------|-------------------|----------------------------------------|
+| id                       | string(uuid)      | UUID                                   |
+| name                     | string            |                                        |
+| region_name              | string            | Application version name               |
+| logo_url                 | string            | Application Logo URL                   |
+| config_info              |                   | Additional status information of the application |
+| modules                  |                   | List of application module information |
+| region                   | string            | Deployment region                      |
+| created                  | string(date-time) |                                        |
+| updated                  | string(date-time) |                                        |
+| owner                    | string            |                                        |
+| code                     | string            | Application code                       |
+| name_en                  | string            | Application name (English); currently only used for S-Mart applications |
+| type                     | string            | Application type                       |
+| is_smart_app             | boolean           | Is it an S-Mart application            |
+| language                 | string            | Programming language                   |
+| creator                  | string            |                                        |
+| is_active                | boolean           | Is it active                           |
+| is_deleted               | boolean           | Is it deleted                          |
+| last_deployed_date       | string(date-time) | Last deployment time                   |
 
 `.web_config` member object field description:
 
-| Name          | Type          | Description                               |
-|-------------------------------|----------|------------------------------|
-| engine_enabled                | bool     |                  |
-| can_create_extra_modules      | bool     |              |
-| require_templated_source      | bool     |  |
-| confirm_required_when_publish | bool     |      |
-| market_published              | bool     |            |
+| Parameter Name                      | Parameter Type | Parameter Description                  |
+|-------------------------------------|----------------|----------------------------------------|
+| engine_enabled                      | bool           | Is the application engine enabled      |
+| can_create_extra_modules            | bool           | Can additional modules be created      |
+| require_templated_source            | bool           | Is a template required when creating a module |
+| confirm_required_when_publish       | bool           | Is a second confirmation required when publishing to the market |
+| market_published                    | bool           | Has it been published to the application market |

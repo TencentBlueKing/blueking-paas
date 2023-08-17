@@ -1,26 +1,29 @@
-### Resource Description
+### Feature Description
+Query the list of all "Blueking Plugin" type applications on the platform (with deployment information), for internal system use only.
 
-Query the app list (with deployment information) of all "blue whale plug-in" types on the platform, which is only used by internal systems
+### Request Parameters
 
-### Authentication mode
+#### 1. Path Parameters:
+None.
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 2. Interface Parameters:
 
-### Input parameter Description
+| Parameter Name        | Parameter Type | Required | Parameter Description                                                |
+|-----------------------|----------------|----------|----------------------------------------------------------------------|
+| search_term           | string         | No       | Filter keyword, will match code and name fields                      |
+| order_by              | string         | No       | Sorting, default is "-created", supports "created", "code", "-code", "name", "-name" |
+| has_deployed          | boolean        | No       | Filter by "whether the plugin has been deployed", default is not filtered |
+| distributor_code_name | string         | No       | Filter by "authorized user code", such as "bksops", default is not filtered |
+| tag                   | integer        | No       | Filter by plugin category, default is not filtered                   |
+| limit                 | integer        | No       | Pagination parameter, total number, default is 100                   |
+| offset                | integer        | No       | Pagination parameter, offset, default is 0                           |
 
-| Field         | Type | Required | Description                                                  |
-|-----------------------|----------|-----|------------------------------------------------------------------|
-| private_token         |  string   | no | Token allocated by PaaS platform, which must be provided when the app identity of requester is not authenticated by PaaS platform |
-| search_term           |  string   | no | Filter keywords to match code and name fields                                  |
-| order_by              |  string   | no | Sorting, default is "created," and supports "created,""code,""created code,""name,""created name"|
-| has_deployed          |  boolean  |no   | Filter by "plug-in deployed" and do not filter by default                                    |
-| distributor_code_name | string   | no | Filter by "authorized user code," such as "bksops," which is not filtered by default                    |
-| tag                   | integer  | 否   |  Filter by plugin tag and do not filter by default                    |
-| limit                 |  integer  |no   | Paging parameter, total, default is 100                                             |
-| offset                |  integer  | no       | Paging parameter, deviation number, default is 0                                             |
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/batch/detailed/
+```
 
-### Return result
-
+### Response Result Example
 ```javascript
 {
   "count": 1,
@@ -37,10 +40,10 @@ Use Bearer method for authentication. Please apply to the administrator for spec
         "has_deployed": true,
         "creator": "username",
         "created": "2021-08-13 10:37:29",
-        "updated": "2021-08-13 10:37:29",
+        "updated": "2021-08-13 10:37:29"
         "tag_info": {
           "id": 1,
-          "name": "tag-1",
+          "name": "Category1",
           "code_name": "tag1"
         }
       },
@@ -58,11 +61,11 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-- Note: the historical version of this interface will return "deployed_statuses. {env} .addresses .addresses field, now removed,
-  To obtain an access address, use the`retrieve_bk_plugin` api
+- Note: The historical version of this interface will return the `deployed_statuses.{env}.addresses` field, which has been removed.
+  To get the access address, please use the `retrieve_bk_plugin` API.
 
-| Field | Type  | Description                |
-|----------|---------------|--------------------------------|
-| results  |array [object] |Please refer to the retrieve_bk_plugin interface return|
+| Parameter Name | Parameter Type | Parameter Description                 |
+|----------------|----------------|---------------------------------------|
+| results        | array[object]  | Please refer to the retrieve_bk_plugin API return |

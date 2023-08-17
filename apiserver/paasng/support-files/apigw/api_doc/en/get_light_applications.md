@@ -1,19 +1,22 @@
-### Resource Description
+### Feature Description
+Get light application information, for management-side APP use only.
 
-Obtain light app information, which is only used by the management side app.
+### Request Parameters
 
-### Authentication mode
+#### 1. Path Parameters:
+None.
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 2. Interface Parameters:
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| app_code       | string         | Yes      | Light Application APP Code |
 
-### Input parameter Description
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/light-applications
+```
 
-| Field | Type | Required | Description |
-| -------- | -------- | ---- | ----------------- |
-| app_code | string   | yes | APP Code for light apps|
-
-### Return result
-
+### Response Result Example
 ```json
 {
   "bk_error_msg": "",
@@ -22,7 +25,7 @@ Use Bearer method for authentication. Please apply to the administrator for spec
     "app_code": "demo-0727-001_ps",
     "app_name": "demo-0727-001_ps",
     "app_url": "http://app.demo.com",
-    "introduction": "Test App",
+    "introduction": "Test application",
     "creator": "admin",
     "logo": "http://demo.com/app-logo/o_demo-0727-001_ps.png",
     "developers": [
@@ -33,15 +36,14 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 }
 ```
 
-### Return result description
-
-| Name         | Type   | Description              |
-| ------------ | ------ | ----------------- |
-| app_code     |  string |APP Code for light apps|
-| app_name     |  string |Name of light app      |
-| app_url      |  string |App link          |
-| introduction | string |App introduction          |
-| creator      |  string |Creator            |
-| logo         |  string |Icon address          |
-| developers   |  array  |List of developers        |
-| state        |  int    | App status          |
+### Response Result Parameter Description
+| Name          | Type   | Description         |
+| ------------- | ------ | ------------------- |
+| app_code      | string | Light Application APP Code |
+| app_name      | string | Light Application Name |
+| app_url       | string | Application Link |
+| introduction  | string | Application Introduction |
+| creator       | string | Creator |
+| logo          | string | Icon URL |
+| developers    | array  | Developer List |
+| state         | int    | Application Status |

@@ -1,110 +1,66 @@
-### 描述
+### 功能描述
 
-查询应用标准输出日志
+查询应用标准输出日志。
 
-### 输入参数
+### 请求参数
 
-| 参数名称 | 参数位置 | 类型 | 必选 | 描述 |
-|------|--------|------| :------: |-------------|
-| end_time | `query` | string |  |  |
-| log_type | `query` | string |  |  |
-| scroll_id | `query` | string |  |  |
-| start_time | `query` | string |  |  |
-| time_range | `query` | string | 是 |  |
-| data | `body` | SearchStandardLogWithPostBody | 是 |  |
+#### 1、路径参数：
 
-### 所有响应
-| 状态码 | 状态 | 描述 |
-|------|--------|-------------|
-| 200 | OK | 查询成功 |
+| 参数名称 | 参数类型 | 必须 | 参数说明 |
+| -------- | -------- | ---- | -------- |
+| app_code | string   | 是   | 应用 ID，如 "monitor" |
+| module   | string   | 是   | 模块名称，如 "default" |
 
-### 响应
+#### 2、接口参数：
 
-#### 200 - 查询成功
-Status: OK
+| 参数名称     | 参数位置 | 类型                              | 是否必填 | 描述 |
+| ------------ | -------- | --------------------------------- | -------- | ---- |
+| end_time     | `query`  | string                            | 否       |      |
+| log_type     | `query`  | string                            | 否       |      |
+| scroll_id    | `query`  | string                            | 否       |      |
+| start_time   | `query`  | string                            | 否       |      |
+| time_range   | `query`  | string                            | 是       |      |
+| data         | `body`   | SearchStandardLogWithPostBody     | 是       |      |
 
-##### Schema
+data
+| 字段   | 类型                              | 是否必填 | 描述 |
+| ------ | --------------------------------- | -------- | ---- |
+| query  | SearchStandardLogWithPostParamsBodyQuery | 是       |      |
+| sort   | interface{}                       | 否       | 排序，例如：{'response_time': 'desc', 'other': 'asc'} |
 
-SearchStandardLogWithPostOKBody
+### 请求示例
 
-##### 内联模型
+```bash
+curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/log/standard_output/list/?time_range=1h'
+```
 
-**SearchStandardLogWithPostBody**
+### 返回结果示例
 
+```json
+{
+  "code": 200,
+  "data": {
+    "logs": [
+      {
+        "environment": "prod",
+        "message": "log message",
+        "pod_name": "app-1",
+        "process_id": "123",
+        "timestamp": "2021-01-01T00:00:00Z"
+      }
+    ],
+    "scroll_id": "scroll_id",
+    "total": 1
+  }
+}
+```
 
-> 简化的 dsl 结构
+### 返回结果参数说明
 
-
-
-**Properties**
-
-| 名称 | 类型 | 必选 | 描述 | 示例 |
-|------|------|:--------:|-------------|---------|
-| query | SearchStandardLogWithPostParamsBodyQuery| 是 |  |  |
-| sort | interface{}|  | 排序，e.g. {'response_time': 'desc', 'other': 'asc'} |  |
-
-
-
-**SearchStandardLogWithPostOKBody**
-
-
-
-**Properties**
-
-| 名称 | 类型 | 必选 | 描述 | 示例 |
-|------|------|:--------:|-------------|---------|
-| code | integer|  | 状态码 |  |
-| data | SearchStandardLogWithPostOKBodyData|  |  |  |
-
-
-
-**SearchStandardLogWithPostOKBodyData**
-
-
-> 返回内容
-
-
-
-**Properties**
-
-| 名称 | 类型 | 必选 | 描述 | 示例 |
-|------|------|:--------:|-------------|---------|
-| logs | []SearchStandardLogWithPostOKBodyDataLogsItems0|  |  |  |
-| scroll_id | string|  | ES 分页查询用的 scroll_id |  |
-| total | integer|  | 日志数量 |  |
-
-
-
-**SearchStandardLogWithPostOKBodyDataLogsItems0**
-
-
-
-**Properties**
-
-| 名称 | 类型 | 必选 | 描述 | 示例 |
-|------|------|:--------:|-------------|---------|
-| environment | string|  | 部署环境 |  |
-| message | string|  | 日志内容 |  |
-| pod_name | string|  | 实例名 |  |
-| process_id | string|  | 应用进程 |  |
-| timestamp | string|  | 日志时间戳 |  |
-
-
-
-**SearchStandardLogWithPostParamsBodyQuery**
-
-
-> 简化的 dsl-query 结构
-目前只支持: query_string/terms 两种查询方式
-query_string: 使用 ES 的 query_string 搜索
-terms: 精准匹配(根据 field 过滤 的场景)
-
-
-
-**Properties**
-
-| 名称 | 类型 | 必选 | 描述 | 示例 |
-|------|------|:--------:|-------------|---------|
-| exclude | map of[]string|  | terms取反, 非标准 DSL |  |
-| query_string | string|  | 使用 `query_string` 语法进行搜索 |  |
-| terms | map of[]string|  | 多值精准匹配 |  |
+| 字段          | 类型                                            | 是否必填 | 描述       |
+| ------------- | ----------------------------------------------- | -------- | ---------- |
+| code          | integer                                         | 是       | 状态码     |
+| data          | SearchStandardLogWithPostOKBodyData             | 是       | 返回数据   |
+| data.logs     | []SearchStandardLogWithPostOKBodyDataLogsItems0 | 是       | 日志列表   |
+| data.scroll_id | string                                          | 是       | ES 分页查询用的 scroll_id |
+| data.total    | integer                                         | 是       | 日志数量   |

@@ -1,15 +1,9 @@
-### 资源描述
+### 功能描述
+查询指定时间区间内，应用按照用户维度分组聚合的访问数据。
 
-查询该时间区间内, 应用按照用户维度分组聚合的访问数据
+### 请求参数
 
-### 输入参数说明
-
-|   参数名称   |    参数类型  |  必须  |     参数说明     |
-| ------------ | ------------ | ------ | ---------------- |
-| app_code   | string | 是 | 应用ID(app id)，可以通过 蓝鲸开发者中心 -> 应用基本设置 -> 基本信息 -> 鉴权信息 获取 |
-| app_secret | string | 否 | 安全秘钥(app secret)，可以通过 蓝鲸开发者中心 -> 应用基本设置 -> 基本信息 -> 鉴权信息 获取 |
-
-### 路径参数
+#### 1、路径参数：
 
 |   参数名称   |    参数类型  |  必须  |     参数说明     |
 | ------------ | ------------ | ------ | ---------------- |
@@ -18,7 +12,7 @@
 | env   | string | 是 | 环境名，如 "stag"、"prod" |
 | source_type   | string | 是 | 访问值来源，可选值 "ingress"（访问日志统计）, "user_tracker"（网站访问统计） |
 
-### 参数说明
+#### 2、接口参数：
 
 |   参数名称   |    参数类型  |  必须  |     参数说明     |
 | ------------ | ------------ | ------ | ---------------- |
@@ -28,15 +22,12 @@
 | offset  | int | 否 | 分页参数，默认为 0 |
 | limit   | int | 否 | 分页参数，默认为 30，最大 100 |
 
-### 调用示例
-
+### 请求示例
 ```bash
 curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/user?start_time={start_time}&end_time={end_time}&ordering=-pv
 ```
 
-
-### 返回结果
-
+### 返回结果示例
 ```javascirpt
 {
   "meta": {
@@ -90,3 +81,25 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
   ]
 }
 ```
+
+### 返回结果参数说明
+
+| 字段 |   类型 |  描述 |
+| ------ | ------ | ------ |
+| meta | object | 元数据信息 |
+| meta.schemas | object | 字段类型信息 |
+| meta.schemas.resource_type | object | 资源类型信息 |
+| meta.schemas.resource_type.name | string | 资源类型名称 |
+| meta.schemas.resource_type.display_name | string | 资源类型显示名称 |
+| meta.schemas.values_type | array | 值类型信息 |
+| meta.schemas.values_type[].name | string | 值类型名称 |
+| meta.schemas.values_type[].display_name | string | 值类型显示名称 |
+| meta.schemas.values_type[].sortable | bool | 是否可排序 |
+| meta.pagination | object | 分页信息 |
+| meta.pagination.total | int | 总记录数 |
+| resources | array | 资源列表 |
+| resources[].name | string | 用户名 |
+| resources[].values | object | 用户相关信息 |
+| resources[].values.dept | string | 部门信息 |
+| resources[].values.pv | int | 访问数 |
+| resources[].display_options | object | 显示选项（暂无） |

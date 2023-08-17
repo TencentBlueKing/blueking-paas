@@ -1,18 +1,29 @@
-### 资源描述
+### 功能描述
 查询部署任务结果
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 调用示例
+#### 1、路径参数：
+
+|   参数名称   |    参数类型  |  必须  |     参数说明     |
+| ------------ | ------------ | ------ | ---------------- |
+| app_code   | string | 是 | 应用 ID |
+| module   | string | 是 | 模块名称 |
+| deployment_id | string | 是 | 部署任务 ID |
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
 ```bash
 curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/deployments/{deployment_id}/result/
 ```
 
-### 请求参数说明
-<table class="parameters"><thead><tr><th class="col_header parameters-col_name">Name</th><th class="col_header parameters-col_description">Description</th></tr></thead><tbody><tr data-param-name="code" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 4907 -->app_code<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 4910 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 4913 -->(<!-- /react-text --><!-- react-text: 4914 -->path<!-- /react-text --><!-- react-text: 4915 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="code" disabled="" value=""></td></tr><tr data-param-name="module_name" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 4921 -->module<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 4924 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 4927 -->(<!-- /react-text --><!-- react-text: 4928 -->path<!-- /react-text --><!-- react-text: 4929 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="module_name" disabled="" value=""></td></tr><tr data-param-name="uuid" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 4935 -->deployment_id<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 4938 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 4941 -->(<!-- /react-text --><!-- react-text: 4942 -->path<!-- /react-text --><!-- react-text: 4943 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="uuid" disabled="" value=""></td></tr></tbody></table>
+#### 获取你的 access_token
 
-### 返回结果
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### 返回结果示例
 ```json
 {
 	"status": "failed",
@@ -32,10 +43,13 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
 }
 ```
 
-### 返回结果说明
-<table class="model"><tbody><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 4990 -->status<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 4998 -->title<!-- /react-text --><!-- react-text: 4999 -->: <!-- /react-text --><!-- react-text: 5000 -->Status<!-- /react-text --></span><div class="markdown"><p>部署状态</p>
-</div><span class="prop-enum"><!-- react-text: 5003 -->Enum:<!-- /react-text --><br><span class=""><span style="cursor: pointer;"><span class="model-toggle collapsed"></span></span><span><!-- react-text: 5009 -->Array [ <!-- /react-text --><!-- react-text: 5010 -->3<!-- /react-text --><!-- react-text: 5011 --> ]<!-- /react-text --></span></span></span></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5014 -->logs<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5022 -->title<!-- /react-text --><!-- react-text: 5023 -->: <!-- /react-text --><!-- react-text: 5024 -->Logs<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5027 -->minLength<!-- /react-text --><!-- react-text: 5028 -->: <!-- /react-text --><!-- react-text: 5029 -->1<!-- /react-text --></span><div class="markdown"><p>部署日志, 纯文本</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5033 -->error_detail<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5041 -->title<!-- /react-text --><!-- react-text: 5042 -->: <!-- /react-text --><!-- react-text: 5043 -->Error detail<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5046 -->minLength<!-- /react-text --><!-- react-text: 5047 -->: <!-- /react-text --><!-- react-text: 5048 -->1<!-- /react-text --></span><div class="markdown"><p>错误详情</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5052 -->error_tips<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class=""><span class="inner-object"><table class="model"><tbody><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5071 -->matched_solutions_found<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">boolean</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5079 -->title<!-- /react-text --><!-- react-text: 5080 -->: <!-- /react-text --><!-- react-text: 5081 -->Matched solutions found<!-- /react-text --></span><div class="markdown"><p>是否有匹配的 tips</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5085 -->possible_reason<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5093 -->title<!-- /react-text --><!-- react-text: 5094 -->: <!-- /react-text --><!-- react-text: 5095 -->Possible reason<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5098 -->minLength<!-- /react-text --><!-- react-text: 5099 -->: <!-- /react-text --><!-- react-text: 5100 -->1<!-- /react-text --></span><div class="markdown"><p>可能导致部署错误的原因</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5104 -->helpers<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class=""><span class="brace-open object">{</span><span class="inner-object"><table class="model"><tbody><tr>&nbsp;</tr><tr><td>&lt; * &gt;:</td><td><span class="model"><span class="prop"><span class="prop-type">string</span></span></span></td></tr></tbody></table></span><span class="brace-close">}</span></span></span></td></tr><tr>&nbsp;</tr></tbody></table></span></span></span></td></tr><tr>&nbsp;</tr></tbody></table>
+### 返回结果参数说明
+
+| 字段 |   类型 |  是否必填 | 描述 |
+| ------ | ------ | ------ | ------ |
+| status | string | 是 | 部署状态 |
+| logs | string | 是 | 部署日志, 纯文本 |
+| error_detail | string | 是 | 错误详情 |
+| error_tips.matched_solutions_found | boolean | 是 | 是否有匹配的 tips |
+| error_tips.possible_reason | string | 是 | 可能导致部署错误的原因 |
+| error_tips.helpers | object | 是 | 辅助信息，包含文本和链接 |

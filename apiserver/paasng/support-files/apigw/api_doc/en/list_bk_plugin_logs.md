@@ -1,25 +1,25 @@
-### Resource Description
+### Feature Description
+Query the logs of a "BlueKing Plugin" type application for internal system use only. This interface defaults to searching all logs within the last 14 days, returning 200 logs each time, and does not support customization.
 
-Query logs for a blue whale plug-in type app for internal system use only.
+### Request Parameters
 
-The interface retrieves all logs within the last 14 days by default, returning 200 logs at a time, and does not support customization for the time being.
+#### 1. Path Parameters:
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| code           | string         | No       | Positional parameter, the code of the plugin to be queried |
 
-### Authentication mode
+#### 2. Interface Parameters:
+| Field     | Type   | Required | Description                                  |
+| --------- | ------ | -------- | -------------------------------------------- |
+| scroll_id | string | No       | Identifier field for scroll pagination       |
+| trace_id  | string | Yes      | `trace_id` identifier for filtering logs     |
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/appid1/logs/?trace_id=1111'
+```
 
-### Input parameter Description
-
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-| private_token | string      | no  | Token allocated by PaaS platform, which must be provided when the app identity of the requester is not authenticated by PaaS platform |
-| code | string |no| Location parameter, code of plug-in to be queried|
-| scroll_id | string |no| Identification field for scrolling through pages|
-| trace_id | string |yes| Identifier used to filter logs`trace_id`|
-
-
-### Return result
-
+### Response Result Example
 ```javascript
 {
     "scroll_id": "FGluY2x1Z...",
@@ -48,26 +48,20 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
+| Parameter Name | Parameter Type | Parameter Description                          |
+| -------------- | -------------- | ---------------------------------------------- |
+| scroll_id      | str            | Pagination identifier, pass this value to get the next page |
+| logs           | list[objects]  | List of log objects, sorted by creation time from newest to oldest |
+| total          | int            | Total number of logs                           |
 
+`logs` object field description:
 
-|   Field   | Type |           Description  |
-| ------------ | ---------- | ------------------------------ |
-|  scroll_id | str |Page turning identification field, which is passed in when obtaining the next page|
-|  logs |list [objects] |List of log objects, sorted by creation time from new to old|
-|  total | int |Total logs|
+| Parameter Name | Parameter Type | Parameter Description                          |
+| -------------- | -------------- | ---------------------------------------------- |
+| plugin_code    | str            | Plugin identifier                             |
+| environment    | str            | Deployment environment where the log was generated, `stag` -> Pre-release environment, `prod` -> Production environment |
+| message        | str            | Log message                                   |
+| detail         | object         | Structured log details                         |
 
-Note:
-
-- page`logs` turning should be stopped when empty in response
-
-`logs` Description of internal object fields:
-
-|   Field   | Type |           Description  |
-| ------------ | ---------- | ------------------------------ |
-|  plugin_code | str |Plug-in identifier|
-|  environment | str |Deployment environment that generates logs,`stag` pre-release environment`prod`, production environment|
-|  message | str |Log information|
-|  detail | object |Structured log details|
-
-**note**:`detail.json.trace_id` in the field, there is a highlight [bk highlight mark] ... [/bk front mark front] mark character, if required for front-end display `please handle it properly.
+**Note**: In the `detail.json.trace_id` field, there are `[bk-mark]...[/bk-mark]` marker characters for highlighting fields. If used for frontend display, please handle them properly.

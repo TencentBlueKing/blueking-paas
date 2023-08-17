@@ -1,26 +1,32 @@
-### Resource Description
-A brief description of the registered resource
+### Feature Description
+A simple description of resource registration
 
-### Input parameter Description
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-| app_code   |  string |yes| App ID (app id), you can get it from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
-| app_secret | string |no| The security key (app secret) can be obtained from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
+### Request Parameters
 
-### Call example
+#### 1. Path Parameters:
+None.
+
+#### 2. Interface Parameters:
+
+| Parameter Name | Parameter Type | Required | Parameter Description                                                                                       |
+| -------------- | -------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| app_code       | string         | Yes      | Application ID (app id), can be obtained from Blueking Developer Center -> Application Basic Settings -> Basic Information -> Authentication Information |
+| app_secret     | string         | No       | Security secret (app secret), can be obtained from Blueking Developer Center -> Application Basic Settings -> Basic Information -> Authentication Information |
+
+### Request Example
 ```python
 from bkapigw.paasv3.shortcuts import get_client_by_request
 client = get_client_by_request(request)
-# Fill Parameters
+# Fill in parameters
 kwargs = {
 
 }
 result = client.api.api_test(kwargs)
 ```
 
-### Return result
+### Response Result Example
 ```json
-# Internal version
+# Internal Edition
 {
     "credentials": {
         "GCS_MYSQL_HOST": "--",
@@ -31,7 +37,7 @@ result = client.api.api_test(kwargs)
     }
 }
 
-# Enterprise version
+# Enterprise Edition
 {
     "credentials": {
         "MYSQL_HOST": "--",
@@ -42,15 +48,28 @@ result = client.api.api_test(kwargs)
     }
 }
 
-# Failure to return
+# Failure Return
 {
     "code": "CANNOT_READ_INSTANCE_INFO",
-    "detail": "Failed to read Enhanced Service Instance information: No valid configuration information could be retrieved."
+    "detail": "Failed to read enhanced service instance information: Unable to obtain valid configuration information."
 }
 
 ```
 
-### Return result description
-|   Field   | Type |           Description  |
-| ------------ | ---------- | ------------------------------ |
-|              |            |                                |
+### Response Result Parameter Description
+
+| Parameter Name    | Parameter Type | Parameter Description         |
+| ----------------- | -------------- | ------------------------------ |
+| credentials       | dict           | Database connection information|
+| GCS_MYSQL_HOST    | string         | Database host address          |
+| GCS_MYSQL_PORT    | int            | Database port                  |
+| GCS_MYSQL_NAME    | string         | Database name                  |
+| GCS_MYSQL_USER    | string         | Database username              |
+| GCS_MYSQL_PASSWORD| string         | Database password              |
+| MYSQL_HOST        | string         | Database host address (Enterprise Edition) |
+| MYSQL_PORT        | int            | Database port (Enterprise Edition) |
+| MYSQL_NAME        | string         | Database name (Enterprise Edition) |
+| MYSQL_USER        | string         | Database username (Enterprise Edition) |
+| MYSQL_PASSWORD    | string         | Database password (Enterprise Edition) |
+| code              | string         | Error code                     |
+| detail            | string         | Error details                  |

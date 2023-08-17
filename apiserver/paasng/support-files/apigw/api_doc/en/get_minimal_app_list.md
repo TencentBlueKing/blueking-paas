@@ -1,15 +1,24 @@
-### Resource Description
-Get App concise information
+### Feature Description
+Get brief information of the App
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Call example
+#### 1. Path Parameters:
+None
+
+#### 2. Interface Parameters:
+None
+
+### Request Example
+
+#### Get your access_token
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/lists/minimal
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/lists/minimal
 ```
 
-### Return result
+### Response Result Example
 ```json
 {
     "count": 2,
@@ -35,3 +44,28 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
 	]
 }
 ```
+
+### Response Result Parameter Description
+
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| count | int | Number of Apps |
+| results | list | List of App information |
+
+results
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| application | dict | App information |
+| product | dict | Product information |
+
+application
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| id | string | App ID |
+| code | string | App code |
+| name | string | App name |
+
+product
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| name | string | Product name |

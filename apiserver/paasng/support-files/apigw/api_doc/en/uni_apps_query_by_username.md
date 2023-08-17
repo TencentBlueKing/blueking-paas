@@ -1,25 +1,29 @@
-### Resource Description
+### Feature Description
+Query the list of applications that the specified user has permission to access, for internal system use only.
 
-Query the list of applications that the specified user has permission, which is only used by internal system
+### Request Parameters
 
-### Authentication mode
+#### 1. Path Parameters:
+None
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 2. Interface Parameters:
+| Parameter Name | Type | Required | Description |
+| -------------- | ---- | -------- | ----------- |
+| username       | string | Yes | Username |
 
-### Input parameter Description
-| Field | Type | Required | Description                |
-|---------------|--------------|-----|--------------------------------|
-| private_token | string       | no | Token allocated by PaaS platform, which must be provided when the app identity of requester is not authenticated by PaaS platform |
-| username      | string | yes   | username |
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/uni_applications/query/by_username/?username=admin
+```
 
-### Return result
-
+### Response Result Example
 ```javascript
 [
     {
         "source": 1,
         "name": "Batman",
         "code": "batman",
+        "region": "default",
         "logo_url": "http://example.com/app-logo/blueking_app_default.png",
         "developers": [
             "username",
@@ -30,6 +34,16 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 ]
 ```
 
-### Return result description
+### Response Result Parameter Description
+| Parameter Name | Type | Description |
+| -------------- | ---- | ----------- |
+| source         | int  | Source      |
+| name           | string | Application Name |
+| code           | string | Application Code |
+| region         | string | Region      |
+| logo_url       | string | Application Logo URL |
+| developers     | list | Developer List |
+| creator        | string | Creator     |
+| created        | string | Creation Time |
 
-- Archived apps do not return
+**Note: Applications that have been removed from the shelves will not be returned**

@@ -1,28 +1,33 @@
-### Resource Description
-Internal interface, to one applicant (usually to the developer), and to apply for platform access rights of Tencent version and access rights of multiple applications at the same time. Currently, only applications on v3 platform are supported.
+### Feature Description
+Internal interface for granting a requester (usually a developer) access to the Tencent platform and multiple applications at the same time. Currently, only v3 platform applications are supported.
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Input parameter Description
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-| applicant_account   |  string |yes| Account number of permission applicant, which should be qq number|
-| name | string |yes| Name of permission applicant|
-| phone | string |yes| Cell phone number|
-| email | string |yes| Email address|
-| company | string |yes| Applicant's company|
-| business | string |yes| Business|
-| reason | string |yes| Reason for application|
-| app_code_list | Array of strings | yes      | List of App IDs requesting access|
+#### 1. Path Parameters:
+None.
 
+#### 2. Interface Parameters:
 
-### Call example
+| Parameter Name     | Parameter Type   | Required | Parameter Description        |
+| ------------------ | ---------------- | -------- | ---------------------------- |
+| applicant_account  | string           | Yes      | Requester's account, should be QQ number |
+| name               | string           | Yes      | Requester's name             |
+| phone              | string           | Yes      | Phone number                 |
+| email              | string           | Yes      | Email address                |
+| company            | string           | Yes      | Requester's company          |
+| business           | string           | Yes      | Related business             |
+| reason             | string           | Yes      | Reason for application        |
+| app_code_list      | Array of strings | Yes      | List of application IDs to be accessed |
+
+### Get Your Access Token
+Before calling the interface, please get your access_token first. For detailed guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token).
+
+### Request Example
 ```python
 import json
 import requests
 
-# Filling parameters
+# Fill in parameters
 data = {
   "applicant_account": "--",
   "name": "--",
@@ -45,14 +50,14 @@ headers = {'X-BKAPI-AUTHORIZATION': json.dumps(AUTHORIZATION)}
 res = requests.post(url, headers=headers, json=data)
 ```
 
-### Return result
+### Response Result Example
 ```python
 ret = res.json()
 ret == [{
     "application": null,
     "status": "processing",
-    "contacts": "BlueKing Assistant",
-    "reason": "Platform permissions need to be manually reviewed"
+    "contacts": "Blue Whale Assistant",
+    "reason": "Platform permissions require manual review"
 }, {
     "application": {
         "id": "--",
@@ -61,7 +66,7 @@ ret == [{
     },
     "status": "pass",
     "contacts": "rtx",
-    "reason": "The bill drawer has the operational authority to apply, and the bill is automatically passed"
+    "reason": "The submitter has the operation permission of the application, and the document is automatically approved"
 }, {
     "application": {
         "id": "--",
@@ -70,26 +75,26 @@ ret == [{
     },
     "status": "processing",
     "contacts": "rtx",
-    "reason": "The withdrawer does not have permission to operate the application, and needs to contact the developer of the application for review"
+    "reason": "The submitter does not have the operation permission of the application and needs to contact the developer of the application for review"
 }, {
     "application": null,
     "status": "reject",
     "contacts": "rtx",
-    "reason": "App does not exist"
+    "reason": "Application does not exist"
 }]
 ```
 
-### Return result description
-| Field | Type | Description                                |
-|-------------|----------|----------------------------------------------------|
-| application | Object   | The application for access is Null when applying for platform permission or when the application does not exist|
-| status      |  string   | Enum: processing pass reject doc execution status     Processing: to be approved; PaaS: approved; Reject: reject    |
-| contacts    |  string   | Contacts, separated by commas                                 |
-| reason      |  string   | Cause                                               |
+### Response Result Parameter Description
+| Parameter Name | Parameter Type | Parameter Description                                           |
+| -------------- | -------------- | --------------------------------------------------------------- |
+| application    | Object         | Application to be accessed, Null when applying for platform permissions or when the application does not exist |
+| status         | string         | Enum: "processing" "pass" "reject" Document execution status: processing: Pending review; pass: Approved; reject: Rejected |
+| contacts       | string         | Contacts, separated by commas                                   |
+| reason         | string         | Reason                                                          |
 
-
-| Object annotation      | Field | Type                                       | Description |
-|-------------|----------|----------------------------------------------------|--------------------|
-| application | id       |  UUID                                               | Apply unique ID (UUID)|
-|             | code     | string                                             | App id(code)    |
-|             | name     | string                                             | App name    |
+#### application
+| Parameter Name | Parameter Type | Parameter Description |
+| -------------- | -------------- | --------------------- |
+| id             | UUID           | Application unique identifier (UUID) |
+| code           | string         | Application ID (code) |
+| name           | string         | Application name      |

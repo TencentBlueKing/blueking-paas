@@ -1,20 +1,26 @@
-### Resource Description
-Upload source code package to platform
+### Feature Description
+Upload source code package to the platform
+
+### Request Parameters
+
+#### 1. Path Parameters:
+
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| code           | string         | Yes      | Code                  |
+| module_name    | string         | Yes      | Module name           |
+
+#### 2. Interface Parameters:
+
+| Field           | Type    | Required | Description                          |
+| --------------- | ------- | -------- | ------------------------------------ |
+| package         | file    | Yes      | Source code package file             |
+| allow_overwrite | boolean | No       | Whether to allow overwriting existing source code package |
 
 ### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### Request parameter Description
-
-| Name                                                         | Description                                                  |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| package  * <br/>file <br/>(formdata)                         | source package file                                          |
-| Allow_overwrite <br/>boolean <br/>(formdata) <br/>x exclusive nullable: true | whether to allow overwriting of original source code packets |
-| code *<br/>string<br/>(path)                                 | code                                                         |
-| module_name *<br/>string<br/>(path)                          | module_name                                                  |
-
-
-### Return result
+### Return Result Example
 ```json
 {
   "version": "v1",
@@ -26,12 +32,13 @@ Before calling the interface, please obtain your access_token. For specific inst
 }
 ```
 
-### Return result description
+### Return Result Parameter Description
 
-| version*          | string<br/>title: Version<br/>minLength: 1<br/><br/>版本信息 |
-| ----------------- | ------------------------------------------------------------ |
-| package_name*     | string<br/>title: Package name<br/>minLength: 1<br/><br/>源码包名称 |
-| package_size      | string<br/>title: Package size<br/>minLength: 1<br/><br/>源码包大小 |
-| sha256_signature* | string<br/>title: Sha256 signature<br/>minLength: 1<br/><br/>sha256数字签名 |
-| updated*          | string($date-time)<br/>title: Updated<br/><br/>更新时间      |
-| created*          | string($date-time)<br/>title: Created<br/><br/>创建时间      |
+| Field           | Type   | Description       |
+| --------------- | ------ | ----------------- |
+| version         | string | Version information |
+| package_name    | string | Source code package name |
+| package_size    | string | Source code package size |
+| sha256_signature | string | sha256 digital signature |
+| updated         | string | Update time       |
+| created         | string | Creation time     |

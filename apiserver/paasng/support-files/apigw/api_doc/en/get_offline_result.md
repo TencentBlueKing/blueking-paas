@@ -1,24 +1,30 @@
-### Resource Description
-Query off-shelf task result
+### Function Description
+Query the result of the offline task
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Path interface description
+#### 1. Path Parameters:
 
-|   Field   | Type | Required |     Description     |
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-|   app_code   |   string     |   yes   | App ID    |
-|   module |   string     |   yes   | Module name, such as "default"|
-|   offline_operation_id | string |yes| UUID of the off-shelf task|
+| app_code   | string | Yes | Application ID |
+| module   | string | Yes | Module name, such as "default" |
+| offline_operation_id | string | Yes | UUID of the offline task |
 
-### Call example
+#### 2. Interface Parameters:
+None.
 
+
+### Request Example
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{Fill in your AccessToken}}/modules/{{Fill in your module name}}/envs/{Fill in the App deployment environment:stag or prod}/offlines/{{offline_operation_id}}/result/
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{Fill in your AppCode}}/modules/{{Fill in your module name}}/envs/{Fill in App deployment environment:stag or prod}/offlines/{{offline_operation_id}}/result/
 ```
 
-### Return result
+#### Get your access_token
+
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### Response Result Example
 ```json
 {
     "status": "str",
@@ -27,10 +33,10 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessT
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| status       | string <br/>example: failed<br/>offline task status (successful, pending, or failed) |
-| ------------ | ------------------------------------------------------------ |
-| error_detail | string <br/>example: failed<br/>error message                |
-| logs         | string <br/>example: Starting stop`web` process<br/>offline log |
-
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| status | string | Yes | Offline task status (successful, pending, or failed) |
+| error_detail | string | Yes | Error information |
+| logs | string | Yes | Offline log |

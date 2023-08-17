@@ -1,34 +1,34 @@
-### Resource Description
+### Feature Description
+Query standard output logs
 
-查询标准输出日志
+### Request Parameters
 
-### Authentication mode
+#### 1. Path Parameters:
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
-
-### Path parameter
-
-|   Field   |    Type  |  Required  |     Description     |
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-|   app_code   |   string     |   yes   |  App ID, e.g. "Monitor"   |
-|   module |   string     |   yes   |   Module name, such as "default" |
+| app_code   | string | Yes | Application ID |
+| module   | string | Yes | Module name, such as "default" |
 
-### Input parameter Description
-| Field              | Type | Required | Description      |
+#### 2. Interface Parameters:
+
+| Parameter Name              | Parameter Type | Required | Parameter Description                                                             |
 |-----------------------|----------|-----|------------------------------------------------------------------|
-| private_token | string      | no   | Token allocated by PaaS platform, which must be provided when the app identity of the requester is not authenticated by PaaS platform|
-| log_type              | string   | yes   | Log type, optional values: "STRUCTURED" "STANDARD_OUTPUT" "INGRESS", default value: "STRUCTURED" |
-| time_range            | string   | yes   | Time range, optional values: "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "customized" |
-| start_time            | string   | no   | Required when time_range is "customized"                                |
-| end_time              | string   | no  | Required when time_range is "customized"               |
-| page              | int   | yes   | >=1              |
-| page_size              | int   | yes   | >=1               |
+| log_type              | string   | Yes   | Log type, optional values: "STRUCTURED" "STANDARD_OUTPUT" "INGRESS", default value: "STRUCTURED" |
+| time_range            | string   | Yes   | Time range, optional values: "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "customized" |
+| start_time            | string   | No   | Required when time_range is "customized"                                |
+| end_time              | string   | No   | Required when time_range is "customized"                |
+| page              | int   | Yes   | Integer greater than 0               |
+| page_size              | int   | Yes   | Integer greater than 0                |
 
-**Tips**: The log query parameters are consistent with the ES query syntax, please refer to:https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
+**Note**: The log query parameters are consistent with the ES query syntax, please refer to: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
 
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{app_code}/modules/{module}/log/structured/list/?time_range=1h'
+```
 
-### Return result
-
+### Response Result Example
 ```javascript
 {
     "code": 0,
@@ -61,3 +61,23 @@ Use Bearer method for authentication. Please apply to the administrator for spec
     }
 }
 ```
+
+### Response Result Parameter Description
+
+| Field |   Type |  Description |
+| ------ | ------ | ------ |
+| code | int | Return code, 0 means success |
+| data | dict | Return data |
+| data.page | dict | Pagination information |
+| data.page.page | int | Current page number |
+| data.page.page_size | int | Number of items per page |
+| data.page.total | int | Total number of records |
+| data.logs | list | Log list |
+| data.logs.region | string | Region |
+| data.logs.app_code | string | Application ID |
+| data.logs.environment | string | Environment |
+| data.logs.process_id | string | Process ID |
+| data.logs.stream | string | Stream |
+| data.logs.message | string | Message |
+| data.logs.detail | dict | Detailed information |
+| data.logs.ts | string | Timestamp |

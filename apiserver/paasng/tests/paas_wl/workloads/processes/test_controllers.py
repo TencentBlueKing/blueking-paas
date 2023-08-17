@@ -93,7 +93,7 @@ def test_list_processes(bk_stag_env, wl_app, wl_release, mock_reader):
 
 def test_list_processes_boundary_case(bk_stag_env, wl_app, wl_release, mock_reader):
     mock_reader.set_processes(
-        # worker 没有实例, 也会被忽略
+        # worker 没有实例, 不会被忽略
         # beat 未定义在 Procfile, 会被忽略
         [
             make_process(wl_app, "web"),
@@ -105,7 +105,8 @@ def test_list_processes_boundary_case(bk_stag_env, wl_app, wl_release, mock_read
 
     web_proc = make_process(wl_app, "web")
     web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
-    assert list_processes(bk_stag_env).processes == [web_proc]
+    worker_proc = make_process(wl_app, "worker")
+    assert list_processes(bk_stag_env).processes == [web_proc, worker_proc]
 
 
 def test_list_processes_without_release(bk_stag_env, wl_app, wl_release, mock_reader):

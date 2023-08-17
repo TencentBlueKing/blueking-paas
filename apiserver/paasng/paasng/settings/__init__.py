@@ -91,7 +91,6 @@ SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 
 # 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
 BK_CRYPTO_TYPE = settings.get('BK_CRYPTO_TYPE', 'CLASSIC')
-# FernetCipher' 对应 'CLASSIC','SM4CTR' 对应 'SHANGMI'
 ENCRYPT_CIPHER_TYPE = 'SM4CTR' if BK_CRYPTO_TYPE == 'SHANGMI' else 'FernetCipher'
 
 DEBUG = settings.get('DEBUG', False)

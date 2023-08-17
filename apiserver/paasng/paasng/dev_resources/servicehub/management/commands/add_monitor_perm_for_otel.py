@@ -41,12 +41,19 @@ class Command(BaseCommand):
         service_instances = mixed_service_mgr.get_provisioned_queryset(service, application_ids)
         for ins in service_instances:
             application = ins.module.application
-            print(f"app_code: {application.code}, module:{ins.module.name} start adding permissions.")
+            self.stdout.write(
+                self.style.NOTICE(f"app_code: {application.code}, module:{ins.module.name} start adding permissions.")
+            )
             if dry_run:
                 continue
 
             # 查询应用对应的空间ID
             cli = make_bk_monitor_client()
             space_detail = cli.get_space_detail(application.code)
-            add_monitoring_space_permission.delay(application.code, application.name, space_detail.bk_space_id)
-            print(f"app_code: {application.code}, module:{ins.module.name} add permissions successfully.")
+            # 脚本操作，这里不用跑后台任务，直接等待权限全部添加完成
+            add_monitoring_space_permission(application.code, application.name, space_detail.bk_space_id)
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"app_code: {application.code}, module:{ins.module.name} add permissions successfully."
+                )
+            )

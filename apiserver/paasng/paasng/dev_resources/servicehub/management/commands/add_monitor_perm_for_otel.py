@@ -50,7 +50,7 @@ class Command(BaseCommand):
             # 查询应用对应的空间ID
             cli = make_bk_monitor_client()
             space_detail = cli.get_space_detail(application.code)
-            # 脚本操作，这里不用跑后台任务，直接等待权限全部添加完成
+            # 同步执行添加监控日志平台应用空间权限的操作
             add_monitoring_space_permission(application.code, application.name, space_detail.bk_space_id)
             self.stdout.write(
                 self.style.SUCCESS(

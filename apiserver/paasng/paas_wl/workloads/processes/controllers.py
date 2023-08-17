@@ -331,10 +331,6 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
     procs_in_k8s = process_kmodel.list_by_app_with_meta(wl_app)
     insts_in_k8s = instance_kmodel.list_by_app_with_meta(wl_app)
     for process in procs_in_k8s.items:
-        if process.type not in procfile:
-            logger.warning("Process %s is undefined in procfile", process.type)
-            continue
-
         process.instances = [inst for inst in insts_in_k8s.items if inst.process_type == process.type]
         processes.append(process)
 

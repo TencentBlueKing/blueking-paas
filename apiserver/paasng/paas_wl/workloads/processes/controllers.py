@@ -336,9 +336,6 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
             continue
 
         process.instances = [inst for inst in insts_in_k8s.items if inst.process_type == process.type]
-        if len(process.instances) == 0:
-            logger.debug("Process %s have no instances", process.type)
-            continue
         processes.append(process)
 
     if missing := procfile.keys() - {process.type for process in processes}:

@@ -255,19 +255,31 @@
                     :label="$t('资源配额方案')"
                     :label-width="120"
                   >
-                    <bk-select
-                      v-model="formData.resQuotaPlan"
-                      :disabled="false"
-                      style="width: 150px;"
-                      searchable
-                    >
-                      <bk-option
-                        v-for="option in resQuotaData"
-                        :id="option"
-                        :key="option"
-                        :name="option"
+                    <div class="flex-row align-items-center">
+                      <bk-select
+                        v-model="formData.resQuotaPlan"
+                        :disabled="false"
+                        style="width: 150px;"
+                        searchable
+                      >
+                        <bk-option
+                          v-for="option in resQuotaData"
+                          :id="option"
+                          :key="option"
+                          :name="option"
+                        />
+                      </bk-select>
+                      <!-- tips内容不会双向绑定 需要重新渲染 -->
+                      <i
+                        v-if="quotaPlansFlag"
+                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                       />
-                    </bk-select>
+                      <i
+                        v-else
+                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                        v-bk-tooltips="tips"
+                      />
+                    </div>
                   </bk-form-item>
                   <bk-form-item
                     :label="$t('扩缩容方式')"
@@ -644,6 +656,9 @@ export default {
         replicas: 1,
       },
       buildData: {},
+      limit: {},
+      request: {},
+      quotaPlansFlag: false,
     };
   },
   computed: {
@@ -664,6 +679,23 @@ export default {
     },
     isV1alpha2() {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
+    },
+
+    tips() {
+      return {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `
+              <div>
+                最大资源限制： <span>cpu：${this.limit.cpu} </span> <span>内存：${this.limit.memory} </span>
+              </div>
+              <div>
+                最小资源请求：<span>cpu：${this.request.cpu} </span> <span>内存：${this.request.memory} </span>
+              </div>
+              `,
+        placements: ['bottom'],
+      };
     },
   },
   watch: {
@@ -714,7 +746,6 @@ export default {
             this.$refs.formDeploy?.clearError();
           }
 
-          console.log('val', val);
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -742,6 +773,10 @@ export default {
           }
         }
       }
+    },
+
+    'formData.resQuotaPlan'(value) {
+      this.getQuotaPlans();
     },
 
     panels: {
@@ -1143,6 +1178,23 @@ export default {
       if (this.bkappAnnotations[this.imageCrdlAnnoKey]) {
         this.$set(this.localCloudAppData.metadata, 'annotations', this.bkappAnnotations);
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }
+    },
+
+    async getQuotaPlans() {
+      try {
+        this.quotaPlansFlag = true;
+        const res =  await this.$store.dispatch('deploy/fetchQuotaPlans', {});
+        const data = res.find(e => e.name === this.formData.resQuotaPlan);
+        this.limit = data.limit;
+        this.request = data.request;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.quotaPlansFlag = false;
       }
     },
   },

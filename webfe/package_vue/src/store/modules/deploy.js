@@ -448,6 +448,15 @@ const actions = {
     const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
     return http.put(url, params, config);
   },
+
+  /**
+   * 获取进程资源配额方案
+   * @param {Object} params 请求参数：appCode, moduleId, env
+   */
+  fetchQuotaPlans({}, {}, config = {}) {
+    const url = `${BACKEND_URL}/api/mres/quota_plans/`;
+    return http.get(url, config);
+  },
 };
 
 export default {

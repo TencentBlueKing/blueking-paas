@@ -160,7 +160,7 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, str]
     """Generate the platform address in the bk system"""
 
     system_envs = {
-        'BK_CRYPTO_TYPE': 'SHANGMI' if settings.ENCRYPT_CIPHER_TYPE == 'SM4CTR' else 'CLASSIC',
+        'BK_CRYPTO_TYPE': settings.BK_CRYPTO_TYPE,
         'BK_DOMAIN': settings.BK_DOMAIN,
         'URL': settings.BKPAAS_URL,
         # 蓝鲸桌面地址

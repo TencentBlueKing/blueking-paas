@@ -42,13 +42,9 @@ from kubernetes.dynamic import ResourceField, ResourceInstance
 
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
-from paas_wl.resources.base.exceptions import ResourceDeleteTimeout, ResourceMissing
-from paas_wl.resources.kube_res.exceptions import (
-    APIServerVersionIncompatible,
-    AppEntityNotFound,
-    WatchKubeResourceError,
-)
-from paas_wl.resources.utils.basic import get_client_by_app
+from paas_wl.resources.base.exceptions import NotAppScopedResource, ResourceDeleteTimeout, ResourceMissing
+from paas_wl.resources.kube_res.exceptions import APIServerVersionIncompatible, AppEntityNotFound
+from paas_wl.resources.utils.basic import get_client_by_app, get_client_by_cluster_name
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.generation.mapper import MapperPack
@@ -269,6 +265,132 @@ class WatchEvent(Generic[AET]):
     error_message: str = ""
 
 
+class NamespaceScopedReader(Generic[AET]):
+    """A reader for namespace-scoped resources."""
+
+    entity_type: Type[AET]
+
+    def retrieve_associated_wl_app(self, kube_data: ResourceInstance) -> WlApp:
+        """Detect the corresponding wl_app for the given kube_data
+
+        This method retrieves the corresponding WlApp object associated with the given kube_data.
+        If no such WlApp object is found, a NotAppScopedResource exception is raised.
+
+        :return: The WlApp object associated with the given kube_data.
+        :raise: NotAppScopedResource If no WlApp object is found for the given kube_data.
+        """
+        raise NotImplementedError
+
+    def list_by_ns(self, cluster_name: str, namespace: str, labels: Optional[Dict] = None) -> List[AET]:
+        """List resources from a specified namespace while optionally filtering based on labels."""
+        return self.list_by_ns_with_mdata(cluster_name, namespace, labels).items
+
+    def list_by_ns_with_mdata(
+        self, cluster_name: str, namespace: str, labels: Optional[Dict] = None
+    ) -> ResourceList[AET]:
+        """List resources from a specified namespace while optionally filtering based on labels."""
+        labels = labels or {}
+        deserializer = self._make_deserializer(cluster_name)
+        with self.kres(cluster_name, api_version=deserializer.get_apiversion()) as kres_client:
+            ret = kres_client.ops_label.list(namespace=namespace, labels=labels)
+
+        items = []
+        for kube_data in ret.items:
+            try:
+                wl_app = self.retrieve_associated_wl_app(kube_data)
+            except NotAppScopedResource:
+                continue
+            item = deserializer.deserialize(wl_app, kube_data)
+            # Set _kube_data
+            item._kube_data = kube_data
+            items.append(item)
+        return ResourceList[AET](items=items, metadata=ret.metadata)
+
+    def watch_by_ns(
+        self,
+        cluster_name: str,
+        namespace: str,
+        labels: Optional[Dict] = None,
+        resource_version: Optional[int] = None,
+        **kwargs,
+    ) -> Iterator[WatchEvent[AET]]:
+        """Watch resources change event for a specified namespace"""
+        labels = labels or {}
+        # set "resource_version" when it's value is not None
+        # because None value will trigger apiserver error
+        if resource_version:
+            kwargs["resource_version"] = resource_version
+
+        deserializer = self._make_deserializer(cluster_name)
+        with self.kres(cluster_name, api_version=deserializer.get_apiversion()) as kres_client:
+            try:
+                for raw_event in kres_client.ops_label.create_watch_stream(
+                    namespace=namespace, labels=labels, **kwargs
+                ):
+                    # When client given a staled resource_version, the watch stream will return an ERROR event
+                    if raw_event["type"] == 'ERROR':
+                        raw_object = raw_event["raw_object"]
+                        msg = raw_object.get("message", "Unknown")
+                        yield WatchEvent(type='ERROR', error_message=msg)
+                        return
+
+                    kube_data = raw_event["object"]
+                    try:
+                        wl_app = self.retrieve_associated_wl_app(kube_data)
+                    except NotAppScopedResource:
+                        continue
+
+                    event = WatchEvent[AET](type=raw_event["type"])
+                    event.res_object = deserializer.deserialize(wl_app, kube_data)
+                    event.res_object._kube_data = kube_data
+                    yield event
+            except ApiException as exc:
+                if self._exc_is_expired_rv(exc):
+                    yield WatchEvent(type='ERROR', error_message=exc.reason)
+                    return
+                else:
+                    raise
+
+    @staticmethod
+    def _exc_is_expired_rv(exc: ApiException) -> bool:
+        """Check if an exception is raised because of expired ResourceVersion"""
+        # Consider all responses with 401 status code as "resourceVersion expired" type error, stricter
+        # checking like `"too old resource version" in exc.reason` sounds cool but it may also introduces
+        # other problems in further Kubernetes versions.
+        #
+        # ref: https://kubernetes.io/docs/reference/using-api/api-concepts/#410-gone-responses
+        return exc.status == 410
+
+    def _make_deserializer(self, cluster_name: str) -> AppEntityDeserializer[AET]:
+        gvk_config = self._load_gvk_config(cluster_name)
+        if self.entity_type.Meta.deserializer:
+            return self.entity_type.Meta.deserializer(self.entity_type, gvk_config)
+
+        picker = EntityDeserializerPicker(self.entity_type.Meta.deserializers)
+        ret = picker.get_transformer(self.entity_type, gvk_config)
+        logger.debug('Picked deserializer:%s from multi choices, gvk_config: %s', ret.__class__.__name__, gvk_config)
+        return ret
+
+    def _load_gvk_config(self, cluster_name: str) -> GVKConfig:
+        """Load GVK config of current Kind"""
+        with self.kres(cluster_name) as kres_client:
+            return GVKConfig(
+                server_version=kres_client.version['kubernetes']['gitVersion'],
+                kind=kres_client.kind,
+                preferred_apiversion=kres_client.get_preferred_version(),
+                available_apiversions=kres_client.get_available_versions(),
+            )
+
+    def _kres(self, cluster_name: str, api_version: str = '') -> Iterator[kres.BaseKresource]:
+        """Return kres object as a context manager which was initialized with kubernetes client, will close all
+        connection automatically when exit to avoid connections leaking.
+        """
+        with get_client_by_cluster_name(cluster_name) as client:
+            yield self.entity_type.Meta.kres_class(client, api_version=api_version)
+
+    kres: Callable[..., ContextManager['kres.BaseKresource']] = contextmanager(_kres)
+
+
 class AppEntityReader(Generic[AET]):
     """Read app related kube resource, produces `AppEntity` objects
 
@@ -318,10 +440,7 @@ class AppEntityReader(Generic[AET]):
         return ResourceList[AET](items=items, metadata=ret.metadata)
 
     def watch_by_app(self, app: WlApp, labels: Optional[Dict] = None, **kwargs) -> Iterator[WatchEvent[AET]]:
-        """Get notified when resource changes
-
-        :raises: WatchKubeResourceError when an ERROR event was received
-        """
+        """Get notified when resource changes"""
         labels = labels or {}
         # Remove "resource_version" param when it's value is None because None value will trigger apiserver error
         if 'resource_version' in kwargs and kwargs['resource_version'] is None:
@@ -341,7 +460,8 @@ class AppEntityReader(Generic[AET]):
                     if raw_event["type"] == 'ERROR':
                         raw_object = raw_event["raw_object"]
                         msg = raw_object.get("message", "Unknown")
-                        raise WatchKubeResourceError(msg)
+                        yield WatchEvent(type='ERROR', error_message=msg)
+                        return
 
                     event = WatchEvent[AET](type=raw_event["type"])
                     event.res_object = deserializer.deserialize(app, raw_event["object"])
@@ -349,7 +469,8 @@ class AppEntityReader(Generic[AET]):
                     yield event
             except ApiException as exc:
                 if self._exc_is_expired_rv(exc):
-                    raise WatchKubeResourceError(exc.reason)
+                    yield WatchEvent(type='ERROR', error_message=exc.reason)
+                    return
                 else:
                     raise
 

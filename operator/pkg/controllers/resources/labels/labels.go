@@ -38,6 +38,7 @@ func Deployment(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
 		labels[paasv1alpha2.BkAppCodeKey] = appInfo.AppCode
 		labels[paasv1alpha2.ModuleNameKey] = appInfo.ModuleName
 		labels[paasv1alpha2.EnvironmentKey] = appInfo.Environment
+		labels[paasv1alpha2.WlAppNameKey] = appInfo.WlAppName
 	}
 	return labels
 }

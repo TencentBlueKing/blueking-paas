@@ -20,6 +20,7 @@ import json
 import logging
 from typing import Dict, Optional
 
+from paas_wl.cnative.specs import mounts
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -37,6 +38,7 @@ from paas_wl.cnative.specs.constants import (
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     USE_CNB_ANNO_KEY,
+    WLAPP_NAME_ANNO_KEY,
     ApiVersion,
 )
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
@@ -87,6 +89,9 @@ class BkAppManifestProcessor:
             manifest.spec.configuration.env, generate_builtin_configurations(env=self.env)
         )
 
+        # 注入挂载信息
+        mounts.inject_to_app_resource(self.env, manifest)
+
         data = manifest.dict()
         # refresh status.conditions
         data["status"] = {"conditions": []}
@@ -119,6 +124,7 @@ class BkAppManifestProcessor:
                 BKAPP_CODE_ANNO_KEY: application.code,
                 MODULE_NAME_ANNO_KEY: env.module.name,
                 ENVIRONMENT_ANNO_KEY: env.environment,
+                WLAPP_NAME_ANNO_KEY: wl_app.name,
             }
         )
         # inject image type

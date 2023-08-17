@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -23,6 +24,7 @@ from rest_framework.response import Response
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.environments.utils import batch_save_protections
 
 from . import serializers
 from .constants import EnvRoleOperation
@@ -78,3 +80,22 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
         protections = EnvRoleProtection.objects.bulk_create(protections)
 
         return Response(self.serializer_class(protections, many=True).data)
+
+    @swagger_auto_schema(
+        request_body=serializers.BatchEnvRoleProtectionSLZ,
+        tags=['部署限制'],
+    )
+    def batch_save(self, request, code, module_name):
+        """批量保存环境限制设置"""
+        application = self.get_application()
+        module = application.get_module(module_name)
+
+        serializer = serializers.BatchEnvRoleProtectionSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        operation = data.get('operation')
+        # 目前产品上只支持默认角色(开发)
+        allowed_roles = EnvRoleOperation.get_default_role(operation)
+        qs = batch_save_protections(module, operation, allowed_roles, data['envs'])
+        return Response(self.serializer_class(qs, many=True).data)

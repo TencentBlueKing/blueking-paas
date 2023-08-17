@@ -36,6 +36,7 @@
               </div>
               <bk-button
                 v-if="rowIndex === $index && !row.is_default" text theme="primary"
+                class="set-module-btn"
                 @click="handleSetDefault(row)">
                 {{ $t('设为主模块') }}
               </bk-button>
@@ -755,6 +756,7 @@ export default {
       }
 
       .module-container{
+        position: relative;
         height: 46px;
         display: flex;
         flex-flow: column;
@@ -765,6 +767,11 @@ export default {
         }
         .module-cursor{
           cursor: pointer;
+        }
+        .set-module-btn {
+          position: absolute;
+          bottom: -7px;
+          white-space: nowrap;
         }
       }
 

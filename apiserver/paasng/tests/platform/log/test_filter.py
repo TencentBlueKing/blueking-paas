@@ -25,6 +25,7 @@ from paasng.platform.log.filters import (
     EnvFilter,
     ESFilter,
     ModuleFilter,
+    _clean_property,
     count_filters_options_from_agg,
     count_filters_options_from_logs,
 )
@@ -370,3 +371,32 @@ class TestModuleFilter:
         params = ElasticSearchParams(indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_name }}"})
         with pytest.raises(ValueError):
             ModuleFilter(bk_module, params).filter_by_module(search)
+
+
+@pytest.mark.parametrize(
+    "nested_name, mapping, expected",
+    [
+        (
+            ["a"],
+            {"properties": {"a": {"type": "text"}, "b": {"type": "int"}}},
+            [FieldFilter(name="a.a", key="a.a.keyword"), FieldFilter(name="a.b", key="a.b")],
+        ),
+        (
+            ["a", "b", "c"],
+            {
+                "properties": {
+                    "d": {"properties": {"e": {"properties": {"f": {"properties": {"g": {"type": "text"}}}}}}}
+                }
+            },
+            [FieldFilter(name="a.b.c.d.e.f.g", key="a.b.c.d.e.f.g.keyword")],
+        ),
+        # invalid
+        (
+            ["a"],
+            {"a": {"type": "text"}, "b": {"type": "int"}},
+            [],
+        ),
+    ],
+)
+def test_clean_property(nested_name, mapping, expected):
+    assert _clean_property(nested_name, mapping) == expected

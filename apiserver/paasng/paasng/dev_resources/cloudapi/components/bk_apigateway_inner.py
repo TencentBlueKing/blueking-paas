@@ -25,9 +25,14 @@ from .component import BaseComponent
 from .http import http_get, http_post
 
 
+# bk-apigateway-inner 接口地址
+BK_APIGATEWAY_INNER_GATEWAY_STAGE = settings.BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway-inner", "prod")
+BK_APIGATEWAY_INNER_API_URL = f"{BK_API_URL_TMPL.format(api_name='bk-apigateway-inner').rstrip('/')}/{BK_APIGATEWAY_INNER_GATEWAY_STAGE}"
+
+
 class BkApigatewayInnerComponent(BaseComponent):
 
-    host = getattr(settings, "BK_APIGATEWAY_INNER_API_URL", "")
+    host = BK_APIGATEWAY_INNER_API_URL
     system_name = "bk-apigateway-inner"
 
     def get(self, path: str, bk_username: str = "", **kwargs):
@@ -38,7 +43,7 @@ class BkApigatewayInnerComponent(BaseComponent):
 
     def _prepare_headers(self, bk_username: str):
         headers = {
-            "X-Bkapi-Authorization": json.dumps(
+            "x-bkapi-authorization": json.dumps(
                 {
                     "bk_app_code": settings.BK_APP_CODE,
                     "bk_app_secret": settings.BK_APP_SECRET,

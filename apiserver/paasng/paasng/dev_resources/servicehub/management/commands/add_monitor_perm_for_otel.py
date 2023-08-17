@@ -22,6 +22,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
+from paasng.accessories.bkmonitorv3.exceptions import BkMonitorSpaceDoesNotExist
 from paasng.accessories.iam.tasks import add_monitoring_space_permission
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import Application
@@ -41,12 +42,28 @@ class Command(BaseCommand):
         service_instances = mixed_service_mgr.get_provisioned_queryset(service, application_ids)
         for ins in service_instances:
             application = ins.module.application
-            print(f"app_code: {application.code}, module:{ins.module.name} start adding permissions.")
+            self.stdout.write(
+                self.style.NOTICE(f"app_code: {application.code}, module:{ins.module.name} start adding permissions.")
+            )
             if dry_run:
                 continue
 
             # 查询应用对应的空间ID
             cli = make_bk_monitor_client()
-            space_detail = cli.get_space_detail(application.code)
-            add_monitoring_space_permission.delay(application.code, application.name, space_detail.bk_space_id)
-            print(f"app_code: {application.code}, module:{ins.module.name} add permissions successfully.")
+            try:
+                space_detail = cli.get_space_detail(application.code)
+            except BkMonitorSpaceDoesNotExist as e:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"app_code: {application.code}, module:{ins.module.name} add permissions failed. {e}"
+                    )
+                )
+                continue
+
+            # 同步执行添加监控日志平台应用空间权限的操作
+            add_monitoring_space_permission(application.code, application.name, space_detail.bk_space_id)
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"app_code: {application.code}, module:{ins.module.name} add permissions successfully."
+                )
+            )

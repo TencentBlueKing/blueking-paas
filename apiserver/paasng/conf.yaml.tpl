@@ -3,8 +3,8 @@
 ## 用于加密数据库内容的 Secret
 # BKKRILL_ENCRYPT_SECRET_KEY: ''
 
-## 选择加密数据库内容的算法，可选择：'FernetCipher' , 'SM4CTR'
-# ENCRYPT_CIPHER_TYPE : ''
+## 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'，分别对应 'SM4CTR'和'Fernet' 算法
+# BK_CRYPTO_TYPE : ''
 
 ## （Django）特定 Django 安装的密钥。用于提供 加密签名，默认值为：${BKKRILL_ENCRYPT_SECRET_KEY}
 ## 更多参考：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#secret-key

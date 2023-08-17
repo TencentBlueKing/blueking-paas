@@ -42,4 +42,4 @@ def add_monitoring_space_permission(app_code: str, app_name: str, bk_space_id: s
 
     # 2. 给应用的管理员、开发者、运营者添加监控平台、日志平台权限
     cli.grant_user_group_policies_in_bk_monitor(bk_space_id, app_name, user_groups_list)
-    cli.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups)
+    cli.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups_list)

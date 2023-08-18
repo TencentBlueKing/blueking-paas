@@ -13,7 +13,6 @@ paths:
       description: 提交多个应用的访问申请单据和Tencent版平台的访问权限申请
       tags:
       - 应用访问控制
-      - 私有化版未提供
       responses:
         default:
           description: ''
@@ -37,7 +36,8 @@ paths:
     post:
       operationId: create_lesscode_app
       description: 创建蓝鲸可视化开发平台应用
-      tags: []
+      tags:
+      - 应用/模块信息查询
       responses:
         default:
           description: ''
@@ -111,7 +111,8 @@ paths:
     post:
       operationId: create_app
       description: 创建应用
-      tags: []
+      tags:
+      - 应用/模块信息查询
       responses:
         default:
           description: ''
@@ -162,7 +163,6 @@ paths:
       description: ''
       tags:
       - 应用访问控制
-      - 私有化版未提供
       responses:
         default:
           description: ''
@@ -340,7 +340,6 @@ paths:
       description: 访问统计：按路径维度查看
       tags:
       - 访问统计
-      - 私有化版未提供
       responses:
         default:
           description: ''
@@ -366,7 +365,6 @@ paths:
       description: 访问统计：按用户维度查看
       tags:
       - 访问统计
-      - 私有化版未提供
       responses:
         default:
           description: ''
@@ -392,7 +390,6 @@ paths:
       description: '访问统计: 站点访问总数'
       tags:
       - 访问统计
-      - 私有化版未提供
       responses:
         default:
           description: ''
@@ -492,7 +489,7 @@ paths:
       operationId: module_offline
       description: 应用模块下架
       tags:
-      - 应用下架
+      - 部署相关接口
       responses:
         default:
           description: ''
@@ -517,7 +514,7 @@ paths:
       operationId: get_resumable_offline_operations
       description: 查询可恢复的下架操作
       tags:
-      - 应用下架
+      - 部署相关接口
       responses:
         default:
           description: ''
@@ -616,7 +613,7 @@ paths:
       operationId: get_offline_result
       description: 查询下架任务结果
       tags:
-      - 应用下架
+      - 部署相关接口
       responses:
         default:
           description: ''
@@ -691,7 +688,7 @@ paths:
       operationId: fetch_app_access_token
       description: 获取代表指定应用和用户身份的 AccessToken
       tags:
-      - Oauth
+      - OAuth
       responses:
         default:
           description: ''
@@ -716,7 +713,7 @@ paths:
       operationId: refresh_app_access_token
       description: 刷新代表指定应用和用户身份的 AccessToken
       tags:
-      - Oauth
+      - OAuth
       responses:
         default:
           description: ''
@@ -791,7 +788,7 @@ paths:
       operationId: get_cnative_deployments_list
       description: 获取云原生应用部署历史
       tags:
-        - 部署相关接口
+      - 部署相关接口
       responses:
         default:
           description: ''
@@ -828,7 +825,7 @@ paths:
           method: post
           path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/deployments/
           matchSubpath: false
-          timeout: 30
+          timeout: 0
           upstreams: {}
           transformHeaders: {}
         authConfig:
@@ -853,7 +850,7 @@ paths:
           method: get
           path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/
           matchSubpath: false
-          timeout: 30
+          timeout: 0
           upstreams: {}
           transformHeaders: {}
         authConfig:
@@ -890,7 +887,7 @@ paths:
       operationId: shim_plugins_centers_create_plugin
       description: 创建插件
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -915,7 +912,7 @@ paths:
       operationId: shim_plugins_center_list_category
       description: 查询平台支持的插件分类列表
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -940,13 +937,13 @@ paths:
       operationId: shim_plugins_center_archive_plugin
       description: 下架插件
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -964,7 +961,7 @@ paths:
       operationId: shim_plugins_center_update_plugin
       description: 更新插件
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -989,7 +986,7 @@ paths:
       operationId: shim_plugins_center_sync_configurations
       description: 插件应用同步环境变量
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1014,7 +1011,7 @@ paths:
       operationId: shim_plugins_centers_deploy_plugin
       description: 部署插件
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1039,7 +1036,7 @@ paths:
       operationId: shim_plugins_center_get_deploy_logs
       description: 查询部署过程日志
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1064,7 +1061,7 @@ paths:
       operationId: shim_plugins_center_check_deploy_status
       description: 检查部署状态
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1089,7 +1086,7 @@ paths:
       operationId: shim_plugins_center_upsert_market_info
       description: 更新插件市场信息
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1114,7 +1111,7 @@ paths:
       operationId: shim_plugins_center_sync_members
       description: 插件应用同步成员
       tags:
-      - 插件开发中心
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1163,7 +1160,8 @@ paths:
     get:
       operationId: get_addon_instance_info
       description: 查询增强服务实例信息
-      tags: []
+      tags:
+      - 增强服务
       responses:
         default:
           description: ''
@@ -1186,7 +1184,8 @@ paths:
     post:
       operationId: provision_addon_instance
       description: 分配增强服务实例
-      tags: []
+      tags:
+      - 增强服务
       responses:
         default:
           description: ''
@@ -1210,7 +1209,8 @@ paths:
     get:
       operationId: sys__api__lesscode__query_db_credentials
       description: 查询数据库增强服务的 credential 信息
-      tags: []
+      tags:
+      - 增强服务
       responses:
         default:
           description: ''
@@ -1234,7 +1234,8 @@ paths:
     post:
       operationId: sys__api__lesscode__bind_db_service
       description: 尝试绑定数据库增强服务
-      tags: []
+      tags:
+      - 增强服务
       responses:
         default:
           description: ''
@@ -1258,7 +1259,8 @@ paths:
     get:
       operationId: retrieve_addon_specs
       description: 获取增强服务的规格组合
-      tags: []
+      tags:
+      - 增强服务
       responses:
         default:
           description: ''
@@ -1278,12 +1280,37 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn: retrieve addon specifications
+  /system/bkapps/applications/{code}/cluster_namespaces/:
+    get:
+      operationId: list_cluster_namespaces_by_code
+      description: 根据应用 ID 查询应用所在的集群和命名空间信息
+      tags:
+      - 应用/模块信息查询
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/bkapps/applications/{code}/cluster_namespaces/
+          matchSubpath: false
+          timeout: 10
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+          resourcePermissionRequired: false
+        disabledStages: []
+        descriptionEn:
   /system/bkapps/xycd/third_app/:
     post:
       operationId: create_xy_cd_app
       description: 给行云提供的创建外链应用的API
-      tags:
-      - 私有化版未提供
+      tags: []
       responses:
         default:
           description: ''
@@ -1308,8 +1335,7 @@ paths:
       operationId: list_bk_plugins
       description: 查询平台上所有蓝鲸插件信息
       tags:
-      - 应用/模块信息查询
-      - 私有化版未提供
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1337,7 +1363,6 @@ paths:
       description: 查询平台上所有蓝鲸插件信息（带详细部署信息）
       tags:
       - 应用/模块信息查询
-      - 私有化版未提供
       responses:
         default:
           description: ''
@@ -1364,8 +1389,7 @@ paths:
       operationId: retrieve_bk_plugin
       description: 查询单个蓝鲸插件详细信息
       tags:
-      - 应用/模块信息查询
-      - 私有化版未提供
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1392,8 +1416,7 @@ paths:
       operationId: list_bk_plugin_logs
       description: 查询单个蓝鲸插件的日志
       tags:
-      - 应用/模块信息查询
-      - 私有化版未提供
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1419,8 +1442,7 @@ paths:
       operationId: list_bk_plugin_logs_cloned
       description: 查询单个蓝鲸插件的日志
       tags:
-      - 应用/模块信息查询
-      - 私有化版未提供
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''
@@ -1447,7 +1469,7 @@ paths:
       operationId: list_bk_plugin_tags
       description: 查询蓝鲸插件的分类列表
       tags:
-      - 应用/模块信息查询
+      - 蓝鲸应用插件
       responses:
         default:
           description: ''

@@ -72,6 +72,8 @@ export default {
         'imageCredential',
         'moduleInfo',
         'appServices',
+        'appServiceInnerShared',
+        'appServiceInner',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -355,6 +357,8 @@ export default {
         'imageCredential',
         'moduleInfo',
         'appServices',
+        'appServiceInnerShared',
+        'appServiceInner',
       ];
 
       this.navTree.forEach((nav) => {
@@ -500,7 +504,7 @@ export default {
       category.children.push({
         categoryName: 'appServices',
         name,
-        matchRouters: ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
+        matchRouters: ['appService', 'appServiceConfig'], // 'appServiceInnerShared' 'appServiceInner',
         destRoute: {
           name: 'appService',
           params: {

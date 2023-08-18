@@ -296,7 +296,7 @@
                         </bk-radio-button>
                       </bk-radio-group>
 
-                      <bk-alert type="info" v-if="isAutoscaling">
+                      <bk-alert type="info" v-if="isAutoscaling" style="margin-right: 60px;">
                         <span slot="title">
                           {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
                           <a

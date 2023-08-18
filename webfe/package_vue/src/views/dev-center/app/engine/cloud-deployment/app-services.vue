@@ -23,7 +23,11 @@
             <template slot-scope="{row, $index}">
               <div class="flex-row align-items-center">
                 <img class="row-img mr10" :src="row.logo" alt="">
-                <p class="row-title-text" @click="handleToPage(row)">{{ row.display_name || '--' }}</p>
+                <p
+                  class="row-title-text"
+                  :class="row.isStartUp ? '' : 'text-disabled'" @click="handleToPage(row)">
+                  {{ row.display_name || '--' }}
+                </p>
                 <i
                   v-if="$index === rowIndex"
                   class="row-icon paasng-icon paasng-page-fill pl5 mt5"
@@ -623,30 +627,24 @@ export default {
 
     // 处理跳转逻辑
     handleToPage(payload) {
-      // if (payload.isStartUp) {
-      //   if (payload.type === 'shared') {    // 共享
-      //     this.$router.push({
-      //       name: 'appServiceInnerShared',
-      //       params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
-      //     });
-      //   } else {    // 直接启动
-      //     this.$router.push({
-      //       name: 'appServiceInner',
-      //       params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
-      //     });
-      //   }
-      // } else {    // 未开启的时候跳转详情
-      //   this.$router.push({
-      //     name: 'serviceInnerPage',
-      //     params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
-      //     query: { name: payload.display_name },
-      //   });
-      // }
-      this.$router.push({
-        name: 'serviceInnerPage',
-        params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
-        query: { name: payload.display_name },
-      });
+      if (payload.isStartUp) {
+        if (payload.type === 'shared') {    // 共享
+          this.$router.push({
+            name: 'appServiceInnerShared',
+            params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+          });
+        } else {    // 直接启动
+          this.$router.push({
+            name: 'appServiceInner',
+            params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+          });
+        }
+      }
+      // this.$router.push({
+      //   name: 'serviceInnerPage',
+      //   params: { category_id: payload.category ? payload.category.id : '', name: payload.name },
+      //   query: { name: payload.display_name },
+      // });
     },
 
     // 获取使用指南
@@ -693,6 +691,10 @@ export default {
       white-space:nowrap; //溢出不换行
       cursor: pointer;
       color: #3A84FF;
+    }
+    .text-disabled{
+      color: #dcdee5;
+      cursor: not-allowed;
     }
     .row-icon{
       cursor: pointer;

@@ -7,25 +7,28 @@
     class="deploy-action-box"
   >
     <div class="form-pre">
-      <div class="flex-row align-items-center justify-content-between">
+      <div class="flex-row align-items-center">
         <div class="item-title-container">
           <div class="item-title">
             {{ $t('部署前置命令') }}
           </div>
-          <div>
-            <div
-              class="ps-switcher-wrapper mr10 ml20"
-              @click="togglePermission"
-            >
-              <bk-switcher
-                v-model="preFormData.loaclEnabled"
-                :disabled="!isPageEdit"
-              />
-            </div>
-            <span>{{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}</span>
+          <div
+            class="ps-switcher-wrapper mr10 ml20"
+            @click="togglePermission"
+            v-if="isPageEdit"
+          >
+            <bk-switcher
+              v-model="preFormData.loaclEnabled"
+              :disabled="!isPageEdit"
+            />
+          </div>
+          <div v-else class="ml10">
+            <bk-tag :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用') ">
+              {{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}
+            </bk-tag>
           </div>
         </div>
-        <bk-button
+        <!-- <bk-button
           v-if="!isPageEdit"
           class="fr"
           theme="primary"
@@ -33,10 +36,15 @@
           :outline="true"
           @click="handleEditClick">
           {{ $t('编辑') }}
-        </bk-button>
+        </bk-button> -->
+
+        <div class="edit-container" @click="handleEditClick" v-if="!isPageEdit">
+          <i class="paasng-icon paasng-edit-2 pl10" />
+          {{ $t('编辑') }}
+        </div>
       </div>
       <bk-form
-        v-if="isPageEdit && preFormData.loaclEnabled"
+        v-if="isPageEdit"
         :model="preFormData"
         :label-width="100"
         class="info-special-form form-pre-command"
@@ -285,5 +293,11 @@ export default {
     }
     .value-cls{
         color: #313238;
+    }
+    .edit-container{
+      color: #3A84FF;
+      font-size: 12px;
+      cursor: pointer;
+      padding-left: 10px;
     }
 </style>

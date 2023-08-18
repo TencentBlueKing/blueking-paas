@@ -77,7 +77,8 @@
           v-if="envVarList.length"
           class="table-cls mt20">
           <bk-table-column
-            :label="$t('Key')" class-name="table-colum-module-cls" :sortable="!isPageEdit">
+            :render-header="handleRenderHander"
+            class-name="table-colum-module-cls" :sortable="!isPageEdit">
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit" class="table-colum-cls">
                 <bk-form
@@ -96,7 +97,7 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column :label="$t('Value')" class-name="table-colum-module-cls">
+          <bk-table-column :render-header="handleRenderHander" class-name="table-colum-module-cls">
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit">
                 <bk-form
@@ -117,7 +118,7 @@
           </bk-table-column>
 
           <bk-table-column
-            :label="$t('生效环境')"
+            :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
             :filters="envSelectList"
             :filter-method="sourceFilterMethod"
@@ -133,7 +134,6 @@
                       v-model="row.environment_name"
                       :placeholder="$t('请选择')"
                       :clearable="false"
-                      style="width: 200px"
                       @change="handleEnvChange(row)"
                     >
                       <bk-option
@@ -997,6 +997,30 @@ export default {
       const { property } = column;
       return row[property] === value;
     },
+
+    handleRenderHander(h, { $index }) {
+      let columnName = 'Key';
+      switch ($index) {
+        case 0:
+          columnName = 'Key';
+          break;
+        case 1:
+          columnName = 'Value';
+          break;
+        case 2:
+          columnName = '生效环境';
+          break;
+        default:
+          break;
+      }
+      return h(
+        'span', { class: 'custom-header-cls flex-row align-items-center' },
+        [
+          h('span', null, columnName),
+          h('span', { class: 'header-required' }, '*'),
+        ],
+      );
+    },
   },
 };
 </script>
@@ -1468,6 +1492,15 @@ export default {
 
     .export-btn-cls{
       font-size: 12px;
+    }
+
+    .custom-header-cls{
+
+    }
+    /deep/ .header-required{
+      color: #EA3636;
+      padding-left: 5px;
+      padding-top: 5px;
     }
   </style>
 

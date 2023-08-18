@@ -40,16 +40,22 @@
             :label="$t('镜像仓库：')">
             <bk-input
               v-model="buildData.image"
-              style="width: 250px;"
+              style="width: 450px;"
               :placeholder="$t('请输入')"
-            />
+            >
+
+              <template slot="append">
+                <div class="group-text form-text-append">应用示例</div>
+              </template>
+            </bk-input>
+            <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
           </bk-form-item>
 
           <bk-form-item
             :label="$t('镜像凭证：')">
             <bk-select
               v-model="buildData.imagePullPolicy"
-              style="width: 250px;"
+              style="width: 450px;"
               searchable
             >
               <bk-option
@@ -363,6 +369,7 @@ export default {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
     },
     artifactType() {
+      console.log('this.curAppModule', this.curAppModule);
       if (this.curAppModule.web_config.artifact_type === 'image') {
         if (this.curAppModule.web_config.build_method === 'custom_image') {
           return this.$t('仅镜像');
@@ -737,6 +744,17 @@ export default {
       .form-text{
           color: #313238;
         }
+    }
+
+    .input-tips {
+          color: #979ba5;
+          font-size: 12px;
+      }
+
+    .form-text-append{
+      color: #3a84ff;
+      background: #FAFBFD;
+      border-radius: 0 2px 2px 0;
     }
 
     .border-b{

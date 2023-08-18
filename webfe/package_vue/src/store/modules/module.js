@@ -30,12 +30,12 @@ export default {
     /**
          * 获取代码库类型
          */
-    getCodeTypes ({ commit, state }, config = {}) {
+    getCodeTypes({  }, config = {}) {
       const url = `${BACKEND_URL}/api/sourcectl/providers/`;
       return http.get(url, config);
     },
 
-    getModuleCodeTypes ({ commit, state }, { appCode, moduleId }, config = {}) {
+    getModuleCodeTypes({  }, { appCode, moduleId }, config = {}) {
       const url = `${BACKEND_URL}/api/sourcectl/applications/${appCode}/modules/${moduleId}/providers/`;
       return http.get(url, config);
     },
@@ -43,7 +43,7 @@ export default {
     /**
          * 获取支持的语言信息
          */
-    getLanguageInfo ({ commit, state }, config = {}) {
+    getLanguageInfo({  }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/regions/specs`;
       return http.get(url, config);
     },
@@ -51,7 +51,7 @@ export default {
     /**
          * 创建应用模块
          */
-    createAppModule ({ commit, state }, { appCode, data }, config = {}) {
+    createAppModule({  }, { appCode, data }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/`;
       return http.post(url, data, config);
     },
@@ -59,7 +59,7 @@ export default {
     /**
          * 获取模块基本信息
          */
-    getModuleBasicInfo ({ commit, state }, { appCode, modelName }, config = {}) {
+    getModuleBasicInfo({  }, { appCode, modelName }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}`;
       return http.get(url, config);
     },
@@ -67,7 +67,7 @@ export default {
     /**
          * 删除模块
          */
-    deleteModule ({ commit, state }, { appCode, moduleName }, config = {}) {
+    deleteModule({  }, { appCode, moduleName }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/`;
       return http.delete(url, config);
     },
@@ -75,7 +75,7 @@ export default {
     /**
          * 切换源码库
          */
-    switchRepo ({ commit, state }, { appCode, modelName, data }, config = {}) {
+    switchRepo({  }, { appCode, modelName, data }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/sourcectl/repo/modify/`;
       return http.post(url, data, config);
     },
@@ -83,7 +83,7 @@ export default {
     /**
          * 设置主模块
          */
-    setMainModule ({ commit, state }, { appCode, modelName }, config = {}) {
+    setMainModule({  }, { appCode, modelName }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/set_default/`;
       return http.post(url, {}, config);
     },
@@ -91,15 +91,23 @@ export default {
     /**
          * 设置部署限制
          */
-    setDeployLimit ({ commit, state }, { appCode, modelName, params }, config = {}) {
+    setDeployLimit({  }, { appCode, modelName, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/`;
+      return http.post(url, params, config);
+    },
+
+    /**
+     * 批量设置部署限制
+     */
+    setDeployLimitBatch({ }, { appCode, modelName, params }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/batch`;
       return http.post(url, params, config);
     },
 
     /**
          * 获取环境保护
          */
-    getEnvProtection ({ commit, state }, { appCode, modelName }, config = {}) {
+    getEnvProtection({  }, { appCode, modelName }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/?operation=deploy`;
       return http.get(url, {}, config);
     },
@@ -107,9 +115,9 @@ export default {
     /**
          * 获取应用模块域名信息
          */
-    getModuleDomainInfo ({ commit, state }, { appCode }, config = {}) {
+    getModuleDomainInfo({  }, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/custom_domain_entrance/`;
       return http.get(url, {}, config);
-    }
-  }
+    },
+  },
 };

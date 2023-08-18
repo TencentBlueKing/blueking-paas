@@ -119,10 +119,17 @@
 
       <div class="form-edit mt20 pb20 border-b" v-else>
         <div class="ml80">
-          <bk-checkbox :value="deployLimit.stag" @change="handleEnvsChange('stag')">{{ $t('预发布环境') }}</bk-checkbox>
-          <bk-checkbox :value="deployLimit.prod" @change="handleEnvsChange('prod')">{{ $t('生产环境') }}</bk-checkbox>
+          <bk-checkbox v-model="deployLimit.stag">{{ $t('预发布环境') }}</bk-checkbox>
+          <bk-checkbox v-model="deployLimit.prod">{{ $t('生产环境') }}</bk-checkbox>
         </div>
         <div class="ml80">
+          <bk-button
+            :theme="'primary'"
+            title="保存"
+            class="mr20 mt20"
+            @click="handleSaveEnv">
+            {{ $t('保存') }}
+          </bk-button>
           <bk-button
             :theme="'default'"
             title="取消"
@@ -339,7 +346,7 @@ export default {
       buildDataBackUp: {},
       localCloudAppData: {},
       localCloudAppDataBackUp: {},
-      deployLimit: {},
+      deployLimit: { stag: false, prod: false },
       isDeployLimitEdit: false,
       isBasePageEdit: false,
       isIpInfoEdit: false,
@@ -359,6 +366,7 @@ export default {
       },
       gatewayInfosStagLoading: false,
       pageLoading: true,
+      envs: [],
     };
   },
   computed: {
@@ -478,9 +486,15 @@ export default {
       }
     },
 
-    // 选择
-    handleEnvsChange(v) {
-      this.fetchSetDeployLimit(v);
+
+    handleSaveEnv() {
+      this.envs = Object.keys(this.deployLimit).reduce((p, v) => {
+        if (this.deployLimit[v]) {
+          p.push(v);
+        }
+        return p;
+      }, []);
+      this.fetchSetDeployLimit(); // 保存环境
     },
 
     stopCapturing(event) {
@@ -499,6 +513,7 @@ export default {
               this.deployLimit[item.environment] = true;
             });
           } else {
+            console.log('res', res);
             const curEnv = res[0].environment;
             if (curEnv === 'stag') {
               this.deployLimit.stag = true;
@@ -524,20 +539,20 @@ export default {
     },
 
     // 设置部署限制环境
-    async fetchSetDeployLimit(env) {
+    async fetchSetDeployLimit() {
       try {
         this.pageLoading = true;
-        await this.$store.dispatch('module/setDeployLimit', {
+        await this.$store.dispatch('module/setDeployLimitBatch', {
           appCode: this.appCode,
           modelName: this.curModuleId,
           params: {
             operation: 'deploy',
-            env,
+            envs: this.envs,
           },
         });
         // 部署限制信息
         this.fetchEnvProtection();
-
+        this.isDeployLimitEdit = false;
         this.$paasMessage({
           theme: 'success',
           message: this.$t('操作成功'),

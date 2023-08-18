@@ -23,7 +23,9 @@
             />
           </div>
           <div v-else class="ml10">
-            <bk-tag :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用') ">
+            <bk-tag
+              :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用') "
+              :theme="preFormData.loaclEnabled ? 'info' : ''">
               {{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}
             </bk-tag>
           </div>

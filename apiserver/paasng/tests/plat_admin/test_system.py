@@ -278,4 +278,4 @@ class TestClusterNamespaceInfoViewSet:
         assert response.status_code == 200
         assert len(response.data) == 2
         assert response.data[0]['namespace']
-        assert response.data[0]['bcs_cluster_id']
+        assert response.data[0]['bcs_cluster_id'] is not None

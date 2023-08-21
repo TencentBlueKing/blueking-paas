@@ -39,13 +39,15 @@ class BkMonitorSpace:
     extra_info: Optional[dict] = None
 
     @property
-    def id_in_iam(self) -> str:
-        """蓝鲸监控空间在权限中心的 id
-        TODO: make a better name for this property
+    def iam_resource_id(self) -> str:
+        """蓝鲸监控空间在权限中心的 资源id
 
-        目前的约定是将蓝鲸监控空间id取负数
+        对于非 bkcc 类型的空间, 目前在 权限中心注册的 资源id 是取 空间id 的负数
         """
-        return f"-{self.id}"
+        if self.space_type_id != SpaceType.BKCC:
+            return f"-{self.id}"
+        # TODO: 确认 bkcc 类型的空间在权限中心的 资源id 是否等于 空间id
+        return f"{self.id}"
 
 
 def gen_bk_monitor_space(application: Application) -> BkMonitorSpace:

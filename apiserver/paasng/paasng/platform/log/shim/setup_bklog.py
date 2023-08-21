@@ -210,7 +210,7 @@ def update_or_create_custom_collector_config(
             # create_custom_collector_config will fill `id`, `index_set_id`, `bk_data_id` fields
             monitor_space, _ = get_or_create_bk_monitor_space(module.application)
             custom_collector_config = client.create_custom_collector_config(
-                biz_or_space_id=monitor_space.id_in_iam, config=custom_collector_config
+                biz_or_space_id=monitor_space.iam_resource_id, config=custom_collector_config
             )
             CustomCollectorConfigModel.objects.update_or_create(
                 module=module,

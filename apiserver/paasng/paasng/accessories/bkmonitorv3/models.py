@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.db import models
 
+from paasng.accessories.bkmonitorv3.constants import SpaceType
 from paasng.platform.applications.models import Application
 from paasng.utils.models import UuidAuditedModel
 
@@ -36,17 +37,19 @@ class BKMonitorSpace(UuidAuditedModel):
     space_type_id = models.CharField(verbose_name="空间类型id", max_length=48)
     space_id = models.CharField(verbose_name="空间id", help_text="同一空间类型下唯一", max_length=48)
     space_name = models.CharField(verbose_name="空间名称", max_length=64)
-    space_uid = models.CharField(verbose_name="蓝鲸监控空间 uid", help_text="{space_type_id}_{space_id}", max_length=48)
+    space_uid = models.CharField(verbose_name="蓝鲸监控空间 uid", help_text="{space_type_id}__{space_id}", max_length=48)
     extra_info = models.JSONField(help_text="蓝鲸监控API-metadata_get_space_detail 的原始返回值")
 
     class Meta:
         unique_together = ("space_type_id", "space_id")
 
     @property
-    def id_in_iam(self) -> str:
-        """蓝鲸监控空间在权限中心的 id
-        TODO: make a better name for this property
+    def iam_resource_id(self) -> str:
+        """蓝鲸监控空间在权限中心的 资源id
 
-        目前的约定是将 蓝鲸监控空间id 取负数
+        对于非 bkcc 类型的空间, 目前在 权限中心注册的 资源id 是取 空间id 的负数
         """
-        return f"-{self.id}"
+        if self.space_type_id != SpaceType.BKCC:
+            return f"-{self.id}"
+        # TODO: 确认 bkcc 类型的空间在权限中心的 资源id 是否等于 空间id
+        return f"{self.id}"

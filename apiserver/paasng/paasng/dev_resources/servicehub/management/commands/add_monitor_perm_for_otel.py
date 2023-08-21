@@ -52,7 +52,7 @@ class Command(BaseCommand):
                 continue
 
             # 同步执行添加监控日志平台应用空间权限的操作
-            add_monitoring_space_permission(application.code, application.name, space.id_in_iam)
+            add_monitoring_space_permission(application.code, application.name, space.iam_resource_id)
             self.stdout.write(
                 self.style.SUCCESS(
                     f"app_code: {application.code}, module:{ins.module.name} add permissions successfully."

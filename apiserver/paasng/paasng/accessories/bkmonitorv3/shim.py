@@ -34,7 +34,7 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     """
     mgr = make_bk_monitor_space_manager()
     space = mgr.create_space(gen_bk_monitor_space(application))
-    add_monitoring_space_permission.delay(application.code, application.name, bk_space_id=space.id_in_iam)
+    add_monitoring_space_permission.delay(application.code, application.name, bk_space_id=space.iam_resource_id)
     return BKMonitorSpace.objects.create(
         application=application,
         id=space.id,

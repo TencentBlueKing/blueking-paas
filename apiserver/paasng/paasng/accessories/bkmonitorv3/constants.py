@@ -21,5 +21,5 @@ from django.utils.translation import gettext_lazy as _
 
 
 class SpaceType(str, StructuredEnum):
-    SAAS = EnumField("saas", label=_("蓝鲸应用"))
+    SAAS = EnumField("bksaas", label=_("蓝鲸应用"))
     BKCC = EnumField("bkcc", label=_("业务"))

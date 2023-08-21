@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                 ('space_type_id', models.CharField(max_length=48, verbose_name='空间类型id')),
                 ('space_id', models.CharField(help_text='同一空间类型下唯一', max_length=48, verbose_name='空间id')),
                 ('space_name', models.CharField(max_length=64, verbose_name='空间名称')),
-                ('space_uid', models.CharField(help_text='{space_type_id}_{space_id}', max_length=48, verbose_name='蓝鲸监控空间 uid')),
+                ('space_uid', models.CharField(help_text='{space_type_id}__{space_id}', max_length=48, verbose_name='蓝鲸监控空间 uid')),
                 ('extra_info', models.JSONField(help_text='蓝鲸监控API-metadata_get_space_detail 的原始返回值')),
                 ('application', models.OneToOneField(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='bk_monitor_space', to='applications.application')),
             ],

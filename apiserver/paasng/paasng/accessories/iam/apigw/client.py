@@ -30,6 +30,14 @@ class Group(OperationGroup):
         Operation, name="management_grade_managers", method="POST", path="/api/v1/open/management/grade_managers/"
     )
 
+    # 修改分级管理员
+    management_grade_managers_update = bind_property(
+        Operation,
+        name="management_grade_managers_update",
+        method="PUT",
+        path="/api/v1/open/management/grade_managers/{id}/",
+    )
+
     # 删除分级管理员
     v2_management_delete_grade_manager = bind_property(
         Operation,
@@ -68,6 +76,22 @@ class Group(OperationGroup):
         name="v2_management_grade_manager_create_groups",
         method="POST",
         path="/api/v2/open/management/systems/{system_id}/grade_managers/{id}/groups/",
+    )
+
+    # 分级管理员用户组列表
+    v2_management_grade_manager_list_groups = bind_property(
+        Operation,
+        name="v2_management_grade_manager_list_groups",
+        method="GET",
+        path="/api/v2/open/management/systems/{system_id}/grade_managers/{id}/groups/",
+    )
+
+    # 分级管理员更新用户组
+    v2_management_grade_manager_update_group = bind_property(
+        Operation,
+        name="v2_management_grade_manager_update_group",
+        method="POST",
+        path="/api/v2/open/management/systems/{system_id}/groups/{id}/",
     )
 
     # 删除用户组

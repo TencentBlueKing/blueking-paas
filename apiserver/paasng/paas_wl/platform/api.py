@@ -133,20 +133,3 @@ def create_cnative_app_model_resource(
         'module_id': model_resource.module_id,
         'manifest': model_resource.revision.json_value,
     }
-
-
-def upsert_app_monitor(
-    engine_app_name: str,
-    port: int,
-    target_port: int,
-):
-    from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
-
-    instance, _ = AppMetricsMonitor.objects.update_or_create(
-        defaults={
-            "port": port,
-            "target_port": target_port,
-            "is_enabled": True,
-        },
-        app=WlApp.objects.get(name=engine_app_name),
-    )

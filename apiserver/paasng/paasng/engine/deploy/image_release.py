@@ -24,6 +24,7 @@ from django.utils.translation import gettext as _
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.cnative.specs.models import AppModelRevision
+from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
@@ -38,6 +39,7 @@ from paasng.engine.workflow import DeployProcedure, DeployStep
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
@@ -77,6 +79,10 @@ class ImageReleaseMgr(DeployStep):
                         image=runtime_info.generate_image(self.version_info),
                         procfile={p.name: p.command for p in processes.values()},
                         extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
+                        # 需要兼容 s-mart 应用
+                        artifact_type=ArtifactType.SLUG
+                        if self.module_environment.module.get_source_origin() == SourceOrigin.S_MART
+                        else ArtifactType.NONE,
                     )
                 else:
                     # TODO: 提供更好的处理方式, 不应该依赖上一个 Deployment

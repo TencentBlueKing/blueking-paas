@@ -24,7 +24,7 @@ from revproxy.utils import cookie_from_string, is_hop_by_hop, should_stream
 from urllib3.response import HTTPResponse as U3HTTPResponse
 
 #: Default number of bytes that are going to be read in a file lecture
-DEFAULT_AMT = 2**16
+DEFAULT_AMT = 2 ** 16
 # The amount of chunk being used when no buffering is needed for reading response
 NO_BUFFER_AMT = 1
 

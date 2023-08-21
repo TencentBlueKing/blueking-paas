@@ -25,24 +25,29 @@ from .component import BaseComponent
 from .http import http_get, http_post
 
 
-class APIGWDashboardComponent(BaseComponent):
+# bk-apigateway-inner 接口地址
+BK_APIGATEWAY_INNER_GATEWAY_STAGE = settings.BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway-inner", "prod")
+BK_APIGATEWAY_INNER_API_URL = f"{settings.BK_API_URL_TMPL.format(api_name='bk-apigateway-inner').rstrip('/')}/{BK_APIGATEWAY_INNER_GATEWAY_STAGE}"
 
-    host = getattr(settings, 'APIGW_DASHBOARD_HOST', '')
-    system_name = "apigw-dashboard"
 
-    def get(self, path: str, bk_username: str = '', **kwargs):
+class BkApigatewayInnerComponent(BaseComponent):
+
+    host = BK_APIGATEWAY_INNER_API_URL
+    system_name = "bk-apigateway-inner"
+
+    def get(self, path: str, bk_username: str = "", **kwargs):
         return self._call_api(http_get, path, headers=self._prepare_headers(bk_username), **kwargs)
 
-    def post(self, path: str, bk_username: str = '', **kwargs):
+    def post(self, path: str, bk_username: str = "", **kwargs):
         return self._call_api(http_post, path, headers=self._prepare_headers(bk_username), **kwargs)
 
     def _prepare_headers(self, bk_username: str):
         headers = {
-            'x-bkapi-authorization': json.dumps(
+            "x-bkapi-authorization": json.dumps(
                 {
-                    'bk_app_code': settings.BK_APP_CODE,
-                    'bk_app_secret': settings.BK_APP_SECRET,
-                    'bk_username': bk_username,
+                    "bk_app_code": settings.BK_APP_CODE,
+                    "bk_app_secret": settings.BK_APP_SECRET,
+                    "bk_username": bk_username,
                 }
             )
         }
@@ -54,4 +59,4 @@ class APIGWDashboardComponent(BaseComponent):
         return headers
 
 
-apigw_dashboard_component = APIGWDashboardComponent()
+bk_apigateway_inner_component = BkApigatewayInnerComponent()

@@ -237,7 +237,7 @@ ensure-legacy-image() {
 }
 
 ensure-smart-image() {
-    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}"
+    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
 }
 
 ensure-runtimes() {

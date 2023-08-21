@@ -53,30 +53,6 @@ class TestMarketAvailableAddressHelper:
         yield
 
     @pytest.mark.parametrize(
-        'addr,expected_addr',
-        [
-            ('https://foo.example.com', 'https://foo.example.com'),
-            ('http://foo.example.com', 'http://foo.example.com'),
-        ],
-    )
-    def test_prefer_https(
-        self, addr, expected_addr, bk_app, set_custom_domain, mock_env_is_running, mock_get_builtin_addresses
-    ):
-        mock_env_is_running["prod"] = True
-        mock_get_builtin_addresses["prod"] = [Address(type=AddressType.SUBDOMAIN, url=addr)]
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-        market_config.prefer_https = True
-        market_config.source_module.save()
-
-        helper = MarketAvailableAddressHelper(market_config)
-
-        set_custom_domain('test.example.com')
-        assert helper.addresses == [
-            AvailableAddress(address=expected_addr, type=2),
-            AvailableAddress(address='http://test.example.com', type=4),
-        ]
-
-    @pytest.mark.parametrize(
         'filter_domain,results',
         [
             ('http://test.example.com', AvailableAddress(address="http://test.example.com", type=4)),
@@ -93,19 +69,33 @@ class TestMarketAvailableAddressHelper:
         set_custom_domain('test.example.com')
         assert helper.filter_domain_address(filter_domain) == results
 
-    def test_access_entrance(self, bk_app):
+    def test_access_entrance(self, bk_app, mock_get_builtin_addresses):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         market_config.source_url_type = ProductSourceUrlType.ENGINE_PROD_ENV.value
         market_config.save()
         helper = MarketAvailableAddressHelper(market_config)
 
+        # 当 prefer_https is False 时, 强制使用 http 地址
+        market_config.prefer_https = False
+        market_config.save()
+
         assert helper.access_entrance
         assert helper.default_access_entrance_with_http
         assert helper.access_entrance.address == helper.default_access_entrance_with_http.address
 
+        # prefer_https is True 无意义, 不再强制使用 https 地址
         market_config.prefer_https = True
         market_config.save()
-        assert helper.access_entrance.address == helper.default_access_entrance_with_https.address
+        assert helper.access_entrance.address
+        assert helper.access_entrance.address.startswith("https://")
+
+        # 即使 prefer_https is True, 只要集群未开启 https_enabled 也返回 http 的访问地址
+        mock_get_builtin_addresses["prod"] = [
+            Address(type=AddressType.SUBDOMAIN, url="http://foo.example.com"),
+            Address(type=AddressType.SUBPATH, url="http://example.org/foo/"),
+        ]
+        assert helper.access_entrance.address
+        assert helper.access_entrance.address.startswith("http://")
 
     def test_access_entrance_for_custom_domain(self, bk_app, bk_module, set_custom_domain):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
@@ -139,21 +129,3 @@ class TestMarketAvailableAddressHelper:
         else:
             assert entrance is not None
             assert entrance.address == address
-
-
-class TestMarketAvailableAddressHelperNoDeployment:
-    def test_list_without_deploy(
-        self, bk_app, bk_module, set_custom_domain, mock_env_is_running, mock_get_builtin_addresses
-    ):
-        # Mock get_exposed_url to return None in order to simulate env which has
-        # not been deployed yet.
-
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-        helper = MarketAvailableAddressHelper(market_config)
-
-        set_custom_domain('test.example.com')
-
-        assert helper.addresses == [
-            AvailableAddress(address=None, type=2),
-            AvailableAddress(address='http://test.example.com', type=4),
-        ]

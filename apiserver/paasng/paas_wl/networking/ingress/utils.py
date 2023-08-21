@@ -44,7 +44,7 @@ def parse_process_type(app: WlApp, service_name: str) -> str:
     :raise ValueError: When given service_name is not parsable.
     """
     if app.type == WlAppType.CLOUD_NATIVE:
-        return service_name
+        return service_name.rsplit("--")[-1]
     parts = service_name.split(app.scheduler_safe_name)
     if len(parts) == 1:
         raise ValueError(f'Service name "{service_name}" invalid')

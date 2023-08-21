@@ -16,6 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.cnative.specs.constants import (
+    BKAPP_CODE_ANNO_KEY,
+    ENVIRONMENT_ANNO_KEY,
+    MODULE_NAME_ANNO_KEY,
+    RESOURCE_TYPE_KEY,
+    WLAPP_NAME_ANNO_KEY,
+)
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base.kres import KDeployment, KPod, KReplicaSet
@@ -61,6 +68,12 @@ class PodMapper(CallThroughKresMapper[KPod]):
             # mark deployment as bkapp, maybe we will have other category in the future.
             "category": "bkapp",
             "mapper_version": "v1",
+            # 云原生应用新增的 labels
+            BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
+            MODULE_NAME_ANNO_KEY: mdata.module_name,
+            ENVIRONMENT_ANNO_KEY: mdata.environment,
+            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            RESOURCE_TYPE_KEY: "process",
         }
 
     @property
@@ -94,6 +107,12 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
             # mark deployment as bkapp, maybe we will have other category in the future.
             "category": "bkapp",
             "mapper_version": "v1",
+            # 云原生应用新增的 labels
+            BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
+            MODULE_NAME_ANNO_KEY: mdata.module_name,
+            ENVIRONMENT_ANNO_KEY: mdata.environment,
+            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            RESOURCE_TYPE_KEY: "process",
         }
 
     @property

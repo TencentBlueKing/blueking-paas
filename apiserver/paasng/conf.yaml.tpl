@@ -3,6 +3,9 @@
 ## 用于加密数据库内容的 Secret
 # BKKRILL_ENCRYPT_SECRET_KEY: ''
 
+## 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'，分别对应 'SM4CTR'和'Fernet' 算法
+# BK_CRYPTO_TYPE : ''
+
 ## （Django）特定 Django 安装的密钥。用于提供 加密签名，默认值为：${BKKRILL_ENCRYPT_SECRET_KEY}
 ## 更多参考：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#secret-key
 # SECRET_KEY: ''
@@ -149,8 +152,8 @@
 # COMPONENT_SYSTEM_HOST: http://localhost:8080
 ## 蓝鲸的组件 API 测试环境地址
 # COMPONENT_SYSTEM_HOST_IN_TEST: http://localhost:8080
-## API Gateway Dashboard 地址
-# APIGW_DASHBOARD_URL: http://localhost:8080
+## bk-apigateway-inner 网关 API 地址
+# BK_APIGATEWAY_INNER_API_URL: http://bkapi.example.com/api/bk-apigateway-inner/prod/
 ## （Apigw Manager SDK）PaaS 服务 API Gateway 注册网关名称
 ## 更多参考：https://github.com/TencentBlueKing/bkpaas-python-sdk/tree/master/sdks/apigw-manager
 # BK_APIGW_NAME: paasv3

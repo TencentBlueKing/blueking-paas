@@ -21,19 +21,21 @@ from textwrap import dedent
 from typing import List
 
 import pytest
+from django.forms.models import model_to_dict
 from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
 from rest_framework.exceptions import ValidationError
 
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.config_var import (
+    CONFIG_VAR_INPUT_FIELDS,
     ENVIRONMENT_ID_FOR_GLOBAL,
     ENVIRONMENT_NAME_FOR_GLOBAL,
     ConfigVar,
     get_config_vars,
 )
 from paasng.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
-from paasng.engine.serializers import ConfigVarFormatSLZ
+from paasng.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ
 from paasng.platform.modules.models import Module
 from tests.utils.helpers import initialize_module
 
@@ -285,6 +287,62 @@ class TestConfigVarManager:
         all_config_vars = list(bk_module.configvar_set.all().order_by(order_by))
         exported = ExportedConfigVars.from_list(all_config_vars)
         assert exported.env_variables == expected
+
+    @pytest.mark.parametrize(
+        "vars_in_db, new_vars, expected_result",
+        [
+            (
+                # 更新已有数据
+                [dict(id=1, key='A', value=2, description='A', environment_name='stag')],
+                [dict(id=1, key='A1', value=2, description='A', environment_name='_global_')],
+                (0, 1, 0),
+            ),
+            (
+                # 修改、删除、新增数据
+                [
+                    dict(id=1, key='A', value=2, description='A', environment_name='stag'),
+                    dict(id=2, key='B', value=2, description='A', environment_name='stag'),
+                ],
+                [
+                    dict(id=1, key='A1', value=2, description='A', environment_name='_global_'),
+                    dict(key='C', value=2, description='B', environment_name='prod'),
+                ],
+                (1, 1, 1),
+            ),
+            (
+                # 修改(但 id 不在 db 内)、删除数据
+                [
+                    dict(id=1, key='A', value=2, description='A', environment_name='stag'),
+                    dict(id=2, key='B', value=2, description='A', environment_name='stag'),
+                ],
+                [dict(id=3, key='A1', value=2, description='A', environment_name='_global_')],
+                (1, 0, 2),
+            ),
+        ],
+    )
+    def test_batch_save(self, bk_module, config_var_maker, vars_in_db, new_vars, expected_result):
+        for var in vars_in_db:
+            config_var_maker(module=bk_module, **var)
+
+        serializer = ConfigVarFormatWithIdSLZ(
+            data=new_vars,
+            context={'module': bk_module},
+            many=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        valid_new_vars = serializer.validated_data
+
+        # 测试批量保存
+        ret = ConfigVarManager().batch_save(bk_module, valid_new_vars)
+        assert (ret.create_num, ret.overwrited_num, ret.deleted_num) == expected_result
+
+        # 验证保存后的数据，是否与新输入的数据完全一致
+        var_in_db = bk_module.configvar_set.all().order_by('key')
+        var_list_in_db = [model_to_dict(_d, fields=CONFIG_VAR_INPUT_FIELDS) for _d in var_in_db]
+
+        valid_new_vars_list = [model_to_dict(_d, fields=CONFIG_VAR_INPUT_FIELDS) for _d in valid_new_vars]
+        sorted_valid_new_vars = sorted(valid_new_vars_list, key=lambda x: x['key'])
+        assert var_list_in_db == sorted_valid_new_vars
 
 
 class TestConfigVarFormatSLZ:

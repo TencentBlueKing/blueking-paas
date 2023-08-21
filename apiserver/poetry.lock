@@ -278,6 +278,29 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "bk-crypto-python-sdk"
+version = "1.0.4"
+description = "bk-crypto-python-sdk is a lightweight cryptography toolkit for Python applications based on Cryptodome / tongsuopy and other encryption libraries."
+category = "main"
+optional = false
+python-versions = ">=3.6.2,<3.11"
+files = [
+    {file = "bk-crypto-python-sdk-1.0.4.tar.gz", hash = "sha256:1711d055d27cfb4e0150b19c03d4febf9cfd0239dbffcebdd8194666e981ffb4"},
+    {file = "bk_crypto_python_sdk-1.0.4-py3-none-any.whl", hash = "sha256:f8f0f824f14555b1fa823a0ce0852b3d86dd81b7d40f2104365a85d4aebbdea4"},
+]
+
+[package.dependencies]
+dacite = ">=1.8.1,<2.0.0"
+pycryptodomex = ">=3.18.0,<4.0.0"
+tongsuopy-crayon = ">=1.0.2b5,<2.0.0"
+wrapt = ">=1.15.0,<2.0.0"
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "bk-iam"
 version = "1.1.20"
 description = "bk-iam python sdk"
@@ -375,6 +398,7 @@ optional = false
 python-versions = ">=3.6,<4.0"
 files = [
     {file = "bkpaas-auth-2.0.6.tar.gz", hash = "sha256:3cf0168784c0c8763b5630de05464041d255fef4dbcd8ba08e6dc31ce997a5b4"},
+    {file = "bkpaas_auth-2.0.6-py3-none-any.whl", hash = "sha256:4bf02a06c13eef0c24008306f397b738b55995dbda74e18614cf6a9446fc3bfa"},
 ]
 
 [package.dependencies]
@@ -466,22 +490,23 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "blue-krill"
-version = "1.2.2"
+version = "2.0.2"
 description = "Tools and common packages for blueking paas"
 category = "main"
 optional = false
-python-versions = ">=3.6.2,<3.11"
+python-versions = ">=3.8,<3.11"
 files = [
-    {file = "blue-krill-1.2.2.tar.gz", hash = "sha256:45a581dfbc3e2d9ee21928cd5e5538e3abad382176800105aee3ccf0f03b7aee"},
-    {file = "blue_krill-1.2.2-py3-none-any.whl", hash = "sha256:20dac3eed94866cffb4c1771a1eae7ab0f7ed4b877c90d931fb7fc36be8f6c03"},
+    {file = "blue_krill-2.0.2-py3-none-any.whl", hash = "sha256:69ad05f8bc2bcf13a24f09860235ccec3fd952547dae3bcaa5974f38a9be0161"},
+    {file = "blue_krill-2.0.2.tar.gz", hash = "sha256:e8c512a0c70ca9add03f668832015cd77169145ec80475ad926ee2ae952adfa8"},
 ]
 
 [package.dependencies]
+bk-crypto-python-sdk = ">=1.0.4,<2.0.0"
 click = "*"
 cryptography = ">=3.0.0,<4.0.0"
 curlify = ">=2.2.1,<3.0.0"
 django-environ = ">=0.8.1,<0.9.0"
-pydantic = ">=1.7,<2.0"
+pydantic = "*"
 pyjwt = ">=1.7.1"
 python-editor = ">=1.0.4,<2.0.0"
 requests = "*"
@@ -1064,7 +1089,7 @@ files = [
 cffi = ">=1.12"
 
 [package.extras]
-docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx_rtd_theme"]
+docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
 docstest = ["doc8", "pyenchant (>=1.6.11)", "sphinxcontrib-spelling (>=4.0.1)", "twine (>=1.12.0)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
 sdist = ["setuptools-rust (>=0.11.4)"]
@@ -1089,6 +1114,25 @@ files = [
 
 [package.dependencies]
 requests = "*"
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
+name = "dacite"
+version = "1.8.1"
+description = "Simple creation of data classes from dictionaries."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "dacite-1.8.1-py3-none-any.whl", hash = "sha256:cc31ad6fdea1f49962ea42db9421772afe01ac5442380d9a99fcf3d188c61afe"},
+]
+
+[package.extras]
+dev = ["black", "coveralls", "mypy", "pre-commit", "pylint", "pytest (>=5)", "pytest-benchmark", "pytest-cov"]
 
 [package.source]
 type = "legacy"
@@ -3505,6 +3549,53 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "pycryptodomex"
+version = "3.18.0"
+description = "Cryptographic library for Python"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+files = [
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:160a39a708c36fa0b168ab79386dede588e62aec06eb505add870739329aecc6"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-manylinux2010_i686.whl", hash = "sha256:c2953afebf282a444c51bf4effe751706b4d0d63d7ca2cc51db21f902aa5b84e"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-manylinux2010_x86_64.whl", hash = "sha256:ba95abd563b0d1b88401658665a260852a8e6c647026ee6a0a65589287681df8"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-manylinux2014_aarch64.whl", hash = "sha256:192306cf881fe3467dda0e174a4f47bb3a8bb24b90c9cdfbdc248eec5fc0578c"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-musllinux_1_1_aarch64.whl", hash = "sha256:f9ab5ef0718f6a8716695dea16d83b671b22c45e9c0c78fd807c32c0192e54b5"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-win32.whl", hash = "sha256:50308fcdbf8345e5ec224a5502b4215178bdb5e95456ead8ab1a69ffd94779cb"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27m-win_amd64.whl", hash = "sha256:4d9379c684efea80fdab02a3eb0169372bca7db13f9332cb67483b8dc8b67c37"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27mu-manylinux2010_i686.whl", hash = "sha256:5594a125dae30d60e94f37797fc67ce3c744522de7992c7c360d02fdb34918f8"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27mu-manylinux2010_x86_64.whl", hash = "sha256:8ff129a5a0eb5ff16e45ca4fa70a6051da7f3de303c33b259063c19be0c43d35"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27mu-manylinux2014_aarch64.whl", hash = "sha256:3d9314ac785a5b75d5aaf924c5f21d6ca7e8df442e5cf4f0fefad4f6e284d422"},
+    {file = "pycryptodomex-3.18.0-cp27-cp27mu-musllinux_1_1_aarch64.whl", hash = "sha256:f237278836dda412a325e9340ba2e6a84cb0f56b9244781e5b61f10b3905de88"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-macosx_10_9_universal2.whl", hash = "sha256:ac614363a86cc53d8ba44b6c469831d1555947e69ab3276ae8d6edc219f570f7"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-macosx_10_9_x86_64.whl", hash = "sha256:302a8f37c224e7b5d72017d462a2be058e28f7be627bdd854066e16722d0fc0c"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-manylinux2014_aarch64.whl", hash = "sha256:6421d23d6a648e83ba2670a352bcd978542dad86829209f59d17a3f087f4afef"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d84e105787f5e5d36ec6a581ff37a1048d12e638688074b2a00bcf402f9aa1c2"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6875eb8666f68ddbd39097867325bd22771f595b4e2b0149739b5623c8bf899b"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:27072a494ce621cc7a9096bbf60ed66826bb94db24b49b7359509e7951033e74"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-musllinux_1_1_i686.whl", hash = "sha256:1949e09ea49b09c36d11a951b16ff2a05a0ffe969dda1846e4686ee342fe8646"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:6ed3606832987018615f68e8ed716a7065c09a0fe94afd7c9ca1b6777f0ac6eb"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-win32.whl", hash = "sha256:d56c9ec41258fd3734db9f5e4d2faeabe48644ba9ca23b18e1839b3bdf093222"},
+    {file = "pycryptodomex-3.18.0-cp35-abi3-win_amd64.whl", hash = "sha256:e00a4bacb83a2627e8210cb353a2e31f04befc1155db2976e5e239dd66482278"},
+    {file = "pycryptodomex-3.18.0-pp27-pypy_73-manylinux2010_x86_64.whl", hash = "sha256:2dc4eab20f4f04a2d00220fdc9258717b82d31913552e766d5f00282c031b70a"},
+    {file = "pycryptodomex-3.18.0-pp27-pypy_73-win32.whl", hash = "sha256:75672205148bdea34669173366df005dbd52be05115e919551ee97171083423d"},
+    {file = "pycryptodomex-3.18.0-pp38-pypy38_pp73-macosx_10_9_x86_64.whl", hash = "sha256:bec6c80994d4e7a38312072f89458903b65ec99bed2d65aa4de96d997a53ea7a"},
+    {file = "pycryptodomex-3.18.0-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d35a8ffdc8b05e4b353ba281217c8437f02c57d7233363824e9d794cf753c419"},
+    {file = "pycryptodomex-3.18.0-pp38-pypy38_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:76f0a46bee539dae4b3dfe37216f678769349576b0080fdbe431d19a02da42ff"},
+    {file = "pycryptodomex-3.18.0-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:71687eed47df7e965f6e0bf3cadef98f368d5221f0fb89d2132effe1a3e6a194"},
+    {file = "pycryptodomex-3.18.0-pp39-pypy39_pp73-macosx_10_9_x86_64.whl", hash = "sha256:73d64b32d84cf48d9ec62106aa277dbe99ab5fbfd38c5100bc7bddd3beb569f7"},
+    {file = "pycryptodomex-3.18.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bbdcce0a226d9205560a5936b05208c709b01d493ed8307792075dedfaaffa5f"},
+    {file = "pycryptodomex-3.18.0-pp39-pypy39_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:58fc0aceb9c961b9897facec9da24c6a94c5db04597ec832060f53d4d6a07196"},
+    {file = "pycryptodomex-3.18.0-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:215be2980a6b70704c10796dd7003eb4390e7be138ac6fb8344bf47e71a8d470"},
+    {file = "pycryptodomex-3.18.0.tar.gz", hash = "sha256:3e3ecb5fe979e7c1bb0027e518340acf7ee60415d79295e5251d13c68dde576e"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "pydantic"
 version = "1.8"
 description = "Data validation and settings management using python 3.6 type hinting"
@@ -4192,7 +4283,8 @@ files = [
     {file = "ruamel.yaml.clib-0.2.7-cp310-cp310-win32.whl", hash = "sha256:763d65baa3b952479c4e972669f679fe490eee058d5aa85da483ebae2009d231"},
     {file = "ruamel.yaml.clib-0.2.7-cp310-cp310-win_amd64.whl", hash = "sha256:d000f258cf42fec2b1bbf2863c61d7b8918d31ffee905da62dede869254d3b8a"},
     {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:045e0626baf1c52e5527bd5db361bc83180faaba2ff586e763d3d5982a876a9e"},
-    {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-macosx_12_6_arm64.whl", hash = "sha256:721bc4ba4525f53f6a611ec0967bdcee61b31df5a56801281027a3a6d1c2daf5"},
+    {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:1a6391a7cabb7641c32517539ca42cf84b87b667bad38b78d4d42dd23e957c81"},
+    {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:9c7617df90c1365638916b98cdd9be833d31d337dbcd722485597b43c4a215bf"},
     {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:41d0f1fa4c6830176eef5b276af04c89320ea616655d01327d5ce65e50575c94"},
     {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-win32.whl", hash = "sha256:f6d3d39611ac2e4f62c3128a9eed45f19a6608670c5a2f4f07f24e8de3441d38"},
     {file = "ruamel.yaml.clib-0.2.7-cp311-cp311-win_amd64.whl", hash = "sha256:da538167284de58a52109a9b89b8f6a53ff8437dd6dc26d33b57bf6699153122"},
@@ -4515,6 +4607,56 @@ files = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
+name = "tongsuopy-crayon"
+version = "1.0.2b6"
+description = "Tongsuo Python SDK"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-macosx_10_12_x86_64.whl", hash = "sha256:6dedcf17142d7dead9192cec8d3497ab9ee85d9fcfaab1bb264406043953ea0f"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-macosx_13_0_arm64.whl", hash = "sha256:8230cef643e215b7a3cba2ed9996764937fb95367becacbe7b318d6f57d061f4"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:db0b8dd76b9a9d3d906b5fe21009dee7f45839b440f77f154c67fd9678d8cb6d"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:702d1acb26965ee09248871be6f90eb72793acce9cfec92fb9e797dac6ecd636"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:1931822c93667ca546255f680da58b2eccd9783e9185ef778a67feba5b2f8277"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:da4bd309da1e7a30908af302d971b9f56a8dac57f0347311b910e5945de2a6a5"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7807d0021bf4dc92d03527cd0a7d420de4dd83506cd839874c1c8bb06e517215"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1a4263b7965ed7c35a91ecc8c92ed85272753d8e75b8a6055934ae45ae50b029"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:45b417cdb46c2f70322fad9be1be0d6558bf46e182e4e5a07c8444e13a2f4020"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:ed9aaac16b3f04483ed241b90a8569ff0602b9788ffa3d3d0d822d54a8ca1d7f"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-win32.whl", hash = "sha256:33353365a7e33cec32cc6516ebe5994132c54a60826b49e2c6af69bbea66480e"},
+    {file = "tongsuopy_crayon-1.0.2b6-cp36-abi3-win_amd64.whl", hash = "sha256:8aa57bd5c7df7a9c658b1b1ef585b80f7d7a39ee23465db69f0d5222ac4aa339"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-macosx_10_12_x86_64.whl", hash = "sha256:e3fd0092140dd2c7c48b99cce179d6e3106bf43c3b89af4fb9cc2434acaf4e32"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:9a85e774cc4c5f4cf63c5d3e19b14b88cf735310a15da47000899e7210b073a5"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4b46b03d86ccd4318714117a5de01558713b142203f3d39c05d72027f7427a5e"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:3887b6257a2d537e5193072ecc49fe1df5bd3781b0a0b8773854379e02555240"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:041f8896ea14561a484442e79d37637bf61ab6c0f566de203d870d91fe2d0597"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a01d6335ccc6edeeb8c012cc4b639cae98dd2ff0a1ed6b36ad70e3b79de41521"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:be32b697fd80e3ab4dc0ff96c58f610ea05dadb385093c909cd70a7daf7d91cf"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:5b0792af5195ff90f0e4066e8b257a5a0d21d5f55bff3f9755f3b6c5bfe052e6"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-macosx_10_12_x86_64.whl", hash = "sha256:7b365a4c2e2ca58acec6837bc946dd214610841f6e6abaa966a8f7518dcf9534"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:ea84ec750a1508cf5cb6e170ac5129f0c6208f7e0504bee6739368bcc8512b09"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8eeb3226a6ddb0d65f79903fb6e286ce86778c70b46a49f2d9843bcd6fd2ec5b"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:20ef52c691edefe485438b194b6a969ddd8d64c8b772f144733896c89cbdab7d"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fd12d135fe89f1c62e478bd2193b71a34be9fc921d59d05d92321681cbafb3fa"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e823d1d705a33fddd954e010a3e7b1b9217365736be920c11229d87fb50b21f5"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:12fafff7d17dad75ce987f40b1b9afccb2e68723f67f590b821850394a5afc66"},
+    {file = "tongsuopy_crayon-1.0.2b6-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:ccf0d627d46f00322a4b42f8f6692da8fbbd3ae848e400efc410c3584c740156"},
+]
+
+[package.dependencies]
+cffi = ">=1.12"
+
+[package.extras]
+pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
+test = ["pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-subtests", "pytest-xdist"]
 
 [package.source]
 type = "legacy"
@@ -5179,4 +5321,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "f856fdbaee65aba19fd3720a50b03968382dbda4e306c8c761450651abe4e00b"
+content-hash = "1b410ad082f46f42d1f9806bb9a7c606ac80a0ffa89bee6dc3feb636ffc5bb35"

@@ -22,7 +22,7 @@ from paasng.platform.applications.constants import ApplicationRole as AR
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.models import EnvRoleProtection
-from paasng.platform.environments.utils import env_role_protection_check
+from paasng.platform.environments.utils import batch_save_protections, env_role_protection_check
 
 pytestmark = pytest.mark.django_db
 
@@ -54,3 +54,27 @@ class TestEnvRoleProtectionCheck:
 
         for role in allowed_roles:
             env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=bk_prod_env, roles=[role])
+
+    @pytest.mark.parametrize(
+        'db_envs,input_envs',
+        [
+            ([], ['stag', 'prod']),
+            (['stag'], ['prod']),
+            (['prod'], ['prod']),
+            (['stag', 'prod'], ['prod']),
+            (['stag', 'prod'], []),
+        ],
+    )
+    def test_batch_save_protections(self, bk_module, db_envs, input_envs):
+        operation = EnvRoleOperation.DEPLOY.value
+        allowed_role = AR.DEVELOPER
+
+        for _env in db_envs:
+            module_env = bk_module.get_envs(_env)
+            EnvRoleProtection.objects.create(allowed_role=allowed_role, module_env=module_env, operation=operation)
+
+        # 批量保存数据
+        qs = batch_save_protections(bk_module, operation, [allowed_role], input_envs)
+        qs_envs = qs.values_list('module_env__environment', flat=True)
+
+        assert set(qs_envs) == set(input_envs)

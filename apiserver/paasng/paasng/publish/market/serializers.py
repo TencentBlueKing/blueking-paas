@@ -417,9 +417,10 @@ class MarketEntranceSLZ(serializers.Serializer):
                 instance.custom_domain_url = url
                 update_fields.extend(["custom_domain_url"])
             elif source_url_type in [ProductSourceUrlType.ENGINE_PROD_ENV, ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS]:
-                if source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS:
-                    instance.prefer_https = True
-                    update_fields.extend(["prefer_https"])
+                # 不再允许前端修改 prefer_https, 如需限制 http 访问, 需要在后台操作
+                # 当 prefer_https 为 None 时, 优先使用集群的配置(https_enabled)
+                instance.prefer_https = None
+                update_fields.extend(["prefer_https"])
         instance.source_url_type = source_url_type
         instance.save(update_fields=update_fields)
         return instance

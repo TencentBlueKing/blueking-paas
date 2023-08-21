@@ -73,12 +73,7 @@ import { PLATFORM_CONFIG } from '../static/json/paas_static.js';
 // 表头配置
 import { renderHeader } from '@/common/utils';
 
-// composition-api
-import VueCompositionAPI from '@vue/composition-api';
-
 window.$ = $;
-
-Vue.use(VueCompositionAPI);
 
 Vue.config.devtools = true;
 

@@ -19,16 +19,13 @@ to the current version of the project delivered to anyone in the future.
 """Engine services module
 """
 import datetime
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, TypedDict
 
 from django.utils.functional import cached_property
 
 from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
-from paas_wl.platform.applications.models.release import Release
-from paas_wl.resources.actions.deploy import AppDeploy
-from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.engine.models.deployment import Deployment
 
@@ -74,43 +71,27 @@ class EngineDeployClient:
         """
         return self.engine_app.to_wl_obj()
 
-    def list_command_logs(self, command_id: str) -> List[LogLine]:
-        """List all logs of command"""
-        command = self.wl_app.command_set.get(pk=command_id)
-        return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
-
-    def create_release(
-        self, build_id: str, deployment_id: Optional[str], extra_envs: Dict[str, str], procfile: Dict[str, str]
-    ) -> Release:
-        """Create a new release
-
-        :return: The created release object.
-        """
-        build = Build.objects.get(pk=build_id)
-        release = self.wl_app.release_set.new(
-            owner=build.owner,
-            build=build,
-            procfile=procfile,
-        )
-
-        try:
-            wl_app = release.app
-            AppDeploy(app=wl_app, release=release, extra_envs=extra_envs).perform()
-        except KubeException:
-            # TODO: Wrap exception and re-raise
-            raise
-        return release
-
-    def create_build(self, image: str, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
+    def create_build(
+        self,
+        image: str,
+        extra_envs: Dict[str, str],
+        procfile: Dict[str, str],
+        artifact_type: ArtifactType = ArtifactType.NONE,
+    ) -> str:
         """Create the **fake** build for Image Type App"""
         build = Build.objects.create(
             app=self.wl_app,
             env_variables=extra_envs,
             procfile=procfile,
             image=image,
-            artifact_type=ArtifactType.NONE,
+            artifact_type=artifact_type,
         )
         return str(build.uuid)
+
+    def list_command_logs(self, command_id: str) -> List[LogLine]:
+        """List all logs of command"""
+        command = self.wl_app.command_set.get(pk=command_id)
+        return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
 
     def list_build_proc_logs(self, build_process_id: str) -> List[LogLine]:
         """Get current status of build process"""

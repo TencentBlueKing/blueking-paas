@@ -30,6 +30,6 @@ func WithAppInfoAnnotations(bkapp *paasv1alpha2.BkApp) *paasv1alpha2.BkApp {
 	annotations[paasv1alpha2.BkAppNameKey] = "app-name"
 	annotations[paasv1alpha2.ModuleNameKey] = "module"
 	annotations[paasv1alpha2.EnvironmentKey] = "stag"
-	annotations[paasv1alpha2.EngineAppNameKey] = "bkapp-app-code-stag"
+	annotations[paasv1alpha2.WlAppNameKey] = "bkapp-app-code-stag"
 	return bkapp
 }

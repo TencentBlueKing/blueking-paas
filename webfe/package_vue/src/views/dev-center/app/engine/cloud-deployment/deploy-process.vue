@@ -245,7 +245,7 @@
               v-show="ifopen"
               :label-width="120"
             >
-              <div class="env-name">生产环境</div>
+              <div class="env-name">{{ $t('生产环境') }}</div>
               <div class="env-container">
                 <bk-form
                   ref="formEnv"

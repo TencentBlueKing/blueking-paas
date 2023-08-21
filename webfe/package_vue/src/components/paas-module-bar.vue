@@ -52,16 +52,16 @@ export default defineComponent({
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
       store.commit('updateCurAppModule', curModule);
 
-      const routeName = route.name;
+      const { name } = route;
       let { query } = route;
-      if (routeName === 'appLog') {
+      if (name === 'appLog') {
         query = {
           tab: route.query.tab || '',
         };
       }
 
       router.push({
-        name: routeName,
+        name,
         params: {
           id: route.params.id,
           moduleId: curModule.name,

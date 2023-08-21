@@ -26,7 +26,18 @@ from paasng.platform.applications.models import Application
 
 @define
 class BkMonitorSpace:
-    """蓝鲸监控空间定义"""
+    """蓝鲸监控空间定义
+
+    :param space_type_id: 空间类型id, 枚举范围见 SpaceType
+    :param space_id: 空间id, 同一 space_type_id 范围内唯一, 对于 bksaas 类型的空间, space_id 即 app_code
+    :param space_name: 空间名称, 对于 bksaas 类型的空间, space_name 即 app_name
+    :param creator: 空间 creator
+
+    :param id: 纯数字的 ID, 不同于 space_id.
+    :param space_uid: 全局唯一的 uid, 拼接规则: `${space_type_id}__${space_id}`
+    :param extra_info: 蓝鲸监控API - metadata_create_space/metadata_update_space/metadata_get_space_detail
+                       的原始返回值, 包含其他未被使用的空间相关的属性
+    """
 
     space_type_id: str
     space_id: str

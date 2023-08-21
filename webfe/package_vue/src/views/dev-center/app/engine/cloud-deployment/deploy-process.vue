@@ -795,7 +795,7 @@ export default {
       }
     },
 
-    'formData.resQuotaPlan'(value) {
+    'formData.resQuotaPlan'() {
       this.getQuotaPlans();
     },
 
@@ -1205,7 +1205,7 @@ export default {
       try {
         this.quotaPlansFlag = true;
         const res =  await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        const data = res.find(e => e.name === this.formData.resQuotaPlan);
+        const data = res.find(e => e.name === (this.formData.resQuotaPlan || 'default'));
         this.limit = data.limit;
         this.request = data.request;
       } catch (e) {

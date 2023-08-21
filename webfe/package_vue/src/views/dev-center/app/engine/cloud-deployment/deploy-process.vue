@@ -245,6 +245,7 @@
               v-show="ifopen"
               :label-width="120"
             >
+              <div class="env-name">生产环境</div>
               <div class="env-container">
                 <bk-form
                   ref="formEnv"
@@ -1354,6 +1355,10 @@ export default {
         color: #313238;
         padding-left: 10px;
       }
+    }
+    .env-name{
+      color: #313238;
+      font-size: 14px;
     }
     .env-container{
       width: 885px;

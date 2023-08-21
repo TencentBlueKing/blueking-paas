@@ -127,5 +127,16 @@ var _ = Describe("HookUtils", func() {
 			hook := BuildPreReleaseHook(bkapp, nil)
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(1))
 		})
+
+		It("test build pre-release hook for cnb runtime image", func() {
+			bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
+			hook := BuildPreReleaseHook(bkapp, nil)
+			c := hook.Pod.Spec.Containers[0]
+			By("test prepend 'launcher' to Command")
+			Expect(len(c.Command)).To(Equal(1 + len(bkapp.Spec.Hooks.PreRelease.Command)))
+			Expect(c.Command).To(Equal([]string{"launcher", "/bin/bash"}))
+			By("test Args is unchanged")
+			Expect(c.Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
+		})
 	})
 })

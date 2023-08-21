@@ -10,7 +10,7 @@
       :is-loading="isLoading"
       placeholder="env-loading"
       :offset-top="20"
-      class="app-container middle"
+      class="app-container env-container"
     >
       <section v-show="!isLoading">
         <div class="middle variable-main">
@@ -1631,6 +1631,12 @@ export default {
 
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/ellipsis.scss';
+    .env-container{
+      background: #fff;
+      padding-left: 24px;
+      padding-right: 24px;
+      margin-top: 16px;
+    }
     .variable-instruction {
         font-size: 14px;
         color: #7b7d8a;

@@ -53,7 +53,6 @@ var _ = Describe("test conversion back and forth", func() {
 						Replicas: ReplicasOne,
 						Image:    "worker:latest",
 						Autoscaling: &AutoscalingSpec{
-							Enabled:     true,
 							MinReplicas: 2,
 							MaxReplicas: 5,
 							Policy:      ScalingPolicyDefault,
@@ -69,6 +68,27 @@ var _ = Describe("test conversion back and forth", func() {
 				EnvOverlay: &AppEnvOverlay{
 					Replicas: []ReplicasOverlay{
 						{EnvName: "stag", Process: "web", Count: 10},
+					},
+					ResQuotas: []ResQuotaOverlay{
+						{
+							EnvName: "stag",
+							Process: "web",
+							Plan:    paasv1alpha2.ResQuotaPlan2C1G,
+						},
+					},
+					EnvVariables: []EnvVarOverlay{
+						{EnvName: "stag", Name: "ENV_NAME_1", Value: "env_value_3"},
+					},
+					Autoscaling: []AutoscalingOverlay{
+						{
+							EnvName: "stag",
+							Process: "web",
+							Spec: AutoscalingSpec{
+								MinReplicas: 1,
+								MaxReplicas: 3,
+								Policy:      ScalingPolicyDefault,
+							},
+						},
 					},
 				},
 			},
@@ -140,7 +160,6 @@ var _ = Describe("test conversion back and forth", func() {
 						Command:      []string{"celery", "start"},
 						ResQuotaPlan: "2x",
 						Autoscaling: &paasv1alpha2.AutoscalingSpec{
-							Enabled:     true,
 							MinReplicas: 1,
 							MaxReplicas: 10,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -149,6 +168,32 @@ var _ = Describe("test conversion back and forth", func() {
 				},
 				Addons: []paasv1alpha2.Addon{
 					{Name: "addon-2", Specs: []paasv1alpha2.AddonSpec{{Name: "version", Value: "5.0"}}},
+				},
+				EnvOverlay: &paasv1alpha2.AppEnvOverlay{
+					Replicas: []paasv1alpha2.ReplicasOverlay{
+						{EnvName: "stag", Process: "web", Count: 10},
+					},
+					ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+						{
+							EnvName: "stag",
+							Process: "web",
+							Plan:    paasv1alpha2.ResQuotaPlan2C1G,
+						},
+					},
+					EnvVariables: []paasv1alpha2.EnvVarOverlay{
+						{EnvName: "stag", Name: "ENV_NAME_1", Value: "env_value_3"},
+					},
+					Autoscaling: []paasv1alpha2.AutoscalingOverlay{
+						{
+							EnvName: "stag",
+							Process: "web",
+							Spec: paasv1alpha2.AutoscalingSpec{
+								MinReplicas: 1,
+								MaxReplicas: 3,
+								Policy:      paasv1alpha2.ScalingPolicyDefault,
+							},
+						},
+					},
 				},
 			},
 			Status: paasv1alpha2.AppStatus{

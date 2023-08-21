@@ -42,6 +42,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
+                    'ENABLE_BK_LOG_COLLECTOR': False,
                 },
             ),
             (
@@ -58,6 +59,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
+                    'ENABLE_BK_LOG_COLLECTOR': False,
                 },
             ),
             (
@@ -74,6 +76,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
+                    'ENABLE_BK_LOG_COLLECTOR': False,
                 },
             ),
             (
@@ -90,6 +93,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
+                    'ENABLE_BK_LOG_COLLECTOR': False,
                 },
             ),
             (
@@ -115,6 +119,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_USER_DIMENSION_SHOW_DEPT': True,
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
+                    'ENABLE_BK_LOG_COLLECTOR': False,
                 },
             ),
         ],

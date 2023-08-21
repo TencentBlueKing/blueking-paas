@@ -171,6 +171,21 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring("processes can't be empty"))
 		})
 
+		It("Processes exceed limit", func() {
+			processes := make([]paasv1alpha2.Process, 0)
+
+			i := int32(0)
+			for ; i < config.Global.GetMaxProcesses()+1; i++ {
+				processes = append(processes, paasv1alpha2.Process{
+					Name: fmt.Sprintf("web-%d", i),
+				})
+			}
+
+			bkapp.Spec.Processes = processes
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(`number of processes has exceeded limit`))
+		})
+
 		It("Process name duplicated", func() {
 			bkapp.Spec.Processes[1].Name = "web"
 			err := bkapp.ValidateCreate()
@@ -212,7 +227,7 @@ var _ = Describe("test webhook.Validator", func() {
 	Context("Test process autoscaling", func() {
 		It("Invalid minReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: paasv1alpha2.ScalingPolicyDefault,
+				MinReplicas: 0, MaxReplicas: 5, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("minReplicas must be greater than 0"))
@@ -220,7 +235,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("Invalid maxReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: paasv1alpha2.ScalingPolicyDefault,
+				MinReplicas: 1, MaxReplicas: 6, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("at most support 5 replicas"))
@@ -228,7 +243,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("maxReplicas < minReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: paasv1alpha2.ScalingPolicyDefault,
+				MinReplicas: 3, MaxReplicas: 2, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("maxReplicas must be greater than or equal to minReplicas"))
@@ -236,7 +251,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("policy required", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "",
+				MinReplicas: 1, MaxReplicas: 3, Policy: "",
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("autoscaling policy is required"))
@@ -244,15 +259,179 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("policy must supported", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
+				MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
 		})
+	})
 
-		It("disable autoscaling cause skip validate", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
-				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: "fake",
+	Context("Test mounts", func() {
+		It("Normal", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      "redis-conf",
+					MountPath: "/etc/redis",
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+					},
+				},
+				{
+					Name:      "nginx-conf",
+					MountPath: "/etc/nginx/conf",
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("Invalid name", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "redis_conf",
+				MountPath: "/etc/redis",
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+				},
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("a lowercase RFC 1123 label must consist of"))
+		})
+		It("Invalid mountPath", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "nginx-conf",
+				MountPath: "etc",
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must match regex"))
+		})
+		It("Duplicate name", func() {
+			sameName := "sample-conf"
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      sameName,
+					MountPath: "/etc/redis",
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+					},
+				},
+				{
+					Name:      sameName,
+					MountPath: "/etc/nginx/conf",
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("Duplicate mountPath", func() {
+			samePath := "/etc/sample"
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      "redis-conf",
+					MountPath: samePath,
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "redis-configmap"},
+					},
+				},
+				{
+					Name:      "nginx-conf",
+					MountPath: samePath,
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+
+		It("Invalid source", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "redis-conf",
+				MountPath: "/etc/redis",
+				Source:    &paasv1alpha2.VolumeSource{},
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("unknown volume source"))
+		})
+
+		It("Source is nil", func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{{
+				Name:      "redis-conf",
+				MountPath: "/etc/redis",
+				Source:    nil,
+			}}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Required value"))
+		})
+	})
+
+	Context("Test DomainResolution nameservers", func() {
+		It("Invalid IP address", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				Nameservers: []string{"foo@example!"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must be valid IP address"))
+		})
+		It("Too many entries", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				Nameservers: []string{"8.8.8.8", "8.8.8.9", "1.1.1.1"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(
+				err.Error(),
+			).To(ContainSubstring(fmt.Sprintf("must not have more than %v nameservers", paasv1alpha2.MaxDNSNameservers)))
+		})
+		It("Normal", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				Nameservers: []string{"8.8.8.8", "1.1.1.1"},
+			}
+			Expect(bkapp.ValidateCreate()).To(BeNil())
+		})
+	})
+
+	Context("Test DomainResolution hostAliases", func() {
+		It("Invalid IP address", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{IP: "foo@invalid!"},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must be valid IP address"))
+		})
+		It("Invalid hostname", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{IP: "127.0.0.1", Hostnames: []string{"foo@invalid!"}},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("must be valid hostname"))
+		})
+		It("Normal", func() {
+			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{
+				HostAliases: []paasv1alpha2.HostAlias{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"foo.localhost", "bar.localhost"},
+					},
+				},
 			}
 			Expect(bkapp.ValidateCreate()).To(BeNil())
 		})
@@ -267,11 +446,22 @@ var _ = Describe("test webhook.Validator", func() {
 				Replicas: []paasv1alpha2.ReplicasOverlay{
 					{EnvName: "stag", Process: "web", Count: 1},
 				},
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "prod", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+				},
 				EnvVariables: []paasv1alpha2.EnvVarOverlay{
 					{EnvName: "stag", Name: "foo", Value: "foo-value"},
 				},
 				Autoscaling: []paasv1alpha2.AutoscalingOverlay{
-					{EnvName: "stag", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
+					{
+						EnvName: "stag",
+						Process: "web",
+						Spec: paasv1alpha2.AutoscalingSpec{
+							MinReplicas: 2,
+							MaxReplicas: 5,
+							Policy:      paasv1alpha2.ScalingPolicyDefault,
+						},
+					},
 				},
 			}
 
@@ -299,6 +489,27 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("count can't be greater than "))
 		})
+		It("[resQuota] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
+				{EnvName: "invalid-env", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[resQuota] invalid process name", func() {
+			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
+				{EnvName: "stag", Process: "invalid-proc", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
+		})
+		It("[resQuota] invalid resource quota plan", func() {
+			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
+				{EnvName: "stag", Process: "web", Plan: "invalid-plan"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"1C512M\""))
+		})
 		It("[envVariables] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{
 				{EnvName: "invalid-env", Name: "foo", Value: "bar"},
@@ -308,21 +519,43 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 		It("[autoscaling] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
-				{EnvName: "invalid-env", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
+				{
+					EnvName: "invalid-env",
+					Process: "web",
+					Spec: paasv1alpha2.AutoscalingSpec{
+						MinReplicas: 2,
+						MaxReplicas: 5,
+						Policy:      paasv1alpha2.ScalingPolicyDefault,
+					},
+				},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
 		It("[autoscaling] invalid process name", func() {
 			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
-				{EnvName: "stag", Process: "invalid-proc", Policy: paasv1alpha2.ScalingPolicyDefault},
+				{
+					EnvName: "stag",
+					Process: "invalid-proc",
+					Spec: paasv1alpha2.AutoscalingSpec{
+						MinReplicas: 2,
+						MaxReplicas: 5,
+						Policy:      paasv1alpha2.ScalingPolicyDefault,
+					},
+				},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
 		})
 		It("[autoscaling] invalid policy", func() {
 			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
-				{EnvName: "stag", Process: "web", Policy: "fake"},
+				{
+					EnvName: "stag",
+					Process: "web",
+					Spec: paasv1alpha2.AutoscalingSpec{
+						MinReplicas: 2, MaxReplicas: 5, Policy: "fake",
+					},
+				},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))

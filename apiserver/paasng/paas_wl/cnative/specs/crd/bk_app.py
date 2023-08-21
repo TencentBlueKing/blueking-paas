@@ -28,10 +28,14 @@ from pydantic import BaseModel, Field, validator
 from paas_wl.cnative.specs.apis import ObjectMetadata
 from paas_wl.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.release_controller.constants import ImagePullPolicy
+from paasng.utils.structure import register
 
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = '500m'
 DEFAULT_PROC_MEM = '256Mi'
+# Default resource request for each process
+DEFAULT_PROC_CPU_REQUEST = '125m'
+DEFAULT_PROC_MEM_REQUEST = '126Mi'
 
 
 class MetaV1Condition(BaseModel):
@@ -47,7 +51,6 @@ class MetaV1Condition(BaseModel):
 class AutoscalingSpec(BaseModel):
     """Autoscaling specification"""
 
-    enabled: bool
     minReplicas: int
     maxReplicas: int
     policy: str = Field(..., min_length=1)
@@ -100,12 +103,43 @@ class BkAppConfiguration(BaseModel):
     env: List[EnvVar] = Field(default_factory=list)
 
 
+@register
+class ConfigMapSource(BaseModel):
+    name: str
+
+
+@register
+class VolumeSource(BaseModel):
+    configMap: Optional[ConfigMapSource]
+
+
+class Mount(BaseModel):
+    mountPath: str
+    name: str
+    source: VolumeSource
+
+
+class MountOverlay(BaseModel):
+    envName: str
+    mountPath: str
+    name: str
+    source: VolumeSource
+
+
 class ReplicasOverlay(BaseModel):
     """Overwrite process's replicas by environment"""
 
     envName: str
     process: str
     count: int
+
+
+class ResQuotaOverlay(BaseModel):
+    """Overwrite process's resQuota by environment"""
+
+    envName: str
+    process: str
+    plan: str
 
 
 class EnvVarOverlay(BaseModel):
@@ -121,15 +155,19 @@ class AutoscalingOverlay(BaseModel):
 
     envName: str
     process: str
-    policy: str
+    minReplicas: int
+    maxReplicas: int
+    policy: str = Field(..., min_length=1)
 
 
 class EnvOverlay(BaseModel):
     """Defines environment specified configs"""
 
     replicas: Optional[List[ReplicasOverlay]] = None
+    resQuotas: Optional[List[ResQuotaOverlay]] = None
     envVariables: Optional[List[EnvVarOverlay]] = None
     autoscaling: Optional[List[AutoscalingOverlay]] = None
+    mounts: Optional[List[MountOverlay]] = None
 
 
 class BkAppBuildConfig(BaseModel):
@@ -158,6 +196,33 @@ class BkAppAddon(BaseModel):
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
 
 
+class HostAlias(BaseModel):
+    """A host alias entry"""
+
+    ip: str
+    hostnames: List[str]
+
+
+class DomainResolution(BaseModel):
+    """Domain resolution config"""
+
+    nameservers: List[str] = Field(default_factory=list)
+    hostAliases: List[HostAlias] = Field(default_factory=list)
+
+
+class SvcDiscEntryBkSaaS(BaseModel):
+    """A service discovery entry that represents an application and an optional module."""
+
+    bkAppCode: str
+    moduleName: Optional[str] = None
+
+
+class SvcDiscConfig(BaseModel):
+    """Service discovery config"""
+
+    bkSaaS: List[SvcDiscEntryBkSaaS] = Field(default_factory=list)
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
@@ -165,7 +230,10 @@ class BkAppSpec(BaseModel):
     processes: List[BkAppProcess] = Field(default_factory=list)
     hooks: Optional[BkAppHooks] = None
     addons: List[BkAppAddon] = Field(default_factory=list)
+    mounts: Optional[List[Mount]] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
+    domainResolution: Optional[DomainResolution] = None
+    svcDiscovery: Optional[SvcDiscConfig] = None
     envOverlay: Optional[EnvOverlay] = None
 
 

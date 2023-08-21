@@ -31,19 +31,19 @@ var ErrParseAppMetadata = errors.New("unable to parse app metadata")
 
 // BluekingAppInfo contains a quadruple that uniquely specifies an EngineApp
 type BluekingAppInfo struct {
-	Region        string
-	AppCode       string
-	AppName       string
-	ModuleName    string
-	Environment   string
-	EngineAppName string
+	Region      string
+	AppCode     string
+	AppName     string
+	ModuleName  string
+	Environment string
+	WlAppName   string
 }
 
 // GetBkAppInfo 获取蓝鲸应用元信息
 func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 	annotations := bkapp.GetAnnotations()
 
-	var region, appCode, appName, moduleName, environment, engineAppName string
+	var region, appCode, appName, moduleName, environment, wlAppName string
 	var ok bool
 
 	if region, ok = annotations[paasv1alpha2.BkAppRegionKey]; !ok {
@@ -62,8 +62,8 @@ func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 	if environment, ok = annotations[paasv1alpha2.EnvironmentKey]; !ok {
 		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", paasv1alpha2.EnvironmentKey)
 	}
-	if engineAppName, ok = annotations[paasv1alpha2.EngineAppNameKey]; !ok {
-		engineAppName = fmt.Sprintf("bkapp-%s-%s", appCode, environment)
+	if wlAppName, ok = annotations[paasv1alpha2.WlAppNameKey]; !ok {
+		wlAppName = fmt.Sprintf("bkapp-%s-%s", appCode, environment)
 	}
 	return &BluekingAppInfo{
 		region,
@@ -71,6 +71,6 @@ func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 		appName,
 		moduleName,
 		environment,
-		engineAppName,
+		wlAppName,
 	}, nil
 }

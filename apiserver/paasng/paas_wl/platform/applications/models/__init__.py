@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from paas_wl.utils.models import AuditedModel, UuidAuditedModel
 
 from .app import WlApp
-from .build import Build, BuildProcess
+from .build import DEFAULT_SLUG_RUNNER_ENTRYPOINT, Build, BuildProcess
 from .config import Config
 from .misc import OneOffCommand, OutputStream, OutputStreamLine
 from .release import Release
@@ -31,6 +31,7 @@ __all__ = [
     'Config',
     'Build',
     'BuildProcess',
+    'DEFAULT_SLUG_RUNNER_ENTRYPOINT',
     'Release',
     'OutputStream',
     'OutputStreamLine',

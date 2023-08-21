@@ -16,8 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from functools import reduce
-from operator import add, attrgetter
+from operator import attrgetter
 from typing import Dict, List, Optional, Protocol, Tuple, Union
 
 from django.conf import settings
@@ -35,6 +34,7 @@ from paasng.platform.log.filters import (
     agg_builtin_filters,
     count_filters_options_from_agg,
     count_filters_options_from_logs,
+    parse_properties_filters,
 )
 from paasng.platform.log.models import BKLogConfig, ElasticSearchConfig, ElasticSearchHost
 
@@ -222,7 +222,7 @@ class ESLogClient:
             search.search,
             self._client.search(body=search.to_dict(), index=es_index, params={"request_timeout": timeout}),
         )
-        all_properties_filters = self._get_properties_filters(mappings)
+        all_properties_filters = parse_properties_filters(mappings)
         filters = count_filters_options_from_agg(response.aggregations.to_dict(), all_properties_filters)
         filters = count_filters_options_from_logs(list(response), filters)
         # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
@@ -270,46 +270,6 @@ class ESLogClient:
         return self._client.count(body=search.to_dict(count=True), index=index, params={"request_timeout": timeout})[
             "count"
         ]
-
-    def _get_properties_filters(self, mappings: dict) -> Dict[str, FieldFilter]:
-        """获取属性映射"""
-        # mappings 来自 get_mappings 函数
-        # 为了简化 _clean_property 的递归代码, 传递给 _clean_property 时需要加上 {"properties": mappings} 这层封装
-        return {f.name: f for f in self._clean_property([], {"properties": mappings})}
-
-    @classmethod
-    def _clean_property(cls, nested_name: List[str], mapping: Dict) -> List[FieldFilter]:
-        """transform ES mapping to List[FieldFilter], will handle nested property by recursion
-
-        Example Mapping:
-        {
-            "properties": {
-                "age": {
-                    "type": "integer"
-                },
-                "email": {
-                    "type": "keyword"
-                },
-                "name": {
-                    "type": "text"
-                },
-                "nested": {
-                    "properties": {...}
-                }
-            }
-        }
-        """
-        if "type" in mapping:
-            field_name = ".".join(nested_name)
-            return [
-                FieldFilter(name=field_name, key=field_name if mapping["type"] != "text" else f"{field_name}.keyword")
-            ]
-        if "properties" in mapping:
-            nested_fields = [
-                cls._clean_property(nested_name + [name], value) for name, value in mapping["properties"].items()
-            ]
-            return reduce(add, nested_fields)
-        return []
 
 
 def instantiate_log_client(log_config: ElasticSearchConfig, bk_username: str) -> LogClientProtocol:

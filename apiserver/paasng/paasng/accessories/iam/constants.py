@@ -43,7 +43,21 @@ LIST_GRADE_MANAGERS_LIMIT = 15000
 
 
 class ResourceType(str, StructuredEnum):
+    """
+    iam 上注册的资源类型
+    """
+
     Application = 'application'
+    # 蓝鲸监控：空间
+    BkMonitorSpace = 'space'
+    # 蓝鲸监控：APM 应用
+    BkMonitorApm = 'apm_application'
+    # 蓝鲸日志：索引集
+    BkLogIndices = 'indices'
+    # 蓝鲸日志：采集项
+    BkLogCollection = 'collection'
+    # 蓝鲸日志：ES源
+    BkLogEsSource = 'es_source'
 
 
 class IAMErrorCodes(int, StructuredEnum):
@@ -54,3 +68,69 @@ class IAMErrorCodes(int, StructuredEnum):
 
     # 资源冲突
     CONFLICT = 1902409
+
+
+# 蓝鲸监控的在权限中心注册的系统 ID
+BK_MONITOR_SYSTEM_ID = 'bk_monitorv3'
+# 蓝鲸日志平台在权限中心注册的系统 ID
+BK_LOG_SYSTEM_ID = 'bk_log_search'
+
+# 蓝鲸应用在监控平台的最小化权限列表
+APP_MINI_ACTIONS_IN_BK_MONITOR = {
+    ResourceType.BkMonitorSpace: [
+        'view_business_v2',
+        'explore_metric_v2',
+        'view_event_v2',
+        'manage_event_v2',
+        'view_notify_team_v2',
+        'manage_notify_team_v2',
+        'view_rule_v2',
+        'manage_rule_v2',
+        'view_downtime_v2',
+        'manage_downtime_v2',
+        'view_custom_metric_v2',
+        'manage_custom_metric_v2',
+        'view_custom_event_v2',
+        'manage_custom_event_v2',
+        'view_dashboard_v2',
+        'manage_dashboard_v2',
+        'manage_datasource_v2',
+        'export_config_v2',
+        'import_config_v2',
+    ],
+    ResourceType.BkMonitorApm: [
+        'view_apm_application_v2',
+        'manage_apm_application_v2',
+    ],
+}
+
+# 蓝鲸应用在日志平台的最小化权限列表
+# 日志平台给空间相关的 resource_system 为监控，其他的为日志
+APP_MINI_ACTIONS_IN_BK_LOG = {
+    ResourceType.BkMonitorSpace: {
+        'resource_system': BK_MONITOR_SYSTEM_ID,
+        'actions': [
+            'view_business_v2',
+            'create_collection_v2',
+            'create_es_source_v2',
+            'create_indices_v2',
+            'view_dashboard_v2',
+            'manage_dashboard_v2',
+            'manage_extract_config_v2',
+        ],
+    },
+    ResourceType.BkLogIndices: {
+        'resource_system': BK_LOG_SYSTEM_ID,
+        'actions': ['manage_indices_v2', 'search_log_v2'],
+    },
+    ResourceType.BkLogCollection: {
+        'resource_system': BK_LOG_SYSTEM_ID,
+        'actions': ['view_collection_v2', 'manage_collection_v2'],
+    },
+    ResourceType.BkLogEsSource: {
+        'resource_system': BK_LOG_SYSTEM_ID,
+        'actions': [
+            'manage_es_source_v2',
+        ],
+    },
+}

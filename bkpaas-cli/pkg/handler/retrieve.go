@@ -54,11 +54,17 @@ func (v *BasicInfoRetriever) Exec(appCode string) (model.AppInfo, error) {
 			envs = append(envs, model.EnvBasicInfo{Name: envName, Cluster: cluster})
 		}
 
+		// 兼容 RepoUrl 可能为 nil 的情况
+		repoUrl := mapx.Get(m, "repo.repo_url", "")
+		if repoUrl == nil {
+			repoUrl = ""
+		}
+
 		// 模块基础信息
 		modules = append(modules, model.ModuleBasicInfo{
 			Name:     mapx.GetStr(m, "name"),
 			RepoType: mapx.GetStr(m, "repo.display_name"),
-			RepoURL:  mapx.GetStr(m, "repo.repo_url"),
+			RepoURL:  repoUrl.(string),
 			Envs:     envs,
 		})
 	}

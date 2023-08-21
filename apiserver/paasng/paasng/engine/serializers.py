@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 import re
 from datetime import datetime
 from typing import List, Optional
@@ -29,7 +28,16 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.monitoring.metrics.constants import MetricsResourceType
-from paasng.engine.constants import ConfigVarEnvName, DeployConditions, ImagePullPolicy, JobStatus, MetricsType
+from paas_wl.platform.applications.models import Build, BuildProcess
+from paas_wl.workloads.processes.drf_serializers import ProcessSpecSLZ
+from paasng.engine.constants import (
+    ConfigVarEnvName,
+    DeployConditions,
+    ImagePullPolicy,
+    JobStatus,
+    MetricsType,
+    RuntimeType,
+)
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.engine.models.deployment import Deployment
@@ -37,11 +45,11 @@ from paasng.engine.models.managers import DeployDisplayBlockRenderer
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.publish.market.serializers import AvailableAddressSLZ
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField
-
-logger = logging.getLogger(__name__)
 
 
 class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
@@ -53,9 +61,11 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         default=ImagePullPolicy.IF_NOT_PRESENT,
     )
     build_only = serializers.BooleanField(help_text="是否仅构建, 不发布", default=False)
+    special_tag = serializers.CharField(help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True)
     build_id = serializers.CharField(
         help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
     )
+    invoke_message = serializers.CharField(help_text="触发信息", required=False, allow_null=True, allow_blank=True)
 
 
 class CreateDeploymentSLZ(serializers.Serializer):
@@ -153,6 +163,32 @@ class DeploymentResultSLZ(serializers.Serializer):
     error_tips = DeploymentErrorTipsSLZ()
 
 
+class BuildProcessSLZ(serializers.Serializer):
+    """构建历史"""
+
+    generation = serializers.IntegerField(help_text="执行ID")
+    image_tag = serializers.SerializerMethodField(help_text="构建镜像")
+    status = serializers.ChoiceField(choices=JobStatus.get_choices())
+    invoke_message = serializers.CharField(help_text="触发信息")
+    start_at = serializers.DateTimeField(help_text="开始时间", source="created")
+    completed_at = serializers.DateTimeField(help_text="结束时间", allow_null=True)
+
+    deployment_id = serializers.SerializerMethodField(help_text="用于查询详情日志")
+    build_id = serializers.CharField(source="build.uuid", allow_null=True)
+
+    def get_deployment_id(self, bp: BuildProcess):
+        # Note: 这里涉及多次数据库查询
+        deployment = Deployment.objects.filter(build_process_id=bp.uuid).first()
+        if deployment:
+            return deployment.pk
+        return None
+
+    def get_image_tag(self, bp: BuildProcess):
+        if not bp.build:
+            return None
+        return bp.build.image_tag
+
+
 class GetReleasedInfoSLZ(serializers.Serializer):
     with_processes = serializers.BooleanField(default=False)
 
@@ -182,6 +218,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
     create_num = serializers.IntegerField()
     overwrited_num = serializers.IntegerField()
     ignore_num = serializers.IntegerField()
+    deleted_num = serializers.IntegerField()
 
 
 def field_env_var_key():
@@ -226,6 +263,12 @@ class ConfigVarFormatSLZ(serializers.Serializer):
             data['is_global'] = False
             data['environment_id'] = module.envs.get(environment=env_name).pk
         return ConfigVar(**data, module=module)
+
+
+class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
+    """When batch editing, need to pass in the id."""
+
+    id = serializers.IntegerField(required=False)
 
 
 class ConfigVarImportSLZ(serializers.Serializer):
@@ -522,3 +565,68 @@ class DeployPhaseSLZ(DeployFramePhaseSLZ):
     start_time = serializers.DateTimeField(required=False)
     complete_time = serializers.DateTimeField(required=False)
     steps = DeployStepSLZ(source="get_sorted_steps", many=True)
+
+
+class ImageArtifactMinimalSLZ(serializers.Serializer):
+    """镜像构件概览"""
+
+    id = serializers.CharField(help_text="构件ID", source="uuid")
+    repository = serializers.CharField(help_text="镜像仓库", source="image_repository")
+    tag = serializers.CharField(help_text="镜像 Tag", source="image_tag")
+    size = serializers.IntegerField(help_text="镜像大小", source="get_artifact_detail.size")
+    digest = serializers.CharField(help_text="摘要", source="get_artifact_detail.digest")
+    invoke_message = serializers.CharField(help_text="触发信息", source="get_artifact_detail.invoke_message")
+    updated = serializers.DateTimeField(help_text="更新时间")
+
+    operator = serializers.SerializerMethodField(help_text="操作人")
+
+    def get_operator(self, build: Build) -> str:
+        try:
+            return get_username_by_bkpaas_user_id(build.owner)
+        except ValueError:
+            return build.owner
+
+
+class ImageDeployRecord(serializers.Serializer):
+    """镜像部署记录"""
+
+    at = serializers.DateTimeField(help_text="部署成功时间")
+    operator = serializers.SerializerMethodField(help_text="操作人")
+    environment = serializers.CharField(help_text="部署环境")
+
+    def get_operator(self, record) -> str:
+        try:
+            return get_username_by_bkpaas_user_id(record["operator"])
+        except ValueError:
+            return record["operator"]
+
+
+class ImageArtifactDetailSLZ(serializers.Serializer):
+    """镜像构件详情"""
+
+    image_info = ImageArtifactMinimalSLZ(help_text="镜像详情")
+    build_records = ImageArtifactMinimalSLZ(many=True, default=list, help_text="构建记录")
+    deploy_records = ImageDeployRecord(many=True, default=list, help_text="部署记录")
+
+
+class ModuleEnvOverviewSLZ(serializers.Serializer):
+    is_deployed = serializers.BooleanField(help_text="是否已部署")
+    address = AvailableAddressSLZ(allow_null=True, help_text="平台提供的访问地址")
+    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
+    # 版本相关信息
+    version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
+    version_name = serializers.CharField(required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name")
+    revision = serializers.CharField(
+        required=False,
+        help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",
+    )
+
+    # 进程相关信息
+    process_specs = ProcessSpecSLZ(many=True, help_text="进程规格")
+
+
+class EnvOverviewSLZ(serializers.Serializer):
+    """环境概览视图"""
+
+    environment = serializers.CharField(help_text="部署环境")
+    modules = ModuleEnvOverviewSLZ(many=True)

@@ -16,18 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.monitoring.bklog.constants import BkLogConfigType
 from paas_wl.monitoring.bklog.entities import BkAppLogConfig, bklog_config_kmodel
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.models import CustomCollectorConfig
-
-logger = logging.getLogger(__name__)
 
 
 def build_bklog_config_crd(wl_app: WlApp, custom_collector_config: CustomCollectorConfig) -> BkAppLogConfig:
@@ -43,19 +38,10 @@ def build_bklog_config_crd(wl_app: WlApp, custom_collector_config: CustomCollect
     )
 
 
-def make_bk_log_controller(wl_app: WlApp):
-    cluster = get_cluster_by_app(wl_app)
-    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-        logger.warning("BkLog is not ready, skip apply BkLogConfig")
-        return NullController()
-    else:
-        return AppLogConfigController(wl_app)
-
-
 class AppLogConfigController:
-    def __init__(self, wl_app: WlApp):
-        self.wl_app = wl_app
-        self.module = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid).module
+    def __init__(self, env: ModuleEnvironment):
+        self.wl_app = env.wl_app
+        self.module = env.module
         self.db_collector_configs = CustomCollectorConfig.objects.filter(module=self.module)
 
     def create_or_patch(self):

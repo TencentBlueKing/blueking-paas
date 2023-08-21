@@ -17,7 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Union
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -31,8 +32,21 @@ from paasng.accessories.bkmonitorv3.exceptions import (
     BkMonitorSpaceDoesNotExist,
 )
 from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
+from paasng.accessories.iam.tasks import add_monitoring_space_permission
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SpaceDetail:
+    """创建、更新、查询空间后返回需要存储的数据"""
+
+    id: int
+    space_uid: str
+
+    def __post_init__(self):
+        # 蓝鲸监控注册在 iam 上的空间资源 ID 为返回数据里面的 id 取负
+        self.bk_space_id = f"-{self.id}"
 
 
 class BkMonitorBackend(Protocol):
@@ -50,6 +64,9 @@ class BkMonitorBackend(Protocol):
     def search_alert(self, *args, **kwargs) -> Dict:
         ...
 
+    def promql_query(self, *args, **kwargs) -> Dict:
+        ...
+
 
 class BkMonitorClient:
     """API provided by BK Monitor
@@ -64,13 +81,13 @@ class BkMonitorClient:
 
     def get_or_create_space(self, app_code: str, app_name: str, creator: str) -> str:
         try:
-            space_uid = self._get_space_detail(app_code)
+            space_detail = self.get_space_detail(app_code)
         except BkMonitorSpaceDoesNotExist:
-            space_uid = self._create_space(app_code, app_name, creator)
+            space_detail = self._create_space(app_code, app_name, creator)
 
-        return space_uid
+        return space_detail.space_uid
 
-    def update_space(self, app_code: str, app_name: str, updater: str) -> str:
+    def update_space(self, app_code: str, app_name: str, updater: str) -> SpaceDetail:
         """更新空间"""
         data = {
             "space_name": app_name,
@@ -89,7 +106,8 @@ class BkMonitorClient:
             logger.info(f'Failed to update app space on BK Monitor, resp:{resp} \ndata: {data}')
             raise BkMonitorApiError(resp['message'])
 
-        return resp.get('data', {}).get('space_uid')
+        resp_data = resp.get('data', {})
+        return SpaceDetail(id=resp_data['id'], space_uid=resp_data['space_uid'])
 
     def query_alerts(self, query_params: QueryAlertsParams) -> List:
         """查询告警
@@ -107,7 +125,7 @@ class BkMonitorClient:
 
         return resp.get('data', {}).get('alerts', [])
 
-    def _get_space_detail(self, app_code: str) -> str:
+    def get_space_detail(self, app_code: str) -> SpaceDetail:
         """获取空间详情"""
         data = {"space_type_id": self.space_type_id, "space_id": app_code}
         try:
@@ -121,9 +139,10 @@ class BkMonitorClient:
             logger.info(f'Failed to get app({app_code}) space detail on BK Monitor, resp:{resp}')
             raise BkMonitorSpaceDoesNotExist(resp['message'])
 
-        return resp.get('data', {}).get('space_uid')
+        resp_data = resp.get('data', {})
+        return SpaceDetail(id=resp_data['id'], space_uid=resp_data['space_uid'])
 
-    def _create_space(self, app_code: str, app_name: str, creator: str) -> str:
+    def _create_space(self, app_code: str, app_name: str, creator: str) -> SpaceDetail:
         """在蓝鲸监控上创建应用对应的空间"""
         data = {
             "space_name": app_name,
@@ -140,18 +159,57 @@ class BkMonitorClient:
             logger.error(f'Failed to create app space on BK Monitor, resp:{resp} \ndata: {data}')
             raise BkMonitorApiError(resp['message'])
 
-        return resp.get('data', {}).get('space_uid')
+        resp_data = resp.get('data', {})
+        space_detail = SpaceDetail(id=resp_data['id'], space_uid=resp_data['space_uid'])
+
+        # 给应用添加蓝鲸监控空间相关的权限
+        add_monitoring_space_permission.delay(app_code, app_name, space_detail.bk_space_id)
+        return space_detail
+
+    def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
+        """
+        通过 promql 语法访问蓝鲸监控，获取容器 cpu / 内存等指标数据
+
+        :param bk_biz_id: 集群绑定的蓝鲸业务 ID
+        :param promql: promql 查询语句，可参考 PROMQL_TMPL
+        :param start: 起始时间戳，如 "1622009400"
+        :param end: 结束时间戳，如 "1622009500"
+        :param step: 步长，如："1m"
+        :returns: 时序数据 Series
+        """
+        params: Dict[str, Union[str, int, None]] = {
+            'promql': promql,
+            'start_time': start,
+            'end_time': end,
+            'step': step,
+            'bk_biz_id': bk_biz_id,
+        }
+
+        headers = {'X-Bk-Scope-Space-Uid': f'bkcc__{bk_biz_id}'}
+        try:
+            resp = self.client.promql_query(headers=headers, data=params)
+        except APIGatewayResponseError:
+            # 详细错误信息 bkapi_client_core 会自动记录
+            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+
+        if resp.get('error'):
+            raise BkMonitorApiError(resp['error'])
+
+        return resp.get('data', {}).get('series', [])
 
 
 def make_bk_monitor_client() -> BkMonitorClient:
     if settings.ENABLE_BK_MONITOR_APIGW:
-        apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
+        apigw_client = Client(
+            endpoint=settings.BK_API_URL_TMPL,
+            stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE,
+        )
         apigw_client.update_bkapi_authorization(
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
         return BkMonitorClient(apigw_client.api)
 
-    # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
+    # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
     esb_client = get_client_by_username("admin")
     return BkMonitorClient(esb_client.monitor_v3)

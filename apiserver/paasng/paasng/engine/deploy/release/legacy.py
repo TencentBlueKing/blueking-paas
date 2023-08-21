@@ -20,22 +20,25 @@ to the current version of the project delivered to anyone in the future.
 """Releasing process of an application deployment
 """
 import logging
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
 
+from paas_wl.platform.applications.models.build import Build
+from paas_wl.platform.applications.models.release import Release
+from paas_wl.resources.actions.deploy import DeployAction
+from paas_wl.resources.base.exceptions import KubeException
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.configurations.building import get_processes_by_build
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.deploy.bg_wait.wait_deployment import AbortedDetails, wait_for_release
-from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
-from paasng.engine.models.processes import ProcessManager
 from paasng.engine.signals import on_release_created
 from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
@@ -53,7 +56,7 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure('更新进程配置'):
-            ProcessManager(self.engine_app).sync_processes_specs(self.deployment.get_processes())
+            ProcessManager(self.engine_app.env).sync_processes_specs(self.deployment.get_processes())
 
         with self.procedure('更新应用配置'):
             update_image_runtime_config(deployment=self.deployment)
@@ -172,7 +175,7 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
     extra_envs = get_env_variables(env, deployment=deployment)
 
     # Create the release and start the background task to wait for the release if needed
-    release = EngineDeployClient(env.get_engine_app()).create_release(build_id, deployment_id, extra_envs, procfile)
+    release = release_to_k8s(env, build_id, extra_envs, procfile)
     if deployment_id:
         wait_for_release(
             env=env,
@@ -181,3 +184,30 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
             extra_params={"deployment_id": deployment_id},
         )
     return str(release.uuid)
+
+
+def release_to_k8s(
+    env: ModuleEnvironment, build_id: str, extra_envs: Dict[str, str], procfile: Dict[str, str]
+) -> Release:
+    """Create a new release object, and perform DeployAction
+
+    :param env: The environment to create the release for.
+    :param build_id: The ID of the finished build object.
+    :param extra_envs: env vars of current environment
+    :param procfile: Procfile to run the process
+
+    :return: The created release object.
+    """
+    build = Build.objects.get(pk=build_id)
+    release = env.wl_app.release_set.new(
+        owner=build.owner,
+        build=build,
+        procfile=procfile,
+    )
+
+    try:
+        DeployAction(env=env, release=release, extra_envs=extra_envs).perform()
+    except KubeException:
+        # TODO: Wrap exception and re-raise
+        raise
+    return release

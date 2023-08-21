@@ -90,531 +90,531 @@
 </template>
 
 <script>
-    import overviewTopInfo from './comps/overview-top-info';
-    import dynamicState from './comps/dynamic-state';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import chartOption from '@/json/analysis-chart-option';
-    import appTopBar from '@/components/paas-app-bar';
-    import notEnginelessChartOption from '@/json/engineless-chart-option';
-    import RenderSideslider from '../engine/analysis/comps/access-guide-sideslider.vue';
-    import ECharts from 'vue-echarts/components/ECharts.vue';
-    import 'echarts/lib/chart/line';
-    import 'echarts/lib/component/tooltip';
-    import moment from 'moment';
-    import { formatDate } from '@/common/tools';
-    import i18n from '@/language/i18n.js';
-    export default {
-        components: {
-            overviewTopInfo,
-            dynamicState,
-            chart: ECharts,
-            appTopBar,
-            RenderSideslider
+import overviewTopInfo from './comps/overview-top-info';
+import dynamicState from './comps/dynamic-state';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import chartOption from '@/json/analysis-chart-option';
+import appTopBar from '@/components/paas-app-bar';
+import notEnginelessChartOption from '@/json/engineless-chart-option';
+import RenderSideslider from '../engine/analysis/comps/access-guide-sideslider.vue';
+import ECharts from 'vue-echarts/components/ECharts.vue';
+import 'echarts/lib/chart/line';
+import 'echarts/lib/component/tooltip';
+import moment from 'moment';
+import { formatDate } from '@/common/tools';
+import i18n from '@/language/i18n.js';
+export default {
+  components: {
+    overviewTopInfo,
+    dynamicState,
+    chart: ECharts,
+    appTopBar,
+    RenderSideslider,
+  },
+  mixins: [appBaseMixin],
+  porps: {
+    engineEnabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  data() {
+    return {
+      loading: true,
+      isChartLoading: false,
+      operationsList: [],
+      topInfo: {
+        type: i18n.t('外链应用'),
+        description: i18n.t('平台为该类应用提供云 API 权限、应用市场等功能'),
+      },
+      chartOption: chartOption.pv_uv,
+      notEnginelessOption: notEnginelessChartOption.config,
+      renderChartIndex: 0,
+      chartFilterType: {
+        pv: true,
+        uv: true,
+      },
+      siteName: 'default',
+      chartDataCache: [],
+      curEnv: 'stag',
+      defaultRange: '1d',
+      isShowSideslider: false,
+      shortcuts: [
+        {
+          id: '1d',
+          text: this.$t('今天'),
+          value() {
+            const end = new Date();
+            const start = new Date();
+            return [start, end];
+          },
         },
-        mixins: [appBaseMixin],
-        porps: {
-            engineEnabled: {
-                type: Boolean,
-                default: true
-            }
+        {
+          id: '3d',
+          text: this.$t('最近 3 天'),
+          value() {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 3);
+            return [start, end];
+          },
         },
-        data () {
-            return {
-                loading: true,
-                isChartLoading: false,
-                operationsList: [],
-                topInfo: {
-                    type: i18n.t('外链应用'),
-                    description: i18n.t('平台为该类应用提供云 API 权限、应用市场等功能')
-                },
-                chartOption: chartOption.pv_uv,
-                notEnginelessOption: notEnginelessChartOption.config,
-                renderChartIndex: 0,
-                chartFilterType: {
-                    pv: true,
-                    uv: true
-                },
-                siteName: 'default',
-                chartDataCache: [],
-                curEnv: 'stag',
-                defaultRange: '1d',
-                isShowSideslider: false,
-                shortcuts: [
-                    {
-                        id: '1d',
-                        text: this.$t('今天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            return [start, end];
-                        }
-                    },
-                    {
-                        id: '3d',
-                        text: this.$t('最近 3 天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 3);
-                            return [start, end];
-                        }
-                    },
-                    {
-                        id: '7d',
-                        text: this.$t('最近 7 天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-                            return [start, end];
-                        }
-                    }
-                ],
-                dateRange: {
-                    startTime: '',
-                    endTime: ''
-                },
-                summaryData: {
-                    pv: 0,
-                    uv: 0
-                },
-                apiNumber: 0,
-                getawayNumber: 0,
-                curDispatchMethod: 'getAppPermissions',
-                gatewayList: [],
-                gatewayLegth: 1,
-                curTime: {},
-                analysisConfig: null
-            };
+        {
+          id: '7d',
+          text: this.$t('最近 7 天'),
+          value() {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+            return [start, end];
+          },
         },
-        computed: {
-            dateFormat () {
-                let isInDay = false; // 是否在一天内
-                if (this.dateRange.startTime && this.dateRange.endTime) {
-                    const start = this.dateRange.startTime;
-                    const end = this.dateRange.endTime;
+      ],
+      dateRange: {
+        startTime: '',
+        endTime: '',
+      },
+      summaryData: {
+        pv: 0,
+        uv: 0,
+      },
+      apiNumber: 0,
+      getawayNumber: 0,
+      curDispatchMethod: 'getAppPermissions',
+      gatewayList: [],
+      gatewayLegth: 1,
+      curTime: {},
+      analysisConfig: null,
+    };
+  },
+  computed: {
+    dateFormat() {
+      let isInDay = false; // 是否在一天内
+      if (this.dateRange.startTime && this.dateRange.endTime) {
+        const start = this.dateRange.startTime;
+        const end = this.dateRange.endTime;
 
-                    const endSeconds = moment(end).valueOf();
-                    const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
-                    if (oneEndSeconds > endSeconds) {
-                        isInDay = true;
-                    }
-                }
+        const endSeconds = moment(end).valueOf();
+        const oneEndSeconds = moment(start).add(1, 'days')
+          .valueOf(); // 一天后
+        if (oneEndSeconds > endSeconds) {
+          isInDay = true;
+        }
+      }
 
-                if (this.defaultRange === '1d') {
-                    return 'MM-DD';
-                } else if (this.defaultRange === '1h') {
-                    if (isInDay) {
-                        return 'HH:mm';
-                    } else {
-                        return 'MM-DD HH:mm';
-                    }
-                } else if (this.defaultRange === '5m') {
-                    if (isInDay) {
-                        return 'HH:mm';
-                    } else {
-                        return 'MM-DD HH:mm';
-                    }
-                }
-                return 'MM-DD';
-            },
-            chartData () {
-                const data = this.$store.state.log.chartData;
-                return data;
-            },
-            viewData () {
-                if (this.curFeatureAnalytics) {
-                    return { ...this.summaryData, apiNumber: this.apiNumber };
-                }
-                return { gateway: this.getawayNumber, apiNumber: this.apiNumber };
-            },
-            // 是否有数据统计模块的版本
-            curFeatureAnalytics () {
-                return this.$store.state.userFeature && this.$store.state.userFeature.ANALYTICS;
-            },
-            siteDisplayName () {
-                return this.analysisConfig ? this.analysisConfig.site.name : '';
-            }
-        },
-        watch: {
-            '$route' () {
-                if (this.curFeatureAnalytics) {
-                    this.refresh();
-                    this.getAnalysisConfig();
-                } else {
-                    this.getAppliedPermissionApi();
-                }
-            },
-            dateRange: {
-                deep: true,
-                handler () {
-                    if (this.curFeatureAnalytics) {
-                        this.refresh();
-                    }
-                }
-            }
-        },
-        created () {
-            this.initDate();
-        },
-        mounted () {
-            this.init();
-        },
-        methods: {
-            init () {
-                if (this.curFeatureAnalytics) {
-                    this.getAnalysisConfig();
-                }
-                this.getModuleOperations();
-                this.getAppliedPermissionApi();
-            },
-            initDate () {
-                moment.locale(this.localLanguage);
-                const end = new Date();
-                const start = new Date();
+      if (this.defaultRange === '1d') {
+        return 'MM-DD';
+      } if (this.defaultRange === '1h') {
+        if (isInDay) {
+          return 'HH:mm';
+        }
+        return 'MM-DD HH:mm';
+      } if (this.defaultRange === '5m') {
+        if (isInDay) {
+          return 'HH:mm';
+        }
+        return 'MM-DD HH:mm';
+      }
+      return 'MM-DD';
+    },
+    chartData() {
+      const data = this.$store.state.log.chartData;
+      return data;
+    },
+    viewData() {
+      if (this.curFeatureAnalytics) {
+        return { ...this.summaryData, apiNumber: this.apiNumber };
+      }
+      return { gateway: this.getawayNumber, apiNumber: this.apiNumber };
+    },
+    // 是否有数据统计模块的版本
+    curFeatureAnalytics() {
+      return this.$store.state.userFeature && this.$store.state.userFeature.ANALYTICS;
+    },
+    siteDisplayName() {
+      return this.analysisConfig ? this.analysisConfig.site.name : '';
+    },
+  },
+  watch: {
+    '$route'() {
+      if (this.curFeatureAnalytics) {
+        this.refresh();
+        this.getAnalysisConfig();
+      } else {
+        this.getAppliedPermissionApi();
+      }
+    },
+    dateRange: {
+      deep: true,
+      handler() {
+        if (this.curFeatureAnalytics) {
+          this.refresh();
+        }
+      },
+    },
+  },
+  created() {
+    this.initDate();
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    init() {
+      if (this.curFeatureAnalytics) {
+        this.getAnalysisConfig();
+      }
+      this.getModuleOperations();
+      this.getAppliedPermissionApi();
+    },
+    initDate() {
+      moment.locale(this.localLanguage);
+      const end = new Date();
+      const start = new Date();
 
-                this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-                this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
-                this.curTime = this.shortcuts[0];
-            },
-            // 获取最新动态
-            getModuleOperations () {
-                this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/operations/?limit=6`).then((response) => {
-                    this.operationsList = [];
-                    for (const item of response.results) {
-                        item['at_friendly'] = moment(item.at).startOf('minute').fromNow();
-                        this.operationsList.push(item);
-                    }
-                });
-            },
-            /**
+      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.curTime = this.shortcuts[0];
+    },
+    // 获取最新动态
+    getModuleOperations() {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/operations/?limit=6`).then((response) => {
+        this.operationsList = [];
+        for (const item of response.results) {
+          item.at_friendly = moment(item.at).startOf('minute')
+            .fromNow();
+          this.operationsList.push(item);
+        }
+      });
+    },
+    /**
              * 图表初始化
              * @param  {Object} chartData 数据
              * @param  {String} type 类型
              * @param  {Object} ref 图表对象
              */
-            renderChart () {
-                const series = [];
-                const xAxisData = [];
-                const pv = [];
-                const uv = [];
-                const chartData = this.chartDataCache;
+    renderChart() {
+      const series = [];
+      const xAxisData = [];
+      const pv = [];
+      const uv = [];
+      const chartData = this.chartDataCache;
 
-                chartData.forEach(item => {
-                    xAxisData.push(moment(item.time).format(this.dateFormat));
-                    uv.push(item.uv);
-                    pv.push(item.pv);
-                });
+      chartData.forEach((item) => {
+        xAxisData.push(moment(item.time).format(this.dateFormat));
+        uv.push(item.uv);
+        pv.push(item.pv);
+      });
 
-                if (this.chartFilterType.uv) {
-                    series.push({
-                        name: 'uv',
-                        type: 'line',
-                        smooth: true,
-                        lineStyle: {
-                            color: '#699df4',
-                            normal: {
-                                color: '#699df4',
-                                width: 1.5
-                            }
-                        },
-                        symbolSize: 1,
-                        showSymbol: false,
-                        areaStyle: {
-                            normal: {
-                                opacity: 0
-                            }
-                        },
-                        data: uv
-                    });
-                }
-
-                if (this.chartFilterType.pv) {
-                    series.push({
-                        name: 'pv',
-                        type: 'line',
-                        smooth: true,
-                        symbolSize: 1,
-                        showSymbol: false,
-                        lineStyle: {
-                            color: '#ffb849',
-                            normal: {
-                                color: '#ffb849',
-                                width: 1.5
-                            }
-                        },
-                        areaStyle: {
-                            normal: {
-                                opacity: 0
-                            }
-                        },
-                        data: pv
-                    });
-                }
-
-                this.chartOption.xAxis[0].data = xAxisData;
-                this.chartOption.series = series;
-                setTimeout(() => {
-                    const chartRef = this.$refs.chart;
-                    chartRef && chartRef.mergeOptions(this.chartOption, true);
-                    chartRef && chartRef.resize();
-                    chartRef && chartRef.hideLoading();
-                }, 1000);
+      if (this.chartFilterType.uv) {
+        series.push({
+          name: 'uv',
+          type: 'line',
+          smooth: true,
+          lineStyle: {
+            color: '#699df4',
+            normal: {
+              color: '#699df4',
+              width: 1.5,
             },
-
-            // 获取网站访问量(外链应用无需指定环境)
-            async getChartData () {
-                try {
-                    const appCode = this.appCode;
-                    const start = this.dateRange.startTime + ' 00:00';
-                    const end = this.dateRange.endTime + ' 23:59';
-                    const getEndDate = () => {
-                        const curTime = new Date(end).getTime();
-                        const nowTime = new Date().getTime();
-                        if (curTime > nowTime) {
-                            return formatDate(new Date());
-                        }
-                        return formatDate(end);
-                    };
-
-                    this.defaultRange = this.curTime.id === '1d' ? '1h' : '1d';
-
-                    const params = {
-                        'start_time': start,
-                        'end_time': getEndDate(),
-                        'interval': this.defaultRange
-                    };
-
-                    const res = await this.$store.dispatch('analysis/getChartData', {
-                        appCode,
-                        params,
-                        siteName: this.siteName,
-                        engineEnabled: false
-                    });
-                    this.chartDataCache = res.result.results;
-                    this.renderChart();
-                } catch (e) {
-                    const chartRef = this.$refs.chart;
-                    chartRef && chartRef.hideLoading();
-                    if (e.detail && e.detail !== this.$t('未找到。')) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: e.detail
-                        });
-                    }
-                }
+          },
+          symbolSize: 1,
+          showSymbol: false,
+          areaStyle: {
+            normal: {
+              opacity: 0,
             },
+          },
+          data: uv,
+        });
+      }
 
-            // 获取pv/uv
-            async getPvUv () {
-                try {
-                    const appCode = this.appCode;
-
-                    const params = {
-                        'start_time': this.dateRange.startTime,
-                        'end_time': this.dateRange.endTime,
-                        'interval': this.defaultRange
-                    };
-                    const res = await this.$store.dispatch('analysis/getPvUv', {
-                        appCode,
-                        params,
-                        siteName: this.siteName,
-                        engineEnabled: false
-                    });
-                    this.summaryData = res.result.results;
-                } catch (e) {
-                    if (e.detail && e.detail !== this.$t('未找到。')) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: e.detail
-                        });
-                    }
-                }
+      if (this.chartFilterType.pv) {
+        series.push({
+          name: 'pv',
+          type: 'line',
+          smooth: true,
+          symbolSize: 1,
+          showSymbol: false,
+          lineStyle: {
+            color: '#ffb849',
+            normal: {
+              color: '#ffb849',
+              width: 1.5,
             },
-
-            handleDateChange (date, id) {
-                this.dateRange = {
-                    startTime: date[0],
-                    endTime: date[1]
-                };
-                this.curTime = this.shortcuts.find(t => t.id === id) || {};
+          },
+          areaStyle: {
+            normal: {
+              opacity: 0,
             },
+          },
+          data: pv,
+        });
+      }
 
-            /**
+      this.chartOption.xAxis[0].data = xAxisData;
+      this.chartOption.series = series;
+      setTimeout(() => {
+        const chartRef = this.$refs.chart;
+        chartRef && chartRef.mergeOptions(this.chartOption, true);
+        chartRef && chartRef.resize();
+        chartRef && chartRef.hideLoading();
+      }, 1000);
+    },
+
+    // 获取网站访问量(外链应用无需指定环境)
+    async getChartData() {
+      try {
+        const { appCode } = this;
+        const start = `${this.dateRange.startTime} 00:00`;
+        const end = `${this.dateRange.endTime} 23:59`;
+        const getEndDate = () => {
+          const curTime = new Date(end).getTime();
+          const nowTime = new Date().getTime();
+          if (curTime > nowTime) {
+            return formatDate(new Date());
+          }
+          return formatDate(end);
+        };
+
+        this.defaultRange = this.curTime.id === '1d' ? '1h' : '1d';
+
+        const params = {
+          start_time: start,
+          end_time: getEndDate(),
+          interval: this.defaultRange,
+        };
+
+        const res = await this.$store.dispatch('analysis/getChartData', {
+          appCode,
+          params,
+          siteName: this.siteName,
+          engineEnabled: false,
+        });
+        this.chartDataCache = res.result.results;
+        this.renderChart();
+      } catch (e) {
+        const chartRef = this.$refs.chart;
+        chartRef && chartRef.hideLoading();
+        if (e.detail && e.detail !== this.$t('未找到。')) {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail,
+          });
+        }
+      }
+    },
+
+    // 获取pv/uv
+    async getPvUv() {
+      try {
+        const { appCode } = this;
+
+        const params = {
+          start_time: this.dateRange.startTime,
+          end_time: this.dateRange.endTime,
+          interval: this.defaultRange,
+        };
+        const res = await this.$store.dispatch('analysis/getPvUv', {
+          appCode,
+          params,
+          siteName: this.siteName,
+          engineEnabled: false,
+        });
+        this.summaryData = res.result.results;
+      } catch (e) {
+        if (e.detail && e.detail !== this.$t('未找到。')) {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail,
+          });
+        }
+      }
+    },
+
+    handleDateChange(date, id) {
+      this.dateRange = {
+        startTime: date[0],
+        endTime: date[1],
+      };
+      this.curTime = this.shortcuts.find(t => t.id === id) || {};
+    },
+
+    /**
              * 显示实例指标数据
              */
-            showInstanceChart (instance, processes) {
-                const chartRef = this.$refs.chart;
+    showInstanceChart(instance, processes) {
+      const chartRef = this.$refs.chart;
 
-                chartRef && chartRef.mergeOptions({
-                    xAxis: [
-                        {
-                            data: []
-                        }
-                    ],
-                    series: []
-                });
+      chartRef && chartRef.mergeOptions({
+        xAxis: [
+          {
+            data: [],
+          },
+        ],
+        series: [],
+      });
 
-                // loading
-                chartRef && chartRef.showLoading({
-                    text: this.$t('正在加载'),
-                    color: '#30d878',
-                    textColor: '#fff',
-                    maskColor: 'rgba(255, 255, 255, 0.8)'
-                });
+      // loading
+      chartRef && chartRef.showLoading({
+        text: this.$t('正在加载'),
+        color: '#30d878',
+        textColor: '#fff',
+        maskColor: 'rgba(255, 255, 255, 0.8)',
+      });
 
-                this.getChartData();
-            },
+      this.getChartData();
+    },
 
-            refresh () {
-                this.clearData();
+    refresh() {
+      this.clearData();
 
-                this.$nextTick(() => {
-                    const promises = [];
-                    promises.push(this.getPvUv());
-                    promises.push(this.showInstanceChart());
+      this.$nextTick(() => {
+        const promises = [];
+        promises.push(this.getPvUv());
+        promises.push(this.showInstanceChart());
 
-                    Promise.all(promises).finally(() => {
-                        this.loading = false;
-                    });
-                });
-            },
+        Promise.all(promises).finally(() => {
+          this.loading = false;
+        });
+      });
+    },
 
-            clearData () {
-                this.summaryData = {
-                    pv: 0,
-                    uv: 0
-                };
+    clearData() {
+      this.summaryData = {
+        pv: 0,
+        uv: 0,
+      };
 
-                this.clearChart();
-            },
+      this.clearChart();
+    },
 
-            /**
+    /**
              * 清空图表数据
              */
-            clearChart () {
-                const chartRef = this.$refs.chart;
+    clearChart() {
+      const chartRef = this.$refs.chart;
 
-                chartRef && chartRef.mergeOptions({
-                    xAxis: [
-                        {
-                            data: []
-                        }
-                    ],
-                    series: [
-                        {
-                            name: '',
-                            type: 'line',
-                            smooth: true,
-                            areaStyle: {
-                                normal: {
-                                    opacity: 0
-                                }
-                            },
-                            data: [0]
-                        }
-                    ]
-                });
+      chartRef && chartRef.mergeOptions({
+        xAxis: [
+          {
+            data: [],
+          },
+        ],
+        series: [
+          {
+            name: '',
+            type: 'line',
+            smooth: true,
+            areaStyle: {
+              normal: {
+                opacity: 0,
+              },
             },
+            data: [0],
+          },
+        ],
+      });
+    },
 
-            // 获取网关API
-            async getAppliedPermissionApi () {
-                // 无数据统计模块的版本
-                if (!this.curFeatureAnalytics) {
-                    this.clearHistogramData();
-                    this.openHistogramLoading();
-                }
-                try {
-                    const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
-                    this.gatewayList = res.data;
-                    this.apiNumber = this.gatewayList.length;
-                    if (!this.curFeatureAnalytics) {
-                        this.renderHistogram();
-                    }
-                } catch (e) {
-                    const chartRef = this.$refs.notModuleChart;
-                    chartRef && chartRef.hideLoading();
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
-            },
-
-            // 开启柱状图loading
-            openHistogramLoading () {
-                this.$nextTick(() => {
-                    const chartRef = this.$refs.notModuleChart;
-                    chartRef && chartRef.showLoading({
-                        text: this.$t('正在加载'),
-                        color: '#30d878',
-                        textColor: '#fff',
-                        maskColor: 'rgba(255, 255, 255, 0.8)'
-                    });
-                });
-            },
-
-            formatHistogramData () {
-                const gatewayData = {};
-                this.gatewayList.forEach(item => {
-                    if (gatewayData[item.api_name]) {
-                        gatewayData[item.api_name]++;
-                    } else {
-                        gatewayData[item.api_name] = 1;
-                    }
-                });
-                this.getawayNumber = Object.keys(gatewayData).length || 0;
-                const labels = [];
-                const data = [];
-                for (const key in gatewayData) {
-                    labels.push(key);
-                    data.push(gatewayData[key]);
-                }
-                return { labels, data };
-            },
-
-            // 设置柱状图
-            renderHistogram () {
-                const chartData = this.formatHistogramData();
-                setTimeout(() => {
-                    this.loading = false;
-                    // 是否无数据
-                    this.gatewayLegth = this.gatewayList.length;
-                    this.notEnginelessOption.series[0].data = chartData.data;
-                    this.notEnginelessOption.xAxis.data = chartData.labels;
-                    const chartRef = this.$refs.notModuleChart;
-                    chartRef && chartRef.resize();
-                    chartRef && chartRef.hideLoading();
-                }, 1000);
-            },
-
-            // 清空图标数据
-            clearHistogramData () {
-                this.notEnginelessOption.series[0].data = [];
-                this.notEnginelessOption.xAxis.data = [];
-            },
-
-            async getAnalysisConfig () {
-                try {
-                    const appCode = this.appCode;
-
-                    const res = await this.$store.dispatch('analysis/getAnalysisConfig', {
-                        appCode,
-                        siteName: this.siteName,
-                        engineEnabled: this.engineEnabled
-                    });
-                    this.analysisConfig = res;
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isLoading = false;
-                }
-            }
+    // 获取网关API
+    async getAppliedPermissionApi() {
+      // 无数据统计模块的版本
+      if (!this.curFeatureAnalytics) {
+        this.clearHistogramData();
+        this.openHistogramLoading();
+      }
+      try {
+        const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
+        this.gatewayList = res.data;
+        this.apiNumber = this.gatewayList.length;
+        if (!this.curFeatureAnalytics) {
+          this.renderHistogram();
         }
-    };
+      } catch (e) {
+        const chartRef = this.$refs.notModuleChart;
+        chartRef && chartRef.hideLoading();
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 开启柱状图loading
+    openHistogramLoading() {
+      this.$nextTick(() => {
+        const chartRef = this.$refs.notModuleChart;
+        chartRef && chartRef.showLoading({
+          text: this.$t('正在加载'),
+          color: '#30d878',
+          textColor: '#fff',
+          maskColor: 'rgba(255, 255, 255, 0.8)',
+        });
+      });
+    },
+
+    formatHistogramData() {
+      const gatewayData = {};
+      this.gatewayList.forEach((item) => {
+        if (gatewayData[item.api_name]) {
+          gatewayData[item.api_name]++;
+        } else {
+          gatewayData[item.api_name] = 1;
+        }
+      });
+      this.getawayNumber = Object.keys(gatewayData).length || 0;
+      const labels = [];
+      const data = [];
+      for (const key in gatewayData) {
+        labels.push(key);
+        data.push(gatewayData[key]);
+      }
+      return { labels, data };
+    },
+
+    // 设置柱状图
+    renderHistogram() {
+      const chartData = this.formatHistogramData();
+      setTimeout(() => {
+        this.loading = false;
+        // 是否无数据
+        this.gatewayLegth = this.gatewayList.length;
+        this.notEnginelessOption.series[0].data = chartData.data;
+        this.notEnginelessOption.xAxis.data = chartData.labels;
+        const chartRef = this.$refs.notModuleChart;
+        chartRef && chartRef.resize();
+        chartRef && chartRef.hideLoading();
+      }, 1000);
+    },
+
+    // 清空图标数据
+    clearHistogramData() {
+      this.notEnginelessOption.series[0].data = [];
+      this.notEnginelessOption.xAxis.data = [];
+    },
+
+    async getAnalysisConfig() {
+      try {
+        const { appCode } = this;
+
+        const res = await this.$store.dispatch('analysis/getAnalysisConfig', {
+          appCode,
+          siteName: this.siteName,
+          engineEnabled: this.engineEnabled,
+        });
+        this.analysisConfig = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
+  },
+};
 </script>
 
 <style scoped lang="scss">

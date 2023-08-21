@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Set, Type
+
 from bkpaas_auth import get_user_by_user_id
 
 
@@ -32,3 +34,20 @@ def get_user_avatar(username):
 def id_to_username(user_id: str) -> str:
     """Get username by decoding user id"""
     return get_user_by_user_id(user_id, username_only=True).username
+
+
+class ForceAllowAuthedApp:
+    """See `AuthenticatedAppAsUserMiddleware` for related details."""
+
+    _view_sets: Set[Type] = set()
+
+    @classmethod
+    def mark_view_set(cls, view_class):
+        """Mark a view set"""
+        cls._view_sets.add(view_class)
+        return view_class
+
+    @classmethod
+    def check_marked(cls, view_class) -> bool:
+        """Check if a view set has been marked"""
+        return view_class in cls._view_sets

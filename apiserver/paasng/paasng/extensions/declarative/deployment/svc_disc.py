@@ -69,13 +69,32 @@ class BkSaaSEnvVariableFactory:
         if not self.saas_items:
             return {}
 
-        data = self._get_preallocated_addresses()
+        data = BkSaaSAddrDiscoverer().get(self.saas_items)
         return {self.variable_name: self.encode_data(data)}
 
-    def _get_preallocated_addresses(self) -> List[Dict]:
-        """Get each app_code's preallocated addresses"""
+    @staticmethod
+    def encode_data(data) -> str:
+        """Encode data to string"""
+        data_bytes = force_bytes(json.dumps(data))
+        return force_str(base64.b64encode(data_bytes))
+
+    @staticmethod
+    def decode_data(data):
+        """Decode string data to object"""
+        return json.loads(base64.b64decode(force_bytes(data)))
+
+
+# TODO: Move this class to another module which is dedicated to "service-discovery"
+class BkSaaSAddrDiscoverer:
+    """Get the service addresses of the given SaaS items"""
+
+    def get(self, items: List[BkSaaSItem]) -> List[Dict]:
+        """Get preallocated addresses by a list of `BkSaaSItem` objects
+
+        :return: A list of addresses dict which includes both environments.
+        """
         data: List[Dict] = []
-        for saas_item, clusters in self.extend_with_clusters(self.saas_items):
+        for saas_item, clusters in self.extend_with_clusters(items):
             value: Optional[Dict]
             try:
                 value = get_preallocated_address(
@@ -105,17 +124,6 @@ class BkSaaSEnvVariableFactory:
             else:
                 logger.info('Module not found in system, no cluster for %s', item)
                 yield item, None
-
-    @staticmethod
-    def encode_data(data) -> str:
-        """Encode dict data to string"""
-        data_bytes = force_bytes(json.dumps(data))
-        return force_str(base64.b64encode(data_bytes))
-
-    @staticmethod
-    def decode_data(data):
-        """Decode string data to object"""
-        return json.loads(base64.b64decode(force_bytes(data)))
 
 
 def query_module(item: BkSaaSItem) -> Optional[Module]:

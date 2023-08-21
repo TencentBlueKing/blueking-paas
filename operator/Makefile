@@ -65,8 +65,10 @@ help: ## 展示可用 make 命令及说明
 
 .PHONY: manifests
 manifests: controller-gen ## 生成 WebhookConfiguration，ClusterRole，CustomResourceDefinition 等配置（YAML）
-	# 备注：output:none 将会丢弃其他的输出，适用于仅特定配置如 crd，webhook 需要更新的情况：https://book.kubebuilder.io/reference/controller-gen.html#output-rules
-	$(CONTROLLER_GEN) crd webhook paths="./..." rbac:roleName=manager-role "crd:crdVersions=v1" output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:none
+	# 备注：output:none 将会丢弃其他的输出，适用于仅特定配置如 crd，webhook 需要更新的情况。
+	# 如果需要增加更新其他部分的 manifests 文件，请在 output:none 前追加对应参数。
+	# 参考： https://book.kubebuilder.io/reference/controller-gen.html#output-rules
+	$(CONTROLLER_GEN) crd webhook paths="./..." rbac:roleName=manager-role "crd:crdVersions=v1" output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:rbac:artifacts:config=config/rbac output:none
 
 .PHONY: generate
 generate: controller-gen ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代码实现（Go）
@@ -169,6 +171,7 @@ HELMIFY ?= $(LOCALBIN)/helmify
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.0
+GOCILINT_VERSION ?= v1.53.3
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -204,7 +207,8 @@ $(GOFUMPT): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOCILINT) ## 安装 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
+	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOCILINT_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOCILINT_VERSION)
 
 .PHONY: helmify
 helmify: $(HELMIFY) ## 安装 helmify 二进制

@@ -45,6 +45,10 @@ class OperationType(ChoicesEnum):
     APPLY_PERM_FOR_CLOUD_API = 21
     RENEW_PERM_FOR_CLOUD_API = 22
 
+    # 白名单访问相关
+    ENABLE_ACCESS_CONTROL = 23
+    DISABLE_ACCESS_CONTROL = 24
+
     # Deprecated 以下事件类型已弃用，目前没有任何动作会产生这类事件
     DEPLOY_STAGE = 2
     DEPLOY_PRODUCT = 3
@@ -67,4 +71,6 @@ class OperationType(ChoicesEnum):
         (DELETE_MODULE, _("删除模块")),
         (APPLY_PERM_FOR_CLOUD_API, _("申请网关 API 权限")),
         (RENEW_PERM_FOR_CLOUD_API, _("续期网关 API 权限")),
+        (ENABLE_ACCESS_CONTROL, _("开启用户访问限制")),
+        (DISABLE_ACCESS_CONTROL, _("关闭用户访问限制")),
     )

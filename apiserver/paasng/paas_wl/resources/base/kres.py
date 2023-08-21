@@ -459,7 +459,7 @@ class LabelBasedOperations(BaseOperations):
         for item in self.list(labels, namespace=namespace).items:
             name_ops.delete(item.metadata.name, namespace=namespace, non_grace_period=non_grace_period)
 
-    def create_watch_stream(self, labels: Dict, namespace: Namespace = None, *args, **kwargs) -> Iterator:
+    def create_watch_stream(self, labels: Dict, namespace: Namespace = None, **kwargs) -> Iterator:
         """Create a stream object to watch changes
 
         :param int timeout_seconds/timeout: the total timeout for this watch request
@@ -467,9 +467,7 @@ class LabelBasedOperations(BaseOperations):
         kwargs = {**self.default_kwargs, **kwargs}
         # be compatible with timeout_seconds parameter
         kwargs.setdefault('timeout', kwargs.pop('timeout_seconds', None))
-        return self.resource.watch(
-            label_selector=self.make_labels_string(labels), namespace=namespace, *args, **kwargs
-        )
+        return self.resource.watch(label_selector=self.make_labels_string(labels), namespace=namespace, **kwargs)
 
     @staticmethod
     def make_labels_string(labels: Dict) -> str:
@@ -501,8 +499,10 @@ class KNamespace(BaseKresource):
         while timeout is None or time.time() - time_started < timeout:
             if self.default_sa_exists(namespace):
                 return None
+
             logger.warning("No default ServiceAccount found in namespace %s", namespace)
             time.sleep(check_period)
+
         raise CreateServiceAccountTimeout(namespace=namespace, timeout=timeout)
 
     def wait_until_removed(
@@ -538,16 +538,20 @@ class KNamespace(BaseKresource):
         :returns: bool
         """
         try:
-            sa = KServiceAccount.clone_from(self).get('default', namespace=namespace)
+            KServiceAccount.clone_from(self).get('default', namespace=namespace)
         except ResourceMissing:
             return False
-        # "sa" and "sa.secret" sometimes can be None
-        # TODO k8s 1.24+ 将不会自动为 default sa 关联 token
-        # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.24.md#urgent-upgrade-notes
-        # keyword: LegacyServiceAccountTokenNoAutoGeneration
-        if not (sa and getattr(sa, 'secrets', None)):
-            return False
-        return any(secret.name.startswith('default-token') for secret in sa.secrets)
+
+        # Q：为什么不再检查 ServiceAccount 绑定的 Secrets 信息
+        # A：目前蓝鲸应用并没有使用 ServiceAccount 绑定的权限访问其他集群资源的需求，
+        #    之前对 SA 的 Secrets 进行检查，主要目的是确保默认的 SA 已经初始化完成，避免应用 Pod 调度失败。
+        #    但是在 k8s 1.24+ 版本中，命名空间在创建后并不会默认为 default SA 绑定 Secret（Token），
+        #    该行为不会影响应用的正常部署，且此处检查 Secret 不再有意义，因此调整为仅检查 SA 是否存在。
+        # Ref：
+        #   1. https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.24.md#urgent-upgrade-notes
+        #      keyword: LegacyServiceAccountTokenNoAutoGeneration
+        #   2. https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#serviceaccount-v1-core
+        return True
 
 
 class KReplicaSet(BaseKresource):
@@ -602,6 +606,14 @@ class KDeployment(BaseKresource):
     kind = 'Deployment'
 
 
+class KStatefulSet(BaseKresource):
+    kind = 'StatefulSet'
+
+
+class KDaemonSet(BaseKresource):
+    kind = 'DaemonSet'
+
+
 class KService(BaseKresource):
     kind = 'Service'
 
@@ -624,6 +636,10 @@ class KEvent(BaseKresource):
 
 class KCustomResourceDefinition(BaseKresource):
     kind = "CustomResourceDefinition"
+
+
+class KConfigMap(BaseKresource):
+    kind = 'ConfigMap'
 
 
 # Individual resource types end

@@ -22,13 +22,12 @@ from uuid import UUID
 
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
-from django.conf import settings
 from django.utils.encoding import force_text
 
 from paas_wl.platform.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
-from paas_wl.platform.applications.models.build import Build, BuildProcess
+from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.utils.kubestatus import check_pod_health_status
@@ -232,13 +231,18 @@ class BuildProcessExecutor(DeployStep):
             raise KeyError("'image' is required")
         image = metadata['image']
         artifact_type = ArtifactType.SLUG
+        artifact_metadata = {}
         if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
             artifact_type = ArtifactType.IMAGE
+            artifact_metadata["use_dockerfile"] = metadata.get("use_dockerfile", False)
+            artifact_metadata["use_cnb"] = metadata.get("use_cnb", False)
         bkapp_revision_id = metadata.get("bkapp_revision_id", None)
 
         # starting create build
         build_instance = Build.objects.create(
-            owner=settings.BUILDER_USERNAME,
+            owner=self.deployment.operator,
+            application_id=self.bp.application_id,
+            module_id=self.bp.module_id,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
             image=image,
@@ -248,17 +252,19 @@ class BuildProcessExecutor(DeployStep):
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
             bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,
+            artifact_metadata=artifact_metadata,
         )
+        mark_as_latest_artifact(build_instance)
 
         # retrieve bp object again, flush the status
         self.bp.build = build_instance
-        self.bp.status = BuildStatus.SUCCESSFUL.value
-        self.bp.save(update_fields=["build", "status"])
+        self.bp.save(update_fields=["build"])
+        self.bp.update_status(BuildStatus.SUCCESSFUL)
         return build_instance
 
     def clean_slugbuilder(self):
         try:
             self.scheduler_client.delete_builder(namespace=self.wl_app.namespace, name=self._builder_name)
         except Exception as e:
-            # cleaning should not influenced main process
+            # cleaning should not influence main process
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)

@@ -64,9 +64,21 @@ type AppSpec struct {
 	// +optional
 	Addons []Addon `json:"addons,omitempty"`
 
+	// Mounts is a list of mount volume
+	// +optional
+	Mounts []Mount `json:"mounts,omitempty"`
+
 	// Hook commands of current BkApp resource
 	// +optional
 	Hooks *AppHooks `json:"hooks,omitempty"`
+
+	// Domain name resolution config
+	// +optional
+	DomainResolution *DomainResConfig `json:"domainResolution,omitempty"`
+
+	// The application's service discovery config
+	// +optional
+	SvcDiscovery *SvcDiscConfig `json:"svcDiscovery,omitempty"`
 
 	// EnvOverlay holds environment specified configurations, includes replica
 	// count and environment variables.
@@ -166,6 +178,16 @@ type AddonSpec struct {
 	Value string `json:"value"`
 }
 
+// Mount is used to specify mount volume
+type Mount struct {
+	// Path of the mount
+	MountPath string `json:"mountPath"`
+	// Name of the mount
+	Name string `json:"name"`
+	// Source of the mount
+	Source *VolumeSource `json:"source"`
+}
+
 // ResQuotaPlan is used to specify process resource quota
 type ResQuotaPlan string
 
@@ -194,9 +216,6 @@ const (
 
 // AutoscalingSpec is bkapp autoscaling config
 type AutoscalingSpec struct {
-	// Enabled indicates whether autoscaling is enabled
-	Enabled bool `json:"enabled"`
-
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
 	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
 	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
@@ -233,6 +252,44 @@ type Hook struct {
 	Args []string `json:"args,omitempty"`
 }
 
+// DomainResConfig defines the domain resolution config of the application
+type DomainResConfig struct {
+	// Nameservers specifies the IP addresses of the name servers
+	// +optional
+	Nameservers []string `json:"nameservers,omitempty"`
+
+	// HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
+	// file if specified. This is only valid for non-hostNetwork pods.
+	// NOTE: Copied from Kubernetes PodSpec API.
+	// +optional
+	HostAliases []HostAlias `json:"hostAliases,omitempty"`
+}
+
+// HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
+// pod's hosts file.
+type HostAlias struct {
+	// IP address of the host file entry.
+	IP string `json:"ip,omitempty"`
+	// Hostnames for the above IP address.
+	Hostnames []string `json:"hostnames,omitempty"`
+}
+
+// SvcDiscConfig stores the service discovery config
+type SvcDiscConfig struct {
+	// A list of entries that contain SaaS module info
+	BkSaaS []SvcDiscEntryBkSaaS `json:"bkSaaS,omitempty"`
+}
+
+// SvcDiscEntryBkSaaS is an entry that represents an application and an optional module.
+type SvcDiscEntryBkSaaS struct {
+	// BkAppCode is the code of the application.
+	BkAppCode string `json:"bkAppCode"`
+
+	// ModuleName is the name of the module, when absent, the "main" module will be used.
+	// +optional
+	ModuleName *string `json:"moduleName,omitempty"`
+}
+
 // AppConfig is bkapp related configuration, such as environment variables, etc.
 type AppConfig struct {
 	// List of environment variables to set in the container.
@@ -250,9 +307,13 @@ type AppEnvVar struct {
 
 // AppEnvOverlay defines environment specified configs.
 type AppEnvOverlay struct {
-	// Replicas overwrite processes's replicas count
+	// Replicas overwrite process's replicas count
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
+
+	// ResQuotas overwrite BkApp's process resource quota
+	// +optional
+	ResQuotas []ResQuotaOverlay `json:"resQuotas,omitempty"`
 
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
@@ -261,6 +322,10 @@ type AppEnvOverlay struct {
 	// Autoscaling overwrite process's autoscaling config
 	// +optional
 	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
+
+	// Mounts overwrite BkApp's mounts by environment
+	// +optional
+	Mounts []MountOverlay `json:"mounts,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
@@ -293,6 +358,16 @@ type ReplicasOverlay struct {
 	Count int32 `json:"count"`
 }
 
+// ResQuotaOverlay overwrite process's resQuota by environment.
+type ResQuotaOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Plan is used to specify process resource quota
+	Plan ResQuotaPlan `json:"plan"`
+}
+
 // EnvVarOverlay overwrite or add application's environment vars by environment.
 type EnvVarOverlay struct {
 	// EnvName is app environment name
@@ -309,8 +384,15 @@ type AutoscalingOverlay struct {
 	EnvName EnvName `json:"envName"`
 	// Process is the name of process
 	Process string `json:"process"`
-	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
-	Policy ScalingPolicy `json:"policy"`
+	// Spec is bkapp autoscaling config
+	Spec AutoscalingSpec `json:",inline"`
+}
+
+// MountOverlay overwrite or add application's mounts by environment
+type MountOverlay struct {
+	Mount Mount `json:",inline"`
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
 }
 
 // AppStatus defines the observed state of BkApp

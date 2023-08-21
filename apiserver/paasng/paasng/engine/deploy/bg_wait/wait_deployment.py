@@ -26,10 +26,10 @@ import django.dispatch
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, PollingStatus, TaskPoller
 from pydantic import BaseModel, validator
 
-from paas_wl.workloads.processes.controllers import get_processes_status
+from paas_wl.workloads.processes.processes import PlainProcess
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.models import Deployment
 from paasng.engine.processes.events import ProcEventsProducer
-from paasng.engine.processes.models import PlainProcess, condense_processes
 from paasng.engine.processes.utils import ProcessesSnapshotStore
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -164,8 +164,7 @@ class WaitProcedurePoller(TaskPoller):
 
     def _get_current_processes(self) -> List[PlainProcess]:
         """Get current process list"""
-        wl_app = self.env.wl_app
-        return condense_processes(get_processes_status(wl_app))
+        return ProcessManager(self.env).list_plain_processes()
 
     def _get_last_processes(self) -> Optional[List[PlainProcess]]:
         """Get process list of last polling action"""

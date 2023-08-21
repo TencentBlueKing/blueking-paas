@@ -20,14 +20,12 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.networking.entrance.addrs import Address
 from paas_wl.networking.entrance.constants import AddressType
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.region.models import get_all_regions
-from paasng.publish.entrance.exposer import Address
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 from paasng.publish.market.utils import MarketAvailableAddressHelper
-from tests.publish.utils import ModuleLiveAddrs
 
 pytestmark = pytest.mark.django_db
 
@@ -35,7 +33,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def set_custom_domain():
     """Allow to set custom domains by mocking"""
-    with mock.patch('paasng.publish.market.utils.list_custom_addresses') as mocker:
+    with mock.patch('paasng.publish.market.utils.LiveEnvAddresses.list_custom') as mocker:
 
         def _set_hostname(hostname):
             """Set mocker to return given hostname as return value"""
@@ -46,79 +44,13 @@ def set_custom_domain():
 
 class TestMarketAvailableAddressHelper:
     @pytest.fixture(autouse=True)
-    def _setup(self):
-        with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-            mocker.return_value = ModuleLiveAddrs(
-                [
-                    {
-                        "env": "prod",
-                        "is_running": True,
-                        "addresses": [
-                            {"type": "subdomain", "url": "https://foo.example.com"},
-                            {"type": "subpath", "url": "https://example.org/foo/"},
-                        ],
-                    },
-                ]
-            )
-            yield
-
-    @pytest.mark.parametrize(
-        'exposed_url_type, expected_addr',
-        [
-            (ExposedURLType.SUBDOMAIN.value, '//foo.example.com'),
-            (ExposedURLType.SUBPATH.value, '//example.org/foo/'),
-        ],
-    )
-    def test_no_prefer_different_exposed_type(self, exposed_url_type, expected_addr, bk_app, set_custom_domain):
-        """No prefer HTTPS, test different exposed types"""
-        for region in get_all_regions().keys():
-            market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-            market_config.source_module.region = region
-            market_config.source_module.exposed_url_type = exposed_url_type
-            market_config.prefer_https = False
-            market_config.source_module.save()
-
-            set_custom_domain('test.example.com')
-            helper = MarketAvailableAddressHelper(market_config)
-            assert helper.addresses == [
-                AvailableAddress(address='http:' + expected_addr, type=2),
-                AvailableAddress(address='https:' + expected_addr, type=5),
-                AvailableAddress(address="http://test.example.com", type=4),
-            ]
-
-    @pytest.mark.parametrize(
-        'addr,expected_addr',
-        [
-            ('https://foo.example.com', 'https://foo.example.com'),
-            ('http://foo.example.com', 'http://foo.example.com'),
-        ],
-    )
-    def test_prefer_https(self, addr, expected_addr, bk_app, set_custom_domain):
-        with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-            mocker.return_value = ModuleLiveAddrs(
-                [
-                    {
-                        "env": "prod",
-                        "is_running": True,
-                        "addresses": [{"type": "subdomain", "url": addr}],
-                    },
-                ]
-            )
-
-            for region in get_all_regions().keys():
-                market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-                market_config.source_module.region = region
-                market_config.source_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
-                market_config.prefer_https = True
-                market_config.source_module.save()
-
-                helper = MarketAvailableAddressHelper(market_config)
-
-                set_custom_domain('test.example.com')
-                assert helper.addresses == [
-                    AvailableAddress(address=expected_addr, type=2),
-                    AvailableAddress(address='http://test.example.com', type=4),
-                ]
+    def _setup(self, mock_env_is_running, mock_get_builtin_addresses):
+        mock_env_is_running["prod"] = True
+        mock_get_builtin_addresses["prod"] = [
+            Address(type=AddressType.SUBDOMAIN, url="https://foo.example.com"),
+            Address(type=AddressType.SUBPATH, url="https://example.org/foo/"),
+        ]
+        yield
 
     @pytest.mark.parametrize(
         'filter_domain,results',
@@ -137,19 +69,33 @@ class TestMarketAvailableAddressHelper:
         set_custom_domain('test.example.com')
         assert helper.filter_domain_address(filter_domain) == results
 
-    def test_access_entrance(self, bk_app):
+    def test_access_entrance(self, bk_app, mock_get_builtin_addresses):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         market_config.source_url_type = ProductSourceUrlType.ENGINE_PROD_ENV.value
         market_config.save()
         helper = MarketAvailableAddressHelper(market_config)
 
+        # 当 prefer_https is False 时, 强制使用 http 地址
+        market_config.prefer_https = False
+        market_config.save()
+
         assert helper.access_entrance
         assert helper.default_access_entrance_with_http
         assert helper.access_entrance.address == helper.default_access_entrance_with_http.address
 
+        # prefer_https is True 无意义, 不再强制使用 https 地址
         market_config.prefer_https = True
         market_config.save()
-        assert helper.access_entrance.address == helper.default_access_entrance_with_https.address
+        assert helper.access_entrance.address
+        assert helper.access_entrance.address.startswith("https://")
+
+        # 即使 prefer_https is True, 只要集群未开启 https_enabled 也返回 http 的访问地址
+        mock_get_builtin_addresses["prod"] = [
+            Address(type=AddressType.SUBDOMAIN, url="http://foo.example.com"),
+            Address(type=AddressType.SUBPATH, url="http://example.org/foo/"),
+        ]
+        assert helper.access_entrance.address
+        assert helper.access_entrance.address.startswith("http://")
 
     def test_access_entrance_for_custom_domain(self, bk_app, bk_module, set_custom_domain):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
@@ -183,21 +129,3 @@ class TestMarketAvailableAddressHelper:
         else:
             assert entrance is not None
             assert entrance.address == address
-
-
-class TestMarketAvailableAddressHelperNoDeployment:
-    @mock.patch('paasng.publish.market.utils.get_exposed_url')
-    def test_list_without_deploy(self, mocker, bk_app, bk_module, set_custom_domain):
-        # Mock get_exposed_url to return None in order to simulate env which has
-        # not been deployed yet.
-        mocker.return_value = None
-
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-        helper = MarketAvailableAddressHelper(market_config)
-
-        set_custom_domain('test.example.com')
-
-        assert helper.addresses == [
-            AvailableAddress(address=None, type=2),
-            AvailableAddress(address="http://test.example.com", type=4),
-        ]

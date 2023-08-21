@@ -3,6 +3,9 @@
 ## 用于加密数据库内容的 Secret
 # BKKRILL_ENCRYPT_SECRET_KEY: ''
 
+## 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'，分别对应 'SM4CTR'和'Fernet' 算法
+# BK_CRYPTO_TYPE : ''
+
 ## （Django）特定 Django 安装的密钥。用于提供 加密签名，默认值为：${BKKRILL_ENCRYPT_SECRET_KEY}
 ## 更多参考：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#secret-key
 # SECRET_KEY: ''
@@ -149,8 +152,8 @@
 # COMPONENT_SYSTEM_HOST: http://localhost:8080
 ## 蓝鲸的组件 API 测试环境地址
 # COMPONENT_SYSTEM_HOST_IN_TEST: http://localhost:8080
-## API Gateway Dashboard 地址
-# APIGW_DASHBOARD_URL: http://localhost:8080
+## bk-apigateway-inner 网关 API 地址
+# BK_APIGATEWAY_INNER_API_URL: http://bkapi.example.com/api/bk-apigateway-inner/prod/
 ## （Apigw Manager SDK）PaaS 服务 API Gateway 注册网关名称
 ## 更多参考：https://github.com/TencentBlueKing/bkpaas-python-sdk/tree/master/sdks/apigw-manager
 # BK_APIGW_NAME: paasv3
@@ -171,6 +174,12 @@
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 
+## 开发者中心使用的 k8s 集群组件（helm chart 名称）
+# BKPAAS_K8S_CLUSTER_COMPONENTS:
+# - bk-ingress-nginx
+# - bkapp-log-collection
+# - bkpaas-app-operator
+# - bcs-general-pod-autoscaler
 
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
 
@@ -179,6 +188,7 @@
 ## 服务健康探针列表
 # HEALTHZ_PROBES:
 #   - paasng.monitoring.healthz.probes.PlatformMysqlProbe
+#   - paasng.monitoring.healthz.probes.WorkloadsMysqlProbe
 #   - paasng.monitoring.healthz.probes.PlatformRedisProbe
 #   - paasng.monitoring.healthz.probes.ServiceHubProbe
 #   - paasng.monitoring.healthz.probes.PlatformBlobStoreProbe
@@ -197,6 +207,8 @@
 
 ## 每个应用下最多创建的模块数量
 # MAX_MODULES_COUNT_PER_APPLICATION: 10
+## 应用单个模块下最多创建的 process 数量
+# MAX_PROCESSES_PER_MODULE: 8
 
 ## 旧版本 PaaS 数据库 Host
 # PAAS_LEGACY_DATABASE_HOST: ''
@@ -655,6 +667,9 @@
 # PYTHON_BUILDPACK_PIP_INDEX_URL: ''
 ## 从源码构建应用时，额外注入的环境变量
 # BUILD_EXTRA_ENV_VARS: {}
+
+## slugbuilder build 的超时时间, 单位秒, 默认 15 分钟
+# BUILD_PROCESS_TIMEOUT = 900
 
 
 ## ---------------------------------------- 服务导出配置 ----------------------------------------

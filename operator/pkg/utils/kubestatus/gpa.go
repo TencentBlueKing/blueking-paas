@@ -28,8 +28,9 @@ import (
 
 // GenGPAHealthStatus check if the GPA is healthy
 // For a deployment:
-//   healthy means the GPA is available, ready to scale workloads with policy.
-//   unhealthy means the GPA is failed when reconciled.
+//
+//	healthy means the GPA is available, ready to scale workloads with policy.
+//	unhealthy means the GPA is failed when reconciled.
 func GenGPAHealthStatus(gpa *autoscaling.GeneralPodAutoscaler) *HealthStatus {
 	for _, condition := range gpa.Status.Conditions {
 		if condition.Status == corev1.ConditionFalse {

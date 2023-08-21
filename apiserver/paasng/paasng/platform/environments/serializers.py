@@ -47,3 +47,8 @@ class EnvRoleProtectionListSLZ(serializers.Serializer):
 
 class EnvRoleProtectionCreateSLZ(EnvRoleProtectionListSLZ):
     env = serializers.ChoiceField(choices=['stag', 'prod'])
+
+
+class BatchEnvRoleProtectionSLZ(serializers.Serializer):
+    envs = serializers.ListField(child=serializers.ChoiceField(choices=['stag', 'prod']))
+    operation = serializers.ChoiceField(choices=EnvRoleOperation.get_choices())

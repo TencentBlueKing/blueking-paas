@@ -25,5 +25,14 @@ module.exports = {
   },
   rules: {
     // 'linebreak-style': ['error', 'windows'], // 回车符使用windows风格（CRLF），默认是LF:使用mac风格
+    'vue/space-unary-ops': [
+      'error',
+      {
+        words: true,
+        nonwords: false,
+      },
+    ],
+    'vue/space-infix-ops': 'off',
+    'vue/object-curly-spacing': 'off',
   },
 };

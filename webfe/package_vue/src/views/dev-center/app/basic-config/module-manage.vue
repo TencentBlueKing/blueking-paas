@@ -13,7 +13,7 @@
       :is-loading="isLoading"
       placeholder="module-manage-loading"
       :offset-top="25"
-      class="app-container middle"
+      class="app-container middle module-container"
     >
       <section v-if="!isLoading">
         <div class="module-info-item mt15">
@@ -1740,6 +1740,11 @@
 
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/border-active-logo.scss';
+    .module-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 16px 24px;
+    }
     .module-info-item {
         margin-bottom: 35px;
         .title {

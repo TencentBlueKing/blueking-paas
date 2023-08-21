@@ -22,7 +22,6 @@ from blue_krill.data_types.enum import StructuredEnum
 from django.core.management.base import BaseCommand
 
 from paasng.accessories.iam.helpers import delete_builtin_user_groups, delete_grade_manager
-from paasng.accessories.iam.members.models import ApplicationGradeManager
 from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.publish.sync_market.managers import AppManger
@@ -91,8 +90,6 @@ class Command(BaseCommand):
         for app in to_del_apps:
             delete_builtin_user_groups(app.code)
             delete_grade_manager(app.code)
-            # 目前在初始化时候有兼容，会复用权限中心对应 AppCode 的分级管理员数据
-            ApplicationGradeManager.objects.get(app_code=app.code).delete()
 
         # 从 PaaS 3.0 中删除相关的信息
         to_del_apps.delete()

@@ -12,7 +12,7 @@
       </h2>
     </div>
     <paas-content-loader
-      class="app-container middle"
+      class="app-container middle docu-container"
       :is-loading="isLoading"
       placeholder="docu-manager-loading"
     >
@@ -484,6 +484,11 @@
 </script>
 <style lang="scss">
     @import '~@/assets/css/mixins/ellipsis.scss';
+    .docu-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 16px 24px;
+    }
     .paas-docu-manager-wrapper {
         .link {
             font-size: 12px;

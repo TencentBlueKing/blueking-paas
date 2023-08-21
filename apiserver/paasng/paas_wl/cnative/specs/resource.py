@@ -22,22 +22,14 @@ from typing import Dict, Optional
 from attrs import define
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
-from paas_wl.cnative.specs import credentials
 from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
-from paas_wl.cnative.specs.constants import (
-    IMAGE_CREDENTIALS_REF_ANNO_KEY,
-    ApiVersion,
-    ConditionStatus,
-    DeployStatus,
-    MResConditionType,
-    MResPhaseType,
-)
+from paas_wl.cnative.specs.constants import ApiVersion, ConditionStatus, DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
+from paas_wl.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.exceptions import ResourceMissing
-from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.entities import ImageCredentials
 from paasng.platform.applications.models import ModuleEnvironment
@@ -72,18 +64,11 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
     :param manifest: Application manifest data.
     :raise: CreateServiceAccountTimeout 当创建 SA 超时（含无默认 token 的情况）时抛出异常
     """
-    wl_app = WlApp.objects.get(pk=env.engine_app_id)
+    wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
-        # 若命名空间不存在，则提前创建（若为新建命名空间，需要等待 ServiceAccount 就绪）
-        namespace_client = KNamespace(client)
-        _, created = namespace_client.get_or_create(name=wl_app.namespace)
-        if created:
-            namespace_client.wait_for_default_sa(namespace=wl_app.namespace)
-
-        if manifest["metadata"]["annotations"].get(IMAGE_CREDENTIALS_REF_ANNO_KEY) == "true":
-            # 下发镜像访问凭证(secret)
-            image_credentials = ImageCredentials.load_from_app(wl_app)
-            credentials.ImageCredentialsManager(client).upsert(image_credentials)
+        # 下发镜像访问凭证(secret)
+        image_credentials = ImageCredentials.load_from_app(wl_app)
+        ImageCredentialsManager(client).upsert(image_credentials)
 
         # 创建或更新 BkApp
         bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(

@@ -11,18 +11,18 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: e56dbef1.bk.tencent.com
-platformConfig:
+platform:
   bkAppCode: "bk_paas3"
   bkAppSecret: ""
   bkAPIGatewayURL: ""
   sentryDSN: ""
   ingressClassName: ""
-ingressPluginConfig:
-  accessControlConfig:
+ingressPlugin:
+  accessControl:
     redisConfigKey: ""
-  paasAnalysisConfig:
+  paasAnalysis:
     enabled: false
-autoscalingConfig:
+autoscaling:
   enabled: false
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume

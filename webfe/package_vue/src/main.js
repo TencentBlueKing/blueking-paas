@@ -73,12 +73,7 @@ import { PLATFORM_CONFIG } from '../static/json/paas_static.js';
 // 表头配置
 import { renderHeader } from '@/common/utils';
 
-// composition-api
-import VueCompositionAPI from '@vue/composition-api';
-
 window.$ = $;
-
-Vue.use(VueCompositionAPI);
 
 Vue.config.devtools = true;
 
@@ -258,6 +253,10 @@ auth.requestCurrentUser().then((user) => {
     title = '无权限访问';
     message = '你没有相应资源的访问权限，请申请权限或联系管理员授权';
     link = err.apply_url;
+  } else if (err.status === 403 && err.code === 1302403) {
+    status = 403;
+    title = '无该应用访问权限' ;
+    message = err.detail || err.message;
   }
 
   global.paasVue = new Vue({
@@ -266,7 +265,7 @@ auth.requestCurrentUser().then((user) => {
     template: `<bk-exception class="exception-wrap-item" scene="page" type="${status}" style="position: fixed; top: 40%; transform: translateY(-50%);">
                         <span>${title}</span>
                         <div class="text-subtitle f12 mt20 mb20" style="color: #979BA5;">${message}</div>
-                        <div class="text-wrap" v-if="${status === 403}">
+                        <div class="text-wrap" v-if="${status === 403 && !!link}">
                             <a class="text-btn bk-primary bk-button-normal bk-button" href="${link}">去申请</a>
                         </div>
                     </bk-exception>`,

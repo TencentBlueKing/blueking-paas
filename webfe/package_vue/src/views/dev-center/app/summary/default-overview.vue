@@ -16,7 +16,7 @@
       :is-loading="loading"
       placeholder="summary-loading"
       :offset-top="20"
-      class="app-container"
+      class="app-container ps-default-container"
     >
       <!-- 应用资源使用信息 -->
       <overview-top-info
@@ -321,7 +321,7 @@
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script> import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import overviewTopInfo from './comps/overview-top-info';
@@ -336,7 +336,7 @@ import dynamicState from './comps/dynamic-state';
 import { cloneDeep } from 'lodash';
 
 const timeMap = {
-  '1d' : '24h',
+  '1d': '24h',
   '3d': '72h',
   '7d': '168h',
 };
@@ -591,7 +591,7 @@ export default {
     },
     // 最新动态
     getModuleOperations() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/operations/?limit=6`).then((response) => {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/operations/?limit=6`).then((response) => {
         this.operationsList = [];
         for (const item of response.results) {
           item.at_friendly = moment(item.at).startOf('minute')
@@ -1318,6 +1318,9 @@ export default {
 
 <style scoped lang="scss">
     @import './overview.scss';
+    .ps-default-container{
+      margin: 0px 24px 30px 24px !important;
+    }
 </style>
 
 <!-- 折叠板内部样式 -->
@@ -1326,9 +1329,7 @@ export default {
         .paas-module-item {
             margin-top: 16px;
             border: solid 1px #e6e9ea;
-            .bk-collapse-item-header{
-                background: #F5F7FA !important;
-            }
+            background: #fff;
             .icon-angle-right{
                 display: none;
             }

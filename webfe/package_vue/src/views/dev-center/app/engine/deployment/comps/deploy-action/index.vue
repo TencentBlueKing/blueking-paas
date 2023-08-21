@@ -1504,7 +1504,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                 const box = document.querySelector('.deploy-action-box');
                 // const box = document.getElementById('deploying-box') || document.getElementById('offlineing-box') || document.getElementById('success-box') || document.getElementById('fail-box')
                 if (box && box.getBoundingClientRect) {
-                    const elementRect = box.getBoundingClientRect();
+                    const elementRect = box?.getBoundingClientRect();
                     this.summaryOffsetLeft = elementRect.x;
                     this.summaryOffsetTop = elementRect.y;
                     this.summaryWidth = elementRect.width;

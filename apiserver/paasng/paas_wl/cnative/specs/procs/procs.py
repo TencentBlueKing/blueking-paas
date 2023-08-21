@@ -17,10 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Main functionalities for proc module"""
-from typing import List
+from typing import Dict, List, Tuple
 
 from attrs import define
 
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
@@ -63,5 +64,54 @@ def parse_proc_specs(res: BkAppResource, env_name: AppEnvName) -> List[CNativePr
     quotas = ResourceQuotaReader(res).read_all()
     for name, (cnt, _) in counts.items():
         target_status = ProcessTargetStatus.START.value if cnt > 0 else ProcessTargetStatus.STOP.value
-        results.append(CNativeProcSpec(name, cnt, target_status, quotas[name]['cpu'], quotas[name]['memory']))
+        results.append(CNativeProcSpec(name, cnt, target_status, quotas[name].cpu, quotas[name].memory))
     return results
+
+
+def get_procfile(env: ModuleEnvironment) -> Dict[str, str]:
+    """Get procfile for env"""
+    res = get_mres_from_cluster(env)
+    if not res:
+        return {}
+    return parse_procfile(res)
+
+
+def parse_procfile(res: BkAppResource) -> Dict[str, str]:
+    """Parse procfile from app model resource, useful for build_method=cnb"""
+    results = {}
+    for proc in res.spec.processes:
+        parts = []
+        if proc.command:
+            parts.extend(proc.command)
+        if proc.args:
+            parts.extend(proc.args)
+        results[proc.name] = " ".join(parts)
+    return results
+
+
+def parse_image(res: BkAppResource) -> Tuple[str, str]:
+    """Parse image from app model resource
+
+    :return: Tuple[image_name, image_tag]
+    """
+    image = ""
+    if res.apiVersion == ApiVersion.V1ALPHA2:
+        if res.spec.build and res.spec.build.image:
+            image = res.spec.build.image
+
+        part = image.partition(":")
+        return part[0], part[2]
+
+    # 兼容 V1ALPHA1
+    # 优先使用 web 进程的镜像, 如无 web 进程, 则使用第一个进程的镜像
+    images = []
+    for proc in res.spec.processes:
+        if proc.image:
+            images.append(proc.image)
+            if proc.name == "web":
+                part = proc.name.partition(":")
+                return part[0], part[2]
+
+    image = images[0] if images else image
+    part = image.partition(":")
+    return part[0], part[2]

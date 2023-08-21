@@ -18,8 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
+from paas_wl.cnative.specs import mounts
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -36,12 +37,13 @@ from paas_wl.cnative.specs.constants import (
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    USE_CNB_ANNO_KEY,
+    WLAPP_NAME_ANNO_KEY,
     ApiVersion,
 )
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
-from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.models import Build, WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
-from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
@@ -55,20 +57,27 @@ class BkAppManifestProcessor:
         self.env = model_deploy.environment
         self.model_deploy = model_deploy
 
-    def build_manifest(self, credential_refs: List[ImageCredentialRef], image: Optional[str] = None) -> Dict:
+    def build_manifest(self, build: Optional[Build] = None) -> Dict:
         """inject bkpaas-specific properties to annotations
 
-        :param credential_refs: Image credential ref objects
-        :param image: optional, the image build by platform, will overwrite the image filed in manifest
+        :param build: optional, artifact build by platform
+            if build.image is not None, will overwrite the image filed in manifest
+            if the image is built by CNB runtime, will set `use-cnb` annotation to "true"
         """
         wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
         manifest = BkAppResource(**self.model_deploy.revision.json_value)
 
-        # 替换镜像信息
-        self._patch_image(manifest, image)
+        use_cnb = False
+        if build:
+            if build.image:
+                # 替换镜像信息
+                # 对于仅托管镜像类型的云原生应用, build.image 字段为空字符串
+                # 对于从源码构建镜像的云原生应用, build.image 字段是构建后的镜像
+                self._patch_image(manifest, build.image)
+            use_cnb = build.artifact_metadata.get("use_cnb", False)
 
         # 更新注解，包含应用基本信息，增强服务，访问控制，镜像凭证等
-        self._inject_annotations(manifest, self.env.application, self.env, wl_app, credential_refs)
+        self._inject_annotations(manifest, self.env.application, self.env, wl_app, use_cnb=use_cnb)
 
         # 注入用户自定义变量，与 YAML 中定义的进行合并，优先级：页面填写的 > YAML 中已有的
         manifest.spec.configuration.env = merge_envvars(
@@ -80,15 +89,15 @@ class BkAppManifestProcessor:
             manifest.spec.configuration.env, generate_builtin_configurations(env=self.env)
         )
 
+        # 注入挂载信息
+        mounts.inject_to_app_resource(self.env, manifest)
+
         data = manifest.dict()
         # refresh status.conditions
         data["status"] = {"conditions": []}
         return data
 
     def _patch_image(self, manifest: BkAppResource, image: Optional[str] = None) -> None:
-        if not image:
-            return
-
         if manifest.apiVersion == ApiVersion.V1ALPHA2 and manifest.spec.build:
             manifest.spec.build.image = image
 
@@ -102,7 +111,7 @@ class BkAppManifestProcessor:
         application: Application,
         env: ModuleEnvironment,
         wl_app: WlApp,
-        credential_refs: List[ImageCredentialRef],
+        use_cnb: bool = False,
     ) -> None:
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.model_deploy.pk)
@@ -115,6 +124,16 @@ class BkAppManifestProcessor:
                 BKAPP_CODE_ANNO_KEY: application.code,
                 MODULE_NAME_ANNO_KEY: env.module.name,
                 ENVIRONMENT_ANNO_KEY: env.environment,
+                WLAPP_NAME_ANNO_KEY: wl_app.name,
+            }
+        )
+        # inject image type
+        manifest.metadata.annotations.update(
+            {
+                # cnb 运行时启动 Process 的 entrypoint 是 `process_type`, command 是空列表
+                # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
+                # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+                USE_CNB_ANNO_KEY: ("true" if use_cnb else "false"),
             }
         )
 
@@ -127,14 +146,8 @@ class BkAppManifestProcessor:
         if bkpa_site_id := get_metadata(wl_app).bkpa_site_id:
             manifest.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
-        # flush credentials and inject a flag to tell operator that workloads have crated the secret
-        if credential_refs:
-            AppImageCredential.objects.flush_from_refs(
-                application=application, wl_app=wl_app, references=credential_refs
-            )
-            manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
-        else:
-            manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = ""
+        # always inject a flag to tell operator that workloads have created the secret
+        manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
 
         # inject access control enable info
         try:

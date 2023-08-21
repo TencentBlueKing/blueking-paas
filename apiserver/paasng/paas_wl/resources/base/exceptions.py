@@ -77,3 +77,7 @@ class ResourceDeleteTimeout(KubeException):
 
 class MapperNotInVersionError(Exception):
     """mapper is missing in this version"""
+
+
+class NotAppScopedResource(Exception):
+    """raise NotAppScopedResource If no WlApp object is found for the given kube_data"""

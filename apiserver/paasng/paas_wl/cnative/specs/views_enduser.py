@@ -24,20 +24,23 @@ from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from drf_yasg.utils import swagger_auto_schema
-from kubernetes.dynamic.exceptions import NotFoundError, UnprocessibleEntityError
+from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.addresses import get_exposed_url
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
+from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
+from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
@@ -47,14 +50,38 @@ from paas_wl.cnative.specs.serializers import (
     DeploySerializer,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    ResQuotaPlanSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
+from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
+
+
+class ResQuotaPlanOptionsView(APIView):
+    """资源配额方案 选项视图"""
+
+    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
+    def get(self, request):
+        return Response(
+            data=ResQuotaPlanSLZ(
+                [
+                    {
+                        "name": ResQuotaPlan.get_choice_label(plan),
+                        "value": str(plan),
+                        "limit": PLAN_TO_LIMIT_QUOTA_MAP[plan],
+                        "request": PLAN_TO_REQUEST_QUOTA_MAP[plan],
+                    }
+                    for plan in ResQuotaPlan.get_values()
+                ],
+                many=True,
+            ).data
+        )
 
 
 class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):
@@ -145,24 +172,35 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # TODO: Allow use other revisions
         revision = model_resource.revision
 
+        # Try to get and validate the image credentials, will raise InvalidImageCredentials when any refs are invalid
+        try:
+            credential_refs = get_references(revision.json_value)
+            validate_references(application, credential_refs)
+        except InvalidImageCredentials:
+            raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
+        # flush credentials if needed
+        if credential_refs:
+            AppImageCredential.objects.flush_from_refs(
+                application=application, wl_app=env.wl_app, references=credential_refs
+            )
+
         try:
             release_by_k8s_operator(env, revision, operator=request.user.pk)
-        except ValueError:
-            raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-        except (UnprocessibleEntityError, NotFoundError) as e:
-            # 格式错误类异常（422），或者资源不存在异常，允许将错误信息提供给用户
+        except UnprocessibleEntityError as e:
+            # 格式错误类异常（422），允许将错误信息提供给用户
             raise error_codes.DEPLOY_BKAPP_FAILED.f(
-                f"app: {application.code}, env: {environment}, summary: {e.summary()}"
+                f"{code}, module: {module_name}, env: {environment}, summary: {e.summary()}"
+            )
+        except ResourceNotFoundError:
+            # 集群内没有 BkApp 等 PaaS Operator 资源，可以暴露给用户
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(
+                f"{code}, module: {module_name}, env: {environment}, reason: bkpaas-app-operator not ready"
             )
         except Exception as e:
             logger.exception(
-                "failed to deploy bkapp, app name: %s, code: %s, env: %s, reason: %s",
-                application.name,
-                application.code,
-                environment,
-                e,
+                "failed to deploy bkapp, code: %s, module: %s, env: %s, reason: %s", code, module_name, environment, e
             )
-            raise error_codes.DEPLOY_BKAPP_FAILED.f(f"app: {application.code}, env: {environment}")
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(f"{code}, module: {module_name}, env: {environment}")
         revision.refresh_from_db()
         return Response(revision.deployed_value)
 
@@ -216,12 +254,13 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not mres:
             raise error_codes.GET_MRES_FAILED.f(f"App: {code}, env: {environment}")
         self.check_applied_deployment(mres, latest_dp)
+        url_obj = get_exposed_url(env)
 
         return Response(
             MresStatusSLZ(
                 {
                     "deployment": latest_dp,
-                    "ingress": {"url": get_exposed_url(env)},
+                    "ingress": {"url": url_obj.address if url_obj else None},
                     "conditions": mres.status.conditions,
                     "events": list_events(env, latest_dp.created),
                 }

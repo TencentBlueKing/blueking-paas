@@ -10,20 +10,20 @@
 </template>
 
 <script>
-    import defaultOverview from './default-overview.vue';
-    import enginelessOverview from './engineless-overview.vue';
-    export default {
-        components: {
-            defaultOverview,
-            enginelessOverview
-        },
-        computed: {
-            curAppInfo () {
-                return this.$store.state.curAppInfo;
-            },
-            isEngineless () {
-                return this.curAppInfo.web_config.engine_enabled;
-            }
-        },
-    };
+import defaultOverview from './default-overview.vue';
+import enginelessOverview from './engineless-overview.vue';
+export default {
+  components: {
+    defaultOverview,
+    enginelessOverview,
+  },
+  computed: {
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    isEngineless() {
+      return this.curAppInfo.web_config.engine_enabled;
+    },
+  },
+};
 </script>

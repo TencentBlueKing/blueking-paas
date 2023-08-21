@@ -38,8 +38,8 @@ type PlatformConfig struct {
 
 // IngressPluginConfig contains the config for controlling ingress config
 type IngressPluginConfig struct {
-	AccessControlConfig *AccessControlConfig `json:"accessControlConfig,omitempty"`
-	PaaSAnalysisConfig  *PaaSAnalysisConfig  `json:"paasAnalysisConfig,omitempty"`
+	AccessControl *AccessControlConfig `json:"accessControl,omitempty"`
+	PaaSAnalysis  *PaaSAnalysisConfig  `json:"paasAnalysis,omitempty"`
 }
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module
@@ -82,10 +82,11 @@ type ProjectConfig struct {
 	// ControllerManagerConfigurationSpec returns the configurations for controllers
 	cfg.ControllerManagerConfigurationSpec `json:",inline"`
 
-	PlatformConfig      PlatformConfig      `json:"platformConfig"`
-	IngressPluginConfig IngressPluginConfig `json:"ingressPluginConfig"`
-	ResLimitConfig      ResLimitConfig      `json:"resLimitConfig"`
-	AutoscalingConfig   AutoscalingConfig   `json:"autoscalingConfig"`
+	Platform      PlatformConfig      `json:"platform"`
+	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
+	ResLimit      ResLimitConfig      `json:"resLimit"`
+	Autoscaling   AutoscalingConfig   `json:"autoscaling"`
+	MaxProcesses  int32               `json:"maxProcesses"`
 }
 
 // NewProjectConfig create project config
@@ -101,9 +102,11 @@ func NewProjectConfig() *ProjectConfig {
 	}
 
 	// 资源预设默认值
-	conf.ResLimitConfig.ProcDefaultCPULimits = "500m"
-	conf.ResLimitConfig.ProcDefaultMemLimits = "256Mi"
-	conf.ResLimitConfig.MaxReplicas = 5
+	conf.ResLimit.ProcDefaultCPULimits = "500m"
+	conf.ResLimit.ProcDefaultMemLimits = "256Mi"
+	conf.ResLimit.MaxReplicas = 5
+
+	conf.MaxProcesses = 8
 
 	return &conf
 }
@@ -114,27 +117,32 @@ func init() {
 
 // Below functions implements the ProjectConfigReader interface
 
+// GetMaxProcesses returns the max processes
+func (p *ProjectConfig) GetMaxProcesses() int32 {
+	return p.MaxProcesses
+}
+
 // GetProcMaxReplicas returns the max replicas of a process
 func (p *ProjectConfig) GetProcMaxReplicas() int32 {
-	return p.ResLimitConfig.MaxReplicas
+	return p.ResLimit.MaxReplicas
 }
 
 // GetProcDefaultCpuLimits returns the default cpu limits of a process
 func (p *ProjectConfig) GetProcDefaultCpuLimits() string {
-	return p.ResLimitConfig.ProcDefaultCPULimits
+	return p.ResLimit.ProcDefaultCPULimits
 }
 
 // GetProcDefaultMemLimits returns the default memory limits of a process
 func (p *ProjectConfig) GetProcDefaultMemLimits() string {
-	return p.ResLimitConfig.ProcDefaultMemLimits
+	return p.ResLimit.ProcDefaultMemLimits
 }
 
 // GetIngressClassName returns the ingress class name
 func (p *ProjectConfig) GetIngressClassName() string {
-	return p.PlatformConfig.IngressClassName
+	return p.Platform.IngressClassName
 }
 
 // IsAutoscalingEnabled returns whether autoscaling is enabled
 func (p *ProjectConfig) IsAutoscalingEnabled() bool {
-	return p.AutoscalingConfig.Enabled
+	return p.Autoscaling.Enabled
 }

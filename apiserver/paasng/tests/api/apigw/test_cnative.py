@@ -24,6 +24,7 @@ import pytest
 from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource, BkAppStatus, MetaV1Condition
 from paas_wl.cnative.specs.events import Event
+from paas_wl.networking.entrance.addrs import Address, AddressType
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -91,13 +92,16 @@ class TestMresDeploymentsViewSet:
                 ],
             },
         }
-        with mock.patch(
-            "paasng.engine.deploy.release.operator.apply_bkapp_to_k8s", new=lambda *args, **kwargs: manifest
-        ), mock.patch(
-            'paasng.engine.deploy.release.operator.AppModelDeployStatusPoller.start', new=lambda *args, **kwargs: None
+        # Mock out the interactions with k8s cluster
+        with mock.patch("paasng.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest), mock.patch(
+            'paasng.engine.deploy.release.operator.AppModelDeployStatusPoller.start',
+            return_value=None,
+        ), mock.patch("paasng.engine.deploy.release.operator.svc_disc"), mock.patch(
+            "paasng.engine.deploy.release.operator.ensure_namespace"
         ):
             response = api_client.post(url, data={"manifest": manifest})
 
+        assert response.status_code == 200
         assert response.data['apiVersion'] == "paas.bk.tencent.com/v1alpha2"
         assert response.data['kind'] == "BkApp"
         assert response.data['metadata']['name'] == bk_app.code
@@ -164,12 +168,10 @@ class TestMresStatusViewSet:
             )
         ]
         with mock.patch(
-            "paas_wl.cnative.specs.views_enduser.get_mres_from_cluster",
-            new=lambda *args, **kwargs: bkapp_res,
-        ), mock.patch(
-            'paas_wl.cnative.specs.views_enduser.list_events', new=lambda *args, **kwargs: events
-        ), mock.patch(
-            'paas_wl.cnative.specs.views_enduser.get_exposed_url', new=lambda *args, **kwargs: 'http://example.com'
+            "paas_wl.cnative.specs.views_enduser.get_mres_from_cluster", return_value=bkapp_res
+        ), mock.patch('paas_wl.cnative.specs.views_enduser.list_events', return_value=events,), mock.patch(
+            'paas_wl.cnative.specs.views_enduser.get_exposed_url',
+            return_value=Address(type=AddressType.SUBDOMAIN, url="http://example.com").to_exposed_url(),
         ):
             response = api_client.get(url)
             excepted = {

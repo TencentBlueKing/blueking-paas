@@ -137,12 +137,20 @@ class ModuleEnvAddressSLZ(serializers.Serializer):
     is_running = serializers.BooleanField(help_text="该环境是否正在运行", default=True)
 
 
+class ModuleEntrancesSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="模块名")
+    is_default = serializers.BooleanField(help_text="是否主模块")
+    envs = serializers.DictField(child=ModuleEnvAddressSLZ(many=True))
+
+
 class CustomDomainsConfigSLZ(serializers.Serializer):
     module = serializers.CharField(help_text='所属模块')
     environment = serializers.CharField(help_text='部署环境')
     frontend_ingress_ip = serializers.CharField(help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能')
 
 
-class SwitchDefaultEntranceSLZ(serializers.Serializer):
+class SwitchMarketEntranceSLZ(serializers.Serializer):
+    """切换市场访问地址"""
+
     module = serializers.CharField(help_text="切换模块名")
     address = AvailableEntranceSLZ(help_text="访问地址")

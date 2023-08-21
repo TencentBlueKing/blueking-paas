@@ -426,7 +426,6 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId
      */
   getManifestExt({}, { appCode, moduleId, env }, config = {}) {
-    console.log('BACKEND_URL', moduleId, env);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/manifest_ext/`;
     return http.get(url, config);
   },
@@ -437,6 +436,25 @@ const actions = {
    */
   getAutoScalFlagWithEnv({}, { appCode, moduleId, env }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/modules/${moduleId}/env/${env}/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 保存信息
+   *
+   * @param {Object} params 请求参数：appCode, moduleId, env
+   */
+  saveCloudAppInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
+    return http.put(url, params, config);
+  },
+
+  /**
+   * 获取进程资源配额方案
+   * @param {Object} params 请求参数：appCode, moduleId, env
+   */
+  fetchQuotaPlans({}, {}, config = {}) {
+    const url = `${BACKEND_URL}/api/mres/quota_plans/`;
     return http.get(url, config);
   },
 };

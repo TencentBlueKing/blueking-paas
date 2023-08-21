@@ -20,7 +20,9 @@ package v1alpha2
 
 import (
 	"fmt"
+	"net"
 	"regexp"
+	"strings"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
@@ -28,6 +30,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -47,6 +51,9 @@ var (
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
 )
+
+// MaxDNSNameservers is the max number of nameservers in DomainResolution
+const MaxDNSNameservers = 2
 
 // SetupWebhookWithManager ...
 func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -178,11 +185,24 @@ func (r *BkApp) validateAnnotations() *field.Error {
 
 func (r *BkApp) validateAppSpec() *field.Error {
 	procsField := field.NewPath("spec").Child("processes")
-	if len(r.Spec.Processes) == 0 {
+
+	numOfProcs := int32(len(r.Spec.Processes))
+	if numOfProcs == 0 {
 		return field.Invalid(procsField, r.Spec.Processes, "processes can't be empty")
 	}
 
+	if numOfProcs > config.Global.GetMaxProcesses() {
+		return field.Invalid(
+			procsField,
+			r.Spec.Processes,
+			fmt.Sprintf("number of processes has exceeded limit %d", config.Global.GetMaxProcesses()),
+		)
+	}
+
 	if err := r.validateBuildConfig(); err != nil {
+		return err
+	}
+	if err := r.validateDomainResolution(); err != nil {
 		return err
 	}
 
@@ -209,7 +229,8 @@ func (r *BkApp) validateAppSpec() *field.Error {
 			return field.Invalid(path.Child("name"), env.Name, "name can't be empty")
 		}
 	}
-	return nil
+
+	return r.validateMounts()
 }
 
 // Get all process names
@@ -248,6 +269,52 @@ func (r *BkApp) validateBuildConfig() *field.Error {
 	return nil
 }
 
+// Validate the domain resolution config
+func (r *BkApp) validateDomainResolution() *field.Error {
+	if r.Spec.DomainResolution == nil {
+		return nil
+	}
+	dsField := field.NewPath("spec").Child("domainResolution")
+
+	// Validate DNS nameservers
+	servers := r.Spec.DomainResolution.Nameservers
+	if len(servers) > MaxDNSNameservers {
+		return field.Invalid(
+			dsField.Child("nameservers"),
+			servers,
+			fmt.Sprintf("must not have more than %v nameservers", MaxDNSNameservers),
+		)
+	}
+	for i, ns := range servers {
+		if ip := net.ParseIP(ns); ip == nil {
+			return field.Invalid(dsField.Child("nameservers").Index(i), ns, "must be valid IP address")
+		}
+	}
+
+	// Validate host aliases
+	hostAliases := r.Spec.DomainResolution.HostAliases
+	for i, alias := range hostAliases {
+		if ip := net.ParseIP(alias.IP); ip == nil {
+			return field.Invalid(
+				dsField.Child("hostAliases").Index(i).Child("ip"),
+				alias.IP,
+				"must be valid IP address",
+			)
+		}
+		for j, hostname := range alias.Hostnames {
+			errs := validation.IsDNS1123Subdomain(hostname)
+			if len(errs) > 0 {
+				return field.Invalid(
+					dsField.Child("hostAliases").Index(i).Child("hostnames").Index(j),
+					hostname,
+					"must be valid hostname",
+				)
+			}
+		}
+	}
+	return nil
+}
+
 func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	pField := field.NewPath("spec").Child("processes").Index(idx)
 	// 1. 进程名称必须符合正则
@@ -275,46 +342,99 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	}
 
 	// 4. 如果启用扩缩容，需要符合规范
-	if proc.Autoscaling != nil && proc.Autoscaling.Enabled {
-		// 目前不支持缩容到 0
-		if proc.Autoscaling.MinReplicas <= 0 {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("minReplicas"),
-				proc.Autoscaling.MinReplicas,
-				"minReplicas must be greater than 0",
-			)
+	if proc.Autoscaling != nil {
+		if err := r.validateAutoscaling(
+			pField.Child("autoscaling"),
+			*proc.Autoscaling,
+		); err != nil {
+			return err
 		}
-		// 扩缩容最大副本数不可超过上限
-		if proc.Autoscaling.MaxReplicas > config.Global.GetProcMaxReplicas() {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("maxReplicas"),
-				proc.Autoscaling.MaxReplicas,
-				fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
-			)
+	}
+	return nil
+}
+
+func (r *BkApp) validateAutoscaling(pPath *field.Path, spec AutoscalingSpec) *field.Error {
+	// 目前不支持缩容到 0
+	if spec.MinReplicas <= 0 {
+		return field.Invalid(pPath.Child("minReplicas"), spec.MinReplicas, "minReplicas must be greater than 0")
+	}
+	// 扩缩容最大副本数不可超过上限
+	if spec.MaxReplicas > config.Global.GetProcMaxReplicas() {
+		return field.Invalid(
+			pPath.Child("maxReplicas"),
+			spec.MaxReplicas,
+			fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
+		)
+	}
+	// 最大副本数需大于等于最小副本数
+	if spec.MinReplicas > spec.MaxReplicas {
+		return field.Invalid(
+			pPath.Child("maxReplicas"), spec.MaxReplicas, "maxReplicas must be greater than or equal to minReplicas",
+		)
+	}
+	// 目前必须配置扩缩容策略
+	if spec.Policy == "" {
+		return field.Invalid(pPath.Child("policy"), spec.Policy, "autoscaling policy is required")
+	}
+	// 配置的扩缩容策略必须是受支持的
+	if !lo.Contains(AllowedScalingPolicies, spec.Policy) {
+		return field.NotSupported(pPath.Child("policy"), spec.Policy, stringx.ToStrArray(AllowedScalingPolicies))
+	}
+	return nil
+}
+
+// validate Spec.Mounts field
+// 校验部分参考 https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/apis/core/validation/validation.go
+func (r *BkApp) validateMounts() *field.Error {
+	mountPoints, mountNames := sets.String{}, sets.String{}
+
+	for idx, mount := range r.Spec.Mounts {
+		pPath := field.NewPath("spec").Child("mounts").Index(idx)
+		if err := r.validateMount(pPath, mount); err != nil {
+			return err
 		}
-		// 最大副本数需大于等于最小副本数
-		if proc.Autoscaling.MinReplicas > proc.Autoscaling.MaxReplicas {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("maxReplicas"),
-				proc.Autoscaling.MaxReplicas,
-				"maxReplicas must be greater than or equal to minReplicas",
-			)
+
+		if mountNames.Has(mount.Name) {
+			return field.Duplicate(pPath.Child("name"), mount.Name)
 		}
-		// 目前必须配置扩缩容策略
-		if proc.Autoscaling.Policy == "" {
-			return field.Invalid(
-				pField.Child("autoscaling").Child("policy"),
-				proc.Autoscaling.Policy,
-				"autoscaling policy is required",
-			)
+		mountNames.Insert(mount.Name)
+
+		if mountPoints.Has(mount.MountPath) {
+			return field.Duplicate(pPath.Child("mountPath"), mount.MountPath)
 		}
-		// 配置的扩缩容策略必须是受支持的
-		if !lo.Contains(AllowedScalingPolicies, proc.Autoscaling.Policy) {
-			return field.NotSupported(
-				pField.Child("autoscaling").Child("policy"),
-				proc.Autoscaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
-			)
-		}
+		mountPoints.Insert(mount.MountPath)
+	}
+
+	return nil
+}
+
+func (r *BkApp) validateMount(pPath *field.Path, mount Mount) *field.Error {
+	// 校验 name
+	if len(mount.Name) == 0 {
+		return field.Required(pPath.Child("name"), "")
+	}
+	if errs := validation.IsDNS1123Label(mount.Name); len(errs) > 0 {
+		return field.Invalid(pPath.Child("name"), mount.Name, strings.Join(errs, ","))
+	}
+
+	// 校验 mountPath
+	if len(mount.MountPath) == 0 {
+		return field.Required(pPath.Child("mountPath"), "")
+	}
+	if matched, _ := regexp.MatchString(FilePathPattern, mount.MountPath); !matched {
+		return field.Invalid(pPath.Child("mountPath"), mount.MountPath, "must match regex "+FilePathPattern)
+	}
+
+	// 校验 source
+	if mount.Source == nil {
+		return field.Required(pPath.Child("source"), "")
+	}
+	val, err := mount.Source.ToValidator()
+	if err != nil {
+		return field.Invalid(pPath.Child("source"), mount.Source, err.Error())
+	}
+	if errs := val.Validate(); len(errs) > 0 {
+		return field.Invalid(pPath.Child("source"), mount.Source, strings.Join(errs, ","))
 	}
 	return nil
 }
@@ -354,6 +474,22 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		}
 	}
 
+	// Validate "resQuota": envName and process
+	for i, q := range r.Spec.EnvOverlay.ResQuotas {
+		resQuotaField := f.Child("resQuota").Index(i)
+		if !q.EnvName.IsValid() {
+			return field.Invalid(resQuotaField.Child("envName"), q.EnvName, "envName is invalid")
+		}
+		if !lo.Contains(r.getProcNames(), q.Process) {
+			return field.Invalid(resQuotaField.Child("process"), q.Process, "process name is invalid")
+		}
+		if !lo.Contains(AllowedResQuotaPlans, q.Plan) {
+			return field.NotSupported(
+				resQuotaField.Child("plan"), q.Plan, stringx.ToStrArray(AllowedResQuotaPlans),
+			)
+		}
+	}
+
 	// Validate "autoscaling": envName, process and policy
 	for i, scaling := range r.Spec.EnvOverlay.Autoscaling {
 		pField := f.Child("autoscaling").Index(i)
@@ -363,16 +499,33 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), scaling.Process) {
 			return field.Invalid(pField.Child("process"), scaling.Process, "process name is invalid")
 		}
-		// 添加的 envOverlay 需要配置扩缩容策略
-		if scaling.Policy == "" {
-			return field.Invalid(pField.Child("policy"), scaling.Policy, "autoscaling policy is required")
-		}
-		// 配置的扩缩容策略必须是受支持的
-		if !lo.Contains(AllowedScalingPolicies, scaling.Policy) {
-			return field.NotSupported(
-				pField.Child("policy"), scaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
-			)
+		if err := r.validateAutoscaling(pField, scaling.Spec); err != nil {
+			return err
 		}
 	}
+
+	// Validate "mounts"
+	mountPoints, mountNames := sets.String{}, sets.String{}
+	for i, mount := range r.Spec.EnvOverlay.Mounts {
+		mField := f.Child("mounts").Index(i)
+		if !mount.EnvName.IsValid() {
+			return field.Invalid(mField.Child("envName"), mount.EnvName, "envName is invalid")
+		}
+
+		if err := r.validateMount(mField, mount.Mount); err != nil {
+			return err
+		}
+
+		if mountNames.Has(mount.Mount.Name) {
+			return field.Duplicate(mField.Child("name"), mount.Mount.Name)
+		}
+		mountNames.Insert(mount.Mount.Name)
+
+		if mountPoints.Has(mount.Mount.MountPath) {
+			return field.Duplicate(mField.Child("mountPath"), mount.Mount.MountPath)
+		}
+		mountPoints.Insert(mount.Mount.MountPath)
+	}
+
 	return nil
 }

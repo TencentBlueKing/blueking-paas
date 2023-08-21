@@ -40,7 +40,8 @@
 
 .overview-fleft {
     width: 240px;
-    background: #fafbfd;
+    background: #fff;
+    border-right: 1px solid rgb(220, 222, 229);
 }
 
 .overview-fleft-plugin {
@@ -90,7 +91,28 @@
     overflow: hidden;
 }
 
-.overview-fright, 
+.overview-fright {
+    min-height: 800px;
+    padding-bottom: 66px;
+    position: relative;
+    flex: 1;
+    background: #F5F7FA;
+    // border-left: solid 1px rgba(220, 222, 229, 0.6);
+    
+    .right-main {
+        padding-bottom: 20px;
+        height: 100%;
+    }
+    h2 {
+        font-size: 14px;
+        font-weight: normal;
+        line-height: 50px;
+        color: #313238;
+        margin: auto;
+        padding: 0 24px;
+    }
+
+}
 .overview-fright-plugin {
     min-height: 800px;
     padding-bottom: 66px;
@@ -108,7 +130,6 @@
     margin-left: 240px;
 }
 
-.overview-fright h2, 
 .overview-fright-plugin h2 {
     font-size: 14px;
     font-weight: normal;
@@ -163,18 +184,18 @@
 
 @media screen and (max-width: 1920px) {
     .overview-fright h2 {
-        max-width: 1180px;
+        // max-width: 1180px;
     }
 }
 
 @media screen and (max-width: 1680px) {
     .overview-fright h2 {
-        max-width: 1080px;
+        // max-width: 1080px;
     }
 }
 
 @media screen and (max-width: 1440px) {
     .overview-fright h2 {
-        max-width: 980px;
+        // max-width: 980px;
     }
 }

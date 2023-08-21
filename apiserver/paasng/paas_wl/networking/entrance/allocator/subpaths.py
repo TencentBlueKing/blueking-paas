@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Subpaths management"""
 from dataclasses import dataclass, field
+from operator import attrgetter
 from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
@@ -111,6 +112,17 @@ class ModuleEnvSubpaths:
             # Sort items because legacy subpath obj has low priority type
             items.sort(key=Subpath.sort_by_type)
         return items
+
+    def get_highest_priority(self) -> Optional[Subpath]:
+        sub_path_domains = self.ingress_config.sub_path_domains
+        if not sub_path_domains:
+            return None
+        return self.allocator.get_highest_priority(
+            sorted(sub_path_domains, key=attrgetter("reserved"))[0],
+            self.env.module.name,
+            self.env.environment,
+            self.env.module.is_default,
+        )
 
 
 def get_legacy_compatible_path(env: ModuleEnvironment) -> str:

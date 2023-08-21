@@ -17,8 +17,8 @@
  */
 
 // Package v1alpha2 contains API Schema definitions for the paas v1alpha2 API group
-//+kubebuilder:object:generate=true
-//+groupName=paas.bk.tencent.com
+// +kubebuilder:object:generate=true
+// +groupName=paas.bk.tencent.com
 package v1alpha2
 
 import (

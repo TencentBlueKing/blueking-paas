@@ -21,7 +21,7 @@ from typing import Dict, List
 import pytest
 
 from paasng.platform.log.dsl import SearchRequestSchema
-from paasng.platform.log.utils import get_es_term, parse_request_to_es_dsl
+from paasng.platform.log.utils import NOT_SET, get_es_term, parse_request_to_es_dsl, rename_log_fields
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.es_log.misc import format_timestamp
 
@@ -42,7 +42,7 @@ def make_stats_indexes_fake_resp():
 
 
 @pytest.mark.parametrize(
-    "query_term,mappings,expected",
+    "query_term, mappings, expected",
     [
         ("dd", {"dd": {"type": "text"}}, "dd.keyword"),
         ("dd", {"dd": {"type": "int"}}, "dd"),
@@ -60,10 +60,148 @@ def make_stats_indexes_fake_resp():
             {"json": {"properties": {"levelname": {"properties": {"no": {"type": "text"}}}}}},
             "json.levelname.no.keyword",
         ),
+        # 保留字测试
+        ("pod_name", {}, "pod_name"),
+        ("pod_name", {"__ext": {"properties": {"io_kubernetes_pod": {"type": "keyword"}}}}, "__ext.io_kubernetes_pod"),
+        (
+            "region",
+            {
+                "__ext": {
+                    "properties": {"labels": {"properties": {"bkapp_paas_bk_tencent_com_region": {"type": "keyword"}}}}
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_region",
+        ),
+        (
+            "app_code",
+            {
+                "__ext": {
+                    "properties": {"labels": {"properties": {"bkapp_paas_bk_tencent_com_code": {"type": "keyword"}}}}
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_code",
+        ),
+        (
+            "app_code",
+            {
+                "__ext": {
+                    "properties": {"labels": {"properties": {"bkapp_paas_bk_tencent_com_code": {"type": "keyword"}}}}
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_code",
+        ),
+        (
+            "module_name",
+            {
+                "__ext": {
+                    "properties": {
+                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_module_name": {"type": "keyword"}}}
+                    }
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_module_name",
+        ),
+        (
+            "environment",
+            {
+                "__ext": {
+                    "properties": {
+                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_environment": {"type": "keyword"}}}
+                    }
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_environment",
+        ),
+        (
+            "environment",
+            {
+                "__ext": {
+                    "properties": {
+                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_environment": {"type": "keyword"}}}
+                    }
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_environment",
+        ),
+        (
+            "process_id",
+            {
+                "__ext": {
+                    "properties": {
+                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_process_name": {"type": "keyword"}}}
+                    }
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_process_name",
+        ),
+        (
+            "environment",
+            {
+                "__ext": {
+                    "properties": {
+                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_environment": {"type": "keyword"}}}
+                    }
+                }
+            },
+            "__ext.labels.bkapp_paas_bk_tencent_com_environment",
+        ),
     ],
 )
 def test_get_es_term(query_term, mappings, expected):
     assert get_es_term(query_term, mappings) == expected
+
+
+_default_log: dict = {
+    "region": NOT_SET,
+    "app_code": NOT_SET,
+    "module_name": NOT_SET,
+    "environment": NOT_SET,
+    "process_id": NOT_SET,
+    "pod_name": NOT_SET,
+    "stream": NOT_SET,
+}
+
+
+@pytest.mark.parametrize(
+    "log, expected",
+    [
+        (
+            {"__ext.labels.bkapp_paas_bk_tencent_com_region": "default"},
+            {**_default_log, "__ext.labels.bkapp_paas_bk_tencent_com_region": "default", "region": "default"},
+        ),
+        (
+            {"__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag"},
+            {**_default_log, "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag", "environment": "stag"},
+        ),
+        (
+            {
+                "__ext.labels.bkapp_paas_bk_tencent_com_region": "default",
+                "__ext.labels.bkapp_paas_bk_tencent_com_code": "code",
+                "__ext.labels.bkapp_paas_bk_tencent_com_module_name": "default",
+                "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag",
+                "__ext.labels.bkapp_paas_bk_tencent_com_process_name": "web",
+                "__ext.io_kubernetes_pod": "bkapp-code-stag--web-8449579sh9d2",
+            },
+            {
+                "__ext.labels.bkapp_paas_bk_tencent_com_region": "default",
+                "__ext.labels.bkapp_paas_bk_tencent_com_code": "code",
+                "__ext.labels.bkapp_paas_bk_tencent_com_module_name": "default",
+                "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag",
+                "__ext.labels.bkapp_paas_bk_tencent_com_process_name": "web",
+                "__ext.io_kubernetes_pod": "bkapp-code-stag--web-8449579sh9d2",
+                "region": "default",
+                "app_code": "code",
+                "module_name": "default",
+                "environment": "stag",
+                "process_id": "web",
+                "pod_name": "bkapp-code-stag--web-8449579sh9d2",
+                "stream": NOT_SET,
+            },
+        ),
+    ],
+)
+def test_rename_log_fields(log, expected):
+    assert rename_log_fields(log) == expected
 
 
 @pytest.mark.parametrize(

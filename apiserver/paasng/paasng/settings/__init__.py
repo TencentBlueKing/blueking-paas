@@ -89,6 +89,10 @@ BKKRILL_ENCRYPT_SECRET_KEY = force_bytes(settings.get('BKKRILL_ENCRYPT_SECRET_KE
 # Django 项目使用的 SECRET_KEY，如未配置，使用 BKKRILL 的 secret key 替代
 SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 
+# 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
+BK_CRYPTO_TYPE = settings.get('BK_CRYPTO_TYPE', 'CLASSIC')
+ENCRYPT_CIPHER_TYPE = 'SM4CTR' if BK_CRYPTO_TYPE == 'SHANGMI' else 'FernetCipher'
+
 DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
@@ -547,8 +551,6 @@ BK_COMPONENT_API_URL = settings.get('BK_COMPONENT_API_URL', '')
 COMPONENT_SYSTEM_HOST = settings.get('COMPONENT_SYSTEM_HOST', BK_COMPONENT_API_URL)
 # 蓝鲸的组件 API 测试环境地址
 COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'http://localhost:8080')
-# APIGW-Dashboard 接口地址
-APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 # 网关运行环境
@@ -556,6 +558,8 @@ BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
+# 网关 API 默认网关环境
+BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系
 REGION_TO_USER_AUTH_TYPE_MAP = settings.get('REGION_TO_USER_AUTH_TYPE_MAP', {'default': 'default'})
@@ -572,6 +576,17 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get('IS_ALLOW_CREATE_CLOU
 # 云原生应用的默认集群名称
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
+# 开发者中心使用的 k8s 集群组件（helm chart 名称）
+BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
+    "BKPAAS_K8S_CLUSTER_COMPONENTS",
+    [
+        'bk-ingress-nginx',
+        'bkapp-log-collection',
+        'bkpaas-app-operator',
+        'bcs-general-pod-autoscaler',
+    ],
+)
+
 # ---------------
 # HealthZ 配置
 # ---------------
@@ -585,6 +600,7 @@ HEALTHZ_PROBES = settings.get(
     'HEALTHZ_PROBES',
     [
         'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
+        'paasng.monitoring.healthz.probes.WorkloadsMysqlProbe',
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
@@ -605,7 +621,9 @@ APIGW_HEALTHZ_URL = settings.get('APIGW_HEALTHZ_URL', 'http://localhost:8080')
 AUTO_CREATE_REGULAR_USER = settings.get('AUTO_CREATE_REGULAR_USER', True)
 
 # 每个应用下最多创建的模块数量
-MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', 10)
+MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', default=10, cast='@int')
+# 应用单个模块允许创建的最大 process 数量
+MAX_PROCESSES_PER_MODULE = settings.get('MAX_PROCESSES_PER_MODULE', default=16, cast='@int')
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var='PAAS_LEGACY_DATABASE_URL', env_var_prefix='PAAS_LEGACY_', for_tests=RUNNING_TESTS
@@ -1120,6 +1138,8 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get('SMART_DOCKER_PASSWORD', 'blueking
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
 
+# slugbuilder build 的超时时间, 单位秒
+BUILD_PROCESS_TIMEOUT = int(settings.get('BUILD_PROCESS_TIMEOUT', 60 * 15))
 
 # ------------------
 # App 应用镜像仓库配置

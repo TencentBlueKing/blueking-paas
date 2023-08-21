@@ -18,8 +18,15 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.cnative.specs.configurations import MergeStrategy, generate_builtin_configurations, merge_envvars
-from paas_wl.cnative.specs.crd.bk_app import EnvVar
+from paas_wl.cnative.specs.configurations import (
+    AppEnvName,
+    EnvVarsReader,
+    MergeStrategy,
+    generate_builtin_configurations,
+    merge_envvars,
+)
+from paas_wl.cnative.specs.crd.bk_app import EnvOverlay, EnvVar, EnvVarOverlay
+from paas_wl.cnative.specs.models import create_app_resource
 
 pytestmark = pytest.mark.django_db(databases=["default"])
 
@@ -58,3 +65,49 @@ def test_generate_builtin_configurations(bk_stag_env, bk_prod_env):
 )
 def test_merge_envvars(x, y, strategy, z):
     assert merge_envvars(x, y, strategy) == z
+
+
+class TestEnvVarsReader:
+    @pytest.mark.parametrize(
+        "envs, expected",
+        [
+            ([EnvVar(name="foo", value="")], [EnvVar(name="FOO", value="")]),
+            (
+                [EnvVar(name="foo", value="1"), EnvVar(name="foo", value="2"), EnvVar(name="Foo", value="3")],
+                [EnvVar(name="FOO", value="3")],
+            ),
+            (
+                [EnvVar(name="foo", value="1"), EnvVar(name="bar", value="2"), EnvVar(name="baz", value="3")],
+                [EnvVar(name="FOO", value="1"), EnvVar(name="BAR", value="2"), EnvVar(name="BAZ", value="3")],
+            ),
+        ],
+    )
+    def test_read(self, envs, expected):
+        res = create_app_resource("foo", "nginx")
+        res.spec.configuration.env = envs
+        assert EnvVarsReader(res).read_all(AppEnvName.STAG) == expected
+        assert EnvVarsReader(res).read_all(AppEnvName.PROD) == expected
+
+    @pytest.mark.parametrize(
+        "envs, overlays, expected_stag, expected_prod",
+        [
+            (
+                [EnvVar(name="foo", value="1")],
+                [EnvVarOverlay(name="foo", value="2", envName="prod")],
+                [EnvVar(name="FOO", value="1")],
+                [EnvVar(name="FOO", value="2")],
+            ),
+            (
+                [EnvVar(name="foo", value="1"), EnvVar(name="baz", value="3")],
+                [EnvVarOverlay(name="bar", value="2", envName="prod")],
+                [EnvVar(name="FOO", value="1"), EnvVar(name="BAZ", value="3")],
+                [EnvVar(name="FOO", value="1"), EnvVar(name="BAZ", value="3"), EnvVar(name="BAR", value="2")],
+            ),
+        ],
+    )
+    def test_overlay(self, envs, overlays, expected_stag, expected_prod):
+        res = create_app_resource("foo", "nginx")
+        res.spec.configuration.env = envs
+        res.spec.envOverlay = EnvOverlay(envVariables=overlays)
+        assert EnvVarsReader(res).read_all(AppEnvName.STAG) == expected_stag
+        assert EnvVarsReader(res).read_all(AppEnvName.PROD) == expected_prod

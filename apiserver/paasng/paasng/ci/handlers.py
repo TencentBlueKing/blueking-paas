@@ -51,7 +51,6 @@ def start_ci_job(sender: 'ApplicationEnvironment', deployment: 'Deployment', **k
     if CIAtomJob.objects.filter(
         env=deployment.app_environment,
         deployment__source_revision=deployment.source_revision,
-        status=JobStatus.SUCCESSFUL,
     ).exists():
         logger.info(
             "the ci job of source<%s> revision<%s> has been executed before",

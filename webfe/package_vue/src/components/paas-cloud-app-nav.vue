@@ -57,7 +57,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -69,6 +69,11 @@ export default {
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
+        'imageCredential',
+        'moduleInfo',
+        'appServices',
+        'appServiceInnerShared',
+        'appServiceInner',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -338,8 +343,8 @@ export default {
     },
 
     /**
-             * 根据角色，初始访问权限
-             */
+     * 根据角色，初始访问权限
+     */
     initRouterPermission() {
       const appRole = this.curAppInfo.role;
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
@@ -349,6 +354,11 @@ export default {
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
+        'imageCredential',
+        'moduleInfo',
+        'appServices',
+        'appServiceInnerShared',
+        'appServiceInner',
       ];
 
       this.navTree.forEach((nav) => {
@@ -485,16 +495,16 @@ export default {
     },
 
     /**
-             * 强服务添加子项
-             * @param {Number} id id
-             * @param {String} name 名称
-             */
+     * 强服务添加子项
+     * @param {Number} id id
+     * @param {String} name 名称
+     */
     addServiceNavItem(navTree, id, name) {
       const category = navTree.find(item => item.name === 'appServices');
       category.children.push({
         categoryName: 'appServices',
         name,
-        matchRouters: ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
+        matchRouters: ['appService', 'appServiceConfig'], // 'appServiceInnerShared' 'appServiceInner',
         destRoute: {
           name: 'appService',
           params: {

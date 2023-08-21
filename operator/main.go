@@ -109,7 +109,7 @@ func main() {
 	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
 	// ref: how to usage sentry in go -> https://docs.sentry.io/platforms/go/usage/
-	sentryDSN := cfgObj.PlatformConfig.SentryDSN
+	sentryDSN := cfgObj.Platform.SentryDSN
 	if sentryDSN == "" {
 		setupLog.Info("[Sentry] SentryDSN unset, all events waiting for report will be dropped.")
 	}
@@ -180,16 +180,16 @@ func main() {
 func initExtensionClient() error {
 	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
-	if cfgObj.PlatformConfig.BkAPIGatewayURL != "" {
-		bkpaasGatewayBaseURL, err := url.Parse(cfgObj.PlatformConfig.BkAPIGatewayURL)
+	if cfgObj.Platform.BkAPIGatewayURL != "" {
+		bkpaasGatewayBaseURL, err := url.Parse(cfgObj.Platform.BkAPIGatewayURL)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse bkpaas gateway url to net.Url")
 		}
 		external.SetDefaultClient(
 			external.NewClient(
 				bkpaasGatewayBaseURL,
-				cfgObj.PlatformConfig.BkAppCode,
-				cfgObj.PlatformConfig.BkAppSecret,
+				cfgObj.Platform.BkAppCode,
+				cfgObj.Platform.BkAppSecret,
 				http.DefaultClient,
 			),
 		)
@@ -202,14 +202,14 @@ func initExtensionClient() error {
 func initIngressPlugins() {
 	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
-	pluginConfig := cfgObj.IngressPluginConfig
-	if pluginConfig.AccessControlConfig != nil {
+	pluginCfg := cfgObj.IngressPlugin
+	if pluginCfg.AccessControl != nil {
 		setupLog.Info("[IngressPlugin] access control plugin enabled.")
-		resources.RegistryPlugin(&resources.AccessControlPlugin{Config: pluginConfig.AccessControlConfig})
+		resources.RegistryPlugin(&resources.AccessControlPlugin{Config: pluginCfg.AccessControl})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
 	}
-	if pluginConfig.PaaSAnalysisConfig != nil && pluginConfig.PaaSAnalysisConfig.Enabled {
+	if pluginCfg.PaaSAnalysis != nil && pluginCfg.PaaSAnalysis.Enabled {
 		// PA 无需额外配置, 可以总是启用该插件
 		setupLog.Info("[IngressPlugin] PA(paas-analysis) plugin enabled.")
 		resources.RegistryPlugin(&resources.PaasAnalysisPlugin{})
@@ -219,11 +219,11 @@ func initIngressPlugins() {
 }
 
 // 生成某类组资源管理器配置
-func genGroupKindMgrOpts(groupKind schema.GroupKind, ctrlConf *cfg.ControllerConfigurationSpec) controller.Options {
+func genGroupKindMgrOpts(groupKind schema.GroupKind, ctrlCfg *cfg.ControllerConfigurationSpec) controller.Options {
 	// 支持配置短路径，如 bkApp，若不存在，则获取 groupKind.String() 的值，如 BkApp.paas.bk.tencent.com
-	concurrency, ok := ctrlConf.GroupKindConcurrency[strcase.ToLowerCamel(groupKind.Kind)]
+	concurrency, ok := ctrlCfg.GroupKindConcurrency[strcase.ToLowerCamel(groupKind.Kind)]
 	if !ok {
-		concurrency = ctrlConf.GroupKindConcurrency[groupKind.String()]
+		concurrency = ctrlCfg.GroupKindConcurrency[groupKind.String()]
 	}
 	return controller.Options{
 		MaxConcurrentReconciles: concurrency,

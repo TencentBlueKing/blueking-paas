@@ -53,7 +53,9 @@
               class="process-command"
               @click="showProcessDetail(process)"
             >
-              {{ process.cmd }}
+              <p v-bk-overflow-tips>
+                {{ process.cmd }}
+              </p>
             </div>
             <div class="status-container">
               <div
@@ -541,10 +543,10 @@
           <bk-form-item v-if="autoscaling" class="desc-form-item" :label-width="10">
             <div class="desc-container">
               <p>
-                {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
+                {{$t('当 CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时，会触发扩容')}}
               </p>
-              <p>{{$t('当')}} {{$t('CPU 使用率')}} &lt;
-                <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
+              <p>{{$t('当 CPU 使用率')}} &lt;
+                <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时，会触发缩容')}}
               </p>
             </div>
           </bk-form-item>
@@ -2195,6 +2197,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .process-table-wrapper {
         &.reset-style {
             border: 1px solid #dcdee5;
@@ -2257,6 +2260,10 @@ export default {
                 min-height: 75px;
                 display: flex;
                 align-items: center;
+
+                p {
+                  @include multiline-ellipsis;
+                }
             }
 
             .process-status {

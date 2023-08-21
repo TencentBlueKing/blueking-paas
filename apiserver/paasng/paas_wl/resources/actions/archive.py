@@ -18,11 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 """Archive related deploy functions"""
 import logging
-from typing import Optional
 
-from paas_wl.monitoring.app_monitor.managers import make_bk_monitor_controller
-from paas_wl.platform.applications.models import Release
-from paas_wl.workloads.processes.controllers import get_proc_mgr
+from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
+from paas_wl.workloads.processes.controllers import get_proc_ctl
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -31,8 +30,7 @@ logger = logging.getLogger(__name__)
 class ArchiveOperationController:
     """Controller for offline operation"""
 
-    def __init__(self, env: ModuleEnvironment, operation_id: Optional[str] = None):
-        self.operation_id = operation_id
+    def __init__(self, env: ModuleEnvironment):
         self.env = env
 
     def start(self):
@@ -41,7 +39,8 @@ class ArchiveOperationController:
 
     def stop_all_processes(self):
         """Stop all processes"""
-        ctl = get_proc_mgr(env=self.env)
-        release: Release = Release.objects.get_latest(self.env.wl_app)
-        for proc_type in release.get_procfile().keys():
+        ctl = get_proc_ctl(env=self.env)
+        lister = ProcessManager(env=self.env)
+        for proc_spec in lister.list_processes_specs():
+            proc_type = proc_spec["name"]
             ctl.stop(proc_type=proc_type)

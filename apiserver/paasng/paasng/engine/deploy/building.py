@@ -28,7 +28,6 @@ from django.utils.translation import gettext as _
 
 from paas_wl.cnative.specs.models import AppModelResource, generate_bkapp_name, update_app_resource
 from paas_wl.platform.applications.models.build import BuildProcess
-from paas_wl.platform.applications.models.misc import OutputStream
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.sourcectl.utils import (
     ExcludeChecker,
@@ -318,19 +317,20 @@ class ApplicationBuilder(BaseBuilder):
         builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 
         app_image_repository = generate_image_repository(env.module)
-        app_image = runtime_info.generate_image(version_info=self.version_info)
-        # Create the Build object and start a background build task
-        build_process = BuildProcess.objects.create(
-            # TODO: Set the correct owner value
-            # owner='',
-            app=env.wl_app,
-            source_tar_path=source_tar_path,
-            revision=self.version_info.revision,
-            branch=self.version_info.version_name,
-            output_stream=OutputStream.objects.create(),
-            image=builder_image,
-            buildpacks=build_info.buildpacks_info or [],
+        app_image = runtime_info.generate_image(
+            version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
+        # Create the Build object and start a background build task
+        build_process = BuildProcess.objects.new(
+            owner=self.deployment.operator,
+            env=env,
+            builder_image=builder_image,
+            source_tar_path=source_tar_path,
+            version_info=self.version_info,
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
+            buildpacks_info=build_info.buildpacks_info,
+        )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
@@ -338,7 +338,7 @@ class ApplicationBuilder(BaseBuilder):
             stream_channel_id=str(self.deployment.id),
             metadata={
                 'procfile': procfile,
-                'extra_envs': extra_envs or {},
+                'extra_envs': extra_envs,
                 # TODO: 不传递 image_repository
                 'image_repository': app_image_repository,
                 'image': app_image,
@@ -410,7 +410,9 @@ class DockerBuilder(BaseBuilder):
         env = self.deployment.app_environment
         builder_image = settings.KANIKO_IMAGE
         app_image_repository = generate_image_repository(env.module)
-        app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(version_info=self.version_info)
+        app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
+            version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
+        )
         # 注入构建环境所需环境变量
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),
@@ -418,14 +420,15 @@ class DockerBuilder(BaseBuilder):
         }
 
         # Create the Build object and start a background build task
-        build_process = BuildProcess.objects.create(
-            app=env.wl_app,
+        build_process = BuildProcess.objects.new(
+            owner=self.deployment.operator,
+            env=env,
+            builder_image=builder_image,
             source_tar_path=source_tar_path,
-            revision=self.version_info.revision,
-            branch=self.version_info.version_name,
-            output_stream=OutputStream.objects.create(),
-            image=builder_image,
+            version_info=self.version_info,
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
@@ -450,7 +453,7 @@ class BuildProcessPoller(DeployPoller):
     """
 
     max_retries_on_error = 10
-    overall_timeout_seconds = 60 * 15
+    overall_timeout_seconds = settings.BUILD_PROCESS_TIMEOUT
     default_retry_delay_seconds = 2
 
     def query(self) -> PollingResult:

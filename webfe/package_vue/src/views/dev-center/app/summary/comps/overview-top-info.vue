@@ -71,136 +71,135 @@
   </div>
 </template>
 
-<script>
-    import i18n from '@/language/i18n.js';
-    const enginelessMapList = [
-        {
-            icon: 'pv',
-            quantity: 0,
-            text: i18n.t('访问数(pv)'),
-            id: 'pv'
-        },
-        {
-            icon: 'member',
-            quantity: 0,
-            text: i18n.t('访客数(uv)'),
-            id: 'uv'
-        },
-        {
-            icon: 'api-2',
-            quantity: 0,
-            text: i18n.t('已申请权限的API数'),
-            id: 'apiNumber'
-        }
-    ];
+<script>import i18n from '@/language/i18n.js';
+const enginelessMapList = [
+  {
+    icon: 'pv',
+    quantity: 0,
+    text: i18n.t('访问数(pv)'),
+    id: 'pv',
+  },
+  {
+    icon: 'member',
+    quantity: 0,
+    text: i18n.t('访客数(uv)'),
+    id: 'uv',
+  },
+  {
+    icon: 'api-2',
+    quantity: 0,
+    text: i18n.t('已申请权限的API数'),
+    id: 'apiNumber',
+  },
+];
 
-    const notAnalyticsMapList = [
-        {
-            icon: 'wangguan',
-            quantity: 0,
-            text: i18n.t('已申请权限的网关数'),
-            id: 'gateway'
-        },
-        {
-            icon: 'api-2',
-            quantity: 0,
-            text: i18n.t('已申请权限的API数'),
-            id: 'apiNumber'
-        }
-    ];
-    export default {
-        props: {
-            appInfo: {
-                type: Object
-            },
-            viewData: {
-                type: Object
-            },
-            isModule: {
-                type: Boolean
-            },
-            isCloud: {
-                type: Boolean
-            }
-        },
-        data () {
-            return {
-                enginelessList: enginelessMapList,
-                notAnalyticsList: notAnalyticsMapList
-            };
-        },
-        computed: {
-            curAppInfo () {
-                return this.$store.state.curAppInfo;
-            },
-            isEngineless () {
-                return this.curAppInfo.web_config.engine_enabled;
-            },
-            viewList () {
-                return this.isModule ? this.enginelessList : this.notAnalyticsList;
-            },
-            appCode () {
-                return this.$route.params.id;
-            },
-            curAppModule () {
-                return this.$store.state.curAppModule;
-            },
-            curModuleId () {
-                return this.curAppModule.name;
-            },
-            userFeature () {
-                return this.$store.state.userFeature;
-            }
-        },
-        watch: {
-            viewData () {
-                if (!this.isEngineless) {
-                    this.seteEnginelessList();
-                }
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                if (!this.isEngineless) {
-                    this.seteEnginelessList();
-                }
-            },
-            seteEnginelessList () {
-                const curList = this.isModule ? this.enginelessList : this.notAnalyticsList;
-                curList.forEach(item => {
-                    item.quantity = this.viewData[item.id];
-                    item.quantity = this.formatNumber(item.quantity);
-                });
-            },
-            // 访问量转为显示单位
-            formatNumber (num) {
-                num = Number(num);
-                return num >= 1e3 && num < 1e4 ? (num / 1e3).toFixed(1) + 'k' : num >= 1e4 ? (num / 1e4).toFixed(1) + 'w' : num;
-            },
-            toDataDetails (data) {
-                if (data.id === 'apiNumber' || data.id === 'gateway') {
-                    this.$router.push({
-                        name: 'appCloudAPI',
-                        params: {
-                            id: this.appCode,
-                            tabActive: 'appPerm'
-                        }
-                    });
-                } else {
-                    this.$router.push({
-                        name: 'appWebAnalysis',
-                        params: {
-                            id: this.appCode,
-                            moduleId: this.curModuleId
-                        }
-                    });
-                }
-            }
-        }
+const notAnalyticsMapList = [
+  {
+    icon: 'wangguan',
+    quantity: 0,
+    text: i18n.t('已申请权限的网关数'),
+    id: 'gateway',
+  },
+  {
+    icon: 'api-2',
+    quantity: 0,
+    text: i18n.t('已申请权限的API数'),
+    id: 'apiNumber',
+  },
+];
+export default {
+  props: {
+    appInfo: {
+      type: Object,
+    },
+    viewData: {
+      type: Object,
+    },
+    isModule: {
+      type: Boolean,
+    },
+    isCloud: {
+      type: Boolean,
+    },
+  },
+  data() {
+    return {
+      enginelessList: enginelessMapList,
+      notAnalyticsList: notAnalyticsMapList,
     };
+  },
+  computed: {
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    isEngineless() {
+      return this.curAppInfo.web_config.engine_enabled;
+    },
+    viewList() {
+      return this.isModule ? this.enginelessList : this.notAnalyticsList;
+    },
+    appCode() {
+      return this.$route.params.id;
+    },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+    curModuleId() {
+      return this.curAppModule.name;
+    },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+  },
+  watch: {
+    viewData() {
+      if (!this.isEngineless) {
+        this.seteEnginelessList();
+      }
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      if (!this.isEngineless) {
+        this.seteEnginelessList();
+      }
+    },
+    seteEnginelessList() {
+      const curList = this.isModule ? this.enginelessList : this.notAnalyticsList;
+      curList.forEach((item) => {
+        item.quantity = this.viewData[item.id];
+        item.quantity = this.formatNumber(item.quantity);
+      });
+    },
+    // 访问量转为显示单位
+    formatNumber(num) {
+      num = Number(num);
+      return num >= 1e3 && num < 1e4 ? `${(num / 1e3).toFixed(1)}k` : num >= 1e4 ? `${(num / 1e4).toFixed(1)}w` : num;
+    },
+    toDataDetails(data) {
+      if (data.id === 'apiNumber' || data.id === 'gateway') {
+        this.$router.push({
+          name: 'appCloudAPI',
+          params: {
+            id: this.appCode,
+            tabActive: 'appPerm',
+          },
+        });
+      } else {
+        this.$router.push({
+          name: 'appWebAnalysis',
+          params: {
+            id: this.appCode,
+            moduleId: this.curModuleId,
+          },
+        });
+      }
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/dashed.scss';
@@ -215,7 +214,6 @@
         display: flex;
         min-height: 100px;
         padding: 16px;
-        margin-top: 4px;
         margin-bottom: 16px;
         border: 1px solid #DCDEE5;
         border-radius: 2px;

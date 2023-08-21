@@ -58,7 +58,7 @@
           </bk-table-column>
           <bk-table-column :label="$t('配置信息')">
             <template slot-scope="{row}">
-              <span v-if="row.specifications && row.specifications.length">
+              <span v-if="row.isStartUp && row.specifications && row.specifications.length">
                 <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
                   {{ $t(item.display_name) }} {{ $t(item.recommended_value) }}
                 </bk-tag>
@@ -68,8 +68,8 @@
           </bk-table-column>
           <bk-table-column :label="$t('共享信息')">
             <template slot-scope="{row}">
-              <span v-if="row.type === 'bound' && row.ref_module && row.ref_module.length">
-                {{ $t('被') }} {{ row.ref_module.map(e => e.name).join(',') }} {{ $t('共享') }}
+              <span v-if="row.type === 'bound' && row.ref_modules && row.ref_modules.length">
+                {{ $t('被') }} {{ row.ref_modules.map(e => e.name).join(',') }} {{ $t('共享') }}
               </span>
               <span v-else-if="row.type === 'shared' && row.ref_module">
                 {{ $t('共享来自') }} {{row.ref_module.name }}

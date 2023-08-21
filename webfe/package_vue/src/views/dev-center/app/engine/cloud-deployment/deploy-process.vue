@@ -313,13 +313,30 @@
                     :label="$t('触发方式')"
                     :label-width="120"
                     class="desc-form-item">
-                    <div class="desc-container">
-                      <p>
-                        {{$t('CPU 使用率')}} = 85%
-                      </p>
-                      <p>
+                    <div class="desc-container flex-row">
+                      <bk-select
+                        v-model="cpuLabel"
+                        disabled
+                        style="width: 150px;"
+                      >
+                        <bk-option
+                          v-for="option in triggerMethodData"
+                          :id="option"
+                          :key="option"
+                          :name="option"
+                        />
+                      </bk-select>
+                      <div class="mr10 ml10">
+                        =
+                      </div>
+                      <bk-input
+                        disabled
+                        v-model="cpuValue"
+                        style="width: 150px"
+                      />
+                      <!-- <p>
                         {{$t('响应时间')}} = 1000ms
-                      </p>
+                      </p> -->
                     </div>
                   </bk-form-item>
                   <section v-if="isAutoscaling" class="mt20">
@@ -659,6 +676,9 @@ export default {
       limit: {},
       request: {},
       quotaPlansFlag: false,
+      triggerMethodData: ['CPU 使用率'],
+      cpuLabel: 'CPU 使用率',
+      cpuValue: '85%',
     };
   },
   computed: {

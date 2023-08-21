@@ -19,7 +19,9 @@
   </div>
 </template>
 <script>
-import { defineComponent, ref } from '@vue/composition-api';
+import { defineComponent, ref } from 'vue';
+import store from '@/store';
+import router from '@/router';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -43,25 +45,25 @@ export default defineComponent({
       },
     },
   },
-  setup(props, { root }) {
-    const { $store, $route, $router } = root;
+  setup(props) {
+    const route = router.currentRoute;
     const active = ref(props.curModule.name || '');
     const handleTabChange = () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
-      $store.commit('updateCurAppModule', curModule);
+      store.commit('updateCurAppModule', curModule);
 
-      const routeName = $route.name;
-      let { query } = $route;
+      const routeName = route.name;
+      let { query } = route;
       if (routeName === 'appLog') {
         query = {
-          tab: $route.query.tab || '',
+          tab: route.query.tab || '',
         };
       }
 
-      $router.push({
+      router.push({
         name: routeName,
         params: {
-          id: $route.params.id,
+          id: route.params.id,
           moduleId: curModule.name,
         },
         query,
@@ -70,7 +72,6 @@ export default defineComponent({
     return {
       handleTabChange,
       active,
-    //   icon,
     };
   },
 });

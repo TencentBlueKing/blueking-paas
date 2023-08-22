@@ -258,7 +258,7 @@
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
-                        v-model="resQuotaPlanStag.plan"
+                        v-model="extraConfigData.stag.resQuotaPlan.plan"
                         :disabled="false"
                         style="width: 150px;"
                         searchable
@@ -278,7 +278,7 @@
                       <i
                         v-else
                         class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        v-bk-tooltips="tips"
+                        v-bk-tooltips="stagTips"
                       />
                     </div>
                   </bk-form-item>
@@ -287,7 +287,9 @@
                     :label-width="120"
                   >
                     <section class="flex-row">
-                      <bk-radio-group v-model="isAutoscaling" @change="handleRadioChange" style="flex: 1">
+                      <bk-radio-group
+                        v-model="extraConfigData.stag.isAutoscaling"
+                        @change="handleRadioChange" style="flex: 1">
                         <bk-radio-button class="radio-cls" :value="false">
                           {{ $t('手动调节') }}
                         </bk-radio-button>
@@ -297,7 +299,7 @@
                         </bk-radio-button>
                       </bk-radio-group>
 
-                      <bk-alert type="info" v-if="isAutoscaling" style="margin-right: 60px;">
+                      <bk-alert type="info" v-if="extraConfigData.stag.isAutoscaling" style="margin-right: 60px;">
                         <span slot="title">
                           {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
                           <a
@@ -310,7 +312,7 @@
                     </section>
                   </bk-form-item>
                   <bk-form-item
-                    v-if="isAutoscaling"
+                    v-if="extraConfigData.stag.isAutoscaling"
                     :label="$t('触发方式')"
                     :label-width="120"
                     class="desc-form-item">
@@ -340,7 +342,7 @@
                       </p> -->
                     </div>
                   </bk-form-item>
-                  <section v-if="isAutoscaling" class="mt20">
+                  <section v-if="extraConfigData.stag.isAutoscaling" class="mt20">
                     <bk-form-item
                       :label="$t('最小副本数')"
                       :label-width="120"
@@ -348,7 +350,7 @@
                       :property="'autoscaling.minReplicas'"
                       :rules="rules.minReplicas">
                       <bk-input
-                        v-model="formData.autoscaling.minReplicas"
+                        v-model="extraConfigData.stag.formAutoscalingData.minReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -362,7 +364,7 @@
                       :property="'autoscaling.maxReplicas'"
                       :rules="rules.maxReplicas">
                       <bk-input
-                        v-model="formData.autoscaling.maxReplicas"
+                        v-model="extraConfigData.stag.formAutoscalingData.maxReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -379,7 +381,7 @@
                       :rules="rules.replicas"
                     >
                       <bk-input
-                        v-model="formData.replicas"
+                        v-model="extraConfigData.stag.formReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -407,7 +409,7 @@
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
-                        v-model="resQuotaPlanProd.plan"
+                        v-model="extraConfigData.prod.resQuotaPlan.plan"
                         :disabled="false"
                         style="width: 150px;"
                         searchable
@@ -427,7 +429,7 @@
                       <i
                         v-else
                         class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        v-bk-tooltips="tips"
+                        v-bk-tooltips="prodTips"
                       />
                     </div>
                   </bk-form-item>
@@ -436,7 +438,9 @@
                     :label-width="120"
                   >
                     <section class="flex-row">
-                      <bk-radio-group v-model="isAutoscaling" @change="handleRadioChange" style="flex: 1">
+                      <bk-radio-group
+                        v-model="extraConfigData.prod.isAutoscaling"
+                        @change="handleRadioChange" style="flex: 1">
                         <bk-radio-button class="radio-cls" :value="false">
                           {{ $t('手动调节') }}
                         </bk-radio-button>
@@ -446,7 +450,7 @@
                         </bk-radio-button>
                       </bk-radio-group>
 
-                      <bk-alert type="info" v-if="isAutoscaling" style="margin-right: 60px;">
+                      <bk-alert type="info" v-if="extraConfigData.prod.isAutoscaling" style="margin-right: 60px;">
                         <span slot="title">
                           {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
                           <a
@@ -459,7 +463,7 @@
                     </section>
                   </bk-form-item>
                   <bk-form-item
-                    v-if="isAutoscaling"
+                    v-if="extraConfigData.prod.isAutoscaling"
                     :label="$t('触发方式')"
                     :label-width="120"
                     class="desc-form-item">
@@ -489,7 +493,7 @@
                       </p> -->
                     </div>
                   </bk-form-item>
-                  <section v-if="isAutoscaling" class="mt20">
+                  <section v-if="extraConfigData.prod.isAutoscaling" class="mt20">
                     <bk-form-item
                       :label="$t('最小副本数')"
                       :label-width="120"
@@ -497,7 +501,7 @@
                       :property="'autoscaling.minReplicas'"
                       :rules="rules.minReplicas">
                       <bk-input
-                        v-model="formData.autoscaling.minReplicas"
+                        v-model="extraConfigData.prod.formAutoscalingData.minReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -511,7 +515,7 @@
                       :property="'autoscaling.maxReplicas'"
                       :rules="rules.maxReplicas">
                       <bk-input
-                        v-model="formData.autoscaling.maxReplicas"
+                        v-model="extraConfigData.prod.formAutoscalingData.maxReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -528,7 +532,7 @@
                       :rules="rules.replicas"
                     >
                       <bk-input
-                        v-model="formData.replicas"
+                        v-model="extraConfigData.prod.formReplicas"
                         type="number"
                         :max="5"
                         :min="1"
@@ -600,13 +604,13 @@
             </bk-form-item>
             <bk-form-item
               :label="$t('扩缩容方式：')">
-              <span class="form-text">{{ isAutoscaling ? $t('自动调节') : $t('手动调节') }}</span>
+              <span class="form-text">{{ extraConfigData.prod.isAutoscaling ? $t('自动调节') : $t('手动调节') }}</span>
             </bk-form-item>
             <!-- <bk-form-item
               :label="$t('触发条件：')">
               <span class="form-text">{{ formData.targetPort || '--' }}</span>
             </bk-form-item> -->
-            <section v-if="isAutoscaling" class="mt20">
+            <section v-if="extraConfigData.prod.isAutoscaling" class="mt20">
               <bk-form-item
                 :label="$t('最小副本数：')">
                 <span class="form-text">{{ formData.autoscaling.minReplicas || '--' }}</span>
@@ -688,7 +692,7 @@ export default {
         cpu: '500m',
         replicas: 1,
         targetPort: 8080,
-        autoscaling: { minReplicas: '', maxReplicas: '', policy: 'default' },
+        autoscaling: {},
       },
       bkappAnnotations: {},
       command: [],
@@ -801,7 +805,6 @@ export default {
       ifopen: false,
       envsData: [{ value: 'stag', label: this.$t('预发布环境') }, { value: 'prod', label: this.$t('生产环境') }],
       resQuotaData: RESQUOTADATA,
-      isAutoscaling: false,
       btnMouseIndex: '',
       processDialog: {
         loading: false,
@@ -823,14 +826,28 @@ export default {
         replicas: 1,
       },
       buildData: {},
-      limit: {},
-      request: {},
       quotaPlansFlag: false,
       triggerMethodData: ['CPU 使用率'],
       cpuLabel: 'CPU 使用率',
       cpuValue: '85%',
-      resQuotaPlanStag: {},
-      resQuotaPlanProd: {},
+      extraConfigData: {
+        stag: {
+          resQuotaPlan: {},
+          isAutoscaling: false,
+          formAutoscalingData: { minReplicas: '', maxReplicas: '', policy: 'default' },
+          formReplicas: 0,
+          limit: {},
+          request: {},
+        },
+        prod: {
+          resQuotaPlan: {},
+          isAutoscaling: false,
+          formAutoscalingData: { minReplicas: '', maxReplicas: '', policy: 'default' },
+          formReplicas: 0,
+          limit: {},
+          request: {},
+        },
+      },
     };
   },
   computed: {
@@ -853,17 +870,33 @@ export default {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
     },
 
-    tips() {
+    stagTips() {
       return {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
         html: `
               <div>
-                最大资源限制： <span>cpu：${this.limit.cpu} </span> <span>内存：${this.limit.memory} </span>
+                最大资源限制： <span>cpu：${this.extraConfigData.stag.limit.cpu} </span> <span>内存：${this.extraConfigData.stag.limit.memory} </span>
               </div>
               <div>
-                最小资源请求：<span>cpu：${this.request.cpu} </span> <span>内存：${this.request.memory} </span>
+                最小资源请求：<span>cpu：${this.extraConfigData.stag.request.cpu} </span> <span>内存：${this.extraConfigData.stag.request.memory} </span>
+              </div>
+              `,
+        placements: ['bottom'],
+      };
+    },
+    prodTips() {
+      return {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `
+              <div>
+                最大资源限制： <span>cpu：${this.extraConfigData.prod.limit.cpu} </span> <span>内存：${this.extraConfigData.prod.limit.memory} </span>
+              </div>
+              <div>
+                最小资源请求：<span>cpu：${this.extraConfigData.prod.request.cpu} </span> <span>内存：${this.extraConfigData.prod.request.memory} </span>
               </div>
               `,
         placements: ['bottom'],
@@ -880,7 +913,6 @@ export default {
           this.buildData = this.localCloudAppData.spec.build || {};
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
-          this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         }
         this.panels = _.cloneDeep(this.processData);
@@ -897,18 +929,41 @@ export default {
             val.targetPort = Number(val.targetPort);
           }
 
-          console.log('resQuotaPlanStag', this.resQuotaPlanStag);
+          console.log('val', val);
 
           // 更多配置信息
-          this.resQuotaPlanStag = (this.envOverlayData?.resQuotas || [])
+          // 资源配额方案
+          this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || [])
             .find(e => e.process === this.processNameActive && e.envName === 'stag') || {};
-
-          this.resQuotaPlanProd = (this.envOverlayData?.resQuotas || [])
+          this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || [])
             .find(e => e.process === this.processNameActive && e.envName === 'prod') || {};
 
-          // console.log('resQuotaPlanStag', resQuotaPlanStag);
-          // this.envName = processConfig ? processConfig.envName : 'stag';
+          // 扩缩容-自动
+          const autoscalingStag = (this.envOverlayData?.autoscaling || [])
+            .find(e => e.process === this.processNameActive && e.envName === 'stag');
+          const autoscalingProd = (this.envOverlayData?.autoscaling || [])
+            .find(e => e.process === this.processNameActive && e.envName === 'prod');
+          this.extraConfigData.stag.isAutoscaling = !!autoscalingStag;
+          this.extraConfigData.prod.isAutoscaling = !!autoscalingProd;
 
+          // 扩缩容-手动
+          const replicasStag = (this.envOverlayData?.replicas || [])
+            .find(e => e.process === this.processNameActive && e.envName === 'stag');
+          const replicasProd = (this.envOverlayData?.replicas || [])
+            .find(e => e.process === this.processNameActive && e.envName === 'prod');
+          if (!!autoscalingStag) {
+            this.extraConfigData.stag.formAutoscalingData.maxReplicas = autoscalingStag.maxReplicas;
+            this.extraConfigData.stag.formAutoscalingData.minReplicas = autoscalingStag.minReplicas;
+          } else {
+            this.extraConfigData.stag.formReplicas = replicasStag.count;
+          }
+
+          if (!!autoscalingProd) {
+            this.extraConfigData.prod.formAutoscalingData.maxReplicas = autoscalingProd.maxReplicas;
+            this.extraConfigData.prod.formAutoscalingData.minReplicas = autoscalingProd.minReplicas;
+          } else {
+            this.extraConfigData.prod.formReplicas = replicasProd.count;
+          }
 
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
           // console.log('val', val);
@@ -957,8 +1012,12 @@ export default {
       }
     },
 
-    'formData.resQuotaPlan'() {
-      // this.getQuotaPlans();
+    'extraConfigData.stag.resQuotaPlan.plan'() {
+      this.getQuotaPlans('stag');
+    },
+
+    'extraConfigData.prod.resQuotaPlan.plan'() {
+      this.getQuotaPlans('prod');
     },
 
     panels: {
@@ -978,9 +1037,6 @@ export default {
     this.getImageCredentialList();
   },
   mounted() {
-    setTimeout(() => {
-      this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
-    }, 1000);
   },
   methods: {
     trimStr(str) {
@@ -1054,7 +1110,6 @@ export default {
     handleBtnGroupClick(v, i) {
       // 选中的进程信息
       this.formData = this.localCloudAppData.spec.processes[i];
-      this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
       this.localProcessNameActive = v;    // 点击的tab名，编辑数据时需要用到
       this.processNameActive = v;
       this.btnIndex = i;
@@ -1151,7 +1206,6 @@ export default {
             autoscaling: { policy: 'default', maxReplicas: '', minReplicas: 1 },
           };
           this.localCloudAppData.spec.processes.push(this.formData);
-          this.isAutoscaling = false;   // 新增进程默认为手动调节
         }
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         this.processDialog.visiable = false;
@@ -1191,7 +1245,6 @@ export default {
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
       this.localCloudAppData.spec.processes.splice(i, 1);
-      this.isAutoscaling = !!(this.formData?.autoscaling?.minReplicas && this.formData?.autoscaling?.maxReplicas);
 
       // 过滤外层envOverlay中的自动调节数据
       this.localCloudAppData.spec.envOverlay.autoscaling = (this.localCloudAppData.spec.envOverlay.autoscaling || [])
@@ -1370,13 +1423,15 @@ export default {
       }
     },
 
-    async getQuotaPlans() {
+    async getQuotaPlans(env) {
       try {
         this.quotaPlansFlag = true;
         const res =  await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        const data = res.find(e => e.name === (this.formData.resQuotaPlan || 'default'));
-        this.limit = data.limit;
-        this.request = data.request;
+        const data = res.find(e => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
+        this.extraConfigData[env].limit = data.limit;
+        this.extraConfigData[env].request = data.request;
+
+        console.log(this.extraConfigData[env].limit);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

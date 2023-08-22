@@ -43,7 +43,7 @@ class UserSourceProviders:
             if not enabled:
                 continue
 
-            # Flags will includes those were not related with source providers, such as `ENABLE_WEB_CONSOLE`.
+            # Flags will include those were not related with source providers, such as `ENABLE_WEB_CONSOLE`.
             # So we need to catch KeyError
             try:
                 str_type = featureflag_sourcectl_map[feature_flag]
@@ -57,10 +57,10 @@ class UserSourceProviders:
         default_providers = self.list_available()
 
         # Append module's source type when it's not presents in user's available providers
-        source_obj = module.get_source_obj()
-        provider_type = source_obj.get_source_type()
-        if provider_type not in default_providers:
-            default_providers.append(provider_type)
+        if source_obj := module.get_source_obj():
+            provider_type = source_obj.get_source_type()
+            if provider_type not in default_providers:
+                default_providers.append(provider_type)
         return default_providers
 
 

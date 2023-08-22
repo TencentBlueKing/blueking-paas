@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     'paasng.accessories.bk_lesscode',
     'paasng.accessories.iam.bkpaas_iam_migration',
     'paasng.accessories.iam.members',
+    'paasng.accessories.bkmonitorv3',
     'paasng.extensions.declarative',
     'paasng.extensions.scene_app',
     'paasng.extensions.smart_app',

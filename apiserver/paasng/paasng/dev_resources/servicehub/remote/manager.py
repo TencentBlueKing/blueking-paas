@@ -31,7 +31,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cluster.shim import EnvClusterService, get_cluster_egress_info
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
+from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.dev_resources.servicehub import constants, exceptions
 from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.dev_resources.servicehub.remote.client import RemoteServiceClient
@@ -322,11 +322,9 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         if 'bk_monitor_space_id' in params_tmpl:
             # 蓝鲸监控命名空间的成员只能初始化一个成员，默认初始化应用的创建者
             # 已测试用离职用户也能创建成功
-            owner_username = self.db_application.owner.username
-
-            bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
-                self.db_application.code, self.db_application.name, owner_username
-            )
+            space, _ = get_or_create_bk_monitor_space(self.db_application)
+            # TODO: 统一术语
+            bk_monitor_space_id = space.space_uid
 
         for key, tmpl_str in params_tmpl.items():
             result[key] = tmpl_str.format(

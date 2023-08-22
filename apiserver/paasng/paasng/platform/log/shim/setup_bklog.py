@@ -25,6 +25,7 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.timezone import get_default_timezone
 
+from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.accessories.log_search.client import make_bk_log_client
 from paasng.accessories.log_search.constatns import ETLType, FieldType
 from paasng.accessories.log_search.definitions import (
@@ -44,9 +45,8 @@ from paasng.platform.log.models import (
     ElasticSearchParams,
     ProcessLogQueryConfig,
 )
+from paasng.platform.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
 from paasng.platform.modules.models import Module
-
-from .setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
 
 logger = logging.getLogger(__name__)
 
@@ -65,14 +65,6 @@ class BKLogConfigProvider:
     @property
     def storage_cluster_id(self) -> int:
         return settings.BKLOG_CONFIG["STORAGE_CLUSTER_ID"]
-
-    @property
-    def bk_biz_id(self) -> int:
-        # TODO: 替换成蓝鲸应用命名空间
-        # bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
-        #     self.db_application.code, self.db_application.name, owner_username
-        # )
-        return settings.BKLOG_CONFIG["BK_BIZ_ID"]
 
 
 def _add_wildcard_suffix(path: str) -> str:
@@ -216,8 +208,9 @@ def update_or_create_custom_collector_config(
                 db_obj.save(update_fields=["log_paths", "log_type", "updated"])
         else:
             # create_custom_collector_config will fill `id`, `index_set_id`, `bk_data_id` fields
+            monitor_space, _ = get_or_create_bk_monitor_space(module.application)
             custom_collector_config = client.create_custom_collector_config(
-                biz_or_space_id=BKLogConfigProvider(module).bk_biz_id, config=custom_collector_config
+                biz_or_space_id=monitor_space.iam_resource_id, config=custom_collector_config
             )
             CustomCollectorConfigModel.objects.update_or_create(
                 module=module,
@@ -244,10 +237,14 @@ def update_or_create_es_search_config(
     assert collector_config.collector_config
     # 与 ELK 方案共用 ES 存储, 需要预先在日志平台配置
     host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
+
+    monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+    # 日志平台的索引规则:
+    # 对于 biz_id 是 业务ID 的采集项: ${biz_id}_bklog_${name_en}_*
+    # 对于 biz_id 是 空间ID 的采集项: space_${id}_bklog_${name_en}_*
+    index_prefix = f"space_{monitor_space.id}_bklog_"
     search_params = ElasticSearchParams(
-        # 日志平台的索引规则: ${biz_id}_bklog_${name_en}_*
-        # TODO: 修改成蓝鲸应用命名空间后, 需要注意 index 规则是否一致
-        indexPattern=f"{BKLogConfigProvider(module).bk_biz_id}_bklog_{collector_config.collector_config.name_en}_*",
+        indexPattern=f"{index_prefix}{collector_config.collector_config.name_en}_*",
         # time 是日志平台默认的时间字段
         timeField="time",
         timeFormat="timestamp[ns]",

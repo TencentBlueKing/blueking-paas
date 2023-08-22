@@ -249,7 +249,7 @@
               <div class="env-container">
                 <bk-form
                   ref="formEnv"
-                  :model="formData"
+                  :model="extraConfigData.stag"
                   ext-cls="form-envs"
                 >
                   <bk-form-item
@@ -347,8 +347,8 @@
                       :label="$t('最小副本数')"
                       :label-width="120"
                       :required="true"
-                      :property="'autoscaling.minReplicas'"
-                      :rules="rules.minReplicas">
+                      :property="'formAutoscalingData.minReplicas'"
+                      :rules="rules.stagMinReplicas">
                       <bk-input
                         v-model="extraConfigData.stag.formAutoscalingData.minReplicas"
                         type="number"
@@ -361,8 +361,8 @@
                       :label="$t('最大副本数')"
                       :label-width="120"
                       :required="true"
-                      :property="'autoscaling.maxReplicas'"
-                      :rules="rules.maxReplicas">
+                      :property="'formAutoscalingData.maxReplicas'"
+                      :rules="rules.stagMaxReplicas">
                       <bk-input
                         v-model="extraConfigData.stag.formAutoscalingData.maxReplicas"
                         type="number"
@@ -377,8 +377,8 @@
                       :label="$t('副本数量')"
                       :label-width="120"
                       :required="true"
-                      :property="'replicas'"
-                      :rules="rules.replicas"
+                      :property="'formReplicas'"
+                      :rules="rules.formReplicas"
                     >
                       <bk-input
                         v-model="extraConfigData.stag.formReplicas"
@@ -400,7 +400,7 @@
               <div class="env-container">
                 <bk-form
                   ref="formEnv"
-                  :model="formData"
+                  :model="extraConfigData.prod"
                   ext-cls="form-envs"
                 >
                   <bk-form-item
@@ -498,8 +498,8 @@
                       :label="$t('最小副本数')"
                       :label-width="120"
                       :required="true"
-                      :property="'autoscaling.minReplicas'"
-                      :rules="rules.minReplicas">
+                      :property="'formAutoscalingData.maxReplicas'"
+                      :rules="rules.prodMinReplicas">
                       <bk-input
                         v-model="extraConfigData.prod.formAutoscalingData.minReplicas"
                         type="number"
@@ -512,8 +512,8 @@
                       :label="$t('最大副本数')"
                       :label-width="120"
                       :required="true"
-                      :property="'autoscaling.maxReplicas'"
-                      :rules="rules.maxReplicas">
+                      :property="'formAutoscalingData.maxReplicas'"
+                      :rules="rules.prodMaxReplicas">
                       <bk-input
                         v-model="extraConfigData.prod.formAutoscalingData.maxReplicas"
                         type="number"
@@ -528,8 +528,8 @@
                       :label="$t('副本数量')"
                       :label-width="120"
                       :required="true"
-                      :property="'replicas'"
-                      :rules="rules.replicas"
+                      :property="'formReplicas'"
+                      :rules="rules.formReplicas"
                     >
                       <bk-input
                         v-model="extraConfigData.prod.formReplicas"
@@ -717,7 +717,7 @@ export default {
             trigger: 'blur',
           },
         ],
-        replicas: [
+        formReplicas: [
           {
             required: true,
             message: this.$t('该字段是必填项'),
@@ -734,7 +734,7 @@ export default {
             trigger: 'blur',
           },
         ],
-        minReplicas: [
+        stagMinReplicas: [
           {
             required: true,
             message: this.$t('请填写最小副本数'),
@@ -748,14 +748,14 @@ export default {
           {
             validator: (v) => {
               const minReplicas = Number(v);
-              const maxReplicas = Number(this.formData.autoscaling.maxReplicas);
+              const maxReplicas = Number(this.extraConfigData.stag.formAutoscalingData.maxReplicas);
               return minReplicas <= maxReplicas;
             },
             message: () => `${this.$t('最小副本数不可大于最大副本数')}`,
             trigger: 'blur',
           },
         ],
-        maxReplicas: [
+        stagMaxReplicas: [
           {
             required: true,
             message: this.$t('请填写最大副本数'),
@@ -769,7 +769,49 @@ export default {
           {
             validator: (v) => {
               const maxReplicas = Number(v);
-              const minReplicas = Number(this.formData.autoscaling.minReplicas);
+              const minReplicas = Number(this.extraConfigData.stag.formAutoscalingData.minReplicas);
+              return maxReplicas >= minReplicas;
+            },
+            message: `${this.$t('最大副本数不可小于最小副本数')}`,
+            trigger: 'blur',
+          },
+        ],
+        prodMinReplicas: [
+          {
+            required: true,
+            message: this.$t('请填写最小副本数'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[1-9][0-9]*$/,
+            message: this.$t('请填写大于0的整数'),
+            trigger: 'blur',
+          },
+          {
+            validator: (v) => {
+              const minReplicas = Number(v);
+              const maxReplicas = Number(this.extraConfigData.prod.formAutoscalingData.maxReplicas);
+              return minReplicas <= maxReplicas;
+            },
+            message: () => `${this.$t('最小副本数不可大于最大副本数')}`,
+            trigger: 'blur',
+          },
+        ],
+        prodMaxReplicas: [
+          {
+            required: true,
+            message: this.$t('请填写最大副本数'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[1-9][0-9]*$/,
+            message: this.$t('请填写大于0的整数'),
+            trigger: 'blur',
+          },
+          {
+            validator: (v) => {
+              const maxReplicas = Number(v);
+              const minReplicas = Number(this.extraConfigData.prod.formAutoscalingData.minReplicas);
               return maxReplicas >= minReplicas;
             },
             message: `${this.$t('最大副本数不可小于最小副本数')}`,
@@ -929,7 +971,7 @@ export default {
             val.targetPort = Number(val.targetPort);
           }
 
-          console.log('val', val);
+          console.log('val1', val);
 
           // 更多配置信息
           // 资源配额方案
@@ -951,10 +993,11 @@ export default {
             .find(e => e.process === this.processNameActive && e.envName === 'stag');
           const replicasProd = (this.envOverlayData?.replicas || [])
             .find(e => e.process === this.processNameActive && e.envName === 'prod');
+            // 自动
           if (!!autoscalingStag) {
             this.extraConfigData.stag.formAutoscalingData.maxReplicas = autoscalingStag.maxReplicas;
             this.extraConfigData.stag.formAutoscalingData.minReplicas = autoscalingStag.minReplicas;
-          } else {
+          } else {  // 手动
             this.extraConfigData.stag.formReplicas = replicasStag.count;
           }
 
@@ -965,10 +1008,10 @@ export default {
             this.extraConfigData.prod.formReplicas = replicasProd.count;
           }
 
+          console.log('this.extraConfigData', this.extraConfigData);
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
-          // console.log('val', val);
-          // debugger;
-          this.handleExtraConfig();   // 处理额外的配置
+
+          // this.handleExtraConfig();   // 处理额外的配置
 
           // 扩缩容
           if (val?.autoscaling?.maxReplicas >= val?.autoscaling?.minReplicas) {
@@ -1012,6 +1055,25 @@ export default {
       }
     },
 
+    'extraConfigData.stag': {
+      handler(val) {
+        console.log('val', val);
+        this.handleExtraConfig();   // 处理额外的配置
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        console.log('this.localCloudAppData', this.localCloudAppData);
+      },
+      deep: true,
+    },
+    // 'extraConfigData.prod': {
+    //   handler(val) {
+    //     console.log('val1', val);
+    //     this.envName = 'prod';
+    //     this.handleExtraConfig();   // 处理额外的配置
+    //     // this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+    //   },
+    //   deep: true,
+    // },
+
     'extraConfigData.stag.resQuotaPlan.plan'() {
       this.getQuotaPlans('stag');
     },
@@ -1029,9 +1091,9 @@ export default {
       deep: true,
     },
 
-    envName() {
-      this.handleExtraConfig();   // 处理额外的配置
-    },
+    // envName() {
+    //   this.handleExtraConfig();   // 处理额外的配置
+    // },
   },
   created() {
     this.getImageCredentialList();
@@ -1132,14 +1194,8 @@ export default {
     },
 
     // 处理自动调节问题
-    handleRadioChange(v) {
+    handleRadioChange() {
       this.$refs.formEnv?.clearError();
-      if (v) {
-        this.$set(this.formData, 'autoscaling', this.formDataBackUp.autoscaling);
-      } else {
-        // 切换成手动需要将原来副本数量渲染到页面
-        this.$set(this.formData, 'replicas', this.formDataBackUp.replicas);
-      }
     },
 
     // 弹窗确认
@@ -1289,29 +1345,29 @@ export default {
       const replicasData = {
         envName: this.envName,
         process: this.processNameActive,
-        count: this.formData.replicas,
+        count: this.extraConfigData[this.envName].formReplicas,
       };
-      // 资源配置相关数据
-      const resQuotaPlanData = [{
+      console.log('replicasData', replicasData);
+      // // 资源配置相关数据
+      const resQuotaPlanData = {
         envName: this.envName,
         process: this.processNameActive,
-        plan: this.formData.resQuotaPlan.stag,
-      }, {
-        envName: this.envName,
-        process: this.processNameActive,
-        plan: this.formData.resQuotaPlan.prod,
-      }];
+        plan: this.extraConfigData[this.envName].resQuotaPlan.plan,
+      };
       if (!this.localCloudAppData.spec.envOverlay) {
         this.localCloudAppData.spec.envOverlay = {};
       }
       if (!this.localCloudAppData.spec.envOverlay?.resQuotas) { // 没有resQuotas时
         this.localCloudAppData.spec.envOverlay.resQuotas = [];
-        resQuotaPlanData.forEach((e) => {
-          this.localCloudAppData.spec.envOverlay.resQuotas.push(e);
-        });
+        this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
       } else {
-        console.log('this.localCloudAppData.spec.envOverlay.resQuotas', this.localCloudAppData.spec.envOverlay.resQuotas);
-        console.log('this.formData', this.formData);
+        this.localCloudAppData.spec.envOverlay.resQuotas
+          .forEach((e) => {
+            if (e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) {
+              e.plan = resQuotaPlanData.plan;
+            }
+          });
+
         // this.localCloudAppData.spec.envOverlay.resQuotas
         //   .forEach((e) => {
         //     if (e.process === resQuotaPlanData.process) {
@@ -1327,45 +1383,43 @@ export default {
         //   });
       }
 
-      if (this.formData.replicas) {     // 副本数量
-        console.log('this.localCloudAppData.spec 处理资源', this.localCloudAppData.spec.envOverlay?.replicas);
+      if (replicasData.count) {     // 副本数量
         // 没有replicas时
         if (!this.localCloudAppData.spec.envOverlay?.replicas
         || !this.localCloudAppData.spec.envOverlay.replicas.length) {
           this.localCloudAppData.spec.envOverlay.replicas = [];
           this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
-          console.log('replicas', this.localCloudAppData.spec.envOverlay.replicas);
         } else {
           // 有replicas数据
           this.localCloudAppData.spec.envOverlay.replicas.forEach((e) => {
-            if (e.process === replicasData.process) {
-              e.envName = replicasData.envName;
+            if (e.process === replicasData.process && e.envName === replicasData.envName) {
               e.count = replicasData.count;
-            } else {
-              const replicasProcess = (this.localCloudAppData.spec?.envOverlay?.replicas || []).map(e => e.process);
-              if (!replicasProcess.includes(replicasData.process)) {
-                this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
-              }
             }
           });
         }
       }
 
+      console.log('this.localCloudAppData.spec.envOverlay', this.localCloudAppData.spec.envOverlay, this.extraConfigData[this.envName].isAutoscaling);
+
       // 自动调节
-      if (this.isAutoscaling) {
+      if (this.extraConfigData[this.envName].isAutoscaling) {
+        const { minReplicas } = this.extraConfigData[this.envName].formAutoscalingData;
+        const { maxReplicas } = this.extraConfigData[this.envName].formAutoscalingData;
         // 自动调节相关数据
         const autoscalingData = {
           envName: this.envName,
           process: this.processNameActive,
           policy: 'default',
-          minReplicas: this.formData.autoscaling.minReplicas ? Number(this.formData.autoscaling.minReplicas) : 1,
-          maxReplicas: this.formData.autoscaling.maxReplicas ? Number(this.formData.autoscaling.maxReplicas) : '',
+          minReplicas: minReplicas ? Number(minReplicas) : 1,
+          maxReplicas: maxReplicas ? Number(maxReplicas) : '',
         };
         // 没有autoscaling时
         if (!this.localCloudAppData.spec.envOverlay?.autoscaling?.length) {
           this.localCloudAppData.spec.envOverlay.autoscaling = [];
           this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
         } else {
+          console.log('this.localCloudAppData.spec.envOverlay.autoscaling1', this.localCloudAppData.spec.envOverlay.autoscaling);
+          debugger;
           // 有autoscaling数据
           this.localCloudAppData.spec.envOverlay.autoscaling
             .forEach((e) => {
@@ -1383,26 +1437,26 @@ export default {
             });
         }
 
-        // replicas做一次备份
-        if (this.localCloudAppData.spec.processes[this.btnIndex].replicas) {
-          this.formDataBackUp.replicas = this.localCloudAppData.spec.processes[this.btnIndex].replicas;
-        }
-        // 需要删除手动调节相关信息
-        delete this.localCloudAppData.spec.processes[this.btnIndex].replicas;
+        // // replicas做一次备份
+        // if (this.localCloudAppData.spec.processes[this.btnIndex].replicas) {
+        //   this.formDataBackUp.replicas = this.localCloudAppData.spec.processes[this.btnIndex].replicas;
+        // }
+        // // 需要删除手动调节相关信息
+        // delete this.localCloudAppData.spec.processes[this.btnIndex].replicas;
         // 过滤当前进程当前环境envOverlay中replicas
-        const { envOverlay } = this.localCloudAppData.spec;
-        this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
+        // const { envOverlay } = this.localCloudAppData.spec;
+        // this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
       } else { // // 手动调节
-        // autoscaling做一次备份
-        if (this.localCloudAppData.spec.processes[this.btnIndex].autoscaling) {
-          this.formDataBackUp.autoscaling = this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
-        }
-        // 需要删除当前进程base中的autoscaling
-        delete this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
+        // // autoscaling做一次备份
+        // if (this.localCloudAppData.spec.processes[this.btnIndex].autoscaling) {
+        //   this.formDataBackUp.autoscaling = this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
+        // }
+        // // 需要删除当前进程base中的autoscaling
+        // delete this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
         // 过滤当前进程当前环境envOverlay中autoscaling
-        const { envOverlay } = this.localCloudAppData.spec;
-        // eslint-disable-next-line max-len
-        this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
+        // const { envOverlay } = this.localCloudAppData.spec;
+        // // eslint-disable-next-line max-len
+        // this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
       }
 
       // 将最大值最小值改为数字类型

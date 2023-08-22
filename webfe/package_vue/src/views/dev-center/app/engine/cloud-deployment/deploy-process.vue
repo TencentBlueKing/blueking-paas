@@ -231,7 +231,7 @@
               :label="$t('配置环境')"
               :label-width="120"
             >
-              <bk-radio-group v-model="envName">
+              <!-- <bk-radio-group v-model="envName">
                 <bk-radio-button
                   class="radio-cls"
                   v-for="(item, index) in envsData"
@@ -239,11 +239,160 @@
                   :value="item.value">
                   {{ item.label }}
                 </bk-radio-button>
-              </bk-radio-group>
+              </bk-radio-group> -->
             </bk-form-item>
             <bk-form-item
               v-show="ifopen"
-              :label-width="120"
+              :label-width="40"
+            >
+              <div class="env-name">{{ $t('预发布环境') }}</div>
+              <div class="env-container">
+                <bk-form
+                  ref="formEnv"
+                  :model="formData"
+                  ext-cls="form-envs"
+                >
+                  <bk-form-item
+                    :label="$t('资源配额方案')"
+                    :label-width="120"
+                  >
+                    <div class="flex-row align-items-center">
+                      <bk-select
+                        v-model="resQuotaPlanStag.plan"
+                        :disabled="false"
+                        style="width: 150px;"
+                        searchable
+                      >
+                        <bk-option
+                          v-for="option in resQuotaData"
+                          :id="option"
+                          :key="option"
+                          :name="option"
+                        />
+                      </bk-select>
+                      <!-- tips内容不会双向绑定 需要重新渲染 -->
+                      <i
+                        v-if="quotaPlansFlag"
+                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                      />
+                      <i
+                        v-else
+                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                        v-bk-tooltips="tips"
+                      />
+                    </div>
+                  </bk-form-item>
+                  <bk-form-item
+                    :label="$t('扩缩容方式')"
+                    :label-width="120"
+                  >
+                    <section class="flex-row">
+                      <bk-radio-group v-model="isAutoscaling" @change="handleRadioChange" style="flex: 1">
+                        <bk-radio-button class="radio-cls" :value="false">
+                          {{ $t('手动调节') }}
+                        </bk-radio-button>
+                        <bk-radio-button
+                          class="radio-cls" :value="true">
+                          {{ $t('自动调节') }}
+                        </bk-radio-button>
+                      </bk-radio-group>
+
+                      <bk-alert type="info" v-if="isAutoscaling" style="margin-right: 60px;">
+                        <span slot="title">
+                          {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
+                          <a
+                            target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
+                            style="color: #3a84ff">
+                            {{$t('查看动态扩缩容计算规则')}}
+                          </a>
+                        </span>
+                      </bk-alert>
+                    </section>
+                  </bk-form-item>
+                  <bk-form-item
+                    v-if="isAutoscaling"
+                    :label="$t('触发方式')"
+                    :label-width="120"
+                    class="desc-form-item">
+                    <div class="desc-container flex-row">
+                      <bk-select
+                        v-model="cpuLabel"
+                        disabled
+                        style="width: 150px;"
+                      >
+                        <bk-option
+                          v-for="option in triggerMethodData"
+                          :id="option"
+                          :key="option"
+                          :name="option"
+                        />
+                      </bk-select>
+                      <div class="mr10 ml10">
+                        =
+                      </div>
+                      <bk-input
+                        disabled
+                        v-model="cpuValue"
+                        style="width: 150px"
+                      />
+                      <!-- <p>
+                        {{$t('响应时间')}} = 1000ms
+                      </p> -->
+                    </div>
+                  </bk-form-item>
+                  <section v-if="isAutoscaling" class="mt20">
+                    <bk-form-item
+                      :label="$t('最小副本数')"
+                      :label-width="120"
+                      :required="true"
+                      :property="'autoscaling.minReplicas'"
+                      :rules="rules.minReplicas">
+                      <bk-input
+                        v-model="formData.autoscaling.minReplicas"
+                        type="number"
+                        :max="5"
+                        :min="1"
+                        style="width: 150px"
+                      />
+                    </bk-form-item>
+                    <bk-form-item
+                      :label="$t('最大副本数')"
+                      :label-width="120"
+                      :required="true"
+                      :property="'autoscaling.maxReplicas'"
+                      :rules="rules.maxReplicas">
+                      <bk-input
+                        v-model="formData.autoscaling.maxReplicas"
+                        type="number"
+                        :max="5"
+                        :min="1"
+                        style="width: 150px"
+                      />
+                    </bk-form-item>
+                  </section>
+                  <section v-else class="mt20">
+                    <bk-form-item
+                      :label="$t('副本数量')"
+                      :label-width="120"
+                      :required="true"
+                      :property="'replicas'"
+                      :rules="rules.replicas"
+                    >
+                      <bk-input
+                        v-model="formData.replicas"
+                        type="number"
+                        :max="5"
+                        :min="1"
+                        style="width: 150px"
+                      />
+                    </bk-form-item>
+                  </section>
+                </bk-form>
+              </div>
+            </bk-form-item>
+            <bk-form-item
+              v-show="ifopen"
+              :label-width="40"
             >
               <div class="env-name">{{ $t('生产环境') }}</div>
               <div class="env-container">
@@ -258,7 +407,7 @@
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
-                        v-model="formData.resQuotaPlan"
+                        v-model="resQuotaPlanProd.plan"
                         :disabled="false"
                         style="width: 150px;"
                         searchable
@@ -447,7 +596,7 @@
             </bk-form-item>
             <bk-form-item
               :label="$t('资源配额方案：')">
-              <span class="form-text">{{ formData.resQuotaPlan || '--' }}</span>
+              <span class="form-text">{{ formData.resQuotaPlan.stag || '--' }}</span>
             </bk-form-item>
             <bk-form-item
               :label="$t('扩缩容方式：')">
@@ -680,6 +829,8 @@ export default {
       triggerMethodData: ['CPU 使用率'],
       cpuLabel: 'CPU 使用率',
       cpuValue: '85%',
+      resQuotaPlanStag: {},
+      resQuotaPlanProd: {},
     };
   },
   computed: {
@@ -746,12 +897,22 @@ export default {
             val.targetPort = Number(val.targetPort);
           }
 
+          console.log('resQuotaPlanStag', this.resQuotaPlanStag);
+
           // 更多配置信息
-          const processConfig = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive);
-          this.envName = processConfig ? processConfig.envName : 'stag';
+          this.resQuotaPlanStag = (this.envOverlayData?.resQuotas || [])
+            .find(e => e.process === this.processNameActive && e.envName === 'stag') || {};
+
+          this.resQuotaPlanProd = (this.envOverlayData?.resQuotas || [])
+            .find(e => e.process === this.processNameActive && e.envName === 'prod') || {};
+
+          // console.log('resQuotaPlanStag', resQuotaPlanStag);
+          // this.envName = processConfig ? processConfig.envName : 'stag';
 
 
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
+          // console.log('val', val);
+          // debugger;
           this.handleExtraConfig();   // 处理额外的配置
 
           // 扩缩容
@@ -766,7 +927,7 @@ export default {
           if (val?.image) {
             this.$refs.formDeploy?.clearError();
           }
-
+          console.log('this.localCloudAppData11', this.localCloudAppData);
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -797,7 +958,7 @@ export default {
     },
 
     'formData.resQuotaPlan'() {
-      this.getQuotaPlans();
+      // this.getQuotaPlans();
     },
 
     panels: {
@@ -983,7 +1144,7 @@ export default {
             cpu: '500m',
             replicas: 1,
             targetPort: null,
-            resQuotaPlan: 'default',
+            resQuotaPlan: { stag: 'default', prod: 'default' },
             envOverlay: {
               replicas: [],
             },
@@ -1078,33 +1239,40 @@ export default {
         count: this.formData.replicas,
       };
       // 资源配置相关数据
-      const resQuotaPlanData = {
+      const resQuotaPlanData = [{
         envName: this.envName,
         process: this.processNameActive,
-        plan: this.formData.resQuotaPlan,
-      };
+        plan: this.formData.resQuotaPlan.stag,
+      }, {
+        envName: this.envName,
+        process: this.processNameActive,
+        plan: this.formData.resQuotaPlan.prod,
+      }];
       if (!this.localCloudAppData.spec.envOverlay) {
         this.localCloudAppData.spec.envOverlay = {};
       }
       if (!this.localCloudAppData.spec.envOverlay?.resQuotas) { // 没有resQuotas时
         this.localCloudAppData.spec.envOverlay.resQuotas = [];
-        this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
+        resQuotaPlanData.forEach((e) => {
+          this.localCloudAppData.spec.envOverlay.resQuotas.push(e);
+        });
       } else {
-        this.localCloudAppData.spec.envOverlay.resQuotas
-          .forEach((e) => {
-            if (e.process === resQuotaPlanData.process) {
-              e.envName = resQuotaPlanData.envName;
-              e.plan = resQuotaPlanData.plan;
-            } else {
-              const resQuotasProcess = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
-                .map(e => e.process) || [];
-              if (!resQuotasProcess.includes(resQuotaPlanData.process)) {   // 如果没包含就需要添加一条数据
-                this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
-              }
-            }
-          });
+        console.log('this.localCloudAppData.spec.envOverlay.resQuotas', this.localCloudAppData.spec.envOverlay.resQuotas);
+        console.log('this.formData', this.formData);
+        // this.localCloudAppData.spec.envOverlay.resQuotas
+        //   .forEach((e) => {
+        //     if (e.process === resQuotaPlanData.process) {
+        //       e.envName = resQuotaPlanData.envName;
+        //       e.plan = resQuotaPlanData.plan;
+        //     } else {
+        //       const resQuotasProcess = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
+        //         .map(e => e.process) || [];
+        //       if (!resQuotasProcess.includes(resQuotaPlanData.process)) {   // 如果没包含就需要添加一条数据
+        //         this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
+        //       }
+        //     }
+        //   });
       }
-
 
       if (this.formData.replicas) {     // 副本数量
         console.log('this.localCloudAppData.spec 处理资源', this.localCloudAppData.spec.envOverlay?.replicas);
@@ -1357,8 +1525,13 @@ export default {
       }
     }
     .env-name{
+      width: 885px;
       color: #313238;
       font-size: 14px;
+      height: 32px;
+      line-height: 32px;
+      background: #F0F1F5;
+      padding-left: 20px;
     }
     .env-container{
       width: 885px;

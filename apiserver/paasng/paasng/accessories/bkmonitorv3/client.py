@@ -66,7 +66,7 @@ class BKMonitorSpaceManager:
         data = {
             "space_name": space.space_name,
             "space_id": space.space_id,
-            "space_type_id": space.space_type_id,
+            "space_type_id": space.space_type_id.value,
             "creator": space.creator,
         }
         try:

@@ -39,7 +39,7 @@ class BkMonitorSpace:
                        的原始返回值, 包含其他未被使用的空间相关的属性
     """
 
-    space_type_id: str
+    space_type_id: SpaceType
     space_id: str
     space_name: str
     creator: str
@@ -67,5 +67,5 @@ def gen_bk_monitor_space(application: Application) -> BkMonitorSpace:
         space_type_id=SpaceType.SAAS,
         space_id=application.code,
         space_name=application.name,
-        creator=application.creator,
+        creator=application.creator.username,
     )

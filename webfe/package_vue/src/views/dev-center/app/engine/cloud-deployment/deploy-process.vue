@@ -245,10 +245,10 @@
               v-show="ifopen"
               :label-width="40"
             >
-              <div class="env-name">{{ $t('预发布环境') }}</div>
+              <div class="env-name w885">{{ $t('预发布环境') }}</div>
               <div class="env-container">
                 <bk-form
-                  ref="formEnv"
+                  ref="formStagEnv"
                   :model="extraConfigData.stag"
                   ext-cls="form-envs"
                 >
@@ -289,7 +289,7 @@
                     <section class="flex-row">
                       <bk-radio-group
                         v-model="extraConfigData.stag.isAutoscaling"
-                        @change="handleRadioChange" style="flex: 1">
+                        @change="handleRadioChange('stag')" style="flex: 1">
                         <bk-radio-button class="radio-cls" :value="false">
                           {{ $t('手动调节') }}
                         </bk-radio-button>
@@ -396,10 +396,10 @@
               v-show="ifopen"
               :label-width="40"
             >
-              <div class="env-name">{{ $t('生产环境') }}</div>
+              <div class="env-name w885">{{ $t('生产环境') }}</div>
               <div class="env-container">
                 <bk-form
-                  ref="formEnv"
+                  ref="formProdEnv"
                   :model="extraConfigData.prod"
                   ext-cls="form-envs"
                 >
@@ -440,7 +440,7 @@
                     <section class="flex-row">
                       <bk-radio-group
                         v-model="extraConfigData.prod.isAutoscaling"
-                        @change="handleRadioChange" style="flex: 1">
+                        @change="handleRadioChange('prod')" style="flex: 1">
                         <bk-radio-button class="radio-cls" :value="false">
                           {{ $t('手动调节') }}
                         </bk-radio-button>
@@ -887,7 +887,7 @@ export default {
           resQuotaPlan: {},
           isAutoscaling: false,
           formAutoscalingData: { minReplicas: '', maxReplicas: '', policy: 'default' },
-          formReplicas: 0,
+          formReplicas: 1,
           limit: {},
           request: {},
         },
@@ -895,7 +895,7 @@ export default {
           resQuotaPlan: {},
           isAutoscaling: false,
           formAutoscalingData: { minReplicas: '', maxReplicas: '', policy: 'default' },
-          formReplicas: 0,
+          formReplicas: 1,
           limit: {},
           request: {},
         },
@@ -985,9 +985,9 @@ export default {
           // 更多配置信息
           // 资源配额方案
           this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || [])
-            .find(e => e.process === this.processNameActive && e.envName === 'stag') || {};
+            .find(e => e.process === this.processNameActive && e.envName === 'stag') || { plan: 'default' };
           this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || [])
-            .find(e => e.process === this.processNameActive && e.envName === 'prod') || {};
+            .find(e => e.process === this.processNameActive && e.envName === 'prod') || { plan: 'default' };
 
           // 扩缩容-自动
           const autoscalingStag = (this.envOverlayData?.autoscaling || [])
@@ -999,10 +999,12 @@ export default {
 
           // 扩缩容-手动
           const replicasStag = (this.envOverlayData?.replicas || [])
-            .find(e => e.process === this.processNameActive && e.envName === 'stag');
+            .find(e => e.process === this.processNameActive && e.envName === 'stag') || { count: 1 };
           const replicasProd = (this.envOverlayData?.replicas || [])
-            .find(e => e.process === this.processNameActive && e.envName === 'prod');
-            // 自动
+            .find(e => e.process === this.processNameActive && e.envName === 'prod') || { count: 1 };
+
+          console.log('replicasProd', this.processNameActive, replicasProd, this.envOverlayData);
+          // 自动
           if (!!autoscalingStag) {
             this.extraConfigData.stag.formAutoscalingData.maxReplicas = autoscalingStag.maxReplicas;
             this.extraConfigData.stag.formAutoscalingData.minReplicas = autoscalingStag.minReplicas;
@@ -1018,6 +1020,7 @@ export default {
           }
 
           console.log('this.extraConfigData', this.extraConfigData);
+          debugger;
           this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val);   // 赋值数据给选中的进程
 
           // this.handleExtraConfig();   // 处理额外的配置
@@ -1025,7 +1028,7 @@ export default {
           if (val?.image) {
             this.$refs.formDeploy?.clearError();
           }
-          console.log('this.localCloudAppData11', this.localCloudAppData);
+          // console.log('this.localCloudAppData11', this.localCloudAppData);
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
         setTimeout(() => {
@@ -1057,28 +1060,33 @@ export default {
 
     'extraConfigData.stag': {
       handler(val) {
-        console.log('val', val);
         this.envName = 'stag';
         this.handleExtraConfig();   // 处理额外的配置
 
         // 扩缩容
-        if (val?.autoscaling?.maxReplicas >= val?.autoscaling?.minReplicas) {
-          this.$refs.formEnv?.clearError();
+        if (val?.formAutoscalingData?.maxReplicas >= val?.formAutoscalingData?.minReplicas) {
+          this.$refs.formStagEnv?.clearError();
         }
 
-        if (val?.autoscaling?.minReplicas <= val?.autoscaling?.maxReplicas) {
-          this.$refs.formEnv?.clearError();
+        if (val?.formAutoscalingData?.minReplicas <= val?.formAutoscalingData?.maxReplicas) {
+          this.$refs.formStagEnv?.clearError();
         }
-        console.log('this.localCloudAppData', this.localCloudAppData);
       },
       deep: true,
     },
     'extraConfigData.prod': {
       handler(val) {
-        console.log('val1', val);
         this.envName = 'prod';
         this.handleExtraConfig();   // 处理额外的配置
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+
+        // 扩缩容
+        if (val?.formAutoscalingData?.maxReplicas >= val?.formAutoscalingData?.minReplicas) {
+          this.$refs.formProdEnv?.clearError();
+        }
+
+        if (val?.formAutoscalingData?.minReplicas <= val?.formAutoscalingData?.maxReplicas) {
+          this.$refs.formProdEnv?.clearError();
+        }
       },
       deep: true,
     },
@@ -1194,7 +1202,8 @@ export default {
     // 处理保存时数据问题
     async handleProcessData() {
       try {
-        await this.$refs.formEnv.validate();
+        await this.$refs.formStagEnv.validate();
+        await this.$refs.formProdEnv.validate();
         return true;
       } catch (error) {
         console.log('error', error);
@@ -1203,8 +1212,12 @@ export default {
     },
 
     // 处理自动调节问题
-    handleRadioChange() {
-      this.$refs.formEnv?.clearError();
+    handleRadioChange(env) {
+      if (env === 'stag') {
+        this.$refs.formStagEnv?.clearError();
+      } else {
+        this.$refs.formStagEnv?.clearError();
+      }
     },
 
     // 弹窗确认
@@ -1213,6 +1226,7 @@ export default {
       try {
         await this.$refs.formDialog.validate(); // 校验进程名
         this.processNameActive = this.processDialog.name; // 选中当前点击tab
+        console.log('this.processNameActive', this.processNameActive);
         if (this.processDialog.index) {   // 编辑进程名
           this.panels.forEach((e, i) => {
             if (i === this.processDialog.index) {
@@ -1350,7 +1364,6 @@ export default {
         process: this.processNameActive,
         count: this.extraConfigData[this.envName].formReplicas,
       };
-      console.log('replicasData', replicasData);
       // // 资源配置相关数据
       const resQuotaPlanData = {
         envName: this.envName,
@@ -1360,44 +1373,93 @@ export default {
       if (!this.localCloudAppData.spec.envOverlay) {
         this.localCloudAppData.spec.envOverlay = {};
       }
-      if (!this.localCloudAppData.spec.envOverlay?.resQuotas) { // 没有resQuotas时
-        this.localCloudAppData.spec.envOverlay.resQuotas = [];
+
+      const resQuotasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
+        .filter(e => e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) || [];
+
+      const resQuotasFilterData = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
+        .filter(e => e.process !== resQuotaPlanData.process || e.envName !== resQuotaPlanData.envName) || [];
+      console.log('resQuotasWithProcessEnv', resQuotasWithProcessEnv, resQuotasFilterData);
+
+
+      if (!resQuotasWithProcessEnv.length) { // 没有resQuotas时
+        // this.localCloudAppData.spec.envOverlay.resQuotas = [];
         this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
       } else {
-        this.localCloudAppData.spec.envOverlay.resQuotas
-          .forEach((e) => {
-            if (e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) {
-              e.plan = resQuotaPlanData.plan;
-            }
-          });
+        resQuotasWithProcessEnv.forEach((e) => {
+          if (e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) {
+            e.plan = resQuotaPlanData.plan;
+          }
+        });
+        this.localCloudAppData.spec.envOverlay.resQuotas = [...resQuotasFilterData, ...resQuotasWithProcessEnv];
+
+        // const resQuotasEnv = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
+        //   .map(e => e.envName) || [];
+        // this.localCloudAppData.spec.envOverlay.resQuotas
+        //   .forEach((e) => {
+        //     if (e.process === resQuotaPlanData.process) {
+        //       if (e.envName === resQuotaPlanData.envName) {
+        //         e.plan = resQuotaPlanData.plan;
+        //       } else {
+        //         if (!resQuotasEnv.includes(resQuotaPlanData.envName)) {
+        //           this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
+        //         }
+        //       }
+        //     } else {
+        //       if (!resQuotasProcess.includes(resQuotaPlanData.process)) {   // 如果没包含就需要添加一条数据
+        //         this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
+        //       }
+        //     }
+        //   });
       }
 
       if (replicasData.count) {     // 副本数量
-        // 没有replicas时
-        if (!this.localCloudAppData.spec.envOverlay?.replicas
-        || !this.localCloudAppData.spec.envOverlay.replicas.length) {
-          this.localCloudAppData.spec.envOverlay.replicas = [];
+        const replicasWithProcessEnv = this.localCloudAppData.spec?.envOverlay?.replicas.
+          filter(e => e.process === replicasData.process && e.envName === replicasData.envName) || [];
+
+        const replicasFilterData = this.localCloudAppData.spec?.envOverlay?.replicas.
+          filter(e => e.process !== replicasData.process || e.envName !== replicasData.envName) || [];
+        console.log('replicasWithProcessEnv', replicasWithProcessEnv, replicasFilterData);
+        if (!replicasWithProcessEnv.length) {
           this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
         } else {
-          const replicasProcess = (this.localCloudAppData.spec?.envOverlay?.replicas || []).map(e => e.process);
-          const replicasEnv = (this.localCloudAppData.spec?.envOverlay?.replicas || []).map(e => e.envName);
-          // 有replicas数据
-          this.localCloudAppData.spec.envOverlay.replicas.forEach((e) => {
-            if (e.process === replicasData.process) {
-              if (e.envName === replicasData.envName) { // 修改已有环境的值
-                e.count = replicasData.count;
-              } else {
-                if (!replicasEnv.includes(replicasData.envName)) {   // 如果没有选中的环境就添加一条
-                  this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
-                }
-              }
-            } else {
-              if (!replicasProcess.includes(replicasData.process)) {
-                this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
-              }
+          replicasWithProcessEnv.forEach((e) => {
+            if (e.process === replicasData.process && e.envName === replicasData.envName) {
+              e.count = replicasData.count;
             }
           });
+          this.localCloudAppData.spec.envOverlay.replicas = [...replicasFilterData, ...replicasWithProcessEnv];
         }
+        // 没有replicas时
+        // if (!this.localCloudAppData.spec.envOverlay?.replicas
+        // || !this.localCloudAppData.spec.envOverlay.replicas.length) {
+        //   this.localCloudAppData.spec.envOverlay.replicas = [];
+        //   this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
+        // } else {
+        //   const replicasWithEnv = this.localCloudAppData.spec?.envOverlay?.replicas.
+        //     filter(e => e.envName === this.envName);
+        //   console.log('replicasWithEnv', replicasWithEnv);
+        //   const replicasProcess = (replicasWithEnv || []).map(e => e.process);
+        //   const replicasEnv = (replicasWithEnv || []).map(e => e.envName);
+        //   // 有replicas数据
+        //   this.localCloudAppData.spec.envOverlay.replicas.forEach((e) => {
+        //     if (e.process === replicasData.process) {
+        //       if (e.envName === replicasData.envName) { // 修改已有环境的值
+        //         e.count = replicasData.count;
+        //       } else {
+        //         console.log('replicasEnv', replicasEnv, replicasData);
+        //         if (!replicasEnv.includes(replicasData.envName)) {   // 如果没有选中的环境就添加一条
+        //           this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
+        //         }
+        //       }
+        //     } else {
+        //       console.log('replicasProcess', replicasProcess, replicasData.process);
+        //       if (!replicasProcess.includes(replicasData.process)) {
+        //         this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
+        //       }
+        //     }
+        //   });
+        // }
       }
 
       // 自动调节
@@ -1417,7 +1479,7 @@ export default {
           this.localCloudAppData.spec.envOverlay.autoscaling = [];
           this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
         } else {
-          console.log('this.localCloudAppData.spec.envOverlay.autoscaling1', this.localCloudAppData.spec.envOverlay.autoscaling);
+          // console.log('this.localCloudAppData.spec.envOverlay.autoscaling1', this.localCloudAppData.spec.envOverlay.autoscaling);
           const autoscalingProcess = (this.localCloudAppData.spec?.envOverlay?.autoscaling || [])
             .map(e => e.process) || [];
           const autoscalingEnv = (this.localCloudAppData.spec?.envOverlay?.autoscaling || [])
@@ -1639,6 +1701,9 @@ export default {
         color: #313238;
         padding-left: 10px;
       }
+    }
+    .w885{
+      width: 885px !important;
     }
     .env-name{
       width: 420px;

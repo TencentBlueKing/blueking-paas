@@ -18,13 +18,21 @@ to the current version of the project delivered to anyone in the future.
 """
 import tarfile
 import zipfile
+from typing import Dict
 
 import pytest
+import yaml
 
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir, generate_temp_file
 from paasng.extensions.smart_app.detector import SourcePackageStatReader
 from paasng.extensions.smart_app.path import ZipPath
-from tests.sourcectl.packages.utils import gen_tar, gen_zip
+from tests.sourcectl.packages.utils import EXAMPLE_APP_YAML, gen_tar, gen_zip
+
+
+@pytest.fixture
+def contents() -> Dict:
+    """The default contents for making tar file."""
+    return {"app.yaml": yaml.safe_dump(EXAMPLE_APP_YAML)}
 
 
 @pytest.fixture

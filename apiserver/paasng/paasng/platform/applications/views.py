@@ -44,8 +44,8 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
 from paasng.accessories.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
+from paasng.accessories.bkmonitorv3.shim import update_or_create_bk_monitor_space
 from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
@@ -334,8 +334,9 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # 修改应用在蓝鲸监控命名空间的名称
         # 蓝鲸监控查询、更新一个不存在的应用返回的 code 都是 500，没有具体的错误码来标识是不是应用不存在，故直接调用更新API，忽略错误信息
+
         try:
-            make_bk_monitor_client().update_space(application.code, application.name, request.user.username)
+            update_or_create_bk_monitor_space(application)
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
             logger.info(f'Failed to update app space on BK Monitor, {e}')
         except Exception:

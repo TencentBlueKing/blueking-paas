@@ -593,39 +593,51 @@
               />
             </bk-button>
           </bk-form-item>
-          <section class="mt20" v-if="ifopen">
+          <section class="mt20 extra-config-cls" v-if="ifopen">
             <bk-form-item
               :label="$t('配置环境：')">
-              <span class="form-text">{{ ENV_ENUM[envName] || '--' }}</span>
+              <!-- <span class="form-text">{{ ENV_ENUM[envName] || '--' }}</span> -->
+              <div class="flex-row env-detail">
+                <div v-for="item in envsData" :key="item.value" :class="item.value === 'prod' ? 'ml20' : ''">
+                  <div class="env-name">{{ item.label }}</div>
+                  <div class="env-item">
+                    <bk-form-item
+                      :label="$t('资源配额方案：')"
+                      ext-cls="form-first-cls">
+                      <span class="form-text">{{ extraConfigData[item.value].resQuotaPlan.plan || '--' }}</span>
+                    </bk-form-item>
+
+                    <bk-form-item
+                      :label="$t('扩缩容方式：')">
+                      <span class="form-text">
+                        {{ extraConfigData[item.value].isAutoscaling ? $t('自动调节') : $t('手动调节') }}
+                      </span>
+                    </bk-form-item>
+
+                    <section v-if="extraConfigData[item.value].isAutoscaling">
+                      <bk-form-item
+                        :label="$t('最小副本数：')">
+                        <span class="form-text">
+                          {{ extraConfigData[item.value].formAutoscalingData.minReplicas || '--' }}
+                        </span>
+                      </bk-form-item>
+                      <bk-form-item
+                        :label="$t('最大副本数：')">
+                        <span class="form-text">
+                          {{ extraConfigData[item.value].formAutoscalingData.maxReplicas || '--' }}
+                        </span>
+                      </bk-form-item>
+                    </section>
+                    <section v-else>
+                      <bk-form-item
+                        :label="$t('副本数量：')">
+                        <span class="form-text">{{ extraConfigData[item.value].formReplicas || '--' }}</span>
+                      </bk-form-item>
+                    </section>
+                  </div>
+                </div>
+              </div>
             </bk-form-item>
-            <bk-form-item
-              :label="$t('资源配额方案：')">
-              <span class="form-text">{{ formData.resQuotaPlan.stag || '--' }}</span>
-            </bk-form-item>
-            <bk-form-item
-              :label="$t('扩缩容方式：')">
-              <span class="form-text">{{ extraConfigData.prod.isAutoscaling ? $t('自动调节') : $t('手动调节') }}</span>
-            </bk-form-item>
-            <!-- <bk-form-item
-              :label="$t('触发条件：')">
-              <span class="form-text">{{ formData.targetPort || '--' }}</span>
-            </bk-form-item> -->
-            <section v-if="extraConfigData.prod.isAutoscaling" class="mt20">
-              <bk-form-item
-                :label="$t('最小副本数：')">
-                <span class="form-text">{{ formData.autoscaling.minReplicas || '--' }}</span>
-              </bk-form-item>
-              <bk-form-item
-                :label="$t('最大副本数：')">
-                <span class="form-text">{{ formData.autoscaling.maxReplicas || '--' }}</span>
-              </bk-form-item>
-            </section>
-            <section v-else class="mt20">
-              <bk-form-item
-                :label="$t('副本数量：')">
-                <span class="form-text">{{ formData.replicas || '--' }}</span>
-              </bk-form-item>
-            </section>
           </section>
         </bk-form>
       </div>
@@ -690,9 +702,7 @@ export default {
         args: [],
         memory: '256Mi',
         cpu: '500m',
-        replicas: 1,
         targetPort: 8080,
-        autoscaling: {},
       },
       bkappAnnotations: {},
       command: [],
@@ -966,7 +976,6 @@ export default {
       handler(val) {
         if (this.localCloudAppData.spec) {
           val.name = this.processNameActive;
-          val.replicas = val.replicas && Number(val.replicas);
           if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
             val.targetPort = Number(val.targetPort);
           }
@@ -1013,15 +1022,6 @@ export default {
 
           // this.handleExtraConfig();   // 处理额外的配置
 
-          // 扩缩容
-          if (val?.autoscaling?.maxReplicas >= val?.autoscaling?.minReplicas) {
-            this.$refs.formEnv?.clearError();
-          }
-
-          if (val?.autoscaling?.minReplicas <= val?.autoscaling?.maxReplicas) {
-            this.$refs.formEnv?.clearError();
-          }
-
           if (val?.image) {
             this.$refs.formDeploy?.clearError();
           }
@@ -1058,21 +1058,30 @@ export default {
     'extraConfigData.stag': {
       handler(val) {
         console.log('val', val);
+        this.envName = 'stag';
         this.handleExtraConfig();   // 处理额外的配置
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+
+        // 扩缩容
+        if (val?.autoscaling?.maxReplicas >= val?.autoscaling?.minReplicas) {
+          this.$refs.formEnv?.clearError();
+        }
+
+        if (val?.autoscaling?.minReplicas <= val?.autoscaling?.maxReplicas) {
+          this.$refs.formEnv?.clearError();
+        }
         console.log('this.localCloudAppData', this.localCloudAppData);
       },
       deep: true,
     },
-    // 'extraConfigData.prod': {
-    //   handler(val) {
-    //     console.log('val1', val);
-    //     this.envName = 'prod';
-    //     this.handleExtraConfig();   // 处理额外的配置
-    //     // this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-    //   },
-    //   deep: true,
-    // },
+    'extraConfigData.prod': {
+      handler(val) {
+        console.log('val1', val);
+        this.envName = 'prod';
+        this.handleExtraConfig();   // 处理额外的配置
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      },
+      deep: true,
+    },
 
     'extraConfigData.stag.resQuotaPlan.plan'() {
       this.getQuotaPlans('stag');
@@ -1253,13 +1262,7 @@ export default {
             args: [],
             memory: '256Mi',
             cpu: '500m',
-            replicas: 1,
             targetPort: null,
-            resQuotaPlan: { stag: 'default', prod: 'default' },
-            envOverlay: {
-              replicas: [],
-            },
-            autoscaling: { policy: 'default', maxReplicas: '', minReplicas: 1 },
           };
           this.localCloudAppData.spec.processes.push(this.formData);
         }
@@ -1327,14 +1330,14 @@ export default {
 
     // 过滤当前进程当前环境envOverlay中autoscaling
     handleFilterAutoscalingData(data, process) {
-      if (this.isAutoscaling) {
+      if (this.extraConfigData[this.envName].isAutoscaling) {
         // 自动调节 需要过滤手动调节相关数据
         this.localCloudAppData.spec.envOverlay.replicas = (data?.replicas || [])
-          .filter(e => !(e.process === process));
+          .filter(e => !(e.process === process && e.envName === this.envName));
       } else {
         // 手动调节 需要过滤自动调节相关数据
         this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || [])
-          .filter(e => !(e.process === process));
+          .filter(e => !(e.process === process && e.envName === this.envName));
       }
     },
 
@@ -1367,20 +1370,6 @@ export default {
               e.plan = resQuotaPlanData.plan;
             }
           });
-
-        // this.localCloudAppData.spec.envOverlay.resQuotas
-        //   .forEach((e) => {
-        //     if (e.process === resQuotaPlanData.process) {
-        //       e.envName = resQuotaPlanData.envName;
-        //       e.plan = resQuotaPlanData.plan;
-        //     } else {
-        //       const resQuotasProcess = (this.localCloudAppData.spec?.envOverlay?.resQuotas || [])
-        //         .map(e => e.process) || [];
-        //       if (!resQuotasProcess.includes(resQuotaPlanData.process)) {   // 如果没包含就需要添加一条数据
-        //         this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
-        //       }
-        //     }
-        //   });
       }
 
       if (replicasData.count) {     // 副本数量
@@ -1390,16 +1379,26 @@ export default {
           this.localCloudAppData.spec.envOverlay.replicas = [];
           this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
         } else {
+          const replicasProcess = (this.localCloudAppData.spec?.envOverlay?.replicas || []).map(e => e.process);
+          const replicasEnv = (this.localCloudAppData.spec?.envOverlay?.replicas || []).map(e => e.envName);
           // 有replicas数据
           this.localCloudAppData.spec.envOverlay.replicas.forEach((e) => {
-            if (e.process === replicasData.process && e.envName === replicasData.envName) {
-              e.count = replicasData.count;
+            if (e.process === replicasData.process) {
+              if (e.envName === replicasData.envName) { // 修改已有环境的值
+                e.count = replicasData.count;
+              } else {
+                if (!replicasEnv.includes(replicasData.envName)) {   // 如果没有选中的环境就添加一条
+                  this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
+                }
+              }
+            } else {
+              if (!replicasProcess.includes(replicasData.process)) {
+                this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
+              }
             }
           });
         }
       }
-
-      console.log('this.localCloudAppData.spec.envOverlay', this.localCloudAppData.spec.envOverlay, this.extraConfigData[this.envName].isAutoscaling);
 
       // 自动调节
       if (this.extraConfigData[this.envName].isAutoscaling) {
@@ -1419,18 +1418,24 @@ export default {
           this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
         } else {
           console.log('this.localCloudAppData.spec.envOverlay.autoscaling1', this.localCloudAppData.spec.envOverlay.autoscaling);
-          debugger;
+          const autoscalingProcess = (this.localCloudAppData.spec?.envOverlay?.autoscaling || [])
+            .map(e => e.process) || [];
+          const autoscalingEnv = (this.localCloudAppData.spec?.envOverlay?.autoscaling || [])
+            .map(e => e.envName) || [];
           // 有autoscaling数据
           this.localCloudAppData.spec.envOverlay.autoscaling
             .forEach((e) => {
               if (e.process === autoscalingData.process) {
-                e.envName = autoscalingData.envName;
-                e.minReplicas =  autoscalingData.minReplicas;
-                e.maxReplicas = autoscalingData.maxReplicas;
+                if (e.envName === autoscalingData.envName) {  // 修改已有环境的值
+                  e.minReplicas =  autoscalingData.minReplicas;
+                  e.maxReplicas = autoscalingData.maxReplicas;
+                } else {
+                  if (!autoscalingEnv.includes(autoscalingData.envName)) {   // 如果没有选中的环境就添加一条
+                    this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
+                  }
+                }
               } else {
-                const autoscalingProcess = (this.localCloudAppData.spec?.envOverlay?.autoscaling || [])
-                  .map(e => e.process) || [];
-                if (!autoscalingProcess.includes(autoscalingData.process)) {   // 如果没包含就需要添加一条数据
+                if (!autoscalingProcess.includes(autoscalingData.process)) {   // 如果没有选中的进程就需要添加一条
                   this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
                 }
               }
@@ -1444,8 +1449,8 @@ export default {
         // // 需要删除手动调节相关信息
         // delete this.localCloudAppData.spec.processes[this.btnIndex].replicas;
         // 过滤当前进程当前环境envOverlay中replicas
-        // const { envOverlay } = this.localCloudAppData.spec;
-        // this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
+        const { envOverlay } = this.localCloudAppData.spec;
+        this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
       } else { // // 手动调节
         // // autoscaling做一次备份
         // if (this.localCloudAppData.spec.processes[this.btnIndex].autoscaling) {
@@ -1454,18 +1459,20 @@ export default {
         // // 需要删除当前进程base中的autoscaling
         // delete this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
         // 过滤当前进程当前环境envOverlay中autoscaling
-        // const { envOverlay } = this.localCloudAppData.spec;
+        const { envOverlay } = this.localCloudAppData.spec;
         // // eslint-disable-next-line max-len
-        // this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
+        this.handleFilterAutoscalingData(envOverlay, this.processNameActive);  // 传入envOverlay、当前进程名
       }
 
       // 将最大值最小值改为数字类型
-      (this.localCloudAppData.spec?.processes || []).forEach((e) => {
-        if (e.autoscaling) {
-          e.autoscaling.minReplicas = e.autoscaling.minReplicas ? Number(e.autoscaling.minReplicas) : '';
-          e.autoscaling.maxReplicas = e.autoscaling.maxReplicas ? Number(e.autoscaling.maxReplicas) : '';
-        }
-      });
+      // (this.localCloudAppData.spec?.processes || []).forEach((e) => {
+      //   if (e.autoscaling) {
+      //     e.autoscaling.minReplicas = e.autoscaling.minReplicas ? Number(e.autoscaling.minReplicas) : '';
+      //     e.autoscaling.maxReplicas = e.autoscaling.maxReplicas ? Number(e.autoscaling.maxReplicas) : '';
+      //   }
+      // });
+
+      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
     },
 
     // 镜像选择
@@ -1634,13 +1641,25 @@ export default {
       }
     }
     .env-name{
-      width: 885px;
+      width: 420px;
       color: #313238;
       font-size: 14px;
       height: 32px;
       line-height: 32px;
       background: #F0F1F5;
       padding-left: 20px;
+    }
+
+    .env-item{
+      background: #FAFBFD;
+      height: 180px;
+      /deep/ .bk-form-item{
+        margin-top: 10px;
+      }
+    }
+    .form-first-cls{
+      margin-top: 0 !important;
+      padding-top: 10px;
     }
     .env-container{
       width: 885px;

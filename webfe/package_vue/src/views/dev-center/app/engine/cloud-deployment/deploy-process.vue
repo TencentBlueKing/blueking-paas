@@ -1195,8 +1195,9 @@ export default {
     // 处理保存时数据问题
     async handleProcessData() {
       try {
-        await this.$refs.formStagEnv.validate();
-        await this.$refs.formProdEnv.validate();
+        await this.$refs?.formStagEnv?.validate();
+        await this.$refs?.formProdEnv?.validate();
+        await this.$refs?.formDeploy?.validate();
         return true;
       } catch (error) {
         console.log('error', error);

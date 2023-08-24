@@ -66,6 +66,8 @@
 import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
+import { mergeObjects } from '@/common/utils';
+import { cloneDeep } from 'lodash';
 
 export default {
   components: {
@@ -118,7 +120,8 @@ export default {
     },
 
     dialogCloudAppData() {
-      return this.$store.state.cloudApi.cloudAppData;
+      const cloudAppData = cloneDeep(this.$store.state.cloudApi.cloudAppData);
+      return mergeObjects(cloudAppData, this.manifestExt);
     },
   },
   watch: {
@@ -163,12 +166,6 @@ export default {
           env: 'prod',
         });
         this.manifestExt = res;
-        // 展示数据
-        if (this.cloudAppData.metadata && this.cloudAppData.metadata.annotations) {
-          const ext = Object.assign({}, this.cloudAppData.metadata.annotations, res.metadata.annotations);
-          this.$set(this.cloudAppData.metadata, 'annotations', ext);
-          this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
-        }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

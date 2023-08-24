@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <div class="paas-content">
     <div
       v-en-class="'en-label'"
@@ -64,16 +64,10 @@
                     class="construction-manner"
                   >
                     <bk-radio :value="'soundCode'">
-                      {{ $t('提供源码') }}
+                      {{ $t('源码&镜像') }}
                     </bk-radio>
                     <bk-radio :value="'mirror'">
-                      {{ $t('提供镜像') }}
-                    </bk-radio>
-                    <bk-radio
-                      :value="'isMirror'"
-                      disabled
-                    >
-                      {{ $t('从源码构建镜像') }}
+                      {{ $t('仅镜像') }}
                     </bk-radio>
                   </bk-radio-group>
                 </div>
@@ -155,8 +149,10 @@
             </bk-form>
           </div>
 
+          <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
+
           <div
-            v-if="sourceOrigin !== GLOBAL.APP_TYPES.IMAGE"
+            v-if="sourceOrigin !== GLOBAL.APP_TYPES.IMAGE && curStep === 1"
             class="create-item"
           >
             <!-- 代码库 -->
@@ -173,13 +169,13 @@
                   >
                     {{ $t('蓝鲸开发框架') }}
                   </li>
-                  <li
+                  <!-- <li
                     v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
                     :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
                     @click="handleCodeTypeChange(2)"
                   >
                     {{ $t('蓝鲸可视化开发平台') }}
-                  </li>
+                  </li> -->
                 </div>
               </section>
             </div>
@@ -265,13 +261,14 @@
               v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
               class="error-tips pt10"
             >
-              {{ $t('蓝鲸可视化开发平台的应用 ID 只能由小写字母组成, 所属应用') }} {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
+              {{ $t('蓝鲸可视化开发平台的应用 ID 只能由小写字母组成, 所属应用') }}
+              {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
               {{ $t('故无法在当前应用下创建蓝鲸可视化开发平台的模块。') }}
             </div>
           </div>
 
           <div
-            v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP"
+            v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP && curStep === 1"
             class="create-item"
             data-test-id="createDefault_item_appEngine"
           >
@@ -356,6 +353,27 @@
             </template>
           </div>
 
+          <!-- 源码&镜像 部署配置内容 -->
+          <div class="mt20" v-if="structureType === 'soundCode' && curStep === 2">
+            <collapseContent :title="$t('进程配置')">
+              <bk-alert
+                type="info">
+                <div slot="title">
+                  {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                </div>
+              </bk-alert>
+            </collapseContent>
+
+            <collapseContent :title="$t('钩子命令')" class="mt20">
+              <bk-alert
+                type="info">
+                <div slot="title">
+                  {{ $t('钩子命令的 app_desc.yaml 文件中定义。') }}
+                </div>
+              </bk-alert>
+            </collapseContent>
+          </div>
+
           <div
             v-if="formLoading"
             class="form-loading"
@@ -365,31 +383,40 @@
           </div>
           <div
             v-else
-            class="form-actions"
+            class="form-actions flex-row"
           >
-            <button
-              v-if="canCreateModule"
-              class="ps-btn ps-btn-l ps-btn-primary"
-              type="submit"
-              :class="{ 'ps-btn-isdisabled': sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules }"
-              :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
-            >
-              {{ $t('创建模块') }}
-            </button>
-            <div
-              v-else
-              v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
-              class="ps-btn-disabled"
-              style="text-align: center;"
-            >
-              {{ $t('创建模块') }}
+            <div v-if="curStep === 1">
+              <bk-button
+                theme="primary"
+                @click="handleNext"
+              >
+                {{ $t('下一步') }}
+              </bk-button>
             </div>
-            <button
-              class="ps-btn ps-btn-l ps-btn-default"
-              @click.stop.prevent="goBack"
-            >
-              {{ $t('返回') }}
-            </button>
+            <div v-if="curStep === 2">
+              <bk-button @click="handlePrev">
+                {{ $t('上一步') }}
+              </bk-button>
+              <bk-button
+                theme="primary"
+                v-if="canCreateModule"
+                :class="{ 'ps-btn-isdisabled': sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules }"
+                :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
+              >
+                {{ $t('提交') }}
+              </bk-button>
+              <div
+                v-else
+                v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
+                class="ps-btn-disabled"
+                style="text-align: center;"
+              >
+                {{ $t('提交') }}
+              </div>
+            </div>
+            <bk-button @click.stop.prevent="goBack">
+              {{ $t('取消') }}
+            </bk-button>
           </div>
         </form>
       </div>
@@ -412,11 +439,13 @@ import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
+import collapseContent from './comps/collapse-content.vue';
 
 export default {
   components: {
     gitExtend,
     repoInfo,
+    collapseContent,
   },
   mixins: [appPreloadMixin],
   data() {
@@ -515,6 +544,8 @@ export default {
         ],
       },
       lessCodeCorrectRules: false,
+      createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
+      curStep: 1,
     };
   },
   computed: {
@@ -556,7 +587,9 @@ export default {
     structureType(value) {
       if (value === 'mirror') {
         this.sourceOrigin = 4;
+        this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       } else if (value === 'soundCode') {
+        this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
         this.handleCodeTypeChange(1);
       }
     },
@@ -710,7 +743,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map((repo, index) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -761,6 +794,7 @@ export default {
       switch (this.sourceControlType) {
         case 'bk_gitlab':
         case 'tc_git':
+          // eslint-disable-next-line no-case-declarations
           const config = this.gitExtendConfig[this.sourceControlType];
           config.fetchMethod();
           break;
@@ -789,8 +823,8 @@ export default {
     },
 
     /**
-             * 创建应用模块
-             */
+     * 创建应用模块
+     */
     async createAppModule() {
       if (!this.canCreateModule) {
         return;
@@ -832,6 +866,7 @@ export default {
           case 'github':
           case 'gitee':
           case 'tc_git':
+            // eslint-disable-next-line no-case-declarations
             const config = this.gitExtendConfig[this.sourceControlType];
             sourceRepoUrl = config.selectedRepoUrl;
             if (!sourceRepoUrl) {
@@ -914,6 +949,16 @@ export default {
       } finally {
         this.formLoading = false;
       }
+    },
+
+    // 下一步按钮
+    handleNext() {
+      this.curStep = 2;
+    },
+
+    // 上一步
+    handlePrev() {
+      this.curStep = 1;
     },
   },
 };

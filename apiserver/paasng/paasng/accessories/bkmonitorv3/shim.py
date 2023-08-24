@@ -38,16 +38,19 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
         space = mgr.get_space_detail(gen_bk_monitor_space(application))
     except Exception:
         space = mgr.create_space(gen_bk_monitor_space(application))
+
     add_monitoring_space_permission.delay(application.code, application.name, bk_space_id=space.iam_resource_id)
-    return BKMonitorSpace.objects.create(
+    return BKMonitorSpace.objects.update_or_create(
         application=application,
-        id=space.id,
-        space_type_id=space.space_type_id,
-        space_id=space.space_id,
-        space_name=space.space_name,
-        space_uid=space.space_uid,
-        extra_info=space.extra_info,
-    )
+        defaults={
+            "id": space.id,
+            "space_type_id": space.space_type_id,
+            "space_id": space.space_id,
+            "space_name": space.space_name,
+            "space_uid": space.space_uid,
+            "extra_info": space.extra_info,
+        },
+    )[0]
 
 
 def get_or_create_bk_monitor_space(application: Application) -> Tuple[BKMonitorSpace, bool]:

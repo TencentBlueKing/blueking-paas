@@ -23,7 +23,7 @@
           </bk-form-item>
           <bk-form-item
             :label="$t('镜像凭证：')">
-            <span class="form-text">{{ buildData.imagePullPolicy || '--' }}</span>
+            <span class="form-text">{{ buildData.imageCredentialsName || '--' }}</span>
           </bk-form-item>
         </bk-form>
       </div>
@@ -54,7 +54,7 @@
           <bk-form-item
             :label="$t('镜像凭证：')">
             <bk-select
-              v-model="buildData.imagePullPolicy"
+              v-model="buildData.imageCredentialsName"
               style="width: 450px;"
               searchable
             >
@@ -422,9 +422,9 @@ export default {
 
     buildData: {
       handler(val) {
-        if (val.image || val.imagePullPolicy) {
+        if (val.image || val.imageCredentialsName) {
           this.localCloudAppData.spec.build.image = val.image;
-          this.localCloudAppData.spec.build.imagePullPolicy = val.imagePullPolicy;
+          this.localCloudAppData.spec.build.imageCredentialsName = val.imageCredentialsName;
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }
       },

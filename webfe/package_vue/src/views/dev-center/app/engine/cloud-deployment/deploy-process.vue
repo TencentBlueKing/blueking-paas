@@ -114,7 +114,7 @@
               :label-width="120"
               v-if="isV1alpha2"
             >
-              {{ buildData.imagePullPolicy }}
+              {{ buildData.imageCredentialsName }}
             </bk-form-item>
 
             <!-- 镜像凭证 -->
@@ -559,7 +559,7 @@
           <bk-form-item
             :label="$t('镜像凭证：')">
             <span class="form-text">
-              {{ isV1alpha2 ? buildData.imagePullPolicy : (bkappAnnotations[imageCrdlAnnoKey] || '--') }}
+              {{ isV1alpha2 ? buildData.imageCredentialsName : (bkappAnnotations[imageCrdlAnnoKey] || '--') }}
             </span>
           </bk-form-item>
           <bk-form-item
@@ -910,6 +910,7 @@ export default {
       return this.$route.params.id;
     },
     imageCrdlAnnoKey() {
+      if (this.isV1alpha2) return '';
       return `bkapp.paas.bk.tencent.com/image-credentials.${this.processNameActive}`;
     },
     imageLocalCrdlAnnoKey() {
@@ -1101,15 +1102,24 @@ export default {
       deep: true,
     },
 
-    // envName() {
-    //   this.handleExtraConfig();   // 处理额外的配置
-    // },
+    isV1alpha2(val) {
+      // v2每个进程不需要 image、imagePullPolicy
+      if (val) {
+        this.localCloudAppData?.spec?.processes.forEach((e) => {
+          console.log('e', e);
+          delete e.image;
+          delete e.imagePullPolicy;
+        });
+        setTimeout(() => {
+          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        }, 500);
+      }
+    },
   },
   created() {
     this.getImageCredentialList();
   },
-  mounted() {
-  },
+  mounted() {},
   methods: {
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');
@@ -1270,6 +1280,9 @@ export default {
             cpu: '500m',
             targetPort: null,
           };
+          if (this.isV1alpha2) {
+            delete this.formData.image;   // v2不需要image
+          }
           this.localCloudAppData.spec.processes.push(this.formData);
         }
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);

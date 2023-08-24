@@ -1,15 +1,15 @@
 <template lang="html">
-  <div class="paas-content white">
+  <div class="paas-content">
     <div
       v-en-class="'en-label'"
       class="wrap"
     >
-      <div class="paas-application-tit establish-title mt30">
+      <div class="paas-application-tit establish-title">
         <span> {{ $t('创建模块') }} </span>
       </div>
       <div
         v-if="canCreateModule"
-        class="establish mt50"
+        class="establish"
       >
         <form
           id="form-create-app"
@@ -53,7 +53,7 @@
               class="form-group"
               style="margin-top: 7px;margin-left: 10px"
             >
-              <label class="form-label"> {{ $t('构建方式') }} </label>
+              <label class="form-label"> {{ $t('托管方式') }} </label>
               <div
                 class="form-group-flex-radio"
                 style="width: 100%"

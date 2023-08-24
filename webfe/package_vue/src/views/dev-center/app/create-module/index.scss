@@ -1,9 +1,10 @@
 @import '~@/assets/css/mixins/border-active-logo.scss';
 .create-item {
     padding: 27px 30px;
-    margin-top: 22px;
-    border: 1px solid #dcdee5;
+    margin-top: 20px;
     border-radius: 2px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px 0 #1919290d;
     .item-title {
         line-height: 21px;
         color: #313238;
@@ -242,47 +243,34 @@ p.app-name {
 }
 
 .paas-application-tit {
-    padding: 15px 0 11px 0;
     color: #666;
-    line-height: 36px;
     position: relative;
+    margin-top: 20px;
 }
 
 .establish-title {
     position: relative;
-    line-height: 34px;
+    line-height: 52px;
+    height: 52px;
     text-align: center;
+    background-color: #fff;
+    color: #313238;
+    box-shadow: 0 1px 0 0 #DCDEE5, 0 3px 4px 0 #4070cb0f;
 }
 
-.establish-title:before,
-.establish-title:after {
-    content: "";
-    position: absolute;
-    width: 528px;
-    height: 1px;
-    background: #e9edee;
-    left: 0;
-    top: 32px;
-}
-
-.establish-title:after {
-    left: auto;
-    right: 0
-}
-
-.establish-title span {
-    display: inline-block;
-    padding: 0 24px;
-    background: #fff;
-    line-height: 34px;
-    font-size: 18px;
-    color: #333;
-    z-index: 9;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    font-weight: 500;
-}
+// .establish-title span {
+//     display: inline-block;
+//     padding: 0 104px;
+//     background: #fff;
+//     line-height: 54px;
+//     font-size: 18px;
+//     color: #333;
+//     z-index: 9;
+//     position: absolute;
+//     left: 50%;
+//     transform: translateX(-50%);
+//     font-weight: 500;
+// }
 
 .establish {
     width: 1000px;

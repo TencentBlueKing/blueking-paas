@@ -444,7 +444,7 @@
                 {{ $t('提交') }}
               </div>
             </div>
-            <bk-button @click.stop.prevent="goBack">
+            <bk-button @click="handleCancel">
               {{ $t('取消') }}
             </bk-button>
           </div>
@@ -1016,6 +1016,9 @@ export default {
     // 下一步按钮
     handleNext() {
       this.curStep = 2;
+      if (this.structureType === 'mirror') {
+        this.getProcessData();
+      }
     },
 
     // 上一步
@@ -1045,6 +1048,11 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    // 处理取消
+    handleCancel() {
+      this.$store.commit('cloudApi/updatePageEdit', false);
     },
   },
 };

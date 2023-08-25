@@ -28,9 +28,38 @@
               </div>
             </div>
 
-            <div class="form-group pb0">
+            <bk-form
+              ref="validate2"
+              form-type="inline"
+              :model="name"
+            >
+              <bk-form-item
+                :required="true"
+                :property="'name'"
+                :rules="rules.name"
+                error-display-type="normal"
+                ext-cls="name-item-cls"
+              >
+                <div
+                  class="form-group mt10"
+                >
+                  <label class="form-label"> {{ $t('模块名称') }} </label>
+                  <div class="form-input-flex">
+                    <bk-input
+                      v-model="name"
+                      :placeholder="$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符')"
+                      class="mr10 mt10 form-input-width"
+                    >
+                    </bk-input>
+                  </div>
+                </div>
+              </bk-form-item>
+            </bk-form>
+
+            <!-- <div class="form-group pb0 mt10">
               <label class="form-label"> {{ $t('模块名称') }} </label>
               <div class="form-group-flex">
+
                 <p>
                   <input
                     type="text"
@@ -46,19 +75,19 @@
                   >
                 </p>
               </div>
-            </div>
+            </div> -->
 
             <div
               v-if="curUserFeature.ENABLE_TC_DOCKER"
-              class="form-group"
-              style="margin-top: 7px;margin-left: 10px"
+              class="form-group mt10"
+              style="margin-left: 10px"
             >
               <label class="form-label"> {{ $t('托管方式') }} </label>
               <div
                 class="form-group-flex-radio"
                 style="width: 100%"
               >
-                <div class="form-group-radio mt10">
+                <div class="form-group-radio mt5">
                   <bk-radio-group
                     v-model="structureType"
                     class="construction-manner"
@@ -359,7 +388,7 @@
               <bk-alert
                 type="info">
                 <div slot="title">
-                  {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                  {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
                 </div>
               </bk-alert>
             </collapseContent>
@@ -368,7 +397,7 @@
               <bk-alert
                 type="info">
                 <div slot="title">
-                  {{ $t('钩子命令的 app_desc.yaml 文件中定义。') }}
+                  {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
                 </div>
               </bk-alert>
             </collapseContent>
@@ -385,10 +414,12 @@
             v-else
             class="form-actions flex-row"
           >
+            <!-- :disabled="" -->
             <div v-if="curStep === 1">
               <bk-button
                 theme="primary"
                 @click="handleNext"
+                :disabled="!gitExtendConfig[sourceControlType].selectedRepoUrl"
               >
                 {{ $t('下一步') }}
               </bk-button>
@@ -402,6 +433,7 @@
                 v-if="canCreateModule"
                 :class="{ 'ps-btn-isdisabled': sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules }"
                 :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
+                @click="createAppModule"
               >
                 {{ $t('提交') }}
               </bk-button>
@@ -430,10 +462,7 @@
   </div>
 </template>
 
-<script>
-// eslint-disable-next-line
-    import { Parsley, ParsleyUI } from 'parsleyjs'
-import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
+<script>import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
 import '@/common/parsley_locale';
 import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
@@ -543,9 +572,19 @@ export default {
           },
         ],
       },
+      rules: {
+        name: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
       lessCodeCorrectRules: false,
       createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
       curStep: 1,
+      name: '',
     };
   },
   computed: {
@@ -897,6 +936,9 @@ export default {
         ...this.$form.serializeObject(),
       };
 
+      console.log('params', params);
+      debugger;
+
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
         const repoData = this.$refs.repoInfo.getData();
         params.source_repo_url = repoData.url;
@@ -972,6 +1014,13 @@ export default {
     .bk-form-content{
         .form-error-tip{
             margin: 5px 0 0 260px;
+        }
+    }
+}
+.name-item-cls{
+  .bk-form-content{
+        .form-error-tip{
+            margin: 5px 0 0 100px;
         }
     }
 }

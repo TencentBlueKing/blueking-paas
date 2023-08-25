@@ -393,31 +393,11 @@
           <!-- 仅镜像 -->
           <div class="mt20" v-if="structureType === 'mirror' && curStep === 2">
             <collapseContent :title="$t('进程配置')">
-              <bk-alert
-                type="info">
-                <div slot="title">
-                  {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
-                  <a
-                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
-                    style="color: #3a84ff">
-                    {{$t('应用进程介绍')}}
-                  </a>
-                </div>
-              </bk-alert>
+              <deploy-process :cloud-app-data="cloudAppData"></deploy-process>
             </collapseContent>
 
             <collapseContent :title="$t('钩子命令')" class="mt20">
-              <bk-alert
-                type="info">
-                <div slot="title">
-                  {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
-                  <a
-                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
-                    style="color: #3a84ff">
-                    {{$t('应用进程介绍')}}
-                  </a>
-                </div>
-              </bk-alert>
+              <deploy-hook :cloud-app-data="cloudAppData"></deploy-hook>
             </collapseContent>
           </div>
 
@@ -486,12 +466,16 @@ import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
 import collapseContent from './comps/collapse-content.vue';
+import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
+import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 
 export default {
   components: {
     gitExtend,
     repoInfo,
     collapseContent,
+    deployProcess,
+    deployHook,
   },
   mixins: [appPreloadMixin],
   data() {
@@ -620,6 +604,7 @@ export default {
       formData: {
         name: '',
       },
+      cloudAppData: {},
     };
   },
   computed: {
@@ -1041,6 +1026,25 @@ export default {
     // 处理应用示例填充
     handleSetMirrorUrl() {
       this.mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld';
+    },
+
+    // 获取进程信息
+    async getProcessData() {
+      try {
+        const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.cloudAppData = res.manifest;
+        this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
   },
 };

@@ -163,7 +163,7 @@
 
             <!-- 资源用量 -->
             <bk-collapse
-              v-if="curAppInfo.feature.RESOURCE_METRICS"
+              v-if="isResourceMetrics"
               v-model="activeResource"
               :accordion="true"
               class="paas-module-warp mt20"
@@ -507,6 +507,9 @@ export default {
     userFeature() {
       return this.$store.state.userFeature;
     },
+    isResourceMetrics () {
+      return this.curAppInfo.feature.RESOURCE_METRICS;
+    }
   },
   watch: {
     '$route'() {
@@ -519,9 +522,12 @@ export default {
         // 重新获取数据
         if (this.changIndex !== 0) {
           this.$nextTick(() => {
-            this.showInstanceChart(this.activeModuleId);
-            this.showProcessResource();
-            this.getAlarmData();
+            // 模块
+            this.userFeature.ANALYTICS && this.showInstanceChart(this.activeModuleId);
+            // 资源用量
+            this.isResourceMetrics && this.showProcessResource();
+            this.userFeature.PHALANX && this.getAlarmData();
+            this.init();
           });
         }
       },
@@ -928,7 +934,7 @@ export default {
         setTimeout(() => {
           this.loading = false;
           // 云原生应用不需要对应图表数据
-          this.getPrcessData();
+          this.isResourceMetrics && this.getPrcessData();
         }, 300);
       }
     },
@@ -951,7 +957,7 @@ export default {
         uv: true,
       };
       // 是否有模块
-      if (data.length) {
+      if (data.length && this.userFeature.ANALYTICS) {
         this.$nextTick(() => {
           this.showInstanceChart(this.activeModuleId);
         });

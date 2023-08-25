@@ -119,5 +119,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/custom_domain_entrance/`;
       return http.get(url, {}, config);
     },
+
+    /**
+     * --
+     * @param {Object} params 请求参数：appCode data
+     */
+    createCloudModules({}, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/cloud-native/${appCode}/modules/`;
+      return http.post(url, data, config);
+    },
   },
 };

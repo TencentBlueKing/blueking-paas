@@ -29,9 +29,9 @@
             </div>
 
             <bk-form
-              ref="validate2"
               form-type="inline"
-              :model="name"
+              :model="formData"
+              ref="formDataRef"
             >
               <bk-form-item
                 :required="true"
@@ -46,7 +46,7 @@
                   <label class="form-label"> {{ $t('模块名称') }} </label>
                   <div class="form-input-flex">
                     <bk-input
-                      v-model="name"
+                      v-model="formData.name"
                       :placeholder="$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符')"
                       class="mr10 mt10 form-input-width"
                     >
@@ -114,29 +114,6 @@
               {{ $t('镜像管理') }}
             </div>
 
-            <div
-              class="form-group"
-              style="margin-top: 7px;"
-            >
-              <label class="form-label"> {{ $t('镜像类型') }} </label>
-              <div
-                class="form-group-radio"
-                style="margin-top: 5px;"
-              >
-                <bk-radio-group v-model="mirrorData.type">
-                  <bk-radio value="public">
-                    {{ $t('公开') }}
-                  </bk-radio>
-                  <bk-radio
-                    value="private"
-                    disabled
-                  >
-                    {{ $t('私有') }}
-                  </bk-radio>
-                </bk-radio-group>
-              </div>
-            </div>
-
             <bk-form
               ref="validate2"
               form-type="inline"
@@ -161,17 +138,17 @@
                       style="width: 520px;"
                       size="large"
                       clearable
-                      :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
+                      :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
                     >
-                      <template
-                        v-if="GLOBAL.CONFIG.MIRROR_PREFIX"
-                        slot="prepend"
-                      >
-                        <div class="group-text">
-                          {{ GLOBAL.CONFIG.MIRROR_PREFIX }}
-                        </div>
+
+                      <template slot="append">
+                        <div
+                          class="group-text form-text-append"
+                          @click="handleSetMirrorUrl"
+                        >应用示例</div>
                       </template>
                     </bk-input>
+                    <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
                   </div>
                 </div>
               </bk-form-item>
@@ -389,6 +366,11 @@
                 type="info">
                 <div slot="title">
                   {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
+                  <a
+                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+                    style="color: #3a84ff">
+                    {{$t('应用进程介绍')}}
+                  </a>
                 </div>
               </bk-alert>
             </collapseContent>
@@ -398,6 +380,42 @@
                 type="info">
                 <div slot="title">
                   {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
+                  <a
+                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+                    style="color: #3a84ff">
+                    {{$t('应用进程介绍')}}
+                  </a>
+                </div>
+              </bk-alert>
+            </collapseContent>
+          </div>
+
+          <!-- 仅镜像 -->
+          <div class="mt20" v-if="structureType === 'mirror' && curStep === 2">
+            <collapseContent :title="$t('进程配置')">
+              <bk-alert
+                type="info">
+                <div slot="title">
+                  {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
+                  <a
+                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+                    style="color: #3a84ff">
+                    {{$t('应用进程介绍')}}
+                  </a>
+                </div>
+              </bk-alert>
+            </collapseContent>
+
+            <collapseContent :title="$t('钩子命令')" class="mt20">
+              <bk-alert
+                type="info">
+                <div slot="title">
+                  {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
+                  <a
+                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+                    style="color: #3a84ff">
+                    {{$t('应用进程介绍')}}
+                  </a>
                 </div>
               </bk-alert>
             </collapseContent>
@@ -419,7 +437,7 @@
               <bk-button
                 theme="primary"
                 @click="handleNext"
-                :disabled="!gitExtendConfig[sourceControlType].selectedRepoUrl"
+                :disabled="!formData.name || (!gitExtendConfig[sourceControlType].selectedRepoUrl && !mirrorData.url)"
               >
                 {{ $t('下一步') }}
               </bk-button>
@@ -463,7 +481,6 @@
 </template>
 
 <script>import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
-import '@/common/parsley_locale';
 import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
@@ -579,12 +596,30 @@ export default {
             message: this.$t('该字段是必填项'),
             trigger: 'blur',
           },
+          {
+            validator(val) {
+              const reg = /^[a-z][a-z0-9-]*$/;
+              return reg.test(val);
+            },
+            message: '格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母',
+            trigger: 'blur',
+          },
+          {
+            validator(val) {
+              const reg = /^[a-z][a-z0-9-]{1,16}$/;
+              return reg.test(val);
+            },
+            message: '由小写字母和数字以及连接符(-)组成，不能超过 16 个字符',
+            trigger: 'blur',
+          },
         ],
       },
       lessCodeCorrectRules: false,
       createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
       curStep: 1,
-      name: '',
+      formData: {
+        name: '',
+      },
     };
   },
   computed: {
@@ -626,7 +661,7 @@ export default {
     structureType(value) {
       if (value === 'mirror') {
         this.sourceOrigin = 4;
-        this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
+        this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       } else if (value === 'soundCode') {
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
         this.handleCodeTypeChange(1);
@@ -664,19 +699,6 @@ export default {
     }
   },
   mounted() {
-    this.form = $('#form-create-app').parsley();
-    this.$form = this.form.$element;
-
-    // Auto clearn ServerError message for field
-    this.form.on('form:validated', (target) => {
-      target.fields.forEach((field) => {
-        field.removeError('serverError');
-      });
-    });
-    window.Parsley.on('field:error', function () {
-      // 防止出现多条错误提示
-      this.$element.parsley().removeError('serverError');
-    });
   },
   methods: {
     handleCodeTypeChange(payload) {
@@ -865,12 +887,23 @@ export default {
      * 创建应用模块
      */
     async createAppModule() {
+      // NORMAL_APP: 1,
+      //   LESSCODE_APP: 2,
+      //   SMART_APP: 3,
+      //   IMAGE: 4,
+      //   SCENE_APP: 5
       if (!this.canCreateModule) {
         return;
       }
       let sourceRepoUrl = null;
-      if (!this.form.isValid()) {
-        return;
+      // 模块名称校验
+      if (this.$refs.formDataRef) {
+        try {
+          await this.$refs.formDataRef.validate();
+        } catch (error) {
+          console.log('error', error);
+          return;
+        }
       }
 
       if (this.sourceDirError) {
@@ -897,7 +930,6 @@ export default {
       this.formLoading = true;
       // Remove all serverError error messages
       this.globalErrorMessage = '';
-      this.form.reset();
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {
         switch (this.sourceControlType) {
@@ -926,38 +958,41 @@ export default {
       }
 
       const params = {
-        name: this.name,
-        language: this.language,
-        source_init_template: this.sourceInitTemplate,
-        source_control_type: this.sourceControlType,
-        source_repo_url: sourceRepoUrl,
-        source_origin: this.sourceOrigin,
-        source_dir: this.sourceDirVal || '',
-        ...this.$form.serializeObject(),
+        name: this.formData.name,
+        build_config: {
+          build_method: 'buildpack',
+        },
+        source_config: {
+          source_init_template: this.sourceInitTemplate,
+          source_control_type: this.sourceControlType,
+          source_repo_url: sourceRepoUrl,
+          source_origin: this.sourceOrigin,
+          source_dir: this.sourceDirVal || '',
+        },
       };
 
-      console.log('params', params);
+      console.log('params', params, this.sourceOrigin);
       debugger;
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
         const repoData = this.$refs.repoInfo.getData();
-        params.source_repo_url = repoData.url;
-        params.source_repo_auth_info = {
+        params.source_config.source_repo_url = repoData.url;
+        params.source_config.source_repo_auth_info = {
           username: repoData.account,
           password: repoData.password,
         };
-        params.source_dir = repoData.sourceDir;
+        params.source_config.source_dir = repoData.sourceDir;
       }
 
       if (this.sourceOrigin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
-        delete params.source_repo_url;
+        delete params.source_config.source_repo_url;
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
-        params.type = 'default';
-        params.source_control_type = 'tc_docker';
-        params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
-        params.source_repo_auth_info = {
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {  // 仅镜像
+        params.build_config = 'custom_image',
+        params.source_config.source_control_type = 'tc_docker';
+        params.source_config.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
+        params.source_config.source_repo_auth_info = {
           username: '',
           password: '',
         };
@@ -966,7 +1001,7 @@ export default {
       try {
         this.formLoading = true;
 
-        const res = await this.$store.dispatch('module/createAppModule', {
+        const res = await this.$store.dispatch('module/createCloudModules', {
           appCode: this.appCode,
           data: params,
         });
@@ -1002,6 +1037,11 @@ export default {
     handlePrev() {
       this.curStep = 1;
     },
+
+    // 处理应用示例填充
+    handleSetMirrorUrl() {
+      this.mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld';
+    },
   },
 };
 </script>
@@ -1013,7 +1053,7 @@ export default {
 .item-cls {
     .bk-form-content{
         .form-error-tip{
-            margin: 5px 0 0 260px;
+            margin: 5px 0 0 100px;
         }
     }
 }

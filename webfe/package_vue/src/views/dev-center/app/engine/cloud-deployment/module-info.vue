@@ -41,11 +41,14 @@
             <bk-input
               v-model="buildData.image"
               style="width: 450px;"
-              :placeholder="$t('请输入')"
+              :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
             >
 
               <template slot="append">
-                <div class="group-text form-text-append">应用示例</div>
+                <div
+                  class="group-text form-text-append"
+                  @click="mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld'"
+                >应用示例</div>
               </template>
             </bk-input>
             <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>

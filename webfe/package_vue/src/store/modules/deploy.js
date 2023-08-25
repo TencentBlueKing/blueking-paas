@@ -457,6 +457,42 @@ const actions = {
     const url = `${BACKEND_URL}/api/mres/quota_plans/`;
     return http.get(url, config);
   },
+
+  /**
+   * 获取镜像信息
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getMirrorInfo({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 获取基础镜像列表
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getBaseImageList({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bp_runtimes/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 获取代码检查详情
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getCodeInspection({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/detail/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 保存镜像信息
+   * @param {Object} params 请求参数：appCode, moduleId, params
+   */
+  saveMirrorInfo({}, { appCode, moduleId, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.post(url, data, config);
+  },
 };
 
 export default {

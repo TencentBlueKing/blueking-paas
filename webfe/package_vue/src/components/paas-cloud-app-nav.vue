@@ -65,6 +65,7 @@ export default {
     return {
       navTree: [],
       allowedRouterName: [
+        'cloudAppDeployForBuild',
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
@@ -83,6 +84,8 @@ export default {
           'appSummary',
           // 应用编排
           'cloudAppDeploy',
+          // 应用编排 - 构建配置
+          'cloudAppDeployForBuild',
           // 应用编排 - 进程配置
           'cloudAppDeployForProcess',
           // 应用编排 - 钩子命令
@@ -121,6 +124,8 @@ export default {
           'appSummary',
           // 应用编排
           'cloudAppDeploy',
+          // 应用编排 - 构建配置
+          'cloudAppDeployForBuild',
           // 应用编排 - 进程配置
           'cloudAppDeployForProcess',
           // 应用编排 - 钩子命令
@@ -350,6 +355,7 @@ export default {
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
 
       this.allowedRouterName = [
+        'cloudAppDeployForBuild',
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',

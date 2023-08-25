@@ -86,11 +86,12 @@ export default {
       },
       manifestExt: {},
       panels: [
+        { name: 'cloudAppDeployForBuild', label: this.$t('构建配置'), ref: 'build' },
         { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
         { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook'  },
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services'  },
-        { name: 'imageCredential', label: this.$t('镜像凭证'), ref: 'ticket'  },
+        { name: 'imageCredential', label: this.$t('镜像凭证-title'), ref: 'ticket'  },
         { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info'  },
       ],
       active: 'cloudAppDeployForProcess',

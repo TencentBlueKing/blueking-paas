@@ -107,6 +107,7 @@
                 v-else
                 v-model="baseInfo.introduction"
                 type="text"
+                :show-word-limit="true"
                 :maxlength="100"
               />
             </bk-form-item>

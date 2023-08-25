@@ -265,6 +265,9 @@ class ApplicationBuilder(BaseBuilder):
         bkapp_revision_id = None
         if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE:
             bkapp_revision_id = self.must_handle_bkapp_manifest()
+            # 从源码构建总是使用 bkapp.yaml 创建新的 revision
+            self.deployment.bkapp_revision_id = bkapp_revision_id
+            self.deployment.save(update_fields=["bkapp_revision_id"])
         else:
             self.try_handle_app_description()
 

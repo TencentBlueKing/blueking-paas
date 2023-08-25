@@ -23,21 +23,21 @@
       <div class="overview-item">
         <h3>{{codeDetails.codeSecurityScore ?? '--'}}</h3>
         <div class="desc">
-          <i class="paasng-icon paasng-process-file mr5" />
+          <i class="paasng-icon paasng-anquan mr5" />
           <span>{{$t('代码安全')}}</span>
         </div>
       </div>
       <div class="overview-item">
         <h3>{{codeDetails.codeStyleScore ?? '--'}}</h3>
         <div class="desc">
-          <i class="paasng-icon paasng-process-file mr5" />
+          <i class="paasng-icon paasng-guifan mr5" />
           <span>{{$t('代码规范')}}</span>
         </div>
       </div>
       <div class="overview-item">
         <h3>{{codeDetails.codeMeasureScore ?? '--'}}</h3>
         <div class="desc">
-          <i class="paasng-icon paasng-process-file mr5" />
+          <i class="paasng-icon paasng-duliang mr5" />
           <span>{{$t('代码度量')}}</span>
         </div>
       </div>

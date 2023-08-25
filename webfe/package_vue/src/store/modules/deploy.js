@@ -487,7 +487,7 @@ const actions = {
 
   /**
    * 保存镜像信息
-   * @param {Object} params 请求参数：appCode, moduleId, params
+   * @param {Object} params 请求参数：appCode, moduleId, data
    */
   saveMirrorInfo({}, { appCode, moduleId, data }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;

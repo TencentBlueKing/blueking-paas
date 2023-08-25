@@ -334,8 +334,6 @@
           const details = await this.$store.dispatch('deploy/getCodeInspection', {
             appCode: this.appCode,
             moduleId: this.curModuleId,
-            // appCode: 'appid1',
-            // moduleId: 'default',
           });
           if (Object.keys(details).length) {
             details.lastAnalysisTime = dayjs(details.lastAnalysisTime).format('YYYY-MM-DD HH:mm:ss');

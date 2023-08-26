@@ -1035,6 +1035,7 @@ export default {
     // 处理应用示例填充
     handleSetMirrorUrl() {
       this.mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld';
+      this.$refs.validate2.clearError();
     },
 
     // 获取进程信息

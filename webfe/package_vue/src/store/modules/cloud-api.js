@@ -28,6 +28,8 @@ export default {
   state: {
     cloudAppData: {},
     isPageEdit: false,
+    processPageEdit: false,
+    hookPageEdit: false,
   },
   getters: {},
   mutations: {
@@ -37,6 +39,12 @@ export default {
     },
     updatePageEdit(state, data) {
       state.isPageEdit = data;
+    },
+    updateProcessPageEdit(state, data) {
+      state.processPageEdit = data;
+    },
+    updateHookPageEdit(state, data) {
+      state.hookPageEdit = data;
     },
   },
   actions: {

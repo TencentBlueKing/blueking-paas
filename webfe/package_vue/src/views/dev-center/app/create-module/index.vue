@@ -393,11 +393,11 @@
           <!-- 仅镜像 -->
           <div class="mt20" v-if="structureType === 'mirror' && curStep === 2">
             <collapseContent :title="$t('进程配置')">
-              <deploy-process :cloud-app-data="cloudAppData"></deploy-process>
+              <deploy-process ref="processRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-process>
             </collapseContent>
 
             <collapseContent :title="$t('钩子命令')" class="mt20">
-              <deploy-hook :cloud-app-data="cloudAppData"></deploy-hook>
+              <deploy-hook :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
             </collapseContent>
           </div>
 
@@ -605,6 +605,8 @@ export default {
         name: '',
       },
       cloudAppData: {},
+      isCreate: true,
+      localCloudAppData: {},
     };
   },
   computed: {
@@ -637,6 +639,10 @@ export default {
     curSourceControl() {
       const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
       return match;
+    },
+
+    createCloudAppData() {
+      return this.$store.state.cloudApi.cloudAppData;
     },
   },
   watch: {
@@ -956,9 +962,6 @@ export default {
         },
       };
 
-      console.log('params', params, this.sourceOrigin);
-      debugger;
-
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
         const repoData = this.$refs.repoInfo.getData();
         params.source_config.source_repo_url = repoData.url;
@@ -974,13 +977,16 @@ export default {
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {  // 仅镜像
-        params.build_config = 'custom_image',
-        params.source_config.source_control_type = 'tc_docker';
-        params.source_config.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
-        params.source_config.source_repo_auth_info = {
-          username: '',
-          password: '',
-        };
+        params.build_config = {
+          build_method: 'custom_image',
+        },
+        // params.source_config.source_control_type = 'tc_docker';
+        params.source_config.source_repo_url = this.mirrorData.url;
+        // params.source_config.source_repo_auth_info = {
+        //   username: '',
+        //   password: '',
+        // };
+        params.manifest = { ...this.createCloudAppData };
       }
 
       try {
@@ -1039,6 +1045,7 @@ export default {
           moduleId: this.curModuleId,
         });
         this.cloudAppData = res.manifest;
+        this.localCloudAppData = _.cloneDeep(this.cloudAppData);
         this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
       } catch (e) {
         this.$paasMessage({
@@ -1052,7 +1059,10 @@ export default {
 
     // 处理取消
     handleCancel() {
-      this.$store.commit('cloudApi/updatePageEdit', false);
+      this.$refs?.processRef?.handleCancel();
+      this.cloudAppData = _.cloneDeep(this.localCloudAppData);
+      this.$store.commit('cloudApi/updateHookPageEdit', false);
+      this.$store.commit('cloudApi/updateProcessPageEdit', false);
     },
   },
 };

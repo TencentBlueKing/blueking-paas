@@ -130,6 +130,10 @@ export default {
       type: Object,
       default: {},
     },
+    isCreate: {
+      type: Boolean,
+      default: false,
+    },
   },
 
   data() {
@@ -152,7 +156,7 @@ export default {
 
   computed: {
     isPageEdit() {
-      return this.$store.state.cloudApi.isPageEdit;
+      return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.hookPageEdit;
     },
   },
 
@@ -250,7 +254,11 @@ export default {
 
     // 编辑
     handleEditClick() {
-      this.$store.commit('cloudApi/updatePageEdit', true);
+      if (this.isCreate) {
+        this.$store.commit('cloudApi/updateHookPageEdit', true);
+      } else {
+        this.$store.commit('cloudApi/updatePageEdit', true);
+      }
     },
   },
 };

@@ -686,6 +686,10 @@ export default {
       type: Object,
       default: {},
     },
+    isCreate: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -917,7 +921,7 @@ export default {
       return `bkapp.paas.bk.tencent.com/image-credentials.${this.localProcessNameActive}`;
     },
     isPageEdit() {
-      return this.$store.state.cloudApi.isPageEdit;
+      return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.processPageEdit;
     },
     isV1alpha2() {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
@@ -1199,7 +1203,11 @@ export default {
 
     // 编辑
     handleEditClick() {
-      this.$store.commit('cloudApi/updatePageEdit', true);
+      if (this.isCreate) {
+        this.$store.commit('cloudApi/updateProcessPageEdit', true);
+      } else {
+        this.$store.commit('cloudApi/updatePageEdit', true);
+      }
     },
 
     // 处理保存时数据问题

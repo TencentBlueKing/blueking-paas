@@ -51,7 +51,8 @@
         @mouseleave="moduleItemIndex = ''">
         {{ panel.name }}
         <i
-          v-if="index === moduleItemIndex" class="icon paasng-icon paasng-delete delete-module-icon"
+          v-if="index === moduleItemIndex && !panel.is_default"
+          class="icon paasng-icon paasng-delete delete-module-icon"
           @click="handleDeleteModule(panel)"></i>
       </div>
     </bk-dialog>
@@ -186,12 +187,14 @@ export default defineComponent({
     };
 
     const handleDeleteModule = (payload) => {
+      console.log('payload', payload);
       curAppModuleName.value = payload.name;
       delAppDialog.visiable = true;
       dialog.visiable = false;
     };
 
     const submitRemoveModule = async () => {
+      3;
       try {
         await store.dispatch('module/deleteModule', {
           appCode: appCode.value,

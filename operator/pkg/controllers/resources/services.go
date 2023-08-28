@@ -36,6 +36,7 @@ func BuildService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *cor
 
 	name := names.Service(bkapp, process.Name)
 	svcLabels := labels.Deployment(bkapp, process.Name)
+	selector := labels.PodSelector(bkapp, process.Name)
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -57,7 +58,7 @@ func BuildService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *cor
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
-			Selector: svcLabels,
+			Selector: selector,
 		},
 	}
 }

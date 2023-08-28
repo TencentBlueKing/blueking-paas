@@ -63,9 +63,9 @@ var _ = Describe("TestQuota", func() {
 		Entry("mem unit Mi", Memory, "300Mi", "150Mi"),
 		Entry("mem unit Gi", Memory, "2Gi", "1024Mi"),
 		Entry("after convert unit", CPU, "1", "500m"),
-		// test case: NewQuantity will not return a null pointer, although err is occurred
-		Entry("Memory max limit(bigger than 4096Mi)", Memory, "8192Mi", "0"),
-		Entry("CPU max limit(bigger than 4000m)", CPU, "8000m", "0"),
+		// test case: If the maximum value is exceeded, the maximum value will be returned
+		Entry("Memory max limit(bigger than 4096Mi)", Memory, "8192Mi", "2048Mi"),
+		Entry("CPU max limit(bigger than 4000m)", CPU, "8000m", "2000m"),
 	)
 
 	DescribeTable(

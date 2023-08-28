@@ -55,7 +55,7 @@ var (
 	// 内存最大资源配额（4096Mi）
 	maxMemoryQuantity = resource.MustParse(maxMemory)
 	// 零值
-	zero = &resource.Quantity{}
+	zero = resource.Quantity{}
 )
 
 const defaultScale = 3
@@ -63,22 +63,22 @@ const defaultScale = 3
 // NewQuantity 创建 Quantity，包含校验检查
 func NewQuantity(raw string, t ResType) (*resource.Quantity, error) {
 	if raw == "" {
-		return nil, errors.WithStack(ErrResQuotaRequired)
+		return &zero, errors.WithStack(ErrResQuotaRequired)
 	}
 	q, err := resource.ParseQuantity(raw)
 	if err != nil {
-		return zero, err
+		return &zero, err
 	}
 
 	// Limit 检查
 	switch t {
 	case CPU:
 		if q.Cmp(maxCPUQuantity) > 0 {
-			return zero, errors.Wrapf(ErrExceedLimit, "exceed cpu max limit %s", maxCPU)
+			return &maxCPUQuantity, errors.Wrapf(ErrExceedLimit, "exceed cpu max limit %s", maxCPU)
 		}
 	case Memory:
 		if q.Cmp(maxMemoryQuantity) > 0 {
-			return zero, errors.Wrapf(ErrExceedLimit, "exceed memory max limit %s", maxMemory)
+			return &maxMemoryQuantity, errors.Wrapf(ErrExceedLimit, "exceed memory max limit %s", maxMemory)
 		}
 	}
 	return &q, nil

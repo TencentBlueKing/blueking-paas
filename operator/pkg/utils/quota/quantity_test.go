@@ -55,8 +55,7 @@ var _ = Describe("TestQuota", func() {
 	DescribeTable(
 		"test Div() 2",
 		func(t ResType, raw, s string) {
-			q, err := NewQuantity(raw, t)
-			Expect(err).ShouldNot(HaveOccurred())
+			q, _ := NewQuantity(raw, t)
 			Expect(Div(q, 2).Cmp(resource.MustParse(s))).To(Equal(0))
 		},
 		Entry("cpu unit m", CPU, "200m", "100m"),
@@ -64,6 +63,9 @@ var _ = Describe("TestQuota", func() {
 		Entry("mem unit Mi", Memory, "300Mi", "150Mi"),
 		Entry("mem unit Gi", Memory, "2Gi", "1024Mi"),
 		Entry("after convert unit", CPU, "1", "500m"),
+		// test case: NewQuantity will not return a null pointer, although err is occurred
+		Entry("Memory max limit(bigger than 4096Mi)", Memory, "8192Mi", "0"),
+		Entry("CPU max limit(bigger than 4000m)", CPU, "8000m", "0"),
 	)
 
 	DescribeTable(
@@ -81,11 +83,13 @@ var _ = Describe("TestQuota", func() {
 	)
 
 	It("parse error case", func() {
-		_, err := NewQuantity("2C", CPU)
+		q, err := NewQuantity("2C", CPU)
 		Expect(err.Error()).To(ContainSubstring("quantities must match the regular expression"))
+		Expect(q).NotTo(BeNil())
 
-		_, err = NewQuantity("2TB", Memory)
+		q, err = NewQuantity("2TB", Memory)
 		Expect(err.Error()).To(ContainSubstring("quantities must match the regular expression"))
+		Expect(q).NotTo(BeNil())
 	})
 
 	It("exceed limit case", func() {

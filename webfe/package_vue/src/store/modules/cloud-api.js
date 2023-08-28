@@ -179,9 +179,9 @@ export default {
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode, systemId
-         */
+     * --
+     * @param {Object} params 请求参数：appCode, systemId
+     */
     getComponents({}, { appCode, systemId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/${systemId}/permissions/components/`;
       return http.get(url, config);

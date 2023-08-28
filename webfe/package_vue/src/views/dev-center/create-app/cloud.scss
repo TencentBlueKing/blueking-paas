@@ -1,0 +1,50 @@
+.cloud-app-container{
+    width: 1000px;
+    margin: 0 auto;
+    .form-item-title{
+        color: #313238;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .form-item-cls{
+        /deep/ .bk-label{
+            width: 100px !important;
+        }
+        .code-depot-item{
+            width: 145px;
+            height: 88px;
+            background: #f0f1f5;
+            border-radius: 2px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            img{
+                width: 40px;
+                height: 36px;
+                margin: 12px 0 6px 0;
+            }
+        }
+    }
+    .form-input-width{
+        width: 520px;
+    }
+
+    .step-cls{
+        width: 400px;
+        margin: 20px auto 0;
+    }
+    .languages-card{
+        background: #FAFBFD;
+        border-radius: 2px;
+        width: 896px;
+        padding: 20px 20px 0 20px;
+        margin: 20px 0 0 100px;
+        .languages-name{
+            color: #63656E;
+        }
+        .languages-desc{
+            color: #979BA5;
+            font-size: 12px;
+        }
+    }
+}

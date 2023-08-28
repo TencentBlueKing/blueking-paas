@@ -78,7 +78,6 @@
             </div> -->
 
             <div
-              v-if="curUserFeature.ENABLE_TC_DOCKER"
               class="form-group mt10"
               style="margin-left: 10px"
             >
@@ -611,6 +610,7 @@ export default {
   },
   computed: {
     region() {
+      console.log('this.curAppInfo', this.curAppInfo);
       return this.curAppInfo.application.region;
     },
     isShowRegionsService() {

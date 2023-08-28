@@ -1134,3 +1134,10 @@ span.ellipsis {
     margin-bottom: 15px;
     margin-left: 0;
 }
+
+.bk-dialog-footer {
+    button:nth-of-type(2) {
+        color: #000;
+        margin-left: 10px;
+    }
+}

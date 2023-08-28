@@ -33,6 +33,8 @@
       :title="dialog.title"
       :loading="dialog.loading"
     >
+
+      <bk-alert class="mb20" type="error" :title="$t('删除操作无法撤回，请在删除前与应用其他成员沟通')"></bk-alert>
       <bk-button
         theme="primary"
         @click="handleToAddModulePage">
@@ -48,15 +50,56 @@
         @mouseenter="handleMouseEnter(index)"
         @mouseleave="moduleItemIndex = ''">
         {{ panel.name }}
-        <i v-if="index === moduleItemIndex" class="icon paasng-icon paasng-delete delete-module-icon"></i>
+        <i
+          v-if="index === moduleItemIndex" class="icon paasng-icon paasng-delete delete-module-icon"
+          @click="handleDeleteModule(panel)"></i>
+      </div>
+    </bk-dialog>
+
+
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="`${$t('确认删除模块')}【${curAppModuleName.value}】？`"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="delAppDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <div class="ps-form">
+        <div class="spacing-x1">
+          {{ $t('请完整输入') }} <code>{{ curAppModuleName }}</code> {{ $t('来确认删除模块！') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveModule"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
       </div>
     </bk-dialog>
   </div>
 </template>
-<script>
-import { defineComponent, reactive, ref } from 'vue';
+<script>import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
 import store from '@/store';
 import router from '@/router';
+import { bkMessage } from 'bk-magic-vue';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -82,13 +125,25 @@ export default defineComponent({
   },
   setup(props) {
     const route = router.currentRoute;
+    const vm = getCurrentInstance();
     const active = ref(props.curModule.name || '');
     const moduleItemIndex = ref('');
+    const formRemoveConfirmCode = ref('');
+    const curAppModuleName = ref('');
     const dialog = reactive({
       title: '模块管理',
       visiable: false,
       loading: false,
     });
+    const delAppDialog = reactive({
+      visiable: false,
+      isLoading: false,
+    });
+
+    // 输入的文案和选中模块相同
+    const formRemoveValidated = computed(() => curAppModuleName.value === formRemoveConfirmCode.value);
+    const appCode = computed(() => route.params.id);
+
     // 切换tab
     const handleTabChange = () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
@@ -105,7 +160,7 @@ export default defineComponent({
       router.push({
         name,
         params: {
-          id: route.params.id,
+          id: appCode.value,
           moduleId: curModule.name,
         },
         query,
@@ -121,13 +176,53 @@ export default defineComponent({
       router.push({
         name: 'appCreateModule',
         params: {
-          id: route.params.id,
+          id: appCode.value,
         },
       });
     };
 
     const handleMouseEnter = (index) => {
       moduleItemIndex.value = index;
+    };
+
+    const handleDeleteModule = (payload) => {
+      curAppModuleName.value = payload.name;
+      delAppDialog.visiable = true;
+      dialog.visiable = false;
+    };
+
+    const submitRemoveModule = async () => {
+      try {
+        await store.dispatch('module/deleteModule', {
+          appCode: appCode.value,
+          moduleName: curAppModuleName.value,
+        });
+        console.log('vue', vm);
+        bkMessage({
+          theme: 'success',
+          message: '模块删除成功',
+        });
+        router.push({
+          name: 'appSummary',
+          params: {
+            id: appCode.value,
+            moduleId: props.moduleList.find(item => item.is_default).name,
+          },
+        });
+        store.dispatch('getAppInfo', { appCode: appCode.value, moduleId: curAppModuleName.value });
+      } catch (res) {
+        console.warn(res);
+        bkMessage({
+          theme: 'error',
+          message: res.message,
+        });
+      } finally {
+        delAppDialog.visiable = false;
+      }
+    };
+
+    const hookAfterClose = () => {
+      formRemoveConfirmCode.value = '';
     };
 
     return {
@@ -137,7 +232,14 @@ export default defineComponent({
       handleMouseEnter,
       active,
       dialog,
+      delAppDialog,
       moduleItemIndex,
+      handleDeleteModule,
+      formRemoveValidated,
+      submitRemoveModule,
+      hookAfterClose,
+      curAppModuleName,
+      formRemoveConfirmCode,
     };
   },
 });

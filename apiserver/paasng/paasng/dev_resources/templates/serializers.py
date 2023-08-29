@@ -56,7 +56,7 @@ class TemplateSLZ(serializers.Serializer):
 class BuildConfigPreviewSLZ(serializers.Serializer):
     """构建配置预览"""
 
-    # image_repository = serializers.CharField(help_text="镜像仓库", read_only=True)
+    image_repository_template = serializers.CharField(help_text="镜像仓库模板", read_only=True)
     build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 

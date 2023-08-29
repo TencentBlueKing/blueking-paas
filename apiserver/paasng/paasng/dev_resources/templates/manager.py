@@ -97,15 +97,15 @@ class TemplateRuntimeManager:
         )
 
     def get_required_buildpacks(self, bp_stack_name: str) -> List[AppBuildPack]:
-        """获取构建模板代码需要的运行时"""
+        """获取构建模板代码需要的构建工具"""
         try:
-            bps_before_language = self.get_template_required_buildpacks(bp_stack_name=bp_stack_name)
+            required_buildpacks = self.get_template_required_buildpacks(bp_stack_name=bp_stack_name)
         except Template.DoesNotExist:
-            bps_before_language = []
+            required_buildpacks = []
         language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
         if language_bp:
-            return bps_before_language + [language_bp]
-        return bps_before_language
+            required_buildpacks.append(language_bp)
+        return required_buildpacks
 
     def get_template_required_buildpacks(self, bp_stack_name: str) -> List[AppBuildPack]:
         """获取模板声明的需要依赖的构建工具"""
@@ -121,18 +121,14 @@ class TemplateRuntimeManager:
             raise ValueError("required_buildpacks is invalid")
 
         builder = AppSlugBuilder.objects.get(name=bp_stack_name)
-        available_bps = {}
-        for bp in builder.list_region_available_buildpacks(region=self.region, name__in=bp_names):
-            available_bps[bp.name] = bp
+        available_bps = {
+            bp.name: bp for bp in builder.list_region_available_buildpacks(region=self.region, name__in=bp_names)
+        }
 
-        buildpacks = []
-        for name in bp_names:
-            try:
-                buildpacks.append(available_bps[name])
-            except KeyError:
-                raise RuntimeError('No buildpacks can be found for name: {}'.format(name))
+        if missing_bps := available_bps.keys() - set(bp_names):
+            raise RuntimeError('No buildpacks can be found for name: {}'.format(missing_bps))
 
-        return buildpacks
+        return [available_bps[bp_name] for bp_name in bp_names]
 
     def get_language_buildpack(self, bp_stack_name: str) -> Optional[AppBuildPack]:
         """获取和模块(或模板)语言相关的构建工具"""

@@ -140,6 +140,8 @@ class TestRegionTemplateViewSet:
         build_config = data["build_config"]
         assert build_config["build_method"] == "buildpack"
         assert build_config["bp_stack_name"] == image_name
+        assert "{app_code}" in build_config["image_repository_template"]
+        assert "{module_name}" in build_config["image_repository_template"]
         assert [{"name": bp["name"]} for bp in build_config["buildpacks"]] == expected_buildpacks
 
         slugbuilder = data["slugbuilder"]

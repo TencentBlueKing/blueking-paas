@@ -134,6 +134,7 @@ class ErrorCodes:
     UNABLE_TO_SET_DISTRIBUTORS = ErrorCode(_('无法设置插件使用方，请稍候重试'))
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
+    UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))
     # 场景模板（Scene SaaS）相关
     SCENE_TMPL_NOT_FOUND = ErrorCode(_('指定的场景模板不存在'))
     SCENE_TMPL_DESC_ERROR = ErrorCode(_('场景模板应用描述文件异常'))

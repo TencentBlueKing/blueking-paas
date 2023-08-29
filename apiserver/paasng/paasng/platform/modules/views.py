@@ -316,12 +316,12 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         results = []
 
         runtime_labels = get_image_labels_by_module(module)
-        available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        available_slugrunners = AppSlugRunner.objects.filter_by_labels(module, runtime_labels)
         if available_slugrunners.count() == 0:
             available_slugrunners = AppSlugRunner.objects.filter_module_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
-        available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        available_slugbuilders = AppSlugBuilder.objects.filter_by_labels(module, runtime_labels)
         if available_slugbuilders.count() == 0:
             available_slugbuilders = AppSlugBuilder.objects.filter_module_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
@@ -473,12 +473,12 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         results = []
         runtime_labels = get_image_labels_by_module(module)
-        available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        available_slugrunners = AppSlugRunner.objects.filter_by_labels(module, runtime_labels)
         if available_slugrunners.count() == 0:
             available_slugrunners = AppSlugRunner.objects.filter_module_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
-        available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        available_slugbuilders = AppSlugBuilder.objects.filter_by_labels(module, runtime_labels)
         if available_slugbuilders.count() == 0:
             available_slugbuilders = AppSlugBuilder.objects.filter_module_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())

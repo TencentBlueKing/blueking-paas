@@ -112,7 +112,7 @@ class TestModuleCreation:
             assert response.status_code == desired_status_code
 
 
-class TestTestCreateCloudNativeModule:
+class TestCreateCloudNativeModule:
     @pytest.fixture(autouse=True)
     def setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
@@ -152,7 +152,7 @@ class TestTestCreateCloudNativeModule:
         self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, bk_cnative_app, init_tmpls
     ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
-        MockedModuleRuntimeBinder.bind_bp_stack.return_value = None
+        MockedModuleRuntimeBinder().bind_bp_stack.return_value = None
         MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
             is_cnb_runtime=True, environments={}
         )

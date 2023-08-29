@@ -136,6 +136,7 @@ class PackageMixin:
 
     runtime_type = RuntimeType.BUILDPACK
     has_vcs = False
+    has_template_code = False
     deploy_via_package = True
 
 
@@ -143,14 +144,12 @@ class BkLessCodeSpecs(PackageMixin, SourceOriginSpecs):
     """Specs for source_origin: BK_LESS_CODE"""
 
     source_origin = SourceOrigin.BK_LESS_CODE
-    has_template_code = False
 
 
 class SMartSpecs(PackageMixin, SourceOriginSpecs):
     """Specs for source_origin: S_MART"""
 
     source_origin = SourceOrigin.S_MART
-    has_template_code = False
 
 
 class ImageRegistrySpecs(SourceOriginSpecs):

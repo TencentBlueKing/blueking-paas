@@ -521,7 +521,7 @@ class TestCreateCloudNativeApp:
         self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, init_tmpls
     ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
-        MockedModuleRuntimeBinder.bind_bp_stack.return_value = None
+        MockedModuleRuntimeBinder().bind_bp_stack.return_value = None
         MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
             is_cnb_runtime=True, environments={}
         )

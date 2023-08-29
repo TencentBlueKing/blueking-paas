@@ -69,18 +69,18 @@ class ModuleBuildpackPlaner:
         self.module = module
 
     def get_required_buildpacks(self, bp_stack_name: str) -> List[AppBuildPack]:
-        """获取构建模板代码需要的运行时"""
+        """获取构建模板代码需要的构建工具"""
         try:
-            bps_before_language = TemplateRuntimeManager(
+            required_buildpacks = TemplateRuntimeManager(
                 region=self.module.region, tmpl_name=self.module.source_init_template
             ).get_template_required_buildpacks(bp_stack_name=bp_stack_name)
         except Template.DoesNotExist:
-            bps_before_language = []
+            required_buildpacks = []
 
         language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
         if language_bp:
-            return bps_before_language + [language_bp]
-        return bps_before_language
+            required_buildpacks.append(language_bp)
+        return required_buildpacks
 
     def get_language_buildpack(self, bp_stack_name: str) -> Optional[AppBuildPack]:
         """获取和模块语言相关的构建工具"""

@@ -22,9 +22,11 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.response import Response
 
+from paasng.dev_resources.templates.exceptions import TmplRegionNotSupported
 from paasng.dev_resources.templates.manager import TemplateRuntimeManager, retrieve_template_build_config
 from paasng.dev_resources.templates.models import Template
 from paasng.dev_resources.templates.serializers import SearchTemplateSLZ, TemplateDetailSLZ, TemplateSLZ
+from paasng.engine.configurations.image import get_image_repository_template
 from paasng.engine.constants import RuntimeType
 from paasng.utils.error_codes import error_codes
 
@@ -53,14 +55,11 @@ class RegionTemplateViewSet(viewsets.ViewSet):
         try:
             mgr = TemplateRuntimeManager(region=region, tmpl_name=tpl_name)
             build_config = retrieve_template_build_config(region=region, template=mgr.template)
-        except ObjectDoesNotExist:
-            raise error_codes.NORMAL_TMPL_NOT_FOUND.f(_("模板名称: {tmpl_name}").format(tmpl_name=tpl_name))
-        except ValueError:
+        except (ObjectDoesNotExist, TmplRegionNotSupported):
             raise error_codes.NORMAL_TMPL_NOT_FOUND.f(_("模板名称: {tmpl_name}").format(tmpl_name=tpl_name))
 
         build_config_data = {
-            # TODO: 根据接口参数构造 image_repository
-            # "image_repository": generate_image_repository(module),
+            "image_repository_template": get_image_repository_template(),
             "build_method": build_config.build_method,
             "tag_options": build_config.tag_options,
         }
@@ -69,11 +68,14 @@ class RegionTemplateViewSet(viewsets.ViewSet):
                 bp_stack_name=build_config.buildpack_builder.name,  # type: ignore
                 buildpacks=build_config.buildpacks,
             )
-        else:
+        elif build_config.build_method == RuntimeType.DOCKERFILE:
             build_config_data.update(
                 dockerfile_path=build_config.dockerfile_path,
                 docker_build_args=build_config.docker_build_args,
             )
+        else:
+            raise error_codes.UNKNOWN_TEMPLATE
+
         return Response(
             TemplateDetailSLZ(
                 {

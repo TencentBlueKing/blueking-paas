@@ -701,7 +701,7 @@ export default {
       panelActive: 0,
       formData: {
         image: '',
-        name: '',
+        name: 'web',
         command: [],
         args: [],
         memory: '256Mi',
@@ -971,6 +971,8 @@ export default {
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+        } else {
+          this.processData = [this.formData];
         }
         this.panels = _.cloneDeep(this.processData);
       },

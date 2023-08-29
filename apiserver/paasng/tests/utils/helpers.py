@@ -88,7 +88,7 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
     # 通过 Mock 被跳过的应用流程（性能原因）
     optional_mockers = {
         # 初始化模块代码，同步到 SVN 等后端
-        'sourcectl': mock.patch('paasng.platform.modules.manager.ModuleInitializer.initialize_with_template'),
+        'sourcectl': mock.patch('paasng.platform.modules.manager.ModuleInitializer.initialize_vcs_with_template'),
     }
     for mod in additional_modules:
         optional_mockers.pop(mod, None)
@@ -105,7 +105,7 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
             module.source_origin = SourceOrigin.AUTHORIZED_VCS
             module.source_init_template = settings.DUMMY_TEMPLATE_NAME
             module.save()
-            module_initializer.initialize_with_template(repo_type, repo_url)
+            module_initializer.initialize_vcs_with_template(repo_type, repo_url)
 
         module_initializer.initialize_log_config()
 
@@ -563,7 +563,7 @@ def create_cnative_app(
         module.source_origin = SourceOrigin.AUTHORIZED_VCS
         module.source_init_template = settings.DUMMY_TEMPLATE_NAME
         module.save()
-        module_initializer.initialize_with_template(sourcectl_name, default_repo_url)
+        module_initializer.initialize_vcs_with_template(sourcectl_name, default_repo_url)
         module_initializer.initialize_log_config()
 
     # Send post-creation signal

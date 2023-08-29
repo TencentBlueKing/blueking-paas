@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Any, Dict
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -235,6 +236,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @transaction.atomic
     @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
+    @swagger_auto_schema(request_body=CreateCNativeModuleSLZ, tags=["创建模块"])
     def create_cloud_native_module(self, request, code):
         """创建云原生应用模块（非默认）"""
         application = self.get_application()
@@ -244,14 +246,17 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        src_cfg = data.get('source_config', {})
+        module_src_cfg: Dict[str, Any] = {}
+        source_config = data["source_config"]
         # 检查当前用户能否使用指定的 source_origin
-        self._ensure_source_origin_available(request.user, SourceOrigin(src_cfg['source_origin']))
+        source_origin = SourceOrigin(source_config['source_origin'])
+        self._ensure_source_origin_available(request.user, source_origin)
 
-        source_config = {'source_origin': src_cfg['source_origin']}
-        if tmpl_name := src_cfg['source_init_template']:
+        module_src_cfg['source_origin'] = source_origin
+        # 如果指定模板信息，则需要提取并保存
+        if tmpl_name := source_config['source_init_template']:
             tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
-            source_config.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+            module_src_cfg.update({'language': tmpl.language, 'source_init_template': tmpl_name})
 
         module = Module.objects.create(
             application=application,
@@ -261,32 +266,17 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             owner=application.owner,
             creator=request.user.pk,
             exposed_url_type=get_region(application.region).entrance_config.exposed_url_type,
-            **source_config,
+            **module_src_cfg,
         )
+
         # 使用默认模块的 PROD 环境部署集群作为新模块集群
         cluster = get_application_cluster(application)
-
-        build_cfg = data['build_config']
-        build_config = BuildConfig.objects.get_or_create_by_module(module)
-        try:
-            build_config.update_with_build_method(
-                build_cfg['build_method'],
-                module,
-                build_cfg.get('bp_stack_name'),
-                build_cfg.get('buildpacks'),
-                build_cfg.get('dockerfile_path'),
-                build_cfg.get('docker_build_args'),
-                build_cfg.get('tag_options'),
-            )
-        except BPNotFound:
-            raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
-
         ret = init_module_in_view(
             module,
-            repo_type=src_cfg.get('source_control_type'),
-            repo_url=src_cfg.get('source_repo_url'),
-            repo_auth_info=src_cfg.get('source_repo_auth_info'),
-            source_dir=src_cfg.get('source_dir', ''),
+            repo_type=source_config.get('source_control_type'),
+            repo_url=source_config.get('source_repo_url'),
+            repo_auth_info=source_config.get('source_repo_auth_info'),
+            source_dir=source_config.get('source_dir', ''),
             cluster_name=cluster.name,
             manifest=data.get('manifest'),
         )
@@ -328,12 +318,12 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         runtime_labels = get_image_labels_by_module(module)
         available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
         if available_slugrunners.count() == 0:
-            available_slugrunners = AppSlugRunner.objects.filter_available(module)
+            available_slugrunners = AppSlugRunner.objects.filter_module_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
         available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
         if available_slugbuilders.count() == 0:
-            available_slugbuilders = AppSlugBuilder.objects.filter_available(module)
+            available_slugbuilders = AppSlugBuilder.objects.filter_module_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
         for slugbuilder in available_slugbuilders:
             name = slugbuilder.name
@@ -464,7 +454,6 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             build_config.update_with_build_method(
                 build_method,
-                module,
                 data.get('bp_stack_name'),
                 data.get('buildpacks'),
                 data.get('dockerfile_path'),
@@ -486,12 +475,12 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         runtime_labels = get_image_labels_by_module(module)
         available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
         if available_slugrunners.count() == 0:
-            available_slugrunners = AppSlugRunner.objects.filter_available(module)
+            available_slugrunners = AppSlugRunner.objects.filter_module_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
         available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
         if available_slugbuilders.count() == 0:
-            available_slugbuilders = AppSlugBuilder.objects.filter_available(module)
+            available_slugbuilders = AppSlugBuilder.objects.filter_module_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
         for slugbuilder in available_slugbuilders:
             name = slugbuilder.name

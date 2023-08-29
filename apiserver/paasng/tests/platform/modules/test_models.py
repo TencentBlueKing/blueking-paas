@@ -41,7 +41,7 @@ class TestAppSlugBuilder:
         slugbuilder.save()
 
         expected = [] if expect_empty else [slugbuilder]
-        assert list(AppSlugBuilder.objects.filter_available(bk_module)) == expected
+        assert list(AppSlugBuilder.objects.filter_module_available(bk_module)) == expected
 
     @pytest.mark.parametrize(
         "image, tag, full_image, expect_empty",
@@ -145,4 +145,4 @@ class TestAppSlugRunner:
         slugrunner.save()
 
         expected = [] if expect_empty else [slugrunner]
-        assert list(AppSlugRunner.objects.filter_available(bk_module)) == expected
+        assert list(AppSlugRunner.objects.filter_module_available(bk_module)) == expected

@@ -157,7 +157,7 @@ class TestModuleInitializerWithTemplate:
             raw_module.source_origin = SourceOrigin.AUTHORIZED_VCS
             raw_module.save()
 
-            result = ModuleInitializer(raw_module).initialize_with_template('dft_bk_svn')
+            result = ModuleInitializer(raw_module).initialize_vcs_with_template('dft_bk_svn')
 
             mocked_client.assert_called()
             mocked_client().sync_dir.assert_called()
@@ -171,6 +171,6 @@ class TestModuleInitializerWithTemplate:
         raw_module.save()
 
         with pytest.raises(ValueError):
-            ModuleInitializer(raw_module).initialize_with_template()
+            ModuleInitializer(raw_module).initialize_vcs_with_template()
 
         assert ModuleSpecs(raw_module).has_template_code is False

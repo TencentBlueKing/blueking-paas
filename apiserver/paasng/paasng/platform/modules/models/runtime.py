@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 
 
 class BuildPackManager(models.Manager):
-    def filter_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
-        """查询模块可用的镜像
+    def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+        """查询模块可用的构建工具
 
         规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         filters = []
@@ -49,11 +49,25 @@ class BuildPackManager(models.Manager):
         except ObjectDoesNotExist:
             logger.debug("module %s 未初始化 BuildConfig", module)
 
-        # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
+        # 给迁移应用绑定镜像时，需要绑定隐藏的构建工具
         if contain_hidden:
             filters.append(models.Q(region=module.region))
         else:
             filters.append(models.Q(is_hidden=False, region=module.region))
+
+        qs = self.get_queryset().filter(reduce(operator.or_, filters))
+        # Q: 为什么需要调用 distinct ?
+        # A: 因为 models.Q(related_build_configs=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
+        return qs.distinct()
+
+    def filter_region_available(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
+        """查询 region 可用的构建工具"""
+        filters = []
+        # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
+        if contain_hidden:
+            filters.append(models.Q(region=region))
+        else:
+            filters.append(models.Q(is_hidden=False, region=region))
 
         qs = self.get_queryset().filter(reduce(operator.or_, filters))
         # Q: 为什么需要调用 distinct ?
@@ -102,9 +116,9 @@ class AppBuildPack(TimestampedModel):
         return f"{self.region}:{self.name}[{self.pk}]"
 
 
-class BuildPackStackManager(models.Manager):
-    def filter_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
-        """查询模块可用的镜像
+class AppImageStackQuerySet(models.QuerySet):
+    def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+        """过滤模块可用的镜像
 
         规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         filters = []
@@ -121,23 +135,39 @@ class BuildPackStackManager(models.Manager):
         else:
             filters.append(models.Q(is_hidden=False, region=module.region))
 
-        qs = self.get_queryset().filter(reduce(operator.or_, filters))
+        qs = self.filter(reduce(operator.or_, filters))
         # Q: 为什么需要调用 distinct ?
         # A: 因为 models.Q(buildconfig__pk=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_by_full_image(self, module: 'Module', full_image: str) -> List['AppImage']:
-        """通过镜像全名查找 DB 记录"""
-        targets = []
-        for i in self.filter_available(module):
-            if i.full_image == full_image:
-                targets.append(i)
-        return targets
+    def filter_region_available(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
+        """过滤 region 可用的镜像"""
+        filters = []
+        # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
+        if contain_hidden:
+            filters.append(models.Q(region=region))
+        else:
+            filters.append(models.Q(is_hidden=False, region=region))
 
-    def filter_by_label(
-        self, module: 'Module', labels: Dict[str, str], contain_hidden: bool = False
-    ) -> models.QuerySet:
-        """根据label查询可用的镜像，目前是:
+        qs = self.filter(reduce(operator.or_, filters))
+        # Q: 为什么需要调用 distinct ?
+        # A: 因为 models.Q(buildconfig__pk=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
+        return qs.distinct()
+
+    def filter_by_full_image(self, full_image: str) -> models.QuerySet:
+        """通过镜像全名过滤"""
+        ids = []
+        for i in self:
+            if i.full_image == full_image:
+                ids.append(i.pk)
+        if ids:
+            return self.filter(id__in=ids)
+        return self.none()
+
+    def filter_by_label(self, labels: Dict[str, str]) -> models.QuerySet:
+        """根据label查询可用的镜像
+
+        目前支持:
         - smart_app: 能且只能给（Python + Smart）应用使用
           - label: {'language': 'Python', 'category': 'smart_app'}
         - region-legacy: 给从 PaaS2.0 迁移过来的应用使用
@@ -147,29 +177,48 @@ class BuildPackStackManager(models.Manager):
 
         :return: available_runtimes
         """
-        query_sets = self.filter_available(module, contain_hidden)
         selected_ids = []
         # 根据 labels 匹配镜像
-        for obj in query_sets:
+        for obj in self:
             if set(labels.items()).issubset(obj.labels.items()):
                 selected_ids.append(obj.id)
         if selected_ids:
-            return query_sets.filter(id__in=selected_ids)
+            return self.filter(id__in=selected_ids)
         # 没有匹配到
-        return query_sets.none()
+        return self.none()
 
-    def select_runtime(self, module: 'Module', labels: dict, contain_hidden: bool = False) -> "AppImage":
-        available_runtimes = self.filter_by_label(module, labels, contain_hidden)
+
+class AppImageStackManager(models.Manager):
+    _queryset_class = AppImageStackQuerySet
+
+    def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+        """过滤模块可用的镜像
+
+        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        return self.get_queryset().filter_module_available(module=module, contain_hidden=contain_hidden)
+
+    def filter_by_full_image(self, module: 'Module', full_image: str) -> models.QuerySet:
+        """通过镜像全名过滤"""
+        return self.filter_module_available(module).filter_by_full_image(full_image=full_image)
+
+    def filter_by_label(
+        self, module: 'Module', labels: Dict[str, str], contain_hidden: bool = False
+    ) -> models.QuerySet:
+        """根据label查询可用的镜像"""
+        return self.filter_module_available(module, contain_hidden).filter_by_label(labels)
+
+    def select_default_runtime(self, region: str, labels: dict, contain_hidden: bool = False) -> "AppImage":
+        """选择 region 下符合对应 labels 的默认运行时"""
+        available_runtimes = self.get_queryset().filter_region_available(region).filter_by_label(labels)
         # 根据label匹配到的，则直接返回最新创建的一个
         if available_runtimes.exists():
             return available_runtimes.latest("created")
 
-        available_runtimes = self.filter_available(module=module, contain_hidden=contain_hidden)
+        available_runtimes = self.get_queryset().filter_region_available(region=region, contain_hidden=contain_hidden)
         if available_runtimes.filter(is_default=True).exists():
             return available_runtimes.filter(is_default=True).latest("updated")
 
         # 没有匹配到，则使用 settings 中的配置的默认镜像
-        region = module.region
         try:
             image = settings.DEFAULT_RUNTIME_IMAGES[region]
         except KeyError:
@@ -236,7 +285,7 @@ class AppSlugRunner(AppImage):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="slugrunners")
 
-    objects = BuildPackStackManager()
+    objects = AppImageStackManager()
 
 
 class AppSlugBuilder(AppImage):
@@ -247,12 +296,16 @@ class AppSlugBuilder(AppImage):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="slugbuilders")
 
-    objects = BuildPackStackManager()
+    objects = AppImageStackManager()
 
     def get_buildpack_choices(self, module: 'Module', *args, **kwargs) -> List[AppBuildPack]:
-        """查询模块可用的 BuildPacks
+        """查询模块可用的构建工具
 
         :param args: other filter params
         :param kwargs: other filter params
         """
-        return list(self.buildpacks.filter_available(module).filter(*args, **kwargs))
+        return list(self.buildpacks.filter_module_available(module).filter(*args, **kwargs))
+
+    def list_region_available_buildpacks(self, region: str, *args, **kwargs) -> List[AppBuildPack]:
+        """查询 region 可用的构建工具"""
+        return list(self.buildpacks.filter_region_available(region).filter(*args, **kwargs))

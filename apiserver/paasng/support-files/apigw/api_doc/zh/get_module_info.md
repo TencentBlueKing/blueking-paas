@@ -16,7 +16,7 @@
 ### 请求示例
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{填写你的AppCode}}/modules/{{填写你的模块名}}/
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{AppCode}}/modules/{{module_name}}/
 ```
 
 #### 获取你的 access_token
@@ -92,4 +92,9 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
 | source_type            | string   | 源码类型名称                       |
 | type                   | string   | 同 source_type                     |
 | trunk_url              | string   | [Deprecated] 仅限 SVN 源码系统使用 |
-| repo
+| repo_url               | string   | 源码仓库地址                       |
+| source_dir             | string   | 源码目录                           |
+| repo_fullname          | string   | 仓库名                             |
+| diff_feature           | object   | 与“查看源码差异”功能有关的配置字段 |
+| linked_to_internal_svn | boolean  | [Deprecated] 与 SVN 有关的保留字段 |
+| display_name           | string   | 源码系统用于展示的名称             |

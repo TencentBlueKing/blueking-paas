@@ -29,7 +29,7 @@ App 部署接口，用于部署应用到指定环境。
 #### gitlab
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{填写你的AppCode}/modules/default/envs/{填写App部署环境:stag或prod}/deployments/ -d '{"url": "http://git.example.com/你的项目路径.git", "revision": "commit的sha值", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{AppCode}/modules/default/envs/{env:stag/prod}/deployments/ -d '{"url": "http://git.example.com/xxxx.git", "revision": "commit的sha值", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
 ```
 
 ### 返回结果示例

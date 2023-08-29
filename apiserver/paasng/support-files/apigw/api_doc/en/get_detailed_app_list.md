@@ -1,9 +1,9 @@
-### Feature Description
+### Description
 Get App details
 
 ### Request Parameters
 
-#### 1. Interface Parameters:
+#### 1. API Parameters:
 
 | Field | Type | Required | Description |
 | ------ | ------ | ------ | ------ |

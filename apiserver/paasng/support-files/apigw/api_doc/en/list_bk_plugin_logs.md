@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the logs of a "BlueKing Plugin" type application for internal system use only. This interface defaults to searching all logs within the last 14 days, returning 200 logs each time, and does not support customization.
 
 ### Request Parameters
@@ -8,7 +8,7 @@ Query the logs of a "BlueKing Plugin" type application for internal system use o
 | -------------- | -------------- | -------- | --------------------- |
 | code           | string         | No       | Positional parameter, the code of the plugin to be queried |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 | Field     | Type   | Required | Description                                  |
 | --------- | ------ | -------- | -------------------------------------------- |
 | scroll_id | string | No       | Identifier field for scroll pagination       |

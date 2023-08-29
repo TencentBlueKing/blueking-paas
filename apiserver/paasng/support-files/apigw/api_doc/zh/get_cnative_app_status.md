@@ -19,7 +19,7 @@
 ### 请求示例
 
 ```bash
-curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "access_token": "{{填写你的 AccessToken}}"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "access_token": "{{your AccessToken}}"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/
 ```
 #### 获取你的 access_token
 

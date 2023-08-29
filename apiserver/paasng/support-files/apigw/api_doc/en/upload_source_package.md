@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Upload source code package to the platform
 
 ### Request Parameters
@@ -10,7 +10,7 @@ Upload source code package to the platform
 | code           | string         | Yes      | Code                  |
 | module_name    | string         | Yes      | Module name           |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Field           | Type    | Required | Description                          |
 | --------------- | ------- | -------- | ------------------------------------ |

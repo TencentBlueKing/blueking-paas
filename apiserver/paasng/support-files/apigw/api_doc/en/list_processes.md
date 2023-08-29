@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get all process and instance information for the application environment
 
 ### Request Parameters
@@ -11,8 +11,10 @@ Get all process and instance information for the application environment
 | environment    | string         | Yes      | Runtime Environment |
 | module_name    | string         | Yes      | Module Name         |
 
-#### 2. Interface Parameters:
-None.
+#### 2. API Parameters:
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | -------------------- |
+| only_latest_version | boolean | No | Whether to show only the last version of the process |
 
 ### Request Example
 ```bash
@@ -59,3 +61,8 @@ Status: OK
 | success | integer | Yes | Normal instance count |
 | type | string | Yes | Process type |
 | version | integer | Yes | Process release version number |
+
+**ListProcessesOKBodyProcessesMetadata**
+| Field | Type | Required | Description |
+|------|------|:--------:|-------------|---------|
+| resource_version | string| Yes | The local resource version number, which can be used in the rv_proc parameter of a watch request. |

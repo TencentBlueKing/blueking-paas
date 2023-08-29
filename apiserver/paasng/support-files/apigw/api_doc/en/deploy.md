@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 App deployment interface for deploying applications to a specified environment.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ App deployment interface for deploying applications to a specified environment.
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |

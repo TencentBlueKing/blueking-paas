@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 App Unpublish Interface, used to unpublish the specified App from the specified environment.
 
 ### Request Parameters
@@ -11,7 +11,7 @@ App Unpublish Interface, used to unpublish the specified App from the specified 
 | module         | string         | Yes      | Module name, e.g., "default" |
 | env            | string         | Yes      | Environment name, available values: "stag" / "prod" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

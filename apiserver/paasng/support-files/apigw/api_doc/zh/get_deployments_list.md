@@ -15,7 +15,7 @@
 
 ### 请求示例
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{你的appcode}/modules/{你的模块名}/deployments/lists/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{appcode}/modules/{module_name}/deployments/lists/
 ```
 
 #### 获取你的 access_token

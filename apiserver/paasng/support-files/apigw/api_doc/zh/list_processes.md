@@ -12,7 +12,9 @@
 | module_name | string | 是 | 模块名称 |
 
 #### 2、接口参数：
-暂无。
+| 参数名称 | 参数类型 | 必须 | 参数说明 |
+| ------ | ------ | ------ | ------ |
+| only_latest_version | boolean | 否 | 是否仅展示最后一个版本的进程 |
 
 ### 请求示例
 ```bash
@@ -59,3 +61,8 @@ Status: OK
 | success | integer | 是 | 正常实例数 |
 | type | string | 是 | 进程类型 |
 | version | integer | 是 | 进程 release 版本号 |
+
+**ListProcessesOKBodyProcessesMetadata**
+| 字段 | 类型 | 必选 | 描述 |
+|------|------|:--------:|-------------|---------|
+| resource_version | string| 是 | 本地资源版本号，可用于 watch 请求的 rv_proc 参数 |

@@ -11,11 +11,13 @@
 | app_code | string   | 是   | 应用编码  |
 
 #### 2、接口参数：
-暂无。
+| 参数名称 | 参数类型 | 必须 | 参数说明 |
+| -------- | -------- | ---- | -------- |
+| source_origin | int   | 否   | 源码来源，目前展示所有来源。支持 1（代码仓库）、2（蓝鲸 LessCode）  |
 
 ### 请求示例
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/
 ```
 #### 获取你的 access_token
 在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)

@@ -15,7 +15,7 @@
 ### 请求示例
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{填写你的AppCode}}/
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{AppCode}}/
 ```
 
 #### 获取你的 access_token
@@ -34,22 +34,22 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
 
 | 参数名称           | 参数类型          | 参数说明                               |
 |--------------------|-------------------|----------------------------------------|
-| id                 | string(uuid)      | UUID                                   |
-| name               | string            |                                        |
+| id                 | string(uuid)      | 应用UUID                                   |
+| name               | string            | 应用名称                                       |
 | region_name        | string            | 应用版本名称                           |
 | logo_url           | string            | 应用的 Logo 地址                       |
-| config_info        |                   | 应用的额外状态信息                     |
-| modules            |                   | 应用各模块信息列表                     |
+| config_info        | dict                  | 应用的额外状态信息                     |
+| modules            | dict                  | 应用各模块信息列表                     |
 | region             | string            | 部署区域                               |
-| created            | string(date-time) |                                        |
-| updated            | string(date-time) |                                        |
-| owner              | string            |                                        |
+| created            | string(date-time) | 创建时间                                      |
+| updated            | string(date-time) | 更新时间                                      |
+| owner              | string            | 应用所有者                                       |
 | code               | string            | 应用代号                               |
 | name_en            | string            | 应用名称(英文); 目前仅用于 S-Mart 应用 |
 | type               | string            | 应用类型                               |
 | is_smart_app       | boolean           | 是否为 S-Mart 应用                     |
 | language           | string            | 编程语言                               |
-| creator            | string            |                                        |
+| creator            | string            | 应用创建者                                     |
 | is_active          | boolean           | 是否活跃                               |
 | is_deleted         | boolean           | 是否删除                               |
 | last_deployed_date | string(date-time) | 最近部署时间                           |

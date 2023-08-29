@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query deployment task results
 
 
@@ -12,7 +12,7 @@ Query deployment task results
 | module         | string         | Yes      | Module name           |
 | deployment_id  | string         | Yes      | Deployment task ID    |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

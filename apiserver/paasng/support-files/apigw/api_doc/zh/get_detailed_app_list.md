@@ -20,7 +20,7 @@
 
 ### 请求示例
 ```bash
-curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/bkapps/applications/lists/detailed
+curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/bkapps/applications/lists/detailed
 ```
 
 #### 获取你的 access_token

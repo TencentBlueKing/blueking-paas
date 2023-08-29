@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Obtain an AccessToken representing the specified application and user identity.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Obtain an AccessToken representing the specified application and user identity.
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Type | Required | Description |
 | -------------- | ---- | -------- | ----------- |

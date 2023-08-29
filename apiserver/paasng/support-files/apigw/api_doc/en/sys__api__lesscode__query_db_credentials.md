@@ -1,43 +1,26 @@
-### Feature Description
-A simple description of resource registration
+### Description
+Obtain the database connection information for the specified application, module, and environment.
 
 ### Request Parameters
 
 #### 1. Path Parameters:
+
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| app_code       | string         | Yes      | Application ID        |
+| module         | string         | Yes      | Module name           |
+| env            | string         | Yes      | Environment, e.g. "prod" |
+
+#### 2. API Parameters:
 None.
 
-#### 2. Interface Parameters:
-
-| Parameter Name | Parameter Type | Required | Parameter Description                                                                                       |
-| -------------- | -------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
-| app_code       | string         | Yes      | Application ID (app id), can be obtained from Blueking Developer Center -> Application Basic Settings -> Basic Information -> Authentication Information |
-| app_secret     | string         | No       | Security secret (app secret), can be obtained from Blueking Developer Center -> Application Basic Settings -> Basic Information -> Authentication Information |
-
 ### Request Example
-```python
-from bkapigw.paasv3.shortcuts import get_client_by_request
-client = get_client_by_request(request)
-# Fill in parameters
-kwargs = {
-
-}
-result = client.api.api_test(kwargs)
+```
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "appid1", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/appid1/modules/default/envs/prod/lesscode/query_db_credentials
 ```
 
 ### Response Result Example
 ```json
-# Internal Edition
-{
-    "credentials": {
-        "GCS_MYSQL_HOST": "--",
-        "GCS_MYSQL_PORT": --,
-        "GCS_MYSQL_NAME": "--",
-        "GCS_MYSQL_USER": "--",
-        "GCS_MYSQL_PASSWORD": "--"
-    }
-}
-
-# Enterprise Edition
 {
     "credentials": {
         "MYSQL_HOST": "--",
@@ -48,7 +31,7 @@ result = client.api.api_test(kwargs)
     }
 }
 
-# Failure Return
+# Failure response
 {
     "code": "CANNOT_READ_INSTANCE_INFO",
     "detail": "Failed to read enhanced service instance information: Unable to obtain valid configuration information."
@@ -58,18 +41,13 @@ result = client.api.api_test(kwargs)
 
 ### Response Result Parameter Description
 
-| Parameter Name    | Parameter Type | Parameter Description         |
-| ----------------- | -------------- | ------------------------------ |
-| credentials       | dict           | Database connection information|
-| GCS_MYSQL_HOST    | string         | Database host address          |
-| GCS_MYSQL_PORT    | int            | Database port                  |
-| GCS_MYSQL_NAME    | string         | Database name                  |
-| GCS_MYSQL_USER    | string         | Database username              |
-| GCS_MYSQL_PASSWORD| string         | Database password              |
-| MYSQL_HOST        | string         | Database host address (Enterprise Edition) |
-| MYSQL_PORT        | int            | Database port (Enterprise Edition) |
-| MYSQL_NAME        | string         | Database name (Enterprise Edition) |
-| MYSQL_USER        | string         | Database username (Enterprise Edition) |
-| MYSQL_PASSWORD    | string         | Database password (Enterprise Edition) |
-| code              | string         | Error code                     |
-| detail            | string         | Error details                  |
+| Parameter Name   | Parameter Type | Parameter Description          |
+| ---------------- | -------------- | ------------------------------ |
+| credentials      | dict           | Database connection information|
+| MYSQL_HOST       | string         | Database host address          |
+| MYSQL_PORT       | int            | Database port                  |
+| MYSQL_NAME       | string         | Database name                  |
+| MYSQL_USER       | string         | Database username              |
+| MYSQL_PASSWORD   | string         | Database password              |
+| code             | string         | Error code                     |
+| detail           | string         | Error details                  |

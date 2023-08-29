@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Internal interface for granting a requester (usually a developer) access to the Tencent platform and multiple applications at the same time. Currently, only v3 platform applications are supported.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Internal interface for granting a requester (usually a developer) access to the 
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name     | Parameter Type   | Required | Parameter Description        |
 | ------------------ | ---------------- | -------- | ---------------------------- |

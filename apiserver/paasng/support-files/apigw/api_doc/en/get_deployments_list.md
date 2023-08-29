@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get deployment history
 
 ### Request Parameters
@@ -10,7 +10,7 @@ Get deployment history
 | app_code   | string | Yes | Application ID, e.g. "vision" |
 | module   | string | Yes | Module name, e.g. "default" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

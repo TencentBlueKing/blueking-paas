@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 
 Get the current deployment status of the cloud-native application in the specified environment.
 
@@ -12,7 +12,7 @@ Get the current deployment status of the cloud-native application in the specifi
 | module         | string         | Yes      | Module name, such as "default" |
 | env            | string         | Yes      | Environment name, optional values "stag" / "prod" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None
 
 

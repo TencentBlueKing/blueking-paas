@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 
 Query the total access volume of the application within the specified time range.
 
@@ -13,7 +13,7 @@ Query the total access volume of the application within the specified time range
 | env   | string | Yes | Environment name, e.g. "stag", "prod" |
 | source_type   | string | Yes | Access value source, optional values "ingress" (access log statistics), "user_tracker" (website access statistics) |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 |   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |

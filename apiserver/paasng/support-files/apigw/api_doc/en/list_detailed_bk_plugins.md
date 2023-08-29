@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the list of all "Blueking Plugin" type applications on the platform (with deployment information), for internal system use only.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Query the list of all "Blueking Plugin" type applications on the platform (with 
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name        | Parameter Type | Required | Parameter Description                                                |
 |-----------------------|----------------|----------|----------------------------------------------------------------------|

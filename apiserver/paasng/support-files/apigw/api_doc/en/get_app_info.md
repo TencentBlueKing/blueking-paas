@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 View application information
 
 
@@ -10,7 +10,7 @@ View application information
 |----------------|----------------|----------|-----------------------|
 | app_code       | string         | Yes      | Application ID        |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example
@@ -36,22 +36,22 @@ Before calling the interface, please get your access_token first. For specific g
 
 | Parameter Name           | Parameter Type    | Parameter Description                  |
 |--------------------------|-------------------|----------------------------------------|
-| id                       | string(uuid)      | UUID                                   |
-| name                     | string            |                                        |
+| id                       | string(uuid)      | Application UUID                                   |
+| name                     | string            | Application name                                      |
 | region_name              | string            | Application version name               |
 | logo_url                 | string            | Application Logo URL                   |
-| config_info              |                   | Additional status information of the application |
-| modules                  |                   | List of application module information |
+| config_info              | dict              | Additional status information of the application |
+| modules                  | dict              | List of application module information |
 | region                   | string            | Deployment region                      |
-| created                  | string(date-time) |                                        |
-| updated                  | string(date-time) |                                        |
-| owner                    | string            |                                        |
+| created                  | string(date-time) | Created time                                       |
+| updated                  | string(date-time) | Updated time                                       |
+| owner                    | string            |  Application owner                                      |
 | code                     | string            | Application code                       |
 | name_en                  | string            | Application name (English); currently only used for S-Mart applications |
 | type                     | string            | Application type                       |
 | is_smart_app             | boolean           | Is it an S-Mart application            |
 | language                 | string            | Programming language                   |
-| creator                  | string            |                                        |
+| creator                  | string            | Application creator                                       |
 | is_active                | boolean           | Is it active                           |
 | is_deleted               | boolean           | Is it deleted                          |
 | last_deployed_date       | string(date-time) | Last deployment time                   |

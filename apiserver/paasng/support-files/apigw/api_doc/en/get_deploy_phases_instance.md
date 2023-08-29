@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get deployment step instances
 
 ### Request Example
@@ -17,7 +17,7 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"bk_app_code": "***", "bk_app_secret": "
 |   env | string |  Yes | Environment name, available values "stag" / "prod" |
 |   deployment_id | string |  Yes | Deployment instance ID (UUID string) |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Response Result Example

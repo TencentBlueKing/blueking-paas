@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 
 Query application basic information based on the application ID, for internal system use only.
 
@@ -7,7 +7,7 @@ Query application basic information based on the application ID, for internal sy
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |

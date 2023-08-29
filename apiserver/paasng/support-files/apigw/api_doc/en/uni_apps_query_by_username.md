@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the list of applications that the specified user has permission to access, for internal system use only.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Query the list of applications that the specified user has permission to access,
 #### 1. Path Parameters:
 None
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 | Parameter Name | Type | Required | Description |
 | -------------- | ---- | -------- | ----------- |
 | username       | string | Yes | Username |

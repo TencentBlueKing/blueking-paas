@@ -11,7 +11,7 @@ Query the result of the offline task
 | module   | string | Yes | Module name, such as "default" |
 | offline_operation_id | string | Yes | UUID of the offline task |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 

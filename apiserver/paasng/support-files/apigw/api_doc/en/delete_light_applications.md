@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 
 Delete lightweight applications, for management-side APP use only.
 
@@ -7,7 +7,7 @@ Delete lightweight applications, for management-side APP use only.
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |

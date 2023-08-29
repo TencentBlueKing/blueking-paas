@@ -581,13 +581,13 @@ export default {
       try {
         await this.$refs.formBaseRef.validate();
         await this.$refs?.repoInfo?.valid();
-        this.repoData = this.$refs.repoInfo.getData();
+        this.repoData = this.$refs?.repoInfo?.getData();
         this.curStep = 2;
         // if (this.structureType === 'mirror') {
         //   this.getProcessData();
         // }
       } catch (error) {
-
+        console.log(error);
       }
     },
 
@@ -655,7 +655,7 @@ export default {
         params.manifest = { ...this.createCloudAppData };
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
         params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {
           username: this.repoData.account,

@@ -192,7 +192,7 @@ export default {
      * @param {Object} params 请求参数：data
      */
     createCloudApp({}, { data }, config = {}) {
-      const url = `${BACKEND_URL}/backend/api/bkapps/cloud-native/`;
+      const url = `${BACKEND_URL}/api/bkapps/cloud-native/`;
       return http.post(url, data, config);
     },
   },

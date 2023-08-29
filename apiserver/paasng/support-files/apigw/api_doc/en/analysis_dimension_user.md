@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the aggregated access data of the application grouped by user dimension within the specified time range.
 
 ### Request Parameters
@@ -12,7 +12,7 @@ Query the aggregated access data of the application grouped by user dimension wi
 | env   | string | Yes | Environment name, such as "stag", "prod" |
 | source_type   | string | Yes | Access value source, optional values "ingress" (access log statistics), "user_tracker" (website access statistics) |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 |   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |

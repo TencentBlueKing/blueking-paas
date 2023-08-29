@@ -17,7 +17,7 @@
 ### 请求示例
 
 ```bash
-curl -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' -H 'X-USER-BK-TICKET: {{你的 bk_ticket }}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{填写你的AppCode}}/oauth/token/{{api_gateway_env}}/ -H "COOKIE: bk_uid={{你的 RTX}}&bk_ticket={{你的bk_ticket}}"
+curl -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}' -H 'X-USER-BK-TICKET: {{your bk_ticket }}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{AppCode}}/oauth/token/{{api_gateway_env}}/ -H "COOKIE: bk_uid={{xxx}}&bk_ticket={{xxxx}}"
 ```
 
 ### 返回结果示例

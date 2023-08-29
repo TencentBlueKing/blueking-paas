@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get brief information of the App
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Get brief information of the App
 #### 1. Path Parameters:
 None
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None
 
 ### Request Example

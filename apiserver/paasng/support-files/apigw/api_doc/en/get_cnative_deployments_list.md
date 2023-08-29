@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 
 Retrieve the deployment history of cloud-native applications in a specified environment.
 
@@ -12,7 +12,7 @@ Retrieve the deployment history of cloud-native applications in a specified envi
 | module         | string         | Yes      | Module name, e.g., "default"         |
 | env            | string         | Yes      | Environment name, "stag" / "prod"    |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Parameter Type | Required | Description |
 | -------------- | -------------- | -------- | ----------- |

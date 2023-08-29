@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get light application information, for management-side APP use only.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Get light application information, for management-side APP use only.
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
 | app_code       | string         | Yes      | Light Application APP Code |

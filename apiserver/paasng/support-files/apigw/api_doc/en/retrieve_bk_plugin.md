@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the detailed information of a "Blueking Plugin" type application, for internal system use only.
 
 ### Request Parameters
@@ -9,7 +9,7 @@ Query the detailed information of a "Blueking Plugin" type application, for inte
 | -------------- | -------------- | -------- | ------------------------------ |
 | code           | string         | No       | Position parameter, plugin code to be queried |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

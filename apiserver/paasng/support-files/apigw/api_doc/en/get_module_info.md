@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 View application module information
 
 ### Request Parameters
@@ -10,7 +10,7 @@ View application module information
 | app_code       | string         | Yes      | Application ID          |
 | module         | string         | Yes      | Module name, e.g. "default" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the classification list of Blueking plugins, for internal system use only.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Query the classification list of Blueking plugins, for internal system use only.
 #### 1. Path Parameters:
 None
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None
 
 ### Request Example

@@ -16,7 +16,7 @@
 
 ### 请求示例
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_state/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_state/
 ```
 
 #### 获取你的 access_token
@@ -120,4 +120,15 @@ deployment
 | status | string | 是 | 部署状态 |
 | operator | dict | 是 | 部署发起人信息 |
 | created | string | 是 | 创建时间 |
-| environment
+| environment | string | 是 | 环境 |
+| deployment_id | string | 是 | Deployment ID |
+| repo | dict | 是 | 代码仓库信息 |
+
+repo
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| url | string | 是| 代码仓库地址 |
+| comment | string | 是 | Comment |
+| type | string | 是 | 代码仓库类型 |
+| name | string | 是| 代码仓库名称|
+| revision | string | 是 | 代码仓库版本 |

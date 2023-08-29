@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query deployment logs
 
 ### Request Parameters
@@ -9,8 +9,10 @@ Query deployment logs
 | -------------- | -------------- | -------- | --------------------- |
 | channel_id     | string         | Yes      | Deployment ID         |
 
-#### 2. Interface Parameters:
-None.
+#### 2. API Parameters:
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| last_event_id     | int         | No      | Last event id         |
 
 ### Request Example
 ```bash

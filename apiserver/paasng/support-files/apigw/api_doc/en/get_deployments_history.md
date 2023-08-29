@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get deployment history
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Get deployment history
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query application module environment deployment information
 
 ### Request Parameters
@@ -11,7 +11,7 @@ Query application module environment deployment information
 | module_name    | string         | Yes      | Module name           |
 | environment    | string         | Yes      | Environment name      |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

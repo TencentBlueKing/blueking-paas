@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query standard output logs
 
 ### Request Parameters
@@ -10,7 +10,7 @@ Query standard output logs
 | app_code   | string | Yes | Application ID |
 | module   | string | Yes | Module name, such as "default" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name              | Parameter Type | Required | Parameter Description                                                             |
 |-----------------------|----------|-----|------------------------------------------------------------------|

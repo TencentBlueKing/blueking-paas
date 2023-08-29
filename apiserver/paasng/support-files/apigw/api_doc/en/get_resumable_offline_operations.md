@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query resumable offline operations
 
 ### Request Parameters
@@ -11,7 +11,7 @@ Query resumable offline operations
 | module   | string | Yes | Module name, e.g. "default" |
 | env | string | Yes | Environment name, optional values: "stag" / "prod" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

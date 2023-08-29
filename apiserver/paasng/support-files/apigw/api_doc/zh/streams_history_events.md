@@ -10,11 +10,13 @@
 | channel_id | string | 是 | 部署ID |
 
 #### 2、接口参数：
-暂无。
+| 参数名称 | 参数类型 | 必须 | 参数说明 |
+| -------- | -------- | ---- | -------- |
+| last_event_id | int | 否 | 最后一个事件id |
 
 ### 请求示例
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/streams/{channel_id}/history_events
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/streams/{channel_id}/history_events
 ```
 
 #### 获取你的 access_token

@@ -21,7 +21,7 @@
 ### 请求示例
 ```bash
 curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sundy820/modules/default/source_package/link/' \
-  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' \
+  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' \
   -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohLfLFHX1EPDP7rB' \
   --data-binary $'------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="package_url"\r\n\r\n   你的源码包链接  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="version"\r\n\r\n  你的版本号  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="allow_overwrite"\r\n\r\nfalse\r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB--\r\n'
 ```

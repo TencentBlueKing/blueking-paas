@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Deploy cloud-native applications.
 
 ### Request Parameters
@@ -11,7 +11,7 @@ Deploy cloud-native applications.
 | module         | string         | Yes      | Module name, e.g., "default" |
 | env            | string         | Yes      | Environment name, optional values: "stag" / "prod" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Field     | Type   | Required | Description                              |
 | --------- | ------ | -------- | ---------------------------------------- |

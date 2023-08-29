@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 
 Query the standard output logs of the application.
 
@@ -11,7 +11,7 @@ Query the standard output logs of the application.
 | app_code   | string | Yes | Application ID, e.g. "monitor" |
 | module   | string | Yes | Module name, e.g. "default" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Type | Required | Description |
 |------|------| :------: |-------------|

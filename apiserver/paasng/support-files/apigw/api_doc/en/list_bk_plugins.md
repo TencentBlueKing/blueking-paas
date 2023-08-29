@@ -6,7 +6,7 @@ Query the list of all "Blueking Plugin" type applications on the platform, for i
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name         | Parameter Type | Required | Parameter Description                                              |
 |------------------------|----------------|----------|--------------------------------------------------------------------|

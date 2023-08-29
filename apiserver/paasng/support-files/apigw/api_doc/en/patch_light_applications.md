@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Modify the light application information, only for management-side APP use.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Modify the light application information, only for management-side APP use.
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 | Parameter Name | Parameter Type | Required | Parameter Description                                                                                           |
 | -------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |

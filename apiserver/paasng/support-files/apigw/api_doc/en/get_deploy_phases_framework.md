@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Get deployment steps (structure)
 
 ### Request Parameters
@@ -11,7 +11,7 @@ Get deployment steps (structure)
 | module   | string | Yes | Module name, e.g. "default" |
 | env | string | Yes | Environment name, available values: "stag" / "prod" |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 None.
 
 ### Request Example

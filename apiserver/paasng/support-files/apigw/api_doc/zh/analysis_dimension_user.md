@@ -24,7 +24,7 @@
 
 ### 请求示例
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/user?start_time={start_time}&end_time={end_time}&ordering=-pv
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/user?start_time={start_time}&end_time={end_time}&ordering=-pv
 ```
 
 ### 返回结果示例

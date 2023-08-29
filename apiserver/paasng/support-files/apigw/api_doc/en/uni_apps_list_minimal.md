@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query basic information of multi-platform applications based on id or name fuzzy search. A maximum of 1000 pieces of data will be returned, with priority given to applications on PaaS3.0 Developer Center.
 
 ### Request Parameters
@@ -6,7 +6,7 @@ Query basic information of multi-platform applications based on id or name fuzzy
 #### 1. Path Parameters:
 None.
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 | Parameter Name | Parameter Type | Required | Parameter Description             |
 |----------------|----------------|----------|------------------------------------|
 | keyword        | string         | No       | Application ID, application name, fuzzy query |

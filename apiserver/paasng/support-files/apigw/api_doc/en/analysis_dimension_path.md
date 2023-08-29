@@ -1,4 +1,4 @@
-### Feature Description
+### Description
 Query the access data aggregated by the application according to the path dimension within this time range.
 
 ### Request Parameters
@@ -12,7 +12,7 @@ Query the access data aggregated by the application according to the path dimens
 | env   | string | Yes | Environment name, such as "stag", "prod" |
 | source_type   | string | Yes | Access value source, optional values "ingress" (access log statistics), "user_tracker" (website access statistics) |
 
-#### 2. Interface Parameters:
+#### 2. API Parameters:
 
 |   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |

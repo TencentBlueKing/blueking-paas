@@ -12,7 +12,7 @@
 ### 请求示例
 
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/lists/minimal
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/lists/minimal
 ```
 
 #### 获取你的 access_token
@@ -61,8 +61,8 @@ results
 application
 | 字段 |   类型 | 描述 |
 | ------ | ------ | ------ |
-| id | string | App ID |
-| code | string | App 代码 |
+| id | string | App UUID |
+| code | string | App ID(bk_app_code)  |
 | name | string | App 名称 |
 
 product

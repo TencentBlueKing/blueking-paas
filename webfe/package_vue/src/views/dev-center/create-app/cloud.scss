@@ -1,3 +1,4 @@
+@import '~@/assets/css/mixins/border-active-logo.scss';
 .cloud-app-container{
     width: 1000px;
     margin: 0 auto;
@@ -10,9 +11,19 @@
         /deep/ .bk-label{
             width: 100px !important;
         }
+        .code-depot{
+            .on {
+                border: solid 2px #3A84FF;
+                padding: 0 16px 0 14px;
+                background-color: #fff;
+                color: #3A84FF;
+        
+                @include border-active-logo;
+            }
+        }
         .code-depot-item{
             width: 145px;
-            height: 88px;
+            height: 100px;
             background: #f0f1f5;
             border-radius: 2px;
             text-align: center;
@@ -24,9 +35,27 @@
                 margin: 12px 0 6px 0;
             }
         }
+        .source-control-title{
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
     }
     .form-input-width{
         width: 520px;
+    }
+
+    .form-btn{
+        margin-left: 100px;
+        margin-top: 20px;
+    }
+
+    .form-text-append{
+        color: #3a84ff !important;
+        background: #FAFBFD;
+        border-radius: 0 2px 2px 0;
+        cursor: pointer;
+        line-height: 30px;
     }
 
     .step-cls{

@@ -103,6 +103,8 @@
             </div>
           </div>
 
+          <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
+
           <!-- 镜像管理 -->
           <div
             v-if="structureType === 'mirror'"
@@ -129,7 +131,7 @@
                   class="form-group"
                   style="margin-top: 10px;"
                 >
-                  <label class="form-label"> {{ $t('镜像地址') }} </label>
+                  <label class="form-label"> {{ $t('镜像仓库') }} </label>
                   <div class="form-input-flex">
                     <bk-input
                       v-model="mirrorData.url"
@@ -153,8 +155,6 @@
               </bk-form-item>
             </bk-form>
           </div>
-
-          <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
 
           <div
             v-if="sourceOrigin !== GLOBAL.APP_TYPES.IMAGE && curStep === 1"

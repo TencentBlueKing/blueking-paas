@@ -1117,11 +1117,12 @@ export default {
         setTimeout(() => {
           this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         }, 500);
+      } else {
+        this.getImageCredentialList();
       }
     },
   },
   created() {
-    this.getImageCredentialList();
   },
   mounted() {},
   methods: {

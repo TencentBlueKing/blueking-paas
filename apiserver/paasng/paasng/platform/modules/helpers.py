@@ -26,6 +26,7 @@ from django.db import transaction
 from paas_wl.cluster.models import Cluster, Domain
 from paas_wl.cluster.shim import EnvClusterService
 from paasng.engine.constants import AppEnvName
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
@@ -328,10 +329,11 @@ def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = 
 
 def get_image_labels_by_module(module: 'Module') -> Dict[str, str]:
     """根据 module 的属性获取筛选镜像的label"""
-    # 目前需要根据模块的语言和类型（smart_app / legacy_app）等信息来筛选绑定的镜像
-    labels = {"language": module.language}
-    if module.source_origin == SourceOrigin.S_MART.value:
-        labels["category"] = APP_CATEGORY.S_MART_APP.value
+    labels = {}
+    if module.application.type == ApplicationType.CLOUD_NATIVE:
+        labels[APP_CATEGORY.CNATIVE_APP.value] = "1"
+    elif module.source_origin == SourceOrigin.S_MART:
+        labels[APP_CATEGORY.S_MART_APP.value] = "1"
     else:
-        labels["category"] = APP_CATEGORY.NORMAL_APP.value
+        labels[APP_CATEGORY.NORMAL_APP.value] = "1"
     return labels

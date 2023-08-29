@@ -80,7 +80,7 @@ class TestModuleInitializer:
         settings.PRESET_SERVICES_BY_APP_TYPE = {raw_module.application.type: services_in_type}
 
         module_initializer = ModuleInitializer(raw_module)
-        with mock.patch('paasng.platform.modules.manager.Template.objects.get') as mocked_get_tmpl, mock.patch(
+        with mock.patch('paasng.dev_resources.templates.manager.Template.objects.get') as mocked_get_tmpl, mock.patch(
             'paasng.platform.modules.manager.mixed_service_mgr'
         ) as mocked_service_mgr:
             mocked_get_tmpl.return_value = Template(
@@ -88,6 +88,7 @@ class TestModuleInitializer:
                 language='Python',
                 # Set preset services
                 preset_services_config=services_in_template,
+                enabled_regions=[settings.DEFAULT_REGION_NAME],
             )
 
             module_initializer.bind_default_services()
@@ -130,6 +131,7 @@ class TestModuleInitializer:
                 name='bar',
                 language='Python',
                 required_buildpacks=[buildpack.name],
+                enabled_regions=[settings.DEFAULT_REGION_NAME],
             )
             module_initializer = ModuleInitializer(raw_module)
             module_initializer.bind_default_runtime()
@@ -142,9 +144,7 @@ class TestModuleInitializer:
             assert buildpacks[1].name == default_buildpack.name
             assert buildpacks[1].language == raw_module.language
 
-
-class TestModuleInitializerWithTemplate:
-    def test_authorized_vcs(self, raw_module, init_tmpls):
+    def test_initialize_vcs(self, raw_module, init_tmpls):
         with mock.patch('paasng.dev_resources.sourcectl.svn.client.RepoProvider') as mocked_provider, mock.patch(
             'paasng.dev_resources.sourcectl.connector.SvnRepositoryClient'
         ) as mocked_client, mock.patch(
@@ -170,7 +170,5 @@ class TestModuleInitializerWithTemplate:
         raw_module.source_origin = SourceOrigin.BK_LESS_CODE
         raw_module.save()
 
-        with pytest.raises(ValueError):
-            ModuleInitializer(raw_module).initialize_vcs_with_template()
-
+        assert ModuleInitializer(raw_module)._should_initialize_vcs() is False
         assert ModuleSpecs(raw_module).has_template_code is False

@@ -416,7 +416,6 @@
               <bk-button
                 theme="primary"
                 @click="handleNext"
-                :disabled="!formData.name || (!gitExtendConfig[sourceControlType].selectedRepoUrl && !mirrorData.url)"
               >
                 {{ $t('下一步') }}
               </bk-button>
@@ -606,6 +605,7 @@ export default {
       cloudAppData: {},
       isCreate: true,
       localCloudAppData: {},
+      repoData: {},
     };
   },
   computed: {
@@ -901,14 +901,6 @@ export default {
         return;
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
-        const validRet = await this.$refs.repoInfo.valid();
-        if (!validRet) {
-          window.scrollTo(0, 0);
-          return;
-        }
-      }
-
       if (this.$refs.validate2) {
         try {
           await this.$refs.validate2.validate();
@@ -963,13 +955,12 @@ export default {
       };
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
-        const repoData = this.$refs.repoInfo.getData();
-        params.source_config.source_repo_url = repoData.url;
+        params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {
-          username: repoData.account,
-          password: repoData.password,
+          username: this.repoData.account,
+          password: this.repoData.password,
         };
-        params.source_config.source_dir = repoData.sourceDir;
+        params.source_config.source_dir = this.repoData.sourceDir;
       }
 
       if (this.sourceOrigin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
@@ -980,12 +971,7 @@ export default {
         params.build_config = {
           build_method: 'custom_image',
         },
-        // params.source_config.source_control_type = 'tc_docker';
         params.source_config.source_repo_url = this.mirrorData.url;
-        // params.source_config.source_repo_auth_info = {
-        //   username: '',
-        //   password: '',
-        // };
         params.manifest = { ...this.createCloudAppData };
       }
 
@@ -1020,10 +1006,21 @@ export default {
     },
 
     // 下一步按钮
-    handleNext() {
+    async handleNext() {
       this.curStep = 2;
       if (this.structureType === 'mirror') {
         this.getProcessData();
+      } else {
+        if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+          const validRet = await this.$refs?.repoInfo?.valid();
+          console.log('validRet', validRet);
+          if (!validRet) {
+            window.scrollTo(0, 0);
+            return;
+          }
+
+          this.repoData = this.$refs.repoInfo.getData();
+        }
       }
     },
 

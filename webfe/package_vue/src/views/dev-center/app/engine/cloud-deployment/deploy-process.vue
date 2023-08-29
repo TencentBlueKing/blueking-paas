@@ -706,7 +706,7 @@ export default {
         args: [],
         memory: '256Mi',
         cpu: '500m',
-        targetPort: 8080,
+        targetPort: 5000,
       },
       bkappAnnotations: {},
       command: [],
@@ -963,6 +963,7 @@ export default {
   watch: {
     cloudAppData: {
       handler(val) {
+        console.log(11111, val);
         if (val.spec) {
           this.localCloudAppData = _.cloneDeep(val);
           this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
@@ -972,15 +973,24 @@ export default {
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
         } else {
+          console.log('val', val);
+          const cloudAppData = {
+            spec: {
+              processes: [this.formData],
+            },
+          };
           this.processData = [this.formData];
+          this.localCloudAppData = _.cloneDeep(cloudAppData);
+          console.log('cloudAppData', cloudAppData);
+          this.$store.commit('cloudApi/updateCloudAppData', cloudAppData);
         }
         this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
-      // deep: true,
     },
     formData: {
       handler(val) {
+        console.log('this.localCloudAppData', this.localCloudAppData);
         this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
         if (this.localCloudAppData.spec) {
           val.name = this.processNameActive;
@@ -1294,6 +1304,7 @@ export default {
           if (this.isV1alpha2) {
             delete this.formData.image;   // v2不需要image
           }
+          console.log('this.localCloudAppData.spec.processes', this.localCloudAppData.spec);
           this.localCloudAppData.spec.processes.push(this.formData);
         }
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);

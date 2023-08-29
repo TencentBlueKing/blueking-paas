@@ -186,5 +186,14 @@ export default {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/${systemId}/permissions/components/`;
       return http.get(url, config);
     },
+
+    /**
+     * --
+     * @param {Object} params 请求参数：data
+     */
+    createCloudApp({}, { data }, config = {}) {
+      const url = `${BACKEND_URL}/backend/api/bkapps/cloud-native/`;
+      return http.post(url, data, config);
+    },
   },
 };

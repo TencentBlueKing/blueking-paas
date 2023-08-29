@@ -330,6 +330,7 @@ export default {
         sourceInitTemplate: '',
         buildDir: '',
       },
+      sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
       createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
       curStep: 1,
       buttonActive: '',
@@ -387,6 +388,7 @@ export default {
       cloudAppData: {},
       isCreate: true,
       localCloudAppData: {},
+      repoData: {}, // svn代码库
       rules: {
         code: [
           {
@@ -459,10 +461,12 @@ export default {
   },
   watch: {
     'formData.sourceOrigin'(value) {
+      this.curStep = 1;
       if (value === 'image') {
-        this.sourceOrigin = 4;
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.IMAGE; // 4
         this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       } else if (value === 'soundCode') {
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP; // 1
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       }
     },
@@ -577,6 +581,7 @@ export default {
       try {
         await this.$refs.formBaseRef.validate();
         await this.$refs?.repoInfo?.valid();
+        this.repoData = this.$refs.repoInfo.getData();
         this.curStep = 2;
         // if (this.structureType === 'mirror') {
         //   this.getProcessData();
@@ -601,8 +606,72 @@ export default {
 
 
     // 创建应用
-    handleCreateApp() {
-      console.log(1);
+    async handleCreateApp() {
+      let sourceRepoUrl = null;
+      switch (this.sourceControlTypeItem) {
+        case 'bk_gitlab':
+        case 'github':
+        case 'gitee':
+        case 'tc_git':
+          // eslint-disable-next-line no-case-declarations
+          const config = this.gitExtendConfig[this.sourceControlTypeItem];
+          sourceRepoUrl = config.selectedRepoUrl;
+          if (!sourceRepoUrl) {
+            this.formLoading = false;
+            this.$paasMessage({
+              theme: 'error',
+              message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号'),
+            });
+            window.scrollTo(0, 0);
+            return;
+          }
+          break;
+        case 'bk_svn':
+        default:
+          sourceRepoUrl = undefined;
+          break;
+      }
+      const params = {
+        region: 'ieod',
+        code: this.formData.code,
+        name: this.formData.name,
+        build_config: {
+          build_method: 'buildpack',
+        },
+        source_config: {
+          source_init_template: this.formData.sourceInitTemplate,
+          source_control_type: this.sourceControlTypeItem,
+          source_repo_url: sourceRepoUrl,
+          source_origin: this.sourceOrigin,
+          source_dir: this.formData.sourceDir || '',
+        },
+      };
+
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {  // 仅镜像
+        params.build_config = {
+          build_method: 'custom_image',
+        },
+        params.source_config.source_repo_url = this.mirrorData.url;
+        params.manifest = { ...this.createCloudAppData };
+      }
+
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+        params.source_config.source_repo_url = this.repoData.url;
+        params.source_config.source_repo_auth_info = {
+          username: this.repoData.account,
+          password: this.repoData.password,
+        };
+        params.source_config.source_dir = this.repoData.sourceDir;
+      }
+      try {
+        const res = await this.$store.dispatch('cloudApi/createCloudApp', {
+          appCode: this.appCode,
+          data: params,
+        });
+        console.log(1, params, res);
+      } catch (error) {
+
+      }
     },
 
 

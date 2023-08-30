@@ -159,6 +159,7 @@
         </bk-form-item>
         <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
           <git-extend
+            ref="extend"
             :key="sourceControlTypeItem"
             :git-control-type="sourceControlTypeItem"
             :is-auth="gitExtendConfig[sourceControlTypeItem].isAuth"
@@ -217,7 +218,7 @@
         >
           <bk-input
             v-model="formData.url"
-            style="width: 520px;"
+            class="form-input-width"
             clearable
             :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
           >
@@ -230,6 +231,34 @@
             </template>
           </bk-input>
           <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
+        </bk-form-item>
+        <bk-form-item
+          error-display-type="normal"
+          ext-cls="form-item-cls"
+          :label="$t('镜像凭证')"
+        >
+          <div class="flex-row form-input-width">
+            <bk-input
+              class="mr10"
+              v-model="formData.imageCredentialName"
+              clearable
+              :placeholder="$t('请输入名称')"
+            >
+            </bk-input>
+            <bk-input
+              class="mr10"
+              v-model="formData.imageCredentialUserName"
+              clearable
+              :placeholder="$t('请输入账号')"
+            >
+            </bk-input>
+            <bk-input
+              v-model="formData.imageCredentialPassWord"
+              clearable
+              :placeholder="$t('请输入密码')"
+            >
+            </bk-input>
+          </div>
         </bk-form-item>
       </bk-form>
     </section>
@@ -268,7 +297,7 @@
 
     <div class="mt20" v-if="formData.sourceOrigin === 'image' && curStep === 2">
       <collapseContent :title="$t('进程配置')">
-        <deploy-process ref="processRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-process>
+        <deploy-process ref="processRef" :cloud-app-data="initCloudAppData" :is-create="isCreate"></deploy-process>
       </collapseContent>
 
       <collapseContent :title="$t('钩子命令')" class="mt20">
@@ -294,6 +323,7 @@
         <bk-button
           theme="primary"
           class="ml20 mr20"
+          :loading="formLoading"
           @click="handleCreateApp"
         >
           {{ $t('提交') }}
@@ -323,12 +353,16 @@ export default {
   data() {
     return {
       formData: {
-        url: '',
-        name: '',
-        code: '',
-        sourceOrigin: 'soundCode',
-        sourceInitTemplate: '',
-        buildDir: '',
+        name: '',   // 应用名称
+        code: '',   // 应用ID
+        url: '',    // 镜像仓库
+        sourceOrigin: 'soundCode',  // 托管方式
+        sourceInitTemplate: '', // 模版来源
+        buildDir: '',   // 构建目录
+        sourceRepoUrl: '',   // 代码仓库
+        imageCredentialName: '', // 镜像名称
+        imageCredentialUserName: '', // 镜像账号
+        imageCredentialPassWord: '', // 镜像密码
       },
       sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
       createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
@@ -385,10 +419,20 @@ export default {
           authDocs: '',
         },
       },
-      cloudAppData: {},
       isCreate: true,
       localCloudAppData: {},
       repoData: {}, // svn代码库
+      cloudAppProcessData: {
+        image: '',
+        name: 'web',
+        command: [],
+        args: [],
+        memory: '256Mi',
+        cpu: '500m',
+        targetPort: 5000,
+      },
+      initCloudAppData: {},
+      formLoading: false,
       rules: {
         code: [
           {
@@ -458,17 +502,29 @@ export default {
     curSourceControl() {
       return this.sourceControlTypes.find(item => item.value === this.sourceControlTypeItem);
     },
+    cloudAppData() {
+      return this.$store.state.cloudApi.cloudAppData;
+    },
   },
   watch: {
     'formData.sourceOrigin'(value) {
       this.curStep = 1;
       if (value === 'image') {
-        this.sourceOrigin = this.GLOBAL.APP_TYPES.IMAGE; // 4
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE; // 6 仅镜像的云原生应用
         this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       } else if (value === 'soundCode') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP; // 1
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       }
+    },
+
+    cloudAppData: {
+      handler(value) {
+        if (!Object.keys(value).length) {  // 没有应用编排数据
+          this.initCloudAppDataFunc();
+        }
+      },
+      immediate: true,
     },
   },
   mounted() {
@@ -580,8 +636,28 @@ export default {
     async handleNext() {
       try {
         await this.$refs.formBaseRef.validate();
-        await this.$refs?.repoInfo?.valid();
+        await this.$refs?.repoInfo?.valid();   //
+        if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {  // 普通应用
+          await this.$refs?.extend?.valid();    // 代码仓库
+          this.formData.sourceRepoUrl = null;
+          switch (this.sourceControlTypeItem) {
+            case 'bk_gitlab':
+            case 'github':
+            case 'gitee':
+            case 'tc_git':
+              // eslint-disable-next-line no-case-declarations
+              const config = this.gitExtendConfig[this.sourceControlTypeItem];
+              this.formData.sourceRepoUrl = config.selectedRepoUrl;
+
+              break;
+            case 'bk_svn':
+            default:
+              this.formData.sourceRepoUrl = undefined;
+              break;
+          }
+        }
         this.repoData = this.$refs?.repoInfo?.getData();
+        this.initCloudAppDataFunc();   // 初始化应用编排数据
         this.curStep = 2;
         // if (this.structureType === 'mirror') {
         //   this.getProcessData();
@@ -607,53 +683,19 @@ export default {
 
     // 创建应用
     async handleCreateApp() {
-      let sourceRepoUrl = null;
-      switch (this.sourceControlTypeItem) {
-        case 'bk_gitlab':
-        case 'github':
-        case 'gitee':
-        case 'tc_git':
-          // eslint-disable-next-line no-case-declarations
-          const config = this.gitExtendConfig[this.sourceControlTypeItem];
-          sourceRepoUrl = config.selectedRepoUrl;
-          if (!sourceRepoUrl) {
-            this.formLoading = false;
-            this.$paasMessage({
-              theme: 'error',
-              message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号'),
-            });
-            window.scrollTo(0, 0);
-            return;
-          }
-          break;
-        case 'bk_svn':
-        default:
-          sourceRepoUrl = undefined;
-          break;
-      }
+      this.formLoading = true;
       const params = {
         region: 'ieod',
         code: this.formData.code,
         name: this.formData.name,
-        build_config: {
-          build_method: 'buildpack',
-        },
         source_config: {
           source_init_template: this.formData.sourceInitTemplate,
           source_control_type: this.sourceControlTypeItem,
-          source_repo_url: sourceRepoUrl,
+          source_repo_url: this.formData.sourceRepoUrl,
           source_origin: this.sourceOrigin,
           source_dir: this.formData.sourceDir || '',
         },
       };
-
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {  // 仅镜像
-        params.build_config = {
-          build_method: 'custom_image',
-        },
-        params.source_config.source_repo_url = this.mirrorData.url;
-        params.manifest = { ...this.createCloudAppData };
-      }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
         params.source_config.source_repo_url = this.repoData.url;
@@ -663,14 +705,39 @@ export default {
         };
         params.source_config.source_dir = this.repoData.sourceDir;
       }
+
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
+        params.source_config = {
+          source_origin: this.sourceOrigin,
+        };
+        params.image_credentials = {    // 仅镜像需要镜像凭证信息
+          name: this.formData.imageCredentialName,
+          username: this.formData.imageCredentialUserName,
+          password: this.formData.imageCredentialPassWord,
+        };
+        params.manifest = {
+          ...this.cloudAppData,
+        };
+        params.source_config.source_repo_url = this.formData.url;   // 镜像
+      }
+
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
           appCode: this.appCode,
           data: params,
         });
         console.log(1, params, res);
-      } catch (error) {
-
+        const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
+        this.$router.push({
+          path,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.formLoading = false;
       }
     },
 
@@ -679,6 +746,23 @@ export default {
     handleSetMirrorUrl() {
       this.formData.url = 'mirrors.tencent.com/bkpaas/django-helloworld';
       this.$refs.formImageRef.clearError();
+    },
+
+    // 初始化应用编排数据
+    initCloudAppDataFunc() {
+      this.initCloudAppData = {
+        apiVersion: 'paas.bk.tencent.com/v1alpha2',
+        kind: 'BkApp',
+        metadata: { name: this.formData.code },
+        spec: {
+          build: {
+            image: this.formData.url,  // 镜像信息-镜像仓库
+            imageCredentialsName: this.formData.imageCredentialName, // 镜像信息-镜像凭证-名称
+          },
+          processes: [this.cloudAppProcessData],
+        },
+      };
+      this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
   },
 };

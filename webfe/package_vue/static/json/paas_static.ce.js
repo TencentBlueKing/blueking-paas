@@ -32,7 +32,8 @@ export const PLATFORM_CONFIG = {
         LESSCODE_APP: 2,
         SMART_APP: 3,
         IMAGE: 4,
-        SCENE_APP: 5
+        SCENE_APP: 5,
+        CNATIVE_IMAGE: 6        //仅镜像的云原生
     },
 
     // 默认使用的代码库类型

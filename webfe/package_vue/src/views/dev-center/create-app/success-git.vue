@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <div>
     <div class="container biz-create-success">
       <div class="success-wrapper">
@@ -78,7 +78,8 @@
                 </code>
                 <i
                   v-copy="pushTips"
-                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']"
+                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon',
+                           localLanguage === 'en' ? 'copy-icon-two' : '']"
                 />
               </div>
             </div>
@@ -106,7 +107,8 @@
                 </code>
                 <i
                   v-copy="pushTips"
-                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']"
+                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon',
+                           localLanguage === 'en' ? 'copy-icon-two' : '']"
                 />
               </div>
             </div>
@@ -133,97 +135,99 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import auth from '@/auth';
-    export default {
-        mixins: [appBaseMixin],
-        data () {
-            // const appCode = this.$route.params.id
-            return {
-                // appCode: appCode,
-                application: {
-                    code: '',
-                    config_info: {}
-                },
-                trunkURL: '',
-                advisedDocLinks: [],
-                downloadableAddress: '',
-                downloadableAddressExpiresIn: 3600,
-                isShowTips: false,
-                user: {}
-            };
-        },
-        computed: {
-            downloadTips: function () {
-                return [
-                    `mkdir ${this.application.code}`,
-                    `curl "${this.downloadableAddress}" > ${this.application.code}.tar.gz`,
-                    `tar -xf ${this.application.code}.tar.gz -C ${this.application.code}`
-                ].join('\n');
-            },
-            pluginTips: function () {
-                return [
-                    'pip install cookiecutter',
-                    `cookiecutter https://github.com/TencentBlueKing/bk-plugin-framework-python/ --directory template`
-                ].join('\n');
-            },
-            initTips: function () {
-                return [
-                  `project_name：${this.application.code}`,
-                  `app_code：${this.application.code}`,
-                  `plugin_desc：插件描述`,
-                  `init_admin：${this.user.chineseName || this.user.username}`,
-                  `init_apigw_maintainer：${this.user.chineseName || this.user.username}`
-                ].join('\n');
-            },
-            pushTips: function () {
-                return [
-                    `cd ${this.application.code}`,
-                    `git init`,
-                    `git add .`,
-                    `git commit -m "init repo"`,
-                    `git remote add origin ${this.trunkURL}`,
-                    `git push -u origin master`
-                ].join('\n');
-            },
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            }
-        },
-        created () {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
-            const linkUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_created&limit=3`;
-            this.$http.get(url).then((response) => {
-                const body = response;
-                this.application = body.application;
-                const modules = this.application.modules;
-
-                if (modules && modules.length) {
-                    this.trunkURL = modules[0].repo.trunk_url;
-                    const defaultModule = modules.find(item => item.name === 'default');
-                    this.isShowTips = defaultModule.source_origin === 1;
-                }
-            });
-            this.$http.get(linkUrl).then((response) => {
-                this.advisedDocLinks = response.links;
-            });
-
-            this.getCurrentUser();
-        },
-        mounted () {
-            const objectKey = localStorage.getItem(this.$route.query.objectKey) === 'undefined' ? '' : localStorage.getItem(this.$route.query.objectKey);
-            const extraInfo = JSON.parse(objectKey || '{}');
-            this.downloadableAddress = extraInfo.downloadable_address;
-            this.downloadableAddressExpiresIn = extraInfo.downloadable_address_expires_in;
-        },
-        methods: {
-          getCurrentUser() {
-            auth.requestCurrentUser().then((user) => {
-              this.user = user;
-            });
-          },
-        }
+import appBaseMixin from '@/mixins/app-base-mixin';
+import auth from '@/auth';
+export default {
+  mixins: [appBaseMixin],
+  data() {
+    // const appCode = this.$route.params.id
+    return {
+      // appCode: appCode,
+      application: {
+        code: '',
+        config_info: {},
+      },
+      trunkURL: '',
+      advisedDocLinks: [],
+      downloadableAddress: '',
+      downloadableAddressExpiresIn: 3600,
+      isShowTips: false,
+      user: {},
     };
+  },
+  computed: {
+    downloadTips() {
+      return [
+        `mkdir ${this.application.code}`,
+        `curl "${this.downloadableAddress}" > ${this.application.code}.tar.gz`,
+        `tar -xf ${this.application.code}.tar.gz -C ${this.application.code}`,
+      ].join('\n');
+    },
+    pluginTips() {
+      return [
+        'pip install cookiecutter',
+        'cookiecutter https://github.com/TencentBlueKing/bk-plugin-framework-python/ --directory template',
+      ].join('\n');
+    },
+    initTips() {
+      return [
+        `project_name：${this.application.code}`,
+        `app_code：${this.application.code}`,
+        'plugin_desc：插件描述',
+        `init_admin：${this.user.chineseName || this.user.username}`,
+        `init_apigw_maintainer：${this.user.chineseName || this.user.username}`,
+      ].join('\n');
+    },
+    pushTips() {
+      return [
+        `cd ${this.application.code}`,
+        'git init',
+        'git add .',
+        'git commit -m "init repo"',
+        `git remote add origin ${this.trunkURL}`,
+        'git push -u origin master',
+      ].join('\n');
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  created() {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
+    const linkUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_created&limit=3`;
+    this.$http.get(url).then((response) => {
+      const body = response;
+      this.application = body.application;
+      const { modules } = this.application;
+
+      console.log('response', response);
+
+      if (modules && modules.length) {
+        this.trunkURL = modules[0].repo?.trunk_url;
+        const defaultModule = modules.find(item => item.name === 'default');
+        this.isShowTips = defaultModule.source_origin === 1;
+      }
+    });
+    this.$http.get(linkUrl).then((response) => {
+      this.advisedDocLinks = response.links;
+    });
+
+    this.getCurrentUser();
+  },
+  mounted() {
+    const objectKey = localStorage.getItem(this.$route.query.objectKey) === 'undefined' ? '' : localStorage.getItem(this.$route.query.objectKey);
+    const extraInfo = JSON.parse(objectKey || '{}');
+    this.downloadableAddress = extraInfo.downloadable_address;
+    this.downloadableAddressExpiresIn = extraInfo.downloadable_address_expires_in;
+  },
+  methods: {
+    getCurrentUser() {
+      auth.requestCurrentUser().then((user) => {
+        this.user = user;
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

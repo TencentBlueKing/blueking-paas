@@ -69,7 +69,7 @@
             ext-cls="form-process"
           >
             <bk-form-item
-              :label="$t('容器镜像地址')"
+              :label="$t('镜像地址')"
               :label-width="120"
               v-if="isV1alpha2"
             >
@@ -77,7 +77,7 @@
             </bk-form-item>
 
             <bk-form-item
-              :label="$t('容器镜像地址')"
+              :label="$t('镜像地址')"
               :required="true"
               :label-width="120"
               :property="'image'"
@@ -972,17 +972,6 @@ export default {
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
-        } else {
-          console.log('val', val);
-          const cloudAppData = {
-            spec: {
-              processes: [this.formData],
-            },
-          };
-          this.processData = [this.formData];
-          this.localCloudAppData = _.cloneDeep(cloudAppData);
-          console.log('cloudAppData', cloudAppData);
-          this.$store.commit('cloudApi/updateCloudAppData', cloudAppData);
         }
         this.panels = _.cloneDeep(this.processData);
       },

@@ -31,6 +31,7 @@ from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import to_error_string
+from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
 from paasng.dev_resources.sourcectl.validators import validate_image_url
@@ -300,6 +301,7 @@ class CreateCNativeModuleSLZ(serializers.Serializer):
 
     name = ModuleNameField()
     source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码配置'))
+    image_credentials = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
     manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
 
     def validate(self, attrs):

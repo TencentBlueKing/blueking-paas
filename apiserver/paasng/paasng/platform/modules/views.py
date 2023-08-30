@@ -21,6 +21,7 @@ from typing import Any, Dict
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -31,6 +32,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.cluster.shim import get_application_cluster
+from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.accessories.iam.permissions.resources.application import AppAction
@@ -252,6 +254,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         source_origin = SourceOrigin(source_config['source_origin'])
         self._ensure_source_origin_available(request.user, source_origin)
 
+        # 初始化应用镜像凭证信息
+        if image_credentials := data.get('image_credentials'):
+            self._init_image_credentials(application, image_credentials)
+
         module_src_cfg['source_origin'] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config['source_init_template']:
@@ -302,6 +308,12 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if source_origin not in SourceOrigin.get_default_origins():
             if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
                 raise ValidationError(_('你无法使用非默认的源码来源'))
+
+    def _init_image_credentials(self, application: Application, image_credentials: Dict):
+        try:
+            AppUserCredential.objects.create(application_id=application.id, **image_credentials)
+        except DbIntegrityError:
+            raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
 
 class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

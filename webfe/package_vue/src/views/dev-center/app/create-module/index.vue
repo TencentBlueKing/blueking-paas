@@ -107,7 +107,7 @@
 
           <!-- 镜像管理 -->
           <div
-            v-if="structureType === 'mirror'"
+            v-if="structureType === 'mirror' && curStep === 1"
             class="create-item"
             data-test-id="createDefault_item_baseInfo"
           >
@@ -117,47 +117,71 @@
 
             <bk-form
               ref="validate2"
-              form-type="inline"
               :model="mirrorData"
               :rules="mirrorRules"
+              :label-width="100"
             >
               <bk-form-item
                 :required="true"
                 :property="'url'"
                 error-display-type="normal"
                 ext-cls="item-cls"
+                :label="$t('镜像仓库')"
               >
-                <div
-                  class="form-group"
-                  style="margin-top: 10px;"
-                >
-                  <label class="form-label"> {{ $t('镜像仓库') }} </label>
-                  <div class="form-input-flex">
-                    <bk-input
-                      v-model="mirrorData.url"
-                      class="mt10"
-                      style="width: 520px;"
-                      size="large"
-                      clearable
-                      :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
-                    >
+                <div class="form-input-flex">
+                  <bk-input
+                    v-model="mirrorData.url"
+                    style="width: 520px;"
+                    size="large"
+                    clearable
+                    :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
+                  >
 
-                      <template slot="append">
-                        <div
-                          class="group-text form-text-append"
-                          @click="handleSetMirrorUrl"
-                        >应用示例</div>
-                      </template>
-                    </bk-input>
-                    <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
-                  </div>
+                    <template slot="append">
+                      <div
+                        class="group-text form-text-append"
+                        @click="handleSetMirrorUrl"
+                      >应用示例</div>
+                    </template>
+                  </bk-input>
+                  <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
                 </div>
+              </bk-form-item>
+
+              <bk-form-item
+                error-display-type="normal"
+                ext-cls="item-cls"
+                :label="$t('镜像凭证')"
+              >
+                <bk-select
+                  v-model="imageCredentialsData.name"
+                  :disabled="false"
+                  style="width: 500px;"
+                  ext-cls="select-custom"
+                  ext-popover-cls="select-popover-custom"
+                  searchable
+                  @change="handleImageChange"
+                >
+                  <bk-option
+                    v-for="option in imageCredentialList"
+                    :id="option.name"
+                    :key="option.name"
+                    :name="option.name"
+                  />
+                  <div
+                    slot="extension"
+                    style="cursor: pointer;"
+                    @click="handlerCreateImageCredential"
+                  >
+                    <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
+                  </div>
+                </bk-select>
               </bk-form-item>
             </bk-form>
           </div>
 
           <div
-            v-if="sourceOrigin !== GLOBAL.APP_TYPES.IMAGE && curStep === 1"
+            v-if="sourceOrigin !== GLOBAL.APP_TYPES.CNATIVE_IMAGE && curStep === 1"
             class="create-item"
           >
             <!-- 代码库 -->
@@ -551,6 +575,12 @@ export default {
       },
       defaultlangName: DEFAULR_LANG_NAME,
       structureType: 'soundCode',
+      imageCredentialsData: {
+        name: '',
+        username: '',
+        password: '',
+      },
+      imageCredentialList: [],
       mirrorData: {
         type: 'public',
         url: '',
@@ -651,9 +681,11 @@ export default {
     },
     structureType(value) {
       if (value === 'mirror') {
-        this.sourceOrigin = 4;
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;   // 仅镜像的云原生
         this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
+        this.getImageCredentialList(); // 获取镜像凭证
       } else if (value === 'soundCode') {
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
         this.handleCodeTypeChange(1);
       }
@@ -883,6 +915,7 @@ export default {
       //   SMART_APP: 3,
       //   IMAGE: 4,
       //   SCENE_APP: 5
+      //    //CNATIVE_IMAGE: 6
       if (!this.canCreateModule) {
         return;
       }
@@ -942,9 +975,6 @@ export default {
 
       const params = {
         name: this.formData.name,
-        build_config: {
-          build_method: 'buildpack',
-        },
         source_config: {
           source_init_template: this.sourceInitTemplate,
           source_control_type: this.sourceControlType,
@@ -967,10 +997,12 @@ export default {
         delete params.source_config.source_repo_url;
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {  // 仅镜像
-        params.build_config = {
-          build_method: 'custom_image',
-        },
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
+        if (this.imageCredentialsData.name) {
+          params.image_credentials = {
+            name: this.imageCredentialsData.name,
+          };
+        }
         params.source_config.source_repo_url = this.mirrorData.url;
         params.manifest = { ...this.createCloudAppData };
       }
@@ -1043,6 +1075,8 @@ export default {
           moduleId: this.curModuleId,
         });
         this.cloudAppData = res.manifest;
+        this.cloudAppData.spec.build.image = this.mirrorData.url;   // 讲镜像仓库的值赋值给cloudAppData
+        this.cloudAppData.spec.build.imageCredentialsName = this.imageCredentialsData.name;   // 讲镜像凭证的值赋值给cloudAppData
         this.localCloudAppData = _.cloneDeep(this.cloudAppData);
         this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
       } catch (e) {
@@ -1062,6 +1096,30 @@ export default {
       this.$store.commit('cloudApi/updateHookPageEdit', false);
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
     },
+
+    // 获取凭证列表
+    async getImageCredentialList() {
+      try {
+        const { appCode } = this;
+        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+        this.imageCredentialList = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 前往创建镜像凭证页面
+    handlerCreateImageCredential() {
+      this.$router.push({ name: 'imageCredential' });
+    },
+
+    // 镜像选择
+    handleImageChange() {
+      console.log();
+    },
   },
 };
 </script>
@@ -1070,18 +1128,4 @@ export default {
     @import "./index.scss";
 </style>
 <style lang="scss">
-.item-cls {
-    .bk-form-content{
-        .form-error-tip{
-            margin: 5px 0 0 100px;
-        }
-    }
-}
-.name-item-cls{
-  .bk-form-content{
-        .form-error-tip{
-            margin: 5px 0 0 100px;
-        }
-    }
-}
 </style>

@@ -93,7 +93,7 @@
           :property="'code'"
           :rules="rules.name"
           error-display-type="normal"
-          ext-cls="form-item-cls mt20"
+          ext-cls="form-item-cls mt10"
         >
           <div class="bk-button-group">
             <bk-button
@@ -187,13 +187,45 @@
           </bk-form-item>
         </section>
 
-        <section class="" v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
+        <section v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
           <repo-info
             ref="repoInfo"
             :key="sourceControlTypeItem"
             :type="sourceControlTypeItem"
           />
         </section>
+      </bk-form>
+
+
+      <bk-form
+        ref="formSourceRef"
+        :model="formData"
+        :rules="rules"
+        :label-width="100"
+      >
+        <div class="form-item-title mb10 mt10">
+          {{ $t('高级选项') }}
+        </div>
+
+
+        <bk-form-item
+          :label="$t('选择集群')"
+          error-display-type="normal"
+          ext-cls="form-item-cls mt20"
+        >
+          <bk-select
+            v-model="formData.clusterName"
+            class="form-input-width"
+            searchable
+          >
+            <bk-option
+              v-for="option in clusterList"
+              :id="option"
+              :key="option"
+              :name="option"
+            />
+          </bk-select>
+        </bk-form-item>
       </bk-form>
     </section>
 
@@ -356,6 +388,7 @@ export default {
         name: '',   // 应用名称
         code: '',   // 应用ID
         url: '',    // 镜像仓库
+        clusterName: '', // 集群名称
         sourceOrigin: 'soundCode',  // 托管方式
         sourceInitTemplate: '', // 模版来源
         buildDir: '',   // 构建目录
@@ -433,6 +466,9 @@ export default {
       },
       initCloudAppData: {},
       formLoading: false,
+      advancedOptionsObj: {},
+      regionChoose: 'ieod',
+      bkPluginConfig: {},
       rules: {
         code: [
           {
@@ -495,6 +531,13 @@ export default {
             trigger: 'blur',
           },
         ],
+        url: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
       },
     };
   },
@@ -504,6 +547,9 @@ export default {
     },
     cloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
+    },
+    clusterList() {
+      return this.advancedOptionsObj[this.regionChoose] || [];
     },
   },
   watch: {
@@ -534,6 +580,7 @@ export default {
     init() {
       this.fetchLanguageInfo();
       this.fetchSourceControlTypesData();
+      this.fetchAdvancedOptions();
     },
     handleSelected(item, key) {
       this.buttonActive = key;
@@ -597,6 +644,39 @@ export default {
       });
     },
 
+    // 获取高级选项 集群列表
+    async fetchAdvancedOptions() {
+      let res;
+      try {
+        res = await this.$store.dispatch('createApp/getOptions');
+      } catch (e) {
+        // 请求接口报错时则不显示高级选项
+        this.isShowAdvancedOptions = false;
+        return;
+      }
+
+      // 初始化蓝鲸插件相关配置
+      (res.bk_plugin_configs || []).forEach((c) => {
+        this.bkPluginConfig[c.region] = c;
+      });
+
+      // 如果返回当前用户不支持“高级选项”，停止后续处理
+      if (!res.allow_adv_options) {
+        this.isShowAdvancedOptions = false;
+        return;
+      }
+
+      // 高级选项：解析分 Region 的集群信息
+      this.isShowAdvancedOptions = true;
+      const advancedRegionClusters = res.adv_region_clusters || [];
+      advancedRegionClusters.forEach((item) => {
+        // eslint-disable-next-line no-prototype-builtins
+        if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
+          this.$set(this.advancedOptionsObj, item.region, item.cluster_names);
+        }
+      });
+    },
+
 
     generateFetchRepoListMethod(sourceControlTypeItem) {
       // 根据不同的 sourceControlTypeItem 生成对应的 fetchRepoList 方法
@@ -636,6 +716,7 @@ export default {
     async handleNext() {
       try {
         await this.$refs.formBaseRef.validate();
+        await this.$refs?.formImageRef?.validate();
         await this.$refs?.repoInfo?.valid();   //
         if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {  // 普通应用
           await this.$refs?.extend?.valid();    // 代码仓库
@@ -674,10 +755,10 @@ export default {
 
     // 处理取消
     handleCancel() {
-      // this.$refs?.processRef?.handleCancel();
-      // this.cloudAppData = _.cloneDeep(this.localCloudAppData);
-      // this.$store.commit('cloudApi/updateHookPageEdit', false);
-      // this.$store.commit('cloudApi/updateProcessPageEdit', false);
+      this.$refs?.processRef?.handleCancel();
+      this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
+      this.$store.commit('cloudApi/updateHookPageEdit', false);
+      this.$store.commit('cloudApi/updateProcessPageEdit', false);
     },
 
 
@@ -693,9 +774,16 @@ export default {
           source_control_type: this.sourceControlTypeItem,
           source_repo_url: this.formData.sourceRepoUrl,
           source_origin: this.sourceOrigin,
-          source_dir: this.formData.sourceDir || '',
+          source_dir: this.formData.buildDir || '',
         },
       };
+
+      // 集群名称
+      if (this.formData.clusterName) {
+        params.advanced_options = {
+          cluster_name: this.formData.clusterName,
+        };
+      }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
         params.source_config.source_repo_url = this.repoData.url;
@@ -710,16 +798,27 @@ export default {
         params.source_config = {
           source_origin: this.sourceOrigin,
         };
-        params.image_credentials = {    // 仅镜像需要镜像凭证信息
-          name: this.formData.imageCredentialName,
-          username: this.formData.imageCredentialUserName,
-          password: this.formData.imageCredentialPassWord,
-        };
+        // 镜像凭证任意有一个值都需要image_credentials字段，如果都没有这不需要此字段
+        if (this.formData.imageCredentialName || this.formData.imageCredentialUserName
+        || this.formData.imageCredentialPassWord) {
+          params.image_credentials = {};
+        }
+        // 仅镜像需要镜像凭证信息
+        if (this.formData.imageCredentialName) {
+          params.image_credentials.name = this.formData.imageCredentialName;
+        }
+        if (this.formData.imageCredentialUserName) {
+          params.image_credentials.username = this.formData.imageCredentialUserName;
+        }
+        if (this.formData.imageCredentialPassWord) {
+          params.image_credentials.password = this.formData.imageCredentialPassWord;
+        }
         params.manifest = {
           ...this.cloudAppData,
         };
         params.source_config.source_repo_url = this.formData.url;   // 镜像
       }
+      console.log('params', params);
       debugger;
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
@@ -762,6 +861,7 @@ export default {
           processes: [this.cloudAppProcessData],
         },
       };
+      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
   },

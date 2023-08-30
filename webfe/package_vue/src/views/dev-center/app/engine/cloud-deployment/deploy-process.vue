@@ -114,7 +114,7 @@
               :label-width="120"
               v-if="isV1alpha2"
             >
-              {{ buildData.imageCredentialsName }}
+              {{ buildData.imageCredentialsName || '--'}}
             </bk-form-item>
 
             <!-- 镜像凭证 -->
@@ -963,7 +963,6 @@ export default {
   watch: {
     cloudAppData: {
       handler(val) {
-        console.log(11111, val);
         if (val.spec) {
           this.localCloudAppData = _.cloneDeep(val);
           this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);

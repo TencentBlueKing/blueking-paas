@@ -216,9 +216,9 @@ p.app-name {
             vertical-align: middle;
         }
     }
-    .form-input-width{
-        width: 520px;
-    }
+}
+.form-input-width{
+    width: 520px;
 }
 
 .form-actions {
@@ -682,6 +682,7 @@ input::-webkit-input-placeholder {
     background: #FAFBFD;
     border-radius: 0 2px 2px 0;
     cursor: pointer;
+    line-height: 36px !important;
 }
 
 

@@ -103,173 +103,177 @@
   </div>
 </template>
 
-<script>
-    export default {
-        props: {
-            edited: {
-                type: Boolean,
-                default: true
-            },
-            type: {
-                type: String,
-                default: 'bare_git'
-            },
-            defaultUrl: {
-                type: String,
-                default: ''
-            },
-            defaultAccount: {
-                type: String,
-                default: ''
-            },
-            defaultDir: {
-                type: String,
-                default: ''
-            },
-            deploymentIsShow: {
-                type: Boolean,
-                default: true
-            }
-        },
-        data () {
-            return {
-                info: {
-                    url: this.defaultUrl,
-                    account: this.defaultAccount,
-                    password: '',
-                    sourceDir: this.defaultDir
-                },
-                rules: {
-                    gitUrl: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            // http(s)://、git://
-                            regex: /^(http|https|git):\/\//,
-                            message: this.$t('请输入正确源代码地址，支持以下协议') + '：http(s)://、git://',
-                            trigger: 'blur'
-                        }
-                    ],
-                    svnUrl: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            // http(s)://、svn://
-                            regex: /^(http|https|svn):\/\//,
-                            message: this.$t('请输入正确源代码地址，支持以下协议') + '：http(s)://、svn://',
-                            trigger: 'blur'
-                        }
-                    ],
-                    sourceDir: [
-                        {
-                            regex: /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/,
-                            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    account: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    password: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                sourceDirTip: {
-                    theme: 'light',
-                    allowHtml: true,
-                    content: this.$t('提示信息'),
-                    html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
-                    placements: ['right']
-                }
-            };
-        },
-        computed: {
-            accountLabel () {
-                return this.type === 'bare_git' ? this.$t('Git账号:') : this.$t('SVN账号:');
-            }
-        },
-        watch: {
-            type () {
-                this.info = {
-                    url: '',
-                    account: '',
-                    password: '',
-                    sourceDir: ''
-                };
-            },
-            info: {
-                deep: true,
-                handler (v) {
-                    const data = this.getData();
-                    this.$emit('change', data);
-                }
-            },
-            edited (v) {
-                if (!v) {
-                    this.info = {
-                        url: this.defaultUrl,
-                        account: this.defaultAccount,
-                        password: '',
-                        sourceDir: this.defaultDir
-                    };
-                }
-            }
-        },
-        methods: {
-            async validate (callback) {
-                this.$refs.repoInfo.validate().then(() => {
-                    callback && callback();
-                }).catch(error => {
-                    const field = error.field;
-                    this.$refs[field].focus();
-                });
-            },
-
-            async valid (callback) {
-                const validRet = await this.$refs.repoInfo.validate().catch(error => {
-                    const field = error.field;
-                    this.$refs[field].focus();
-                });
-                return validRet;
-            },
-
-            getData () {
-                const gitUrlReg = /^(http|https|git):\/\//;
-                const svnUrlReg = /^(http|https|svn):\/\//;
-                let url = '';
-                if (this.type === 'bare_git') {
-                    if (gitUrlReg.test(this.info.url)) {
-                        url = this.info.url;
-                    }
-                } else {
-                    if (svnUrlReg.test(this.info.url)) {
-                        url = this.info.url;
-                    }
-                }
-
-                return {
-                    url: url,
-                    account: this.info.account,
-                    password: this.info.password,
-                    sourceDir: this.info.sourceDir
-                };
-            }
-        }
+<script>export default {
+  props: {
+    edited: {
+      type: Boolean,
+      default: true,
+    },
+    type: {
+      type: String,
+      default: 'bare_git',
+    },
+    defaultUrl: {
+      type: String,
+      default: '',
+    },
+    defaultAccount: {
+      type: String,
+      default: '',
+    },
+    defaultDir: {
+      type: String,
+      default: '',
+    },
+    deploymentIsShow: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  data() {
+    return {
+      info: {
+        url: this.defaultUrl,
+        account: this.defaultAccount,
+        password: '',
+        sourceDir: this.defaultDir,
+      },
+      rules: {
+        gitUrl: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            // http(s)://、git://
+            regex: /^(http|https|git):\/\//,
+            message: `${this.$t('请输入正确源代码地址，支持以下协议')}：http(s)://、git://`,
+            trigger: 'blur',
+          },
+        ],
+        svnUrl: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            // http(s)://、svn://
+            regex: /^(http|https|svn):\/\//,
+            message: `${this.$t('请输入正确源代码地址，支持以下协议')}：http(s)://、svn://`,
+            trigger: 'blur',
+          },
+        ],
+        sourceDir: [
+          {
+            regex: /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/,
+            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
+            trigger: 'blur',
+          },
+        ],
+        account: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        password: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      sourceDirTip: {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
+        placements: ['right'],
+      },
     };
+  },
+  computed: {
+    accountLabel() {
+      return this.type === 'bare_git' ? this.$t('Git账号:') : this.$t('SVN账号:');
+    },
+  },
+  watch: {
+    type() {
+      this.info = {
+        url: '',
+        account: '',
+        password: '',
+        sourceDir: '',
+      };
+    },
+    info: {
+      deep: true,
+      handler() {
+        const data = this.getData();
+        this.$emit('change', data);
+      },
+    },
+    edited(v) {
+      if (!v) {
+        this.info = {
+          url: this.defaultUrl,
+          account: this.defaultAccount,
+          password: '',
+          sourceDir: this.defaultDir,
+        };
+      }
+    },
+  },
+  methods: {
+    async validate(callback) {
+      this.$refs.repoInfo.validate().then(() => {
+        callback && callback();
+      })
+        .catch((error) => {
+          const { field } = error;
+          this.$refs[field].focus();
+        });
+    },
+
+    async valid() {
+      try {
+        const validRet = await this.$refs.repoInfo.validate();
+        console.log('validRet', validRet);
+        return validRet;
+      } catch (error) {
+        const { field } = error;
+        this.$refs[field].focus();
+        return Promise.reject(error);
+      }
+    },
+
+    getData() {
+      const gitUrlReg = /^(http|https|git):\/\//;
+      const svnUrlReg = /^(http|https|svn):\/\//;
+      let url = '';
+      if (this.type === 'bare_git') {
+        if (gitUrlReg.test(this.info.url)) {
+          url = this.info.url;
+        }
+      } else {
+        if (svnUrlReg.test(this.info.url)) {
+          url = this.info.url;
+        }
+      }
+
+      return {
+        url,
+        account: this.info.account,
+        password: this.info.password,
+        sourceDir: this.info.sourceDir,
+      };
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

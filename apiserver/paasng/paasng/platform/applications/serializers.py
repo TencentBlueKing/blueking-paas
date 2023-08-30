@@ -290,6 +290,9 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
             if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
                 raise ValidationError(_('请使用 BkApp v1alpha2 版本'))
 
+            if bkapp_res.metadata.name != attrs["code"]:
+                raise ValidationError(_("Manifest 中定义的应用模型名称与应用ID不一致"))
+
             if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
                 raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))
         return attrs

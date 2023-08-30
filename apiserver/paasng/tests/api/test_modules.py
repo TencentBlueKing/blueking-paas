@@ -132,7 +132,11 @@ class TestCreateCloudNativeModule:
                 "manifest": {
                     "apiVersion": "paas.bk.tencent.com/v1alpha2",
                     "kind": "BkApp",
-                    "metadata": {"name": "csu230202", "generation": 0, "annotations": {}},
+                    "metadata": {
+                        "name": f"{bk_cnative_app.code}-m-uta-{random_suffix}",
+                        "generation": 0,
+                        "annotations": {},
+                    },
                     "spec": {
                         "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
                         "processes": [{"name": "web", "replicas": 1}],

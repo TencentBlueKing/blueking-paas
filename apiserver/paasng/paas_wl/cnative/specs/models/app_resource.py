@@ -287,9 +287,15 @@ def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
         mdata = get_metadata(obj)
         module_name = mdata.module_name
         code = mdata.get_paas_app_code()
+
+    return _generate_bkapp_name(app_code=code, module_name=module_name)
+
+
+def _generate_bkapp_name(app_code: str, module_name: str) -> str:
+    """core generator of bkapp name"""
     # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
     if module_name == ModuleName.DEFAULT.value:
-        name = code
+        name = app_code
     else:
-        name = f'{code}-m-{module_name}'
+        name = f'{app_code}-m-{module_name}'
     return name.replace("_", "0us0")

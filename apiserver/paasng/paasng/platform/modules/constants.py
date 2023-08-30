@@ -55,6 +55,7 @@ class APP_CATEGORY(str, StructuredEnum):
 
     NORMAL_APP = 'normal_app'
     S_MART_APP = 'smart_app'
+    CNATIVE_APP = 'cnative_app'
     LEGACY_APP = 'legacy_app'
 
 

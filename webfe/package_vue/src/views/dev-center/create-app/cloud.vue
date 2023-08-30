@@ -1,5 +1,5 @@
 <template>
-  <div class="cloud-app-container">
+  <div class="cloud-app-container" v-bkloading="{ isLoading: formLoading, opacity: 1 }">
     <bk-alert
       class="mb20 mt20" type="info"
       :title="$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力。')"></bk-alert>
@@ -720,7 +720,7 @@ export default {
         };
         params.source_config.source_repo_url = this.formData.url;   // 镜像
       }
-
+      debugger;
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
           appCode: this.appCode,

@@ -737,7 +737,4 @@ export default {
     .form-input-cls{
       position: relative;
     }
-    .address-info-title + .address-info-url {
-      transform: translateY(2px);
-    }
 </style>

@@ -17,6 +17,7 @@
             v-if="edited"
             ref="url"
             v-model="info.url"
+            class="form-input-width"
             :placeholder="`${$t('支持以下协议：')}http(s)://、git://`"
           />
           <p v-else>
@@ -36,6 +37,7 @@
             v-if="edited"
             ref="url"
             v-model="info.url"
+            class="form-input-width"
             :placeholder="`${$t('支持以下协议：')}http(s)://、svn://，${$t('并确保trunk、branches、tags等在该目录下')}`"
           />
           <p v-else>
@@ -56,6 +58,7 @@
         <bk-input
           v-if="edited"
           ref="sourceDir"
+          class="form-input-width"
           v-model="info.sourceDir"
         />
         <p v-else>
@@ -74,6 +77,7 @@
         <bk-input
           v-if="edited"
           ref="account"
+          class="form-input-width"
           v-model="info.account"
         />
         <p v-else>
@@ -92,6 +96,7 @@
           v-if="edited"
           ref="password"
           v-model="info.password"
+          class="form-input-width"
           type="password"
           :placeholder="$t('请输入')"
         />
@@ -277,4 +282,7 @@
 </script>
 
 <style lang="scss" scoped>
+.form-input-width{
+  width: 650px;
+}
 </style>

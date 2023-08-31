@@ -1,11 +1,17 @@
 @import '~@/assets/css/mixins/border-active-logo.scss';
 .cloud-app-container{
-    width: 1000px;
+    width: 1200px;
     margin: 0 auto;
     .form-item-title{
         color: #313238;
         font-size: 14px;
         font-weight: 600;
+    }
+    .from-content{
+        background: #FFFFFF;
+        box-shadow: 0 2px 4px 0 #1919290d;
+        border-radius: 2px;
+        padding: 12px 24px;
     }
     .form-item-cls{
         /deep/ .bk-label{

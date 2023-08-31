@@ -8,6 +8,7 @@
       :model="formData"
       :rules="rules"
       :label-width="100"
+      class="from-content"
     >
       <div class="form-item-title mb10">
         {{ $t('基本信息') }}
@@ -77,8 +78,9 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title mb10 mt10">
+        <div class="form-item-title mb10">
           {{ $t('应用模版') }}
         </div>
         <bk-form-item
@@ -128,8 +130,9 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title mb10 mt10">
+        <div class="form-item-title mb10">
           {{ $t('源码管理') }}
         </div>
 
@@ -202,8 +205,9 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title mt20">
+        <div class="form-item-title">
           {{ $t('高级选项') }}
         </div>
 
@@ -236,9 +240,10 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title">
-          {{ $t('源码管理') }}
+        <div class="form-item-title mb10">
+          {{ $t('镜像信息') }}
         </div>
         <bk-form-item
           :required="true"
@@ -337,7 +342,7 @@
     </div>
 
 
-    <div class="form-btn flex-row">
+    <div class="mt20 flex-row">
       <!-- :disabled="" -->
       <div class="mr20" v-if="curStep === 1">
         <bk-button

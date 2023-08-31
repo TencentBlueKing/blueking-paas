@@ -143,7 +143,7 @@
                 <template v-else>
                     <div v-for="(bps, stack_name) in readOnlyDialog.form.required_buildpacks">
                         <div>
-                            <span v-if="stack_name != '__default__'">基础镜像 $[ stack_name ] 的构建工具: </span>
+                            <span v-if="stack_name != '__default__'">基础镜像 <b>$[ stack_name ]</b> 的构建工具: </span>
                             <span v-else>默认构建工具(对所有镜像生效): </span>
                             <span v-for="tag in bps" v-if="bps.length">
                                 <bk-tag>$[ tag ]</bk-tag>

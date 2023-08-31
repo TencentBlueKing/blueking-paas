@@ -161,7 +161,6 @@
                   ext-cls="select-custom"
                   ext-popover-cls="select-popover-custom"
                   searchable
-                  @change="handleImageChange"
                 >
                   <bk-option
                     v-for="option in imageCredentialList"
@@ -879,10 +878,6 @@ export default {
           break;
       }
     },
-
-    goBack() {
-      window.history.go(-1);
-    },
     validSourceDir() {
       const val = this.sourceDirVal || '';
       if (!val) {
@@ -1058,10 +1053,14 @@ export default {
 
     // 处理取消
     handleCancel() {
-      this.$refs?.processRef?.handleCancel();
-      this.cloudAppData = _.cloneDeep(this.localCloudAppData);
-      this.$store.commit('cloudApi/updateHookPageEdit', false);
-      this.$store.commit('cloudApi/updateProcessPageEdit', false);
+      if (this.curStep === 1) {
+        window.history.go(-1);
+      } else {
+        this.$refs?.processRef?.handleCancel();
+        this.cloudAppData = _.cloneDeep(this.localCloudAppData);
+        this.$store.commit('cloudApi/updateHookPageEdit', false);
+        this.$store.commit('cloudApi/updateProcessPageEdit', false);
+      }
     },
 
     // 获取凭证列表
@@ -1081,11 +1080,6 @@ export default {
     // 前往创建镜像凭证页面
     handlerCreateImageCredential() {
       this.$router.push({ name: 'imageCredential' });
-    },
-
-    // 镜像选择
-    handleImageChange() {
-      console.log();
     },
   },
 };

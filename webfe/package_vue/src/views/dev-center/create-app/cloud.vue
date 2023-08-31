@@ -203,10 +203,9 @@
         :rules="rules"
         :label-width="100"
       >
-        <div class="form-item-title mb10 mt10">
+        <div class="form-item-title mt20">
           {{ $t('高级选项') }}
         </div>
-
 
         <bk-form-item
           :label="$t('选择集群')"

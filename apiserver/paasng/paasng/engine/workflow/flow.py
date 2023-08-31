@@ -135,6 +135,10 @@ class DeploymentStateMgr:
         deployment = Deployment.objects.get(pk=deployment_id)
         return cls(deployment=deployment, phase_type=phase_type)
 
+    @property
+    def phase(self):
+        return self.deployment.deployphase_set.get(type=self.phase_type)
+
     def update(self, **fields):
         return self.deployment.update_fields(**fields)
 

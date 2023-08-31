@@ -21,7 +21,7 @@
             </div>
             <div class="form-group pb0">
               <label class="form-label"> {{ $t('所属应用') }} </label>
-              <div class="form-group-flex">
+              <div class="form-group-flex form-input-width">
                 <p class="app-name">
                   {{ curAppInfo.application.name }}
                 </p>
@@ -339,7 +339,7 @@
                     <p>
                       <bk-input
                         v-model="sourceDirVal"
-                        class="source-dir"
+                        class="source-dir form-input-width"
                         :class="sourceDirError ? 'error' : ''"
                         :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
                         @blur="validSourceDir"
@@ -659,6 +659,7 @@ export default {
     },
 
     createCloudAppData() {
+      console.log('this.$store.state.cloudApi.cloudAppData', this.$store.state.cloudApi.cloudAppData);
       return this.$store.state.cloudApi.cloudAppData;
     },
   },
@@ -683,6 +684,15 @@ export default {
       if (value === 2) {
         this.lessCodeCorrectRules = !/^[a-z]+$/.test(this.curAppInfo.application.code);
       }
+    },
+    createCloudAppData: {
+      handler(value) {
+        // 如果vuex变量cloudAppData变动了则需要将值赋值给this.cloudAppData
+        if (JSON.stringify(value?.spec?.processes) !== JSON.stringify(this.cloudAppData?.spec?.processes)) {
+          this.cloudAppData = value;
+        }
+      },
+      deep: true,
     },
   },
   async created() {

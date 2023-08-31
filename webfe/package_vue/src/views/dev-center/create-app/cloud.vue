@@ -571,6 +571,13 @@ export default {
       },
       immediate: true,
     },
+
+    'formData.code'(value) {
+      if (!this.initCloudAppData.metadata) {
+        this.initCloudAppData.metadata = {};
+      }
+      this.initCloudAppData.metadata.name = value;
+    },
   },
   mounted() {
     this.init();

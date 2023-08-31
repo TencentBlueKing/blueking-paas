@@ -99,6 +99,9 @@ class SourceOriginSpecs(ABC):
     # Describe the type of runtime system
     runtime_type: RuntimeType
 
+    # Whether the module uses a version control system to manage source code
+    has_vcs: bool = False
+
     # Whether current module has template code, the code was usually initialized during module creation
     has_template_code: bool = True
 

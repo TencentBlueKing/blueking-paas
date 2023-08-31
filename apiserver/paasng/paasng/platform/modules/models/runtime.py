@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class BuildPackManager(models.Manager):
+class BuildpackManager(models.Manager):
     def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
         """查询模块可用的构建工具
 
@@ -60,7 +60,7 @@ class BuildPackManager(models.Manager):
         # A: 因为 models.Q(related_build_configs=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_region_available(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
+    def filter_by_region(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
         """查询 region 可用的构建工具"""
         qs = self.get_queryset().filter(region=region)
         if not contain_hidden:
@@ -90,7 +90,7 @@ class AppBuildPack(TimestampedModel):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="buildpacks")
 
-    objects = BuildPackManager()
+    objects = BuildpackManager()
 
     def natural_key(self):
         return (self.region, self.name)
@@ -133,7 +133,7 @@ class AppImageStackQuerySet(models.QuerySet):
         # A: 因为 models.Q(buildconfig__pk=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_region_available(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
+    def filter_by_region(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
         """过滤 region 可用的镜像"""
         qs = self.filter(region=region)
         if not contain_hidden:
@@ -195,12 +195,12 @@ class AppImageStackManager(models.Manager):
 
     def select_default_runtime(self, region: str, labels: dict, contain_hidden: bool = False) -> "AppImage":
         """选择 region 下符合对应 labels 的默认运行时"""
-        available_runtimes = self.get_queryset().filter_region_available(region).filter_by_labels(labels)
+        available_runtimes = self.get_queryset().filter_by_region(region).filter_by_labels(labels)
         # 根据label匹配到的，则直接返回最新创建的一个
         if available_runtimes.exists():
             return available_runtimes.latest("created")
 
-        available_runtimes = self.get_queryset().filter_region_available(region=region, contain_hidden=contain_hidden)
+        available_runtimes = self.get_queryset().filter_by_region(region=region, contain_hidden=contain_hidden)
         if available_runtimes.filter(is_default=True).exists():
             return available_runtimes.filter(is_default=True).latest("updated")
 
@@ -294,4 +294,4 @@ class AppSlugBuilder(AppImage):
 
     def list_region_available_buildpacks(self, region: str, *args, **kwargs) -> List[AppBuildPack]:
         """查询 region 可用的构建工具"""
-        return list(self.buildpacks.filter_region_available(region).filter(*args, **kwargs))
+        return list(self.buildpacks.filter_by_region(region).filter(*args, **kwargs))

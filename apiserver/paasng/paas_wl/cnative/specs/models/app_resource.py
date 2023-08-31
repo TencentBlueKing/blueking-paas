@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional, Union, overload
+from typing import Dict, List, Optional, Union
 
 import yaml
 from django.db import models
@@ -256,46 +256,34 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-@overload
-def generate_bkapp_name(obj: Module) -> str:
-    ...
+class BkAppNameGenerator:
+    @classmethod
+    def generate(cls, obj: Union[Module, WlApp, ModuleEnvironment]) -> str:
+        """Generate name of the BkApp resource by env.
+
+        :param obj: Union[Module, WlApp, ModuleEnvironment] object
+        :return: BkApp resource name
+        """
+        if isinstance(obj, Module):
+            module_name = obj.name
+            code = obj.application.code
+        elif isinstance(obj, ModuleEnvironment):
+            module_name = obj.module.name
+            code = obj.application.code
+        else:
+            mdata = get_metadata(obj)
+            module_name = mdata.module_name
+            code = mdata.get_paas_app_code()
+        return cls.make_name(app_code=code, module_name=module_name)
+
+    @classmethod
+    def make_name(cls, app_code: str, module_name: str) -> str:
+        # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
+        if module_name == ModuleName.DEFAULT.value:
+            name = app_code
+        else:
+            name = f'{app_code}-m-{module_name}'
+        return name.replace("_", "0us0")
 
 
-@overload
-def generate_bkapp_name(obj: ModuleEnvironment) -> str:
-    ...
-
-
-@overload
-def generate_bkapp_name(obj: WlApp) -> str:
-    ...
-
-
-def generate_bkapp_name(obj: Union[Module, ModuleEnvironment]) -> str:
-    """Generate name of the BkApp resource by env.
-
-    :param obj: Union[Module, ModuleEnvironment] object
-    :return: BkApp resource name
-    """
-    if isinstance(obj, Module):
-        module_name = obj.name
-        code = obj.application.code
-    elif isinstance(obj, ModuleEnvironment):
-        module_name = obj.module.name
-        code = obj.application.code
-    else:
-        mdata = get_metadata(obj)
-        module_name = mdata.module_name
-        code = mdata.get_paas_app_code()
-
-    return _generate_bkapp_name(app_code=code, module_name=module_name)
-
-
-def _generate_bkapp_name(app_code: str, module_name: str) -> str:
-    """core generator of bkapp name"""
-    # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
-    if module_name == ModuleName.DEFAULT.value:
-        name = app_code
-    else:
-        name = f'{app_code}-m-{module_name}'
-    return name.replace("_", "0us0")
+generate_bkapp_name = BkAppNameGenerator.generate

@@ -35,7 +35,11 @@ logger = logging.getLogger(__name__)
 
 @define
 class BuildConfig:
-    """BuildConfig dataclass, provide similar attribute of models.BuildConfig"""
+    """BuildConfig dataclass, provide similar attribute of modules.models.BuildConfig
+
+    This class is used to keep the response structure of `RegionTemplateViewSet.retrieve`
+    similar to `ModuleBuildConfigViewSet.retrieve`
+    """
 
     build_method: RuntimeType
     tag_options: ImageTagOptions

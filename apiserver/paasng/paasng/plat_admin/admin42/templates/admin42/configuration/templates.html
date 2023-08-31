@@ -132,10 +132,26 @@
                 <span v-if="!readOnlyDialog.form.enabled_regions.length" class="ml10">--</span>
             </bk-form-item>
             <bk-form-item label="必须的构建工具">
-                <span v-for="tag in readOnlyDialog.form.required_buildpacks">
-                    <bk-tag>$[ tag ]</bk-tag>
-                </span>
-                <span v-if="!readOnlyDialog.form.required_buildpacks.length" class="ml10">--</span>
+                <template v-if="readOnlyDialog.form.required_buildpacks.length === 0">
+                    <span class="ml10">--</span>
+                </template>
+                <template v-else-if="readOnlyDialog.form.required_buildpacks instanceof Array">
+                    <span v-for="tag in readOnlyDialog.form.required_buildpacks">
+                        <bk-tag>$[ tag ]</bk-tag>
+                    </span>
+                </template>
+                <template v-else>
+                    <div v-for="(bps, stack_name) in readOnlyDialog.form.required_buildpacks">
+                        <div>
+                            <span v-if="stack_name != '__default__'">基础镜像 $[ stack_name ] 的构建工具: </span>
+                            <span v-else>默认构建工具(对所有镜像生效): </span>
+                            <span v-for="tag in bps" v-if="bps.length">
+                                <bk-tag>$[ tag ]</bk-tag>
+                            </span>
+                            <span v-else>--</span>
+                        </div>
+                    </div>
+                </template>
             </bk-form-item>
             <bk-form-item label="进程配置">
                 <json-pretty

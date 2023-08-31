@@ -65,6 +65,16 @@ make_app_metadata = ReplaceableFunction(default_factory=dict)
 
 
 class ModuleBuildpackPlaner:
+    """ModuleBuildpackPlaner 的职责是协助 ModuleInitializer 初始化运行时需要的构建工具
+
+    ModuleBuildpackPlaner 与 TemplateRuntimeManager 的行为类似但不一样:
+    - ModuleBuildpackPlaner 关注的是 module, 而 TemplateRuntimeManager 关注的是 template
+    - 处理从模板创建的 Module 时, ModuleBuildpackPlaner 与 TemplateRuntimeManager **完全**一致
+    - 由于并非所有 Module 都从模板创建, 因此目前并不能用 TemplateRuntimeManager 取代 ModuleBuildpackPlaner, 涉及的应用类型:
+        - BK_LESSCODE
+        - BK_PLUGINS
+    """
+
     def __init__(self, module: Module):
         self.module = module
 

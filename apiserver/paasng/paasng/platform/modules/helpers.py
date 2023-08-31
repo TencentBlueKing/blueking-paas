@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from operator import attrgetter
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, overload
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -83,8 +82,8 @@ class ModuleRuntimeBinder:
         """绑定 buildpack stack - 即构建和运行的镜像、以及构建工具"""
         module = self.module
         try:
-            slugbuilder = AppSlugBuilder.objects.filter_available(module=module).get(name=bp_stack_name)
-            slugrunner = AppSlugRunner.objects.filter_available(module=module).get(name=bp_stack_name)
+            slugbuilder = AppSlugBuilder.objects.filter_module_available(module=module).get(name=bp_stack_name)
+            slugrunner = AppSlugRunner.objects.filter_module_available(module=module).get(name=bp_stack_name)
         except ObjectDoesNotExist:
             raise BuildPackStackNotFound(bp_stack_name)
 
@@ -155,42 +154,6 @@ class ModuleRuntimeBinder:
         buildpack.related_build_configs.add(self.build_config)
         self.build_config.buildpack_builder = slugbuilder
         self.build_config.save(update_fields=["buildpack_builder", "updated"])
-
-    def bind_buildpacks_by_name(self, names: List[str]):
-        """根据给定的名称及顺序来绑定构建工具
-
-        :raises: RuntimeError when no buildpacks can be found
-        """
-        slugbuilder = self.build_config.buildpack_builder
-        if not slugbuilder:
-            raise BindError("Can't bind buildpacks when without SlugBuilder")
-
-        available_bps = {}
-        for bp in slugbuilder.get_buildpack_choices(self.module, name__in=names):
-            available_bps[bp.name] = bp
-
-        buildpacks = []
-        for name in names:
-            try:
-                buildpacks.append(available_bps[name])
-            except KeyError:
-                raise RuntimeError('No buildpacks can be found for name: {}'.format(name))
-
-        if buildpacks:
-            self.bind_buildpacks(buildpacks, [bp.id for bp in buildpacks])
-
-    def bind_buildpacks_by_module_language(self):
-        """根据模块的语言筛选可用的 buildpack 进行绑定"""
-        slugbuilder = self.build_config.buildpack_builder
-        if not slugbuilder:
-            raise BindError("Can't bind buildpacks when without SlugBuilder")
-
-        # 选取指定语言的最新一个非隐藏的 buildpack
-        buildpacks = slugbuilder.get_buildpack_choices(self.module, language=self.module.language)
-        if not buildpacks:
-            return
-        buildpack = sorted(buildpacks, key=attrgetter("created"))[-1]
-        self.bind_buildpack(buildpack)
 
     @staticmethod
     def get_ordered_buildpacks_list(

@@ -51,6 +51,7 @@ class ModuleSpecs:
         self.app_specs = AppSpecs(module.application)
         self.source_origin_specs = SourceOriginSpecs.get(SourceOrigin(module.get_source_origin()))
 
+    has_vcs = source_origin_property('has_vcs')
     has_template_code = source_origin_property('has_template_code')
     deploy_via_package = source_origin_property('deploy_via_package')
 
@@ -98,6 +99,9 @@ class SourceOriginSpecs(ABC):
     # Describe the type of runtime system
     runtime_type: RuntimeType
 
+    # Whether the module uses a version control system to manage source code
+    has_vcs: bool = False
+
     # Whether current module has template code, the code was usually initialized during module creation
     has_template_code: bool = True
 
@@ -125,6 +129,7 @@ class AuthorizedVcsSpecs(SourceOriginSpecs):
     """Specs for source_origin: AUTHORIZED_VCS"""
 
     source_origin = SourceOrigin.AUTHORIZED_VCS
+    has_vcs = True
     has_template_code = True
     deploy_via_package = False
 
@@ -133,6 +138,7 @@ class PackageMixin:
     """Stores common mixin properties for external package based source origins"""
 
     runtime_type = RuntimeType.BUILDPACK
+    has_vcs = False
     has_template_code = False
     deploy_via_package = True
 
@@ -154,6 +160,17 @@ class ImageRegistrySpecs(SourceOriginSpecs):
 
     source_origin = SourceOrigin.IMAGE_REGISTRY
     runtime_type = RuntimeType.CUSTOM_IMAGE
+    has_vcs = False
+    has_template_code = False
+    deploy_via_package = False
+
+
+class CNativeImageSpecs(SourceOriginSpecs):
+    """Specs for source_origin: CNATIVE_IMAGE"""
+
+    source_origin = SourceOrigin.CNATIVE_IMAGE
+    runtime_type = RuntimeType.CUSTOM_IMAGE
+    has_vcs = False
     has_template_code = False
     deploy_via_package = False
 
@@ -163,5 +180,6 @@ class SceneSpecs(SourceOriginSpecs):
 
     source_origin = SourceOrigin.SCENE
     runtime_type = RuntimeType.BUILDPACK
+    has_vcs = True
     has_template_code = True
     deploy_via_package = False

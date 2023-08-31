@@ -41,7 +41,7 @@ class TestAppSlugBuilder:
         slugbuilder.save()
 
         expected = [] if expect_empty else [slugbuilder]
-        assert list(AppSlugBuilder.objects.filter_available(bk_module)) == expected
+        assert list(AppSlugBuilder.objects.filter_module_available(bk_module)) == expected
 
     @pytest.mark.parametrize(
         "image, tag, full_image, expect_empty",
@@ -107,7 +107,7 @@ class TestAppSlugBuilder:
             ({}, "Python", SourceOrigin.AUTHORIZED_VCS.value, False, False),
         ],
     )
-    def test_filter_by_label(
+    def test_filter_by_labels(
         self, bk_module, slugbuilder, labels, language, source_origin, expect_matched, expect_empty
     ):
         for key in labels:
@@ -120,7 +120,7 @@ class TestAppSlugBuilder:
             runtime_labels["category"] = APP_CATEGORY.S_MART_APP.value
         else:
             runtime_labels["category"] = APP_CATEGORY.NORMAL_APP.value
-        available_qs = AppSlugBuilder.objects.filter_by_label(bk_module, runtime_labels)
+        available_qs = AppSlugBuilder.objects.filter_by_labels(bk_module, runtime_labels)
         if expect_matched:
             assert available_qs.count() > 0
             assert list(available_qs) == [] if expect_empty else [slugbuilder]
@@ -145,4 +145,4 @@ class TestAppSlugRunner:
         slugrunner.save()
 
         expected = [] if expect_empty else [slugrunner]
-        assert list(AppSlugRunner.objects.filter_available(bk_module)) == expected
+        assert list(AppSlugRunner.objects.filter_module_available(bk_module)) == expected

@@ -32,7 +32,7 @@ from paas_wl.cluster.shim import RegionClusterService
 from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import to_error_string
-from paasng.engine.constants import RuntimeType
+from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.platform.applications.constants import AppLanguage, ApplicationRole, ApplicationType
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
@@ -46,12 +46,7 @@ from paasng.platform.applications.specs import AppTypeSpecs
 from paasng.platform.applications.utils import RE_APP_CODE, RE_APP_SEARCH
 from paasng.platform.core.region import get_region
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.serializers import (
-    MinimalModuleSLZ,
-    ModuleBuildConfigSLZ,
-    ModuleSLZ,
-    ModuleSourceConfigSLZ,
-)
+from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import NickNameField, UserField
 from paasng.utils.validators import Base64Validator, DnsSafeNameValidator, ReservedWordValidator
@@ -260,14 +255,6 @@ class CloudNativeParamsSLZ(serializers.Serializer):
     api_version = serializers.CharField(label=_('API版本'), required=False, default=ApiVersion.V1ALPHA1.value)
 
 
-class ImageCredentialsParamsMixin(serializers.Serializer):
-    """镜像凭证相关参数"""
-
-    name = serializers.CharField(required=True)
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)
-
-
 class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     """创建云原生架构应用的表单"""
 
@@ -276,8 +263,7 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     advanced_options = AdvancedCreationParamsMixin(required=False)
 
     source_config = ModuleSourceConfigSLZ(required=False, help_text=_('源码配置'))
-    build_config = ModuleBuildConfigSLZ(required=False, help_text=_('构建配置'))
-    image_credentials = ImageCredentialsParamsMixin(required=False, help_text=_('镜像凭证信息'))
+    image_credentials = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
     manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
 
     def validate(self, attrs):
@@ -288,30 +274,27 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
             return attrs
 
         source_cfg = attrs.get('source_config')
-        build_cfg = attrs.get('build_config')
-        if not (source_cfg and build_cfg):
-            raise ValidationError(_('需要指定 源码配置 以及 构建配置'))
+        if not source_cfg:
+            raise ValidationError(_('需要指定 源码配置'))
 
-        if build_cfg['build_method'] == RuntimeType.CUSTOM_IMAGE:
-            if not attrs.get('manifest'):
-                raise ValidationError(_('云原生应用 manifest 不能为空'))
-
-            source_cfg = attrs['source_config']
-            # 检查 source_config 中 source_origin 类型必须为 IMAGE_REGISTRY
-            if source_cfg['source_origin'] != SourceOrigin.IMAGE_REGISTRY:
-                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 IMAGE_REGISTRY'))
+        if manifest := attrs.get('manifest'):
+            # 检查 source_config 中 source_origin 类型必须为 CNATIVE_IMAGE
+            if source_cfg['source_origin'] != SourceOrigin.CNATIVE_IMAGE:
+                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 CNATIVE_IMAGE'))
 
             try:
-                bkapp_res = BkAppResource(**attrs['manifest'])
+                bkapp_res = BkAppResource(**manifest)
             except PDValidationError as e:
                 raise ValidationError(to_error_string(e))
 
             if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
                 raise ValidationError(_('请使用 BkApp v1alpha2 版本'))
 
+            if bkapp_res.metadata.name != attrs["code"]:
+                raise ValidationError(_("Manifest 中定义的应用模型名称与应用ID不一致"))
+
             if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
                 raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))
-
         return attrs
 
 

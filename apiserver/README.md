@@ -44,7 +44,7 @@ apiserver 为 blueking-paas 项目的主控模块。
 
 ```shell
 virtualenv -p ~/.pyenv/versions/3.8.13/bin/python3 bkpaas-venv
-source ./bkpaas-venv/bin/active
+source ./bkpaas-venv/bin/activate
 ```
 
 2. 安装项目依赖
@@ -156,3 +156,8 @@ Template 页面开发模式与常规的 Django 项目无异, 但是使用了 [Vu
 2. 首屏数据使用服务端渲染至 HTML, 以简化前后端交互的逻辑
 3. 避免硬编码后端接口, 使用 `url` 标签动态获取接口地址
 4. 监听 `DOMContentLoaded` 事件完成 Vue 对象的初始化
+
+## FAQ
+### docker compose 安装 bundle 依赖问题
+如果在安装 docker 时, 安装了 docker-compose-plugin, 
+需要修改'blueking-paas/apiserver/dev_utils/bundle/start.sh' 中的 docker-compose 改为 docker compose

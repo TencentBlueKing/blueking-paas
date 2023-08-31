@@ -92,6 +92,7 @@ class Deployment(OperationVersionBase):
     )
     pre_release_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 pre-release 的时间')
     release_id = models.UUIDField(max_length=32, null=True)
+    bkapp_release_id = models.BigIntegerField(null=True, help_text="云原生应用发布记录ID")
     release_status = models.CharField(choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
     release_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 release 的时间')
 

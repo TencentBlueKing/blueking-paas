@@ -40,11 +40,10 @@ apiserver 为 blueking-paas 项目的主控模块。
 ❯ pyenv install 3.8.13
 ```
 
-- 使用 virtualenv 工具，为项目初始化独立的运行环境
+- 使用 poetry 工具，为项目初始化独立的运行环境
 
 ```shell
-virtualenv -p ~/.pyenv/versions/3.8.13/bin/python3 bkpaas-venv
-source ./bkpaas-venv/bin/activate
+❯ poetry env use ~/.pyenv/versions/3.8.13/bin/python3
 ```
 
 2. 安装项目依赖
@@ -68,8 +67,12 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 1. 安装 [Nodejs](https://github.com/nodejs)，推荐使用 v14.21.1 版本
 
+我们推荐使用 [nvm](https://github.com/nvm-sh/nvm) 管理本地的 nodejs 环境
+- 依照 [相关指引](https://github.com/nvm-sh/nvm#installing-and-updating) 安装 nvm
+- 使用 nvm 安装 nodejs 14
+
 ```shell
-❯ brew install node@14 
+❯ nvm install 14 
 ```
 
 2. 安装项目依赖

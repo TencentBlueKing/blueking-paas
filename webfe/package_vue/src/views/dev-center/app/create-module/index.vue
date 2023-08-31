@@ -38,7 +38,7 @@
                 :property="'name'"
                 :rules="rules.name"
                 error-display-type="normal"
-                ext-cls="name-item-cls"
+                ext-cls="module-item-cls"
               >
                 <div
                   class="form-group mt10"
@@ -116,6 +116,7 @@
             </div>
 
             <bk-form
+              class="mt10"
               ref="validate2"
               :model="mirrorData"
               :rules="mirrorRules"
@@ -188,24 +189,9 @@
             <div class="item-title">
               {{ $t('应用模板') }}
             </div>
-            <div class="establish-tab">
+            <div class="establish-tab mt10">
               <section class="code-type">
-                <label class="form-label template"> {{ $t('模板来源') }} </label>
-                <div class="tab-box">
-                  <li
-                    :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
-                    @click="handleCodeTypeChange(1)"
-                  >
-                    {{ $t('蓝鲸开发框架') }}
-                  </li>
-                  <!-- <li
-                    v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
-                    :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
-                    @click="handleCodeTypeChange(2)"
-                  >
-                    {{ $t('蓝鲸可视化开发平台') }}
-                  </li> -->
-                </div>
+                <span class="pl20">模板来源：</span><span class="pl10 module-name">蓝鲸开发框架</span>
               </section>
             </div>
 
@@ -326,6 +312,7 @@
               <!-- Git 相关额外代码 start -->
               <template v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
                 <git-extend
+                  ref="extend"
                   :key="sourceControlType"
                   :git-control-type="sourceControlType"
                   :is-auth="gitExtendConfig[sourceControlType].isAuth"
@@ -680,6 +667,7 @@ export default {
       this.fetchRegionsServices();
     },
     structureType(value) {
+      this.curStep = 1;
       if (value === 'mirror') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;   // 仅镜像的云原生
         this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
@@ -699,11 +687,6 @@ export default {
   },
   async created() {
     await this.fetchRegion();
-
-    if (!this.canCreateModule) {
-      this.loading = false;
-      return;
-    }
     await this.getLanguageByRegion();
     await this.getCodeTypes();
     this.sourceInitTemplate = this.languages[this.language][0].name;
@@ -888,13 +871,6 @@ export default {
     },
 
     goBack() {
-      // this.$router.push({
-      //     name: 'appSummary',
-      //     params: {
-      //         id: this.$route.params.id,
-      //         moduleId: this.curModuleId
-      //     }
-      // })
       window.history.go(-1);
     },
     validSourceDir() {
@@ -916,31 +892,10 @@ export default {
       //   IMAGE: 4,
       //   SCENE_APP: 5
       //    //CNATIVE_IMAGE: 6
-      if (!this.canCreateModule) {
-        return;
-      }
       let sourceRepoUrl = null;
-      // 模块名称校验
-      if (this.$refs.formDataRef) {
-        try {
-          await this.$refs.formDataRef.validate();
-        } catch (error) {
-          console.log('error', error);
-          return;
-        }
-      }
 
       if (this.sourceDirError) {
         return;
-      }
-
-      if (this.$refs.validate2) {
-        try {
-          await this.$refs.validate2.validate();
-        } catch (error) {
-          console.log('error', error);
-          return;
-        }
       }
 
       this.formLoading = true;
@@ -998,12 +953,10 @@ export default {
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
-        if (this.imageCredentialsData.name) {
-          params.image_credentials = {
-            name: this.imageCredentialsData.name,
-          };
-        }
-        params.source_config.source_repo_url = this.mirrorData.url;
+        params.source_config = {
+          source_repo_url: this.mirrorData.url,
+          source_origin: this.sourceOrigin,
+        };
         params.manifest = { ...this.createCloudAppData };
       }
 
@@ -1039,21 +992,23 @@ export default {
 
     // 下一步按钮
     async handleNext() {
-      this.curStep = 2;
-      if (this.structureType === 'mirror') {
+      await this.$refs.formDataRef.validate();    // 基本信息检验
+      if (this.structureType === 'mirror') {      // 仅镜像
+        await this.$refs.validate2?.validate();
         this.getProcessData();
-      } else {
-        if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+      } else {      // 源码&镜像
+        await this.$refs?.extend?.valid();    // 代码仓库检验
+        if (['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
           const validRet = await this.$refs?.repoInfo?.valid();
-          console.log('validRet', validRet);
           if (!validRet) {
             window.scrollTo(0, 0);
             return;
           }
 
-          this.repoData = this.$refs.repoInfo.getData();
+          this.repoData = this.$refs?.repoInfo?.getData();
         }
       }
+      this.curStep = 2;
     },
 
     // 上一步
@@ -1075,8 +1030,10 @@ export default {
           moduleId: this.curModuleId,
         });
         this.cloudAppData = res.manifest;
-        this.cloudAppData.spec.build.image = this.mirrorData.url;   // 讲镜像仓库的值赋值给cloudAppData
-        this.cloudAppData.spec.build.imageCredentialsName = this.imageCredentialsData.name;   // 讲镜像凭证的值赋值给cloudAppData
+        this.cloudAppData.spec.build.image = this.mirrorData.url;   // 镜像仓库的值赋值给cloudAppData
+        this.cloudAppData.spec.build.imageCredentialsName = this.imageCredentialsData.name;   // 镜像凭证的值赋值给cloudAppData
+        // 镜像仓库的值赋值给cloudAppData.metadata.name 必须等于 `${应用ID}-m-${模块名称}`
+        this.cloudAppData.metadata = { name: `${this.curAppInfo.application.name}-m-${this.formData.name}` } ;
         this.localCloudAppData = _.cloneDeep(this.cloudAppData);
         this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
       } catch (e) {
@@ -1128,4 +1085,11 @@ export default {
     @import "./index.scss";
 </style>
 <style lang="scss">
+.module-item-cls {
+    .bk-form-content{
+        .form-error-tip{
+            margin: 5px 0 0 100px;
+        }
+    }
+}
 </style>

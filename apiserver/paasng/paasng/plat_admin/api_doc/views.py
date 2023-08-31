@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict
 
 import yaml
+from django.conf import settings
 from django.template.loader import get_template
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
@@ -32,7 +33,7 @@ schema_view = get_schema_view(
         title="PaaS V3 API",
         default_version='vx',
         description="PaaS V3 API Document",
-        terms_of_service="http://paas.bking.com",
+        terms_of_service=settings.BKPAAS_URL,
         contact=openapi.Contact(email="blueking@tencent.com"),
         license=openapi.License(name="BSD License"),
     ),

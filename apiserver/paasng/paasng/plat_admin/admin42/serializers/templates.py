@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -36,9 +36,18 @@ class TemplateSLZ(serializers.ModelSerializer):
             raise ValidationError(_("预设增强服务配置必须为 Dict 格式"))
         return conf
 
-    def validate_required_buildpacks(self, required_buildpacks: List) -> List:
-        if not isinstance(required_buildpacks, list):
-            raise ValidationError(_("必须的构建工具配置必须为 List 格式"))
+    def validate_required_buildpacks(self, required_buildpacks: Union[List, Dict]) -> Union[List, Dict]:
+        if isinstance(required_buildpacks, list):
+            if any(not isinstance(bp, str) for bp in required_buildpacks):
+                raise ValidationError(_("构建工具配置必须为 List[str] 格式"))
+        elif isinstance(required_buildpacks, dict):
+            if "__default__" not in required_buildpacks:
+                raise ValidationError(_("针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"))
+            for required_buildpacks_for_image in required_buildpacks.values():
+                if any(not isinstance(bp, str) for bp in required_buildpacks_for_image):
+                    raise ValidationError(_("构建工具配置必须为 Dict[str, List[str]] 格式"))
+        else:
+            raise ValidationError(_("构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"))
         return required_buildpacks
 
     def validate_processes(self, processes: Dict) -> Dict:

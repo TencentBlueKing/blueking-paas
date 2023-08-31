@@ -38,12 +38,16 @@ if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
 
 
+def get_image_repository_template() -> str:
+    """Get the image repository template"""
+    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
+    return f"{system_prefix}/{{app_code}}/{{module_name}}"
+
+
 def generate_image_repository(module: Module) -> str:
     """Get the image repository for storing container image"""
     application = module.application
-    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
-    app_part = f"{application.code}/{module.name}"
-    return f"{system_prefix}/{app_part}"
+    return get_image_repository_template().format(app_code=application.code, module_name=module.name)
 
 
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:

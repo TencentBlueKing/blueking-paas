@@ -41,8 +41,10 @@ func NewCmd() *cobra.Command {
 		Long:                  configLongDesc,
 		DisableFlagsInUseLine: true,
 		Run:                   cmdUtil.DefaultSubCmdRun(),
+		GroupID:               "core",
 	}
 
+	cmdUtil.DisableAuthCheck(cmd)
 	// 配置信息查看
 	cmd.AddCommand(NewCmdView())
 	return cmd

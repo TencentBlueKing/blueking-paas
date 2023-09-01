@@ -19,39 +19,36 @@
 package app
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
+	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 )
 
-// NewCmdGetInfo returns a Command instance for 'app get-info' sub command
-func NewCmdGetInfo() *cobra.Command {
-	var appCode string
+var appLongDesc = `
+Deploy PaaS application using subcommands like "bkpaas-cli app deploy"
+`
 
-	cmd := cobra.Command{
-		Use:   "get-info",
-		Short: "Get PaaS application info",
-		Run: func(cmd *cobra.Command, args []string) {
-			displayAppInfo(appCode)
-		},
+// NewCmd create application command
+func NewCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                   "app",
+		Short:                 "Manage PaaS application",
+		Long:                  appLongDesc,
+		DisableFlagsInUseLine: true,
+		Run:                   cmdUtil.DefaultSubCmdRun(),
+		GroupID:               "core",
 	}
 
-	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
-	_ = cmd.MarkFlagRequired("code")
+	// 有权限的应用列表
+	cmd.AddCommand(NewCmdList())
+	// 配置信息查看
+	cmd.AddCommand(NewCmdGetInfo())
+	// 蓝鲸应用部署
+	cmd.AddCommand(NewCmdDeploy())
+	// 查看部署结果
+	cmd.AddCommand(NewCmdDeployResult())
+	// 查看蓝鲸应用部署历史
+	cmd.AddCommand(NewCmdDeployHistory())
 
-	return &cmd
-}
-
-// 在命令行中展示指定的蓝鲸应用信息
-func displayAppInfo(appCode string) {
-	retriever := handler.NewBasicInfoRetriever()
-	appInfo, err := retriever.Exec(appCode)
-	if err != nil {
-		console.Error("Failed to get application info")
-		return
-	}
-	fmt.Println(appInfo)
+	return cmd
 }

@@ -86,7 +86,7 @@ Application List
 你可以通过执行命令 `bkpaas-cli app get-info` 来查看指定应用的基础信息：
 
 ```shell
->>> bkpaas-cli app get-info --code=app-code-1
+>>> bkpaas-cli app get-info --bk-app-code=app-code-1
 +-----------------------------------------------------------------------------------------------------+
 |                                Application Basic Information                                        |
 +------+----------------------------------------------------------------------------------------------+
@@ -137,7 +137,7 @@ spec:
 EOF
 
 # 执行以下命令以部署云原生应用
->>> bkpaas-cli app deploy --code=cnative-demo --env=stag -f ./bkapp.yaml
+>>> bkpaas-cli app deploy --bk-app-code=cnative-demo --env=stag -f ./bkapp.yaml
 Application cnative-demo deploying...
 
 # 轮询获取部署结果，直到部署成功 / 失败
@@ -171,7 +171,7 @@ Deploy successful.
 
 ```shell
 # 注：如果你有部署非默认模块的需求，可以在部署时添加参数 --module=${module_name}
->>> bkpaas-cli app deploy --code=demo-app --env=stag --branch master
+>>> bkpaas-cli app deploy --bk-app-code=demo-app --env=stag --branch master
 Application demo-app deploying...
 Waiting for deploy finished...
 Waiting for deploy finished...
@@ -196,7 +196,7 @@ Deploy successful.
 ##### 云原生应用
 
 ```shell
->>> bkpaas-cli app deploy-result --code=cnative-demo --env=stag
+>>> bkpaas-cli app deploy-result --bk-app-code=cnative-demo --env=stag
 Deploy Conditions: (Code: cnative-demo, Module: default, Env: stag)
 +-------------------+--------+--------------+---------+
 |       TYPE        | STATUS |    REASON    | MESSAGE |
@@ -220,7 +220,7 @@ Deploy successful.
 
 ```shell
 # 成功情况
->>> bkpaas-cli app deploy-result --code=demo-app --env=stag
+>>> bkpaas-cli app deploy-result --bk-app-code=demo-app --env=stag
 Logs:
 Preparing to build bkapp-demo-app-stag ...
 Starting build app: bkapp-demo-app-stag
@@ -278,7 +278,7 @@ Deploy successful.
 
 
 # 失败情况
->>> bkpaas-cli app deploy-result --code=demo-app --env=stag
+>>> bkpaas-cli app deploy-result --bk-app-code=demo-app --env=stag
 Logs:
 Procfile error: Can not read Procfile file from repository
 
@@ -296,7 +296,7 @@ You can:
 ##### 云原生应用
 
 ```shell
->>> bkpaas-cli app deploy-history --code=cnative-demo --env=stag
+>>> bkpaas-cli app deploy-history --bk-app-code=cnative-demo --env=stag
 Application Recent 5 Deploy History (AppCode: cnative-demo, Module: default, Env: stag)
 +-----------------------------+----------+-----------+--------+---------------------+
 |           VERSION           | OPERATOR | COST TIME | STATUS |      START AT       |
@@ -312,7 +312,7 @@ Application Recent 5 Deploy History (AppCode: cnative-demo, Module: default, Env
 ##### 普通应用
 
 ```shell
->>> bkpaas-cli app deploy-history --code=demo-app --env=stag
+>>> bkpaas-cli app deploy-history --bk-app-code=demo-app --env=stag
 Application Recent 5 Deploy History (AppCode: demo-app, Module: default, Env: stag)
 +--------------------+----------+----------+-----------+------------+---------------------+
 |       BRANCH       | VERSION  | OPERATOR | COST TIME |   STATUS   |      START AT       |

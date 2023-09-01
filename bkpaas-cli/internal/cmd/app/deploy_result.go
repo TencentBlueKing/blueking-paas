@@ -20,13 +20,12 @@ package app
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdDeployResult returns a Command instance for 'app deploy-result' sub command
@@ -36,21 +35,26 @@ func NewCmdDeployResult() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "deploy-result",
 		Short: "Get PaaS application latest deploy result",
-		Run: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if appCode == "" {
+				_ = cmd.MarkFlagRequired("bk-app-code")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			result, err := getDeployResult(appCode, appModule, appEnv)
 			if err != nil {
-				console.Error("failed to get application %s deploy result, error: %s", appCode, err.Error())
-				os.Exit(1)
+				return errors.Wrapf(err, "failed to get application %s deploy result", appCode)
 			}
 			fmt.Println(result)
+			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&appCode, "code", "", "app code")
+	cmd.Flags().StringVar(&appCode, "bk-app-code", "", "应用ID (bk_app_code)")
+	cmd.Flags().StringVar(&appCode, "code", "", "[deprecated] 应用ID (bk_app_code)")
 	cmd.Flags().StringVar(&appModule, "module", "default", "module name")
 	cmd.Flags().StringVar(&appEnv, "env", "", "environment (stag/prod)")
-	_ = cmd.MarkFlagRequired("code")
-
 	return &cmd
 }
 

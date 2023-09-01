@@ -20,13 +20,12 @@ package app
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdDeployHistory returns a Command instance for 'app deploy-history' sub command
@@ -36,21 +35,26 @@ func NewCmdDeployHistory() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "deploy-history",
 		Short: "List PaaS application deploy history",
-		Run: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if appCode == "" {
+				_ = cmd.MarkFlagRequired("bk-app-code")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			history, err := listDeployHistory(appCode, appModule, appEnv)
 			if err != nil {
-				console.Error("failed to list application %s deploy history, error: %s", appCode, err.Error())
-				os.Exit(1)
+				return errors.Wrapf(err, "Failed to list application %s deploy history", appCode)
 			}
 			fmt.Println(history)
+			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&appCode, "code", "", "app code")
+	cmd.Flags().StringVar(&appCode, "bk-app-code", "", "应用ID (bk_app_code)")
+	cmd.Flags().StringVar(&appCode, "code", "", "[deprecated] 应用ID (bk_app_code)")
 	cmd.Flags().StringVar(&appModule, "module", "default", "module name")
 	cmd.Flags().StringVar(&appEnv, "env", "stag", "environment (stag/prod)")
-	_ = cmd.MarkFlagRequired("code")
-
 	return &cmd
 }
 

@@ -16,18 +16,20 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package cmd
+package root
 
 import (
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/cmd/app"
-	"github.com/TencentBlueKing/blueking-paas/client/cmd/config"
-	"github.com/TencentBlueKing/blueking-paas/client/cmd/login"
-	"github.com/TencentBlueKing/blueking-paas/client/cmd/version"
+	"github.com/TencentBlueKing/blueking-paas/client/internal/cmd/app"
+	"github.com/TencentBlueKing/blueking-paas/client/internal/cmd/config"
+	"github.com/TencentBlueKing/blueking-paas/client/internal/cmd/login"
+	"github.com/TencentBlueKing/blueking-paas/client/internal/cmd/version"
 	cliConf "github.com/TencentBlueKing/blueking-paas/client/pkg/config"
+	cmdutil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
@@ -36,16 +38,35 @@ func NewRootCmd() *cobra.Command {
 	var debug bool
 
 	rootCmd := &cobra.Command{
-		Use: "bkpaas-cli",
+		Use:   "bkpaas-cli",
+		Short: "BK-PaaS Cli",
+		Long:  "Work seamlessly with BK-PaaS from the command line.",
 		Run: func(cmd *cobra.Command, args []string) {
 			console.Info("Hello %s, welcome to use bkpaas-cli, use `bkpaas-cli -h` for help", cliConf.G.Username)
 		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if debug {
 				cliConf.EnableDebugMode()
 			}
+			// load global config ...
+			if _, err := cliConf.LoadConf(cliConf.ConfigFilePath); err != nil {
+				console.Tips("Please follow the user guide (Readme.md) to initialize the configuration...")
+				return errors.Wrap(err, "Failed to load config")
+			}
+
+			// require that the user is authenticated before running most commands
+			if cmdutil.IsAuthRequired(cmd) && !cmdutil.CheckAuth(cliConf.G) {
+				return errors.New("User unauthorized! Please use `bkpaas-cli login` to login")
+			}
+			return nil
 		},
 	}
+	cmdutil.DisableAuthCheck(rootCmd)
+
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    "core",
+		Title: "Core commands",
+	})
 
 	// 用户登录
 	rootCmd.AddCommand(login.NewCmd())
@@ -65,7 +86,7 @@ func NewRootCmd() *cobra.Command {
 // Execute bkpaas-cli command
 func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
-		console.Error("Failed to init root command: %s", err.Error())
+		console.Error(err.Error())
 		os.Exit(1)
 	}
 }

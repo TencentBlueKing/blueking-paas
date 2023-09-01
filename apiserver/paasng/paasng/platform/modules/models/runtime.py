@@ -183,9 +183,11 @@ class AppImageStackManager(models.Manager):
         规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         return self.get_queryset().filter_module_available(module=module, contain_hidden=contain_hidden)
 
-    def filter_by_full_image(self, module: 'Module', full_image: str) -> models.QuerySet:
+    def filter_by_full_image(self, module: 'Module', full_image: str, contain_hidden: bool = False) -> models.QuerySet:
         """通过镜像全名过滤"""
-        return self.filter_module_available(module).filter_by_full_image(full_image=full_image)
+        return self.filter_module_available(module, contain_hidden=contain_hidden).filter_by_full_image(
+            full_image=full_image
+        )
 
     def filter_by_labels(
         self, module: 'Module', labels: Dict[str, str], contain_hidden: bool = False
@@ -194,30 +196,34 @@ class AppImageStackManager(models.Manager):
         return self.filter_module_available(module, contain_hidden).filter_by_labels(labels)
 
     def select_default_runtime(self, region: str, labels: dict, contain_hidden: bool = False) -> "AppImage":
-        """选择 region 下符合对应 labels 的默认运行时"""
-        available_runtimes = self.get_queryset().filter_by_region(region).filter_by_labels(labels)
-        # 根据label匹配到的，则直接返回最新创建的一个
-        if available_runtimes.exists():
+        """选择 region 下符合对应 labels 的默认运行时
+
+        :raise ObjectDoesNotExist: when no available runtime
+        """
+        original_qs = self.get_queryset().filter_by_region(
+            region, contain_hidden=contain_hidden
+        )  # type: AppImageStackQuerySet
+
+        # firstly, try to select default runtime by labels
+        if labels and (available_runtimes := original_qs.filter_by_labels(labels)).exists():
+            # return the latest `created` one, but `is_default` has higher priority
+            return available_runtimes.latest("is_default", "created")
+
+        # secondly, try to select default runtime by field "is_default"
+        if (available_runtimes := original_qs.filter(is_default=True)).exists():
+            # return the latest `created` one
             return available_runtimes.latest("created")
 
-        available_runtimes = self.get_queryset().filter_by_region(region=region, contain_hidden=contain_hidden)
-        if available_runtimes.filter(is_default=True).exists():
-            return available_runtimes.filter(is_default=True).latest("updated")
-
-        # 没有匹配到，则使用 settings 中的配置的默认镜像
+        # finally, try to select default runtime by settings
         try:
             image = settings.DEFAULT_RUNTIME_IMAGES[region]
         except KeyError:
             image = list(settings.DEFAULT_RUNTIME_IMAGES.values())[0]
             logger.warning('Unable to get default image for region: %s, will use %s by default', region, image)
-
         try:
-            default_runtime = available_runtimes.filter(name=image).latest("created")
+            return original_qs.get(name=image)
         except self.model.DoesNotExist:
-            # 找不到则使用 app engine 默认配置的镜像
-            logger.warning("skip runtime binding because default image is not found")
             raise ObjectDoesNotExist
-        return default_runtime
 
     def get_by_natural_key(self, name):
         return self.get(name=name)

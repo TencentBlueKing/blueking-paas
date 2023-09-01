@@ -62,9 +62,8 @@ def retrieve_template_build_config(region: str, template: Template) -> BuildConf
         builder = AppSlugBuilder.objects.select_default_runtime(
             region=region, labels={"language": template.language, "category": APP_CATEGORY.NORMAL_APP.value}
         )
-        runner = AppSlugRunner.objects.select_default_runtime(
-            region=region, labels={"language": template.language, "category": APP_CATEGORY.NORMAL_APP.value}
-        )
+        # by designed, name must be consistent between builder and runner
+        runner = AppSlugRunner.objects.get(name=builder.name)
     except ObjectDoesNotExist:
         logger.warning("default image is not found")
         raise

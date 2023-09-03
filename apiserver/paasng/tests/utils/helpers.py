@@ -36,12 +36,12 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
-from paasng.platform.core.region import load_regions_from_settings
 from paasng.platform.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.oauth2.utils import create_oauth2_client
+from paasng.platform.region.states import load_regions_from_settings
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
 from paasng.utils.configs import RegionAwareConfig

@@ -38,11 +38,22 @@ from paasng.dev_resources.servicehub.models import (
 from paasng.dev_resources.servicehub.remote.manager import RemotePlanMgr, RemoteServiceMgr, RemoteServiceObj
 from paasng.dev_resources.servicehub.remote.store import get_remote_store
 from paasng.dev_resources.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
+from paasng.dev_resources.services.models import ServiceCategory
 from paasng.engine.models import EngineApp
 from paasng.platform.modules.models import Module
-from paasng.platform.region.models import get_all_regions
+from paasng.platform.region.models import get_all_regions, set_service_categories_loader
 
 logger = logging.getLogger(__name__)
+
+
+def _fetch_service_categories(region: str) -> List[ServiceCategory]:
+    """Fetch service categories by region."""
+    category_ids = {obj.category_id for obj in mixed_service_mgr.list_by_region(region)}
+    categories = ServiceCategory.objects.filter(pk__in=category_ids).order_by("-sort_priority")
+    return list(categories)
+
+
+set_service_categories_loader(_fetch_service_categories)
 
 
 def _proxied_svc_dispatcher(method_name: str):

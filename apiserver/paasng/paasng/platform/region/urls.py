@@ -25,6 +25,4 @@ REGION = '(?P<region>[a-z0-9_-]{1,32})'
 urlpatterns = [
     # service APIs
     url(r'^api/regions/%s/$' % REGION, views.RegionViewSet.as_view({'get': 'retrieve'}), name='api.regions.retrieve'),
-    # specs APIs
-    url('^api/bkapps/regions/specs', views.RegionSpecsViewSet.as_view({'get': 'retrieve'}), name='api.region.specs'),
 ]

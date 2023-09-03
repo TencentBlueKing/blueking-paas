@@ -50,17 +50,6 @@ def get_region(name: str):
     return get_all_regions()[name]
 
 
-def get_regions_by_user(user) -> 'List[Region]':
-    """Get region list by username
-    :param user: user object
-    :return:
-    """
-    from paasng.accounts.models import UserProfile
-
-    user_profile = UserProfile.objects.get_profile(user)
-    return user_profile.enable_regions
-
-
 class RegionList(list):
     def __str__(self):
         return str(';'.join([x.name for x in self]))

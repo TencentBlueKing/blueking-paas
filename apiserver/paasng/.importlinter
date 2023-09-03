@@ -40,7 +40,6 @@ ignore_imports =
     paasng.platform.applications.models -> paasng.publish.**
     paasng.platform.applications.models -> paasng.accessories.iam.**
     paasng.platform.applications.views_ext -> paasng.plat_admin.system.applications
-    paasng.platform.region.models -> paasng.accounts.models
     paasng.platform.region.permissions -> paasng.utils.api_docs
     paasng.platform.region.permissions -> paasng.accounts.models
     paasng.utils.models -> paasng.platform.region.states

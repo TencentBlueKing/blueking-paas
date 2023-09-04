@@ -291,6 +291,19 @@ const docuManagement = () => import(/* webpackChunkName: 'docu-management' */'@/
   window.showDeployTip(error);
 });
 
+// 云原生部署管理
+const cloudAppDeployManage = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const cloudAppDeployManageStag = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/comps/stag').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const cloudAppDeployManageProd = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/comps/prod').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -555,6 +568,33 @@ const router = new Router({
           path: ':id/:moduleId/process',
           component: appProcesses,
           name: 'appProcess',
+        },
+        // 云原生部署管理
+        {
+          path: ':id/:moduleId/cloud-deploy-manage',
+          component: cloudAppDeployManage,
+          name: 'cloudAppDeployManage',
+          redirect: {
+            name: 'cloudAppDeployForProcess',
+          },
+          children: [
+            {
+              path: 'stag',
+              component: cloudAppDeployManageStag,
+              name: 'cloudAppDeployManageStag',
+              meta: {
+                module: 'cloudDeployStag',
+              },
+            },
+            {
+              path: 'prod',
+              component: cloudAppDeployManageProd,
+              name: 'cloudAppDeployManageProd',
+              meta: {
+                module: 'cloudDeployProd',
+              },
+            },
+          ]
         },
         {
           path: ':id/:moduleId/status',

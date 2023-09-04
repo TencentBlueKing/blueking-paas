@@ -953,3 +953,24 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-process-2:before {
 	content: "\e24c";
 }
+.paasng-bushu:before {
+	content: "\e24f";
+}
+.paasng-keguance:before {
+	content: "\e250";
+}
+.paasng-peizhi:before {
+	content: "\e252";
+}
+.paasng-jingxiang:before {
+	content: "\e253";
+}
+.paasng-guifan:before {
+	content: "\e255";
+}
+.paasng-anquan:before {
+	content: "\e256";
+}
+.paasng-duliang:before {
+	content: "\e254";
+}

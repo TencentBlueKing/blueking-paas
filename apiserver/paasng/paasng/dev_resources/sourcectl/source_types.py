@@ -30,12 +30,13 @@ from django.utils.module_loading import import_string
 from django.utils.translation import get_language
 from pydantic import BaseModel, Field
 
+from paasng.accounts.oauth.backends import OAuth2Backend
+from paasng.accounts.oauth.utils import set_get_backends_callback_func
 from paasng.dev_resources.sourcectl.constants import DiffFeatureType
 from paasng.utils.configs import RegionAwareConfig, get_settings
 from paasng.utils.text import camel_to_snake, remove_suffix
 
 if TYPE_CHECKING:
-    from paasng.accounts.oauth.backends import OAuth2Backend
     from paasng.dev_resources.sourcectl.connector import ModuleRepoConnector
     from paasng.dev_resources.sourcectl.repo_controller import RepoController
 
@@ -386,3 +387,19 @@ def reload_settings(setting, value, enter, *args, **kwargs):
 
 
 setting_changed.connect(reload_settings)
+
+
+# Connect with the oauth2 lib
+
+
+def list_oauth_backends() -> List[Tuple[str, OAuth2Backend]]:
+    """Return the oauth backends by the current source type specs"""
+    items = []
+    for name, type_spec in get_sourcectl_types().items():
+        if type_spec.support_oauth():
+            items.append((name, type_spec.make_oauth_backend()))
+    return items
+
+
+# Set the callback function
+set_get_backends_callback_func(list_oauth_backends)

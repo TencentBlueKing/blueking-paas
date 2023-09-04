@@ -76,7 +76,10 @@ export default {
 
   computed: {
     showRate() {
-      return this.codeDetails.rdIndicatorsScore / 100 * 5;
+      if (this.codeDetails.rdIndicatorsScore) {
+        return this.codeDetails.rdIndicatorsScore / 100 * 5;
+      }
+      return 0;
     },
   },
 

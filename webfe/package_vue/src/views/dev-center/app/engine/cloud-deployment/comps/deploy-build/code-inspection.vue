@@ -45,7 +45,7 @@
     <section class="card-item check-details">
       <h4>{{$t('代码检查详情')}}</h4>
       <ul class="detail-wrapper" v-if="codeDetails.lastAnalysisResultList?.length">
-        <li class="item" v-for="item in codeDetails.lastAnalysisResultList">
+        <li class="item" v-for="(item, index) in codeDetails.lastAnalysisResultList" :key="index">
           <p>{{item.displayName}}</p>
           <div class="container">
             <span class="number">{{item.defectCount}}</span>

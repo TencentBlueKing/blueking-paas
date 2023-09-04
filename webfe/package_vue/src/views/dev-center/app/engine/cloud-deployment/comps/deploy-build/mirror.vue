@@ -53,7 +53,7 @@
               </bk-form-item>
               <!-- 暂时方式 -->
               <bk-form-item :label="`${$t('构建参数')}：`">
-                <template v-if="mirrorData.docker_build_args?.length">
+                <template v-if="Object.keys(mirrorData.docker_build_args).length">
                   <div
                     class="form-text"
                     v-for="(value, key) in mirrorData.docker_build_args"
@@ -140,7 +140,7 @@
             </template>
             <template v-else>
               <bk-form-item :label="$t('Dockerfile 路径')">
-                <bk-input v-model="mirrorData.dockerfile_path"> </bk-input>
+                <bk-input v-model="mirrorData.dockerfile_path"></bk-input>
               </bk-form-item>
               <bk-form-item :label="$t('构建参数')">
                 <template v-if="buildParams.length">
@@ -200,7 +200,6 @@
 
 <script>
 import appBaseMixin from "@/mixins/app-base-mixin";
-import i18n from "@/language/i18n.js";
 import { TAG_MAP } from "@/common/constants.js";
 import { cloneDeep } from "lodash";
 
@@ -217,6 +216,7 @@ export default {
           with_build_time: false,
           with_commit_id: false,
         },
+        docker_build_args: {}
       },
       // 构建方式
       constructMethod: [
@@ -383,9 +383,8 @@ export default {
           theme: 'success',
           message: this.$t('操作成功'),
         });
-        this.getMirrorInfo();
+        await this.getMirrorInfo();
         this.handleCancel();
-        this.setTools();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -436,9 +435,6 @@ export default {
       this.mirrorData = cloneDeep(this.oldMirrorData);
       this.formatterBuildArgs();
       this.setTools();
-    },
-    handleToggleSideslider() {
-      this.defaultSettings.isShow = true;
     },
     transferChange(sourceList, targetList, targetValueList) {
       this.targetToolValues = targetValueList;

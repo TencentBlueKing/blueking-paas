@@ -301,13 +301,6 @@
 
       // 获取代码源列表
       async fetchAccountAllowSourceControlType() {
-        // 初始化 repo List
-        for (const key in this.gitExtendConfig) {
-          const config = this.gitExtendConfig[key];
-          if (key === this.sourceControlType) {
-            config.fetchMethod();
-          }
-        }
         try {
           const sourceControlTypes = await this.$store.dispatch('fetchAccountAllowSourceControlType', {})
           // 代码源列表
@@ -677,6 +670,15 @@
 
     :deep(.bk-form-item+.bk-form-item) {
       margin-top: 10px;
+    }
+
+    :deep(.code-repo) {
+      .bk-label {
+        width: 150px !important;
+      }
+      .bk-form-content {
+        margin-left: 150px !important;
+      }
     }
   }
 

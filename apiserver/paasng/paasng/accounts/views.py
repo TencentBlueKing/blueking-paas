@@ -35,7 +35,7 @@ from paasng.accounts.oauth.exceptions import BKAppOauthError
 from paasng.accounts.oauth.utils import get_available_backends, get_backend
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
-from paasng.accounts.utils import get_user_avatar
+from paasng.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
@@ -140,7 +140,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取代表指定应用和用户身份的 AccessToken"""
         application = self.get_application()
         try:
-            backend = get_bkapp_oauth_backend_cls().from_app(application, env_name=env_name)
+            backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
         try:
@@ -157,7 +157,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """刷新代表指定应用和用户身份的 AccessToken"""
         application = self.get_application()
         try:
-            backend = get_bkapp_oauth_backend_cls().from_app(application, env_name=env_name)
+            backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
 
@@ -173,7 +173,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def validate_app_token(self, request, app_code: str, env_name: str):
         application = self.get_application()
         try:
-            backend = get_bkapp_oauth_backend_cls().from_app(application, env_name=env_name)
+            backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
 

@@ -39,7 +39,6 @@ ignore_imports =
     paasng.platform.applications.models -> paasng.accessories.iam.**
     paasng.platform.applications.views_ext -> paasng.plat_admin.system.applications
     paasng.accounts.oauth.* -> paasng.dev_resources.sourcectl.*
-    paasng.accounts.oauth.backends -> paasng.platform.applications.models
     paasng.dev_resources.sourcectl.connector -> paasng.dev_resources.services.utils
     paasng.extensions.scene_app.initializer -> paasng.extensions.declarative.*
     paasng.accessories.paas_analysis.utils -> paasng.platform.environments.models

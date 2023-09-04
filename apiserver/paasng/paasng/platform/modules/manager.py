@@ -232,7 +232,8 @@ class ModuleInitializer:
         """Bind slugbuilder/slugrunner/buildpacks by labels"""
         try:
             slugbuilder = AppSlugBuilder.objects.select_default_runtime(self.module.region, labels, contain_hidden)
-            slugrunner = AppSlugRunner.objects.select_default_runtime(self.module.region, labels, contain_hidden)
+            # by designed, name must be consistent between builder and runner
+            slugrunner = AppSlugRunner.objects.get(name=slugbuilder.name)
         except ObjectDoesNotExist:
             # 找不到则使用 app engine 默认配置的镜像
             logger.warning("skip runtime binding because default image is not found")

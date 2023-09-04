@@ -53,13 +53,18 @@
               </bk-form-item>
               <!-- 暂时方式 -->
               <bk-form-item :label="`${$t('构建参数')}：`">
-                <div
-                  class="form-text"
-                  v-for="(value, key) in mirrorData.docker_build_args"
-                  :key="key"
-                >
-                  {{ key }}={{ value }}
-                </div>
+                <template v-if="mirrorData.docker_build_args?.length">
+                  <div
+                    class="form-text"
+                    v-for="(value, key) in mirrorData.docker_build_args"
+                    :key="key"
+                  >
+                    {{ key }}={{ value }}
+                  </div>
+                </template>
+                <template v-else>
+                  --
+                </template>
               </bk-form-item>
             </template>
           </bk-form>

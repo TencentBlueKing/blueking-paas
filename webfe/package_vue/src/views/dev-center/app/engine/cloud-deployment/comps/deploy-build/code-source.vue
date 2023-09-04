@@ -689,7 +689,7 @@
   }
 
   :deep(.establish-tab) #shorter-loading-animate .form-label {
-    width: 130px;
+    width: 130px !important;
     margin-right: 20px;
   }
 

@@ -40,12 +40,6 @@ apiserver 为 blueking-paas 项目的主控模块。
 ❯ pyenv install 3.8.13
 ```
 
-- 使用 poetry 工具，为项目初始化独立的运行环境
-
-```shell
-❯ poetry env use ~/.pyenv/versions/3.8.13/bin/python3
-```
-
 2. 安装项目依赖
 
 本项目使用 [poetry](https://python-poetry.org/) 管理项目依赖。

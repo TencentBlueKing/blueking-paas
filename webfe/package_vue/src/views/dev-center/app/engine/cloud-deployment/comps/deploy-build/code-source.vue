@@ -822,7 +822,7 @@
     margin-left: 150px;
   }
 </style>
-<style>
+<style lang="scss">
   .form-group-flex .source-dir.error .bk-input-text {
     input {
       border-color: #ff3737 !important;

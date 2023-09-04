@@ -19,10 +19,43 @@ to the current version of the project delivered to anyone in the future.
 import json
 from typing import Dict
 
-from django.forms import CharField, ChoiceField, ModelForm, Textarea
+from django.forms import CharField, ChoiceField, ModelChoiceField, ModelForm, Textarea
 
 from paasng.platform.core.region import RegionType
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
+
+
+class ModelNameChoiceField(ModelChoiceField):
+    def to_python(self, value):
+        return super().to_python(value).name
+
+    def __init__(
+        self,
+        queryset,
+        *,
+        empty_label="---------",
+        required=True,
+        widget=None,
+        label=None,
+        initial=None,
+        help_text='',
+        limit_choices_to=None,
+        blank=False,
+        **kwargs
+    ):
+        super().__init__(
+            queryset,
+            empty_label=empty_label,
+            required=required,
+            widget=widget,
+            label=label,
+            initial=initial,
+            help_text=help_text,
+            to_field_name="name",
+            limit_choices_to=limit_choices_to,
+            blank=blank,
+            **kwargs
+        )
 
 
 class JSONEnvironmentFieldMixin:
@@ -43,6 +76,7 @@ class AppSlugBuilderForm(ModelForm, JSONEnvironmentFieldMixin):
 
 class AppSlugRunnerForm(ModelForm, JSONEnvironmentFieldMixin):
     region = ChoiceField(choices=RegionType.get_choices())
+    name = ModelNameChoiceField(queryset=AppSlugBuilder.objects.all())
 
     class Meta:
         model = AppSlugRunner

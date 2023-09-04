@@ -25,13 +25,15 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
+const skipAuthCheckFlag = "skipAuthCheck"
+
 // DisableAuthCheck disable auth check of given cmd
 func DisableAuthCheck(cmd *cobra.Command) {
 	if cmd.Annotations == nil {
 		cmd.Annotations = map[string]string{}
 	}
 
-	cmd.Annotations["skipAuthCheck"] = "true"
+	cmd.Annotations[skipAuthCheckFlag] = "true"
 }
 
 // CheckAuth check whether the cfg.AccessToken has authorized
@@ -53,7 +55,7 @@ func IsAuthRequired(cmd *cobra.Command) bool {
 	}
 
 	for c := cmd; c != nil || c.Parent() != nil; c = c.Parent() {
-		if c.Annotations != nil && c.Annotations["skipAuthCheck"] == "true" {
+		if c.Annotations[skipAuthCheckFlag] == "true" {
 			return false
 		}
 	}

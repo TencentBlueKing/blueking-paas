@@ -69,7 +69,7 @@
             ext-cls="form-process"
           >
             <bk-form-item
-              :label="$t('镜像地址')"
+              :label="$t('镜像仓库')"
               :label-width="120"
               v-if="isV1alpha2"
             >
@@ -77,7 +77,7 @@
             </bk-form-item>
 
             <bk-form-item
-              :label="$t('镜像地址')"
+              :label="$t('镜像仓库')"
               :required="true"
               :label-width="120"
               :property="'image'"
@@ -87,7 +87,7 @@
                 ref="mirrorUrl"
                 v-model="formData.image"
                 style="width: 500px;"
-                :placeholder="$t('请输入带标签的镜像地址')"
+                :placeholder="$t('请输入带标签的镜像仓库')"
               />
               <p class="whole-item-tips">
                 {{ $t('示例镜像：') }}
@@ -553,7 +553,7 @@
         <bk-form
           :model="formData">
           <bk-form-item
-            :label="$t('容器镜像地址：')">
+            :label="$t('镜像仓库：')">
             <span class="form-text">{{ isV1alpha2 ? buildData.image : (formData.image || '--') }}</span>
           </bk-form-item>
           <bk-form-item

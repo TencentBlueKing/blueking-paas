@@ -8,6 +8,7 @@
       :model="formData"
       :rules="rules"
       :label-width="100"
+      class="from-content"
     >
       <div class="form-item-title mb10">
         {{ $t('基本信息') }}
@@ -77,8 +78,9 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title mb10 mt10">
+        <div class="form-item-title mb10">
           {{ $t('应用模版') }}
         </div>
         <bk-form-item
@@ -95,15 +97,21 @@
           error-display-type="normal"
           ext-cls="form-item-cls mt10"
         >
-          <div class="bk-button-group">
-            <bk-button
-              v-for="(item, key) in languagesData"
-              :key="key"
-              :class="buttonActive === key ? 'is-selected' : ''"
-              @click="handleSelected(item, key)"
-            >
-              {{ $t(defaultlangName[key]) }}
-            </bk-button>
+          <div class="flex-row justify-content-between">
+            <div class="bk-button-group">
+              <bk-button
+                v-for="(item, key) in languagesData"
+                :key="key"
+                :class="buttonActive === key ? 'is-selected' : ''"
+                @click="handleSelected(item, key)"
+              >
+                {{ $t(defaultlangName[key]) }}
+              </bk-button>
+            </div>
+            <div class="build-info" @click="showBuildDialog">
+              <i class="row-icon paasng-icon paasng-page-fill"></i>
+              {{ $t('构建信息') }}
+            </div>
           </div>
         </bk-form-item>
         <div class="languages-card">
@@ -128,8 +136,9 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title mb10 mt10">
+        <div class="form-item-title mb10">
           {{ $t('源码管理') }}
         </div>
 
@@ -202,11 +211,11 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title mb10 mt10">
+        <div class="form-item-title">
           {{ $t('高级选项') }}
         </div>
-
 
         <bk-form-item
           :label="$t('选择集群')"
@@ -237,9 +246,10 @@
         :model="formData"
         :rules="rules"
         :label-width="100"
+        class="from-content mt20"
       >
-        <div class="form-item-title">
-          {{ $t('源码管理') }}
+        <div class="form-item-title mb10">
+          {{ $t('镜像信息') }}
         </div>
         <bk-form-item
           :required="true"
@@ -338,7 +348,7 @@
     </div>
 
 
-    <div class="form-btn flex-row">
+    <div class="mt20 flex-row">
       <!-- :disabled="" -->
       <div class="mr20" v-if="curStep === 1">
         <bk-button
@@ -365,6 +375,44 @@
         {{ $t('取消') }}
       </bk-button>
     </div>
+
+    <!-- 构建信息弹窗 -->
+    <bk-dialog
+      v-model="buildDialog.visiable"
+      width="720"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="true"
+      :show-footer="false"
+      :title="buildDialog.title"
+    >
+      <bk-form
+        :model="buildDialog.formData"
+        :label-width="130">
+        <bk-form-item :label="$t('镜像仓库：')">
+          <span class="build-text">
+            {{ imageRepositoryTemplate }}
+          </span>
+        </bk-form-item>
+        <bk-form-item :label="$t('镜像 tag 规则：')">
+          v-{分支/标签}-构建时间-commitID
+        </bk-form-item>
+        <bk-form-item :label="$t('构建方式：')">
+          {{ buildDialog.formData.buildMethod }}
+        </bk-form-item>
+        <bk-form-item :label="$t('基础镜像：')">
+          {{ buildDialog.formData.imageName }}
+        </bk-form-item>
+        <bk-form-item :label="$t('构建工具：')">
+          <p
+            class="config-item" v-for="item in buildDialog.formData.buildConfig"
+            :key="item.id"
+            v-bk-tooltips="`${item.display_name}${item.description ? (item.description) : ''}`">
+            {{ item.display_name }} {{ item.description ? (item.description) : '' }}
+          </p>
+        </bk-form-item>
+      </bk-form>
+    </bk-dialog>
   </div>
 </template>
 <script>import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
@@ -539,6 +587,11 @@ export default {
           },
         ],
       },
+      buildDialog: {
+        visiable: false,
+        title: this.$t('构建信息'),
+        formData: {},
+      },
     };
   },
   computed: {
@@ -550,6 +603,12 @@ export default {
     },
     clusterList() {
       return this.advancedOptionsObj[this.regionChoose] || [];
+    },
+    imageRepositoryTemplate() {
+      if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
+      const imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
+        .replace('{app_code}', this.formData.code);
+      return imageRepositoryTemplate.replace('{module_name}', 'default');
     },
   },
   watch: {
@@ -571,6 +630,13 @@ export default {
         }
       },
       immediate: true,
+    },
+
+    'formData.code'(value) {
+      if (!this.initCloudAppData.metadata) {
+        this.initCloudAppData.metadata = {};
+      }
+      this.initCloudAppData.metadata.name = value;
     },
   },
   mounted() {
@@ -863,6 +929,31 @@ export default {
       };
       this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
+    },
+
+    // 获取构建信息
+    async showBuildDialog() {
+      try {
+        const res = await this.$store.dispatch('cloudApi/getBuildDataInfo', {
+          appCode: this.appCode,
+          tplTyp: 'normal',
+          region: 'ieod',
+          tplName: this.formData.sourceInitTemplate,
+        });
+        this.buildDialog.visiable = true;
+        this.buildDialog.formData = {
+          imageRepositoryTemplate: res.build_config.image_repository_template,    // 镜像仓库
+          tagOptions: res.build_config.tag_options,   // tag规则
+          buildMethod: res.build_config.build_method,  // 构建方式
+          imageName: `${res.slugbuilder.display_name}（${res.slugbuilder.description}）`,
+          buildConfig: res.build_config.buildpacks,
+        };
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };

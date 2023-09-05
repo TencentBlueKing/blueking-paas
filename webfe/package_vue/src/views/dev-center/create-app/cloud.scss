@@ -1,11 +1,17 @@
 @import '~@/assets/css/mixins/border-active-logo.scss';
 .cloud-app-container{
-    width: 1000px;
+    width: 1200px;
     margin: 0 auto;
     .form-item-title{
         color: #313238;
         font-size: 14px;
         font-weight: 600;
+    }
+    .from-content{
+        background: #FFFFFF;
+        box-shadow: 0 2px 4px 0 #1919290d;
+        border-radius: 2px;
+        padding: 12px 24px;
     }
     .form-item-cls{
         /deep/ .bk-label{
@@ -65,7 +71,7 @@
     .languages-card{
         background: #FAFBFD;
         border-radius: 2px;
-        width: 896px;
+        width: 940px;
         padding: 20px 20px 0 20px;
         margin: 20px 0 0 100px;
         .languages-name{
@@ -77,3 +83,17 @@
         }
     }
 }
+.build-info{
+    margin-right: 110px;
+    color: #3A84FF;
+    cursor: pointer;
+}
+.build-text{
+    color: #313238;
+}
+.config-item{
+    position: relative;
+    overflow:hidden; //超出的文本隐藏
+    text-overflow:ellipsis; //溢出用省略号显示
+    white-space:nowrap; //溢出不换行
+ }

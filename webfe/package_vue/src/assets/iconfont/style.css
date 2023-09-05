@@ -1001,3 +1001,6 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-duliang:before {
 	content: "\e254";
 }
+.paasng-deploy-item-dot:before {
+	content: "\e260";
+}

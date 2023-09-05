@@ -47,7 +47,7 @@
                 :data-parsley-pattern="isLessCodeRule ? '[a-z]+' : '[a-z][a-z0-9-]+'"
                 :data-parsley-pattern-message="isLessCodeRule ? $t('格式不正确，由小写字母组成，长度小于 16 个字符') : $t('格式不正确，只能包含：3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
                 data-parsley-trigger="input blur"
-                class="ps-form-control"
+                class="ps-form-control form-input-width"
                 :placeholder="isLessCodeRule ? $t('由小写字母组成，长度小于 16 个字符') : $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               >
             </p>
@@ -69,7 +69,7 @@
               data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5]+"
               :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')"
               data-parsley-trigger="input blur"
-              class="ps-form-control"
+              class="ps-form-control form-input-width"
               :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')"
             >
           </p>
@@ -413,7 +413,7 @@
                 <p>
                   <bk-input
                     v-model="sourceDirVal"
-                    class="source-dir"
+                    class="source-dir form-input-width"
                     :class="sourceDirError ? 'error' : ''"
                     :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
                     @blur="validSourceDir"
@@ -457,7 +457,7 @@
           <label class="form-label"> {{ $t('选择集群') }} </label>
           <bk-select
             v-model="clusterName"
-            style="width: 520px; margin-top: 7px;"
+            style="width: 650px; margin-top: 7px;"
             searchable
             :style="errorSelectStyle"
           >
@@ -696,7 +696,7 @@ export default {
     establishStyle() {
       if (this.curLanguages && this.language && this.curLanguages[this.language]) {
         const len = this.curLanguages[this.language].length;
-        const lanItemHeight = 50;
+        const lanItemHeight = 45;
         if (!len) {
           return {
             height: '208px',

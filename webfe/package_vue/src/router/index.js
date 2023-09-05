@@ -86,6 +86,10 @@ const cloudAppDeployments = () => import(/* webpackChunkName: 'app-engine' */'@/
   window.showDeployTip(error);
 });
 
+const cloudAppDeploymentsForBuild = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/cloud-deployment/deploy-build').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const cloudAppDeploymentsForProcess = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/cloud-deployment/deploy-process').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -488,6 +492,14 @@ const router = new Router({
             name: 'cloudAppDeployForProcess',
           },
           children: [
+            {
+              path: 'build',
+              component: cloudAppDeploymentsForBuild,
+              name: 'cloudAppDeployForBuild',
+              meta: {
+                module: 'build',
+              },
+            },
             {
               path: 'process',
               component: cloudAppDeploymentsForProcess,

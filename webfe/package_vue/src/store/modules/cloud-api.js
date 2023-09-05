@@ -195,5 +195,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/cloud-native/`;
       return http.post(url, data, config);
     },
+
+    /**
+     * 查询模板详情(构建信息)
+     * @param {Object} params tplType模版类型, region应用版本 tplName模版名称
+     */
+    getBuildDataInfo({}, { tplTyp, region, tplName }, config = {}) {
+      const url = `${BACKEND_URL}/api/tmpls/${tplTyp}/region/${region}/template/${tplName}`;
+      return http.get(url, config);
+    },
   },
 };

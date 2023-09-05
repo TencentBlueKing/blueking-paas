@@ -122,3 +122,9 @@ export const PLUGIN_ITSM_LADING = {
   title: '标题',
   creator: '提单人',
 };
+
+export const TAG_MAP = {
+  with_version: '{分支/标签}',
+  with_build_time: '构建时间',
+  with_commit_id: 'commitID',
+};

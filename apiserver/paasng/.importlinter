@@ -24,11 +24,11 @@ layers =
     paasng.plat_admin 
     paasng.extensions.bk_plugins 
     paasng.accessories.bk_lesscode | paasng.extensions.smart_app
-    paasng.accessories.search | paasng.ci | paasng.cnative | paasng.dev_resources.cloudapi |  paasng.extensions.declarative| paasng.extensions.scene_app | paasng.platform.environments | paasng.platform.log 
+    paasng.accessories.search | paasng.ci | paasng.cnative | paasng.dev_resources.cloudapi |  paasng.extensions.declarative| paasng.extensions.scene_app | paasng.platform.environments
     paasng.dev_resources.servicehub
-    paasng.accessories.bkmonitorv3 | paasng.accessories.changelog | paasng.accessories.documentation | paasng.accessories.log_search | paasng.accessories.paas_analysis | paasng.accessories.smart_advisor | paasng.platform.operations
-    paasng.dev_resources.services | paasng.publish | paasng.service_proxy
-    paasng.accessories.bk_components | paasng.accounts.permissions
+    paasng.accessories.changelog | paasng.accessories.documentation | paasng.accessories.paas_analysis | paasng.accessories.smart_advisor | paasng.platform.operations
+    paasng.dev_resources.services | paasng.publish | paasng.service_proxy | paasng.platform.log 
+    paasng.accessories.bk_components | paasng.accounts.permissions | paasng.accessories.log_search | paasng.accessories.bkmonitorv3
     paasng.accessories.iam 
     paasng.accounts.models
     paasng.dev_resources.templates | paasng.accounts.oauth | paasng.platform.feature_flags
@@ -42,9 +42,6 @@ ignore_imports =
     paasng.extensions.scene_app.initializer -> paasng.extensions.declarative.*
     paasng.accessories.paas_analysis.utils -> paasng.platform.environments.models
     paasng.dev_resources.services.management.commands.query_related_applications -> paasng.platform.environments.models
-    paas_wl.cluster.constants -> paasng.platform.log.constants
-    paasng.platform.modules.manager -> paasng.platform.log.shim
-    paasng.cnative.services -> paasng.platform.log.shim
     paasng.platform.operations.views -> paasng.platform.applications.views
     paasng.platform.operations.serializers -> paasng.platform.applications.serializers
     paasng.publish.entrance.serializers -> paasng.platform.modules.serializers

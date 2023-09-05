@@ -22,8 +22,6 @@ from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField,
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from paasng.platform.log.constants import LogCollectorType
-
 
 class ClusterTokenType(int, StructuredEnum):
     SERVICE_ACCOUNT = 1
@@ -34,6 +32,10 @@ class ClusterType(str, StructuredEnum):
 
     NORMAL = EnumField('normal', label=_('普通集群'))
     VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
+
+
+LOG_COLLECTOR_TYPE_BK_LOG = 'BK_LOG'
+BK_LOG_DEFAULT_ENABLED = settings.LOG_COLLECTOR_TYPE == LOG_COLLECTOR_TYPE_BK_LOG
 
 
 class ClusterFeatureFlag(FeatureFlag):  # type: ignore
@@ -54,7 +56,7 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
         # 如果 LOG_COLLECTOR_TYPE 设置成 BK_LOG(即只用蓝鲸日志采集链路)
         # 那么平台将不支持 1.12(含)以下的 k8s 集群
         label=_("使用蓝鲸日志平台方案采集日志"),
-        default=settings.LOG_COLLECTOR_TYPE == LogCollectorType.BK_LOG,
+        default=BK_LOG_DEFAULT_ENABLED,
     )
     # 低于 k8s 1.9 的集群无法支持 GPA
     ENABLE_AUTOSCALING = FeatureFlagField(label=_("支持自动扩容"), default=False)

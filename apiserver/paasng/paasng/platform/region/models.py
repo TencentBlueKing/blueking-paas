@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Protocol, Set
 
 from django.conf import settings
 
@@ -48,17 +48,6 @@ def get_region(name: str):
     :param str name: region name, such as 'ieod'
     """
     return get_all_regions()[name]
-
-
-def get_regions_by_user(user) -> 'List[Region]':
-    """Get region list by username
-    :param user: user object
-    :return:
-    """
-    from paasng.accounts.models import UserProfile
-
-    user_profile = UserProfile.objects.get_profile(user)
-    return user_profile.enable_regions
 
 
 class RegionList(list):
@@ -140,6 +129,22 @@ class RegionMulModulesConfig:
     creation_allowed: bool
 
 
+class SvcCategoriesLoader(Protocol):
+    """The loader for loading service categories"""
+
+    def __call__(self, region: str) -> List:
+        ...
+
+
+# The loader function that loads service categories, set it when all modules are initialized.
+_service_categories_loader: Optional[SvcCategoriesLoader] = None
+
+
+def set_service_categories_loader(loader: SvcCategoriesLoader):
+    global _service_categories_loader
+    _service_categories_loader = loader
+
+
 @dataclass
 class Region:
     """Region represents a region in current PaaS platform, it will be used for:
@@ -172,15 +177,10 @@ class Region:
         return self._service_categories
 
     def load_dynamic_infos(self):
-        self.fetch_service_categories()
+        if not _service_categories_loader:
+            raise RuntimeError('the svc categories loader is not found')
 
-    def fetch_service_categories(self):
-        from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-        from paasng.dev_resources.services.models import ServiceCategory
-
-        category_ids = {obj.category_id for obj in mixed_service_mgr.list_by_region(self.name)}
-        categories = ServiceCategory.objects.filter(pk__in=category_ids).order_by("-sort_priority")
-        self._service_categories = list(categories)
+        self._service_categories = _service_categories_loader(self.name)
 
     def get_built_in_config_var(self, key, env):
         return self.basic_info.built_in_config_var.get(key, {}).get(env, "")

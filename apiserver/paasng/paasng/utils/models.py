@@ -37,8 +37,8 @@ from imagekit.models import ProcessedImageField as OrigProcessedImageField
 from imagekit.utils import suggest_extension
 from jsonfield import JSONField
 
-from paasng.platform.core.region import RegionType
 from paasng.platform.region.models import RegionList, filter_region_by_name, get_region
+from paasng.platform.region.states import RegionType
 from paasng.utils.validators import RegionListValidator
 
 

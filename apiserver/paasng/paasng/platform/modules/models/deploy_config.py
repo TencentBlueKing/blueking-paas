@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
@@ -131,39 +131,3 @@ class BuildConfig(UuidAuditedModel):
     # Image Tag Policy
     tag_options: ImageTagOptions = ImageTagOptionsField(default=ImageTagOptions)
     objects = BuildConfigManager()
-
-    def update_with_build_method(
-        self,
-        build_method: RuntimeType,
-        bp_stack_name: Optional[str] = None,
-        buildpacks: Optional[List[Dict[str, Any]]] = None,
-        dockerfile_path: Optional[str] = None,
-        docker_build_args: Optional[Dict[str, str]] = None,
-        tag_options: Optional[ImageTagOptions] = None,
-    ):
-        """根据指定的 build_method 更新部分字段"""
-        from paasng.platform.modules.helpers import ModuleRuntimeBinder
-
-        update_fields = ["build_method", "updated"]
-        self.build_method = build_method
-        if tag_options:
-            self.tag_options = tag_options
-            update_fields.extend(["tag_options"])
-
-        # 基于 buildpack 的构建方式
-        if build_method == RuntimeType.BUILDPACK:
-            assert buildpacks is not None
-            assert bp_stack_name is not None
-            buildpack_ids = [item["id"] for item in buildpacks]
-            binder = ModuleRuntimeBinder(module=self.module)
-            binder.bind_bp_stack(bp_stack_name, buildpack_ids)
-
-        # 基于 Dockerfile 的构建方式
-        elif build_method == RuntimeType.DOCKERFILE:
-            assert dockerfile_path is not None
-            assert docker_build_args is not None
-            self.dockerfile_path = dockerfile_path
-            self.docker_build_args = docker_build_args
-            update_fields.extend(["dockerfile_path", "docker_build_args"])
-
-        self.save(update_fields=update_fields)

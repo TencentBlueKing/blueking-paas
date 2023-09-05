@@ -36,6 +36,7 @@ layers =
     paasng.accounts.oauth | paasng.platform.feature_flags
     paasng.platform.region | paasng.platform.core 
 
+
 [importlinter:contract:layers-engine]
 name=the layers for paasng.engine mod
 type=layers
@@ -48,15 +49,9 @@ layers =
     paasng.engine.models
 ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
-    paas_wl.resources.base.* -> paasng.engine.configurations.*
-    paas_wl.cnative.specs.addresses -> paasng.engine.configurations.ingress
     paas_wl.platform.applications.models.build -> paasng.engine.deploy.bg_build.utils
-    paasng.platform.modules.specs -> paasng.engine.configurations.building
     paasng.engine.models.base -> paasng.engine.utils.output
-    paasng.engine.processes.handlers -> paasng.engine.deploy.bg_wait.wait_deployment
-    paasng.engine.workflow.flow -> paasng.engine.deploy.engine_svc
-    paasng.engine.utils.version -> paasng.engine.deploy.archive
-    paasng.engine.utils.source -> paasng.accessories.smart_advisor.tagging
+
 
 [importlinter:contract:independent-apps]
 name=main independent modules

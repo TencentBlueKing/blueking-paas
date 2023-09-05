@@ -41,7 +41,6 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed
@@ -58,6 +57,7 @@ from paasng.engine.serializers import (
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
+from paasng.engine.utils.client import get_all_logs
 from paasng.engine.workflow import DeploymentCoordinator
 from paasng.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.extensions.declarative.exceptions import DescriptionValidationError

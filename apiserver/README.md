@@ -40,13 +40,6 @@ apiserver 为 blueking-paas 项目的主控模块。
 ❯ pyenv install 3.8.13
 ```
 
-- 使用 virtualenv 工具，为项目初始化独立的运行环境
-
-```shell
-virtualenv -p ~/.pyenv/versions/3.8.13/bin/python3 bkpaas-venv
-source ./bkpaas-venv/bin/active
-```
-
 2. 安装项目依赖
 
 本项目使用 [poetry](https://python-poetry.org/) 管理项目依赖。
@@ -68,8 +61,12 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 1. 安装 [Nodejs](https://github.com/nodejs)，推荐使用 v14.21.1 版本
 
+我们推荐使用 [nvm](https://github.com/nvm-sh/nvm) 管理本地的 nodejs 环境
+- 依照 [相关指引](https://github.com/nvm-sh/nvm#installing-and-updating) 安装 nvm
+- 使用 nvm 安装 nodejs 14
+
 ```shell
-❯ brew install node@14 
+❯ nvm install 14 
 ```
 
 2. 安装项目依赖
@@ -156,3 +153,8 @@ Template 页面开发模式与常规的 Django 项目无异, 但是使用了 [Vu
 2. 首屏数据使用服务端渲染至 HTML, 以简化前后端交互的逻辑
 3. 避免硬编码后端接口, 使用 `url` 标签动态获取接口地址
 4. 监听 `DOMContentLoaded` 事件完成 Vue 对象的初始化
+
+## FAQ
+### docker compose 安装 bundle 依赖问题
+如果在安装 docker 时, 安装了 docker-compose-plugin, 
+需要修改'blueking-paas/apiserver/dev_utils/bundle/start.sh' 中的 docker-compose 改为 docker compose

@@ -25,7 +25,7 @@ from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.publish.entrance.preallocated import get_preallocated_url
 
 if TYPE_CHECKING:
-    from paasng.engine.models import EngineApp
+    from paasng.engine.models import DeployPhase, EngineApp
     from paasng.platform.modules.helpers import ModuleRuntimeManager
     from paasng.platform.modules.models import Module
 
@@ -172,3 +172,16 @@ def get_display_blocks_by_type(phase_type: DeployPhaseTypes) -> List[Type[Displa
         ],
     }
     return map_[phase_type]
+
+
+class DeployDisplayBlockRenderer:
+    @staticmethod
+    def get_display_blocks_info(phase_obj: 'DeployPhase') -> dict:
+        """获取该阶段的静态展示信息"""
+        # Q: 为什么这里不直接存渲染后的内容？
+        # A: 因为很多信息是没有办法在应用创建拿到的，如果要存这些信息，那么需要引入信息及时同步的复杂度
+        # 所以每次请求 deploy skeleton 时，都需要实时渲染一次
+        info = dict()
+        for b in get_display_blocks_by_type(DeployPhaseTypes(phase_obj.type)):
+            info.update(b.get_detail(engine_app=phase_obj.engine_app))
+        return info

@@ -46,7 +46,8 @@ from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models import Deployment
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
+from paasng.engine.phases_steps.steps import get_sorted_steps
 from paasng.engine.serializers import (
     CheckPreparationsSLZ,
     CreateDeploymentResponseSLZ,
@@ -290,6 +291,9 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_frame(self, request, code, module_name, environment):
         env = self.get_env_via_path()
         phases = DeployPhaseManager(env).get_or_create_all()
+        # Set property for rendering by slz
+        for p in phases:
+            p._sorted_steps = get_sorted_steps(p)
         data = DeployFramePhaseSLZ(phases, many=True).data
         return Response(data=data)
 
@@ -307,6 +311,9 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             logger.exception("failed to get phase info")
             raise error_codes.CANNOT_GET_DEPLOYMENT_PHASES
 
+        # Set property for rendering by slz
+        for p in phases:
+            p._sorted_steps = get_sorted_steps(p)
         return Response(data=DeployPhaseSLZ(phases, many=True).data)
 
 

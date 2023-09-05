@@ -22,7 +22,7 @@ import pytest
 
 from paasng.engine.constants import JobStatus
 from paasng.engine.models import DeployPhaseTypes
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
 
 pytestmark = pytest.mark.django_db
 

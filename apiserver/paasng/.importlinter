@@ -53,8 +53,6 @@ ignore_imports =
     paas_wl.platform.applications.models.build -> paasng.engine.deploy.bg_build.utils
     paasng.platform.modules.specs -> paasng.engine.configurations.building
     paasng.engine.models.base -> paasng.engine.utils.output
-    paasng.engine.models.managers -> paasng.engine.phases_steps.*
-    paasng.engine.models.phases -> paasng.engine.phases_steps.steps
     paasng.engine.processes.handlers -> paasng.engine.deploy.bg_wait.wait_deployment
     paasng.engine.workflow.flow -> paasng.engine.deploy.engine_svc
     paasng.engine.utils.version -> paasng.engine.deploy.archive

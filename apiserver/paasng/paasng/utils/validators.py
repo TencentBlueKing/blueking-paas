@@ -31,6 +31,8 @@ from paasng.platform.region.models import Region, RegionList, filter_region_by_n
 RE_APP_CODE = re.compile(r'^[a-z0-9-]{1,16}$')
 RE_APP_SEARCH = re.compile(u'[\u4300-\u9fa5\\w_\\-\\d]{1,20}')
 
+RE_CONFIG_VAR_KEY = re.compile(r'^[A-Z][A-Z0-9_]*$')
+
 
 @deconstructible
 class DnsSafeNameValidator:

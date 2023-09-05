@@ -25,7 +25,6 @@
     <section class="content">
       <!-- 根据模块渲染 -->
       <deploy-module-list
-        :module-data="showModuleList"
         v-bind="$attrs"
       />
     </section>

@@ -1,56 +1,58 @@
 <template>
   <div class="deploy-module-content">
-    <div class="deploy-module-list" v-for="item in moduleData" :key="item.name">
-      <div class="deploy-module-item">
-        <!-- 预览模式 / 详情模式 / 未部署 -->
-        <section class="top-info-wrapper">
-          <!-- 已部署 -->
-          <div class="left-info">
-            <div class="module">
-              <i class="paasng-icon paasng-restore-screen"></i>
-              <span class="name">{{item.name}}</span>
-              <i class="paasng-icon paasng-jump-link icon-cls-link" v-if="isDeploy" />
-            </div>
-            <template v-if="isDeploy">
-              <div class="version">
-                <span class="label">版本：</span>
-                <span class="value">58239632</span>
+    <div v-if="deploymentInfoData.length">
+      <div class="deploy-module-list" v-for="deploymentInfo in deploymentInfoData" :key="deploymentInfo.name">
+        <div class="deploy-module-item">
+          <!-- 预览模式 / 详情模式 / 未部署 -->
+          <section class="top-info-wrapper">
+            <!-- 已部署 -->
+            <div class="left-info">
+              <div class="module">
+                <i class="paasng-icon paasng-restore-screen"></i>
+                <span class="name">{{deploymentInfo.module_name}}</span>
+                <i class="paasng-icon paasng-jump-link icon-cls-link" />
               </div>
-              <div class="line"></div>
-              <div class="branch">
-                <span class="label">分支：</span>
-                <span class="value">xxxx</span>
-              </div>
-            </template>
-            <template v-else>
-              <div class="not-deployed">暂未部署</div>
-            </template>
-          </div>
-          <div class="right-btn">
-            <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy">
-              部署
-            </bk-button>
-            <bk-button :theme="'default'" size="small" :disabled="!isDeploy" @click="handleOfflineApp">
-              下架
-            </bk-button>
-          </div>
-        </section>
-        <!-- 内容 -->
-        <section class="main" v-if="isDeploy">
-          <!-- 详情表格 -->
-          <deploy-detail v-show="isExpand" />
-          <!-- 预览 -->
-          <deploy-preview v-show="!isExpand" />
-          <div class="operation-wrapper">
-            <div
-              class="btn"
-              @click="handleChangePanel">
-              {{ isExpand ? '收起' : '展开详情' }}
-              <i class="paasng-icon paasng-ps-arrow-down" v-if="!isExpand"></i>
-              <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
+              <template v-if="deploymentInfo">
+                <div class="version">
+                  <span class="label">版本：</span>
+                  <span class="value">xx</span>
+                </div>
+                <div class="line"></div>
+                <div class="branch">
+                  <span class="label">分支：</span>
+                  <span class="value">xx</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="not-deployed">暂未部署</div>
+              </template>
             </div>
-          </div>
-        </section>
+            <div class="right-btn">
+              <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy">
+                部署
+              </bk-button>
+              <bk-button :theme="'default'" size="small" @click="handleOfflineApp">
+                下架
+              </bk-button>
+            </div>
+          </section>
+          <!-- 内容 -->
+          <section class="main">
+            <!-- 详情表格 -->
+            <deploy-detail v-show="isExpand" />
+            <!-- 预览 -->
+            <deploy-preview v-show="!isExpand" />
+            <div class="operation-wrapper">
+              <div
+                class="btn"
+                @click="handleChangePanel">
+                {{ isExpand ? '收起' : '展开详情' }}
+                <i class="paasng-icon paasng-ps-arrow-down" v-if="!isExpand"></i>
+                <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
 
@@ -71,7 +73,7 @@
         {{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
       </div>
     </bk-dialog>
-    <deploy-dialog :show="isShowDialog" :environment="environment"></deploy-dialog>
+    <deploy-dialog :show.sync="isShowDialog" :environment="environment"></deploy-dialog>
   </div>
 </template>
 
@@ -88,10 +90,6 @@ export default {
   },
   mixins: [appBaseMixin],
   props: {
-    moduleData: {
-      type: Array,
-      default: () => [],
-    },
     environment: {
       type: String,
       default: () => 'stag',
@@ -106,20 +104,18 @@ export default {
         isLoading: false,
       },
       isShowDialog: false,
+      isAppOffline: false, // 是否下架
+      isFirstDeploy: false,   // 是否是第一次部署
+      deploymentInfoData: [],    // 部署信息
     };
   },
 
-  computed: {
-    // 是否部署
-    isDeploy() {
-      console.log('this.moduleData', this.moduleData);
-      return true;
-    },
+  created() {
+    // this.isExpand = this.isDeploy;
   },
 
-  created() {
+  mounted() {
     this.init();
-    // this.isExpand = this.isDeploy;
   },
 
   methods: {
@@ -177,23 +173,23 @@ export default {
     // 获取部署版本信息
     async getModuleReleaseInfo() {
       try {
-        const res = await this.$store.dispatch('deploy/getModuleReleaseInfo', {
+        const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
           env: this.environment,
         });
-        console.log('res', res);
+        // this.deploymentInfoData = res.data;
+        this.$set(this, 'deploymentInfoData', res.data);
+        console.log('deploymentInfoData', this.deploymentInfoData);
         // if (!res.code) {
         //   // 已下架
         //   if (res.is_offlined) {
         //     res.offline.repo.version = this.formatRevision(res.offline.repo.revision);
         //     this.deploymentInfo = res.offline;
-        //     this.exposedLink = '';
         //     this.isAppOffline = true;
         //   } else if (res.deployment) {
         //     res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
         //     this.deploymentInfo = res.deployment;
-        //     this.exposedLink = res.exposed_link.url;
+        //     console.log('this.deploymentInfo', this.deploymentInfo);
         //     this.isAppOffline = false;
         //   } else {
         //     this.deploymentInfo = {
@@ -207,7 +203,7 @@ export default {
         //   this.isFirstDeploy = true;
         // }
       } catch (e) {
-        this.deploymentInfo = null;
+        this.deploymentInfoData = null;
         this.isFirstDeploy = true;
         this.exposedLink = '';
         this.$paasMessage({
@@ -215,6 +211,20 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    formatRevision(revision) {
+      // 修改后端返回的 repo 数据，增加额外字段
+      // 追加 version 字段
+      // 为 Git 类型版本号取前 8 位
+      const reg = RegExp('^[a-z0-9]{40}$');
+      let version = '';
+      if (reg.test(revision)) {
+        version = revision.substring(0, 8);
+      } else {
+        version = revision;
+      }
+      return version;
     },
   },
 };

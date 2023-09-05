@@ -1,8 +1,8 @@
 <template>
-  <div>
+  <div class="deploy-dialog-container">
     <bk-dialog
-      v-model="isShowDialog"
-      width="450"
+      v-model="deployAppDialog.visiable"
+      width="470"
       :title="$t('模块部署')"
       :theme="'primary'"
       :header-position="'left'"
@@ -10,6 +10,7 @@
       :loading="deployAppDialog.isLoading"
       @confirm="handleConfirm"
       @cancel="handleCancel"
+      @after-leave="handleAfterLeave"
     >
       <div class="code-depot">
         <span class="pr20">代码仓库</span>
@@ -18,7 +19,10 @@
         </bk-button>
       </div>
       <div class="image-source mt20">
-        <div class="mb10">镜像来源</div>
+        <div class="mb10 flex-row justify-content-between">
+          <div>镜像来源</div>
+          <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
+        </div>
         <div class="bk-button-group">
           <bk-button
             v-for="item in imageSourceData"
@@ -91,6 +95,10 @@ export default {
       type: String,
       default: () => 'stag',
     },
+    deploymentInfo: {
+      type: Object,
+      default: () => {},
+    },
   },
 
   data() {
@@ -99,13 +107,13 @@ export default {
         visiable: false,
         isLoading: false,
       },
-      isShowDialog: false,
       imageSourceData: [{ value: 'source', label: '从源码构建' }, { value: 'image', label: '已构建镜像' }],
       buttonActive: 'source',
       branchList: [],
       branchValue: '',
       overview: '',
       isBranchesLoading: false,
+      branchesMap: {},
     };
   },
   computed: {
@@ -119,19 +127,29 @@ export default {
       }
       return this.$t('暂无选项');
     },
+
+    // 是否是smartApp
+    isSmartApp() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+    },
+
+    availableBranch() {
+      if (this.$store.state.deploy.availableBranch) {
+        return `${this.$store.state.deploy.availableType}:${this.$store.state.deploy.availableBranch}`;
+      }
+      return '';
+    },
   },
   watch: {
     show: {
       handler(value) {
         console.log('value', value);
-        this.isShowDialog = true;
         this.deployAppDialog.visiable = !!value;
-        if (this.isShowDialog) {
-        //   this.fetchData();
+        if (this.deployAppDialog.visiable) {
+          this.getModuleBranches();
         }
       },
-      //   immediate: true,
-      deep: true,
+      immediate: true,
     },
   },
   methods: {
@@ -163,7 +181,7 @@ export default {
         }
         const branchesData = res.results;
         const branchesList = [];
-        branchesData.forEach((branch, index) => {
+        branchesData.forEach((branch) => {
           const branchId = `${branch.type}:${branch.name}`;
           let branchName = branch.name;
 
@@ -206,6 +224,31 @@ export default {
       }
     },
 
+    initBranchSelection(favBranchName) {
+      // 如果是刚刚创建新分支，默认选中新建的分支
+      // 如果相应环境上次部署过，默认选中上次部署的分支
+      // 如果正式环境没有部署过，默认选中预发布环境部署过的分支
+
+      // eslint-disable-next-line no-prototype-builtins
+      if (favBranchName && this.branchesMap.hasOwnProperty(favBranchName)) {
+        this.branchSelection = favBranchName;
+        return;
+      }
+
+      if (this.branchList.length && !this.branchSelection) {
+        if (this.environment === 'prod') {
+          if (this.availableBranch) {
+            this.branchValue = this.availableBranch;
+          } else {
+            this.branchValue = this.branchList[0].children[0].id;
+          }
+        } else {
+          // 默认选中第一个
+          this.branchValue = this.branchList[0].children[0].id;
+        }
+      }
+    },
+
 
     async getModuleRuntimeOverview() {
       try {
@@ -222,6 +265,61 @@ export default {
       }
     },
 
+
+    handleAfterLeave() {
+      this.branchValue = '';
+      this.$emit('update:show', false);
+    },
+
+    // 查看代码差异
+    async handleShowCommits() {
+      if (this.curAppModule.repo.diff_feature.method === 'external') {
+        this.showCompare();
+      } else {
+        this.showCommits();
+      }
+    },
+
+
+    // 查看代码对比
+    async showCompare() {
+      if (!this.branchValue) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请选择部署分支'),
+        });
+        return false;
+      }
+
+      const fromVersion = this.deploymentInfo?.repo?.revision;
+      const toVersion = this.branchValue;
+      const win = window.open();
+      const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        fromVersion,
+        toVersion,
+      });
+      win.location.href = res.result;
+    },
+
   },
 };
 </script>
+<style lang="scss" scoped>
+.deploy-dialog-container{
+}
+.version-code{
+    color: #3A84FF;
+    font-size: 12px;
+  }
+.option-group{
+    position: relative;
+  }
+.paas-branch-btn{
+    position: absolute;
+    right: 30px;
+    top: 0px;
+    font-size: 12px;
+  }
+</style>

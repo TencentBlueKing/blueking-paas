@@ -152,6 +152,15 @@ const actions = {
   },
 
   /**
+   * 获取部署管理列表信息
+   * @param {Object} params 请求参数：appCode, env
+   */
+  getModuleReleaseList({ }, { appCode, env },  config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list`;
+    return http.get(url, config);
+  },
+
+  /**
      * 获取模块部署分支
      * @param {Object} params 请求参数：appCode, moduleId, env
      */

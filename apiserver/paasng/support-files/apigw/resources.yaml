@@ -688,7 +688,7 @@ paths:
       operationId: fetch_app_access_token
       description: 获取代表指定应用和用户身份的 AccessToken
       tags:
-      - OAuth
+      - Oauth
       responses:
         default:
           description: ''
@@ -713,7 +713,7 @@ paths:
       operationId: refresh_app_access_token
       description: 刷新代表指定应用和用户身份的 AccessToken
       tags:
-      - OAuth
+      - Oauth
       responses:
         default:
           description: ''

@@ -956,6 +956,30 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-process-2:before {
 	content: "\e24c";
 }
+.paasng-abnormal:before {
+	content: "\e257";
+}
+.paasng-normal:before {
+	content: "\e258";
+}
+.paasng-default:before {
+	content: "\e25e";
+}
+.paasng-success:before {
+	content: "\e25d";
+}
+.paasng-failed:before {
+	content: "\e25c";
+}
+.paasng-waiting:before {
+	content: "\e25b";
+}
+.paasng-warning-2:before {
+	content: "\e25a";
+}
+.paasng-unknown:before {
+	content: "\e259";
+}
 .paasng-bushu:before {
 	content: "\e24f";
 }
@@ -976,4 +1000,7 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-duliang:before {
 	content: "\e254";
+}
+.paasng-deploy-item-dot:before {
+	content: "\e260";
 }

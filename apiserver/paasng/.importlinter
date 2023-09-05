@@ -35,14 +35,9 @@ layers =
     paasng.platform.region | paasng.platform.core 
 ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
-    paasng.platform.applications.models -> paasng.publish.**
     paasng.platform.applications.models -> paasng.accessories.iam.**
     paasng.extensions.scene_app.initializer -> paasng.extensions.declarative.*
     paasng.dev_resources.services.management.commands.query_related_applications -> paasng.platform.environments.models
-    paasng.platform.operations.views -> paasng.platform.applications.views
-    paasng.platform.operations.serializers -> paasng.platform.applications.serializers
-    paasng.publish.entrance.serializers -> paasng.platform.modules.serializers
-    paasng.publish.market.serializers -> paasng.platform.applications.serializers
     paasng.dev_resources.templates.views -> paasng.engine.configurations.image
     paasng.dev_resources.templates.** -> paasng.platform.modules.**
 

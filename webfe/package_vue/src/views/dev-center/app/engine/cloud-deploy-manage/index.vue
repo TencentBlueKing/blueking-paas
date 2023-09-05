@@ -15,35 +15,34 @@
     >
       <!-- <component :is="curComponentsName" :key="curComponentsName"></component> -->
       <!-- 骨架屏 -->
-      <router-view :key="routeIndex"></router-view>
+      <router-view :key="routeIndex" :environment="active"></router-view>
     </paas-content-loader>
   </div>
 </template>
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
-import stag from './comps/stag.vue';
-import prod from './comps/prod.vue';
+// import stag from './comps/stag.vue';
+// import prod from './comps/prod.vue';
 
 export default {
-  name: 'cloudDeployManagement',
+  name: 'CloudDeployManagement',
   components: {
     cloudAppTopBar,
-    stag,
-    prod
+    // stag,
+    // prod,
   },
   mixins: [appBaseMixin],
-  data () {
+  data() {
     return {
       isLoading: true,
       active: 'stag',
       routeIndex: 0,
-      curComponentsName: 'stag',
       panels: [
         { name: 'stag', label: '预发布环境', routeName: 'cloudAppDeployManageStag' },
-        { name: 'prod', label: '生产环境', routeName: 'cloudAppDeployManageProd' }
-      ]
-    }
+        { name: 'prod', label: '生产环境', routeName: 'cloudAppDeployManageProd' },
+      ],
+    };
   },
   watch: {
     '$route'() {
@@ -51,20 +50,20 @@ export default {
       this.routeIndex++;
     },
   },
-  created () {
+  created() {
     setTimeout(() => {
       this.isLoading = false;
     }, 500);
   },
   methods: {
     handleTabChange(name) {
-      this.curComponentsName = name;
+      this.active = name;
       const curEnv = this.panels.find(item => item.name === name);
       this.$router.push({
         name: curEnv.routeName,
       });
-    }
-  }
+    },
+  },
 };
 </script>
 <style lang="scss" scoped>

@@ -6,7 +6,7 @@
         <span class="value">{{item.value}}</span>
       </div>
     </section>
-    
+
     <section class="process-table-wrapper">
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
@@ -83,21 +83,23 @@
               :class="row.isExpand ? 'expand' : 'close'"
               v-for="instance in row.instances"
               :key="instance.process_name"
-              >
-                <bk-button class="mr10" :text="true" title="primary">
-                  查看日志
-                </bk-button>
-                <bk-button :text="true" title="primary">
-                  访问控制台
-                </bk-button>
-              </div>
+            >
+              <bk-button class="mr10" :text="true" title="primary">
+                查看日志
+              </bk-button>
+              <bk-button :text="true" title="primary">
+                访问控制台
+              </bk-button>
+            </div>
           </template>
         </bk-table-column>
         <bk-table-column label="进程操作" width="120" class-name="table-colum-operation-cls">
           <template slot-scope="{ row }">
             <div class="operation">
               <div class="operate-process-wrapper mr15">
-                <i class="paasng-icon paasng-play-circle-shape start" v-if="row.status === 'stop'" @click="handleProcessOperation(row, 'start')"></i>
+                <i
+                  class="paasng-icon paasng-play-circle-shape start"
+                  v-if="row.status === 'stop'" @click="handleProcessOperation(row, 'start')"></i>
                 <div class="round-wrapper" v-else>
                   <div class="square-icon" @click="handleProcessOperation(row, 'stop')"></div>
                 </div>
@@ -122,14 +124,14 @@
 
 <script>
 export default {
-  data () {
+  data() {
     return {
       isTableLoading: false,
       isColumnExpand: true,
       instanceList: [
         { label: '运行实例数', value: 5 },
         { label: '期望实例数', value: 4 },
-        { label: '异常实例数', value: 1 }
+        { label: '异常实例数', value: 1 },
       ],
       data: [{
         process_name: 'web-test',
@@ -137,7 +139,7 @@ export default {
         status: 'stop',
         instances: [
           { name: 'rhpa', status: 'running', time: '近 30 分钟' },
-          { name: 'rhpa2', status: 'faild', time: '近 1 天' }
+          { name: 'rhpa2', status: 'faild', time: '近 1 天' },
         ],
       },
       {
@@ -145,7 +147,7 @@ export default {
         isExpand: true,
         status: 'stop',
         instances: [
-          { name: 'rhpa3', status: 'running', time: '近 10 分钟' }
+          { name: 'rhpa3', status: 'running', time: '近 10 分钟' },
         ],
       },
       {
@@ -154,27 +156,27 @@ export default {
         status: 'start',
         instances: [
           { name: 'yeada', status: 'running', time: '近 10 分钟' },
-          { name: 'dadsc', status: 'running', time: '近 2 天' }
+          { name: 'dadsc', status: 'running', time: '近 2 天' },
         ],
-      }]
-    }
+      }],
+    };
   },
 
   methods: {
-    getRejectedCount (row) {
+    getRejectedCount(row) {
       return row.instances.filter(item => item.status === 'faild').length;
     },
-    handleExpand (row) {
+    handleExpand(row) {
       row.isExpand = !row.isExpand;
     },
-    handleProcessOperation (row, type) {
+    handleProcessOperation(row, type) {
       row.status = type;
     },
-    handleExpansionAndContraction () {
+    handleExpansionAndContraction() {
       console.log('click');
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -240,7 +242,7 @@ export default {
     height: 13px;
     border-radius: 50%;
     margin-right: 8px;
-    
+
     &.faild {
       background: #EA3636;
       border: 3px solid #fce0e0;

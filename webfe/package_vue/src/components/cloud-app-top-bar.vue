@@ -38,8 +38,8 @@ export default defineComponent({
     },
     active: {
       type: String,
-      default: ''
-    }
+      default: '',
+    },
   },
   setup(props, { emit }) {
     const curActive = ref(props.active || props.navList[0]?.name);

@@ -34,5 +34,6 @@ module.exports = {
     ],
     'vue/space-infix-ops': 'off',
     'vue/object-curly-spacing': 'off',
+    'vue/multi-word-component-names': 'off',
   },
 };

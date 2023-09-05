@@ -22,6 +22,7 @@
         <bk-table-column
           :label="$t('最近出现时间')"
           prop="last_seen"
+          :show-overflow-tooltip="true"
           :render-header="$renderHeader"
         />
         <bk-table-column
@@ -35,6 +36,7 @@
         <bk-table-column
           :label="$t('事件内容')"
           prop="message"
+          :show-overflow-tooltip="true"
           :render-header="$renderHeader"
         />
         <bk-table-column

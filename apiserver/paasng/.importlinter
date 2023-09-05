@@ -37,10 +37,7 @@ ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
     paasng.platform.applications.models -> paasng.publish.**
     paasng.platform.applications.models -> paasng.accessories.iam.**
-    paasng.platform.applications.views_ext -> paasng.plat_admin.system.applications
-    paasng.dev_resources.sourcectl.connector -> paasng.dev_resources.services.utils
     paasng.extensions.scene_app.initializer -> paasng.extensions.declarative.*
-    paasng.accessories.paas_analysis.utils -> paasng.platform.environments.models
     paasng.dev_resources.services.management.commands.query_related_applications -> paasng.platform.environments.models
     paasng.platform.operations.views -> paasng.platform.applications.views
     paasng.platform.operations.serializers -> paasng.platform.applications.serializers

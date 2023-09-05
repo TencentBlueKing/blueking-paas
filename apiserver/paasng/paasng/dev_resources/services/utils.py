@@ -114,7 +114,7 @@ class Base36Handler:
         idx = 0
         for char in encoded:
             power = str_len - (idx + 1)
-            num += alphabet.index(char) * (base ** power)
+            num += alphabet.index(char) * (base**power)
             idx += 1
 
         return num

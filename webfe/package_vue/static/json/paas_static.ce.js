@@ -565,6 +565,7 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("应用编排"),
                 "matchRouters": [
                     "cloudAppDeploy",
+                    "cloudAppDeployForBuild",
                     "cloudAppDeployForProcess",
                     "cloudAppDeployForEnv",
                     "cloudAppDeployForYaml",

@@ -21,6 +21,7 @@ package app
 import (
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -46,8 +47,10 @@ func NewCmdGetInfo() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&appCode, "bk-app-code", "", "App ID (bk_app_code)")
-	cmd.Flags().
-		StringVar(&appCode, "code", "", "[deprecated] App ID (bk_app_code), this will be removed in the future, please use --bk-app-code instead.")
+	cmd.Flags().StringVar(&appCode, "code", "", heredoc.Doc(`
+			[deprecated] App ID (bk_app_code)
+			this will be removed in the future, please use --bk-app-code instead.`,
+	))
 	return &cmd
 }
 

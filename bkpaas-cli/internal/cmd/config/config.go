@@ -41,7 +41,7 @@ func NewCmd() *cobra.Command {
 		Long:                  configLongDesc,
 		DisableFlagsInUseLine: true,
 		Run:                   cmdUtil.DefaultSubCmdRun(),
-		GroupID:               "core",
+		GroupID:               cmdUtil.GroupCore.ID,
 	}
 
 	cmdUtil.DisableAuthCheck(cmd)

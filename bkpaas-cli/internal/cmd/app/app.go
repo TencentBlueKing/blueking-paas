@@ -36,7 +36,7 @@ func NewCmd() *cobra.Command {
 		Long:                  appLongDesc,
 		DisableFlagsInUseLine: true,
 		Run:                   cmdUtil.DefaultSubCmdRun(),
-		GroupID:               "core",
+		GroupID:               cmdUtil.GroupCore.ID,
 	}
 
 	// 有权限的应用列表

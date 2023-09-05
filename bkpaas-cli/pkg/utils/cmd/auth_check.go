@@ -41,7 +41,7 @@ func CheckAuth(cfg *config.Conf) bool {
 	if cfg == nil {
 		return false
 	}
-	if account.IsUserAuthorized(config.G.AccessToken) {
+	if account.IsUserAuthorized(cfg.AccessToken) {
 		return true
 	}
 	return false
@@ -54,7 +54,7 @@ func IsAuthRequired(cmd *cobra.Command) bool {
 		return false
 	}
 
-	for c := cmd; c != nil || c.Parent() != nil; c = c.Parent() {
+	for c := cmd; !(c == nil || c.Parent() == nil); c = c.Parent() {
 		if c.Annotations[skipAuthCheckFlag] == "true" {
 			return false
 		}

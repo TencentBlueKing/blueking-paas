@@ -35,7 +35,7 @@ func NewCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(version.GetVersion())
 		},
-		GroupID: "core",
+		GroupID: cmdUtil.GroupCore.ID,
 	}
 	cmdUtil.DisableAuthCheck(cmd)
 	return cmd

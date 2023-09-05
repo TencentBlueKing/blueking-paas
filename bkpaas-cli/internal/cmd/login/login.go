@@ -55,7 +55,7 @@ func NewCmd() *cobra.Command {
 			}
 			return loginByBrowser()
 		},
-		GroupID: "core",
+		GroupID: cmdUtil.GroupCore.ID,
 	}
 
 	cmdUtil.DisableAuthCheck(cmd)

@@ -63,10 +63,7 @@ func NewRootCmd() *cobra.Command {
 	}
 	cmdutil.DisableAuthCheck(rootCmd)
 
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    "core",
-		Title: "Core commands",
-	})
+	rootCmd.AddGroup(&cmdutil.GroupCore)
 
 	// 用户登录
 	rootCmd.AddCommand(login.NewCmd())

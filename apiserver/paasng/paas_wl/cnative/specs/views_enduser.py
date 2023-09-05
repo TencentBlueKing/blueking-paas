@@ -23,6 +23,7 @@ from django.conf import settings
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
@@ -53,9 +54,11 @@ from paas_wl.cnative.specs.serializers import (
     ResQuotaPlanSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.images.models import AppImageCredential
+from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.dev_resources.sourcectl.controllers.docker import DockerRegistryController
+from paasng.dev_resources.sourcectl.serializers import AlternativeVersionSLZ
 from paasng.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
 from paasng.publish.entrance.exposer import get_exposed_url
@@ -278,3 +281,45 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.INVALID_MRES.f(f"missing Annotations[{BKPAAS_DEPLOY_ID_ANNO_KEY!r}]")
         if str(deploy_id) != str(deployment.id):
             raise error_codes.GET_DEPLOYMENT_FAILED.f("The deployed version is inconsistent with the cluster state")
+
+
+class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
+    def list_tags(self, request, code, module_name):
+        application = self.get_application()
+        module = self.get_module_via_path()
+        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
+        bkapp = BkAppResource(**model_resource.revision.json_value)
+
+        if bkapp.spec.build is None:
+            raise error_codes.INVALID_MRES.f(_("缺失 `spec.build` 字段"))
+
+        repository = bkapp.spec.build.image
+        credential_name = bkapp.spec.build.imageCredentialsName
+
+        if repository is None:
+            raise error_codes.INVALID_MRES.f(_("缺失 `spec.build.image` 字段"))
+
+        if ":" in repository:
+            logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+            repository = repository.partition(":")[0]
+        username, password = "", ""
+        if credential_name:
+            try:
+                credential = AppUserCredential.objects.get(application_id=application.id, name=credential_name)
+            except AppUserCredential.DoesNotExist:
+                raise error_codes.INVALID_CREDENTIALS.f(_("镜像凭证不存在"))
+            username, password = credential.username, credential.password
+
+        endpoint, slash, repo = repository.partition("/")
+        version_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
+
+        if not version_service.touch():
+            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足"))
+
+        try:
+            alternative_versions = AlternativeVersionSLZ(version_service.list_alternative_versions(), many=True).data
+        except Exception:
+            logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
+            raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
+        return Response(data=alternative_versions)

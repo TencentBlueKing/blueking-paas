@@ -84,9 +84,11 @@ class ErrorCodes:
     GET_MRES_FAILED = ErrorCode("Failed to find bkapp in Kubernetes")
     INVALID_MRES = ErrorCode("The bkapp is invalid")
     GET_DEPLOYMENT_FAILED = ErrorCode("Failed to find deployed version")
+    LIST_TAGS_FAILED = ErrorCode("Failed to list tag from image repository")
 
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode("Failed to create credentials")
+    INVALID_CREDENTIALS = ErrorCode("Image credentials is invalid")
 
     # 集群组件相关
     CLUSTER_COMPONENT_NOT_EXIST = ErrorCode('Cluster component not exist')

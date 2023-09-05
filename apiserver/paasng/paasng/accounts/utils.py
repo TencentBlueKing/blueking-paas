@@ -19,6 +19,11 @@ to the current version of the project delivered to anyone in the future.
 from typing import Set, Type
 
 from bkpaas_auth import get_user_by_user_id
+from django.conf import settings
+
+from paasng.accounts.oauth.backends import get_bkapp_oauth_backend_cls
+from paasng.platform.applications.models import Application
+from paasng.platform.oauth2.utils import get_oauth2_client_secret
 
 
 def get_user_avatar(username):
@@ -51,3 +56,17 @@ class ForceAllowAuthedApp:
     def check_marked(cls, view_class) -> bool:
         """Check if a view set has been marked"""
         return view_class in cls._view_sets
+
+
+def create_app_oauth_backend(application: Application, env_name: str = settings.AUTH_ENV_NAME):
+    """使用指定的应用的身份"""
+    app_secret = get_oauth2_client_secret(application.code, application.region)
+    return get_bkapp_oauth_backend_cls()(
+        auth_url=settings.TOKEN_AUTH_ENDPOINT,
+        refresh_url=settings.TOKEN_REFRESH_ENDPOINT,
+        # 借用了 bkpaas-auth 的配置项
+        validate_url=settings.BKAUTH_TOKEN_CHECK_ENDPOINT,
+        app_code=application.code,
+        app_secret=app_secret,
+        env_name=env_name,
+    )

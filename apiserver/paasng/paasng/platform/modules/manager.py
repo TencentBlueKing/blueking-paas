@@ -24,6 +24,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from collections import namedtuple
 from contextlib import contextmanager
+from operator import attrgetter
 from typing import Any, Dict, List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -41,6 +42,7 @@ from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
 from paasng.dev_resources.sourcectl.connector import get_repo_connector
 from paasng.dev_resources.sourcectl.docker.models import init_image_repo
 from paasng.dev_resources.templates.constants import TemplateType
+from paasng.dev_resources.templates.manager import AppBuildPack, TemplateRuntimeManager
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
 from paasng.engine.models import EngineApp
@@ -48,10 +50,10 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.log.shim import setup_env_log_model
-from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
+from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, get_image_labels_by_module
-from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.utils.addons import ReplaceableFunction
@@ -60,6 +62,45 @@ from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 make_app_metadata = ReplaceableFunction(default_factory=dict)
+
+
+class ModuleBuildpackPlaner:
+    """ModuleBuildpackPlaner 的职责是协助 ModuleInitializer 初始化运行时需要的构建工具
+
+    ModuleBuildpackPlaner 与 TemplateRuntimeManager 的行为类似但不一样:
+    - ModuleBuildpackPlaner 关注的是 module, 而 TemplateRuntimeManager 关注的是 template
+    - 处理从模板创建的 Module 时, ModuleBuildpackPlaner 与 TemplateRuntimeManager **完全**一致
+    - 由于并非所有 Module 都从模板创建, 因此目前并不能用 TemplateRuntimeManager 取代 ModuleBuildpackPlaner, 涉及的应用类型:
+        - BK_LESSCODE
+        - BK_PLUGINS
+    """
+
+    def __init__(self, module: Module):
+        self.module = module
+
+    def get_required_buildpacks(self, bp_stack_name: str) -> List[AppBuildPack]:
+        """获取构建模板代码需要的构建工具"""
+        try:
+            required_buildpacks = TemplateRuntimeManager(
+                region=self.module.region, tmpl_name=self.module.source_init_template
+            ).get_template_required_buildpacks(bp_stack_name=bp_stack_name)
+        except Template.DoesNotExist:
+            required_buildpacks = []
+
+        language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
+        if language_bp:
+            required_buildpacks.append(language_bp)
+        return required_buildpacks
+
+    def get_language_buildpack(self, bp_stack_name: str) -> Optional[AppBuildPack]:
+        """获取和模块语言相关的构建工具"""
+        builder = AppSlugBuilder.objects.get(name=bp_stack_name)
+        buildpacks = builder.get_buildpack_choices(self.module, language=self.module.language)
+        if not buildpacks:
+            return None
+        # 选取指定语言的最新一个非隐藏的 buildpack
+        buildpack = sorted(buildpacks, key=attrgetter("created"))[-1]
+        return buildpack
 
 
 class ModuleInitializer:
@@ -105,21 +146,21 @@ class ModuleInitializer:
             update_metadata_by_env(env, engine_app_meta_info)
         return
 
-    def initialize_with_template(
+    def initialize_vcs_with_template(
         self,
         repo_type: Optional[str] = None,
         repo_url: Optional[str] = None,
         repo_auth_info: Optional[dict] = None,
         source_dir: str = '',
     ):
-        """Initialize module with source template
+        """Initialize module vcs with source template
 
         :param repo_type: the type of repository provider, used when source_origin is `AUTHORIZED_VCS`
         :param repo_url: the address of repository, used when source_origin is `AUTHORIZED_VCS`
         :param repo_auth_info: the auth of repository
         :param source_dir: The work dir, which containing Procfile.
         """
-        if not self._should_initialize_with_template():
+        if not self._should_initialize_vcs():
             logger.info(
                 'Skip initializing template for application:<%s>/<%s>', self.application.code, self.module.name
             )
@@ -150,23 +191,37 @@ class ModuleInitializer:
             return {'code': 'OK', "extra_info": result.extra_info, "dest_type": result.dest_type}
         return {'code': result.error}
 
-    def _should_initialize_with_template(self) -> bool:
+    def _should_initialize_vcs(self) -> bool:
         """Check if current module should run source template initializing procedure"""
-        app_specs = AppSpecs(self.application)
+        module_specs = ModuleSpecs(self.module)
         # Matches app type: ENGINELESS_APP
-        if not app_specs.engine_enabled:
+        if not module_specs.app_specs.engine_enabled:
             return False
-        # Matches app type: BK_PLUGIN
-        if (
-            app_specs.require_templated_source
-            and not Template.objects.filter(name=self.module.source_init_template, type=TemplateType.NORMAL).exists()
-        ):
+
+        # Matches source_origin type: S-Mart App or Lesscode
+        if module_specs.source_origin_specs.deploy_via_package:
             return False
+
+        # Matches source origin type: IMAGE_REGISTRY or CNATIVE_IMAGE
+        if module_specs.runtime_type == RuntimeType.CUSTOM_IMAGE:
+            return False
+
         return True
 
     def bind_default_services(self):
         """Bind default services after module creation"""
         DefaultServicesBinder(self.module).bind()
+
+    def initialize_docker_build_config(self):
+        """初始化 Dockerfile 类型的构建配置"""
+        tmpl_mgr = TemplateRuntimeManager(region=self.module.region, tmpl_name=self.module.source_init_template)
+        cfg = tmpl_mgr.get_docker_build_config()
+        db_instance = BuildConfig.objects.get_or_create_by_module(self.module)
+        db_instance.update_with_build_method(
+            build_method=cfg.build_method,
+            dockerfile_path=cfg.dockerfile_path,
+            docker_build_args=cfg.docker_build_args,
+        )
 
     def bind_default_runtime(self):
         """Bind slugbuilder/slugrunner/buildpacks after module creation"""
@@ -176,29 +231,20 @@ class ModuleInitializer:
     def bind_runtime_by_labels(self, labels: Dict[str, str], contain_hidden: bool = False):
         """Bind slugbuilder/slugrunner/buildpacks by labels"""
         try:
-            slugbuilder = AppSlugBuilder.objects.select_runtime(self.module, labels, contain_hidden)
-            slugrunner = AppSlugRunner.objects.select_runtime(self.module, labels, contain_hidden)
+            slugbuilder = AppSlugBuilder.objects.select_default_runtime(self.module.region, labels, contain_hidden)
+            # by designed, name must be consistent between builder and runner
+            slugrunner = AppSlugRunner.objects.get(name=slugbuilder.name)
         except ObjectDoesNotExist:
             # 找不到则使用 app engine 默认配置的镜像
             logger.warning("skip runtime binding because default image is not found")
             return
 
-        helper = ModuleRuntimeBinder(self.module)
-        helper.bind_image(slugrunner, slugbuilder)
+        binder = ModuleRuntimeBinder(self.module)
+        binder.bind_image(slugrunner, slugbuilder)
 
-        # 应用初始化代码模板中配置了 required_buildpacks 的话，需要额外绑定，且顺序必须在语言相关的构建工具之前
-        try:
-            tmpl = Template.objects.get(name=self.module.source_init_template, type=TemplateType.NORMAL)
-            helper.bind_buildpacks_by_name(tmpl.required_buildpacks)
-        except ObjectDoesNotExist:
-            logger.info(
-                'Skip setting buildpacks required by source template for application:<%s>/<%s>',
-                self.application.code,
-                self.module.name,
-            )
-
-        # 语言要求的构建工具
-        helper.bind_buildpacks_by_module_language()
+        planer = ModuleBuildpackPlaner(module=self.module)
+        for buildpack in planer.get_required_buildpacks(bp_stack_name=slugbuilder.name):
+            binder.bind_buildpack(buildpack)
 
     def initialize_log_config(self):
         for env in self.module.get_envs():
@@ -308,29 +354,40 @@ def initialize_module(
         module_initializer.create_engine_apps(cluster_name=cluster_name)
 
     source_init_result = {}
-    if module_spec.has_template_code:
-        # initialize module with template if required
+    if module_spec.has_vcs:
+        # initialize module vcs with template if required
         with _humanize_exception('initialize_app_source', _('代码初始化过程失败，请稍候再试')):
-            source_init_result = module_initializer.initialize_with_template(
+            source_init_result = module_initializer.initialize_vcs_with_template(
                 repo_type, repo_url, repo_auth_info=repo_auth_info, source_dir=source_dir
             )
 
-    if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
+    if module_spec.templated_source_enabled:
+        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
+            tmpl_mgr = TemplateRuntimeManager(region=module.region, tmpl_name=module.source_init_template)
+            if tmpl_mgr.template.runtime_type == RuntimeType.BUILDPACK:
+                # bind heroku runtime, such as slug builder/runner and buildpacks
+                module_initializer.bind_default_runtime()
+            elif tmpl_mgr.template.runtime_type == RuntimeType.DOCKERFILE:
+                # setup build_config, such as dockerfile path and build args
+                module_initializer.initialize_docker_build_config()
+
+    elif module_spec.runtime_type != RuntimeType.CUSTOM_IMAGE:
+        # Matches source_origin type: Lesscode or BK_PLUGIN
+        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
+            # bind heroku runtime, such as slug builder/runner and buildpacks
+            module_initializer.bind_default_runtime()
+    elif not manifest:
+        # Matches source_origin type: IMAGE_REGISTRY and NOT cloud native app
         with _humanize_exception('config_image_registry', _('配置镜像 Registry 失败，请稍候再试')):
             init_image_repo(module, repo_url or '', source_dir, repo_auth_info or {})
 
     with _humanize_exception('bind_default_services', _('绑定初始增强服务失败，请稍候再试')):
         module_initializer.bind_default_services()
 
-    if module_spec.runtime_type == RuntimeType.BUILDPACK:
-        # bind heroku runtime, such as slug builder/runner and buildpacks
-        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
-            module_initializer.bind_default_runtime()
-
     with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
         module_initializer.initialize_log_config()
 
-    with _humanize_exception("initialize_app_model_resource", _("初始化资源配置失败, 请稍候再试")):
+    with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
         module_initializer.initialize_app_model_resource(manifest)
 
     return ModuleInitResult(source_init_result=source_init_result)
@@ -404,12 +461,10 @@ class DefaultServicesBinder:
     def find_services_from_template(self) -> PresetServiceSpecs:
         """find default services defined in module template"""
         try:
-            return Template.objects.get(
-                name=self.module.source_init_template, type=TemplateType.NORMAL
-            ).preset_services_config
-        except ObjectDoesNotExist:
-            logger.info('No default services found for <%s>/<%s>', self.application.code, self.module.name)
-        return {}
+            tmpl_mgr = TemplateRuntimeManager(region=self.module.region, tmpl_name=self.module.source_init_template)
+            return tmpl_mgr.get_preset_services_config()
+        except Template.DoesNotExist:
+            return {}
 
     def _bind(self, services: PresetServiceSpecs):
         """Bind current module with given services"""

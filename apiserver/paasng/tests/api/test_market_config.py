@@ -47,7 +47,7 @@ def test_create_then_release(
     api_client,
     mock_wl_services_in_creation,
     mock_paas_analysis_client,
-    mock_initialize_with_template,
+    mock_initialize_vcs_with_template,
     confirm_required_when_publish,
     auto_enable_when_deploy,
     deployment_status,

@@ -85,7 +85,9 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
 
             is_encrypted_image = any(
                 runner.get_label(ModuleRuntimeManager.SECURE_ENCRYPTED_LABEL)
-                for runner in AppSlugRunner.objects.filter_by_full_image(module, image)
+                # 升级镜像时会导致旧镜像无法打开 web-console (因为镜像的全名发生了变化)
+                # 解决方案: 到管理端创建与旧镜像信息一样的隐藏镜像
+                for runner in AppSlugRunner.objects.filter_by_full_image(module, image, contain_hidden=True)
             )
             if not is_encrypted_image:
                 tag = get_dynamic_tag("app-feature:web-console")

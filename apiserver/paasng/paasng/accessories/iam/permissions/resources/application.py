@@ -28,10 +28,9 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from iam.exceptions import AuthAPIError
 
-from paasng.accessories.iam.constants import ResourceType
+from paasng.accessories.iam.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP, ResourceType
 from paasng.accessories.iam.permissions.perm import PermCtx, Permission, ResCreatorAction, validate_empty
 from paasng.accessories.iam.permissions.request import ResourceRequest
-from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 
 logger = logging.getLogger(__name__)
 

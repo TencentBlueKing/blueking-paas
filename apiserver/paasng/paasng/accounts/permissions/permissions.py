@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Callable
 from rest_framework import permissions
 
 from paasng.accounts.models import UserProfile
+from paasng.utils.api_docs import is_rendering_openapi
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -50,6 +51,27 @@ class HasRegionPermission(permissions.BasePermission):
             region = self.getter(request, view)
         except Exception:
             logger.warning("get region name failed")
+            return False
+
+        user_profile = UserProfile.objects.get_profile(request.user)
+        return user_profile.enable_regions.has_region_by_name(region)
+
+
+class HasPostRegionPermission(permissions.BasePermission):
+    """Check if the current user has the permission to perform POST request in the current region."""
+
+    def has_permission(self, request, view):
+        # only check post request, let other requests go
+        if request.method != 'POST':
+            return True
+
+        # 如果在渲染 openapi 文档, 那么跳过权限校验.
+        if is_rendering_openapi(request):
+            return True
+
+        try:
+            region = request.data['region']
+        except KeyError:
             return False
 
         user_profile = UserProfile.objects.get_profile(request.user)

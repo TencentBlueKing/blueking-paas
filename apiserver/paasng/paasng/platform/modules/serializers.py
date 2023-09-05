@@ -31,6 +31,8 @@ from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import to_error_string
+from paas_wl.cnative.specs.models.app_resource import BkAppNameGenerator
+from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
 from paasng.dev_resources.sourcectl.validators import validate_image_url
@@ -300,29 +302,29 @@ class CreateCNativeModuleSLZ(serializers.Serializer):
 
     name = ModuleNameField()
     source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码配置'))
-    build_config = ModuleBuildConfigSLZ(required=True, help_text=_('构建配置'))
+    image_credentials = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
     manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
 
     def validate(self, attrs):
-        build_cfg = attrs['build_config']
-
-        # 如果托管方式为仅镜像，则应该设置 manifest
-        if build_cfg['build_method'] == RuntimeType.CUSTOM_IMAGE:
-            if not attrs.get('manifest'):
-                raise ValidationError(_('云原生应用 manifest 不能为空'))
-
-            source_cfg = attrs['source_config']
-            # 检查 source_config 中 source_origin 类型必须为 IMAGE_REGISTRY
-            if source_cfg['source_origin'] != SourceOrigin.IMAGE_REGISTRY:
-                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 IMAGE_REGISTRY'))
+        application = self.context["application"]
+        source_cfg = attrs["source_config"]
+        if manifest := attrs.get('manifest'):
+            # 检查 source_config 中 source_origin 类型必须为 CNATIVE_IMAGE
+            if source_cfg['source_origin'] != SourceOrigin.CNATIVE_IMAGE:
+                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 CNATIVE_IMAGE'))
 
             try:
-                bkapp_res = BkAppResource(**attrs['manifest'])
+                bkapp_res = BkAppResource(**manifest)
             except PDValidationError as e:
                 raise ValidationError(to_error_string(e))
 
             if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
                 raise ValidationError(_('请使用 BkApp v1alpha2 以支持多模块'))
+
+            if bkapp_res.metadata.name != BkAppNameGenerator.make_name(
+                app_code=application.code, module_name=attrs["name"]
+            ):
+                raise ValidationError(_("Manifest 中定义的应用模型名称与模块信息不一致"))
 
             if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
                 raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))

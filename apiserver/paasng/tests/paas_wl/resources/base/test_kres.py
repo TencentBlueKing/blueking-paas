@@ -124,7 +124,7 @@ class TestLabelBasedOps:
         # 在集成测试中, K8s 集群有可能会更新 Pod 的 metadata 和 status, 导致版本变化多次
         assert len(list(stream)) >= 1
 
-    def test_filter_by_label(self, k8s_client, wl_app):
+    def test_filter_by_labels(self, k8s_client, wl_app):
         results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 

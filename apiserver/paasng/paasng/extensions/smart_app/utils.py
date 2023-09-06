@@ -91,7 +91,7 @@ class SMartImageManager:
         default_runner = AppSlugRunner.objects.filter(region=self.module.region, is_default=True).first()
         if not default_runner:
             raise ValueError("Unknown base image for S-Mart")
-        named = parse_image(default_runner.image)
+        named = parse_image(default_runner.image, default_registry=bksmart_settings.registry.host)
         return named
 
     def get_image_info(self, tag: str = "latest") -> NamedImage:

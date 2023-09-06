@@ -23,10 +23,11 @@
           <div>镜像来源</div>
           <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
         </div>
-        <div class="bk-button-group">
+        <div class="bk-button-group btn-container">
           <bk-button
             v-for="item in imageSourceData"
             :key="item.value"
+            class="btn-item"
             :class="buttonActive === item.value ? 'is-selected' : ''"
             @click="handleSelected(item)"
           >
@@ -44,6 +45,7 @@
           :popover-min-width="420"
           :clearable="false"
           :searchable="true"
+          @change="handleChangeBranch"
           :loading="isBranchesLoading"
           :empty-text="branchEmptyText"
         >
@@ -107,13 +109,15 @@ export default {
         visiable: false,
         isLoading: false,
       },
-      imageSourceData: [{ value: 'source', label: '从源码构建' }, { value: 'image', label: '已构建镜像' }],
-      buttonActive: 'source',
+      imageSourceData: [{ value: 'branch', label: '从源码构建' }, { value: 'image', label: '已构建镜像' }],
+      buttonActive: 'branch',
       branchList: [],
+      branchesData: [],
       branchValue: '',
       overview: '',
       isBranchesLoading: false,
       branchesMap: {},
+      curBranch: {},
     };
   },
   computed: {
@@ -153,7 +157,19 @@ export default {
     },
   },
   methods: {
-    handleConfirm() {},
+    // 弹窗确认
+    handleConfirm() {
+      console.log('this.branchList', this.branchesData, this.branchValue);
+    },
+    // 选择分支
+    handleChangeBranch() {
+      this.curBranch = this.branchesData.find((e) => {
+        if (this.branchValue.includes(e.name)) {
+          return e;
+        }
+        return {};
+      });
+    },
     handleCancel() {},
     // 点击镜像来源
     handleSelected(item) {
@@ -179,9 +195,9 @@ export default {
           const sortList = res.results.sort(this.sortData);
           this.branchSelection = `${sortList[0].type}:${sortList[0].name}`;
         }
-        const branchesData = res.results;
+        this.branchesData = res.results;
         const branchesList = [];
-        branchesData.forEach((branch) => {
+        this.branchesData.forEach((branch) => {
           const branchId = `${branch.type}:${branch.name}`;
           let branchName = branch.name;
 
@@ -322,4 +338,10 @@ export default {
     top: 0px;
     font-size: 12px;
   }
+.btn-container{
+  width: 420px;
+  .btn-item{
+    padding: 0 69px;
+  }
+}
 </style>

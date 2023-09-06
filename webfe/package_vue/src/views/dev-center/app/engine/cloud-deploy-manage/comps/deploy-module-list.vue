@@ -12,7 +12,7 @@
                 <span class="name">{{deploymentInfo.module_name}}</span>
                 <i class="paasng-icon paasng-jump-link icon-cls-link" />
               </div>
-              <template v-if="deploymentInfo">
+              <template v-if="deploymentInfo.is_deployed">
                 <div class="version">
                   <span class="label">版本：</span>
                   <span class="value">xx</span>
@@ -39,10 +39,10 @@
           <!-- 内容 -->
           <section class="main">
             <!-- 详情表格 -->
-            <deploy-detail v-show="isExpand" />
+            <!-- <deploy-detail v-show="isExpand" /> -->
             <!-- 预览 -->
-            <deploy-preview v-show="!isExpand" />
-            <div class="operation-wrapper">
+            <deploy-preview :deployment-info="deploymentInfo" v-show="!isExpand" />
+            <!-- <div class="operation-wrapper">
               <div
                 class="btn"
                 @click="handleChangePanel">
@@ -50,7 +50,7 @@
                 <i class="paasng-icon paasng-ps-arrow-down" v-if="!isExpand"></i>
                 <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
               </div>
-            </div>
+            </div> -->
           </section>
         </div>
       </div>
@@ -77,14 +77,15 @@
   </div>
 </template>
 
-<script>import deployDetail from './deploy-detail';
+<script>
+// import deployDetail from './deploy-detail';
 import deployPreview from './deploy-preview.vue';
 import deployDialog from './deploy-dialog.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   components: {
-    deployDetail,
+    // deployDetail,
     deployPreview,
     deployDialog,
   },
@@ -94,11 +95,15 @@ export default {
       type: String,
       default: () => 'stag',
     },
+    modelName: {
+      type: String,
+      default: () => '',
+    },
   },
 
   data() {
     return {
-      isExpand: true,
+      isExpand: false,
       offlineAppDialog: {
         visiable: false,
         isLoading: false,
@@ -108,6 +113,16 @@ export default {
       isFirstDeploy: false,   // 是否是第一次部署
       deploymentInfoData: [],    // 部署信息
     };
+  },
+
+  watch: {
+    modelName(value) {
+      if (value === '全部模块') {
+        this.showModuleList = this.moduleInfoList;
+      } else {
+        this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);
+      }
+    },
   },
 
   created() {
@@ -177,8 +192,7 @@ export default {
           appCode: this.appCode,
           env: this.environment,
         });
-        // this.deploymentInfoData = res.data;
-        this.$set(this, 'deploymentInfoData', res.data);
+        this.deploymentInfoData = res.data;
         console.log('deploymentInfoData', this.deploymentInfoData);
         // if (!res.code) {
         //   // 已下架

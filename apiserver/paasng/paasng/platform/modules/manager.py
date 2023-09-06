@@ -380,6 +380,11 @@ def initialize_module(
         # Matches source_origin type: IMAGE_REGISTRY and NOT cloud native app
         with _humanize_exception('config_image_registry', _('配置镜像 Registry 失败，请稍候再试')):
             init_image_repo(module, repo_url or '', source_dir, repo_auth_info or {})
+    else:
+        # cloud native app
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+        build_config.build_method = RuntimeType.CUSTOM_IMAGE
+        build_config.save(update_fields=["build_method"])
 
     with _humanize_exception('bind_default_services', _('绑定初始增强服务失败，请稍候再试')):
         module_initializer.bind_default_services()

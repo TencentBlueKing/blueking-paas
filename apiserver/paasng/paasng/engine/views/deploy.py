@@ -33,9 +33,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.cnative.specs.models import AppModelResource
+from paas_wl.cnative.specs.image_parser import ImageParser
+from paas_wl.cnative.specs.utils import get_bkapp
 from paas_wl.platform.applications.models import Build
 from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.accessories.iam.permissions.resources.application import AppAction
@@ -135,7 +134,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
             if not manifest:
                 version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
-                manifest = self._get_manifest(application, module, image_tag=params["version_name"])
+                manifest = self._get_deployable_manifest(application, module, image_tag=params["version_name"])
             else:
                 # v1alpha1 的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
                 version_info = VersionInfo("", "", "")
@@ -208,18 +207,15 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return VersionInfo(revision, version_name, version_type)
 
     @staticmethod
-    def _get_manifest(application, module: Module, image_tag: str) -> Dict:
+    def _get_deployable_manifest(application, module: Module, image_tag: str) -> Dict:
+        """查询 module 关联的 bkapp 模型, 并将其转换成 manifest"""
+        bkapp = get_bkapp(application, module)
         try:
-            model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
-        except AppModelResource.DoesNotExist:
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("未完善应用部署信息"))
-        bkapp = BkAppResource(**model_resource.revision.json_value)
-        if bkapp.apiVersion not in [ApiVersion.V1ALPHA2]:
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("不支持的云原生应用版本: {}").format(bkapp.apiVersion))
-        if bkapp.spec.build is None or bkapp.spec.build.image is None:
-            raise error_codes.CANNOT_DEPLOY_APP.f(_("缺失 `spec.build.image` 字段"))
+            repository = ImageParser(bkapp).get_repository()
+        except ValueError as e:
+            raise error_codes.CANNOT_DEPLOY_APP.f(str(e))
         # 根据用户输入组装完整镜像名
-        repository = bkapp.spec.build.image.partition(":")[0]
+        assert bkapp.spec.build
         bkapp.spec.build.image = f"{repository}:{image_tag}"
         return bkapp.to_deployable()
 

@@ -39,6 +39,7 @@ from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.cnative.specs.image_parser import ImageParser
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -286,23 +287,22 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
     def list_tags(self, request, code, module_name):
+        """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
         application = self.get_application()
         module = self.get_module_via_path()
         model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
         bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        if bkapp.spec.build is None:
-            raise error_codes.INVALID_MRES.f(_("缺失 `spec.build` 字段"))
+        try:
+            repository = ImageParser(bkapp).get_repository()
+        except ValueError as e:
+            raise error_codes.INVALID_MRES.f(str(e))
 
-        repository = bkapp.spec.build.image
-        credential_name = bkapp.spec.build.imageCredentialsName
-
-        if repository is None:
-            raise error_codes.INVALID_MRES.f(_("缺失 `spec.build.image` 字段"))
-
-        if ":" in repository:
+        assert bkapp.spec.build
+        if repository != bkapp.spec.build.image:
             logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
-            repository = repository.partition(":")[0]
+
+        credential_name = bkapp.spec.build.imageCredentialsName
         username, password = "", ""
         if credential_name:
             try:

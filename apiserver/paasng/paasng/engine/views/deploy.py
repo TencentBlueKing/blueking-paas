@@ -33,6 +33,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.constants import ApiVersion
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.models import AppModelResource
 from paas_wl.platform.applications.models import Build
 from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.accessories.iam.permissions.resources.application import AppAction
@@ -41,6 +44,7 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
+from paasng.engine.constants import RuntimeType
 from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
@@ -128,10 +132,14 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             build = Build.objects.get(pk=build_id)
 
         manifest = params.get("manifest", None)
-        version_info = None
-        # 只有仅托管镜像的云原生应用会传递 manifest
-        # 目前仅托管镜像的云原生应用的 image 字段由前端组装
-        if manifest is None:
+        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            if not manifest:
+                version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
+                manifest = self._get_manifest(application, module, image_tag=params["version_name"])
+            else:
+                # v1alpha1 的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
+                version_info = VersionInfo("", "", "")
+        else:
             version_info = self._get_version_info(request.user, module, params, build=build)
 
         coordinator = DeploymentCoordinator(env)
@@ -176,6 +184,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 version_name=image_tag,
                 revision=image_tag,
             )
+
         version_name = params["version_name"]
         version_type = params["version_type"]
         revision = params.get("revision", None)
@@ -197,6 +206,22 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not revision:
             raise error_codes.CANNOT_GET_REVISION
         return VersionInfo(revision, version_name, version_type)
+
+    @staticmethod
+    def _get_manifest(application, module: Module, image_tag: str) -> Dict:
+        try:
+            model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
+        except AppModelResource.DoesNotExist:
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("未完善应用部署信息"))
+        bkapp = BkAppResource(**model_resource.revision.json_value)
+        if bkapp.apiVersion not in [ApiVersion.V1ALPHA2]:
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("不支持的云原生应用版本: {}").format(bkapp.apiVersion))
+        if bkapp.spec.build is None or bkapp.spec.build.image is None:
+            raise error_codes.CANNOT_DEPLOY_APP.f(_("缺失 `spec.build.image` 字段"))
+        # 根据用户输入组装完整镜像名
+        repository = bkapp.spec.build.image.partition(":")[0]
+        bkapp.spec.build.image = f"{repository}:{image_tag}"
+        return bkapp.to_deployable()
 
     def _handle_deploy_failed(self, module: Module, deployment: Optional[Deployment], exception: Exception):
         DEPLOYMENT_INFO_COUNTER.labels(

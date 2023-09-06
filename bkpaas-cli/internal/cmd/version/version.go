@@ -16,34 +16,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package config
+package version
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/version"
 )
 
-var configLongDesc = `
-Display bkpaas-cli config files using subcommands like "bkpaas-cli config view"
-
-The loading order follows these rules:
-	
-  1.  ${BKPAAS_CLI_CONFIG} environment variable.
-  2.  Use ${HOME}/.blueking-paas/config.yaml.
-`
-
-// NewCmd create bkpaas-cli config command
+// NewCmd create version command
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                   "config",
-		Short:                 "Manage bkpaas-cli config",
-		Long:                  configLongDesc,
-		DisableFlagsInUseLine: true,
-		Run:                   cmdUtil.DefaultSubCmdRun(),
+		Use:   "version",
+		Short: "Display bkpaas-cli version info.",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(version.GetVersion())
+		},
+		GroupID: cmdUtil.GroupCore.ID,
 	}
-
-	// 配置信息查看
-	cmd.AddCommand(NewCmdView())
+	cmdUtil.DisableAuthCheck(cmd)
 	return cmd
 }

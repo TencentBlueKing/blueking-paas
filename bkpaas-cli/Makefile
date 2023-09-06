@@ -12,6 +12,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+.DEFAULT_GOAL:=help
 
 ifdef VERSION
     VERSION=${VERSION}
@@ -68,7 +69,7 @@ help: ## 展示可用 make 命令及说明
 
 .PHONY: build
 build: tidy ## 构建 bkpaas-cli 可执行文件
-	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o ${BIN_NAME} ./main.go
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o ${BIN_NAME} ./cmd/bkpaas-cli/main.go
 
 .PHONY: fmt
 fmt: ## 执行 golines，gofumpt ...
@@ -111,4 +112,4 @@ $(GOFUMPT): $(LOCALBIN)
 .PHONY: install-golangci-lint
 install-golangci-lint: $(GOCILINT) ## 下载 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3

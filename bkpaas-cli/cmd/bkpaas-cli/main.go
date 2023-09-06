@@ -16,23 +16,12 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package version
+package main
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/version"
+	"github.com/TencentBlueKing/blueking-paas/client/internal/cmd/root"
 )
 
-// NewCmd create version command
-func NewCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "version",
-		Short: "Display bkpaas-cli version info.",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(version.GetVersion())
-		},
-	}
+func main() {
+	root.Execute()
 }

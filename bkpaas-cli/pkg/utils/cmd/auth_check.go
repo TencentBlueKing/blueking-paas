@@ -16,23 +16,49 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package cmd
 
 import (
-	"os"
+	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/cmd"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
-func main() {
-	// load global config ...
-	if _, err := config.LoadConf(config.ConfigFilePath); err != nil {
-		console.Error("Failed to load config, error: %s", err.Error())
-		console.Tips("Please follow the user guide (Readme.md) to initialize the configuration...")
-		os.Exit(1)
+const skipAuthCheckFlag = "skipAuthCheck"
+
+// DisableAuthCheck disable auth check of given cmd
+func DisableAuthCheck(cmd *cobra.Command) {
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
 	}
 
-	cmd.Execute()
+	cmd.Annotations[skipAuthCheckFlag] = "true"
+}
+
+// CheckAuth check whether the cfg.AccessToken has authorized
+func CheckAuth(cfg *config.Conf) bool {
+	if cfg == nil {
+		return false
+	}
+	if account.IsUserAuthorized(cfg.AccessToken) {
+		return true
+	}
+	return false
+}
+
+// IsAuthRequired Returns whether `cmd` requires user authentication
+func IsAuthRequired(cmd *cobra.Command) bool {
+	switch cmd.Name() {
+	case "help", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd:
+		return false
+	}
+
+	for c := cmd; !(c == nil || c.Parent() == nil); c = c.Parent() {
+		if c.Annotations[skipAuthCheckFlag] == "true" {
+			return false
+		}
+	}
+
+	return true
 }

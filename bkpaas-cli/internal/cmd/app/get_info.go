@@ -21,29 +21,46 @@ package app
 import (
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc/v2"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
-// NewCmdList returns a Command instance for 'app list' sub command
-func NewCmdList() *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List PaaS applications",
-		Run: func(cmd *cobra.Command, args []string) {
-			listApps()
+// NewCmdGetInfo returns a Command instance for 'app get-info' sub command
+func NewCmdGetInfo() *cobra.Command {
+	var appCode string
+
+	cmd := cobra.Command{
+		Use:   "get-info",
+		Short: "Get PaaS application info",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if appCode == "" {
+				_ = cmd.MarkFlagRequired("bk-app-code")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return displayAppInfo(appCode)
 		},
 	}
+
+	cmd.Flags().StringVar(&appCode, "bk-app-code", "", "App ID (bk_app_code)")
+	cmd.Flags().StringVar(&appCode, "code", "", heredoc.Doc(`
+			[deprecated] App ID (bk_app_code)
+			this will be removed in the future, please use --bk-app-code instead.`,
+	))
+	return &cmd
 }
 
-// 在命令行中展示当前用户有权限的应用列表
-func listApps() {
-	applications, err := handler.NewAppLister().Exec()
+// 在命令行中展示指定的蓝鲸应用信息
+func displayAppInfo(appCode string) error {
+	retriever := handler.NewBasicInfoRetriever()
+	appInfo, err := retriever.Exec(appCode)
 	if err != nil {
-		console.Error("Failed to list applications")
-		return
+		return errors.Wrap(err, "Failed to get application info")
 	}
-	fmt.Println(applications)
+	fmt.Println(appInfo)
+	return nil
 }

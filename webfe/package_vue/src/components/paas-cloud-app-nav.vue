@@ -76,7 +76,8 @@ export default {
         'appServiceInnerShared',
         'appServiceInner',
         'cloudAppDeployManageStag',
-        'cloudAppDeployManageProd'
+        'cloudAppDeployManageProd',
+        'cloudAppDeployHistory'
       ],
       allNavItems: [],
       region: 'ieod',
@@ -104,6 +105,8 @@ export default {
           'cloudAppDeployManageStag',
           // 部署管理 - 生产
           'cloudAppDeployManageProd',
+          // 部署管理 - 部署历史
+          'cloudAppDeployHistory',
           // 部署状态
           'appStatus',
           // 日志查询
@@ -150,6 +153,8 @@ export default {
           'cloudAppDeployManageStag',
           // 部署管理 - 生产
           'cloudAppDeployManageProd',
+          // 部署管理 - 部署历史
+          'cloudAppDeployHistory',
           // 部署状态
           'appStatus',
           // 日志查询
@@ -380,7 +385,8 @@ export default {
         'appServiceInnerShared',
         'appServiceInner',
         'cloudAppDeployManageStag',
-        'cloudAppDeployManageProd'
+        'cloudAppDeployManageProd',
+        'cloudAppDeployHistory'
       ];
 
       this.navTree.forEach((nav) => {

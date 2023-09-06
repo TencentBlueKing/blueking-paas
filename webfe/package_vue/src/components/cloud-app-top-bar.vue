@@ -3,7 +3,7 @@
     <div class="title pt15">
       {{ title }}
     </div>
-    <div class="flex-row justify-content-between align-items-center pr40">
+    <div class="flex-row justify-content-between align-items-center">
       <bk-tab
         :active.sync="curActive"
         ext-cls="app-tab-cls"
@@ -17,6 +17,11 @@
           v-bind="panel"
         />
       </bk-tab>
+      <div class="module-manager" @click="handleRightConfigClick">
+        <!-- paasng-icon paasng-lishijilu 历史记录 -->
+        <i class="icon paasng-icon paasng-gear"></i>
+        <span class="title">{{ rightTitle }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -39,6 +44,10 @@ export default defineComponent({
     active: {
       type: String,
       default: ''
+    },
+    rightTitle: {
+      type: String,
+      default: ''
     }
   },
   setup(props, { emit }) {
@@ -48,9 +57,14 @@ export default defineComponent({
       emit('change', curActive.value);
     };
 
+    const handleRightConfigClick = () => {
+      emit('right-config-click');
+    }
+
     return {
       curActive,
       handleTabChange,
+      handleRightConfigClick
     };
   },
 });
@@ -72,5 +86,11 @@ export default defineComponent({
     .module-manager{
       color: #3A84FF;
       cursor: pointer;
+
+      .title {
+        font-size: 14px;
+        color: #3A84FF;
+        padding-left: 6px;
+      }
     }
 </style>

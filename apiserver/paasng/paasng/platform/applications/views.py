@@ -61,6 +61,7 @@ from paasng.accounts.models import AccountFeatureFlag, make_verifier
 from paasng.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.permissions import HasPostRegionPermission
 from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
@@ -110,7 +111,6 @@ from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.region.models import get_all_regions
-from paasng.platform.region.permissions import HasPostRegionPermission
 from paasng.publish.market.constant import AppState, ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig, Product
 from paasng.publish.sync_market.managers import AppDeveloperManger

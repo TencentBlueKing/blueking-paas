@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf import settings
 
-from paasng.platform.core.region import RegionType
+from paasng.platform.region.states import RegionType
 
 
 def admin_config(request):

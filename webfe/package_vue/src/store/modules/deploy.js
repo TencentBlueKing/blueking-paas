@@ -502,6 +502,11 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
     return http.post(url, data, config);
   },
+
+  branchDeployments({}, { appCode, moduleId, env, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/`;
+    return http.post(url, data, config);
+  },
 };
 
 export default {

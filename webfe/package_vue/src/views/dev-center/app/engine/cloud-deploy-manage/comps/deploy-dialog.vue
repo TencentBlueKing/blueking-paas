@@ -81,12 +81,26 @@
         </bk-select>
       </div>
     </bk-dialog>
+    <bk-sideslider
+      :is-show.sync="isShowSideslider"
+      :title="$t('部署日志')"
+      :width="800"
+      :quick-close="true"
+    >
+      <div slot="content">
+        <deploy-status-detail :environment="environment" :deployment-id="deploymentId"></deploy-status-detail>
+      </div>
+    </bk-sideslider>
   </div>
 </template>
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
+import deployStatusDetail from './deploy-status-detail';
 // :ok-text="$t('部署至')`${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
 export default {
+  components: {
+    deployStatusDetail,
+  },
   mixins: [appBaseMixin],
   props: {
     show: {
@@ -118,6 +132,8 @@ export default {
       isBranchesLoading: false,
       branchesMap: {},
       curBranch: {},
+      isShowSideslider: false,
+      deploymentId: '',
     };
   },
   computed: {
@@ -147,7 +163,6 @@ export default {
   watch: {
     show: {
       handler(value) {
-        console.log('value', value);
         this.deployAppDialog.visiable = !!value;
         if (this.deployAppDialog.visiable) {
           this.getModuleBranches();
@@ -157,26 +172,6 @@ export default {
     },
   },
   methods: {
-    // 弹窗确认
-    handleConfirm() {
-      console.log('this.branchList', this.branchesData, this.branchValue);
-    },
-    // 选择分支
-    handleChangeBranch() {
-      this.curBranch = this.branchesData.find((e) => {
-        if (this.branchValue.includes(e.name)) {
-          return e;
-        }
-        return {};
-      });
-    },
-    handleCancel() {},
-    // 点击镜像来源
-    handleSelected(item) {
-      this.buttonActive = item.value;
-    },
-
-
     async getModuleBranches(favBranchName) {
       this.isBranchesLoading = true;
       try {
@@ -319,6 +314,49 @@ export default {
       win.location.href = res.result;
     },
 
+    // 弹窗确认
+    async handleConfirm() {
+      try {
+        const res = await this.$store.dispatch('deploy/branchDeployments', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          data: {
+            revision: this.curBranch.revision,
+            version_type: this.curBranch.type,
+            version_name: this.curBranch.name,
+            advanced_options: {
+              image_pull_policy: 'IfNotPresent',
+            },
+          },
+        });
+        console.log('res', res);
+        this.deploymentId = res.deployment_id;
+        this.handleAfterLeave(); // 关闭弹窗
+        this.isShowSideslider = true;  // 打开侧边栏
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+      console.log('this.branchList', this.branchesData, this.branchValue);
+    },
+
+    // 选择分支
+    handleChangeBranch() {
+      this.curBranch = this.branchesData.find((e) => {
+        if (this.branchValue.includes(e.name)) {
+          return e;
+        }
+        return {};
+      });
+    },
+    handleCancel() {},
+    // 点击镜像来源
+    handleSelected(item) {
+      this.buttonActive = item.value;
+    },
   },
 };
 </script>

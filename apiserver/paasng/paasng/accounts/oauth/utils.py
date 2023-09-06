@@ -16,18 +16,23 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import TYPE_CHECKING, Iterable, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple
 
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
+from paasng.accounts.oauth.backends import OAuth2Backend
 
-if TYPE_CHECKING:
-    from .backends import OAuth2Backend
+# The callback function for getting the supported backends, should be set by other modules.
+_get_backends_callback_func: Optional[Callable[..., List[Tuple[str, OAuth2Backend]]]] = None
+
+
+def set_get_backends_callback_func(func: Callable):
+    global _get_backends_callback_func
+    _get_backends_callback_func = func
 
 
 def get_available_backends() -> Iterable[Tuple[str, 'OAuth2Backend']]:
-    for name, type_spec in get_sourcectl_types().items():
-        if type_spec.support_oauth():
-            yield name, type_spec.make_oauth_backend()
+    if not _get_backends_callback_func:
+        raise RuntimeError("Must set the callback function for getting oauth backends")
+    yield from _get_backends_callback_func()
 
 
 def get_backend(backend_name: str) -> 'OAuth2Backend':

@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -41,14 +42,19 @@ func NewCmdDeploy() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy PaaS application",
-		Run: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if appCode == "" {
+				_ = cmd.MarkFlagRequired("bk-app-code")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			console.Info("Application %s deploying...", appCode)
 			if err := deployApp(appCode, appModule, appEnv, branch, filePath); err != nil {
-				console.Error("failed to deploy application %s, error: %s", appCode, err.Error())
-				os.Exit(1)
+				return errors.Wrapf(err, "Failed to deploy application %s", appCode)
 			}
 			if noWatch {
-				return
+				return nil
 			}
 			// TODO 添加超时机制?
 			// TODO 轮询体验优化，比如支持滚动更新日志？
@@ -58,26 +64,27 @@ func NewCmdDeploy() *cobra.Command {
 
 				result, err := getDeployResult(appCode, appModule, appEnv)
 				if err != nil {
-					console.Error("failed to get app %s deploy result, error: %s", appCode, err.Error())
-					os.Exit(1)
+					return errors.Wrapf(err, "failed to get app %s deploy result", appCode)
 				}
 				// 到达稳定状态后输出部署结果
 				if result.IsStable() {
 					fmt.Println(result)
-					return
+					return nil
 				}
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&appCode, "code", "", "app code")
+	cmd.Flags().StringVar(&appCode, "bk-app-code", "", "App ID (bk_app_code)")
+	cmd.Flags().StringVar(&appCode, "code", "", heredoc.Doc(`
+			[deprecated] App ID (bk_app_code)
+			this will be removed in the future, please use --bk-app-code instead.`,
+	))
 	cmd.Flags().StringVar(&appModule, "module", "default", "module name")
 	cmd.Flags().StringVar(&appEnv, "env", "stag", "environment (stag/prod)")
 	cmd.Flags().StringVar(&branch, "branch", "", "git repo branch")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "bkapp manifest file path")
 	cmd.Flags().BoolVar(&noWatch, "no-watch", false, "watch deploy process")
-	_ = cmd.MarkFlagRequired("code")
-
 	return &cmd
 }
 

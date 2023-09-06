@@ -17,13 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import typing
-from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, Union
 
 from rest_framework import serializers
-
-from paasng.dev_resources.templates.models import Template
-from paasng.utils.i18n.serializers import TranslatedCharField
 
 if typing.TYPE_CHECKING:
     from paasng.platform.region.models import Region
@@ -71,37 +67,3 @@ class MulModulesConfigConfigSLZ(serializers.Serializer):
 
 class EntranceConfigSLZ(serializers.Serializer):
     manually_upgrade_to_subdomain_allowed = serializers.BooleanField()
-
-
-class TmplSLZ(serializers.Serializer):
-    """创建应用/模块时，需要的模板信息"""
-
-    name = serializers.CharField()
-    display_name = TranslatedCharField()
-    description = TranslatedCharField()
-    language = serializers.CharField()
-    market_ready = serializers.BooleanField()
-
-
-class AllSpecsSLZ:
-    def __init__(self, regions: 'List[Region]'):
-        self.regions = regions
-
-    def serialize(self):
-        data = {}
-        for region in self.regions:
-            languages = defaultdict(list)
-            for tmpl in Template.objects.filter_by_region(region.name):
-                languages[tmpl.language].append(TmplSLZ(tmpl).data)
-
-            data.update(
-                {
-                    region.name: {
-                        "display_name": region.display_name,
-                        "languages": languages,
-                        "description": region.basic_info.description,
-                        "allow_deploy_app_by_lesscode": region.allow_deploy_app_by_lesscode,
-                    }
-                }
-            )
-        return data

@@ -20,42 +20,50 @@ package app
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/MakeNowJust/heredoc/v2"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
-// NewCmdDeployHistory returns a Command instance for 'app deploy-history' sub command
-func NewCmdDeployHistory() *cobra.Command {
+// NewCmdDeployResult returns a Command instance for 'app deploy-result' sub command
+func NewCmdDeployResult() *cobra.Command {
 	var appCode, appModule, appEnv string
 
 	cmd := cobra.Command{
-		Use:   "deploy-history",
-		Short: "List PaaS application deploy history",
-		Run: func(cmd *cobra.Command, args []string) {
-			history, err := listDeployHistory(appCode, appModule, appEnv)
-			if err != nil {
-				console.Error("failed to list application %s deploy history, error: %s", appCode, err.Error())
-				os.Exit(1)
+		Use:   "deploy-result",
+		Short: "Get PaaS application latest deploy result",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if appCode == "" {
+				_ = cmd.MarkFlagRequired("bk-app-code")
 			}
-			fmt.Println(history)
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := getDeployResult(appCode, appModule, appEnv)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get application %s deploy result", appCode)
+			}
+			fmt.Println(result)
+			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&appCode, "code", "", "app code")
+	cmd.Flags().StringVar(&appCode, "bk-app-code", "", "App ID (bk_app_code)")
+	cmd.Flags().StringVar(&appCode, "code", "", heredoc.Doc(`
+			[deprecated] App ID (bk_app_code)
+			this will be removed in the future, please use --bk-app-code instead.`,
+	))
 	cmd.Flags().StringVar(&appModule, "module", "default", "module name")
-	cmd.Flags().StringVar(&appEnv, "env", "stag", "environment (stag/prod)")
-	_ = cmd.MarkFlagRequired("code")
-
+	cmd.Flags().StringVar(&appEnv, "env", "", "environment (stag/prod)")
 	return &cmd
 }
 
-// 获取应用部署历史
-func listDeployHistory(appCode, appModule, appEnv string) (model.DeployHistory, error) {
+// 应用部署
+func getDeployResult(appCode, appModule, appEnv string) (model.DeployResult, error) {
 	opts := model.DeployOptions{
 		AppCode:   appCode,
 		Module:    appModule,
@@ -66,5 +74,6 @@ func listDeployHistory(appCode, appModule, appEnv string) (model.DeployHistory, 
 	if err != nil {
 		return nil, err
 	}
-	return deployer.GetHistory(opts)
+
+	return deployer.GetResult(opts)
 }

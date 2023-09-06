@@ -19,14 +19,9 @@
 package app
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 var appLongDesc = `
@@ -40,16 +35,8 @@ func NewCmd() *cobra.Command {
 		Short:                 "Manage PaaS application",
 		Long:                  appLongDesc,
 		DisableFlagsInUseLine: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// 由于重写 PersistentPreRun 方法，此处需要显式调用父命令 PersistentPreRun
-			cmd.Parent().PersistentPreRun(cmd.Parent(), args)
-
-			if !account.IsUserAuthorized(config.G.AccessToken) {
-				console.Error("User unauthorized! Please use `bkpaas-cli login` to login")
-				os.Exit(1)
-			}
-		},
-		Run: cmdUtil.DefaultSubCmdRun(),
+		Run:                   cmdUtil.DefaultSubCmdRun(),
+		GroupID:               cmdUtil.GroupCore.ID,
 	}
 
 	// 有权限的应用列表

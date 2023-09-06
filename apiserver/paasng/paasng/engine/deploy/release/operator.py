@@ -53,7 +53,7 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure('部署应用'):
-            release_id = release_by_k8s_operator(
+            bkapp_release_id = release_by_k8s_operator(
                 self.module_environment,
                 revision,
                 operator=self.deployment.operator,
@@ -62,10 +62,12 @@ class BkAppReleaseMgr(DeployStep):
             )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
-        self.state_mgr.update(release_id=release_id)
+        self.state_mgr.update(bkapp_release_id=bkapp_release_id)
         try:
             step_obj = self.phase.get_step_by_name(name="检测部署结果")
-            step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+            step_obj.mark_and_write_to_stream(
+                self.stream, JobStatus.PENDING, extra_info={"bkapp_release_id": bkapp_release_id}
+            )
         except StepNotInPresetListError:
             logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
 

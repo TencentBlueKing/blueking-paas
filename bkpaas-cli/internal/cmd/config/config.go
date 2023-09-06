@@ -16,42 +16,36 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package app
+package config
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
+	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 )
 
-// NewCmdGetInfo returns a Command instance for 'app get-info' sub command
-func NewCmdGetInfo() *cobra.Command {
-	var appCode string
+var configLongDesc = `
+Display bkpaas-cli config files using subcommands like "bkpaas-cli config view"
 
-	cmd := cobra.Command{
-		Use:   "get-info",
-		Short: "Get PaaS application info",
-		Run: func(cmd *cobra.Command, args []string) {
-			displayAppInfo(appCode)
-		},
+The loading order follows these rules:
+	
+  1.  ${BKPAAS_CLI_CONFIG} environment variable.
+  2.  Use ${HOME}/.blueking-paas/config.yaml.
+`
+
+// NewCmd create bkpaas-cli config command
+func NewCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                   "config",
+		Short:                 "Manage bkpaas-cli config",
+		Long:                  configLongDesc,
+		DisableFlagsInUseLine: true,
+		Run:                   cmdUtil.DefaultSubCmdRun(),
+		GroupID:               cmdUtil.GroupCore.ID,
 	}
 
-	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
-	_ = cmd.MarkFlagRequired("code")
-
-	return &cmd
-}
-
-// 在命令行中展示指定的蓝鲸应用信息
-func displayAppInfo(appCode string) {
-	retriever := handler.NewBasicInfoRetriever()
-	appInfo, err := retriever.Exec(appCode)
-	if err != nil {
-		console.Error("Failed to get application info")
-		return
-	}
-	fmt.Println(appInfo)
+	cmdUtil.DisableAuthCheck(cmd)
+	// 配置信息查看
+	cmd.AddCommand(NewCmdView())
+	return cmd
 }

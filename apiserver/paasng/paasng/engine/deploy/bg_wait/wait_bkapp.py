@@ -107,7 +107,7 @@ class DeployStatusHandler(CallbackHandler):
             )
             job_status = deploy_status_to_job_status(dp.status)
             try:
-                step_obj = state_mgr.get_step_by_name(name="检测部署结果")
+                step_obj = state_mgr.phase.get_step_by_name(name="检测部署结果")
                 step_obj.mark_and_write_to_stream(state_mgr.stream, job_status)
             except StepNotInPresetListError:
                 logger.debug("Step not found or duplicated, name: %s", "检测部署结果")

@@ -18,8 +18,7 @@
         />
       </bk-tab>
       <div class="module-manager" @click="handleRightConfigClick">
-        <!-- paasng-icon paasng-lishijilu 历史记录 -->
-        <i class="icon paasng-icon paasng-gear"></i>
+        <i class="paasng-icon paasng-lishijilu"></i>
         <span class="title">{{ rightTitle }}</span>
       </div>
     </div>

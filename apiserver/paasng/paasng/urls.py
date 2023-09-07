@@ -74,6 +74,7 @@ urlpatterns = [
     url(r'^', include('paasng.accessories.bk_lesscode.urls')),
     url(r"^", include('paasng.pluginscenter.urls')),
     url(r"^", include('paasng.pluginscenter.itsm_adaptor.open_apis.urls')),
+    url(r"^", include('paasng.accessories.bk_auth.urls')),
     # A universal reverse proxy for other services
     url(r'^', include('paasng.service_proxy.urls')),
     # switch language

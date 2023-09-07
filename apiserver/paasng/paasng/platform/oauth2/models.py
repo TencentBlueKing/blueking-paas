@@ -35,9 +35,20 @@ from paasng.utils.models import TimestampedModel
 class OAuth2Client(TimestampedModel):
     """OAuth2 体系中的基本单位：Client
 
-    一个蓝鲸应用如果选择接入蓝鲸用户体系，那么就需要为其创建 OAuth2 体系中的 Client。
-    事实上，这个行为目前是默认发生的。
+    settings.ENABLE_BK_OAUTH 为 True 时，则不再使用该表，Auth 相关的数据直接调用 BKAuth 服务提供的 API。
     """
 
     client_id = models.CharField(verbose_name=u'应用编码', max_length=20, unique=True)
     client_secret = EncryptField(verbose_name=u"安全密钥")
+
+
+class BuiltinBkAppSecret(TimestampedModel):
+    """
+    写入应用内置环境变量中的 bk_app_sercret 的信息
+    """
+
+    bk_app_code = models.CharField(max_length=20, unique=True)
+    bk_app_secret_id = models.IntegerField(verbose_name=u"应用密钥的 ID", help_text="不存储密钥的信息，仅存储密钥 ID")
+
+    def __str__(self) -> str:
+        return f"[{self.bk_app_code}]{self.bk_app_secret_id}"

@@ -592,6 +592,22 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "cloudAppDeployManageStag",
+                "label": staticI18n.$t("部署管理"),
+                "matchRouters": [
+                    "cloudAppDeployManage",
+                    "cloudAppDeployManageStag",
+                    "cloudAppDeployManageProd",
+                    "cloudAppDeployHistory"
+                ],
+                "iconfontName": "bushu",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "cloudAppDeployManageStag"
+                },
+                "children": []
+            },
+            {
                 "name": "appStatus",
                 "label": staticI18n.$t("部署状态"),
                 "matchRouters": ["appStatus"],

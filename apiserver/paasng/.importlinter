@@ -65,12 +65,12 @@ modules =
 name=the layers for paas_wl module
 type=layers
 layers = 
-    # -- The APIs layer
+    # -- The admin layer
     paas_wl.admin | paas_wl.platform.system_api | paas_wl.cnative
     # -- The domain services layer
     paas_wl.monitoring | paas_wl.tracing | paas_wl.networking | paas_wl.workloads.autoscaling | paas_wl.configuration | paas_wl.release_controller | paas_wl.workloads.images
     paas_wl.workloads.processes
-    # -- The infstracture and data models layer
+    # -- The infrastructure and data models layer
     paas_wl.resources | paas_wl.workloads.resource_templates
     paas_wl.cluster
     paas_wl.platform.applications | paas_wl.platform.external 

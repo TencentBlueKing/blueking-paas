@@ -36,7 +36,7 @@
         </div>
       </div>
 
-      <div class="image-source mt20">
+      <div class="image-source mt20" v-if="buttonActive === 'branch'">
         <div class="mb10">代码分支选择</div>
         <bk-select
           v-model="branchValue"
@@ -78,6 +78,27 @@
           >
             <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署分支') }}
           </div>
+        </bk-select>
+      </div>
+
+      <div class="image-source mt20" v-if="buttonActive === 'image'">
+        <div class="mb10">镜像Tag</div>
+        <bk-select
+          v-model="tagValue"
+          :placeholder="$t('请选择')"
+          style="width: 420px; display: inline-block; vertical-align: middle;"
+          :popover-min-width="420"
+          :clearable="false"
+          :searchable="true"
+          @change="handleChangeTags"
+          :loading="isTagLoading"
+        >
+          <bk-option
+            v-for="option in imageTagList"
+            :id="option.id"
+            :key="option.id"
+            :name="option.tag"
+          />
         </bk-select>
       </div>
     </bk-dialog>
@@ -131,9 +152,17 @@ export default {
       overview: '',
       isBranchesLoading: false,
       branchesMap: {},
-      curBranch: {},
+      curSelectData: {},
       isShowSideslider: false,
       deploymentId: '',
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      imageTagList: [],
+      isTagLoading: false,
+      tagValue: '',
     };
   },
   computed: {
@@ -165,7 +194,7 @@ export default {
       handler(value) {
         this.deployAppDialog.visiable = !!value;
         if (this.deployAppDialog.visiable) {
-          this.getModuleBranches();
+          this.getModuleBranches();   // 获取分支数据
         }
       },
       immediate: true,
@@ -317,17 +346,22 @@ export default {
     // 弹窗确认
     async handleConfirm() {
       try {
+        const advancedOptions = {
+          image_pull_policy: 'IfNotPresent',
+        };
+        // 如果是镜像则需要传构建产物ID, 镜像列表接口里的 `id` 字段
+        if (this.buttonActive === 'image') {
+          advancedOptions.build_id = this.tagValue;
+        }
         const res = await this.$store.dispatch('deploy/branchDeployments', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
           data: {
-            revision: this.curBranch.revision,
-            version_type: this.curBranch.type,
-            version_name: this.curBranch.name,
-            advanced_options: {
-              image_pull_policy: 'IfNotPresent',
-            },
+            revision: this.curSelectData.revision,
+            version_type: this.curSelectData.type,
+            version_name: this.curSelectData.name,
+            advanced_options: advancedOptions,
           },
         });
         console.log('res', res);
@@ -340,13 +374,50 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
-      console.log('this.branchList', this.branchesData, this.branchValue);
+    },
+
+    // 获取镜像tag列表
+    async getImageTagList() {
+      try {
+        this.isTagLoading = true;
+        const res =  await this.$store.dispatch('deploy/getImageTagData', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data: {
+            limit: this.pagination.limit,
+            offset: this.pagination.limit * (this.pagination.current - 1),
+          },
+        });
+        this.imageTagList = res.results;
+        console.log('res', res);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.isTagLoading = false;
+      }
     },
 
     // 选择分支
     handleChangeBranch() {
-      this.curBranch = this.branchesData.find((e) => {
+      this.curSelectData = this.branchesData.find((e) => {
         if (this.branchValue.includes(e.name)) {
+          return e;
+        }
+        return {};
+      });
+    },
+
+    // 选择tag
+    handleChangeTags() {
+      this.curSelectData = this.imageTagList.find((e) => {
+        if (e.id === this.tagValue) {
+          e.revision = e.digest;
+          e.type = 'image',
+          e.name = e.tag;
+          console.log('eeeeee', e);
           return e;
         }
         return {};
@@ -356,6 +427,11 @@ export default {
     // 点击镜像来源
     handleSelected(item) {
       this.buttonActive = item.value;
+      if (this.buttonActive === 'branch') {
+
+      } else {
+        this.getImageTagList();
+      }
     },
   },
 };

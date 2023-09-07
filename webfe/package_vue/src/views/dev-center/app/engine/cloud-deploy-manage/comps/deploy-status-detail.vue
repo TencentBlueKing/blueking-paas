@@ -30,6 +30,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from './deploy-timeline';
 import deployLog from './deploy-log';
+import moment from 'moment';
 export default {
   components: {
     deployTimeline,
@@ -91,6 +92,10 @@ export default {
       appMarketPublished: false,     // 是否发布到应用市场
       allProcesses: [],      // 全部进程
       processLoading: false,
+      prevProcessVersion: 0,
+      prevInstanceVersion: 0,
+      releaseId: '',   // 部署id
+      isDeployReady: true,
     };
   },
   computed: {
@@ -212,6 +217,7 @@ export default {
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
             this.releaseId = item.release_id;
+            this.getProcessList(item.release_id, true);
             this.$nextTick(() => {
               this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
             });
@@ -595,6 +601,96 @@ export default {
         }
       }
       return displayBlocks;
+    },
+
+
+    // 获取进程列表
+    async getProcessList(releaseId, isLoading = false) {
+      this.closeServerPush();
+      this.processLoading = isLoading;
+      try {
+        const res = await this.$store.dispatch('processes/getLastVersionProcesses', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          releaseId,
+        });
+        this.formatProcesses(res);
+        // 发起服务监听
+        this.watchServerPush();
+      } catch (e) {
+        // 无法获取进程目前状态
+        console.error(e);
+      } finally {
+        this.processLoading = false;
+      }
+    },
+
+
+    // 对数据进行处理
+    formatProcesses(processesData) {
+      const allProcesses = [];
+
+      // 保存上次的版本号
+      this.prevProcessVersion = processesData.processes.metadata.resource_version;
+      this.prevInstanceVersion = processesData.instances.metadata.resource_version;
+
+      // 遍历进行数据组装
+      const extraInfos = processesData.processes.extra_infos;
+      const packages = processesData.process_packages;
+      const instances = processesData.instances.items;
+
+      processesData.processes.items.forEach((processItem) => {
+        const { type } = processItem;
+        const extraInfo = extraInfos.find(item => item.type === type);
+        const packageInfo = packages.find(item => item.name === type);
+
+        const processInfo = {
+          ...processItem,
+          ...packageInfo,
+          ...extraInfo,
+          instances: [],
+        };
+
+        instances.forEach((instance) => {
+          if (instance.process_type === type) {
+            processInfo.instances.push(instance);
+          }
+        });
+
+        // 作数据转换，以兼容原逻辑
+        const process = {
+          name: processInfo.name,
+          instance: processInfo.instances.length,
+          instances: processInfo.instances,
+          targetReplicas: processInfo.target_replicas,
+          isStopTrigger: false,
+          targetStatus: processInfo.target_status,
+          isActionLoading: false, // 用于记录进程启动/停止接口是否已完成
+          maxReplicas: processInfo.max_replicas,
+          status: 'Stopped',
+          cmd: processInfo.command,
+          // operateIconTitle: operateIconTitle,
+          // operateIconTitleCopy: operateIconTitle,
+          // isShowTooltipConfirm: false,
+          desired_replicas: processInfo.replicas,
+          available_instance_count: processInfo.success,
+          failed: processInfo.failed,
+          resourceLimit: processInfo.resource_limit,
+          clusterLink: processInfo.cluster_link,
+        };
+
+        this.$set(process, 'expanded', false);
+
+
+        // 日期转换
+        process.instances.forEach((item) => {
+          item.date_time = moment(item.start_time).startOf('minute')
+            .fromNow();
+        });
+        allProcesses.push(process);
+      });
+      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
     },
 
   },

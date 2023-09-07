@@ -308,6 +308,10 @@ const cloudAppDeployManageProd = () => import(/* webpackChunkName: 'cloud-deploy
   window.showDeployTip(error);
 });
 
+const cloudAppDeployHistory = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/comps/deploy-history').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -604,6 +608,15 @@ const router = new Router({
               name: 'cloudAppDeployManageProd',
               meta: {
                 module: 'cloudDeployProd',
+              },
+            },
+            {
+              path: 'deploy-history',
+              component: cloudAppDeployHistory,
+              name: 'cloudAppDeployHistory',
+              meta: {
+                module: 'cloudAppDeployHistory',
+                history: true
               },
             },
           ]

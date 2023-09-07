@@ -980,6 +980,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-unknown:before {
 	content: "\e259";
 }
+.paasng-lishijilu:before {
+	content: "\e261";
+}
 .paasng-bushu:before {
 	content: "\e24f";
 }

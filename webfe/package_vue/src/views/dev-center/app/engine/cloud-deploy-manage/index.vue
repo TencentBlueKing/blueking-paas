@@ -1,11 +1,24 @@
 <template>
   <div class="right-main">
+    <!-- 部署历史 -->
+    <div class="ps-top-bar" v-if="isDeployHistory">
+      <div class="top-title flex-row align-items-center">
+        <i
+          class="paasng-icon paasng-arrows-left icon-cls-back mr5"
+          @click="goBack"
+        />
+        <h3>{{ $t('部署历史') }}</h3>
+      </div>
+    </div>
     <cloud-app-top-bar
+      v-else
       :title="$t('部署管理')"
       :active="active"
       :nav-list="panels"
       :module-id="curModuleId"
+      :right-title="$t('部署历史')"
       @change="handleTabChange"
+      @right-config-click="toDeployHistory"
     />
     <paas-content-loader
       :is-loading="isLoading"
@@ -44,6 +57,11 @@ export default {
       ],
     };
   },
+  computed: {
+    isDeployHistory() {
+      return this.$route.meta.history;
+    },
+  },
   watch: {
     '$route'() {
       // eslint-disable-next-line no-plusplus
@@ -63,10 +81,38 @@ export default {
         name: curEnv.routeName,
       });
     },
+
+    /** 部署历史 */
+    toDeployHistory() {
+      this.$router.push({
+        name: 'cloudAppDeployHistory',
+      });
+    },
+
+    goBack() {
+      this.$router.go(-1);
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
+.right-main {
+  .top-title {
+    padding-left: 24px;
+    h3 {
+      font-size: 16px;
+      color: #313238;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .icon-cls-back{
+      color: #3A84FF;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  }
+}
 .cloud-deploy-management{
   padding-top: 0px;
   margin: 0;

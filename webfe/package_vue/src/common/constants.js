@@ -128,3 +128,9 @@ export const TAG_MAP = {
   with_build_time: '构建时间',
   with_commit_id: 'commitID',
 };
+
+export const DEPLOY_STATUS = {
+  successful: '成功',
+  failed: '失败',
+  interrupted: '中断'
+};

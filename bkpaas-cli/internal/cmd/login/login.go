@@ -27,10 +27,12 @@ import (
 	"github.com/howeyc/gopass"
 	"github.com/levigross/grequests"
 	"github.com/pkg/browser"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
+	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
@@ -38,34 +40,33 @@ import (
 func NewCmd() *cobra.Command {
 	var useAccessToken, useBkTicket, useBkToken bool
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Login as user",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if useAccessToken {
-				loginByAccessToken()
-				return
+				return loginByAccessToken()
 			}
 			if useBkTicket {
-				loginByBkTicket()
-				return
+				return loginByBkTicket()
 			}
 			if useBkToken {
-				loginByBkToken()
-				return
+				return loginByBkToken()
 			}
-			loginByBrowser()
+			return loginByBrowser()
 		},
+		GroupID: cmdUtil.GroupCore.ID,
 	}
 
+	cmdUtil.DisableAuthCheck(cmd)
 	cmd.Flags().BoolVar(&useAccessToken, "access-token", false, "BlueKing AccessToken")
 	cmd.Flags().BoolVar(&useBkTicket, "bk-ticket", false, "BlueKing User Ticket")
 	cmd.Flags().BoolVar(&useBkToken, "bk-token", false, "BlueKing User Token")
-	return &cmd
+	return cmd
 }
 
 // 通过浏览器登录
-func loginByBrowser() {
+func loginByBrowser() error {
 	console.Tips("Now we will open your browser...")
 	console.Tips("Please copy and paste the access_token from your browser.")
 
@@ -73,35 +74,33 @@ func loginByBrowser() {
 	time.Sleep(1 * time.Second)
 
 	if err := browser.OpenURL(account.GetOAuthTokenUrl()); err != nil {
-		console.Error("Failed to open browser, error: %s", err.Error())
 		console.Tips(
 			"Don't worry, you can still manually open the browser to get the access_token: %s",
 			account.GetOAuthTokenUrl(),
 		)
+		return errors.Wrap(err, "Failed to open browser")
 	}
-	loginByAccessToken()
+	return loginByAccessToken()
 }
 
 // 通过 AccessToken 登录
-func loginByAccessToken() {
+func loginByAccessToken() error {
 	// read access_token implicitly
 	fmt.Printf(">>> AccessToken: ")
 	accessToken, err := gopass.GetPasswdMasked()
 	if err != nil {
-		console.Error("Failed to read access token, error: %s", err.Error())
-		return
+		return errors.Wrap(err, "Failed to read access token")
 	}
-	login(string(accessToken))
+	return login(string(accessToken))
 }
 
 // 通过 bkTicket 进行登录
-func loginByBkTicket() {
+func loginByBkTicket() error {
 	// read bk_ticket implicitly
 	fmt.Printf(">>> BkTicket: ")
 	bkTicket, err := gopass.GetPasswdMasked()
 	if err != nil {
-		console.Error("Failed to read bk ticket, error: %s", err.Error())
-		return
+		return errors.Wrap(err, "Failed to read bk ticket")
 	}
 
 	resp, err := grequests.Get(account.GetOAuthTokenUrl(), &grequests.RequestOptions{
@@ -110,37 +109,33 @@ func loginByBkTicket() {
 	console.Debug("Response: %d -> %s", resp.StatusCode, resp.String())
 
 	if !resp.Ok || err != nil {
-		console.Error("Failed to get access token by bk ticket")
-		return
+		return errors.New("Failed to get access token by bk ticket")
 	}
 	respData := map[string]any{}
 	if err = resp.JSON(&respData); err != nil {
-		console.Error("Failed to parse oauth api response, error: %s", err.Error())
-		return
+		return errors.Wrap(err, "Failed to parse oauth api response")
 	}
-	login(respData["access_token"].(string))
+	return login(respData["access_token"].(string))
 }
 
 // 通过提供 bkToken 进行登录
-func loginByBkToken() {
-	console.Error("login by bk_token currently unsupported...")
+func loginByBkToken() error {
+	return errors.New("login by bk_token currently unsupported...")
 }
 
 // 用户登录
-func login(accessToken string) {
+func login(accessToken string) error {
 	fmt.Printf("User login... ")
 	username, err := account.FetchUserNameByAccessToken(accessToken)
 	if err != nil {
-		console.Error("Fail!")
-		console.Error(err.Error())
-		return
+		return errors.Wrap(err, "Login Failed")
 	}
-	color.Green("Success!")
-
 	// update global config and dump to file
 	config.G.Username = username
 	config.G.AccessToken = accessToken
 	if err = config.DumpConf(config.ConfigFilePath); err != nil {
-		console.Error("Failed to dump config, error: %s", err.Error())
+		return errors.Wrap(err, "Login Success but failed to dump config")
 	}
+	color.Green("Success!")
+	return nil
 }

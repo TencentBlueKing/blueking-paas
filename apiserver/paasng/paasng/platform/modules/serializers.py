@@ -40,14 +40,13 @@ from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
-from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.models.deploy_config import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
-from paasng.utils.validators import DnsSafeNameValidator, ReservedWordValidator, validate_procfile
+from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator, validate_procfile
 
 
 class ModuleNameField(serializers.RegexField):

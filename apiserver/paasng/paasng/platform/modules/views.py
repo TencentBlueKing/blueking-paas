@@ -50,7 +50,12 @@ from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import delete_module
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.exceptions import BPNotFound
-from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager, get_image_labels_by_module
+from paasng.platform.modules.helpers import (
+    ModuleRuntimeBinder,
+    ModuleRuntimeManager,
+    get_image_labels_by_module,
+    update_build_config_with_method,
+)
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
@@ -464,7 +469,8 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
 
         try:
-            build_config.update_with_build_method(
+            update_build_config_with_method(
+                build_config,
                 build_method,
                 data.get('bp_stack_name'),
                 data.get('buildpacks'),

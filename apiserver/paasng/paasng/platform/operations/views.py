@@ -28,8 +28,8 @@ from rest_framework.views import APIView
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
 from paasng.platform.operations import serializers
 from paasng.platform.operations.serializers import RecentOperationsByAppSLZ
 from paasng.publish.entrance.exposer import get_module_exposed_links

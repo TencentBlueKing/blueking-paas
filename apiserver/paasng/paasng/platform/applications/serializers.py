@@ -43,13 +43,18 @@ from paasng.platform.applications.signals import (
     prepare_use_application_name,
 )
 from paasng.platform.applications.specs import AppTypeSpecs
-from paasng.platform.applications.utils import RE_APP_CODE, RE_APP_SEARCH
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.platform.region.states import get_region
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import NickNameField, UserField
-from paasng.utils.validators import Base64Validator, DnsSafeNameValidator, ReservedWordValidator
+from paasng.utils.validators import (
+    RE_APP_CODE,
+    RE_APP_SEARCH,
+    Base64Validator,
+    DnsSafeNameValidator,
+    ReservedWordValidator,
+)
 
 # Fields and utilities start
 
@@ -364,7 +369,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
-    deploy_info = serializers.JSONField(read_only=True, source='get_deploy_info', help_text=u"部署状态")
+    deploy_info = serializers.JSONField(read_only=True, source='_deploy_info', help_text=u"部署状态")
 
 
 class ApplicationRelationSLZ(serializers.Serializer):

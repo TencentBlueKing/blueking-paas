@@ -28,11 +28,11 @@ from django.utils.translation import gettext_lazy as _
 
 from paasng.dev_resources.servicehub import exceptions
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.exceptions import DeployShouldAbortError, StepNotInPresetListError
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.signals import post_appenv_deploy, post_phase_end
+from paasng.engine.utils.client import EngineDeployClient
 from paasng.engine.utils.output import DeployStream, StreamType, Style, get_default_stream
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.core.storages.redisdb import get_default_redis

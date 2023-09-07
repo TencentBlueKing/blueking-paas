@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 class Project(Protocol):
     """A simple type that provides VCS project name info."""
 
+    type: str
     # The name of the project
     name: str
 

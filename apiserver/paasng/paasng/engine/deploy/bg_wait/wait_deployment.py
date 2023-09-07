@@ -22,7 +22,6 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 
-import django.dispatch
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, PollingStatus, TaskPoller
 from pydantic import BaseModel, validator
 
@@ -31,11 +30,10 @@ from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.models import Deployment
 from paasng.engine.processes.events import ProcEventsProducer
 from paasng.engine.processes.utils import ProcessesSnapshotStore
+from paasng.engine.signals import processes_updated
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
-
-processes_updated = django.dispatch.Signal(providing_args=['events', 'extra_params'])
 
 
 def wait_for_all_stopped(env: ModuleEnvironment, result_handler: Type, extra_params: Optional[Dict] = None):

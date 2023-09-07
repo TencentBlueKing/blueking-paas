@@ -39,7 +39,7 @@ from paas_wl.workloads.processes.shim import ProcessManager
 from paas_wl.workloads.processes.watch import ProcInstByEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.utils.version import get_env_deployed_version_info
+from paasng.engine.deploy.version import get_env_deployed_version_info
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user

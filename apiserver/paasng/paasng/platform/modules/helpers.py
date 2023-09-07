@@ -17,24 +17,61 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, overload
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, overload
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from paas_wl.cluster.models import Cluster, Domain
 from paas_wl.cluster.shim import EnvClusterService
-from paasng.engine.constants import AppEnvName
+from paasng.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
+from paasng.platform.modules.models.deploy_config import ImageTagOptions
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
+
+
+def update_build_config_with_method(
+    build_config: BuildConfig,
+    build_method: RuntimeType,
+    bp_stack_name: Optional[str] = None,
+    buildpacks: Optional[List[Dict[str, Any]]] = None,
+    dockerfile_path: Optional[str] = None,
+    docker_build_args: Optional[Dict[str, str]] = None,
+    tag_options: Optional[ImageTagOptions] = None,
+):
+    """根据指定的 build_method 更新部分字段"""
+
+    update_fields = ["build_method", "updated"]
+    build_config.build_method = build_method
+    if tag_options:
+        build_config.tag_options = tag_options
+        update_fields.extend(["tag_options"])
+
+    # 基于 buildpack 的构建方式
+    if build_method == RuntimeType.BUILDPACK:
+        assert buildpacks is not None
+        assert bp_stack_name is not None
+        buildpack_ids = [item["id"] for item in buildpacks]
+        binder = ModuleRuntimeBinder(module=build_config.module)
+        binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+
+    # 基于 Dockerfile 的构建方式
+    elif build_method == RuntimeType.DOCKERFILE:
+        assert dockerfile_path is not None
+        assert docker_build_args is not None
+        build_config.dockerfile_path = dockerfile_path
+        build_config.docker_build_args = docker_build_args
+        update_fields.extend(["dockerfile_path", "docker_build_args"])
+
+    build_config.save(update_fields=update_fields)
 
 
 class SlugbuilderBinder:

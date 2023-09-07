@@ -24,7 +24,7 @@ from paas_wl.networking.entrance.addrs import EnvExposedURL
 from paas_wl.networking.entrance.handlers import refresh_module_domains
 from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.workloads.processes.controllers import env_is_running
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
 
@@ -51,6 +51,11 @@ def get_module_exposed_links(module: Module) -> Dict[str, Dict]:
             url = None
         links[env.environment] = {"deployed": deployed, "url": url}
     return links
+
+
+def get_exposed_links(application: Application) -> Dict:
+    """Return exposed links for default module"""
+    return get_module_exposed_links(application.get_default_module())
 
 
 def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:

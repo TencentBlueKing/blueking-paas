@@ -518,6 +518,8 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
 # Celery 队列名称
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
 
+# 用于生成唯一且有意义的 ID 的函数导入路径，默认复用增强服务模块下的工具函数，一般情况下无需调整
+UNIQUE_ID_GEN_FUNC = 'paasng.dev_resources.services.utils.gen_unique_id'
 
 # --------
 # 系统配置

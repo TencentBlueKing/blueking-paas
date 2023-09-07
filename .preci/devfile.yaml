@@ -1,0 +1,7 @@
+version: v1.0
+
+runs-on: mirrors.tencent.com/ci/remote-dev-full-remoting:latest
+
+vscode:
+  extensions:
+    - Vue.volar

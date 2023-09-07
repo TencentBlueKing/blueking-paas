@@ -163,7 +163,7 @@ export default {
           env: this.environment,
         });
         console.log('res', res);
-        // this.watchOfflineOperation(res.offline_operation_id);
+        this.watchOfflineOperation(res.offline_operation_id);   // 轮询获取下架的进度
 
         // if (this.environment === 'prod') {
         //   this.appMarketPublished = false;
@@ -178,6 +178,49 @@ export default {
         this.offlineAppDialog.visiable = false;
         this.offlineAppDialog.isLoading = false;
       }
+    },
+
+
+    /**
+     * 轮询获取应用下架进度
+     */
+    watchOfflineOperation(offlineOperationId) {
+      this.isWatchOfflineing = true;
+      this.offlineTimer = setInterval(async () => {
+        try {
+          const res = await this.$store.dispatch('deploy/getOfflineResult', {
+            appCode: this.appCode,
+            moduleId: this.curModuleId,
+            offlineOperationId,
+          });
+
+          // 下架进行中，三状态：pendding successful failed，pendding需要继续轮询
+          if (res.status === 'successful') {
+            this.isWatchOfflineing = false;
+            this.getModuleReleaseInfo();
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('应用下架成功'),
+            });
+            clearInterval(this.offlineTimer);
+          } else if (res.status === 'failed') {
+            const message = res.err_detail;
+            this.isWatchOfflineing = false;
+            this.$paasMessage({
+              theme: 'error',
+              message,
+            });
+            clearInterval(this.offlineTimer);
+          }
+        } catch (e) {
+          this.isWatchOfflineing = false;
+          clearInterval(this.offlineTimer);
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('下架失败，请稍候再试'),
+          });
+        }
+      }, 3000);
     },
 
     cancelOfflineApp() {

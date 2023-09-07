@@ -43,6 +43,7 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
+from paasng.engine.constants import RuntimeType
 from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed

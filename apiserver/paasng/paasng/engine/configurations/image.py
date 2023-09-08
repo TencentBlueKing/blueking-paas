@@ -22,6 +22,7 @@ import arrow
 from django.conf import settings
 
 from paas_wl.platform.applications.models import Build
+from paas_wl.workloads.processes.services import refresh_res_reqs
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder
 from paasng.engine.constants import RuntimeType
 from paasng.engine.models import Deployment
@@ -175,4 +176,4 @@ def update_image_runtime_config(deployment: Deployment):
     config.runtime = runtime_dict
     config.save(update_fields=['runtime', 'updated'])
     # Refresh resource requirements
-    config.refresh_res_reqs()
+    refresh_res_reqs(config)

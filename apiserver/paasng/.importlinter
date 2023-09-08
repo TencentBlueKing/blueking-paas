@@ -100,6 +100,4 @@ ignore_imports =
     paas_wl.networking.ingress.domains.manager -> paas_wl.cnative.specs.resource
     # TODO: Remove these rules after the dependency relations are fixed.
     paas_wl.workloads.processes.views -> paasng.engine.deploy.version
-    paasng.engine.models.deployment -> paas_wl.workloads.processes.models
     paas_wl.platform.applications.** -> paas_wl.workloads.processes.models
-    paas_wl.workloads.images.views_enduser -> paasng.platform.applications.views

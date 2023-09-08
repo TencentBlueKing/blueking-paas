@@ -37,9 +37,8 @@
                   --
                 </template>
                 <template v-else>
-                  <div class="form-text" v-for="(item, index) in buildpacksList" :key="index">
+                  <div class="builder-item" v-for="(item, index) in buildpacksList" :key="index">
                     {{item}}
-                    <span v-if="(buildpacksList.length - 1) !== index">，</span>
                   </div>
                 </template>
               </bk-form-item>
@@ -475,6 +474,23 @@ export default {
 
 .mirror-main .content {
   width: 800px;
+  .builder-item {
+    padding: 0 10px;
+    line-height: 32px;
+    position: relative;
+
+    &:before {
+        content: '';
+        font-size: 12px;
+        position: absolute;
+        left: 0;
+        top: 15px;
+        width: 3px;
+        height: 3px;
+        display: inline-block;
+        background: #656565;
+    }
+}
 }
 
 .mirror-info {

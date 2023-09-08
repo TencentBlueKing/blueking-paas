@@ -102,7 +102,8 @@
           {{ $t('编辑') }}
         </div>
 
-        <div class="info pl20" v-else>
+        <div class="info flex-row align-items-center pl20">
+          <bk-icon type="info-circle" class="mr5" v-if="!isDeployLimitEdit" />
           {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
         </div>
       </div>
@@ -155,7 +156,8 @@
           {{ $t('编辑') }}
         </div>
 
-        <div class="info pl20" v-else>
+        <div class="info pl20 flex-row align-items-center">
+          <bk-icon type="info-circle mr5" v-if="!isIpInfoEdit" />
           {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
         </div>
       </div>

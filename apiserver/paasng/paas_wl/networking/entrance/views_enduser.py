@@ -40,7 +40,7 @@ from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
 from paasng.utils.api_docs import openapi_empty_response

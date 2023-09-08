@@ -28,6 +28,7 @@ from jsonfield import JSONField
 
 from paas_wl.networking.constants import NetworkProtocol
 from paas_wl.platform.applications.models import AuditedModel, WlApp
+from paas_wl.resources.utils.basic import label_toleration_providers
 
 logger = logging.getLogger(__name__)
 
@@ -201,3 +202,15 @@ class EgressRule(AuditedModel):
     # 一般来说，service 与 host 值相同，dport 与 sport 值相同
     src_port = models.IntegerField('源端口')
     service = models.CharField('服务名', max_length=128)
+
+
+@label_toleration_providers.register_labels
+def _get_labels_for_binding(app: WlApp) -> Dict[str, str]:
+    """Inject ClusterState labels when bound"""
+    try:
+        binding = RCStateAppBinding.objects.get(app=app)
+    except RCStateAppBinding.DoesNotExist:
+        pass
+    else:
+        return binding.state.to_labels()
+    return {}

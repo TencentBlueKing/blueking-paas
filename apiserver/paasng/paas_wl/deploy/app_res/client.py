@@ -30,6 +30,7 @@ from paas_wl.deploy.app_res.controllers import (
     ProcessesHandler,
 )
 from paas_wl.deploy.app_res.generation import get_mapper_version
+from paas_wl.monitoring.app_monitor.utils import build_monitor_port
 from paas_wl.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.release_controller.hooks.entities import Command
@@ -99,12 +100,12 @@ class K8sScheduler:
         """Deploy processes will create the Deployment and the Service"""
         for process in processes:
             self.processes_handler.deploy(process=process)
-            ProcDefaultServices(process.app, process.type).create_or_patch()
+            self.get_default_services(process).create_or_patch()
 
     def scale_processes(self, processes: Iterable[Process]):
         """Scale Processes will patch the Deployment and Service"""
         for process in processes:
-            ProcDefaultServices(process.app, process.type).create_or_patch()
+            self.get_default_services(process).create_or_patch()
             self.processes_handler.scale(process=process)
 
     def shutdown_processes(self, processes: Iterable[Process]):
@@ -117,8 +118,13 @@ class K8sScheduler:
         """Delete process will delete the Deployment and the Service(if with_access=True)"""
         for process in processes:
             if with_access:
-                ProcDefaultServices(process.app, process.type).remove()
+                self.get_default_services(process).remove()
             self.processes_handler.delete(process=process)
+
+    @staticmethod
+    def get_default_services(process: Process) -> ProcDefaultServices:
+        monitor_port = build_monitor_port(process.app)
+        return ProcDefaultServices(process.app, process.type, monitor_port=monitor_port)
 
     #############
     # build API #

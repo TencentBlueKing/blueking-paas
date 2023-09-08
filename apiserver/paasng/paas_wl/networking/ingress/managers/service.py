@@ -17,10 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Optional
 
 from django.conf import settings
 
-from paas_wl.monitoring.app_monitor.utils import build_monitor_port
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.networking.ingress.managers import AppDefaultIngresses
 from paas_wl.networking.ingress.utils import make_service_name
@@ -34,9 +34,6 @@ def build_process_service(app: WlApp, process_type: str) -> ProcessService:
     """Generate the desired ProcessService object"""
     name = make_service_name(app, process_type)
     ports = [PServicePortPair(name="http", port=80, target_port=settings.CONTAINER_PORT)]
-    monitor_port = build_monitor_port(app)
-    if monitor_port:
-        ports.append(monitor_port)
 
     return ProcessService(
         app=app,
@@ -47,25 +44,31 @@ def build_process_service(app: WlApp, process_type: str) -> ProcessService:
 
 
 class ProcDefaultServices:
-    """Maintains default service and ingress rules for each app process(k8s side)"""
+    """Maintains default service and ingress rules for each app process(k8s side)
 
-    def __init__(self, app: WlApp, process_type: str):
+    :param monitor_port: The port for monitoring functionality.
+    """
+
+    def __init__(self, app: WlApp, process_type: str, monitor_port: Optional[PServicePortPair] = None):
         self.process_type = process_type
         self.app = app
+        self.monitor_port = monitor_port
 
     def create_or_patch(self):
         """Create or patch service / (ingress) resources"""
         service = build_process_service(self.app, self.process_type)
+        if self.monitor_port:
+            service.ports.append(self.monitor_port)
+
         try:
-            service = service_kmodel.get(self.app, service.name)
+            existed_service = service_kmodel.get(self.app, service.name)
         except AppEntityNotFound:
             service_kmodel.create(service)
         else:
             # Add metrics service port if not exists.
-            monitor_port = build_monitor_port(self.app)
-            if monitor_port and not service.has_port(monitor_port.name):
-                service.ports.append(monitor_port)
-                service_kmodel.update(service)
+            if self.monitor_port and not existed_service.has_port(self.monitor_port.name):
+                existed_service.ports.append(self.monitor_port)
+                service_kmodel.update(existed_service)
 
         if self.should_create_ingress():
             AppDefaultIngresses(self.app).sync_ignore_empty(default_service_name=service.name)

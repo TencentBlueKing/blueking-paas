@@ -17,6 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Callable, Dict
 
+from paas_wl.platform.applications.models.release import Release
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -50,3 +51,15 @@ class EnvIsRunningHub:
 
 def env_is_running(env: ModuleEnvironment) -> bool:
     return EnvIsRunningHub.get(env)
+
+
+# Register env_is_running implementations
+def _get_env_is_running(env):
+    """Get "is_running" status by query for successful releases."""
+    wl_app = env.wl_app
+    return Release.objects.any_successful(wl_app) and not env.is_offlined
+
+
+EnvIsRunningHub.register_func(ApplicationType.DEFAULT, _get_env_is_running)
+EnvIsRunningHub.register_func(ApplicationType.ENGINELESS_APP, _get_env_is_running)
+EnvIsRunningHub.register_func(ApplicationType.BK_PLUGIN, _get_env_is_running)

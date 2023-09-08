@@ -97,7 +97,6 @@ ignore_imports =
     # views_enduser can import deploy
     paas_wl.workloads.processes.views_enduser -> paas_wl.deploy.processes
     # TODO: Remove these rules after the dependency relations are fixed.
-    paas_wl.cluster.shim -> paas_wl.networking.egress.misc
     paas_wl.networking.** -> paasng.platform.applications.views
     paas_wl.networking.ingress.utils -> paas_wl.cnative.specs.models
     paas_wl.networking.ingress.managers.service -> paas_wl.monitoring.app_monitor.utils

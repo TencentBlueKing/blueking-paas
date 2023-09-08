@@ -30,7 +30,8 @@ from django.db.transaction import atomic
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.cluster.shim import EnvClusterService, get_cluster_egress_info
+from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.networking.egress.shim import get_cluster_egress_info
 from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.dev_resources.servicehub import constants, exceptions
 from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment

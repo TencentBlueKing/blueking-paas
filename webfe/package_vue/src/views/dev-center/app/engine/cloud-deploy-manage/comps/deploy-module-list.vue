@@ -180,7 +180,6 @@ export default {
     handleDeploy(payload) {
       this.isShowDialog = true;
       this.curDeploymentInfoItem = payload;
-      console.log('this.isShowDialog', this.isShowDialog);
     },
 
     // 下架

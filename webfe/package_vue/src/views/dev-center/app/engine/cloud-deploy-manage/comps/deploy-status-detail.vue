@@ -119,7 +119,6 @@ export default {
   watch: {
     deploymentId: {
       handler(v) {
-        console.log('vvvv', v);
         this.watchDeployStatus(v);
       },
       immediate: true,

@@ -23,7 +23,7 @@
       </div>
       <!-- 仅镜像不需要选择镜像来源 -->
       <div v-if="deploymentInfo.build_method !== 'custom_image'">
-        <div class="image-source mt20">
+        <div class="image-source">
           <div class="mb10">
             <div>
               {{ $t('镜像来源') }}
@@ -228,7 +228,10 @@ export default {
     show: {
       handler(value) {
         this.deployAppDialog.visiable = !!value;
-        if (this.deployAppDialog.visiable) {
+        this.buttonActive = 'branch';
+        this.tagValue = '';
+        // 仅镜像部署不需要获取分支数据
+        if (this.deployAppDialog.visiable && this.deploymentInfo.build_method !== 'custom_image') {
           this.getModuleBranches();   // 获取分支数据
         }
       },

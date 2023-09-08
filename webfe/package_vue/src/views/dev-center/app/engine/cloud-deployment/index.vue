@@ -5,6 +5,7 @@
       :can-create="canCreateModule"
       :cur-module="curAppModule"
       :module-list="curAppModuleList"
+      :first-module-name="firstTabActiveName"
     />
     <paas-content-loader
       :is-loading="isLoading"
@@ -20,7 +21,7 @@
             </bk-button>
           </template>
           <bk-tab-panel
-            v-for="(panel, index) in panels"
+            v-for="(panel, index) in curTabPanels"
             v-bind="panel"
             :key="index">
           </bk-tab-panel>
@@ -112,7 +113,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.panels.find(e => e.name === this.active);
+      const curPenel = this.curTabPanels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -124,19 +125,35 @@ export default {
       const cloudAppData = cloneDeep(this.$store.state.cloudApi.cloudAppData);
       return mergeObjects(cloudAppData, this.manifestExt);
     },
+
+    // 仅镜像
+    isMirrorOnlyApp () {
+      return this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;
+    },
+
+    firstTabActiveName () {
+      return this.curTabPanels[0].name;
+    },
+
+    curTabPanels () {
+      if (this.isMirrorOnlyApp) {
+        return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
+      }
+      return this.panels;
+    }
   },
   watch: {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
+      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
   created() {
     this.init();
-    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
   },
   methods: {
     async init() {
@@ -223,7 +240,6 @@ export default {
         });
       }
     },
-
 
     // 查看yaml
     handleYamlView() {

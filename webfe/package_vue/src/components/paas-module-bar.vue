@@ -123,6 +123,10 @@ export default defineComponent({
         };
       },
     },
+    firstModuleName: {
+      type: String,
+      default: ''
+    },
   },
   setup(props) {
     const route = router.currentRoute;
@@ -146,11 +150,11 @@ export default defineComponent({
     const appCode = computed(() => route.params.id);
 
     // 切换tab
-    const handleTabChange = () => {
+    const handleTabChange = async () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
-      store.commit('updateCurAppModule', curModule);
+      await store.commit('updateCurAppModule', curModule);
 
-      const { name } = route;
+      const name = props.firstModuleName || route.name;
       let { query } = route;
       if (name === 'appLog') {
         query = {

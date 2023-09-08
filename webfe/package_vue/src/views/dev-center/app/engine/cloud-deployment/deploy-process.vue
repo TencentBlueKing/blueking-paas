@@ -1110,7 +1110,6 @@ export default {
       // v2每个进程不需要 image、imagePullPolicy
       if (val) {
         this.localCloudAppData?.spec?.processes.forEach((e) => {
-          console.log('e', e);
           delete e.image;
           delete e.imagePullPolicy;
         });

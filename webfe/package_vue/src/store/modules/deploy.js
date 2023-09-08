@@ -503,7 +503,7 @@ const actions = {
     return http.post(url, data, config);
   },
 
-  branchDeployments({}, { appCode, moduleId, env, data }, config = {}) {
+  cloudDeployments({}, { appCode, moduleId, env, data }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/`;
     return http.post(url, data, config);
   },

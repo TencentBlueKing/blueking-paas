@@ -1,5 +1,18 @@
 <template>
   <div class="deploy-module-content" v-bkloading="{ isLoading: listLoading, opacity: 1 }">
+    <bk-alert type="info" :show-icon="false" class="mt20" v-if="isWatchOfflineing">
+      <div class="flex-row align-items-center" slot="title">
+        <div class="fl">
+          <round-loading
+            size="small"
+            ext-cls="deploy-round-loading"
+          />
+        </div>
+        <p class="deploy-pending-text pl20">
+          {{ $t('正在下架中...') }}
+        </p>
+      </div>
+    </bk-alert>
     <div v-if="deploymentInfoData.length">
       <div class="deploy-module-list" v-for="deploymentInfo in deploymentInfoData" :key="deploymentInfo.name">
         <div class="deploy-module-item">
@@ -98,7 +111,7 @@
 
 <script>
 // import deployDetail from './deploy-detail';
-import deployPreview from './deploy-preview.vue';
+import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
@@ -133,6 +146,7 @@ export default {
       listLoading: false,
       deploymentInfoData: [],    // 部署信息列表
       curDeploymentInfoItem: {},      // 当前弹窗的部署信息
+      isWatchOfflineing: false,   // 下架中
     };
   },
 
@@ -184,13 +198,7 @@ export default {
           moduleId: this.curModuleId,
           env: this.environment,
         });
-        console.log('res', res);
         this.watchOfflineOperation(res.offline_operation_id);   // 轮询获取下架的进度
-
-        // if (this.environment === 'prod') {
-        //   this.appMarketPublished = false;
-        //   this.$store.commit('updateCurAppMarketPublished', false);
-        // }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -385,4 +393,10 @@ export default {
     color: #979ba5;
   }
 }
+.deploy-pending-text{
+    font-size: 14px;
+    color: #313238;
+    font-weight: 500;
+    line-height: 32px;
+  }
 </style>

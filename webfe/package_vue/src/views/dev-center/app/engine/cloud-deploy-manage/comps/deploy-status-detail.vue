@@ -10,7 +10,7 @@
           :key="timelineComKey"
           :list="timeLineList"
           :stage="curDeployStage"
-          :disabled="isWatchDeploying || isDeploySuccess || isDeployFail || isDeployInterrupted || isDeployInterrupting"
+          disabled
         />
       </div>
       <deploy-log
@@ -45,6 +45,10 @@ export default {
     deploymentId: {     // 部署id, stream流需要用到的参数
       type: String,
       default: () => '',
+    },
+    deploymentInfo: {
+      type: Object,
+      default: () => {},
     },
   },
   data() {
@@ -96,6 +100,7 @@ export default {
       prevInstanceVersion: 0,
       releaseId: '',   // 部署id
       isDeployReady: true,
+      curProcess: {},  // 当前模块的进程信息
     };
   },
   computed: {
@@ -103,6 +108,10 @@ export default {
       const flag = this.isWatchDeploying || this.isDeploySuccess
       || this.isDeployFail || this.isDeployInterrupted || this.isDeployInterrupting;
       return flag ? 'deploy' : 'noDeploy';
+    },
+    curModuleId() {
+      // 当前模块的名称
+      return this.deploymentInfo.module_name;
     },
   },
   watch: {
@@ -609,13 +618,12 @@ export default {
       this.closeServerPush();
       this.processLoading = isLoading;
       try {
-        const res = await this.$store.dispatch('processes/getLastVersionProcesses', {
+        const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
           env: this.environment,
-          releaseId,
         });
-        this.formatProcesses(res);
+        this.curProcess = res.data.find(e => e.module_name === this.curModuleId);
+        this.formatProcesses(this.curProcess);
         // 发起服务监听
         this.watchServerPush();
       } catch (e) {
@@ -631,24 +639,18 @@ export default {
     formatProcesses(processesData) {
       const allProcesses = [];
 
-      // 保存上次的版本号
-      this.prevProcessVersion = processesData.processes.metadata.resource_version;
-      this.prevInstanceVersion = processesData.instances.metadata.resource_version;
-
       // 遍历进行数据组装
-      const extraInfos = processesData.processes.extra_infos;
-      const packages = processesData.process_packages;
-      const instances = processesData.instances.items;
+      const packages = processesData.proc_specs;
+      const { instances } = processesData;
+      console.log('processesData', processesData);
 
-      processesData.processes.items.forEach((processItem) => {
+      processesData.processes.forEach((processItem) => {
         const { type } = processItem;
-        const extraInfo = extraInfos.find(item => item.type === type);
         const packageInfo = packages.find(item => item.name === type);
 
         const processInfo = {
           ...processItem,
           ...packageInfo,
-          ...extraInfo,
           instances: [],
         };
 
@@ -691,6 +693,60 @@ export default {
         allProcesses.push(process);
       });
       this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      console.log('this.allProcesses', this.allProcesses);
+    },
+
+
+    watchServerPush() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/`;
+      this.serverProcessEvent = new EventSource(url, {
+        withCredentials: true,
+      });
+
+      // 收藏服务推送消息
+      this.serverProcessEvent.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.warn(data);
+        if (data.object_type === 'process') {
+          // this.updateProcessData(data);
+        } else if (data.object_type === 'instance') {
+          // this.updateInstanceData(data);
+          if (data.type === 'ADDED') {
+            console.warn(this.$t('重新拉取进程...'));
+            // this.getProcessList(this.releaseId, false);
+          }
+        } else if (data.type === 'ERROR') {
+          // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
+          clearTimeout(this.timer);
+          this.timer = setTimeout(() => {
+            // this.getProcessList(this.releaseId, false);
+          }, 2000);
+        }
+      };
+
+      // 服务异常
+      this.serverProcessEvent.onerror = (event) => {
+        // 异常后主动关闭，否则会继续重连
+        console.error(this.$t('推送异常'), event);
+        this.serverProcessEvent.close();
+
+        // 推迟调用，防止过于频繁导致服务性能问题
+        setTimeout(() => {
+          this.watchServerPush();
+        }, 3000);
+      };
+
+      // 服务结束
+      this.serverProcessEvent.addEventListener('EOF', () => {
+        this.serverProcessEvent.close();
+
+        if (!this.isDeploySseEof) {
+          // 推迟调用，防止过于频繁导致服务性能问题
+          setTimeout(() => {
+            this.watchServerPush();
+          }, 3000);
+        }
+      });
     },
 
   },

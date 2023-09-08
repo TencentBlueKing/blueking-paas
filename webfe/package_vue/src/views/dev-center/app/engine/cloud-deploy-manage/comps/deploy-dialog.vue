@@ -12,7 +12,7 @@
       @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
-      <div class="code-depot">
+      <div class="code-depot" v-if="deploymentInfo.exposed_url">
         <span class="pr20">
           {{ deploymentInfo.build_method === 'dockerfile' ?
             $t('代码仓库') : $t('镜像仓库') }}
@@ -133,7 +133,11 @@
       :quick-close="true"
     >
       <div slot="content">
-        <deploy-status-detail :environment="environment" :deployment-id="deploymentId"></deploy-status-detail>
+        <deploy-status-detail
+          :environment="environment"
+          :deployment-id="deploymentId"
+          :deployment-info="deploymentInfo"
+        ></deploy-status-detail>
       </div>
     </bk-sideslider>
   </div>
@@ -199,6 +203,11 @@ export default {
         return this.$t('暂无选项');
       }
       return this.$t('暂无选项');
+    },
+
+    curModuleId() {
+      // 当前模块的名称
+      return this.deploymentInfo.module_name;
     },
 
     // 是否是smartApp
@@ -370,6 +379,7 @@ export default {
     // 弹窗确认
     async handleConfirm() {
       try {
+        this.deployAppDialog.isLoading = true;
         const advancedOptions = {
           image_pull_policy: 'IfNotPresent',
         };
@@ -391,13 +401,13 @@ export default {
           };
         }
 
-        const res = await this.$store.dispatch('deploy/branchDeployments', {
+        const res = await this.$store.dispatch('deploy/cloudDeployments', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
           data: params,
         });
-        console.log('res', res);
+        this.deployAppDialog.isLoading = false;    // 成功之后关闭弹窗打开侧栏
         this.deploymentId = res.deployment_id;
         this.handleAfterLeave(); // 关闭弹窗
         this.isShowSideslider = true;  // 打开侧边栏

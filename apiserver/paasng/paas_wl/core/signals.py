@@ -15,3 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.dispatch import Signal
+
+# Triggered when a new operation happened
+new_operation_happened = Signal(providing_args=['env', 'operate_type', 'operator', 'extra_values'])

@@ -77,7 +77,7 @@ layers =
     # -- The infrastructure and data models layer
     paas_wl.resources | paas_wl.workloads.resource_templates
     paas_wl.cluster | paas_wl.core
-    paas_wl.platform.applications | paas_wl.platform.external 
+    paas_wl.platform.applications
     # -- The utils layer
     paas_wl.utils
 ignore_imports =
@@ -93,16 +93,12 @@ ignore_imports =
     paas_wl.resources.kube_res.base -> paas_wl.deploy.app_res.generation.mapper
     paas_wl.platform.applications.models.managers.app_res_ver -> paas_wl.deploy.app_res.generation
     paas_wl.platform.applications.handlers -> paas_wl.deploy.app_res.generation
+    paas_wl.platform.applications.models.managers.app_res_ver -> paas_wl.resources.**
     # views_enduser can import deploy
     paas_wl.workloads.processes.views_enduser -> paas_wl.deploy.processes
     # Replace the dep with signal
     paas_wl.networking.ingress.domains.manager -> paas_wl.cnative.specs.resource
     # TODO: Remove these rules after the dependency relations are fixed.
-    paas_wl.platform.applications.models.managers.app_configvar -> paas_wl.networking.ingress.models
-    paas_wl.platform.applications.models.managers.app_res_ver -> paas_wl.resources.**
-    paas_wl.platform.applications.management.commands.clean_timeout_pod -> paas_wl.resources.**
-    paas_wl.platform.external.local -> paasng.platform.applications.models
-    paas_wl.platform.external.local -> paasng.platform.operations.models
     paas_wl.workloads.processes.views -> paasng.engine.deploy.version
     paasng.engine.models.deployment -> paas_wl.workloads.processes.models
     paas_wl.platform.applications.** -> paas_wl.workloads.processes.models

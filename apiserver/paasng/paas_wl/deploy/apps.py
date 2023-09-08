@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,16 +15,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Client for requesting platform services"""
-import logging
-
-logger = logging.getLogger(__name__)
+from django.apps import AppConfig
 
 
-def get_local_plat_client():
-    """When "workloads" was migrated from service into module, use local client to
-    call apiserver module directly.
-    """
-    from .local import LocalPlatformSvcClient
-
-    return LocalPlatformSvcClient()
+class DeployAppConfig(AppConfig):
+    name = 'paas_wl.deploy'

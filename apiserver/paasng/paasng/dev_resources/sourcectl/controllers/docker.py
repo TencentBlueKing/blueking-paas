@@ -79,8 +79,7 @@ class DockerRegistryController:
 
     def touch(self) -> bool:
         client = self.get_client()
-        client.ping()
-        return True
+        return client.ping()
 
     def get_client(self, **kwargs) -> DockerRegistryV2Client:
         if self._client is None:

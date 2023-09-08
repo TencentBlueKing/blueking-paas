@@ -47,6 +47,11 @@ urlpatterns = [
         name='api.mres.status',
     ),
     re_path(
+        make_app_pattern(r'/mres/image_tags/$', include_envs=False),
+        views_enduser.ImageRepositoryView.as_view({'get': 'list_tags'}),
+        name='api.mres.image_tags.list',
+    ),
+    re_path(
         r"api/mres/quota_plans/$",
         views_enduser.ResQuotaPlanOptionsView.as_view(),
     ),

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import random
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from bkpaas_auth import get_user_by_user_id
 from blue_krill.models.fields import EncryptField
@@ -33,13 +33,10 @@ from jsonfield import JSONField
 from paasng.accounts.constants import FUNCTION_TYPE_MAP
 from paasng.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
 from paasng.accounts.constants import SiteRole
-from paasng.accounts.oauth.models import Scope
+from paasng.accounts.oauth.models import Project, Scope
 from paasng.accounts.oauth.utils import get_backend
 from paasng.utils.models import AuditedModel, BkUserField, RegionListField, TimestampedModel
 from paasng.utils.text import generate_token
-
-if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import GitProject
 
 
 class User(AbstractBaseUser):
@@ -195,7 +192,7 @@ class SessionCodeVerifier:
         self.storage_key = storage_key or 'verification_code'
 
     def generate_code(self):
-        return str(random.randint(10 ** (self.numbers - 1), 10 ** self.numbers - 1))
+        return str(random.randint(10 ** (self.numbers - 1), 10**self.numbers - 1))
 
     def set_current_code(self):
         code = self.generate_code()
@@ -223,7 +220,7 @@ def make_verifier(session, func=None):
 
 
 class Oauth2TokenHolderQS(models.QuerySet):
-    def get_by_project(self, project: 'GitProject') -> 'Oauth2TokenHolder':
+    def get_by_project(self, project: Project) -> 'Oauth2TokenHolder':
         """根据传入的 GitProject, 获取Scope能覆盖到该 GitProject 的 Oauth2TokenHolder
         如果不存在, 则抛异常
         """

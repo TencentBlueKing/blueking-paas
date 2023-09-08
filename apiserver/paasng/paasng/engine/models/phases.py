@@ -16,8 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from contextlib import suppress
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
@@ -99,20 +98,6 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
             raise StepNotInPresetListError(name)
         except MultipleObjectsReturned:
             raise DuplicateNameInSamePhaseError(name)
-
-    def get_sorted_steps(self) -> List['DeployStep']:
-        from paasng.engine.phases_steps.steps import DeployStepPicker
-
-        names = list(
-            DeployStepPicker.pick(engine_app=self.engine_app).list_sorted_step_names(DeployPhaseTypes(self.type))
-        )
-        steps = list(self.steps.all())
-
-        # 如果出现异常, 就直接返回未排序的步骤.
-        # 导致异常的可能情况: 未在 DeployStepMeta 定义的步骤无法排序
-        with suppress(Exception):
-            steps.sort(key=lambda x: names.index(x.name))
-        return steps
 
     def attach(self, deployment: Deployment):
         if self.attached:

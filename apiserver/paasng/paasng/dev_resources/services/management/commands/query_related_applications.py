@@ -25,7 +25,7 @@ from typing import Dict, Optional
 from django.core.management.base import BaseCommand
 
 from paasng.dev_resources.services.models import PreCreatedInstance, Service, ServiceInstance
-from paasng.platform.environments.models import ModuleEnvironment
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 def _get_service_choices():

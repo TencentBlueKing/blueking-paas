@@ -16,41 +16,25 @@ include_external_packages = True
 # paasng.platform.modules
 # paasng.platform.applications
 # paasng.dev_resources.sourcectl
+# paasng.dev_resources.templates
 
 [importlinter:contract:layers-main]
 name=the main layers
 type=layers
-layers =
+layers = 
+    # Platform admin system is the highest level
     paasng.plat_admin 
     paasng.extensions.bk_plugins 
-    paasng.accessories.bk_lesscode | paasng.extensions.smart_app
-    paasng.accessories.search | paasng.ci | paasng.cnative | paasng.dev_resources.cloudapi |  paasng.extensions.declarative| paasng.extensions.scene_app | paasng.platform.environments | paasng.platform.log 
+    paasng.accessories.bk_lesscode | paasng.extensions.smart_app | paasng.extensions.scene_app
+    paasng.accessories.search | paasng.ci | paasng.cnative | paasng.dev_resources.cloudapi |  paasng.extensions.declarative | paasng.platform.environments
     paasng.dev_resources.servicehub
-    paasng.accessories.bkmonitorv3 | paasng.accessories.changelog | paasng.accessories.documentation | paasng.accessories.log_search | paasng.accessories.paas_analysis | paasng.accessories.smart_advisor | paasng.platform.operations
-    paasng.dev_resources.services | paasng.publish | paasng.service_proxy
-    paasng.accessories.bk_components | paasng.accounts.permissions
+    paasng.accessories.documentation | paasng.accessories.paas_analysis | paasng.accessories.smart_advisor | paasng.platform.operations
+    paasng.dev_resources.services | paasng.publish | paasng.service_proxy | paasng.platform.log 
+    paasng.accessories.bk_components | paasng.accounts.permissions | paasng.accessories.log_search | paasng.accessories.bkmonitorv3
     paasng.accessories.iam 
     paasng.accounts.models
-    paasng.dev_resources.templates | paasng.accounts.oauth | paasng.platform.feature_flags
-    paasng.platform.region | paasng.platform.core 
-ignore_imports =
-    # TODO: Remove these rules after the dependency relations are fixed.
-    paasng.platform.applications.models -> paasng.publish.**
-    paasng.platform.applications.models -> paasng.accessories.iam.**
-    paasng.platform.applications.views_ext -> paasng.plat_admin.system.applications
-    paasng.dev_resources.sourcectl.connector -> paasng.dev_resources.services.utils
-    paasng.extensions.scene_app.initializer -> paasng.extensions.declarative.*
-    paasng.accessories.paas_analysis.utils -> paasng.platform.environments.models
-    paasng.dev_resources.services.management.commands.query_related_applications -> paasng.platform.environments.models
-    paas_wl.cluster.constants -> paasng.platform.log.constants
-    paasng.platform.modules.manager -> paasng.platform.log.shim
-    paasng.cnative.services -> paasng.platform.log.shim
-    paasng.platform.operations.views -> paasng.platform.applications.views
-    paasng.platform.operations.serializers -> paasng.platform.applications.serializers
-    paasng.publish.entrance.serializers -> paasng.platform.modules.serializers
-    paasng.publish.market.serializers -> paasng.platform.applications.serializers
-    paasng.dev_resources.templates.views -> paasng.engine.configurations.image
-    paasng.dev_resources.templates.** -> paasng.platform.modules.**
+    paasng.accounts.oauth | paasng.platform.feature_flags
+    paasng.platform.region | paasng.platform.core | paasng.accessories.changelog
 
 
 [importlinter:contract:layers-engine]
@@ -65,17 +49,9 @@ layers =
     paasng.engine.models
 ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
-    paas_wl.resources.base.* -> paasng.engine.configurations.*
-    paas_wl.cnative.specs.addresses -> paasng.engine.configurations.ingress
     paas_wl.platform.applications.models.build -> paasng.engine.deploy.bg_build.utils
-    paasng.platform.modules.specs -> paasng.engine.configurations.building
     paasng.engine.models.base -> paasng.engine.utils.output
-    paasng.engine.models.managers -> paasng.engine.phases_steps.*
-    paasng.engine.models.phases -> paasng.engine.phases_steps.steps
-    paasng.engine.processes.handlers -> paasng.engine.deploy.bg_wait.wait_deployment
-    paasng.engine.workflow.flow -> paasng.engine.deploy.engine_svc
-    paasng.engine.utils.version -> paasng.engine.deploy.archive
-    paasng.engine.utils.source -> paasng.accessories.smart_advisor.tagging
+
 
 [importlinter:contract:independent-apps]
 name=main independent modules
@@ -83,3 +59,59 @@ type=independence
 modules =
     paasng.metrics
     paasng.tracing
+
+
+[importlinter:contract:layers-paas-wl]
+name=the layers for paas_wl module
+type=layers
+layers = 
+    # -- The admin layer
+    paas_wl.admin | paas_wl.platform.system_api | paas_wl.cnative
+    # -- The domain services layer
+    paas_wl.monitoring | paas_wl.tracing | paas_wl.networking | paas_wl.workloads.autoscaling | paas_wl.configuration | paas_wl.release_controller | paas_wl.workloads.images
+    paas_wl.workloads.processes
+    # -- The infrastructure and data models layer
+    paas_wl.resources | paas_wl.workloads.resource_templates
+    paas_wl.cluster
+    paas_wl.platform.applications | paas_wl.platform.external 
+    # -- The utils layer
+    paas_wl.utils
+ignore_imports =
+    # Depend on the "constants" submodule is excluded because "constants" is treated like
+    # a shared settings globally.
+    paas_wl.** -> paas_wl.**.constants
+    # TODO: Remove these rules after the dependency relations are fixed.
+    paas_wl.workloads.processes.* -> paas_wl.cnative.specs.**
+    paas_wl.cluster.shim -> paas_wl.networking.egress.misc
+    paas_wl.networking.** -> paasng.platform.applications.views
+    paas_wl.networking.ingress.utils -> paas_wl.cnative.specs.models
+    paas_wl.networking.ingress.managers.service -> paas_wl.monitoring.app_monitor.utils
+    paas_wl.networking.ingress.domains.manager -> paas_wl.cnative.specs.resource
+    paas_wl.platform.applications.models.build -> paasng.engine.deploy.bg_build.utils
+    paas_wl.resources.base.client -> paas_wl.networking.ingress.managers.service
+    paas_wl.resources.utils.basic -> paas_wl.networking.egress.models
+    paas_wl.platform.applications.models.managers.app_configvar -> paas_wl.networking.ingress.models
+    paas_wl.monitoring.app_monitor.utils -> paas_wl.networking.ingress.entities.service
+    paas_wl.monitoring.metrics.management.commands.deploy_stats_diagnoser -> paas_wl.networking.egress.models
+    paas_wl.resources.actions.* -> paas_wl.monitoring.**
+    paas_wl.resources.actions.* -> paas_wl.workloads.processes.**
+    paas_wl.platform.applications.models.managers.app_res_ver -> paas_wl.resources.**
+    paas_wl.platform.applications.management.commands.clean_timeout_pod -> paas_wl.resources.**
+    paas_wl.platform.applications.handlers -> paas_wl.resources.base.generation
+    paas_wl.platform.applications.models_utils -> paas_wl.resources.actions.delete
+    paas_wl.platform.external.local -> paasng.platform.applications.models
+    paas_wl.platform.external.local -> paasng.platform.operations.models
+    paas_wl.platform.applications.models_utils -> paas_wl.networking.ingress.models
+    paas_wl.platform.applications.models_utils -> paas_wl.cnative.specs.models
+    paas_wl.resources.base.client -> paas_wl.release_controller.hooks.entities
+    paas_wl.resources.** -> paasng.engine.configurations.building
+    paas_wl.resources.** -> paas_wl.release_controller.hooks.*
+    paas_wl.resources.** -> paas_wl.workloads.processes.*
+    paas_wl.workloads.processes.views -> paasng.engine.deploy.version
+    paasng.engine.models.deployment -> paas_wl.workloads.processes.models
+    paas_wl.workloads.processes.views_enduser -> paas_wl.networking.ingress.utils
+    paas_wl.workloads.processes.drf_serializers -> paas_wl.networking.ingress.utils
+    paas_wl.workloads.processes.views -> paas_wl.networking.entrance.shim
+    paas_wl.platform.applications.** -> paas_wl.workloads.processes.models
+    paas_wl.workloads.images.views_enduser -> paasng.platform.applications.views
+    paas_wl.resources.base.client -> paas_wl.workloads.images.entities

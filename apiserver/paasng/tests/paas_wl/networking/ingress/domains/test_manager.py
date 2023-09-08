@@ -19,11 +19,11 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
+from blue_krill.web.std_error import APIError
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.networking.ingress.domains.manager import CNativeCustomDomainManager, check_domain_used_by_market
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.utils.error_codes import APIError
 from paasng.publish.market.models import MarketConfig
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 

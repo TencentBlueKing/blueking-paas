@@ -29,7 +29,7 @@ from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
 from paasng.engine.handlers import attach_all_phases
 from paasng.engine.models import Deployment, DeployPhaseTypes
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 

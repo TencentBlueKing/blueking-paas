@@ -18,12 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.engine.exceptions import NoUnlinkedDeployPhaseError
-from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.managers import DeployOperationManager, DeployPhaseManager
+from paasng.engine.models.managers import DeployOperationManager
 from paasng.engine.models.offline import OfflineOperation
-from tests.engine.setup_utils import create_fake_deployment
 
 pytestmark = pytest.mark.django_db
 
@@ -48,39 +45,3 @@ class TestDeployOperationManager:
     def test_none_pending_exist(self, bk_module):
         manager = DeployOperationManager(bk_module)
         assert not manager.has_pending()
-
-
-class TestPhaseManager:
-    @pytest.fixture
-    def manager(self, bk_stag_env):
-        return DeployPhaseManager(bk_stag_env)
-
-    def test_get_or_create(self, bk_stag_env, manager):
-        p = manager._get_or_create(phase_type=DeployPhaseTypes.BUILD)
-        assert p.type == "build"
-
-        # 不会重复生成
-        p2 = manager._get_or_create(phase_type=DeployPhaseTypes.BUILD)
-        assert p.pk == p2.pk
-
-    def test_attach(self, bk_stag_env, manager):
-        manager.get_or_create_all()
-        pp = manager._get_unattached_phase(phase_type=DeployPhaseTypes.PREPARATION)
-        assert pp
-
-        manager.attach(
-            phase_type=DeployPhaseTypes.PREPARATION,
-            deployment=create_fake_deployment(bk_stag_env.module, app_environment="stag"),
-        )
-        with pytest.raises(NoUnlinkedDeployPhaseError):
-            manager._get_unattached_phase(phase_type=DeployPhaseTypes.PREPARATION)
-
-    def test_get_unattached(self, bk_stag_env, manager):
-        p1 = manager._get_or_create(phase_type=DeployPhaseTypes.PREPARATION)
-        p2 = manager._get_unattached_phase(phase_type=DeployPhaseTypes.PREPARATION)
-
-        assert p1.pk == p2.pk
-
-    def test_rebuild_steps(self):
-        """测试步骤变更后重建"""
-        # TODO: 仿造 test_steps 构造对应的 step set

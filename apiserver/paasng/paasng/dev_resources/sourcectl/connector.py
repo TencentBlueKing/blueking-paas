@@ -28,7 +28,6 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.db.models import Model
 
-from paasng.dev_resources.services.utils import gen_unique_id
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, RepositoryInstance, SvnRepository
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 from paasng.dev_resources.sourcectl.svn.admin import get_svn_authorization_manager, promote_repo_privilege_temporary
@@ -41,7 +40,7 @@ from paasng.dev_resources.templates.templater import Templater
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
-from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.basic import get_username_by_bkpaas_user_id, unique_id_generator
 from paasng.utils.blobstore import BlobStore, make_blob_store
 
 logger = logging.getLogger(__name__)
@@ -175,7 +174,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
             self.auth_manager.set_paas_user_root_privilege(path=desired_root, write=True, read=True)
             server_config = get_bksvn_config(self.application.region, name=self.repo_type)
             return self._acquire_repo(
-                desired_name=gen_unique_id(self.module.name),
+                desired_name=unique_id_generator(self.module.name),
                 base_info=server_config.as_module_arguments(root_path=desired_root),
                 with_branches_and_tags=True,
             )
@@ -191,7 +190,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
     def bind(self, repo_url: Optional[str] = "", source_dir: str = '', **kwargs):
         if not repo_url:
             # get unique repo root, sample-app will get sample-app-7Gt
-            unique_app_root = gen_unique_id(self.application.code)
+            unique_app_root = unique_id_generator(self.application.code)
             # initialize application's repo as parent
             self._initial_application_root(desired_root=unique_app_root)
             repo_url = self._acquire_module_repo(desired_root=unique_app_root)

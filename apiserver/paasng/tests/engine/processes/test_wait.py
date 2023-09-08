@@ -36,8 +36,8 @@ from paasng.engine.deploy.bg_wait.wait_deployment import (
     UserInterruptedPolicy,
     WaitForAllStopped,
     WaitForReleaseAllReady,
-    processes_updated,
 )
+from paasng.engine.signals import processes_updated
 
 if TYPE_CHECKING:
     from paas_wl.workloads.processes.entities import Process

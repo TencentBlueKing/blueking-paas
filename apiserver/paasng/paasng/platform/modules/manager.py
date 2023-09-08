@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Management functions for application module, may include:
 
 - Module initialization
-- Module deletetion / recycle
+- Module deletion / recycle
 """
 import logging
 from collections import namedtuple
@@ -52,7 +52,11 @@ from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.log.shim import setup_env_log_model
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.modules.exceptions import ModuleInitializationError
-from paasng.platform.modules.helpers import ModuleRuntimeBinder, get_image_labels_by_module
+from paasng.platform.modules.helpers import (
+    ModuleRuntimeBinder,
+    get_image_labels_by_module,
+    update_build_config_with_method,
+)
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
@@ -217,7 +221,8 @@ class ModuleInitializer:
         tmpl_mgr = TemplateRuntimeManager(region=self.module.region, tmpl_name=self.module.source_init_template)
         cfg = tmpl_mgr.get_docker_build_config()
         db_instance = BuildConfig.objects.get_or_create_by_module(self.module)
-        db_instance.update_with_build_method(
+        update_build_config_with_method(
+            db_instance,
             build_method=cfg.build_method,
             dockerfile_path=cfg.dockerfile_path,
             docker_build_args=cfg.docker_build_args,
@@ -380,6 +385,11 @@ def initialize_module(
         # Matches source_origin type: IMAGE_REGISTRY and NOT cloud native app
         with _humanize_exception('config_image_registry', _('配置镜像 Registry 失败，请稍候再试')):
             init_image_repo(module, repo_url or '', source_dir, repo_auth_info or {})
+    else:
+        # cloud native app
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+        build_config.build_method = RuntimeType.CUSTOM_IMAGE
+        build_config.save(update_fields=["build_method"])
 
     with _humanize_exception('bind_default_services', _('绑定初始增强服务失败，请稍候再试')):
         module_initializer.bind_default_services()

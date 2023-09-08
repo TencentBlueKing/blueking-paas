@@ -18,11 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Optional
 
 from django.db import models
 
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.models import BkUserField, OwnerTimestampedModel
 
@@ -66,29 +65,9 @@ class Module(OwnerTimestampedModel):
 
     def get_source_obj(self) -> 'RepositoryInstance':
         """获取 Module 对应的源码 Repo 对象"""
-        names = get_sourcectl_names()
-        from paasng.platform.modules.specs import ModuleSpecs
-
-        if names.validate_svn(self.source_type):
-            from paasng.dev_resources.sourcectl.models import SvnRepository
-
-            return SvnRepository.objects.get(pk=self.source_repo_id)
-        elif names.validate_git(self.source_type):
-            from paasng.dev_resources.sourcectl.models import GitRepository
-
-            return GitRepository.objects.get(pk=self.source_repo_id)
-        elif self.get_source_origin() in [SourceOrigin.IMAGE_REGISTRY]:
-            from paasng.dev_resources.sourcectl.models import DockerRepository
-
-            return DockerRepository.objects.get(pk=self.source_repo_id)
-        elif ModuleSpecs(self).deploy_via_package:
-            from paasng.dev_resources.sourcectl.models import SourcePackageRepository
-
-            return SourcePackageRepository(self)
-
-        # NOTE: 2020.08.19. 调整中, 目前这里不能保证必然有返回值
-        logger.warning("Can't get source obj from %s", self)
-        return None  # type: ignore
+        if not _source_obj_finder_func:
+            raise RuntimeError('The function for getting source obj is not registered')
+        return _source_obj_finder_func(self)
 
     def get_source_origin(self) -> SourceOrigin:
         return SourceOrigin(self.source_origin or SourceOrigin.AUTHORIZED_VCS)
@@ -106,3 +85,12 @@ class Module(OwnerTimestampedModel):
 
     def __str__(self):
         return f"{self.application.code}-{self.name}"
+
+
+# The function for finding source object by module, should be registered by other modules
+_source_obj_finder_func: 'Optional[Callable[[Module], RepositoryInstance]]' = None
+
+
+def set_source_obj_finder_func(func):
+    global _source_obj_finder_func
+    _source_obj_finder_func = func

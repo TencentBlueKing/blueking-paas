@@ -39,8 +39,9 @@ from paasng.accounts.models import make_verifier
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.engine.constants import AppInfoBuiltinEnv
+from paasng.engine.models.deployment import Deployment
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.oauth2.api import BkOauthClient
 from paasng.platform.oauth2.models import BuiltinBkAppSecret
@@ -142,6 +143,10 @@ class BuiltinSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         envs = ModuleEnvironment.objects.filter(module__in=application.modules.all()).all()
         deployed_secret_list = []
         for env in envs:
+            # 当前环境的最近部署成功的时间
+            latest_deployed_at = Deployment.objects.filter_by_env(env).latest_succeeded().created
+
+            # 查询线上运行进程中的环境变量信息
             process_manager = ProcessManager(env)
             process_list = process_manager.list_processes()
             # 只查询一个进程的内置密钥即可
@@ -149,11 +154,16 @@ class BuiltinSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}"
             )
             deployed_secret_list.append(
-                {"module": env.module.name, "environment": env.environment, "bk_app_secret": _secret}
+                {
+                    "module": env.module.name,
+                    "environment": env.environment,
+                    "bk_app_secret": _secret,
+                    "latest_deployed_at": latest_deployed_at,
+                }
             )
         return Response(
             BulitinAppSecretSLZ(
-                data={"bulitin_app_secret": bulitin_app_secret, "deployed_secret_list": deployed_secret_list}
+                {"bulitin_app_secret": bulitin_app_secret, "deployed_secret_list": deployed_secret_list}
             ).data
         )
 

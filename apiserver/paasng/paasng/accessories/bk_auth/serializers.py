@@ -57,11 +57,11 @@ class AppSecretInEnvSLZ(serializers.Serializer):
     module = serializers.CharField(help_text="模块")
     environment = serializers.CharField(help_text="环境")
     bk_app_secret = serializers.CharField(help_text="密钥")
+    latest_deployed_at = serializers.DateTimeField(help_text="最近部署时间")
 
     def to_representation(self, obj):
         result = super().to_representation(obj)
-        # 应用密钥脱敏展示
-        result["bk_app_secret"] = desensitize_secret(obj.bk_app_secret)
+        result["bk_app_secret"] = desensitize_secret(obj['bk_app_secret'])
         return result
 
 
@@ -71,6 +71,5 @@ class BulitinAppSecretSLZ(serializers.Serializer):
 
     def to_representation(self, obj):
         result = super().to_representation(obj)
-        # 应用密钥脱敏展示
-        result["bulitin_app_secret"] = desensitize_secret(obj.bulitin_app_secret)
+        result["bulitin_app_secret"] = desensitize_secret(obj['bulitin_app_secret'])
         return result

@@ -587,7 +587,7 @@ const router = new Router({
         },
         // 云原生部署管理
         {
-          path: ':id/:moduleId/cloud-deploy-manage',
+          path: ':id/cloud-deploy-manage',
           component: cloudAppDeployManage,
           name: 'cloudAppDeployManage',
           redirect: {
@@ -616,10 +616,10 @@ const router = new Router({
               name: 'cloudAppDeployHistory',
               meta: {
                 module: 'cloudAppDeployHistory',
-                history: true
+                history: true,
               },
             },
-          ]
+          ],
         },
         {
           path: ':id/:moduleId/status',

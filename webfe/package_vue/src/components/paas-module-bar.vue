@@ -105,6 +105,9 @@ import { bkMessage } from 'bk-magic-vue';
 export default defineComponent({
   name: 'EditorStatus',
   props: {
+    appCode: {
+      type: String | Number
+    },
     title: {
       type: String,
       default: '',
@@ -147,7 +150,6 @@ export default defineComponent({
 
     // 输入的文案和选中模块相同
     const formRemoveValidated = computed(() => curAppModuleName.value === formRemoveConfirmCode.value);
-    const appCode = computed(() => route.params.id);
 
     // 切换tab
     const handleTabChange = async () => {
@@ -165,7 +167,7 @@ export default defineComponent({
       router.push({
         name,
         params: {
-          id: appCode.value,
+          id: props.appCode,
           moduleId: curModule.name,
         },
         query,
@@ -181,7 +183,7 @@ export default defineComponent({
       router.push({
         name: 'appCreateModule',
         params: {
-          id: appCode.value,
+          id: props.appCode,
         },
       });
     };
@@ -191,7 +193,6 @@ export default defineComponent({
     };
 
     const handleDeleteModule = (payload) => {
-      console.log('payload', payload);
       curAppModuleName.value = payload.name;
       delAppDialog.visiable = true;
       dialog.visiable = false;
@@ -201,7 +202,7 @@ export default defineComponent({
       3;
       try {
         await store.dispatch('module/deleteModule', {
-          appCode: appCode.value,
+          appCode: props.appCode,
           moduleName: curAppModuleName.value,
         });
         console.log('vue', vm);
@@ -212,11 +213,11 @@ export default defineComponent({
         router.push({
           name: 'appSummary',
           params: {
-            id: appCode.value,
+            id: props.appCode,
             moduleId: props.moduleList.find(item => item.is_default).name,
           },
         });
-        store.dispatch('getAppInfo', { appCode: appCode.value, moduleId: curAppModuleName.value });
+        store.dispatch('getAppInfo', { appCode: props.appCode, moduleId: curAppModuleName.value });
       } catch (res) {
         console.warn(res);
         bkMessage({

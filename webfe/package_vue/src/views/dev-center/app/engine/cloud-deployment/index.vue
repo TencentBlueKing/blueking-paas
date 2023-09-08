@@ -1,6 +1,7 @@
 <template>
   <div class="right-main">
     <module-top-bar
+      :app-code="appCode"
       :title="$t('应用编排')"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
@@ -152,8 +153,15 @@ export default {
     },
   },
   created() {
-    this.init();
     this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    // 默认第一项
+    if (this.$route.name !== this.firstTabActiveName) {
+      this.$router.push({
+        ...this.$route,
+        name: this.firstTabActiveName,
+      });
+    }
+    this.init();
   },
   methods: {
     async init() {

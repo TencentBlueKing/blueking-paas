@@ -29,7 +29,7 @@ layers =
     paasng.accessories.search | paasng.ci | paasng.cnative | paasng.dev_resources.cloudapi |  paasng.extensions.declarative | paasng.platform.environments
     paasng.dev_resources.servicehub
     paasng.accessories.documentation | paasng.accessories.paas_analysis | paasng.accessories.smart_advisor | paasng.platform.operations
-    paasng.dev_resources.services | paasng.publish | paasng.service_proxy | paasng.platform.log 
+    paasng.dev_resources.services | paasng.publish | paasng.service_proxy | paasng.platform.log | paasng.accessories.bk_auth
     paasng.accessories.bk_components | paasng.accounts.permissions | paasng.accessories.log_search | paasng.accessories.bkmonitorv3
     paasng.accessories.iam 
     paasng.accounts.models

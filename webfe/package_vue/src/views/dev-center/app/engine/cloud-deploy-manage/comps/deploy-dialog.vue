@@ -131,9 +131,11 @@
       :title="$t('部署日志')"
       :width="800"
       :quick-close="true"
+      :before-close="handleCloseProcessWatch"
     >
       <div slot="content">
         <deploy-status-detail
+          ref="deployStatusRef"
           :environment="environment"
           :deployment-id="deploymentId"
           :deployment-info="deploymentInfo"
@@ -475,6 +477,12 @@ export default {
       } else {
         this.getImageTagList();
       }
+    },
+
+    // 关闭进程的事件流
+    handleCloseProcessWatch() {
+      this.$refs.deployStatusRef.closeServerPush();
+      this.isShowSideslider = false;
     },
   },
 };

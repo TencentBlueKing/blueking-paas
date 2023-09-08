@@ -101,6 +101,8 @@ export default {
       releaseId: '',   // 部署id
       isDeployReady: true,
       curProcess: {},  // 当前模块的进程信息
+      serverProcessEvent: null,
+      watchServerTimer: null,
     };
   },
   computed: {
@@ -226,7 +228,10 @@ export default {
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
             this.releaseId = item.release_id;
-            this.getProcessList(item.release_id, true);
+            this.getProcessList(true);
+
+            // 发起服务监听
+            this.watchServerPush();
             this.$nextTick(() => {
               this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
             });
@@ -237,7 +242,7 @@ export default {
           }
 
           if (item.status === 'successful' && item.name === this.$t('检测部署结果')) {
-            this.closeServerPush();
+            this.serverProcessEvent.close();  // 关闭进程的watch事件流
           }
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.$forceUpdate();
@@ -268,7 +273,7 @@ export default {
         this.serverLogEvent.addEventListener('EOF', () => {
           this.reConnectTimes = 0;
           this.serverLogEvent.close();
-          this.closeServerPush();
+          this.serverProcessEvent.close();  // 关闭进程的watch事件流
           this.isDeploySseEof = true;
           // this.allProcesses = JSON.parse(JSON.stringify(this.allProcesses))
 
@@ -296,6 +301,9 @@ export default {
       // 把当前服务监听关闭
       if (this.serverProcessEvent) {
         this.serverProcessEvent.close();
+        if (this.watchServerTimer) {
+          clearTimeout(this.watchServerTimer);
+        };
       }
     },
 
@@ -614,8 +622,7 @@ export default {
 
 
     // 获取进程列表
-    async getProcessList(releaseId, isLoading = false) {
-      this.closeServerPush();
+    async getProcessList(isLoading = false) {
       this.processLoading = isLoading;
       try {
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -624,8 +631,6 @@ export default {
         });
         this.curProcess = res.data.find(e => e.module_name === this.curModuleId);
         this.formatProcesses(this.curProcess);
-        // 发起服务监听
-        this.watchServerPush();
       } catch (e) {
         // 无法获取进程目前状态
         console.error(e);
@@ -696,8 +701,12 @@ export default {
       console.log('this.allProcesses', this.allProcesses);
     },
 
-
+    // 监听进程事件流
     watchServerPush() {
+      // 停止轮询的标志
+      if (this.watchServerTimer) {
+        clearTimeout(this.watchServerTimer);
+      };
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/`;
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
@@ -731,7 +740,7 @@ export default {
         this.serverProcessEvent.close();
 
         // 推迟调用，防止过于频繁导致服务性能问题
-        setTimeout(() => {
+        this.watchServerTimer = setTimeout(() => {
           this.watchServerPush();
         }, 3000);
       };
@@ -742,12 +751,19 @@ export default {
 
         if (!this.isDeploySseEof) {
           // 推迟调用，防止过于频繁导致服务性能问题
-          setTimeout(() => {
+          this.watchServerTimer = setTimeout(() => {
             this.watchServerPush();
           }, 3000);
         }
       });
     },
+
+    // // 三秒轮询一次
+    // setIntervalWatchServerPush() {
+    //   this.watchServerPushTimer = setInterval(() => {
+    //     this.watchServerPush();
+    //   }, 3000);
+    // },
 
   },
 };

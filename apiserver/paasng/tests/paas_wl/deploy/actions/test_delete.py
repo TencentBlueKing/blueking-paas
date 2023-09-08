@@ -17,9 +17,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.deploy.actions.delete import delete_module_related_res
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import Build, Release, WlApp
-from paas_wl.platform.applications.models_utils import delete_module_related_res
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

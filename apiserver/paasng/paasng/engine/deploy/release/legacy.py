@@ -25,9 +25,9 @@ from typing import Dict, Optional, Tuple
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
 
+from paas_wl.deploy.actions.deploy import DeployAction
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.platform.applications.models.release import Release
-from paas_wl.resources.actions.deploy import DeployAction
 from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.configurations.building import get_processes_by_build

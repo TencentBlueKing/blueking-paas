@@ -21,8 +21,8 @@ from typing import Any, Dict
 import pytest
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.deploy.app_res.generation import get_mapper_version
 from paas_wl.resources.base import crd
-from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.kube_res.base import GVKConfig
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling

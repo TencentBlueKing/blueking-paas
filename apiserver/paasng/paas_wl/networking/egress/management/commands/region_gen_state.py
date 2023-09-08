@@ -28,8 +28,9 @@ import sys
 from django.core.management.base import BaseCommand
 
 from paas_wl.cluster.models import Cluster
+from paas_wl.networking.egress.misc import sync_state_to_nodes
 from paas_wl.networking.egress.models import generate_state
-from paas_wl.resources.utils.app import get_scheduler_client
+from paas_wl.resources.utils.basic import get_client_by_cluster_name
 
 logger = logging.getLogger("commands")
 
@@ -112,13 +113,13 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    sched_client = get_scheduler_client(cluster_name=cluster.name)
+                    client = get_client_by_cluster_name(cluster_name=cluster.name)
 
                     logger.info(f"Generating state for [{region} - {cluster.name}]...")
-                    state = generate_state(region, cluster.name, sched_client, ignore_labels=ignore_labels)
+                    state = generate_state(region, cluster.name, client, ignore_labels=ignore_labels)
 
                     logger.info("Syncing the state to nodes...")
-                    sched_client.sync_state_to_nodes(state)
+                    sync_state_to_nodes(client, state)
                 except Exception:
                     logger.exception("Unable to generate state")
                     continue

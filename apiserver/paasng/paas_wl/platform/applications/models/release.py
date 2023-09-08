@@ -21,8 +21,10 @@ from typing import TYPE_CHECKING, Dict, Optional
 from django.db import models
 from jsonfield import JSONField
 
+from paas_wl.core.env import EnvIsRunningHub
 from paas_wl.platform.applications.models import UuidAuditedModel
 from paas_wl.utils.models import validate_procfile
+from paasng.platform.applications.constants import ApplicationType
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models import Build, Config, WlApp
@@ -158,3 +160,15 @@ class Release(UuidAuditedModel):
         :raise ObjectDoesNotExist: 如果不存在上一次的 release, 则抛该异常
         """
         return Release.objects.filter(app=self.app, version__lt=self.version).latest('version')
+
+
+# Register env_is_running implementations
+def _get_env_is_running(env):
+    """Get "is_running" status by query for successful releases."""
+    wl_app = env.wl_app
+    return Release.objects.any_successful(wl_app) and not env.is_offlined
+
+
+EnvIsRunningHub.register_func(ApplicationType.DEFAULT, _get_env_is_running)
+EnvIsRunningHub.register_func(ApplicationType.ENGINELESS_APP, _get_env_is_running)
+EnvIsRunningHub.register_func(ApplicationType.BK_PLUGIN, _get_env_is_running)

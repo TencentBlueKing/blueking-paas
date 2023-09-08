@@ -22,12 +22,12 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 
-from paas_wl.resources.base.generation import check_if_available, get_mapper_version
+from paas_wl.deploy.app_res.generation import check_if_available, get_mapper_version
 from paas_wl.resources.utils.basic import get_client_by_app
 
 if TYPE_CHECKING:
+    from paas_wl.deploy.app_res.generation import MapperPack
     from paas_wl.platform.applications.models import WlApp
-    from paas_wl.resources.base.generation import MapperPack
 
 logger = logging.getLogger(__name__)
 

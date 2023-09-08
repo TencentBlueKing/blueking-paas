@@ -26,7 +26,6 @@ from paas_wl.networking.ingress.managers import AppDefaultIngresses
 from paas_wl.networking.ingress.utils import make_service_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.workloads.processes.entities import Process
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +49,13 @@ def build_process_service(app: WlApp, process_type: str) -> ProcessService:
 class ProcDefaultServices:
     """Maintains default service and ingress rules for each app process(k8s side)"""
 
-    def __init__(self, process: Process):
-        self.process = process
-        self.app = process.app
+    def __init__(self, app: WlApp, process_type: str):
+        self.process_type = process_type
+        self.app = app
 
     def create_or_patch(self):
         """Create or patch service / (ingress) resources"""
-        service = build_process_service(self.app, self.process.type)
+        service = build_process_service(self.app, self.process_type)
         try:
             service = service_kmodel.get(self.app, service.name)
         except AppEntityNotFound:
@@ -73,11 +72,11 @@ class ProcDefaultServices:
 
     def remove(self):
         """Remove service / (ingress) resources"""
-        service_name = make_service_name(self.app, self.process.type)
+        service_name = make_service_name(self.app, self.process_type)
         service_kmodel.delete_by_name(self.app, service_name)
         AppDefaultIngresses(self.app).delete_if_service_matches(service_name)
 
     def should_create_ingress(self):
         """whether to create an ingress rule or not"""
         # TODO: 由 ProcessSpec 模型控制是否创建 ingress
-        return self.process.type == "web"
+        return self.process_type == "web"

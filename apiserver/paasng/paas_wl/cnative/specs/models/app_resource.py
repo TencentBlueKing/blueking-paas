@@ -27,11 +27,13 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.cnative.specs.constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
 from paas_wl.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+from paas_wl.core.env import EnvIsRunningHub
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.engine.constants import AppEnvName
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
@@ -287,3 +289,12 @@ class BkAppNameGenerator:
 
 
 generate_bkapp_name = BkAppNameGenerator.generate
+
+
+# Register env_is_running implementations
+def _get_env_is_running(env):
+    """Get "is_running" status by querying for successful deploys."""
+    return AppModelDeploy.objects.any_successful(env) and not env.is_offlined
+
+
+EnvIsRunningHub.register_func(ApplicationType.CLOUD_NATIVE, _get_env_is_running)

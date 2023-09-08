@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,22 +16,43 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Utilities related with application models"""
 import logging
 
-from django.db import models
+from django.db import models, transaction
 
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
+from paas_wl.core.env import env_is_running
+from paas_wl.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import BuildProcess, WlApp
-from paas_wl.resources.actions.delete import delete_env_resources
 from paas_wl.workloads.processes.models import ProcessSpec
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
-def delete_module_related_res(module: Module) -> None:
+def delete_env_resources(env: 'ModuleEnvironment'):
+    """Delete app's resources in cluster"""
+    if not env_is_running(env):
+        return
+
+    wl_app = env.wl_app
+    scheduler_client = get_scheduler_client_by_app(app=wl_app)
+    scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
+    return
+
+
+def delete_module_related_res(module: 'Module'):
+    """Delete module's related resources"""
+    with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
+        _delete_module_related_res(module)
+        # Delete related EngineApp db records
+        for env in module.get_envs():
+            env.get_engine_app().delete()
+
+
+def _delete_module_related_res(module: Module) -> None:
     """Delete all related resources of module"""
     # Remove module level data
     model_cls: models.Model

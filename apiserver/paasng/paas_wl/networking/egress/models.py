@@ -79,9 +79,12 @@ def filter_nodes_with_labels(nodes, ignore_labels):
             yield node
 
 
-def generate_state(region: str, cluster_name: str, sched_client, ignore_labels: List) -> RegionClusterState:
+# TODO: Move there functions out of models module to avoid circular imports
+def generate_state(region: str, cluster_name: str, client, ignore_labels: List) -> RegionClusterState:
     """Generate region state for a single region"""
-    nodes = sched_client.get_nodes()
+    from paas_wl.networking.egress.misc import get_nodes
+
+    nodes = get_nodes(client)
     nodes = list(filter_nodes_with_labels(nodes, ignore_labels))
     nodes_name = sorted([node.metadata.name for node in nodes])
     nodes_digest = get_digest_of_nodes_name(nodes_name)
@@ -140,7 +143,6 @@ def format_nodes_data(nodes: List[dict]) -> List[dict]:
 
 
 class EgressSpec(AuditedModel):
-
     wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE, db_constraint=False)
     replicas = models.IntegerField(default=1)
     cpu_limit = models.CharField(max_length=16)

@@ -16,17 +16,31 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.utils.app import get_scheduler_client_by_app
-from paas_wl.workloads.processes.controllers import env_is_running
+"""Archive related deploy functions"""
+import logging
+
+from paas_wl.deploy.processes import get_proc_ctl
+from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
+logger = logging.getLogger(__name__)
 
-def delete_env_resources(env: 'ModuleEnvironment'):
-    """Delete app's resources in cluster"""
-    if not env_is_running(env):
-        return
 
-    wl_app = env.wl_app
-    scheduler_client = get_scheduler_client_by_app(app=wl_app)
-    scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
-    return
+class ArchiveOperationController:
+    """Controller for offline operation"""
+
+    def __init__(self, env: ModuleEnvironment):
+        self.env = env
+
+    def start(self):
+        self.stop_all_processes()
+        make_bk_monitor_controller(self.env.wl_app).remove()
+
+    def stop_all_processes(self):
+        """Stop all processes"""
+        ctl = get_proc_ctl(env=self.env)
+        lister = ProcessManager(env=self.env)
+        for proc_spec in lister.list_processes_specs():
+            proc_type = proc_spec["name"]
+            ctl.stop(proc_type=proc_type)

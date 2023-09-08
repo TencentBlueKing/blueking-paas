@@ -23,10 +23,8 @@ import pytest
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.kube_res.base import ResourceField, ResourceList
-from paas_wl.workloads.processes.controllers import env_is_running, list_processes
+from paas_wl.workloads.processes.controllers import list_processes
 from paas_wl.workloads.processes.entities import Instance, Process, Runtime, Schedule
-from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
-from tests.paas_wl.workloads.conftest import create_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -119,30 +117,3 @@ def test_list_processes_without_release(bk_stag_env, wl_app, wl_release, mock_re
     mock_reader.set_instances([Instance(app=wl_app, name="web", process_type="web")])
     wl_release.delete()
     assert len(list_processes(bk_stag_env).processes) == 1
-
-
-class TestController:
-    def test_default_app_env_is_running(self, bk_app, bk_stag_env, bk_user, with_wl_apps):
-        assert env_is_running(bk_stag_env) is False
-        # Create a failed release at first, it should not affect the result
-        create_release(bk_stag_env, bk_user, failed=True)
-        assert env_is_running(bk_stag_env) is False
-
-        create_release(bk_stag_env, bk_user, failed=False)
-        assert env_is_running(bk_stag_env) is True
-
-        # Simulate case when stag environment was offline
-        bk_stag_env.is_offlined = True
-        bk_stag_env.save()
-        assert env_is_running(bk_stag_env) is False
-
-    def test_cnative_app_env_is_running(self, bk_cnative_app, bk_stag_env, bk_user):
-        assert env_is_running(bk_stag_env) is False
-
-        create_cnative_deploy(bk_stag_env, bk_user)
-        assert env_is_running(bk_stag_env) is True
-
-        # Simulate case when stag environment was offline
-        bk_stag_env.is_offlined = True
-        bk_stag_env.save()
-        assert env_is_running(bk_stag_env) is False

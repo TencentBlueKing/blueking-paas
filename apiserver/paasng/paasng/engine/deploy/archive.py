@@ -23,7 +23,7 @@ from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, Ta
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from paas_wl.resources.actions.archive import ArchiveOperationController
+from paas_wl.deploy.actions.archive import ArchiveOperationController
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
 from paasng.engine.exceptions import OfflineOperationExistError

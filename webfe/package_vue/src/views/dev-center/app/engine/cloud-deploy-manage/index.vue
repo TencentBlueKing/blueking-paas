@@ -20,16 +20,9 @@
       @change="handleTabChange"
       @right-config-click="toDeployHistory"
     />
-    <paas-content-loader
-      :is-loading="isLoading"
-      placeholder="deploy-loading"
-      :offset-top="30"
-      class="app-container middle overview"
-    >
-      <!-- <component :is="curComponentsName" :key="curComponentsName"></component> -->
-      <!-- 骨架屏 -->
+    <div class="m20">
       <router-view :key="routeIndex" :environment="active"></router-view>
-    </paas-content-loader>
+    </div>
   </div>
 </template>
 <script>

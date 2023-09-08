@@ -1,5 +1,5 @@
 <template>
-  <div class="deploy-module-content">
+  <div class="deploy-module-content" v-bkloading="{ isLoading: listLoading, opacity: 1 }">
     <div v-if="deploymentInfoData.length">
       <div class="deploy-module-list" v-for="deploymentInfo in deploymentInfoData" :key="deploymentInfo.name">
         <div class="deploy-module-item">
@@ -13,14 +13,30 @@
                 <i class="paasng-icon paasng-jump-link icon-cls-link" />
               </div>
               <template v-if="deploymentInfo.is_deployed">
-                <div class="version">
-                  <span class="label">版本：</span>
-                  <span class="value">xx</span>
+                <!-- 源码&镜像 -->
+                <div class="flex-row" v-if="deploymentInfo.build_method === 'dockerfile'">
+                  <div class="version">
+                    <span class="label">版本：</span>
+                    <span class="value">
+                      {{ deploymentInfo.version_info.revision }}
+                    </span>
+                  </div>
+                  <div class="line"></div>
+                  <div class="branch">
+                    <span class="label">分支：</span>
+                    <span class="value">
+                      {{ deploymentInfo.version_info.version_name }}
+                    </span>
+                  </div>
                 </div>
-                <div class="line"></div>
-                <div class="branch">
-                  <span class="label">分支：</span>
-                  <span class="value">xx</span>
+                <!-- 仅镜像 -->
+                <div class="flex-row" v-if="deploymentInfo.build_method === 'custom_image'">
+                  <div class="version">
+                    <span class="label">镜像Tag：</span>
+                    <span class="value">
+                      {{ deploymentInfo.version_info.version_name }}
+                    </span>
+                  </div>
                 </div>
               </template>
               <template v-else>
@@ -28,7 +44,7 @@
               </template>
             </div>
             <div class="right-btn">
-              <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy">
+              <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy(deploymentInfo)">
                 部署
               </bk-button>
               <bk-button :theme="'default'" size="small" @click="handleOfflineApp">
@@ -41,7 +57,7 @@
             <!-- 详情表格 -->
             <!-- <deploy-detail v-show="isExpand" /> -->
             <!-- 预览 -->
-            <deploy-preview :deployment-info="deploymentInfo" v-show="!isExpand" />
+            <deploy-preview :deployment-info="deploymentInfo" />
             <!-- <div class="operation-wrapper">
               <div
                 class="btn"
@@ -73,7 +89,10 @@
         {{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
       </div>
     </bk-dialog>
-    <deploy-dialog :show.sync="isShowDialog" :environment="environment"></deploy-dialog>
+    <deploy-dialog
+      :show.sync="isShowDialog"
+      :environment="environment"
+      :deployment-info="curDeploymentInfoItem"></deploy-dialog>
   </div>
 </template>
 
@@ -111,7 +130,9 @@ export default {
       isShowDialog: false,
       isAppOffline: false, // 是否下架
       isFirstDeploy: false,   // 是否是第一次部署
-      deploymentInfoData: [],    // 部署信息
+      listLoading: false,
+      deploymentInfoData: [],    // 部署信息列表
+      curDeploymentInfoItem: {},      // 当前弹窗的部署信息
     };
   },
 
@@ -142,8 +163,9 @@ export default {
     },
 
     // 部署
-    handleDeploy() {
+    handleDeploy(payload) {
       this.isShowDialog = true;
+      this.curDeploymentInfoItem = payload;
       console.log('this.isShowDialog', this.isShowDialog);
     },
 
@@ -231,6 +253,7 @@ export default {
     // 获取部署版本信息
     async getModuleReleaseInfo() {
       try {
+        this.listLoading = true;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
           env: this.environment,
@@ -267,6 +290,8 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.listLoading = false;
       }
     },
 
@@ -288,6 +313,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.deploy-module-content{
+  min-height: 280px;
+}
 .deploy-module-item {
   margin-top: 16px;
   .top-info-wrapper {

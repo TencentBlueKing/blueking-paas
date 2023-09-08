@@ -13,94 +13,118 @@
       @after-leave="handleAfterLeave"
     >
       <div class="code-depot">
-        <span class="pr20">代码仓库</span>
+        <span class="pr20">
+          {{ deploymentInfo.build_method === 'dockerfile' ?
+            $t('代码仓库') : $t('镜像仓库') }}
+        </span>
         <bk-button :theme="'default'" text>
-          mirrors.tencent.com/bkapp/some-appid-defalult
+          {{ deploymentInfo.exposed_url }}
         </bk-button>
       </div>
-      <div class="image-source mt20">
-        <div class="mb10 flex-row justify-content-between">
-          <div>镜像来源</div>
-          <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
-        </div>
-        <div class="bk-button-group btn-container">
-          <bk-button
-            v-for="item in imageSourceData"
-            :key="item.value"
-            class="btn-item"
-            :class="buttonActive === item.value ? 'is-selected' : ''"
-            @click="handleSelected(item)"
-          >
-            {{ $t(item.label) }}
-          </bk-button>
-        </div>
-      </div>
-
-      <div class="image-source mt20" v-if="buttonActive === 'branch'">
-        <div class="mb10">代码分支选择</div>
-        <bk-select
-          v-model="branchValue"
-          :placeholder="$t('请选择')"
-          style="width: 420px; display: inline-block; vertical-align: middle;"
-          :popover-min-width="420"
-          :clearable="false"
-          :searchable="true"
-          @change="handleChangeBranch"
-          :loading="isBranchesLoading"
-          :empty-text="branchEmptyText"
-        >
-          <bk-option-group
-            v-for="(branch, index) in branchList"
-            :key="index"
-            class="option-group"
-            :name="branch.name"
-          >
+      <!-- 仅镜像不需要选择镜像来源 -->
+      <div v-if="deploymentInfo.build_method !== 'custom_image'">
+        <div class="image-source mt20">
+          <div class="mb10">
+            <div>
+              {{ $t('镜像来源') }}
+            </div>
+          </div>
+          <div class="bk-button-group btn-container">
             <bk-button
-              ext-cls="paas-branch-btn"
-              theme="primary"
-              text
-              @click="getModuleBranches"
+              v-for="item in imageSourceData"
+              :key="item.value"
+              class="btn-item"
+              :class="buttonActive === item.value ? 'is-selected' : ''"
+              @click="handleSelected(item)"
             >
-              {{ $t('刷新') }}
+              {{ $t(item.label) }}
             </bk-button>
+          </div>
+        </div>
+        <div class="image-source mt20" v-if="buttonActive === 'branch'">
+          <div class="mb10 flex-row justify-content-between">
+            <div>代码分支选择</div>
+            <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
+          </div>
+          <bk-select
+            v-model="branchValue"
+            :placeholder="$t('请选择')"
+            style="width: 420px; display: inline-block; vertical-align: middle;"
+            :popover-min-width="420"
+            :clearable="false"
+            :searchable="true"
+            @change="handleChangeBranch"
+            :loading="isBranchesLoading"
+            :empty-text="branchEmptyText"
+          >
+            <bk-option-group
+              v-for="(branch, index) in branchList"
+              :key="index"
+              class="option-group"
+              :name="branch.name"
+            >
+              <bk-button
+                ext-cls="paas-branch-btn"
+                theme="primary"
+                text
+                @click="getModuleBranches"
+              >
+                {{ $t('刷新') }}
+              </bk-button>
+              <bk-option
+                v-for="option in branch.children"
+                :id="option.id"
+                :key="option.id"
+                :name="option.text"
+              />
+            </bk-option-group>
+            <div
+              v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
+              slot="extension"
+              style="cursor: pointer;"
+              @click="handleCreateBranch"
+            >
+              <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署分支') }}
+            </div>
+          </bk-select>
+        </div>
+
+        <div class="image-source mt20" v-if="buttonActive === 'image'">
+          <div class="mb10 flex-row justify-content-between">
+            <div>镜像Tag</div>
+            <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
+          </div>
+          <bk-select
+            v-model="tagValue"
+            :placeholder="$t('请选择')"
+            style="width: 420px; display: inline-block; vertical-align: middle;"
+            :popover-min-width="420"
+            :clearable="false"
+            :searchable="true"
+            @change="handleChangeTags"
+            :loading="isTagLoading"
+          >
             <bk-option
-              v-for="option in branch.children"
+              v-for="option in imageTagList"
               :id="option.id"
               :key="option.id"
-              :name="option.text"
+              :name="option.tag"
             />
-          </bk-option-group>
-          <div
-            v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
-            slot="extension"
-            style="cursor: pointer;"
-            @click="handleCreateBranch"
-          >
-            <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署分支') }}
-          </div>
-        </bk-select>
+          </bk-select>
+        </div>
+      </div>
+      <div class="mt20" v-else>
+        <div class="mb10 flex-row justify-content-between">
+          <div>镜像Tag</div>
+          <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
+        </div>
+        <bk-input
+          v-model="tagValue"
+          :placeholder="$t('请输入镜像Tag')"
+          clearable
+        />
       </div>
 
-      <div class="image-source mt20" v-if="buttonActive === 'image'">
-        <div class="mb10">镜像Tag</div>
-        <bk-select
-          v-model="tagValue"
-          :placeholder="$t('请选择')"
-          style="width: 420px; display: inline-block; vertical-align: middle;"
-          :popover-min-width="420"
-          :clearable="false"
-          :searchable="true"
-          @change="handleChangeTags"
-          :loading="isTagLoading"
-        >
-          <bk-option
-            v-for="option in imageTagList"
-            :id="option.id"
-            :key="option.id"
-            :name="option.tag"
-          />
-        </bk-select>
-      </div>
     </bk-dialog>
     <bk-sideslider
       :is-show.sync="isShowSideslider"
@@ -353,16 +377,25 @@ export default {
         if (this.buttonActive === 'image') {
           advancedOptions.build_id = this.tagValue;
         }
+        let params = {
+          revision: this.curSelectData.revision,
+          version_type: this.curSelectData.type,
+          version_name: this.curSelectData.name,
+          advanced_options: advancedOptions,
+        };
+        // 仅镜像部署
+        if (this.deploymentInfo.build_method === 'custom_image') {
+          params = {
+            version_type: 'image',
+            version_name: this.tagValue,
+          };
+        }
+
         const res = await this.$store.dispatch('deploy/branchDeployments', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
-          data: {
-            revision: this.curSelectData.revision,
-            version_type: this.curSelectData.type,
-            version_name: this.curSelectData.name,
-            advanced_options: advancedOptions,
-          },
+          data: params,
         });
         console.log('res', res);
         this.deploymentId = res.deployment_id;

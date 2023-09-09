@@ -150,6 +150,13 @@ export default {
     };
   },
 
+  computed: {
+    curModuleId() {
+    // 当前模块的名称
+      return this.curDeploymentInfoItem.module_name;
+    },
+  },
+
   watch: {
     modelName(value) {
       if (value === '全部模块') {
@@ -158,11 +165,6 @@ export default {
         this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);
       }
     },
-  },
-
-  curModuleId() {
-    // 当前模块的名称
-    return this.curDeploymentInfoItem.module_name;
   },
 
   created() {

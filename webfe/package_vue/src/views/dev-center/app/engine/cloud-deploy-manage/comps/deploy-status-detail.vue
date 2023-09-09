@@ -272,7 +272,7 @@ export default {
         this.serverLogEvent.addEventListener('EOF', () => {
           this.reConnectTimes = 0;
           this.serverLogEvent.close();
-          this.serverProcessEvent.close();  // 关闭进程的watch事件流
+          this.serverProcessEvent && this.serverProcessEvent.close();  // 关闭进程的watch事件流
           this.isDeploySseEof = true;
           // this.allProcesses = JSON.parse(JSON.stringify(this.allProcesses))
 

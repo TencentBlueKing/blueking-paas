@@ -2,7 +2,7 @@
   <div class="deploy-dialog-container">
     <bk-dialog
       v-model="deployAppDialog.visiable"
-      width="470"
+      width="520"
       :title="$t('模块部署')"
       :theme="'primary'"
       :header-position="'left'"
@@ -49,7 +49,7 @@
           <bk-select
             v-model="branchValue"
             :placeholder="$t('请选择')"
-            style="width: 420px; display: inline-block; vertical-align: middle;"
+            style="width: 470px; display: inline-block; vertical-align: middle;"
             :popover-min-width="420"
             :clearable="false"
             :searchable="true"
@@ -97,7 +97,7 @@
           <bk-select
             v-model="tagValue"
             :placeholder="$t('请选择')"
-            style="width: 420px; display: inline-block; vertical-align: middle;"
+            style="width: 470px; display: inline-block; vertical-align: middle;"
             :popover-min-width="420"
             :clearable="false"
             :searchable="true"
@@ -507,9 +507,8 @@ export default {
     font-size: 12px;
   }
 .btn-container{
-  width: 420px;
   .btn-item{
-    padding: 0 69px;
+    padding: 0 82px;
   }
 }
 </style>

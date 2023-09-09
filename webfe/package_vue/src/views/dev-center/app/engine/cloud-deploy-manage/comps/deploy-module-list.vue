@@ -1,5 +1,5 @@
 <template>
-  <div class="deploy-module-content" v-bkloading="{ isLoading: listLoading, opacity: 1 }">
+  <div class="deploy-module-content" v-bkloading="{ isLoading: listLoading, opacity: 1}">
     <bk-alert type="info" :show-icon="false" class="mt20" v-if="isWatchOfflineing">
       <div class="flex-row align-items-center" slot="title">
         <div class="fl">
@@ -60,7 +60,7 @@
               <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy(deploymentInfo)">
                 部署
               </bk-button>
-              <bk-button :theme="'default'" size="small" @click="handleOfflineApp">
+              <bk-button :theme="'default'" size="small" @click="handleOfflineApp(deploymentInfo)">
                 下架
               </bk-button>
             </div>
@@ -88,7 +88,7 @@
     <bk-dialog
       v-model="offlineAppDialog.visiable"
       width="450"
-      :title="`${$t('是否')}${$t('下架')}${curAppModule.name}模块`"
+      :title="`${$t('是否')}${$t('下架')}${curModuleId}模块`"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -160,6 +160,11 @@ export default {
     },
   },
 
+  curModuleId() {
+    // 当前模块的名称
+    return this.curDeploymentInfoItem.module_name;
+  },
+
   created() {
     // this.isExpand = this.isDeploy;
   },
@@ -183,8 +188,9 @@ export default {
     },
 
     // 下架
-    handleOfflineApp() {
+    handleOfflineApp(payload) {
       this.offlineAppDialog.visiable = true;
+      this.curDeploymentInfoItem = payload;
     },
 
 
@@ -321,7 +327,8 @@ export default {
 
 <style lang="scss" scoped>
 .deploy-module-content{
-  min-height: 280px;
+  height: 100%;
+  // min-height: 280px;
 }
 .deploy-module-item {
   margin-top: 16px;
@@ -397,5 +404,8 @@ export default {
     color: #313238;
     font-weight: 500;
     line-height: 32px;
+  }
+  .loading-cls{
+    top: 30vh;
   }
 </style>

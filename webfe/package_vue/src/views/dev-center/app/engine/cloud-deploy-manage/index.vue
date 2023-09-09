@@ -20,7 +20,7 @@
       @change="handleTabChange"
       @right-config-click="toDeployHistory"
     />
-    <div class="m20">
+    <div class="router-container m20">
       <router-view :key="routeIndex" :environment="active"></router-view>
     </div>
   </div>
@@ -110,5 +110,8 @@ export default {
   padding-top: 0px;
   margin: 0;
   margin-top: 0 !important;
+}
+.router-container{
+  height: 100%;
 }
 </style>

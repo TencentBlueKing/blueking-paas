@@ -92,6 +92,7 @@ export default {
   height: 100%;
   .top-operate {
     display: flex;
+    margin-bottom: 16px;
   }
   .module-select-wrapper {
     background: #fff;

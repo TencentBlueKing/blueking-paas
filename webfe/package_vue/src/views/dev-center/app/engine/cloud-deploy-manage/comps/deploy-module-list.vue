@@ -114,6 +114,7 @@
 import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import _ from 'lodash';
 
 export default {
   components: {
@@ -145,6 +146,7 @@ export default {
       isFirstDeploy: false,   // 是否是第一次部署
       listLoading: false,
       deploymentInfoData: [],    // 部署信息列表
+      deploymentInfoDataBackUp: [],   //  部署信息列表备份
       curDeploymentInfoItem: {},      // 当前弹窗的部署信息
       isWatchOfflineing: false,   // 下架中
     };
@@ -160,9 +162,10 @@ export default {
   watch: {
     modelName(value) {
       if (value === '全部模块') {
-        this.showModuleList = this.moduleInfoList;
+        this.deploymentInfoData = this.deploymentInfoDataBackUp;
       } else {
-        this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);
+        this.deploymentInfoData = this.deploymentInfoDataBackUp
+          .filter(module => module.module_name === value);
       }
     },
   },
@@ -274,7 +277,7 @@ export default {
           env: this.environment,
         });
         this.deploymentInfoData = res.data;
-        console.log('deploymentInfoData', this.deploymentInfoData);
+        this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
         // if (!res.code) {
         //   // 已下架
         //   if (res.is_offlined) {
@@ -333,7 +336,7 @@ export default {
   // min-height: 280px;
 }
 .deploy-module-item {
-  margin-top: 16px;
+  margin-bottom: 16px;
   .top-info-wrapper {
     height: 40px;
     display: flex;

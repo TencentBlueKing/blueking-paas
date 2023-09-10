@@ -1,5 +1,36 @@
 <template>
   <div class="deploy-view pl10 pr10 pt20">
+    <!-- 部署中、部署成功、部署失败 -->
+    <div v-if="isWatchDeploying || isDeploySuccess || isDeployFail">
+      <bk-alert type="info" :show-icon="false" class="mb20" v-if="isWatchDeploying">
+        <div class="flex-row align-items-center" slot="title">
+          <div class="fl">
+            <round-loading
+              size="small"
+              ext-cls="deploy-round-loading"
+            />
+          </div>
+          <p class="deploy-pending-text pl20">
+            {{ $t('正在部署中...') }}
+          </p>
+          <p class="deploy-text-wrapper">
+            <span v-if="deploymentInfo.build_method === 'dockerfile'">
+              <span class="branch-text"> {{ $t('分支：') }} {{ deploymentInfo.version_info.version_name }}</span>
+              <span class="version-text pl30"> {{ $t('版本：') }} {{ deploymentInfo.version_info.revision }}</span>
+            </span>
+            <span v-if="deploymentInfo.build_method === 'custom_image'">
+              <span class="branch-text"> {{ $t('镜像Tag：') }} {{ deploymentInfo.version_info.version_name }}</span>
+            </span>
+            <span
+              v-if="deployTotalTime"
+              class="time-text"
+            > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+          </p>
+        </div>
+      </bk-alert>
+      <bk-alert type="info" :show-icon="false" class="mb20" v-if="isDeployFail">
+      </bk-alert>
+    </div>
     <div class="deploy-time-log flex-row">
       <div
         id="deploy-timeline-box"
@@ -114,6 +145,10 @@ export default {
     curModuleId() {
       // 当前模块的名称
       return this.deploymentInfo.module_name;
+    },
+    // 总时间
+    deployTotalTimeDisplay() {
+      return this.getDisplayTime(this.deployTotalTime);
     },
   },
   watch: {
@@ -767,3 +802,13 @@ export default {
   },
 };
 </script>
+<style lang="scss" scoped>
+  .deploy-pending-text{
+    color: #63656E;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .deploy-text-wrapper{
+    padding-left: 36px;
+  }
+</style>

@@ -129,7 +129,7 @@
     <bk-sideslider
       :is-show.sync="isShowSideslider"
       :title="$t('部署日志')"
-      :width="800"
+      :width="820"
       :quick-close="true"
       :before-close="handleCloseProcessWatch"
     >
@@ -139,6 +139,7 @@
           :environment="environment"
           :deployment-id="deploymentId"
           :deployment-info="deploymentInfo"
+          @close="handleCloseSideslider"
         ></deploy-status-detail>
       </div>
     </bk-sideslider>
@@ -486,6 +487,11 @@ export default {
     handleCloseProcessWatch() {
       this.$refs.deployStatusRef.closeServerPush();
       this.isShowSideslider = false;
+      this.$emit('refresh');
+    },
+
+    handleCloseSideslider() {
+      this.handleCloseProcessWatch();
     },
   },
 };

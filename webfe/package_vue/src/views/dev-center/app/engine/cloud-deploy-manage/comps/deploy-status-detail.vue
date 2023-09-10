@@ -14,11 +14,11 @@
             {{ $t('正在部署中...') }}
           </p>
           <p class="deploy-text-wrapper">
-            <span v-if="deploymentInfo.build_method === 'dockerfile'">
+            <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
               <span class="branch-text"> {{ $t('分支：') }} {{ deploymentInfo.version_info.version_name }}</span>
               <span class="version-text pl30"> {{ $t('版本：') }} {{ deploymentInfo.version_info.revision }}</span>
             </span>
-            <span v-if="deploymentInfo.build_method === 'custom_image'">
+            <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
               <span class="branch-text"> {{ $t('镜像Tag：') }} {{ deploymentInfo.version_info.version_name }}</span>
             </span>
             <span
@@ -28,7 +28,53 @@
           </p>
         </div>
       </bk-alert>
-      <bk-alert type="info" :show-icon="false" class="mb20" v-if="isDeployFail">
+      <bk-alert type="error" :show-icon="false" class="mb20" v-if="isDeployFail">
+        <div class="flex-row align-items-center" slot="title">
+          <p class="deploy-pending-text pl10">
+            {{ $t('部署失败') }}
+          </p>
+          <p class="pl20">
+            <span>{{ curDeployResult.possible_reason }}</span>
+            <span class="pl10" v-if="curDeployResult.result === 'failed'">
+              <span
+                v-for="(help, index) in curDeployResult.error_tips.helpers"
+                :key="index"
+              >
+                <a
+                  :href="help.link"
+                  target="_blank"
+                  class="mr10"
+                >
+                  {{ help.text }}
+                </a>
+              </span>
+            </span>
+          </p>
+          <bk-button
+            theme="danger"
+            ext-cls="paas-deploy-failed-btn"
+            outline
+            @click="handleCallback"
+          >
+            {{ $t('返回') }}
+          </bk-button>
+        </div>
+      </bk-alert>
+      <bk-alert type="success" :show-icon="false" class="mb20" v-if="isDeploySuccess">
+        <div class="flex-row align-items-center" slot="title">
+          <p class="deploy-pending-text pl10">
+            {{ $t('部署成功') }}
+          </p>
+          <bk-button
+            style="margin-left: 6px;"
+            theme="success"
+            ext-cls="paas-deploy-success-btn"
+            outline
+            @click="handleCallback"
+          >
+            {{ $t('返回') }}
+          </bk-button>
+        </div>
       </bk-alert>
     </div>
     <div class="deploy-time-log flex-row">
@@ -241,6 +287,7 @@ export default {
           if (item.name === 'release' && item.status === 'successful') {
             // 部署成功
             this.isDeploySuccess = true;
+            this.getModuleReleaseInfo();
           } else if (item.status === 'failed') {
             // 部署失败
             this.isDeployFail = true;
@@ -454,6 +501,7 @@ export default {
           moduleId: this.curModuleId,
           deployId,
         });
+        console.log('res', res);
         this.curDeployResult.result = res.status;
         this.curDeployResult.logs = res.logs;
         if (res.status === 'successful') {
@@ -799,6 +847,11 @@ export default {
     //   }, 3000);
     // },
 
+    // 返回操作
+    handleCallback() {
+      this.$emit('close');
+    },
+
   },
 };
 </script>
@@ -809,6 +862,6 @@ export default {
     font-size: 14px;
   }
   .deploy-text-wrapper{
-    padding-left: 36px;
+    padding-left: 30px;
   }
 </style>

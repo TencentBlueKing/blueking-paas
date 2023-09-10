@@ -105,7 +105,8 @@
     <deploy-dialog
       :show.sync="isShowDialog"
       :environment="environment"
-      :deployment-info="curDeploymentInfoItem"></deploy-dialog>
+      :deployment-info="curDeploymentInfoItem"
+      @refresh="handleRefresh"></deploy-dialog>
   </div>
 </template>
 
@@ -325,6 +326,11 @@ export default {
         version = revision;
       }
       return version;
+    },
+
+    // 刷新列表
+    handleRefresh() {
+      this.init();
     },
   },
 };

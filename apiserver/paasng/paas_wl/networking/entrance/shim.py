@@ -116,7 +116,7 @@ class LiveEnvAddresses(BaseEnvAddresses):
     """
 
     def list(self) -> List[Address]:
-        """ "list all `live` addresses for deployed environment"""
+        """list all `live` addresses for deployed environment"""
         if not env_is_running(self.env):
             return []
 

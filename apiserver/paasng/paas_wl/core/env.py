@@ -54,7 +54,7 @@ def env_is_running(env: ModuleEnvironment) -> bool:
 
 
 # Register env_is_running implementations
-def _get_env_is_running(env):
+def _get_env_is_running(env: ModuleEnvironment) -> bool:
     """Get "is_running" status by query for successful releases."""
     wl_app = env.wl_app
     return Release.objects.any_successful(wl_app) and not env.is_offlined

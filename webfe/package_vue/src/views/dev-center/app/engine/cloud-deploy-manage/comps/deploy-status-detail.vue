@@ -2,7 +2,7 @@
   <div class="deploy-view pl10 pr10 pt20">
     <!-- 部署中、部署成功、部署失败 -->
     <div v-if="isWatchDeploying || isDeploySuccess || isDeployFail">
-      <bk-alert type="info" :show-icon="false" class="mb20" v-if="isWatchDeploying">
+      <bk-alert type="info" :show-icon="false" class="mb20 alert-cls" v-if="isWatchDeploying">
         <div class="flex-row align-items-center" slot="title">
           <div class="fl">
             <round-loading
@@ -28,7 +28,7 @@
           </p>
         </div>
       </bk-alert>
-      <bk-alert type="error" :show-icon="false" class="mb20" v-if="isDeployFail">
+      <bk-alert type="error" :show-icon="false" class="mb20 alert-cls" v-if="isDeployFail">
         <div class="flex-row align-items-center" slot="title">
           <p class="deploy-pending-text pl10">
             {{ $t('部署失败') }}
@@ -52,7 +52,7 @@
           </p>
           <bk-button
             theme="danger"
-            ext-cls="paas-deploy-failed-btn"
+            ext-cls="paas-deploy-failed-btn ml10"
             outline
             @click="handleCallback"
           >
@@ -60,7 +60,7 @@
           </bk-button>
         </div>
       </bk-alert>
-      <bk-alert type="success" :show-icon="false" class="mb20" v-if="isDeploySuccess">
+      <bk-alert type="success" :show-icon="false" class="mb20 alert-cls" v-if="isDeploySuccess">
         <div class="flex-row align-items-center justify-content-between" slot="title">
           <p class="deploy-pending-text pl10">
             {{ $t('部署成功') }}
@@ -965,5 +965,11 @@ export default {
   }
   .deploy-text-wrapper{
     padding-left: 30px;
+  }
+  .alert-cls{
+    border: none !important;
+    /deep/ .bk-alert-wraper{
+      padding: 5px 10px;
+    }
   }
 </style>

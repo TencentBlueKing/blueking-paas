@@ -12,17 +12,17 @@
       @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
-      <div class="code-depot" v-if="deploymentInfo.exposed_url">
+      <div class="code-depot" v-if="deploymentInfoBackUp.exposed_url">
         <span class="pr20">
-          {{ deploymentInfo.build_method === 'dockerfile' ?
+          {{ deploymentInfoBackUp.build_method === 'dockerfile' ?
             $t('代码仓库') : $t('镜像仓库') }}
         </span>
         <bk-button :theme="'default'" text>
-          {{ deploymentInfo.exposed_url }}
+          {{ deploymentInfoBackUp.repo_url }}
         </bk-button>
       </div>
       <!-- 仅镜像不需要选择镜像来源 -->
-      <div v-if="deploymentInfo.build_method !== 'custom_image'">
+      <div v-if="deploymentInfoBackUp.build_method !== 'custom_image'">
         <div class="image-source">
           <div class="mb10">
             <div>
@@ -92,7 +92,6 @@
         <div class="image-source mt20" v-if="buttonActive === 'image'">
           <div class="mb10 flex-row justify-content-between">
             <div>镜像Tag</div>
-            <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
           </div>
           <bk-select
             v-model="tagValue"
@@ -116,7 +115,6 @@
       <div class="mt20" v-else>
         <div class="mb10 flex-row justify-content-between">
           <div>镜像Tag</div>
-          <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
         </div>
         <bk-input
           v-model="tagValue"
@@ -138,7 +136,7 @@
           ref="deployStatusRef"
           :environment="environment"
           :deployment-id="deploymentId"
-          :deployment-info="deploymentInfo"
+          :deployment-info="deploymentInfoBackUp"
           @close="handleCloseSideslider"
         ></deploy-status-detail>
       </div>
@@ -148,6 +146,7 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
+import _ from 'lodash';
 // :ok-text="$t('部署至')`${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
 export default {
   components: {
@@ -194,6 +193,7 @@ export default {
       imageTagList: [],
       isTagLoading: false,
       tagValue: '',
+      deploymentInfoBackUp: {},  // 模块信息备份
     };
   },
   computed: {
@@ -210,7 +210,7 @@ export default {
 
     curModuleId() {
       // 当前模块的名称
-      return this.deploymentInfo.module_name;
+      return this.deploymentInfoBackUp.module_name;
     },
 
     // 是否是smartApp
@@ -232,11 +232,14 @@ export default {
         this.buttonActive = 'branch';
         this.tagValue = '';
         // 仅镜像部署不需要获取分支数据
-        if (this.deployAppDialog.visiable && this.deploymentInfo.build_method !== 'custom_image') {
+        if (this.deployAppDialog.visiable && this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches();   // 获取分支数据
         }
       },
       immediate: true,
+    },
+    deploymentInfo(v) {
+      this.deploymentInfoBackUp = _.cloneDeep(v);
     },
   },
   methods: {
@@ -370,7 +373,7 @@ export default {
         return false;
       }
 
-      const fromVersion = this.deploymentInfo?.repo?.revision;
+      const fromVersion = this.deploymentInfoBackUp?.repo?.revision;
       const toVersion = this.branchValue;
       const win = window.open();
       const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
@@ -400,11 +403,15 @@ export default {
           advanced_options: advancedOptions,
         };
         // 仅镜像部署
-        if (this.deploymentInfo.build_method === 'custom_image') {
+        if (this.deploymentInfoBackUp.build_method === 'custom_image') {
           params = {
             version_type: 'image',
             version_name: this.tagValue,
           };
+          if (!this.deploymentInfoBackUp.version_info) {
+            this.deploymentInfoBackUp.version_info = {};
+          }
+          this.deploymentInfoBackUp.version_info.version_name = this.tagValue;
         }
 
         const res = await this.$store.dispatch('deploy/cloudDeployments', {

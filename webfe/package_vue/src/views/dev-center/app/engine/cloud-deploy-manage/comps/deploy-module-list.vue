@@ -270,9 +270,9 @@ export default {
     },
 
     // 获取部署版本信息
-    async getModuleReleaseInfo() {
+    async getModuleReleaseInfo(listLoading = true) {
       try {
-        this.listLoading = true;
+        this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
           env: this.environment,
@@ -330,7 +330,7 @@ export default {
 
     // 刷新列表
     handleRefresh() {
-      this.init();
+      this.getModuleReleaseInfo(false);
     },
   },
 };

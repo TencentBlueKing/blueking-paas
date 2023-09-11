@@ -27,27 +27,13 @@ from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.exceptions import OfflineOperationExistError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
+from paasng.engine.utils.query import OfflineOperationGetter
 from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
-
-
-def env_has_been_offline(env: 'ModuleEnvironment', latest_deployment: Deployment):
-    """是否处于下架状态，是则同时返回最近一次的 OfflineOperation"""
-    try:
-        latest_offline_operation = OfflineOperation.objects.filter(app_environment=env).latest_succeeded()
-    except OfflineOperation.DoesNotExist:
-        pass
-    else:
-        # 如果存在已下架成功记录，并且比最近一次部署成功记录更新，说明应用已经是下架过了，则不再重复下架
-        if latest_offline_operation.created > latest_deployment.created:
-            logger.info("the module has been offline, just skip")
-            return latest_offline_operation, True
-
-    return None, False
 
 
 class BaseArchiveManager:
@@ -68,9 +54,8 @@ class BaseArchiveManager:
         """
         # raise DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
         deployment = Deployment.objects.filter_by_env(env=self.env).latest_succeeded()
-        latest_offline_operation, has_been_offline = env_has_been_offline(self.env, deployment)
-        if has_been_offline:
-            assert latest_offline_operation
+        latest_offline_operation = OfflineOperationGetter(env=self.env).get_latest_succeeded()
+        if latest_offline_operation is not None:
             return latest_offline_operation
 
         try:

@@ -24,8 +24,8 @@ from paas_wl.cnative.specs.image_parser import ImageParser
 from paas_wl.cnative.specs.models import AppModelRevision
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import RuntimeType
-from paasng.engine.deploy.archive.base import env_has_been_offline
 from paasng.engine.models import Deployment
+from paasng.engine.utils.query import OfflineOperationGetter
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import BuildConfig
@@ -46,7 +46,7 @@ def get_env_deployed_version_info(env: ModuleEnvironment) -> Tuple[RuntimeType, 
         logger.debug("Module: %s Env: %s is not deployed", env.module.name, env.environment)
         return build_config.build_method, None
 
-    if env_has_been_offline(env, deployment)[1]:
+    if OfflineOperationGetter(env).get_latest_succeeded() is not None:
         logger.debug("Module: %s Env: %s has been offline", env.module.name, env.environment)
         return build_config.build_method, None
 

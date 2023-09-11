@@ -57,7 +57,13 @@
               </template>
             </div>
             <div class="right-btn">
-              <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy(deploymentInfo)">
+              <bk-button
+                :theme="'primary'"
+                class="mr10"
+                size="small"
+                @click="handleDeploy(deploymentInfo)"
+                :disabled="(isWatchOfflineing)
+                  && curDeploymentInfoItem.module_name === deploymentInfo.module_name">
                 部署
               </bk-button>
               <bk-button

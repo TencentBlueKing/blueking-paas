@@ -20,15 +20,17 @@ to the current version of the project delivered to anyone in the future.
 """Releasing process of an application deployment
 """
 import logging
+from dataclasses import asdict
 from typing import Dict, Optional, Tuple
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
 
+from paas_wl.deploy.actions.deploy import DeployAction
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.platform.applications.models.release import Release
-from paas_wl.resources.actions.deploy import DeployAction
 from paas_wl.resources.base.exceptions import KubeException
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.configurations.building import get_processes_by_build
 from paasng.engine.configurations.config_var import get_env_variables
@@ -56,7 +58,9 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure('更新进程配置'):
-            ProcessManager(self.engine_app.env).sync_processes_specs(self.deployment.get_processes())
+            # Turn the processes into the corresponding type in paas_wl module
+            procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
+            ProcessManager(self.engine_app.env).sync_processes_specs(procs)
 
         with self.procedure('更新应用配置'):
             update_image_runtime_config(deployment=self.deployment)

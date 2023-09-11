@@ -17,25 +17,61 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from operator import attrgetter
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, overload
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, overload
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from paas_wl.cluster.models import Cluster, Domain
 from paas_wl.cluster.shim import EnvClusterService
-from paasng.engine.constants import AppEnvName
+from paasng.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
+from paasng.platform.modules.models.deploy_config import ImageTagOptions
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
+
+
+def update_build_config_with_method(
+    build_config: BuildConfig,
+    build_method: RuntimeType,
+    bp_stack_name: Optional[str] = None,
+    buildpacks: Optional[List[Dict[str, Any]]] = None,
+    dockerfile_path: Optional[str] = None,
+    docker_build_args: Optional[Dict[str, str]] = None,
+    tag_options: Optional[ImageTagOptions] = None,
+):
+    """根据指定的 build_method 更新部分字段"""
+
+    update_fields = ["build_method", "updated"]
+    build_config.build_method = build_method
+    if tag_options:
+        build_config.tag_options = tag_options
+        update_fields.extend(["tag_options"])
+
+    # 基于 buildpack 的构建方式
+    if build_method == RuntimeType.BUILDPACK:
+        assert buildpacks is not None
+        assert bp_stack_name is not None
+        buildpack_ids = [item["id"] for item in buildpacks]
+        binder = ModuleRuntimeBinder(module=build_config.module)
+        binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+
+    # 基于 Dockerfile 的构建方式
+    elif build_method == RuntimeType.DOCKERFILE:
+        assert dockerfile_path is not None
+        assert docker_build_args is not None
+        build_config.dockerfile_path = dockerfile_path
+        build_config.docker_build_args = docker_build_args
+        update_fields.extend(["dockerfile_path", "docker_build_args"])
+
+    build_config.save(update_fields=update_fields)
 
 
 class SlugbuilderBinder:
@@ -83,8 +119,8 @@ class ModuleRuntimeBinder:
         """绑定 buildpack stack - 即构建和运行的镜像、以及构建工具"""
         module = self.module
         try:
-            slugbuilder = AppSlugBuilder.objects.filter_available(module=module).get(name=bp_stack_name)
-            slugrunner = AppSlugRunner.objects.filter_available(module=module).get(name=bp_stack_name)
+            slugbuilder = AppSlugBuilder.objects.filter_module_available(module=module).get(name=bp_stack_name)
+            slugrunner = AppSlugRunner.objects.filter_module_available(module=module).get(name=bp_stack_name)
         except ObjectDoesNotExist:
             raise BuildPackStackNotFound(bp_stack_name)
 
@@ -155,42 +191,6 @@ class ModuleRuntimeBinder:
         buildpack.related_build_configs.add(self.build_config)
         self.build_config.buildpack_builder = slugbuilder
         self.build_config.save(update_fields=["buildpack_builder", "updated"])
-
-    def bind_buildpacks_by_name(self, names: List[str]):
-        """根据给定的名称及顺序来绑定构建工具
-
-        :raises: RuntimeError when no buildpacks can be found
-        """
-        slugbuilder = self.build_config.buildpack_builder
-        if not slugbuilder:
-            raise BindError("Can't bind buildpacks when without SlugBuilder")
-
-        available_bps = {}
-        for bp in slugbuilder.get_buildpack_choices(self.module, name__in=names):
-            available_bps[bp.name] = bp
-
-        buildpacks = []
-        for name in names:
-            try:
-                buildpacks.append(available_bps[name])
-            except KeyError:
-                raise RuntimeError('No buildpacks can be found for name: {}'.format(name))
-
-        if buildpacks:
-            self.bind_buildpacks(buildpacks, [bp.id for bp in buildpacks])
-
-    def bind_buildpacks_by_module_language(self):
-        """根据模块的语言筛选可用的 buildpack 进行绑定"""
-        slugbuilder = self.build_config.buildpack_builder
-        if not slugbuilder:
-            raise BindError("Can't bind buildpacks when without SlugBuilder")
-
-        # 选取指定语言的最新一个非隐藏的 buildpack
-        buildpacks = slugbuilder.get_buildpack_choices(self.module, language=self.module.language)
-        if not buildpacks:
-            return
-        buildpack = sorted(buildpacks, key=attrgetter("created"))[-1]
-        self.bind_buildpack(buildpack)
 
     @staticmethod
     def get_ordered_buildpacks_list(

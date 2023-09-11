@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import base64
 import re
-from typing import Union
+from typing import List, Optional, Union
 
 import arrow
 from bkpaas_auth import get_user_by_user_id
@@ -38,6 +38,7 @@ from paasng.accounts.utils import get_user_avatar
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.sanitizer import clean_html
+from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -238,3 +239,34 @@ class SourceControlField(serializers.ChoiceField):
             self.fail('invalid_choice', input=data)
 
     choices = property(_get_choices, _set_choices)
+
+
+class ConfigVarReservedKeyValidator:
+    def __init__(
+        self, protected_key_list: Optional[List[str]] = None, protected_prefix_list: Optional[List[str]] = None
+    ):
+        self.protected_key_set = set(protected_key_list or [])
+        self.protected_prefix_list = protected_prefix_list or []
+
+    def __call__(self, value: str):
+        if value in self.protected_key_set:
+            raise serializers.ValidationError(f"保留关键字: {value}")
+        for prefix in self.protected_prefix_list:
+            if value.startswith(prefix):
+                raise serializers.ValidationError(f"保留前缀: {prefix}，请尝试其他前缀")
+        return value
+
+
+def field_env_var_key():
+    return serializers.RegexField(
+        RE_CONFIG_VAR_KEY,
+        max_length=1024,
+        required=True,
+        error_messages={'invalid': _('格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。')},
+        validators=[
+            ConfigVarReservedKeyValidator(
+                protected_key_list=getattr(settings, "CONFIGVAR_PROTECTED_NAMES", []),
+                protected_prefix_list=getattr(settings, "CONFIGVAR_PROTECTED_PREFIXES", []),
+            )
+        ],
+    )

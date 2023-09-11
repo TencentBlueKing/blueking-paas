@@ -25,7 +25,7 @@ from typing import Optional
 import arrow
 from prometheus_client.core import GaugeMetricFamily
 
-from paasng.engine.deploy.engine_svc import EngineDeployClient
+from paasng.engine.utils.client import EngineDeployClient
 from paasng.metrics.collector import cb_metric_collector
 from paasng.platform.core.storages.cache import region as cache_region
 

@@ -16,9 +16,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+from paas_wl.core.env import env_is_running
 from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
 from paas_wl.networking.ingress.managers import AppDefaultIngresses
-from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.models import ModuleEnvironment
 
 

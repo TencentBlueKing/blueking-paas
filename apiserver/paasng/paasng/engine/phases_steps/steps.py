@@ -18,9 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from typing import TYPE_CHECKING, Dict
+from contextlib import suppress
+from typing import TYPE_CHECKING, Dict, List
 
 from paasng.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
+from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.models.steps import StepMetaSet
 from paasng.engine.utils.output import RedisChannelStream
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -28,9 +30,24 @@ from paasng.platform.modules.helpers import ModuleRuntimeManager
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
     from paasng.engine.models.phases import DeployPhase
+    from paasng.engine.models.steps import DeployStep
 
 
 logger = logging.getLogger()
+
+
+def get_sorted_steps(phase: 'DeployPhase') -> List['DeployStep']:
+    """获取有序的 Steps 列表"""
+    names = list(
+        DeployStepPicker.pick(engine_app=phase.engine_app).list_sorted_step_names(DeployPhaseTypes(phase.type))
+    )
+    steps = list(phase.steps.all())
+
+    # 如果出现异常, 就直接返回未排序的步骤.
+    # 导致异常的可能情况: 未在 DeployStepMeta 定义的步骤无法排序
+    with suppress(IndexError):
+        steps.sort(key=lambda x: names.index(x.name))
+    return steps
 
 
 class DeployStepPicker:

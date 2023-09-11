@@ -211,7 +211,7 @@ class TestApplicationCreateWithEngine:
         creation_succeeded,
         api_client,
         mock_wl_services_in_creation,
-        mock_initialize_with_template,
+        mock_initialize_vcs_with_template,
         settings,
         init_tmpls,
     ):
@@ -462,7 +462,7 @@ class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, mock_wl_services_in_creation, mock_initialize_with_template, init_tmpls, bk_user, settings):
+    def setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
@@ -494,14 +494,13 @@ class TestCreateCloudNativeApp:
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
                 "source_config": {
-                    "source_origin": SourceOrigin.IMAGE_REGISTRY,
+                    "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
-                "build_config": {"build_method": "custom_image"},
                 "manifest": {
                     "apiVersion": "paas.bk.tencent.com/v1alpha2",
                     "kind": "BkApp",
-                    "metadata": {"name": "csu230202", "generation": 0, "annotations": {}},
+                    "metadata": {"name": f"uta-{random_suffix}", "generation": 0, "annotations": {}},
                     "spec": {
                         "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
                         "processes": [{"name": "web", "replicas": 1}],
@@ -518,9 +517,11 @@ class TestCreateCloudNativeApp:
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
     @mock.patch('paasng.engine.configurations.building.ModuleRuntimeManager')
-    def test_create_with_buildpack(self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client):
+    def test_create_with_buildpack(
+        self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, init_tmpls
+    ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
-        MockedModuleRuntimeBinder.bind_bp_stack.return_value = None
+        MockedModuleRuntimeBinder().bind_bp_stack.return_value = None
         MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
             is_cnb_runtime=True, environments={}
         )
@@ -533,20 +534,10 @@ class TestCreateCloudNativeApp:
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
                 "source_config": {
+                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
                     "source_repo_url": "https://github.com/octocat/helloWorld.git",
                     "source_repo_auth_info": {},
-                },
-                "build_config": {
-                    "build_method": "buildpack",
-                    "tag_options": {
-                        "prefix": "bkapp",
-                        "with_version": True,
-                        "with_build_time": True,
-                        "with_commit_id": True,
-                    },
-                    "bp_stack_name": "heroku-1.18",
-                    "buildpacks": [{"id": 1}],
                 },
             },
         )
@@ -556,7 +547,7 @@ class TestCreateCloudNativeApp:
         assert app_data['modules'][0]['web_config']['build_method'] == 'buildpack'
         assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'
 
-    def test_create_with_dockerfile(self, api_client):
+    def test_create_with_dockerfile(self, api_client, init_tmpls):
         """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -566,20 +557,10 @@ class TestCreateCloudNativeApp:
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
                 "source_config": {
+                    "source_init_template": "docker",
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
                     "source_repo_url": "https://github.com/octocat/helloWorld.git",
                     "source_repo_auth_info": {},
-                },
-                "build_config": {
-                    "build_method": "dockerfile",
-                    "tag_options": {
-                        "prefix": "bkapp",
-                        "with_version": False,
-                        "with_build_time": False,
-                        "with_commit_id": False,
-                    },
-                    "dockerfile_path": "./Dockerfile",
-                    "docker_build_args": {"version": "v1.1.0"},
                 },
             },
         )

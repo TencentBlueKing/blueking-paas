@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from paas_wl.deploy.app_res.generation import get_latest_mapper_version
 from paas_wl.platform.applications.models import Config, WlApp
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
-from paas_wl.resources.base.generation import get_latest_mapper_version
 
 
 @receiver(post_save, sender=WlApp)

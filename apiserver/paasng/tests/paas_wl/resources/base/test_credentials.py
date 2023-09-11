@@ -21,7 +21,7 @@ import json
 import pytest
 from django.utils.crypto import get_random_string
 
-from paas_wl.resources.base.client import K8sScheduler
+from paas_wl.deploy.app_res.client import K8sScheduler
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import b64decode, b64encode
 from paas_wl.workloads.images import constants

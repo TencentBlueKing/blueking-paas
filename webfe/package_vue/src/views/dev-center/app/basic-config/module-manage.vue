@@ -741,6 +741,7 @@
                 },
                 gatewayInfosStagLoading: false,
                 gatewayInfosProdLoading: false,
+                isGatewayInfosBeClearing: false,
 
                 sourceControlTypes: DEFAULT_APP_SOURCE_CONTROL_TYPES,
                 sourceControlType: '',
@@ -949,12 +950,28 @@
                 return !this.displaySwitchDisabled;
             },
             curStagDisabled () {
-                // 测试环境，没有启用 egress 的，也不再允许用户自己启用
-                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.stag.node_ip_addresses.length || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+                if (this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing) {
+                  // 防抖, 不允许频繁切换
+                  return true;
+                }
+                if (this.gatewayInfos.stag.node_ip_addresses.length) {
+                  // 总是允许关闭出口 IP
+                  return false;
+                }
+                // 如果应用未支持开关出口IP管理或者当前环境的集群不支持该特性, 则不允许打开出口IP
+                return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
             },
             curProdDisabled () {
-                // 证书环境，没有启用 egress 的，也不再允许用户自己启用
-                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.prod.node_ip_addresses.length || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+                if (this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing) {
+                  // 防抖, 不允许频繁切换
+                  return true;
+                }
+                if (this.gatewayInfos.prod.node_ip_addresses.length) {
+                  // 总是允许关闭出口 IP
+                  return false;
+                }
+                // 如果应用未支持开关出口IP管理或者当前环境的集群不支持该特性, 则不允许打开出口IP
+                return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
             },
             entranceConfig () {
                 return this.$store.state.region.entrance_config;

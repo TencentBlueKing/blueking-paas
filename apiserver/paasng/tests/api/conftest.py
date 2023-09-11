@@ -23,15 +23,15 @@ import pytest
 from tests.utils.mocks.engine import mock_cluster_service
 
 
-def _mock_initialize_with_template():
+def _mock_initialize_vcs_with_template():
     with mock.patch(
-        "paasng.platform.modules.manager.ModuleInitializer.initialize_with_template"
+        "paasng.platform.modules.manager.ModuleInitializer.initialize_vcs_with_template"
     ) as initialize_with_template:
         initialize_with_template.return_value = {}
         yield initialize_with_template
 
 
-mock_initialize_with_template = pytest.fixture(_mock_initialize_with_template)
+mock_initialize_vcs_with_template = pytest.fixture(_mock_initialize_vcs_with_template)
 
 
 class FakeMiddleware:

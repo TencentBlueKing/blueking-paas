@@ -1,8 +1,9 @@
 module github.com/TencentBlueKing/blueking-paas/client
 
-go 1.19
+go 1.20
 
 require (
+	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/TencentBlueKing/gopkg v1.1.0
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de

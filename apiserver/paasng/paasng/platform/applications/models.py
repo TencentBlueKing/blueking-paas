@@ -291,14 +291,6 @@ class Application(OwnerTimestampedModel):
 
         return AppSpecs(self).engine_enabled
 
-    @property
-    def market_published(self) -> bool:
-        """应用是否已发布到应用市场"""
-        from paasng.publish.market.models import MarketConfig
-
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(self)
-        return market_config.enabled
-
     def get_source_obj(self) -> 'RepositoryInstance':
         """获取 Application 对应的源码 Repo 对象"""
         return self.get_default_module().get_source_obj()
@@ -338,11 +330,6 @@ class Application(OwnerTimestampedModel):
         if environment:
             return self.envs.get(environment=environment)
         return self.envs.all()
-
-    def get_deploy_info(self):
-        """检测应用的部署状态"""
-        # TODO: remove this method and move "exposed_links" property out of application
-        return get_exposed_links(self)
 
     def get_product(self):
         try:
@@ -539,13 +526,6 @@ class ApplicationFeatureFlag(TimestampedModel):
     name = models.CharField(u"特性名称(key)", max_length=30)
 
     objects = ApplicationFeatureFlagManager()
-
-
-def get_exposed_links(application: Application) -> Dict:
-    """Return exposed links for default module"""
-    from paasng.publish.entrance.exposer import get_module_exposed_links
-
-    return get_module_exposed_links(application.get_default_module())
 
 
 class UserMarkedApplication(OwnerTimestampedModel):

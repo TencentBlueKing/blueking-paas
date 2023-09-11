@@ -20,30 +20,11 @@ from textwrap import dedent
 
 import pytest
 import yaml
-from blue_krill.contextlib import nullcontext as does_not_raise
 from django.core.files.base import ContentFile
 from rest_framework.serializers import ValidationError
 
 from paasng.engine import serializers as slzs
 from paasng.engine.models.config_var import ConfigVar
-
-
-@pytest.mark.parametrize(
-    "protected_key_list, protected_prefix_list, key, expected",
-    [
-        ([], [], "foo", does_not_raise()),
-        (["foo"], [], "foo", pytest.raises(ValidationError)),
-        (["foo_"], [], "foo", does_not_raise()),
-        (["f00"], [], "foo", does_not_raise()),
-        ([], ["f"], "foo", pytest.raises(ValidationError)),
-        ([], ["foo"], "foo", pytest.raises(ValidationError)),
-        ([], ["foo_"], "foo", does_not_raise()),
-    ],
-)
-def test_config_var_reserverd_key_validator(protected_key_list, protected_prefix_list, key, expected):
-    v = slzs.ConfigVarReservedKeyValidator(protected_key_list, protected_prefix_list)
-    with expected:
-        v(key)
 
 
 @pytest.mark.django_db

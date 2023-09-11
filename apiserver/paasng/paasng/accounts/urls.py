@@ -50,4 +50,6 @@ urlpatterns = [
     ),
     # for provider call back
     url(r'^api/oauth/complete/(?P<backend>[^/]+)/?$', views.Oauth2BackendsViewSet.as_view({"get": "bind"})),
+    # specs APIs
+    url(r'^api/bkapps/regions/specs', views.RegionSpecsViewSet.as_view({'get': 'retrieve'}), name='api.region.specs'),
 ]

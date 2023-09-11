@@ -29,3 +29,5 @@ post_phase_end = Signal(providing_args=['status', 'phase'])
 
 # 当某个 module_env 进行 release 时, 会触发该信号
 on_release_created = Signal(providing_args=["env"])
+
+processes_updated = Signal(providing_args=['events', 'extra_params'])

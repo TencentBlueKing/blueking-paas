@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -25,7 +26,6 @@ from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.engine.models.base import OperationVersionBase
@@ -69,6 +69,21 @@ class AdvancedOptions:
     invoke_message: Optional[str] = None
 
 
+@dataclass
+class ProcessTmpl:
+    """This class is a duplication of paas_wl.workloads.processes.models.ProcessTmpl, it
+    avoids a circular import problem.
+    """
+
+    name: str
+    command: str
+    replicas: Optional[int] = None
+    plan: Optional[str] = None
+
+    def __post_init__(self):
+        self.name = self.name.lower()
+
+
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)
 DeclarativeProcessField = make_json_field("DeclarativeProcessField", Dict[str, ProcessTmpl])
 
@@ -92,6 +107,7 @@ class Deployment(OperationVersionBase):
     )
     pre_release_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 pre-release 的时间')
     release_id = models.UUIDField(max_length=32, null=True)
+    bkapp_release_id = models.BigIntegerField(null=True, help_text="云原生应用发布记录ID")
     release_status = models.CharField(choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
     release_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 release 的时间')
 

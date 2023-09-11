@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
-from typing import Optional
+from typing import Optional, Type
 
 from django.db import IntegrityError
 
@@ -41,6 +41,14 @@ from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
+# Try to load the access control module
+ApplicationAccessControlSwitch: Optional[Type]
+try:
+    from paasng.security.access_control.models import ApplicationAccessControlSwitch
+except ImportError:
+    logger.info('access control only supported in te edition, skip import')
+    ApplicationAccessControlSwitch = None
+
 
 class BkAppReleaseMgr(DeployStep):
     """BkApp(CRD) Release Step, will schedule the Deployment/Ingress and so on by k8s operator.
@@ -53,7 +61,7 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure('部署应用'):
-            release_id = release_by_k8s_operator(
+            bkapp_release_id = release_by_k8s_operator(
                 self.module_environment,
                 revision,
                 operator=self.deployment.operator,
@@ -62,10 +70,12 @@ class BkAppReleaseMgr(DeployStep):
             )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
-        self.state_mgr.update(release_id=release_id)
+        self.state_mgr.update(bkapp_release_id=bkapp_release_id)
         try:
             step_obj = self.phase.get_step_by_name(name="检测部署结果")
-            step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+            step_obj.mark_and_write_to_stream(
+                self.stream, JobStatus.PENDING, extra_info={"bkapp_release_id": bkapp_release_id}
+            )
         except StepNotInPresetListError:
             logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
 
@@ -124,8 +134,13 @@ def release_by_k8s_operator(
         # 下发待挂载的 volume source
         VolumeSourceManager(env).deploy()
 
+        if ApplicationAccessControlSwitch is not None:
+            acl_enabled = ApplicationAccessControlSwitch.objects.is_enabled(application)
+        else:
+            acl_enabled = False
+
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build, acl_enabled=acl_enabled)
         )
 
         # 下发日志采集配置

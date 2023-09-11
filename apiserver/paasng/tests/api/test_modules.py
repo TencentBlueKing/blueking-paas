@@ -31,9 +31,10 @@ from paasng.platform.modules.models.deploy_config import Hook
 from paasng.platform.modules.models.module import Module
 from paasng.platform.operations.constant import OperationType
 from paasng.platform.operations.models import Operation
+from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ class TestModuleCreation:
         init_tmpls,
         bk_app,
         mock_wl_services_in_creation,
-        mock_initialize_with_template,
+        mock_initialize_vcs_with_template,
         creation_params,
     ):
         with mock.patch.object(IntegratedSvnAppRepoConnector, 'sync_templated_sources') as mocked_sync:
@@ -109,6 +110,94 @@ class TestModuleCreation:
             )
             desired_status_code = 201 if is_success else 400
             assert response.status_code == desired_status_code
+
+
+class TestCreateCloudNativeModule:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, init_tmpls, bk_user, settings):
+        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
+        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
+
+    def test_create_with_manifest(self, bk_cnative_app, api_client):
+        """托管方式：仅镜像（提供 manifest）"""
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
+            data={
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.CNATIVE_IMAGE,
+                    "source_repo_url": "strm/helloworld-http",
+                },
+                "manifest": {
+                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
+                    "kind": "BkApp",
+                    "metadata": {
+                        "name": f"{bk_cnative_app.code}-m-uta-{random_suffix}",
+                        "generation": 0,
+                        "annotations": {},
+                    },
+                    "spec": {
+                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
+                        "processes": [{"name": "web", "replicas": 1}],
+                        "configuration": {"env": []},
+                    },
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        module_data = response.json()['module']
+        assert module_data['web_config']['build_method'] == 'custom_image'
+        assert module_data['web_config']['artifact_type'] == 'none'
+
+    @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
+    @mock.patch('paasng.engine.configurations.building.ModuleRuntimeManager')
+    def test_create_with_buildpack(
+        self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, bk_cnative_app, init_tmpls
+    ):
+        """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
+        MockedModuleRuntimeBinder().bind_bp_stack.return_value = None
+        MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
+            is_cnb_runtime=True, environments={}
+        )
+
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
+            data={
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        module_data = response.json()['module']
+        assert module_data['web_config']['build_method'] == 'buildpack'
+        assert module_data['web_config']['artifact_type'] == 'image'
+
+    def test_create_with_dockerfile(self, api_client, bk_cnative_app, init_tmpls):
+        """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
+            data={
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_init_template": "docker",
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        module_data = response.json()['module']
+        assert module_data['web_config']['build_method'] == 'dockerfile'
+        assert module_data['web_config']['artifact_type'] == 'image'
 
 
 class TestModuleDeployConfigViewSet:

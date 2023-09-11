@@ -23,7 +23,7 @@ import pytest
 
 from paasng.engine.exceptions import DeployShouldAbortError
 from paasng.engine.models import DeployPhaseTypes
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
 from paasng.engine.utils.output import ConsoleStream
 from paasng.engine.workflow.flow import DeploymentCoordinator, DeployProcedure
 from tests.engine.setup_utils import create_fake_deployment

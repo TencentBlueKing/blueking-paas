@@ -61,7 +61,6 @@ class BaseArchiveManager:
 
         current_operation = OfflineOperationGetter(env=self.env).get_current_operation()
         if current_operation is not None:
-            # 存在正在下架操作，不再重复发起
             raise OfflineOperationExistError(_("存在正在进行的下架任务"))
 
         offline_operation = OfflineOperation.objects.create(

@@ -33,7 +33,9 @@ from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.processes.drf_serializers import (
     ModuleScopedData,
+    ModuleState,
     NamespaceScopedListWatchRespSLZ,
+    OperationGroup,
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
@@ -43,6 +45,7 @@ from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.constants import RuntimeType
 from paasng.engine.deploy.version import get_env_deployed_version_info
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import Module
@@ -79,11 +82,24 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 exposed_url = addr.url
 
             build_method, version_info = get_env_deployed_version_info(module_env)
+            deployment_getter = DeploymentGetter(env=module_env)
+            offline_getter = OfflineOperationGetter(env=module_env)
 
             grouped_data[module_name] = ModuleScopedData(
                 module_name=module_name,
                 build_method=build_method,
-                is_deployed=is_living,
+                state=ModuleState(
+                    deployment=OperationGroup(
+                        latest=deployment_getter.get_latest_deployment(),
+                        latest_succeeded=deployment_getter.get_latest_succeeded(),
+                        pending=deployment_getter.get_current_deployment(),
+                    ),
+                    offline=OperationGroup(
+                        latest=offline_getter.get_latest_operation(),
+                        latest_succeeded=offline_getter.get_latest_succeeded(),
+                        pending=offline_getter.get_current_operation(),
+                    ),
+                ),
                 exposed_url=exposed_url,
                 repo_url=self.get_repo_url(module=module) or "--",
                 version_info=version_info,

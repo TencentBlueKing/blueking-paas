@@ -125,7 +125,6 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data = OfflineOperationSLZ(instance=offline_operation).data
             return JsonResponse(data)
 
-    @swagger_auto_schema(response_serializer=OfflineOperationSLZ)
     def get_resumable_offline_operations(self, request, code, module_name, environment):
         """查询可恢复的下架操作"""
         env = self.get_env_via_path()

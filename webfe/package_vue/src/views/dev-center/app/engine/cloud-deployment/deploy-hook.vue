@@ -2,8 +2,9 @@
   <paas-content-loader
     :is-loading="isLoading"
     placeholder="deploy-hook-loading"
-    :offset-top="20"
-    :offset-left="20"
+    :offset-top="0"
+    :offset-left="0"
+    :is-transition="false"
     class="deploy-action-box"
   >
     <div class="form-pre">

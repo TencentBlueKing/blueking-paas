@@ -3,6 +3,9 @@
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-env-loading"
+      :is-transition="false"
+      :offset-top="0"
+      :offset-left="0"
       class="middle"
     >
       <section v-show="!isLoading">

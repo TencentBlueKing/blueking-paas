@@ -2,7 +2,8 @@
   <paas-content-loader
     :is-loading="isLoading"
     placeholder="deploy-process-loading"
-    :offset-top="20"
+    :offset-top="0"
+    :is-transition="false"
     :offset-left="20"
     class="deploy-action-box"
   >

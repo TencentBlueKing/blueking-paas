@@ -4,7 +4,7 @@
     :style="{ 'min-height': localLoading && height ? height + 'px' : 'calc(100% - 50px)' }"
   >
     <div
-      :class="['loading-placeholder', { 'hide': !isLoaderShow }]"
+      :class="['loading-placeholder', { 'hide': !isLoaderShow }, { 'transition': !isTransition }]"
       :style="{ 'background-color': backgroundColor }"
     >
       <template v-if="placeholder">
@@ -76,6 +76,8 @@ import CreatePluginLoading from './loading/create-plugin.vue';
 import PluginProcessLoading from './loading/plugin-process.vue';
 import PluginBaseInfoLoading from './loading/plugin-base-info.vue';
 import EventListLoading from './loading/event-list.vue';
+import BuildConfigLoading from './loading/clound-build-config.vue';
+import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
 export default {
   components: {
     ByUserLoading,
@@ -134,6 +136,8 @@ export default {
     PluginProcessLoading,
     PluginBaseInfoLoading,
     EventListLoading,
+    BuildConfigLoading,
+    DeployModuleInfoLoading,
   },
   props: {
     isLoading: {
@@ -161,6 +165,10 @@ export default {
     backgroundColor: {
       type: String,
       default: '#FFF',
+    },
+    isTransition: {
+      type: Boolean,
+      default: true
     },
   },
   data() {
@@ -282,6 +290,10 @@ export default {
 
       &.hide {
         z-index: -1;
+      }
+
+      &.transition {
+        transition: none;
       }
 
       svg {

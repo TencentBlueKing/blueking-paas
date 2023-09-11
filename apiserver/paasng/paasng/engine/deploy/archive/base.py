@@ -17,18 +17,15 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Type
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
-from django.conf import settings
 from django.utils.translation import gettext as _
 
-from paas_wl.deploy.actions.archive import ArchiveOperationController
 from paasng.engine.constants import JobStatus, ReleaseStatus
-from paasng.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
 from paasng.engine.exceptions import OfflineOperationExistError
-from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.offline import OfflineOperation
+from paasng.engine.models import Deployment, OfflineOperation
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
 
 if TYPE_CHECKING:
@@ -37,7 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class OfflineManager:
+class BaseArchiveManager:
     """Archive a module environment.
 
     :param env: the module environment to be archived.
@@ -46,38 +43,24 @@ class OfflineManager:
     def __init__(self, env: 'ModuleEnvironment'):
         self.env = env
 
-    def has_been_offline(self, latest_deployment: Deployment) -> Tuple[Optional[OfflineOperation], bool]:
-        """是否处于下架状态，是则同时返回最近一次的 OfflineOperation"""
-        try:
-            latest_offline_operation = OfflineOperation.objects.filter(app_environment=self.env).latest_succeeded()
-        except OfflineOperation.DoesNotExist:
-            pass
-        else:
-            # 如果存在已下架成功记录，并且比最近一次部署成功记录更新，说明应用已经是下架过了，则不再重复下架
-            if latest_offline_operation.created > latest_deployment.created:
-                logger.info("the module has been offline, just skip")
-                return latest_offline_operation, True
+    def perform_env_offline(self, operator: str) -> OfflineOperation:
+        """执行下架 env, 如果环境已下架, 则直接返回
 
-        return None, False
-
-    def get_latest_succeeded_deployment(self):
-        return Deployment.objects.filter_by_env(env=self.env).latest_succeeded()
-
-    def perform_env_offline(self, operator: str):
-        """可重入的下架操作，返回 OfflineOperation"""
-        # raise DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
-        deployment = self.get_latest_succeeded_deployment()
-        latest_offline_operation, has_been_offline = self.has_been_offline(deployment)
-        if has_been_offline:
+        :param operator: 操作人(user_id)
+        :return: OfflineOperation
+        :raise Deployment.DoseNotExist: 未曾部署成功, 无需下架
+        :raise OfflineOperationExistError: 当已存在正在下架的任务时抛该异常
+        """
+        deployment = DeploymentGetter(env=self.env).get_latest_succeeded()
+        if deployment is None:
+            # raise Deployment.DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
+            raise Deployment.DoesNotExist
+        latest_offline_operation = OfflineOperationGetter(env=self.env).get_latest_succeeded()
+        if latest_offline_operation is not None:
             return latest_offline_operation
 
-        try:
-            OfflineOperation.objects.filter(app_environment=self.env).get_latest_resumable(
-                max_resumable_seconds=settings.ENGINE_OFFLINE_RESUMABLE_SECS
-            )
-        except OfflineOperation.DoesNotExist:
-            pass
-        else:
+        current_operation = OfflineOperationGetter(env=self.env).get_current_operation()
+        if current_operation is not None:
             # 存在正在下架操作，不再重复发起
             raise OfflineOperationExistError(_("存在正在进行的下架任务"))
 
@@ -97,11 +80,12 @@ class OfflineManager:
             sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
         )
 
-        # Start the offline operation, this will start background task
-        op_id = str(offline_operation.pk)
-        ArchiveOperationController(env=self.env).start()
-        wait_for_all_stopped(env=self.env, result_handler=ArchiveResultHandler, extra_params={"operation_id": op_id})
+        self.perform_implement(offline_operation, result_handler=ArchiveResultHandler)
         return offline_operation
+
+    def perform_implement(self, offline_operation: OfflineOperation, result_handler: Type[CallbackHandler]):
+        """Start the offline operation, this will start background task, and call result handler when task finished"""
+        raise NotImplementedError
 
 
 class ArchiveResultHandler(CallbackHandler):

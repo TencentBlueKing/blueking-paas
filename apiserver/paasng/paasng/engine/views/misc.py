@@ -39,7 +39,7 @@ from paas_wl.platform.system_api.serializers import InstanceMetricsResultSeriali
 from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.deploy.archive import OfflineManager
+from paasng.engine.deploy.archive import start_archive_step
 from paasng.engine.exceptions import OfflineOperationExistError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
@@ -51,6 +51,7 @@ from paasng.engine.serializers import (
     QueryOperationsSLZ,
     ResourceMetricsSLZ,
 )
+from paasng.engine.utils.query import OfflineOperationGetter
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
@@ -81,7 +82,6 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         app_environment = module.get_envs(environment)
-        manager = OfflineManager(env=app_environment)
 
         roles = fetch_user_roles(application.code, request.user.username)
         try:
@@ -91,7 +91,7 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
 
         try:
-            offline_operation = manager.perform_env_offline(operator=request.user.pk)
+            offline_operation = start_archive_step(env=app_environment, operator=request.user.pk)
         except Deployment.DoesNotExist:
             # 未曾部署，跳过该环境的下架操作
             raise error_codes.CANNOT_OFFLINE_APP.f(_("没有找到对应的部署记录，不允许下架"))
@@ -128,15 +128,9 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(response_serializer=OfflineOperationSLZ)
     def get_resumable_offline_operations(self, request, code, module_name, environment):
         """查询可恢复的下架操作"""
-        application = self.get_application()
-        module = application.get_module(module_name)
-
-        app_env = module.envs.get(environment=environment)
-        try:
-            offline_operation = OfflineOperation.objects.filter(app_environment=app_env).get_latest_resumable(
-                max_resumable_seconds=settings.ENGINE_OFFLINE_RESUMABLE_SECS
-            )
-        except OfflineOperation.DoesNotExist:
+        env = self.get_env_via_path()
+        offline_operation = OfflineOperationGetter(env).get_current_operation()
+        if offline_operation is None:
             return Response({})
 
         serializer = OfflineOperationSLZ(instance=offline_operation)

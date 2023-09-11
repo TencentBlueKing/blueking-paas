@@ -20,8 +20,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from paas_wl.deploy.app_res.generation import get_mapper_version
 from paas_wl.resources.base.exceptions import ResourceMissing
-from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.utils import get_command_name

@@ -21,28 +21,28 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 
 from django.conf import settings
-from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.networking.ingress.managers.service import ProcDefaultServices
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.release_controller.hooks.entities import Command
-from paas_wl.resources.base.base import get_client_by_cluster_name
-from paas_wl.resources.base.controllers import (
+from paas_wl.deploy.app_res.controllers import (
     BuildHandler,
     CommandHandler,
     NamespacesHandler,
     ProcAutoscalingHandler,
     ProcessesHandler,
 )
-from paas_wl.resources.base.generation import get_mapper_version
-from paas_wl.resources.base.kres import KNode, set_default_options
+from paas_wl.deploy.app_res.generation import get_mapper_version
+from paas_wl.monitoring.app_monitor.utils import build_monitor_port
+from paas_wl.networking.ingress.managers.service import ProcDefaultServices
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.release_controller.hooks.entities import Command
+from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.resources.base.kres import set_default_options
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.processes.entities import Process
 
 if TYPE_CHECKING:
+    from paas_wl.deploy.app_res.generation import MapperPack
     from paas_wl.resources.base.base import EnhancedApiClient
-    from paas_wl.resources.base.generation import MapperPack
     from paasng.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
@@ -92,28 +92,6 @@ class K8sScheduler:
         self.credential_handler = credentials_kmodel
         self.autoscaling_handler = ProcAutoscalingHandler(**init_params)
 
-    # Node start
-    # WARNING: Node methods returns the raw data structure from kubernetes instead of transform it
-
-    def get_nodes(self) -> List[ResourceInstance]:
-        """Return a list a all kubernetes nodes in current cluster"""
-        return KNode(self.client).ops_label.list({}).items
-
-    def sync_state_to_nodes(self, state):
-        """Sync a RegionClusterState object to current cluster, which means:
-
-        - Update the labels of all nodes
-        - Engine apps may use the labels to customize their schedule strategy
-        """
-        labels = state.to_labels()
-        for node_name in state.nodes_name:
-            node = KNode(self.client).get(node_name)
-            node.metadata.labels = {**node.metadata.get('labels', {}), **labels}
-            logger.debug(f"Patching node object {node_name} with labels {labels}")
-            KNode(self.client).ops_name.replace_or_patch(node_name, node, update_method="patch")
-
-    # Node End
-
     #################
     # processes API #
     #################
@@ -122,12 +100,12 @@ class K8sScheduler:
         """Deploy processes will create the Deployment and the Service"""
         for process in processes:
             self.processes_handler.deploy(process=process)
-            ProcDefaultServices(process).create_or_patch()
+            self.get_default_services(process).create_or_patch()
 
     def scale_processes(self, processes: Iterable[Process]):
         """Scale Processes will patch the Deployment and Service"""
         for process in processes:
-            ProcDefaultServices(process).create_or_patch()
+            self.get_default_services(process).create_or_patch()
             self.processes_handler.scale(process=process)
 
     def shutdown_processes(self, processes: Iterable[Process]):
@@ -140,8 +118,13 @@ class K8sScheduler:
         """Delete process will delete the Deployment and the Service(if with_access=True)"""
         for process in processes:
             if with_access:
-                ProcDefaultServices(process).remove()
+                self.get_default_services(process).remove()
             self.processes_handler.delete(process=process)
+
+    @staticmethod
+    def get_default_services(process: Process) -> ProcDefaultServices:
+        monitor_port = build_monitor_port(process.app)
+        return ProcDefaultServices(process.app, process.type, monitor_port=monitor_port)
 
     #############
     # build API #

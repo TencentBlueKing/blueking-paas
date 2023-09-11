@@ -22,19 +22,19 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
+from paas_wl.deploy.actions.exceptions import BuildMissingError
+from paas_wl.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.resources.actions.exceptions import BuildMissingError
 from paas_wl.resources.base.exceptions import KubeException
-from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.utils import get_command_name
 from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:
+    from paas_wl.deploy.app_res.client import K8sScheduler
     from paas_wl.platform.applications.models import Release
-    from paas_wl.resources.base.client import K8sScheduler
     from paas_wl.workloads.processes.entities import Process
 
 logger = logging.getLogger(__name__)

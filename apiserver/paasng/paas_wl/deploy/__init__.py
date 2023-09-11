@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,18 +15,4 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.release_controller.hooks.entities import Command as CommandKModel
-from paas_wl.release_controller.hooks.models import Command as CommandModel
-
-
-def interrupt_command(command: 'CommandModel') -> bool:
-    """Interrupt a command.
-
-    :param command: Command object
-    """
-    command.set_int_requested_at()
-    app = command.app
-    kmodel = CommandKModel.from_db_obj(command)
-    result = get_scheduler_client_by_app(app).interrupt_command(kmodel)
-    return result
+default_app_config = 'paas_wl.deploy.apps.DeployAppConfig'

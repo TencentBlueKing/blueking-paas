@@ -43,11 +43,11 @@ from paas_wl.admin.serializers.clusters import (
     ReadonlyClusterSLZ,
 )
 from paas_wl.cluster.models import APIServer, Cluster
+from paas_wl.networking.egress.misc import sync_state_to_nodes
 from paas_wl.networking.egress.models import generate_state
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KSecret
-from paas_wl.resources.utils.app import get_scheduler_client
 from paas_wl.utils.error_codes import error_codes
 from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 
@@ -98,13 +98,13 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         logger.info(f'will generate state for [{region}/{cluster_name}]...')
-        sched_client = get_scheduler_client(cluster_name=cluster_name)
+        client = get_client_by_cluster_name(cluster_name=cluster_name)
 
         logger.info(f'generating state for [{region}/{cluster_name}]...')
-        state = generate_state(region, cluster_name, sched_client, data['ignore_labels'])
+        state = generate_state(region, cluster_name, client, data['ignore_labels'])
 
         logger.info('syncing the state to nodes...')
-        sched_client.sync_state_to_nodes(state)
+        sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

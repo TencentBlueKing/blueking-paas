@@ -52,8 +52,8 @@ from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.processes.entities import Process
 
 if TYPE_CHECKING:
+    from paas_wl.deploy.app_res.generation import MapperPack
     from paas_wl.resources.base.base import EnhancedApiClient
-    from paas_wl.resources.base.generation import MapperPack
     from paasng.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)

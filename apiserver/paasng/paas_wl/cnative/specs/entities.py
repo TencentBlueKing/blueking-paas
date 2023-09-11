@@ -57,12 +57,13 @@ class BkAppManifestProcessor:
         self.env = model_deploy.environment
         self.model_deploy = model_deploy
 
-    def build_manifest(self, build: Optional[Build] = None) -> Dict:
+    def build_manifest(self, build: Optional[Build] = None, acl_enabled: bool = False) -> Dict:
         """inject bkpaas-specific properties to annotations
 
         :param build: optional, artifact build by platform
             if build.image is not None, will overwrite the image filed in manifest
             if the image is built by CNB runtime, will set `use-cnb` annotation to "true"
+        :param acl_enabled: whether the access control module is enabled.
         """
         wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
         manifest = BkAppResource(**self.model_deploy.revision.json_value)
@@ -77,7 +78,9 @@ class BkAppManifestProcessor:
             use_cnb = build.artifact_metadata.get("use_cnb", False)
 
         # 更新注解，包含应用基本信息，增强服务，访问控制，镜像凭证等
-        self._inject_annotations(manifest, self.env.application, self.env, wl_app, use_cnb=use_cnb)
+        self._inject_annotations(
+            manifest, self.env.application, self.env, wl_app, use_cnb=use_cnb, acl_enabled=acl_enabled
+        )
 
         # 注入用户自定义变量，与 YAML 中定义的进行合并，优先级：页面填写的 > YAML 中已有的
         manifest.spec.configuration.env = merge_envvars(
@@ -112,6 +115,7 @@ class BkAppManifestProcessor:
         env: ModuleEnvironment,
         wl_app: WlApp,
         use_cnb: bool = False,
+        acl_enabled: bool = False,
     ) -> None:
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.model_deploy.pk)
@@ -150,10 +154,5 @@ class BkAppManifestProcessor:
         manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
 
         # inject access control enable info
-        try:
-            from paasng.security.access_control.models import ApplicationAccessControlSwitch
-        except ImportError:
-            logger.info('access control only supported in te region, skip when inject annotations...')
-        else:
-            if ApplicationAccessControlSwitch.objects.is_enabled(application):
-                manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
+        if acl_enabled:
+            manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,33 +16,31 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+"""Archive related deploy functions"""
+import logging
 
+from paas_wl.deploy.processes import get_proc_ctl
+from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.operations.models import Operation
+
+logger = logging.getLogger(__name__)
 
 
-class LocalPlatformSvcClient:
-    """Client for "apiserver" module, uses local module"""
+class ArchiveOperationController:
+    """Controller for offline operation"""
 
-    def create_operation_log(
-        self,
-        env: ModuleEnvironment,
-        operate_type: int,
-        operator: str,
-        extra_values: Optional[Dict] = None,
-    ):
-        """Create an operation log for application
+    def __init__(self, env: ModuleEnvironment):
+        self.env = env
 
-        :returns: None if creation succeeded
-        :raises: PlatClientRequestError
-        """
-        Operation.objects.create(
-            application=env.application,
-            type=operate_type,
-            user=operator,
-            region=env.application.region,
-            module_name=env.module.name,
-            source_object_id=str(env.id),
-            extra_values=extra_values,
-        )
+    def start(self):
+        self.stop_all_processes()
+        make_bk_monitor_controller(self.env.wl_app).remove()
+
+    def stop_all_processes(self):
+        """Stop all processes"""
+        ctl = get_proc_ctl(env=self.env)
+        lister = ProcessManager(env=self.env)
+        for proc_spec in lister.list_processes_specs():
+            proc_type = proc_spec["name"]
+            ctl.stop(proc_type=proc_type)

@@ -22,11 +22,11 @@ from typing import Dict
 from attr import define, field
 from six import ensure_text
 
+from paas_wl.deploy.actions.exceptions import BuildMissingError, CommandRerunError
+from paas_wl.deploy.app_res.utils import K8sScheduler, get_scheduler_client_by_app
 from paas_wl.release_controller.hooks.entities import Command as CommandKModel
 from paas_wl.release_controller.hooks.models import Command
-from paas_wl.resources.actions.exceptions import BuildMissingError, CommandRerunError
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
-from paas_wl.resources.utils.app import K8sScheduler, get_scheduler_client_by_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
 from paasng.engine.utils.output import DeployStream, Style

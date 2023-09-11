@@ -16,13 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
+import pytest
 
 
-class TestPresetClient:
-    """由于 preset client 只是在 configuration 读取 & failover 上有差异
-    所以在这里测试
-    """
-
-    def test_call_api(self, scheduler_client):
-        result = scheduler_client.get_nodes()
-        assert isinstance(result, list)
+@pytest.fixture
+def mock_run_command():
+    with mock.patch("paas_wl.deploy.app_res.client.K8sScheduler.run_command"):
+        yield

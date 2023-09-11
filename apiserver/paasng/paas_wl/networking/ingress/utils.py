@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from paas_wl.cnative.specs.models import generate_bkapp_name
+from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
@@ -32,7 +32,7 @@ def make_service_name(app: WlApp, process_type: str) -> str:
     if app.type == WlAppType.CLOUD_NATIVE:
         # pkg/controllers/resources/names/names.go
         # return DNSSafeName(bkapp.GetName() + "--" + process)
-        return f"{generate_bkapp_name(app)}--{process_type}"
+        return f"{CNativeBkAppNameGenerator.generate(app)}--{process_type}"
     return f"{app.region}-{app.scheduler_safe_name}-{process_type}"
 
 

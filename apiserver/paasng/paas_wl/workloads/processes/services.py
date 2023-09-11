@@ -15,3 +15,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.platform.applications.models.config import Config
+from paas_wl.workloads.processes.models import ProcessSpec
+
+
+def refresh_res_reqs(config: Config):
+    """Refresh resource_requirements field"""
+    config.resource_requirements = {
+        pack.name: pack.plan.get_resource_summary() for pack in ProcessSpec.objects.filter(engine_app_id=config.app.pk)
+    }
+    config.save(update_fields=['resource_requirements'])

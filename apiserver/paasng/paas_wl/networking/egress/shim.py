@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,17 +15,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.utils.app import get_scheduler_client_by_app
-from paas_wl.workloads.processes.controllers import env_is_running
-from paasng.platform.applications.models import ModuleEnvironment
+from paas_wl.cluster.models import Cluster
+from paas_wl.networking.egress.misc import ClusterEgressIps, get_cluster_egress_ips
 
 
-def delete_env_resources(env: 'ModuleEnvironment'):
-    """Delete app's resources in cluster"""
-    if not env_is_running(env):
-        return
-
-    wl_app = env.wl_app
-    scheduler_client = get_scheduler_client_by_app(app=wl_app)
-    scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
-    return
+def get_cluster_egress_info(cluster_name: str) -> ClusterEgressIps:
+    """Get cluster's egress info"""
+    cluster = Cluster.objects.get(name=cluster_name)
+    return get_cluster_egress_ips(cluster)

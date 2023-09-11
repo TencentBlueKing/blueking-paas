@@ -33,7 +33,7 @@ from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.constants import AppFeatureFlag
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
 

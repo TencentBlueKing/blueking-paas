@@ -26,9 +26,9 @@ from django.conf import settings
 from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
+from paas_wl.deploy.app_res.controllers import BuildHandler
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
-from paas_wl.resources.base.controllers import BuildHandler
 from paas_wl.resources.base.exceptions import (
     PodAbsentError,
     PodNotSucceededError,
@@ -44,7 +44,7 @@ from paas_wl.workloads.processes.managers import AppProcessManager
 from paasng.engine.configurations.building import SlugBuilderTemplate
 from paasng.engine.deploy.bg_build.utils import generate_builder_name
 
-from .test_kres import construct_foo_pod
+from .conftest import construct_foo_pod
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -194,7 +194,7 @@ class TestClientBuild:
         ), patch('paas_wl.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
             'paas_wl.resources.base.kres.NameBasedOperations.create_or_update', kpod_create_or_update
         ), patch(
-            "paas_wl.resources.base.controllers.WaitPodDelete.wait"
+            "paas_wl.deploy.app_res.controllers.WaitPodDelete.wait"
         ):
             scheduler_client.build_slug(template=pod_template)
             assert kpod_get.called

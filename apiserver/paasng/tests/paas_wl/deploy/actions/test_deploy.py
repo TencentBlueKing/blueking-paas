@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.resources.actions.deploy import ZombieProcessesKiller
+from paas_wl.deploy.actions.deploy import ZombieProcessesKiller
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

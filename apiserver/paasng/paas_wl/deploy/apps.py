@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,12 +15,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest import mock
-
-import pytest
+from django.apps import AppConfig
 
 
-@pytest.fixture
-def mock_run_command():
-    with mock.patch("paas_wl.resources.base.client.K8sScheduler.run_command"):
-        yield
+class DeployAppConfig(AppConfig):
+    name = 'paas_wl.deploy'

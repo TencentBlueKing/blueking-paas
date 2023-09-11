@@ -15,11 +15,17 @@
           </p>
           <p class="deploy-text-wrapper">
             <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
-              <span class="branch-text"> {{ $t('分支：') }} {{ deploymentInfo.version_info.version_name }}</span>
-              <span class="version-text pl30"> {{ $t('版本：') }} {{ deploymentInfo.version_info.revision }}</span>
+              <span class="version-text pl30"> {{ $t('版本：') }}
+                {{ deploymentInfo.version_info.revision.substring(1,8) }}
+              </span>
+              <span class="branch-text"> {{ $t('分支：') }}
+                {{ deploymentInfo.version_info.version_name }}
+              </span>
             </span>
             <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
-              <span class="branch-text"> {{ $t('镜像Tag：') }} {{ deploymentInfo.version_info.version_name }}</span>
+              <span class="branch-text"> {{ $t('镜像Tag：') }}
+                {{ deploymentInfo.version_info.version_name.substring(0,16) }}
+              </span>
             </span>
             <span
               v-if="deployTotalTime"
@@ -377,7 +383,7 @@ export default {
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleSetFailed();
 
           if (this.isDeploySuccess) {
-            this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
+            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
           }
           this.getDeployResult(deployId);
         }, false);

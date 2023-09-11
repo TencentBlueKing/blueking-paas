@@ -25,20 +25,20 @@
                 <span class="name">{{deploymentInfo.module_name}}</span>
                 <i class="paasng-icon paasng-jump-link icon-cls-link" />
               </div>
-              <template v-if="deploymentInfo.is_deployed">
+              <template v-if="deploymentInfo.state.deployment.latest_succeeded">
                 <!-- 源码&镜像 -->
                 <div class="flex-row" v-if="deploymentInfo.build_method === 'dockerfile'">
                   <div class="version">
                     <span class="label">版本：</span>
                     <span class="value">
-                      {{ deploymentInfo.version_info.revision }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
                     </span>
                   </div>
                   <div class="line"></div>
                   <div class="branch">
                     <span class="label">分支：</span>
                     <span class="value">
-                      {{ deploymentInfo.version_info.version_name }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
                     </span>
                   </div>
                 </div>
@@ -47,7 +47,7 @@
                   <div class="version">
                     <span class="label">镜像Tag：</span>
                     <span class="value">
-                      {{ deploymentInfo.version_info.version_name }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
                     </span>
                   </div>
                 </div>
@@ -62,16 +62,16 @@
                 class="mr10"
                 size="small"
                 @click="handleDeploy(deploymentInfo)"
-                :disabled="(isWatchOfflineing)
-                  && curDeploymentInfoItem.module_name === deploymentInfo.module_name">
+                :disabled="(deploymentInfo.state.offline.pending || deploymentInfo.state.deployment.pending)"
+                :loading="!!deploymentInfo.state.deployment.pending">
                 部署
               </bk-button>
               <bk-button
                 :theme="'default'"
                 size="small"
                 @click="handleOfflineApp(deploymentInfo)"
-                :disabled="isWatchOfflineing && curDeploymentInfoItem.module_name === deploymentInfo.module_name"
-                :loading="isWatchOfflineing && curDeploymentInfoItem.module_name === deploymentInfo.module_name">
+                :disabled="deploymentInfo.state.offline.pending || deploymentInfo.state.deployment.pending"
+                :loading="!!deploymentInfo.state.offline.pending">
                 下架
               </bk-button>
             </div>
@@ -215,12 +215,12 @@ export default {
     async confirmOfflineApp() {
       this.offlineAppDialog.isLoading = true;
       try {
-        const res = await this.$store.dispatch('deploy/offlineApp', {
+        await this.$store.dispatch('deploy/offlineApp', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
         });
-        this.watchOfflineOperation(res.offline_operation_id);   // 轮询获取下架的进度
+        this.watchOfflineOperation();   // 轮询获取下架的进度
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -236,42 +236,43 @@ export default {
     /**
      * 轮询获取应用下架进度
      */
-    watchOfflineOperation(offlineOperationId) {
+    watchOfflineOperation() {
       this.isWatchOfflineing = true;
       this.offlineTimer = setInterval(async () => {
-        try {
-          const res = await this.$store.dispatch('deploy/getOfflineResult', {
-            appCode: this.appCode,
-            moduleId: this.curModuleId,
-            offlineOperationId,
-          });
+        this.getModuleReleaseInfo(false);
+        // try {
+        //   const res = await this.$store.dispatch('deploy/getOfflineResult', {
+        //     appCode: this.appCode,
+        //     moduleId: this.curModuleId,
+        //     offlineOperationId,
+        //   });
 
-          // 下架进行中，三状态：pendding successful failed，pendding需要继续轮询
-          if (res.status === 'successful') {
-            this.isWatchOfflineing = false;
-            this.getModuleReleaseInfo();
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('应用下架成功'),
-            });
-            clearInterval(this.offlineTimer);
-          } else if (res.status === 'failed') {
-            const message = res.err_detail;
-            this.isWatchOfflineing = false;
-            this.$paasMessage({
-              theme: 'error',
-              message,
-            });
-            clearInterval(this.offlineTimer);
-          }
-        } catch (e) {
-          this.isWatchOfflineing = false;
-          clearInterval(this.offlineTimer);
-          this.$paasMessage({
-            theme: 'error',
-            message: e.detail || e.message || this.$t('下架失败，请稍候再试'),
-          });
-        }
+        //   // 下架进行中，三状态：pendding successful failed，pendding需要继续轮询
+        //   if (res.status === 'successful') {
+        //     this.isWatchOfflineing = false;
+        //     this.getModuleReleaseInfo();
+        //     this.$paasMessage({
+        //       theme: 'success',
+        //       message: this.$t('应用下架成功'),
+        //     });
+        //     clearInterval(this.offlineTimer);
+        //   } else if (res.status === 'failed') {
+        //     const message = res.err_detail;
+        //     this.isWatchOfflineing = false;
+        //     this.$paasMessage({
+        //       theme: 'error',
+        //       message,
+        //     });
+        //     clearInterval(this.offlineTimer);
+        //   }
+        // } catch (e) {
+        //   this.isWatchOfflineing = false;
+        //   clearInterval(this.offlineTimer);
+        //   this.$paasMessage({
+        //     theme: 'error',
+        //     message: e.detail || e.message || this.$t('下架失败，请稍候再试'),
+        //   });
+        // }
       }, 3000);
     },
 
@@ -288,24 +289,37 @@ export default {
           appCode: this.appCode,
           env: this.environment,
         });
-        this.deploymentInfoData = res.data;
+        // this.deploymentInfoData = res.data;
+        this.$set(this, 'deploymentInfoData', res.data);
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
+        console.log(111, this.deploymentInfoData);
+        const isOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending);    // 正在下架的数据
+        this.isWatchOfflineing = !!(isOfflinedData.length);   // 如果还存在下架中的数据，这说明还有模块在下架中
+        if (!this.isWatchOfflineing) {
+          if (this.offlineTimer) {
+            clearInterval(this.offlineTimer);
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('应用下架成功'),
+            });
+          }
+        }
         // if (!res.code) {
         //   // 已下架
-        //   if (res.is_offlined) {
-        //     res.offline.repo.version = this.formatRevision(res.offline.repo.revision);
-        //     this.deploymentInfo = res.offline;
-        //     this.isAppOffline = true;
-        //   } else if (res.deployment) {
-        //     res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
-        //     this.deploymentInfo = res.deployment;
-        //     console.log('this.deploymentInfo', this.deploymentInfo);
-        //     this.isAppOffline = false;
-        //   } else {
-        //     this.deploymentInfo = {
-        //       repo: {},
-        //     };
-        //   }
+        // if (res.is_offlined) {
+        //   res.offline.repo.version = this.formatRevision(res.offline.repo.revision);
+        //   this.deploymentInfo = res.offline;
+        //   this.isAppOffline = true;
+        // } else if (res.deployment) {
+        //   res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
+        //   this.deploymentInfo = res.deployment;
+        //   console.log('this.deploymentInfo', this.deploymentInfo);
+        //   this.isAppOffline = false;
+        // } else {
+        //   this.deploymentInfo = {
+        //     repo: {},
+        //   };
+        // }
 
         //   // 是否第一次部署
         //   this.isFirstDeploy = !res.deployment;

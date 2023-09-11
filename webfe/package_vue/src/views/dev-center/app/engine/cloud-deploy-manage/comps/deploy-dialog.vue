@@ -113,7 +113,7 @@
           </bk-select>
         </div>
       </div>
-      <div class="mt20" v-else>
+      <div v-else>
         <div class="mb10 flex-row justify-content-between">
           <div>镜像Tag</div>
         </div>

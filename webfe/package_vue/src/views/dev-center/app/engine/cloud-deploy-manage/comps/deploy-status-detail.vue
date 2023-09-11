@@ -1,0 +1,867 @@
+<template>
+  <div class="deploy-view pl10 pr10 pt20">
+    <!-- 部署中、部署成功、部署失败 -->
+    <div v-if="isWatchDeploying || isDeploySuccess || isDeployFail">
+      <bk-alert type="info" :show-icon="false" class="mb20" v-if="isWatchDeploying">
+        <div class="flex-row align-items-center" slot="title">
+          <div class="fl">
+            <round-loading
+              size="small"
+              ext-cls="deploy-round-loading"
+            />
+          </div>
+          <p class="deploy-pending-text pl20">
+            {{ $t('正在部署中...') }}
+          </p>
+          <p class="deploy-text-wrapper">
+            <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
+              <span class="branch-text"> {{ $t('分支：') }} {{ deploymentInfo.version_info.version_name }}</span>
+              <span class="version-text pl30"> {{ $t('版本：') }} {{ deploymentInfo.version_info.revision }}</span>
+            </span>
+            <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
+              <span class="branch-text"> {{ $t('镜像Tag：') }} {{ deploymentInfo.version_info.version_name }}</span>
+            </span>
+            <span
+              v-if="deployTotalTime"
+              class="time-text"
+            > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+          </p>
+        </div>
+      </bk-alert>
+      <bk-alert type="error" :show-icon="false" class="mb20" v-if="isDeployFail">
+        <div class="flex-row align-items-center" slot="title">
+          <p class="deploy-pending-text pl10">
+            {{ $t('部署失败') }}
+          </p>
+          <p class="pl20">
+            <span>{{ curDeployResult.possible_reason }}</span>
+            <span class="pl10" v-if="curDeployResult.result === 'failed'">
+              <span
+                v-for="(help, index) in curDeployResult.error_tips.helpers"
+                :key="index"
+              >
+                <a
+                  :href="help.link"
+                  target="_blank"
+                  class="mr10"
+                >
+                  {{ help.text }}
+                </a>
+              </span>
+            </span>
+          </p>
+          <bk-button
+            theme="danger"
+            ext-cls="paas-deploy-failed-btn"
+            outline
+            @click="handleCallback"
+          >
+            {{ $t('返回') }}
+          </bk-button>
+        </div>
+      </bk-alert>
+      <bk-alert type="success" :show-icon="false" class="mb20" v-if="isDeploySuccess">
+        <div class="flex-row align-items-center" slot="title">
+          <p class="deploy-pending-text pl10">
+            {{ $t('部署成功') }}
+          </p>
+          <bk-button
+            style="margin-left: 6px;"
+            theme="success"
+            ext-cls="paas-deploy-success-btn"
+            outline
+            @click="handleCallback"
+          >
+            {{ $t('返回') }}
+          </bk-button>
+        </div>
+      </bk-alert>
+    </div>
+    <div class="deploy-time-log flex-row">
+      <div
+        id="deploy-timeline-box"
+        style="width: 230px"
+      >
+        <deploy-timeline
+          ref="deployTimelineRef"
+          :key="timelineComKey"
+          :list="timeLineList"
+          :stage="curDeployStage"
+          disabled
+        />
+      </div>
+      <deploy-log
+        v-if="isWatchDeploying || isDeploySuccess || isDeployFail || isDeployInterrupted || isDeployInterrupting"
+        ref="deployLogRef"
+        :build-list="streamLogs"
+        :ready-list="readyLogs"
+        :process-list="allProcesses"
+        :state-process="appearDeployState"
+        :process-loading="processLoading"
+        :environment="environment"
+      />
+    </div>
+  </div>
+</template>
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
+import deployTimeline from './deploy-timeline';
+import deployLog from './deploy-log';
+import moment from 'moment';
+export default {
+  components: {
+    deployTimeline,
+    deployLog,
+  },
+  mixins: [appBaseMixin],
+  props: {
+    environment: {
+      type: String,
+      default: () => 'stag',
+    },
+    deploymentId: {     // 部署id, stream流需要用到的参数
+      type: String,
+      default: () => '',
+    },
+    deploymentInfo: {
+      type: Object,
+      default: () => {},
+    },
+  },
+  data() {
+    const curDeployResult = {
+      possible_reason: '',
+      logs: '',
+      exposedLink: '',
+      title: '',
+      result: '',
+      resultMessage: this.$t('应用部署成功，已发布至蓝鲸应用市场。'),
+      error_tips: null,
+      getResultDisplay() {
+        if (this.result === 'successful') {
+          return this.$t('部署成功');
+        }
+        return this.$t('部署失败');
+      },
+      getTitleDisplay() {
+        if (this.result) {
+          return this.$t('项目部署结束');
+        }
+        return this.title;
+      },
+    };
+    return {
+      serverLogEvent: null,
+      timelineComKey: -1,
+      streamLogs: [],       // 日志流信息
+      eventSourceState: {
+        CLOSED: 2,
+      },
+      isLogError: false,        // 日志错误
+      appearDeployState: [],
+      readyLogs: [],        // 准备阶段日志
+      deployStartTimeQueue: [],
+      deployEndTimeQueue: [],
+      isDeploySuccess: false,
+      isDeployFail: false,
+      isDeployInterrupted: false,
+      isDeployInterrupting: false,
+      isWatchDeploying: true,
+      timeLineList: [],     // 时间节点数据
+      curDeployResult,
+      deployTotalTime: 0,       // 部署总耗时
+      appMarketPublished: false,     // 是否发布到应用市场
+      allProcesses: [],      // 全部进程
+      processLoading: false,
+      prevProcessVersion: 0,
+      prevInstanceVersion: 0,
+      releaseId: '',   // 部署id
+      isDeployReady: true,
+      curProcess: {},  // 当前模块的进程信息
+      serverProcessEvent: null,
+      watchServerTimer: null,
+    };
+  },
+  computed: {
+    curDeployStage() {
+      const flag = this.isWatchDeploying || this.isDeploySuccess
+      || this.isDeployFail || this.isDeployInterrupted || this.isDeployInterrupting;
+      return flag ? 'deploy' : 'noDeploy';
+    },
+    curModuleId() {
+      // 当前模块的名称
+      return this.deploymentInfo.module_name;
+    },
+    // 总时间
+    deployTotalTimeDisplay() {
+      return this.getDisplayTime(this.deployTotalTime);
+    },
+  },
+  watch: {
+    deploymentId: {
+      handler(v) {
+        this.watchDeployStatus(v);
+      },
+      immediate: true,
+    },
+  },
+  mounted() {
+    // 初始化日志彩色组件
+    // eslint-disable-next-line
+    const AU = require('ansi_up')
+    // eslint-disable-next-line
+    this.ansiUp = new AU.default
+
+    window.addEventListener('scroll', () => {
+      this.isScrollFixed = (this.isWatchDeploying || this.isWatchOfflineing
+      || this.isDeploySuccess || this.isDeployFail
+      || this.isDeployInterrupted || this.isDeployInterrupting)
+      && (window.pageYOffset >= 260);
+    });
+
+    window.addEventListener('resize', () => {
+      this.computedBoxFixed();
+    });
+    // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
+    this.isDeployReady = true;
+    this.init();
+  },
+  methods: {
+    init() {
+      this.getPreDeployDetail();
+    //   this.watchDeployStatus();
+    },
+    /**
+     * 监听部署进度，打印日志
+     */
+    watchDeployStatus(deployId) {
+      this.serverLogEvent = null;
+      this.timelineComKey = +new Date();
+      this.streamLogs = [];
+      this.streamPanelShowed = true;
+      this.isDeploySseEof = false;
+
+      clearInterval(this.watchTimer);
+      if (this.serverLogEvent === null || this.serverLogEvent.readyState === this.eventSourceState.CLOSED) {
+        this.serverLogEvent = new EventSource(`${BACKEND_URL}/streams/${deployId}`, {
+          withCredentials: true,
+        });
+        this.serverLogEvent.onmessage = (event) => {
+          // 如果是error，会重新发起日志请求，在下次信息返回前清空上次信息
+          if (this.isLogError) {
+            this.streamLogs = [];
+            this.isLogError = false;
+            // streamLogItems = []
+          }
+          const item = JSON.parse(event.data);
+          if (this.isDeployReady) {
+            this.appearDeployState.push('preparation');
+            this.$nextTick(() => {
+              this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'pending', '');
+            });
+            this.readyLogs.push(this.ansiUp.ansi_to_html(item.line));
+          } else {
+            this.streamLogs.push(this.ansiUp.ansi_to_html(item.line));
+          }
+        };
+
+        this.serverLogEvent.addEventListener('phase', (event) => {
+          const item = JSON.parse(event.data);
+          if (item.name === 'build') {
+            this.isDeployReady = false;
+          }
+
+          if (['build', 'preparation'].includes(item.name)) {
+            this.appearDeployState.push(item.name);
+          }
+          let content = '';
+          if (item.status === 'successful') {
+            this.deployStartTimeQueue.push(item.start_time);
+            this.deployEndTimeQueue.push(item.complete_time);
+          }
+
+          if (item.name === 'release' && ['failed', 'successful'].includes(item.status)) {
+            content = this.computedDeployTime(item.start_time, item.complete_time);
+          }
+
+          if (item.name === 'release' && item.status === 'successful') {
+            // 部署成功
+            this.isDeploySuccess = true;
+            this.getModuleReleaseInfo();
+          } else if (item.status === 'failed') {
+            // 部署失败
+            this.isDeployFail = true;
+          } else if (item.status === 'interrupted') {
+            // 停止部署成功
+            this.isDeployInterrupted = true;
+            this.isDeployInterrupting = false;
+          }
+          this.$nextTick(() => {
+            this.$refs.deployTimelineRef
+            && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+          });
+        });
+
+        this.serverLogEvent.addEventListener('step', (event) => {
+          const item = JSON.parse(event.data);
+          let content = '';
+
+          if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
+            this.appearDeployState.push('release');
+            this.releaseId = item.release_id;
+            this.getProcessList(true);
+
+            // 发起服务监听
+            this.watchServerPush();
+            this.$nextTick(() => {
+              this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
+            });
+          }
+
+          if (['failed', 'successful'].includes(item.status)) {
+            content = this.computedDeployTime(item.start_time, item.complete_time);
+          }
+
+          if (item.status === 'successful' && item.name === this.$t('检测部署结果')) {
+            this.serverProcessEvent.close();  // 关闭进程的watch事件流
+          }
+          this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+          this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.$forceUpdate();
+        });
+
+        this.serverLogEvent.onerror = () => {
+          this.isLogError = true;
+
+          if (this.serverLogEvent.readyState === this.eventSourceState.CLOSED) {
+            // 超过重试限制
+            if (this.reConnectTimes >= this.reConnectLimit) {
+              this.$paasMessage({
+                theme: 'error',
+                message: this.$t('日志输出流异常，建议您刷新页面重试!'),
+              });
+            }
+
+            this.reConnectTimes += 1;
+            // cancel debounced before we start new one
+            // this.timeoutDebounced.cancel()
+            setTimeout(() => {
+              this.watchDeployStatus(deployId);
+            }, 3000);
+          }
+        };
+
+        // 监听到部署结束
+        this.serverLogEvent.addEventListener('EOF', () => {
+          this.reConnectTimes = 0;
+          this.serverLogEvent.close();
+          this.serverProcessEvent && this.serverProcessEvent.close();  // 关闭进程的watch事件流
+          this.isDeploySseEof = true;
+          // this.allProcesses = JSON.parse(JSON.stringify(this.allProcesses))
+
+          // 判断是否在准备阶段就失败
+          const isReadyFailed = this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleGetIsInit();
+
+          isReadyFailed && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'failed', '');
+
+          this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleSetFailed();
+
+          if (this.isDeploySuccess) {
+            this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
+          }
+          this.getDeployResult(deployId);
+        }, false);
+
+        // 监听到部署slider title变化
+        this.serverLogEvent.addEventListener('title', (event) => {
+          this.curDeployResult.title = event.data;
+        }, true);
+      }
+    },
+
+    closeServerPush() {
+      // 把当前服务监听关闭
+      if (this.serverProcessEvent) {
+        this.serverProcessEvent.close();
+        if (this.watchServerTimer) {
+          clearTimeout(this.watchServerTimer);
+        };
+      }
+    },
+
+    /**
+     * 计算部署进程间的所花时间
+     */
+    computedDeployTime(startTime, endTime) {
+      const start = new Date(startTime).getTime();
+      const end = new Date(endTime).getTime();
+      const interval = (end - start) / 1000;
+
+      if (!interval) {
+        return `< 1${this.$t('秒')}`;
+      }
+
+      return this.getDisplayTime(interval);
+    },
+
+    /**
+     * 展示到页面的时间
+     */
+    getDisplayTime(payload) {
+      let theTime = payload;
+      if (theTime < 1) {
+        return `< 1${this.$t('秒')}`;
+      }
+      let middle = 0;
+      let hour = 0;
+
+      if (theTime > 60) {
+        middle = parseInt(theTime / 60, 10);
+        theTime = parseInt(theTime % 60, 10);
+        if (middle > 60) {
+          hour = parseInt(middle / 60, 10);
+          middle = parseInt(middle % 60, 10);
+        }
+      }
+
+      let result = '';
+
+      if (theTime > 0) {
+        result = `${theTime}${this.$t('秒')}`;
+      }
+      if (middle > 0) {
+        result = `${middle}${this.$t('分')}${result}`;
+      }
+      if (hour > 0) {
+        result = `${hour}${this.$t('时')}${result}`;
+      }
+
+      return result;
+    },
+
+
+    /**
+     * 获取部署前各阶段详情
+     */
+    async getPreDeployDetail() {
+      try {
+        const res = await this.$store.dispatch('deploy/getPreDeployDetail', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+        });
+        const timeLineList = [];
+        res.forEach((stageItem) => {
+          timeLineList.push({
+            // name: 部署阶段的名称
+            name: stageItem.type,
+            // tag: 部署阶段的展示名称
+            tag: stageItem.display_name,
+            // content: 完成时间
+            content: '',
+            // status: 部署阶段的状态
+            status: 'default',
+            displayBlocks: this.formatDisplayBlock(stageItem.display_blocks),
+            // stage: 部署阶段类型, 仅主节点有该字段
+            stage: stageItem.type,
+            // sse没返回子进程的状态时强行改变当前的进程状态为 pending 的标识
+            loading: false,
+          });
+
+          stageItem.steps.forEach((stepItem) => {
+            timeLineList.push({
+              // name: 部署阶段的名称
+              name: stepItem.name,
+              // tag: 部署阶段的展示名称
+              tag: stepItem.display_name,
+              // content: 完成时间
+              content: '',
+              // status: 部署阶段的状态
+              status: 'default',
+              parent: stageItem.display_name,
+              parentStage: stageItem.type,
+            });
+          });
+        });
+        this.timeLineList = timeLineList;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      }
+    },
+
+    /**
+     * 获取部署结果
+     */
+    async getDeployResult(deployId) {
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployResult', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          deployId,
+        });
+        console.log('res', res);
+        this.curDeployResult.result = res.status;
+        this.curDeployResult.logs = res.logs;
+        if (res.status === 'successful') {
+          this.computedTotalTime();
+          this.curDeployResult.possible_reason = '';
+          this.curDeployResult.error_tips = null;
+
+          const appInfo = await this.$store.dispatch('getAppInfo', {
+            appCode: this.appCode,
+            moduleId: this.curModuleId,
+          });
+          this.appMarketPublished = appInfo.web_config.market_published;
+        } else {
+          this.curDeployResult.possible_reason = res.error_tips.possible_reason;
+          this.curDeployResult.error_tips = res.error_tips;
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('部署失败，请稍候再试'),
+        });
+      } finally {
+        this.isWatchDeploying = false;
+      }
+    },
+
+    // 成功计算部署总耗时
+    computedTotalTime() {
+      const startTime = new Date(this.deployStartTimeQueue[0]).getTime();
+      const endTime = new Date(this.deployEndTimeQueue[this.deployEndTimeQueue.length - 1]).getTime();
+      this.deployTotalTime = (endTime - startTime) / 1000;
+    },
+
+    // 展示时间节点数据
+    formatDisplayBlock(displays) {
+      const displayBlocks = [];
+      const keys = Object.keys(displays);
+      for (const key of keys) {
+        const sourceInfo = [];
+        if (displays[key].display_name) {
+          sourceInfo.push({
+            text: this.$t('类型'),
+            value: displays[key].display_name,
+          });
+        }
+        if (displays[key].repo_url) {
+          sourceInfo.push({
+            text: this.$t('地址'),
+            value: displays[key].repo_url,
+          });
+        }
+        if (displays[key].source_dir) {
+          sourceInfo.push({
+            text: this.$t('部署目录'),
+            value: displays[key].source_dir,
+          });
+        }
+        if (this.curAppInfo.application.type === 'bk_plugin') {
+          sourceInfo.push({
+            text: this.$t('模块类型'),
+            value: this.$t('蓝鲸插件'),
+            href: this.GLOBAL.LINK.BK_PLUGIN,
+            hrefText: this.$t('查看详情'),
+          });
+        }
+
+        // 普通应用不展示
+        if (this.curAppModule.web_config.templated_source_enabled
+        && this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
+          sourceInfo.push({
+            text: this.$t('初始化模板类型'),
+            value: this.initTemplateTypeDisplay || '--',
+          }, {
+            text: this.$t('初始化模板说明'),
+            value: this.initTemplateDesc || '--',
+            downloadBtn: this.handleDownloadTemplate,
+            downloadBtnText: this.initTemplateDesc === '--' ? '' : this.$t('下载模板代码'),
+          });
+        }
+
+        if (this.curAppModule.web_config.runtime_type !== 'custom_image') {
+          const smartRoute = [
+            {
+              name: this.$t('查看包版本'),
+              route: {
+                name: 'appPackages',
+              },
+            },
+          ];
+          const value = this.isSmartApp ? smartRoute : (this.curAppModule.source_origin === 1 ? this.$t('代码库') : this.$t('蓝鲸可视化开发平台提供源码包'));
+          // 普通应用不展示
+          if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
+            sourceInfo.push({
+              text: this.$t('源码管理'),
+              value,
+            });
+          }
+        }
+
+        switch (key) {
+          // 源码信息
+          case 'source_info':
+            displayBlocks.push({
+              name: this.curAppModule.web_config.runtime_type === 'custom_image' ? this.$t('镜像信息') : this.$t('源码信息'),
+              type: 'key-value',
+              routerName: 'moduleManage',
+              key,
+              infos: sourceInfo,
+            });
+            break;
+
+            // 增强服务
+          case 'services_info':
+            displayBlocks.push({
+              name: this.$t('增强服务'),
+              type: 'key-value',
+              key,
+              infos: [
+                {
+                  text: this.$t('启用未创建'),
+                  value: displays[key].filter(item => !item.is_provisioned).map(item => item.display_name)
+                    .join(', '),
+                },
+                {
+                  text: this.$t('已创建实例'),
+                  value: displays[key].filter(item => item.is_provisioned).map(item => ({
+                    name: item.display_name,
+                    route: {
+                      name: 'appServiceInner',
+                      params: {
+                        id: this.appCode,
+                        service: item.service_id,
+                        category_id: item.category_id,
+                      },
+                    },
+                  })),
+                },
+              ],
+            });
+            break;
+
+            // 运行时的信息
+          case 'runtime_info':
+            displayBlocks.push({
+              name: this.$t('运行时信息'),
+              type: 'key-value',
+              routerName: 'appEnvVariables',
+              key,
+              infos: [
+                {
+                  text: this.$t('基础镜像'),
+                  value: displays[key].image,
+                },
+                {
+                  text: this.$t('构建工具'),
+                  value: displays[key].buildpacks.map(item => item.display_name).join(', '),
+                },
+              ],
+            });
+            break;
+
+            // 访问地址
+          case 'access_info':
+            displayBlocks.push({
+              name: this.$t('访问地址'),
+              type: 'key-value',
+              routerName: 'appEntryConfig',
+              key,
+              infos: [
+                {
+                  text: this.$t('当前类型'),
+                  value: displays[key] && displays[key].type === 'default_subdomain' ? this.$t('子域名') : this.$t('子路径'),
+                },
+                {
+                  text: this.$t('访问地址'),
+                  value: displays[key].address,
+                },
+              ],
+            });
+            break;
+
+            // 帮助文档
+          case 'prepare_help_docs':
+          case 'build_help_docs':
+          case 'release_help_docs':
+            displayBlocks.push({
+              name: this.$t('帮助文档'),
+              type: 'link',
+              key,
+              infos: displays[key].map(doc => ({
+                text: doc.name,
+                value: doc.link,
+              })),
+            });
+            break;
+        }
+      }
+      return displayBlocks;
+    },
+
+
+    // 获取进程列表
+    async getProcessList(isLoading = false) {
+      this.processLoading = isLoading;
+      try {
+        const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
+          appCode: this.appCode,
+          env: this.environment,
+        });
+        this.curProcess = res.data.find(e => e.module_name === this.curModuleId);
+        this.formatProcesses(this.curProcess);
+      } catch (e) {
+        // 无法获取进程目前状态
+        console.error(e);
+      } finally {
+        this.processLoading = false;
+      }
+    },
+
+
+    // 对数据进行处理
+    formatProcesses(processesData) {
+      const allProcesses = [];
+
+      // 遍历进行数据组装
+      const packages = processesData.proc_specs;
+      const { instances } = processesData;
+      console.log('processesData', processesData);
+
+      processesData.processes.forEach((processItem) => {
+        const { type } = processItem;
+        const packageInfo = packages.find(item => item.name === type);
+
+        const processInfo = {
+          ...processItem,
+          ...packageInfo,
+          instances: [],
+        };
+
+        instances.forEach((instance) => {
+          if (instance.process_type === type) {
+            processInfo.instances.push(instance);
+          }
+        });
+
+        // 作数据转换，以兼容原逻辑
+        const process = {
+          name: processInfo.name,
+          instance: processInfo.instances.length,
+          instances: processInfo.instances,
+          targetReplicas: processInfo.target_replicas,
+          isStopTrigger: false,
+          targetStatus: processInfo.target_status,
+          isActionLoading: false, // 用于记录进程启动/停止接口是否已完成
+          maxReplicas: processInfo.max_replicas,
+          status: 'Stopped',
+          cmd: processInfo.command,
+          // operateIconTitle: operateIconTitle,
+          // operateIconTitleCopy: operateIconTitle,
+          // isShowTooltipConfirm: false,
+          desired_replicas: processInfo.replicas,
+          available_instance_count: processInfo.success,
+          failed: processInfo.failed,
+          resourceLimit: processInfo.resource_limit,
+          clusterLink: processInfo.cluster_link,
+        };
+
+        this.$set(process, 'expanded', false);
+
+
+        // 日期转换
+        process.instances.forEach((item) => {
+          item.date_time = moment(item.start_time).startOf('minute')
+            .fromNow();
+        });
+        allProcesses.push(process);
+      });
+      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      console.log('this.allProcesses', this.allProcesses);
+    },
+
+    // 监听进程事件流
+    watchServerPush() {
+      // 停止轮询的标志
+      if (this.watchServerTimer) {
+        clearTimeout(this.watchServerTimer);
+      };
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/`;
+      this.serverProcessEvent = new EventSource(url, {
+        withCredentials: true,
+      });
+
+      // 收藏服务推送消息
+      this.serverProcessEvent.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.warn(data);
+        if (data.object_type === 'process') {
+          // this.updateProcessData(data);
+        } else if (data.object_type === 'instance') {
+          // this.updateInstanceData(data);
+          if (data.type === 'ADDED') {
+            console.warn(this.$t('重新拉取进程...'));
+            // this.getProcessList(this.releaseId, false);
+          }
+        } else if (data.type === 'ERROR') {
+          // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
+          clearTimeout(this.timer);
+          this.timer = setTimeout(() => {
+            // this.getProcessList(this.releaseId, false);
+          }, 2000);
+        }
+      };
+
+      // 服务异常
+      this.serverProcessEvent.onerror = (event) => {
+        // 异常后主动关闭，否则会继续重连
+        console.error(this.$t('推送异常'), event);
+        this.serverProcessEvent.close();
+
+        // 推迟调用，防止过于频繁导致服务性能问题
+        this.watchServerTimer = setTimeout(() => {
+          this.watchServerPush();
+        }, 3000);
+      };
+
+      // 服务结束
+      this.serverProcessEvent.addEventListener('EOF', () => {
+        this.serverProcessEvent.close();
+
+        if (!this.isDeploySseEof) {
+          // 推迟调用，防止过于频繁导致服务性能问题
+          this.watchServerTimer = setTimeout(() => {
+            this.watchServerPush();
+          }, 3000);
+        }
+      });
+    },
+
+    // // 三秒轮询一次
+    // setIntervalWatchServerPush() {
+    //   this.watchServerPushTimer = setInterval(() => {
+    //     this.watchServerPush();
+    //   }, 3000);
+    // },
+
+    // 返回操作
+    handleCallback() {
+      this.$emit('close');
+    },
+
+  },
+};
+</script>
+<style lang="scss" scoped>
+  .deploy-pending-text{
+    color: #63656E;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .deploy-text-wrapper{
+    padding-left: 30px;
+  }
+</style>

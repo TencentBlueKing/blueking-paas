@@ -42,12 +42,12 @@ export default defineComponent({
     },
     active: {
       type: String,
-      default: ''
+      default: '',
     },
     rightTitle: {
       type: String,
-      default: ''
-    }
+      default: '',
+    },
   },
   setup(props, { emit }) {
     const curActive = ref(props.active || props.navList[0]?.name);
@@ -58,12 +58,12 @@ export default defineComponent({
 
     const handleRightConfigClick = () => {
       emit('right-config-click');
-    }
+    };
 
     return {
       curActive,
       handleTabChange,
-      handleRightConfigClick
+      handleRightConfigClick,
     };
   },
 });

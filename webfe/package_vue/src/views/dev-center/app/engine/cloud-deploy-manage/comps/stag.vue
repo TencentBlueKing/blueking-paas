@@ -13,86 +13,86 @@
           ext-cls="select-custom"
           ext-popover-cls="select-popover-custom"
           searchable>
-          <bk-option v-for="(module, index) in moduleList"
-              :key="index"
-              :id="module.name"
-              :name="module.name">
+          <bk-option
+            v-for="(module, index) in moduleList"
+            :key="index"
+            :id="module.name"
+            :name="module.name">
           </bk-option>
         </bk-select>
       </div>
     </section>
-    <section class="content">
-      <!-- 根据模块渲染 -->
-      <deploy-module-item
-        v-for="item in showModuleList"
-        :module-data="item"
-        :key="item.name"
-      />
-    </section>
+    <!-- 根据模块渲染 -->
+    <deploy-module-list
+      :model-name="moduleValue"
+      v-bind="$attrs"
+    />
   </div>
 </template>
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
-import deployModuleItem from './deploy-module-item.vue';
+import deployModuleList from './deploy-module-list.vue';
 export default {
-  mixins: [appBaseMixin],
 
   components: {
-    deployModuleItem
+    deployModuleList,
   },
+  mixins: [appBaseMixin],
 
-  data () {
+  data() {
     return {
       moduleValue: '全部模块',
-      showModuleList: []
-    }
+      showModuleList: [],
+    };
   },
-  
+
   computed: {
-    moduleList () {
+    moduleList() {
       const appModuleList = [{
         id: 'all',
-        name: '全部模块'
+        name: '全部模块',
       }, ...this.curAppModuleList];
       return appModuleList;
     },
     // 包含当前面板所需状态
-    moduleInfoList () {
-      return this.curAppModuleList.map(module => {
+    moduleInfoList() {
+      return this.curAppModuleList.map((module) => {
         module.isExpand = true;
         // 默认展开已部署第一项
         // if (module.repo) {
         //   module.isExpand = true;
         // }
-        return module
+        return module;
       });
-    }
+    },
   },
 
   watch: {
-    moduleValue (value) {
+    moduleValue(value) {
       if (value === '全部模块') {
         this.showModuleList = this.moduleInfoList;
       } else {
         this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);
       }
-    }
+    },
   },
 
-  created () {
+  created() {
     this.showModuleList = this.moduleInfoList;
   },
 
   methods: {
-  }
-}
+  },
+};
 </script>
 
 <style lang="scss" scoped>
 .stag-wrapper {
+  height: 100%;
   .top-operate {
     display: flex;
+    margin-bottom: 16px;
   }
   .module-select-wrapper {
     background: #fff;

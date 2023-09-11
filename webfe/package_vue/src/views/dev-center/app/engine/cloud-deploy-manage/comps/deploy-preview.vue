@@ -2,21 +2,21 @@
   <div class="deploy-preview">
     <div class="info-item">
       <p>
-        <span class="count">5</span>
+        <span class="count">{{ deploymentInfo.total_available_instance_count }}</span>
         <span class="unit">个</span>
       </p>
       <p class="desc">运行实例数</p>
     </div>
     <div class="info-item">
       <p>
-        <span class="count">4</span>
+        <span class="count">{{ deploymentInfo.total_desired_replicas }}</span>
         <span class="unit">个</span>
       </p>
       <p class="desc">期望实例数</p>
     </div>
     <div class="info-item">
       <p>
-        <span class="count rejected">1</span>
+        <span class="count rejected">{{ deploymentInfo.total_failed }}</span>
         <span class="unit">个</span>
       </p>
       <p class="desc">异常实例数</p>
@@ -26,8 +26,14 @@
 
 <script>
 export default {
+  props: {
+    deploymentInfo: {
+      type: Object,
+      default: () => ({}),
+    },
+  },
 
-}
+};
 </script>
 
 <style lang="scss" scoped>

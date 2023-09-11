@@ -20,48 +20,40 @@
       @change="handleTabChange"
       @right-config-click="toDeployHistory"
     />
-    <paas-content-loader
-      :is-loading="isLoading"
-      placeholder="deploy-loading"
-      :offset-top="30"
-      class="app-container middle overview"
-    >
-      <!-- <component :is="curComponentsName" :key="curComponentsName"></component> -->
-      <!-- 骨架屏 -->
-      <router-view :key="routeIndex"></router-view>
-    </paas-content-loader>
+    <div class="router-container m20">
+      <router-view :key="routeIndex" :environment="active"></router-view>
+    </div>
   </div>
 </template>
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
-import stag from './comps/stag.vue';
-import prod from './comps/prod.vue';
+// import stag from './comps/stag.vue';
+// import prod from './comps/prod.vue';
 
 export default {
-  name: 'cloudDeployManagement',
+  name: 'CloudDeployManagement',
   components: {
     cloudAppTopBar,
-    stag,
-    prod
+    // stag,
+    // prod,
   },
   mixins: [appBaseMixin],
-  data () {
+  data() {
     return {
       isLoading: true,
       active: 'stag',
       routeIndex: 0,
-      curComponentsName: 'stag',
       panels: [
         { name: 'stag', label: '预发布环境', routeName: 'cloudAppDeployManageStag' },
-        { name: 'prod', label: '生产环境', routeName: 'cloudAppDeployManageProd' }
-      ]
-    }
+        { name: 'prod', label: '生产环境', routeName: 'cloudAppDeployManageProd' },
+      ],
+    };
   },
   computed: {
-    isDeployHistory () {
+    isDeployHistory() {
       return this.$route.meta.history;
-    }
+    },
   },
   watch: {
     '$route'() {
@@ -69,14 +61,14 @@ export default {
       this.routeIndex++;
     },
   },
-  created () {
+  created() {
     setTimeout(() => {
       this.isLoading = false;
     }, 500);
   },
   methods: {
     handleTabChange(name) {
-      this.curComponentsName = name;
+      this.active = name;
       const curEnv = this.panels.find(item => item.name === name);
       this.$router.push({
         name: curEnv.routeName,
@@ -86,14 +78,14 @@ export default {
     /** 部署历史 */
     toDeployHistory() {
       this.$router.push({
-        name: 'cloudAppDeployHistory'
+        name: 'cloudAppDeployHistory',
       });
     },
 
     goBack() {
       this.$router.go(-1);
-    }
-  }
+    },
+  },
 };
 </script>
 <style lang="scss" scoped>
@@ -118,5 +110,8 @@ export default {
   padding-top: 0px;
   margin: 0;
   margin-top: 0 !important;
+}
+.router-container{
+  height: 100%;
 }
 </style>

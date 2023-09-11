@@ -381,15 +381,13 @@ export default {
     },
     artifactType() {
       console.log('this.curAppModule', this.curAppModule);
-      if (this.curAppModule.web_config.artifact_type === 'image') {
-        if (this.curAppModule.web_config.build_method === 'custom_image') {
-          return this.$t('仅镜像');
-        }
-        return this.$t('源码&镜像');
+      if (this.curAppModule.web_config.build_method === 'custom_image') {
+        return this.$t('仅镜像');
       }
       if (this.curAppModule.web_config.artifact_type === 'slug') {
         return this.$t('仅源码');
       }
+      return this.$t('源码&镜像');
       return '--';
     },
 

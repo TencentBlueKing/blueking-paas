@@ -83,10 +83,9 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         if module_env.is_offlined:
             offline_operation = OfflineOperationGetter(module_env).get_latest_succeeded()
-            if offline_operation:
-                offline_data = OfflineOperationSLZ(offline_operation).data
-            else:
+            if offline_operation is None:
                 raise error_codes.APP_NOT_RELEASED
+            offline_data = OfflineOperationSLZ(offline_operation).data
 
         # Check if current env is running
         if env_is_deployed(module_env):

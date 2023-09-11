@@ -49,12 +49,16 @@
       </div>
       <bk-form
         v-if="isPageEdit"
+        ref="commandRef"
         :model="preFormData"
         :label-width="100"
         class="info-special-form form-pre-command"
       >
         <bk-form-item
           :label="$t('启动命令')"
+          :required="true"
+          :rules="rules.command"
+          :error-display-type="'normal'"
           class="pt20"
           style="position:relative; margin-left: 5px"
         >
@@ -67,7 +71,7 @@
             :has-delete-icon="hasDeleteIcon"
             :paste-fn="copyCommand"
           />
-          <span class="whole-item-tips">{{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} 如：./bin/pre-task.sh</span>
+          <span slot="tip" class="whole-item-tips">{{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} 如：./bin/pre-task.sh</span>
         </bk-form-item>
         <bk-form-item
           :label="$t('命令参数')"
@@ -114,11 +118,25 @@
           <div v-else class="pl10">--</div>
         </bk-form-item>
       </bk-form>
+      <div class="hook-btn-wrapper" v-if="isPageEdit">
+        <bk-button
+          :loading="saveLoading"
+          class="pl20 pr20"
+          :theme="'primary'"
+          @click="handleSave"
+        >
+          {{ $t('保存') }}
+        </bk-button>
+        <bk-button class="pl20 pr20 ml20" @click="$emit('cancel')">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
     </div>
   </paas-content-loader>
 </template>
 
-<script>import _ from 'lodash';
+<script>
+import _ from 'lodash';
 import i18n from '@/language/i18n.js';
 
 export default {
@@ -135,6 +153,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    saveLoading: {
+      type: Boolean,
+      default: false
+    }
   },
 
   data() {
@@ -152,6 +174,21 @@ export default {
       hooks: null,
       processData: [],
       cloudInfoTip: i18n.t('web进程的容器镜像地址'),
+      rawData: {},
+      rules: {
+        command: [
+          {
+            validator: (val) => {
+              if (this.preFormData.command.length) {
+                return true;
+              }
+              return false;
+            },
+            message: () => `${this.$t('必填项')}`,
+            trigger: 'blur',
+          },
+        ]
+      }
     };
   },
 
@@ -175,6 +212,7 @@ export default {
             this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
           }
           this.formData = this.processData[this.panelActive];
+          this.rawData = _.cloneDeep(this.preFormData);
         }
         setTimeout(() => {
           this.isLoading = false;
@@ -261,6 +299,25 @@ export default {
         this.$store.commit('cloudApi/updatePageEdit', true);
       }
     },
+
+    // 保存
+    handleSave () {
+      this.$refs.commandRef.validate().then(validator => {
+        this.$emit('save');
+        this.$nextTick(() => {
+          this.rawData = _.cloneDeep(this.preFormData);
+        });
+      }, err => {
+        console.error(err);
+      });
+    },
+
+    // 数据还原
+    handleCancel () {
+      this.$refs.commandRef.clearError();
+      this.preFormData.command = this.rawData.command;
+      this.preFormData.args = this.rawData.args;
+    }
   },
 };
 </script>
@@ -289,6 +346,11 @@ export default {
             line-height: 26px;
             color: #979ba5;
             font-size: 12px;
+        }
+
+        .hook-btn-wrapper {
+          margin-left: 105px;
+          margin-top: 24px;
         }
     }
 

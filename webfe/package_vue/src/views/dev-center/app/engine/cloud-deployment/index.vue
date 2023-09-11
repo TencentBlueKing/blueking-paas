@@ -33,11 +33,14 @@
             :ref="routerRefs"
             :key="renderIndex"
             :cloud-app-data="cloudAppData"
+            :save-loading="buttonLoading"
+            @save="handleSave"
+            @cancel="handleCancel"
           />
         </div>
       </section>
 
-      <div class="deploy-btn-wrapper" v-if="isPageEdit">
+      <div class="deploy-btn-wrapper" v-if="isPageEdit && isFooterActionBtn">
         <bk-button
           :loading="buttonLoading"
           class="pl20 pr20"
@@ -141,6 +144,13 @@ export default {
         return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
       }
       return this.panels;
+    },
+
+    // 是否需要保存操作按钮
+    isFooterActionBtn () {
+      // 无需展示外部操作按钮组
+      const hideTabItems = ['cloudAppDeployForHook'];
+      return !hideTabItems.includes(this.active);
     }
   },
   watch: {

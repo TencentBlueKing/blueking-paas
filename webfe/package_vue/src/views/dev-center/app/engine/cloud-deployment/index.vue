@@ -229,7 +229,13 @@ export default {
           const res = await this.$refs[this.routerRefs]?.handleProcessData();
           if (!res) return;
         }
-        const params = { ... this.$store.state.cloudApi.cloudAppData };
+        const data = this.$store.state.cloudApi.cloudAppData;
+        data.spec.processes = data.spec.processes.map(process => {
+          // 过滤空值容器端口
+          const { targetPort, ...processValue } = process;
+          return (targetPort === '' || targetPort === null) ? processValue : process;
+        });
+        const params = { ...data };
         await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,

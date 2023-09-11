@@ -142,6 +142,7 @@ class NamespaceScopedListWatchRespPartSLZ(serializers.Serializer):
     module_name = serializers.CharField()
     is_deployed = serializers.BooleanField(help_text="是否已部署")
     exposed_url = serializers.CharField(required=False, help_text="访问地址")
+    repo_url = serializers.CharField(required=False, help_text="源码/镜像仓库地址")
     build_method = serializers.CharField(help_text="构建方式")
     version_info = VersionInfoSLZ(required=False)
 
@@ -160,6 +161,7 @@ class ModuleScopedData:
     build_method: RuntimeType
     is_deployed: bool
     exposed_url: Optional[str]
+    repo_url: Optional[str]
     version_info: Optional[VersionInfo] = None
 
     processes: List[Process] = field(default_factory=list)

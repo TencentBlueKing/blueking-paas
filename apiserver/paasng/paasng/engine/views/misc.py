@@ -51,6 +51,7 @@ from paasng.engine.serializers import (
     QueryOperationsSLZ,
     ResourceMetricsSLZ,
 )
+from paasng.engine.utils.query import OfflineOperationGetter
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
@@ -127,15 +128,9 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(response_serializer=OfflineOperationSLZ)
     def get_resumable_offline_operations(self, request, code, module_name, environment):
         """查询可恢复的下架操作"""
-        application = self.get_application()
-        module = application.get_module(module_name)
-
-        app_env = module.envs.get(environment=environment)
-        try:
-            offline_operation = OfflineOperation.objects.filter(app_environment=app_env).get_latest_resumable(
-                max_resumable_seconds=settings.ENGINE_OFFLINE_RESUMABLE_SECS
-            )
-        except OfflineOperation.DoesNotExist:
+        env = self.get_env_via_path()
+        offline_operation = OfflineOperationGetter(env).get_current_operation()
+        if offline_operation is None:
             return Response({})
 
         serializer = OfflineOperationSLZ(instance=offline_operation)

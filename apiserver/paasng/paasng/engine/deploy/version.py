@@ -24,8 +24,7 @@ from paas_wl.cnative.specs.image_parser import ImageParser
 from paas_wl.cnative.specs.models import AppModelRevision
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import RuntimeType
-from paasng.engine.models import Deployment
-from paasng.engine.utils.query import OfflineOperationGetter
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import BuildConfig
@@ -40,9 +39,8 @@ def get_env_deployed_version_info(env: ModuleEnvironment) -> Tuple[RuntimeType, 
     """
     application = env.application
     build_config = BuildConfig.objects.get_or_create_by_module(env.module)
-    try:
-        deployment = Deployment.objects.filter_by_env(env).latest_succeeded()
-    except Deployment.DoesNotExist:
+    deployment = DeploymentGetter(env).get_latest_succeeded()
+    if not deployment:
         logger.debug("Module: %s Env: %s is not deployed", env.module.name, env.environment)
         return build_config.build_method, None
 

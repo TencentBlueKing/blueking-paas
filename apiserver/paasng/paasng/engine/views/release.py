@@ -29,9 +29,9 @@ from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.deploy.release.legacy import release_by_engine
-from paasng.engine.models import Deployment, OfflineOperation
 from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL
 from paasng.engine.serializers import DeploymentSLZ, GetReleasedInfoSLZ, OfflineOperationSLZ
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
@@ -49,9 +49,8 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_env = self.get_env_via_path()
         serializer = self.serializer_class(request.query_params)
 
-        try:
-            deployment = Deployment.objects.filter_by_env(env=module_env).latest_succeeded()
-        except Deployment.DoesNotExist:
+        deployment = DeploymentGetter(module_env).get_latest_succeeded()
+        if deployment is None:
             raise error_codes.APP_NOT_RELEASED
 
         entrance = get_exposed_url(deployment.app_environment)
@@ -83,11 +82,11 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         default_access_entrance = get_preallocated_url(module_env)
 
         if module_env.is_offlined:
-            try:
-                offline_operation = OfflineOperation.objects.filter(app_environment=module_env).latest_succeeded()
-            except OfflineOperation.DoesNotExist:
+            offline_operation = OfflineOperationGetter(module_env).get_latest_succeeded()
+            if offline_operation:
+                offline_data = OfflineOperationSLZ(offline_operation).data
+            else:
                 raise error_codes.APP_NOT_RELEASED
-            offline_data = OfflineOperationSLZ(offline_operation).data
 
         # Check if current env is running
         if env_is_deployed(module_env):
@@ -121,10 +120,8 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def get_deployment_data(env) -> Optional[Dict]:
         """Try to get the latest deployment data by querying Deployment model"""
-        try:
-            deployment = Deployment.objects.filter_by_env(env=env).latest_succeeded()
-        except Deployment.DoesNotExist:
-            # Cloud-native app does not has any deployment objects
+        deployment = DeploymentGetter(env).get_latest_succeeded()
+        if deployment is None:
             return None
         return DeploymentSLZ(deployment).data
 

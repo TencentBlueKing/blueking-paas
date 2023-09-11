@@ -21,7 +21,7 @@ from django.utils.translation import gettext as _
 
 from paas_wl.networking.entrance.shim import LiveEnvAddresses
 from paasng.engine.models.managers import DeployOperationManager
-from paasng.engine.utils.query import OfflineOperationGetter
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.platform.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.modules.models import Module
@@ -58,7 +58,10 @@ class AllEnvsArchivedCondition(ModuleDeleteCondition):
     def validate(self):
         # 删除模块时, 需要用户主动下架所有环境, 已保证模块删除成功.
         for env in self.module.get_envs():
-            if OfflineOperationGetter(env).get_latest_succeeded() is not None:
+            if DeploymentGetter(env).get_latest_succeeded() is None:
+                continue
+
+            if OfflineOperationGetter(env).get_latest_succeeded() is None:
                 # 存在某个环境没有完全下架
                 raise ConditionNotMatched(
                     _("删除模块前，请先将所有部署环境下架"),

@@ -20,14 +20,12 @@ import logging
 from typing import TYPE_CHECKING, Type
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
-from django.conf import settings
 from django.utils.translation import gettext as _
 
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.exceptions import OfflineOperationExistError
-from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.offline import OfflineOperation
-from paasng.engine.utils.query import OfflineOperationGetter
+from paasng.engine.models import Deployment, OfflineOperation
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
 
 if TYPE_CHECKING:
@@ -50,21 +48,19 @@ class BaseArchiveManager:
 
         :param operator: 操作人(user_id)
         :return: OfflineOperation
+        :raise Deployment.DoseNotExist: 未曾部署成功, 无需下架
         :raise OfflineOperationExistError: 当已存在正在下架的任务时抛该异常
         """
-        # raise DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
-        deployment = Deployment.objects.filter_by_env(env=self.env).latest_succeeded()
+        deployment = DeploymentGetter(env=self.env).get_latest_succeeded()
+        if deployment is None:
+            # raise Deployment.DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
+            raise Deployment.DoesNotExist
         latest_offline_operation = OfflineOperationGetter(env=self.env).get_latest_succeeded()
         if latest_offline_operation is not None:
             return latest_offline_operation
 
-        try:
-            OfflineOperation.objects.filter(app_environment=self.env).get_latest_resumable(
-                max_resumable_seconds=settings.ENGINE_OFFLINE_RESUMABLE_SECS
-            )
-        except OfflineOperation.DoesNotExist:
-            pass
-        else:
+        current_operation = OfflineOperationGetter(env=self.env).get_current_operation()
+        if current_operation is not None:
             # 存在正在下架操作，不再重复发起
             raise OfflineOperationExistError(_("存在正在进行的下架任务"))
 

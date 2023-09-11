@@ -61,6 +61,7 @@ from paasng.engine.serializers import (
     QueryDeploymentsSLZ,
 )
 from paasng.engine.utils.client import get_all_logs
+from paasng.engine.utils.query import DeploymentGetter
 from paasng.engine.workflow import DeploymentCoordinator
 from paasng.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
@@ -277,7 +278,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def get_resumable_deployment(self, request, code, module_name, environment):
         app_env = self.get_env_via_path()
-        deployment = DeploymentCoordinator(app_env).get_current_deployment()
+        deployment = DeploymentGetter(app_env).get_current_deployment()
         if not deployment:
             return Response({})
 

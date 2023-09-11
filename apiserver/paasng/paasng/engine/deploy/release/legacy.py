@@ -42,6 +42,7 @@ from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.signals import on_release_created
+from paasng.engine.utils.query import DeploymentGetter
 from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -161,10 +162,7 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
     :return: The ID of the created release object.
     """
     if not deployment:
-        try:
-            deployment = env.deployments.latest_succeeded()
-        except Deployment.DoesNotExist:
-            pass
+        deployment = DeploymentGetter(env).get_latest_succeeded()
 
     deployment_id: Optional[str]
     if deployment:

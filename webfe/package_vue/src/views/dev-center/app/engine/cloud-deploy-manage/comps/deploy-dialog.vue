@@ -92,6 +92,7 @@
         <div class="image-source mt20" v-if="buttonActive === 'image'">
           <div class="mb10 flex-row justify-content-between">
             <div>镜像Tag</div>
+            <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
           </div>
           <bk-select
             v-model="tagValue"
@@ -197,6 +198,9 @@ export default {
     };
   },
   computed: {
+    curAppModule() {
+      return this.curAppModuleList.find(e => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
+    },
     branchEmptyText() {
       const sourceType = this.overview.repo && this.overview.repo.source_type;
       if (['bare_svn', 'bare_git'].includes(sourceType)) {
@@ -355,6 +359,7 @@ export default {
 
     // 查看代码差异
     async handleShowCommits() {
+      console.log('this.curAppModule', this.curAppModule);
       if (this.curAppModule.repo.diff_feature.method === 'external') {
         this.showCompare();
       } else {
@@ -373,8 +378,9 @@ export default {
         return false;
       }
 
-      const fromVersion = this.deploymentInfoBackUp?.repo?.revision;
+      const fromVersion = this.deploymentInfoBackUp?.version_info?.revision;
       const toVersion = this.branchValue;
+      console.log('fromVersion', fromVersion, toVersion);
       const win = window.open();
       const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
         appCode: this.appCode,
@@ -396,6 +402,7 @@ export default {
         if (this.buttonActive === 'image') {
           advancedOptions.build_id = this.tagValue;
         }
+        console.log('this.curSelectData', this.curSelectData);
         let params = {
           revision: this.curSelectData.revision,
           version_type: this.curSelectData.type,
@@ -462,12 +469,12 @@ export default {
         if (this.branchValue.includes(e.name)) {
           return e;
         }
-        return {};
       });
     },
 
     // 选择tag
-    handleChangeTags() {
+    handleChangeTags(v) {
+      console.log('v', v, this.tagValue, this.imageTagList);
       this.curSelectData = this.imageTagList.find((e) => {
         if (e.id === this.tagValue) {
           e.revision = e.digest;
@@ -476,7 +483,6 @@ export default {
           console.log('eeeeee', e);
           return e;
         }
-        return {};
       });
     },
     handleCancel() {},

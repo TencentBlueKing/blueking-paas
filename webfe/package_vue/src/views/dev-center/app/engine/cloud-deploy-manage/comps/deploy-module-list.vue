@@ -1,6 +1,6 @@
 <template>
   <div class="deploy-module-content" v-bkloading="{ isLoading: listLoading, opacity: 1}">
-    <bk-alert type="info" :show-icon="false" class="mt20" v-if="isWatchOfflineing">
+    <bk-alert type="info" :show-icon="false" class="mt20 mb20 alert-cls" v-if="isWatchOfflineing">
       <div class="flex-row align-items-center" slot="title">
         <div class="fl">
           <round-loading
@@ -9,7 +9,7 @@
           />
         </div>
         <p class="deploy-pending-text pl20">
-          {{ $t('正在下架中...') }}
+          模块 {{ curDeploymentInfoItem.module_name }} {{ $t('正在下架中...') }}
         </p>
       </div>
     </bk-alert>
@@ -60,7 +60,12 @@
               <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy(deploymentInfo)">
                 部署
               </bk-button>
-              <bk-button :theme="'default'" size="small" @click="handleOfflineApp(deploymentInfo)">
+              <bk-button
+                :theme="'default'"
+                size="small"
+                @click="handleOfflineApp(deploymentInfo)"
+                :disabled="isWatchOfflineing && curDeploymentInfoItem.module_name === deploymentInfo.module_name"
+                :loading="isWatchOfflineing && curDeploymentInfoItem.module_name === deploymentInfo.module_name">
                 下架
               </bk-button>
             </div>
@@ -418,5 +423,11 @@ export default {
   }
   .loading-cls{
     top: 30vh;
+  }
+  .alert-cls{
+    border: none !important;
+    /deep/ .bk-alert-wraper{
+      padding: 5px 10px;
+    }
   }
 </style>

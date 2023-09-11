@@ -99,6 +99,25 @@ def deploy_networking(env: ModuleEnvironment) -> None:
         )
 
 
+def delete_bkapp(env: ModuleEnvironment):
+    """Delete bkapp in cluster
+
+    :param env
+    """
+
+    wl_app = env.wl_app
+    with get_client_by_app(wl_app) as client:
+        crd.BkApp(client).delete(generate_bkapp_name(env), namespace=wl_app.namespace)
+
+
+def delete_networking(env: ModuleEnvironment):
+    """Delete network group mapping in cluster"""
+    mapping = AddrResourceManager(env).build_mapping()
+    wl_app = env.wl_app
+    with get_client_by_app(wl_app) as client:
+        crd.DomainGroupMapping(client).delete(mapping.metadata.name, namespace=wl_app.namespace)
+
+
 @define
 class ModelResState:
     """State of deployed app model resource

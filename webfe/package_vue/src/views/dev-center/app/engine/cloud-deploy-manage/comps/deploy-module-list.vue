@@ -58,6 +58,15 @@
             </div>
             <div class="right-btn">
               <bk-button
+                v-if="!!deploymentInfo.state.deployment.pending"
+                :theme="'primary'"
+                class="mr10"
+                size="small"
+                text
+                @click="handleShowDeploy(deploymentInfo)">
+                部署详情
+              </bk-button>
+              <bk-button
                 :theme="'primary'"
                 class="mr10"
                 size="small"
@@ -80,18 +89,22 @@
           <!-- 内容 -->
           <section class="main">
             <!-- 详情表格 -->
-            <!-- <deploy-detail v-show="isExpand" /> -->
+            <deploy-detail
+              v-show="deploymentInfo.isExpand"
+              :deployment-info="deploymentInfo" />
             <!-- 预览 -->
-            <deploy-preview :deployment-info="deploymentInfo" />
-            <!-- <div class="operation-wrapper">
+            <deploy-preview
+              :deployment-info="deploymentInfo"
+              v-show="!deploymentInfo.isExpand" />
+            <div class="operation-wrapper">
               <div
                 class="btn"
-                @click="handleChangePanel">
-                {{ isExpand ? '收起' : '展开详情' }}
-                <i class="paasng-icon paasng-ps-arrow-down" v-if="!isExpand"></i>
+                @click="handleChangePanel(deploymentInfo)">
+                {{ deploymentInfo.isExpand ? '收起' : '展开详情' }}
+                <i class="paasng-icon paasng-ps-arrow-down" v-if="!deploymentInfo.isExpand"></i>
                 <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
               </div>
-            </div> -->
+            </div>
           </section>
         </div>
       </div>
@@ -119,22 +132,45 @@
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
       :cloud-app-data="cloudAppData"
-      @refresh="handleRefresh"></deploy-dialog>
+      @refresh="handleRefresh">
+    </deploy-dialog>
+
+
+    <bk-sideslider
+      :is-show.sync="isShowSideslider"
+      :title="$t('部署日志')"
+      :width="820"
+      :quick-close="true"
+      :before-close="handleCloseProcessWatch"
+    >
+      <div slot="content">
+        <!-- :deployment-id="curDeploymentInfoItem.state.deployment.pending.id" -->
+        <deploy-status-detail
+          ref="deployStatusRef"
+          :environment="environment"
+          :deployment-id="curDeploymentInfoItem.state?.deployment?.pending?.id"
+          :deployment-info="curDeploymentInfoItem"
+          @close="handleCloseSideslider"
+        ></deploy-status-detail>
+      </div>
+    </bk-sideslider>
   </div>
 </template>
 
 <script>
-// import deployDetail from './deploy-detail';
+import deployDetail from './deploy-detail';
 import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog.vue';
+import deployStatusDetail from './deploy-status-detail';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import _ from 'lodash';
 
 export default {
   components: {
-    // deployDetail,
+    deployDetail,
     deployPreview,
     deployDialog,
+    deployStatusDetail,
   },
   mixins: [appBaseMixin],
   props: {
@@ -164,6 +200,7 @@ export default {
       curDeploymentInfoItem: {},      // 当前弹窗的部署信息
       isWatchOfflineing: false,   // 下架中
       cloudAppData: {},
+      isShowSideslider: false,
     };
   },
 
@@ -205,8 +242,12 @@ export default {
     init() {
       this.getModuleReleaseInfo();
     },
-    handleChangePanel() {
-      this.isExpand = !this.isExpand;
+    handleChangePanel(payload) {
+      payload.isExpand = !payload.isExpand;
+      // this.$set(this, 'deploymentInfoData', res.data);
+      //   this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
+      // this.curDeploymentInfoItem = payload || {};
+      // this.isExpand = !this.isExpand;
     },
 
     // 部署
@@ -215,9 +256,15 @@ export default {
       this.getCloudAppYaml();
     },
 
+    // 部署侧边栏
+    handleShowDeploy(payload) {
+      this.curDeploymentInfoItem = payload || {};
+      this.isShowSideslider = true;
+    },
+
     // 下架
     handleOfflineApp(payload) {
-      this.curDeploymentInfoItem = payload;
+      this.curDeploymentInfoItem = payload || {};
       this.offlineAppDialog.visiable = true;
     },
 
@@ -278,6 +325,10 @@ export default {
           env: this.environment,
         });
         // this.deploymentInfoData = res.data;
+        res.data = res.data.map((e) => {
+          e.isExpand = false;
+          return e;
+        });
         this.$set(this, 'deploymentInfoData', res.data);
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
         console.log(111, this.deploymentInfoData);
@@ -321,6 +372,16 @@ export default {
     // 刷新列表
     handleRefresh() {
       this.getModuleReleaseInfo(false);
+    },
+
+    // 关闭进程的事件流
+    handleCloseProcessWatch() {
+      this.$refs.deployStatusRef.closeServerPush();
+      this.isShowSideslider = false;
+    },
+    // 关闭侧边栏
+    handleCloseSideslider() {
+      this.isShowSideslider = false;
     },
   },
 };

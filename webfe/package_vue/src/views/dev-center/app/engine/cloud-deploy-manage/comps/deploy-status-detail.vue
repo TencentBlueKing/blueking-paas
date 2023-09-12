@@ -40,6 +40,7 @@
           >
             <bk-button
               theme="primary"
+              size="small"
               :outline="true"
               @click="stopDeploy"
             >
@@ -74,6 +75,7 @@
             theme="danger"
             ext-cls="paas-deploy-failed-btn ml10"
             outline
+            size="small"
             @click="handleCallback"
           >
             {{ $t('返回') }}
@@ -99,6 +101,7 @@
               theme="success"
               ext-cls="paas-deploy-success-btn"
               outline
+              size="small"
               @click="handleCallback"
             >
               {{ $t('返回') }}
@@ -217,7 +220,7 @@ export default {
       isDeployFail: false,
       isDeployInterrupted: false,
       isDeployInterrupting: false,
-      isWatchDeploying: true,
+      isWatchDeploying: false,
       timeLineList: [],     // 时间节点数据
       curDeployResult,
       deployTotalTime: 0,       // 部署总耗时
@@ -285,6 +288,7 @@ export default {
   },
   methods: {
     init() {
+      console.log('11111');
       this.getPreDeployDetail();
     //   this.watchDeployStatus();
     },
@@ -297,6 +301,7 @@ export default {
       this.streamLogs = [];
       this.streamPanelShowed = true;
       this.isDeploySseEof = false;
+      this.isWatchDeploying = true;
 
       clearInterval(this.watchTimer);
       if (this.serverLogEvent === null || this.serverLogEvent.readyState === this.eventSourceState.CLOSED) {
@@ -349,6 +354,7 @@ export default {
           } else if (item.status === 'failed') {
             // 部署失败
             this.isDeployFail = true;
+            this.isWatchDeploying = false;
           } else if (item.status === 'interrupted') {
             // 停止部署成功
             this.isDeployInterrupted = true;

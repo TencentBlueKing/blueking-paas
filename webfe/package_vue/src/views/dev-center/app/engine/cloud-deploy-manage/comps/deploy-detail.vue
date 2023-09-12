@@ -1,25 +1,33 @@
 <template>
   <div class="deploy-detail">
     <section class="instance-details">
-      <div class="instance-item" v-for="(item, index) in instanceList" :key="index">
-        <span class="label">{{item.label}}：</span>
-        <span class="value">{{item.value}}</span>
+      <div class="instance-item">
+        <span class="label">运行实例数：</span>
+        <span class="value">{{deployData.total_available_instance_count}}</span>
+      </div>
+      <div class="instance-item">
+        <span class="label">期望实例数：</span>
+        <span class="value">{{deployData.total_desired_replicas}}</span>
+      </div>
+      <div class="instance-item">
+        <span class="label">异常实例数：</span>
+        <span class="value">{{deployData.total_failed}}</span>
       </div>
     </section>
 
     <section class="process-table-wrapper">
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
-        :data="data"
+        :data="allProcesses"
         class="process-detail-table"
         border
       >
         <bk-table-column :label="$t('进程名称')" :width="190" class-name="table-colum-process-cls">
           <template slot-scope="{ row }">
             <div>
-              <span>{{ row.process_name || '--' }}</span>
-              <span class="ml5">1 / {{ row.instances.length }}</span>
-              <div class="rejected-count" v-if="getRejectedCount(row)">{{ getRejectedCount(row) }}</div>
+              <span>{{ row.name || '--' }}</span>
+              <span class="ml5">{{ row.success }} / {{ row.totalCount }}</span>
+              <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div>
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <i
                   v-if="row.isExpand"
@@ -43,7 +51,7 @@
               v-for="instance in row.instances"
               :key="instance.process_name"
             >
-              {{ instance.name }}
+              {{ instance.display_name }}
             </div>
           </template>
         </bk-table-column>
@@ -56,11 +64,11 @@
               :key="instance.process_name"
             >
               <div
-                class="status-dot"
-                :class="instance.status"
+                class="dot"
+                :class="instance.state"
               >
               </div>
-              {{ instance.status }}
+              {{ instance.state }}
             </div>
           </template>
         </bk-table-column>
@@ -72,7 +80,12 @@
               v-for="instance in row.instances"
               :key="instance.process_name"
             >
-              {{ instance.time }}
+              <template v-if="instance.date_time !== 'Invalid date'">
+                {{ $t('创建于') }} {{ instance.date_time }}
+              </template>
+              <template v-else>
+                --
+              </template>
             </div>
           </template>
         </bk-table-column>
@@ -97,12 +110,12 @@
           <template slot-scope="{ row }">
             <div class="operation">
               <div class="operate-process-wrapper mr15">
-                <i
-                  class="paasng-icon paasng-play-circle-shape start"
-                  v-if="row.status === 'stop'" @click="handleProcessOperation(row, 'start')"></i>
-                <div class="round-wrapper" v-else>
+                <div class="round-wrapper" v-if="row.targetStatus === 'start'">
                   <div class="square-icon" @click="handleProcessOperation(row, 'stop')"></div>
                 </div>
+                <i
+                  class="paasng-icon paasng-play-circle-shape start"
+                  v-else @click="handleProcessOperation(row, 'start')"></i>
               </div>
               <i class="paasng-icon paasng-log-2 detail mr10"></i>
               <bk-popover
@@ -123,49 +136,36 @@
 </template>
 
 <script>
+import moment from 'moment';
 export default {
+  props: {
+    deploymentInfo: {
+      type: Object,
+      default: () => ({}),
+    },
+  },
   data() {
     return {
       isTableLoading: false,
       isColumnExpand: true,
-      instanceList: [
-        { label: '运行实例数', value: 5 },
-        { label: '期望实例数', value: 4 },
-        { label: '异常实例数', value: 1 },
-      ],
-      data: [{
-        process_name: 'web-test',
-        isExpand: true,
-        status: 'stop',
-        instances: [
-          { name: 'rhpa', status: 'running', time: '近 30 分钟' },
-          { name: 'rhpa2', status: 'faild', time: '近 1 天' },
-        ],
-      },
-      {
-        process_name: 'stag-ui',
-        isExpand: true,
-        status: 'stop',
-        instances: [
-          { name: 'rhpa3', status: 'running', time: '近 10 分钟' },
-        ],
-      },
-      {
-        process_name: 'prod-yda',
-        isExpand: true,
-        status: 'start',
-        instances: [
-          { name: 'yeada', status: 'running', time: '近 10 分钟' },
-          { name: 'dadsc', status: 'running', time: '近 2 天' },
-        ],
-      }],
+      deployData: {},
+      allProcesses: [],
     };
   },
 
-  methods: {
-    getRejectedCount(row) {
-      return row.instances.filter(item => item.status === 'faild').length;
+  watch: {
+    deploymentInfo: {
+      handler(value) {
+        this.deployData = value;
+        // this.handleDeployInstanceData();
+        this.formatProcesses(this.deployData);
+      },
+      immediate: true,
+      deep: true,
     },
+  },
+
+  methods: {
     handleExpand(row) {
       row.isExpand = !row.isExpand;
     },
@@ -174,6 +174,79 @@ export default {
     },
     handleExpansionAndContraction() {
       console.log('click');
+    },
+    // 处理进程与实例的关系
+    // handleDeployInstanceData() {
+    //   this.processData = this.deployData.processes.reduce((p, v) => {
+    //     const instances = this.deployData.instances.filter((e) => {
+    //       if (e.process_type === v.type) {
+    //         e.date_time = moment(e.start_time).startOf('minute')
+    //           .fromNow();
+    //         return true;
+    //       }
+    //       return false;
+    //     });
+    //     v.instances = instances;
+    //     v.totalCount = v.failed + v.success;
+    //     p.push(v);
+    //     console.log(p);
+    //     return p;
+    //   }, []);
+    //   console.log(11113, this.processData);
+    // },
+
+    // 对数据进行处理
+    formatProcesses(processesData) {
+      const allProcesses = [];
+
+      // 遍历进行数据组装
+      const packages = processesData.proc_specs;
+      const { instances } = processesData;
+
+      processesData.processes.forEach((processItem) => {
+        const { type } = processItem;
+        const packageInfo = packages.find(item => item.name === type);
+
+        const processInfo = {
+          ...processItem,
+          ...packageInfo,
+          instances: [],
+        };
+
+        instances.forEach((instance) => {
+          if (instance.process_type === type) {
+            processInfo.instances.push(instance);
+          }
+        });
+
+        // 作数据转换，以兼容原逻辑
+        const process = {
+          name: processInfo.name,
+          instance: processInfo.instances.length,
+          instances: processInfo.instances,
+          targetReplicas: processInfo.target_replicas,
+          isStopTrigger: false,
+          targetStatus: processInfo.target_status,
+          isActionLoading: false, // 用于记录进程启动/停止接口是否已完成
+          maxReplicas: processInfo.max_replicas,
+          status: 'Stopped',
+          cmd: processInfo.command,
+          desired_replicas: processInfo.replicas,
+          available_instance_count: processInfo.success,
+          failed: processInfo.failed,
+          resourceLimit: processInfo.resource_limit,
+          clusterLink: processInfo.cluster_link,
+        };
+
+        // 日期转换
+        process.instances.forEach((item) => {
+          item.date_time = moment(item.start_time).startOf('minute')
+            .fromNow();
+        });
+        allProcesses.push(process);
+      });
+      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      console.log('this.allProcesses', this.allProcesses);
     },
   },
 };
@@ -372,6 +445,27 @@ export default {
         height: 7px;
         background: #fff;
         border-radius: 1px;
+    }
+  }
+  .dot {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    margin-right: 8px;
+
+    &.failed {
+      background: #EA3636;
+      border: 3px solid #fce0e0;
+    }
+    &.interrupted,
+    &.warning {
+      background: #FF9C01;
+      border: 3px solid #ffefd6;
+    }
+    &.Running {
+      background: #3FC06D;
+      border: 3px solid #daefe4;
     }
   }
 }

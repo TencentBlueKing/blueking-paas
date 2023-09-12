@@ -139,7 +139,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 manifest = self._get_deployable_manifest(application, module, image_tag=params["version_name"])
             else:
                 # v1alpha1 的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
-                version_info = VersionInfo("", "", "")
+                version_info = VersionInfo("", "manifest", "manifest")
         else:
             version_info = self._get_version_info(request.user, module, params, build=build)
 

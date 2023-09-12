@@ -21,6 +21,9 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import arrow
 from django.conf import settings
 
+from paas_wl.cnative.specs.constants import ApiVersion
+from paas_wl.cnative.specs.image_parser import ImageParser
+from paas_wl.cnative.specs.utils import get_bkapp
 from paas_wl.platform.applications.models import Build
 from paas_wl.workloads.processes.services import refresh_res_reqs
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder
@@ -126,11 +129,15 @@ class RuntimeImageInfo:
         """
         if self.type == RuntimeType.CUSTOM_IMAGE:
             if self.application.type == ApplicationType.CLOUD_NATIVE:
-                # 仅托管镜像类型的云原生应用的镜像由 Yaml 定义, 因此返回空字符串
-                # Q: 为什么不尝试从 Yaml 解析？
-                # A: 因为 v1alpha1 版本的云原生应用并不能保证只有一个 image...
-                #    从 Yaml 解析在兼容 v1alpha1 需要写很复杂或依赖约定(例如用 web 的 image)的逻辑, 这反而更难维护。
-                return ""
+                image_tag = special_tag or version_info.version_name
+                manifest = get_bkapp(self.application, self.module)
+                if manifest.apiVersion != ApiVersion.V1ALPHA2:
+                    # 由于 v1alpha1 版本的云原生应用并不能保证只有一个 image, 所以目前不支持覆盖 v1alpha1 应用的镜像信息
+                    # 此处返回空字符串表示不覆盖 manifest 的 image 信息
+                    return ""
+                repository = ImageParser(manifest).get_repository()
+                assert manifest.spec.build
+                return f"{repository}:{image_tag}"
             repo_url = self.module.get_source_obj().get_repo_url()
             reference = version_info.revision
             return f"{repo_url}:{reference}"

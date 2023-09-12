@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import hashlib
 from collections import MutableMapping
-from typing import Collection, Dict
+from typing import Any, Collection, Dict
 from uuid import UUID
 
 import cattr
@@ -30,6 +30,8 @@ from django.utils.encoding import force_bytes
 # Register cattr custom hooks
 cattr.register_unstructure_hook(UUID, lambda val: str(val))  # type: ignore
 cattr.register_structure_hook(UUID, lambda val, _: val if isinstance(val, UUID) else UUID(str(val)))
+
+
 # End register
 
 
@@ -93,3 +95,25 @@ _requests_session.mount('https://', _adapter)
 def get_requests_session() -> requests.Session:
     """Return the global requests session object which supports connection pooling"""
     return _requests_session
+
+
+def underscore_to_camel(word: str) -> str:
+    """将下划线分隔的字符串转换为驼峰格式 """
+    parts = word.split('_')
+    return parts[0] + ''.join(part.capitalize() for part in parts[1:])
+
+
+def convert_dict_underscore_to_camel(data: dict) -> dict:
+    """将字典中的所有下划线分隔的键转换为驼峰格式"""
+    result: Dict[Any, Any] = {}
+    for key, value in data.items():
+        camel_key = underscore_to_camel(key)
+        if isinstance(value, dict):
+            result[camel_key] = convert_dict_underscore_to_camel(value)
+        elif isinstance(value, list):
+            result[camel_key] = [
+                convert_dict_underscore_to_camel(item) if isinstance(item, dict) else item for item in value
+            ]
+        else:
+            result[camel_key] = value
+    return result

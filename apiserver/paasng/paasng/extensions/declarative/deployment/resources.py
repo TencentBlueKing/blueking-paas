@@ -59,6 +59,74 @@ class SvcDiscovery:
 
 
 @define
+class ExecAction:
+    command: List[str]
+
+
+@define
+class HTTPHeader:
+    name: Optional[str] = None
+    value: Optional[str] = None
+
+
+@define
+class HTTPGetAction:
+    port: Optional[int]
+    host: Optional[str] = None
+    path: Optional[str] = None
+    http_headers: Optional[List[HTTPHeader]] = None
+    scheme: Optional[str] = None
+
+
+@define
+class TCPSocketAction:
+    port: Optional[int]
+    host: Optional[str] = None
+
+
+@define
+class Probe:
+    """Resource: Probe
+
+    :param exec:命令行探活检测机制
+    :param http_get:http 请求探活检测机制
+    :param tcp_socket:tcp 请求探活检测机制
+    :param initial_delay_seconds:容器启动后等待时间
+    :param timeout_seconds:探针执行超时时间
+    :param period_seconds:探针执行间隔时间
+    :param success_threshold:连续几次检测成功后，判定容器是健康的
+    :param failure_threshold:连续几次检测失败后，判定容器是不健康
+    """
+
+    exec: Optional[ExecAction] = None
+    http_get: Optional[HTTPGetAction] = None
+    tcp_socket: Optional[TCPSocketAction] = None
+
+    initial_delay_seconds: Optional[int] = 0
+    timeout_seconds: Optional[int] = 1
+    period_seconds: Optional[int] = 10
+    success_threshold: Optional[int] = 1
+    failure_threshold: Optional[int] = 3
+
+    def get_check_mechanism_json(self) -> Optional[dict]:
+        """返回 check_mechanism 即（"exec", "http_get", "tcp_socket"）这几个检测机制的json字符串 """
+        probe_dict = cattr.unstructure(self)
+        check_mechanism_types = ("exec", "http_get", "tcp_socket")
+        data = [
+            (probe_dict[mechanism], mechanism)
+            for mechanism in check_mechanism_types
+            if probe_dict[mechanism] is not None
+        ]
+        if data:
+            check_mechanism, check_mechanism_type = data[0]
+            check_mechanism_data = {check_mechanism_type: check_mechanism}
+            return check_mechanism_data
+        else:
+            # 处理找不到机制的情况（例如，设置默认值）
+            return None
+
+
+@define
 class Process:
     """Resource: Process
 
@@ -70,6 +138,7 @@ class Process:
     command: str
     replicas: Optional[int] = field(default=None, validator=validators.optional(validators.gt(0)))
     plan: Optional[str] = None
+    probes: Dict[str, Probe] = field(factory=dict)
 
 
 @define

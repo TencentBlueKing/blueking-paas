@@ -38,6 +38,7 @@ from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.extensions.declarative.serializers import SMartV1DescriptionSLZ, UniConfigSLZ, validate_desc
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.utils.basic import replace_env_vars_in_json
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,8 @@ class AppDescriptionHandler:
 
     def __init__(self, json_data: Dict):
         """The app_desc.yml json data"""
-        self.json_data = json_data
+        # 使用环境变量替换 json_data 中符合 ${env} 格式的值字段
+        self.json_data = replace_env_vars_in_json(json_data)
 
     @property
     def app_desc(self) -> ApplicationDesc:
@@ -118,6 +120,7 @@ class AppDescriptionHandler:
         if not module_desc:
             logger.info('Skip running deployment controller because not content was provided')
             raise DescriptionValidationError({"module": _('内容不能为空')})
+
         desc = validate_desc(DeploymentDescSLZ, module_desc)
         return desc
 

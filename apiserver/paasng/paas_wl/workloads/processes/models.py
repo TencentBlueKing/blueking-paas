@@ -209,3 +209,26 @@ class ProcessTmpl:
 
     def __post_init__(self):
         self.name = self.name.lower()
+
+
+class WlAppProbe(models.Model):
+    from paas_wl.platform.applications.models import WlApp
+
+    PROBE_TYPE_CHOICES = (
+        ('readiness', 'readinessProbe'),
+        ('liveness', 'livenessProbe'),
+        ('startup', 'startupProbe'),
+    )
+    app = models.ForeignKey(WlApp, related_name='wlapp_probes', on_delete=models.CASCADE)
+    # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
+    process_type = models.CharField(max_length=255)
+    probe_type = models.CharField(max_length=255, choices=PROBE_TYPE_CHOICES)
+
+    # 具体的检测机制配置，例如 httpGet 完整配置
+    check_mechanism = models.JSONField(default=None)
+
+    initial_delay_seconds = models.IntegerField(default=0)
+    timeout_seconds = models.PositiveIntegerField(default=1)
+    period_seconds = models.PositiveIntegerField(default=10)
+    success_threshold = models.PositiveIntegerField(default=1)
+    failure_threshold = models.PositiveIntegerField(default=3)

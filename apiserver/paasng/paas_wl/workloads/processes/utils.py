@@ -20,6 +20,9 @@ import os
 from typing import List
 
 from paas_wl.resources.base.kube_client import CoreDynamicClient
+from paas_wl.workloads.processes.models import WlAppProbe
+from paasng.extensions.declarative.deployment.resources import Probe
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 def get_command_name(command: str) -> str:
@@ -59,3 +62,26 @@ def list_unavailable_deployment(client: CoreDynamicClient) -> List:
         # 其他情况的 Deployment 均认为 unavailable
         unavailable_deployments.append(deployment)
     return unavailable_deployments
+
+
+def upsert_wl_app_probe(
+    env: ModuleEnvironment,
+    process_type: str,
+    probe_type: str,
+    probe: Probe,
+):
+    """更新或创建蓝鲸监控相关资源(ServiceMonitor)的配置
+
+    - AppMetricsMonitor 创建后需要在应用部署时才会真正下发到 k8s 集群
+    """
+    instance, _ = WlAppProbe.objects.update_or_create(
+        app=env.wl_app,
+        process_type=process_type,
+        probe_type=probe_type,
+        check_mechanism=probe.get_check_mechanism_json(),
+        initial_delay_seconds=probe.initial_delay_seconds,
+        timeout_seconds=probe.timeout_seconds,
+        period_seconds=probe.period_seconds,
+        success_threshold=probe.success_threshold,
+        failure_threshold=probe.failure_threshold,
+    )

@@ -22,9 +22,10 @@ import cattr
 from django.db.transaction import atomic
 
 from paas_wl.monitoring.app_monitor.shim import upsert_app_monitor
+from paas_wl.workloads.processes.utils import upsert_wl_app_probe
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
-from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
+from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, Probe
 from paasng.extensions.declarative.models import DeploymentDescription
 
 logger = logging.getLogger(__name__)
@@ -62,10 +63,23 @@ class DeploymentDeclarativeController:
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
 
+        for process_type, process in desc.processes.items():
+            for probe_type, probe in process.probes.items():
+                self.update_probes(process_type=process_type, probe_type=probe_type, probe=probe)
+
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
         upsert_app_monitor(
             env=self.deployment.app_environment,
             port=bk_monitor.port,
             target_port=bk_monitor.target_port,  # type: ignore
+        )
+
+    def update_probes(self, process_type: str, probe_type: str, probe: Probe):
+        """更新 SaaS 探针配置"""
+        upsert_wl_app_probe(
+            env=self.deployment.app_environment,
+            process_type=process_type,
+            probe_type=probe_type,
+            probe=probe,
         )

@@ -71,6 +71,16 @@ def probe_addon_template(probe_template):
 
 
 @pytest.fixture
+def check_mechanism_templates():
+    return {
+        "readiness": {
+            "http_get": {"path": "/healthz", "port": 8080},
+        },
+        "liveness": {"tcp_socket": {"port": 60}},
+    }
+
+
+@pytest.fixture
 def shm_volume_mount_template():
     return dedent(
         """
@@ -128,6 +138,11 @@ def secret_volume_template():
         }
     """
     )
+
+
+@pytest.fixture
+def process_type():
+    return 'web'
 
 
 @pytest.fixture

@@ -57,10 +57,45 @@ class SvcDiscoverySLZ(serializers.Serializer):
     bk_saas = serializers.ListField(child=SvcBkSaaSSLZ())
 
 
+class HTTPHeaderSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="标头名称")
+    value = serializers.CharField(help_text="标头值")
+
+
+class ExecSLZ(serializers.Serializer):
+    command = serializers.ListField(help_text="访问路径", child=serializers.CharField())
+
+
+class HTTPGetSLZ(serializers.Serializer):
+    port = serializers.IntegerField(help_text="访问端口或者端口名称")
+    host = serializers.CharField(help_text="主机名", required=False)
+    path = serializers.CharField(help_text="访问路径", required=False)
+    http_headers = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ())
+    scheme = serializers.CharField(help_text="连接主机的方案", required=False)
+
+
+class TCPSocketSLZ(serializers.Serializer):
+    port = serializers.IntegerField(help_text="访问端口或者端口名称")
+    host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
+
+
+class ProbesSLZ(serializers.Serializer):
+    exec = ExecSLZ(help_text="命令行探活检测机制", required=False)
+    http_get = HTTPGetSLZ(help_text="http 请求探活检测机制", required=False)
+    tcp_socket = TCPSocketSLZ(help_text="tcp 请求探活检测机制", required=False)
+
+    initial_delay_seconds = serializers.IntegerField(help_text="容器启动后等待时间", required=False)
+    timeout_seconds = serializers.IntegerField(help_text="探针执行超时时间", required=False)
+    period_seconds = serializers.IntegerField(help_text="探针执行间隔时间", required=False)
+    success_threshold = serializers.IntegerField(help_text="连续几次检测成功后，判定容器是健康的", required=False)
+    failure_threshold = serializers.IntegerField(help_text="连续几次检测失败后，判定容器是不健康", required=False)
+
+
 class ProcessSLZ(serializers.Serializer):
     command = serializers.CharField(help_text="进程启动指令")
     replicas = serializers.IntegerField(default=None, help_text="进程副本数", allow_null=True)
     plan = serializers.CharField(help_text="资源方案名称", required=False, allow_blank=True, allow_null=True)
+    probes = serializers.DictField(help_text="key: 探针类型, value: 探针信息信息", required=False, child=ProbesSLZ())
 
 
 class BluekingMonitorSLZ(serializers.Serializer):

@@ -1,18 +1,25 @@
-### 资源描述
+### 功能描述
 
-根据应用 ID 查询应用基本信息，仅供内部系统使用
+根据应用 ID 查询应用基本信息，仅供内部系统使用。
 
-### 认证方式
+### 请求参数
 
-使用 Bearer 方式认证，具体的 token 请向管理员申请。
+#### 1、路径参数：
+暂无。
 
-### 输入参数说明
-| 参数名称      | 参数类型     | 必须 | 参数说明                           |
-|---------------|--------------|-----|--------------------------------|
-| private_token | string       | 否   | PaaS 平台分配的 token,当请求方的应用身份未被 PaaS 平台认证时必须提供|
-| id            | List[string] | 是   | 使用逗号分隔的应用 ID(app id) 列表 |
+#### 2、接口参数：
 
-### 返回结果
+| 参数名称 | 参数类型 | 是否必填 | 参数说明 |
+| -------- | -------- | -------- | -------- |
+| id       | List[string] | 是   | 使用逗号分隔的应用 ID(bk_app_code) 列表 |
+
+### 请求示例
+
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/uni_applications/query/by_id/?id={bk_app_code}'
+```
+
+### 返回结果示例
 
 ```javascript
 [
@@ -39,11 +46,21 @@
 ]
 ```
 
-### 返回结果说明
+### 返回结果参数说明
 
-- 结果列表里的内容，与请求参数的 AppID 顺序一致
-- 当某个应用 ID 查不到任何信息时，该位置内容为 null
+- 结果列表里的内容，与请求参数的 AppID 顺序一致。
+- 当某个应用 ID 查不到任何信息时，该位置内容为 null。
 
-| 参数名称 | 参数类型     | 参数说明                 |
-|----------|----------|----------------------|
-| source   | 应用来源平台 | 1 - 默认（v3）, 2 - 旧版本 |
+| 参数名称 | 参数类型 | 参数说明 |
+| -------- | -------- | -------- |
+| source   | int      | 应用来源平台，1 - 默认（v3），2 - 旧版本 |
+| name     | string   | 应用名称 |
+| code     | string   | 应用代码 |
+| region   | string   | 应用区域，默认为 "default" |
+| logo_url | string   | 应用 Logo URL |
+| developers | List[string] | 应用开发者列表 |
+| creator  | string   | 应用创建者 |
+| created  | string   | 应用创建时间 |
+| contact_info | dict  | 联系信息 |
+| contact_info.latest_operator | string | 最近操作者 |
+| contact_info.recent_deployment_operators | List[string] | 最近 1 个月内部署过的人，排名不分先后 |

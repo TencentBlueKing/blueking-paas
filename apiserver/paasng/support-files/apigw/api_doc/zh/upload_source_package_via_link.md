@@ -1,25 +1,35 @@
-### 资源描述
+### 功能描述
 根据下载链接上传源码包至平台
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 调用示例
+#### 1、路径参数：
+
+| 参数名称 | 参数类型 | 必须 | 参数说明 |
+| -------- | -------- | ---- | -------- |
+| code     | string   | 是   | 应用 ID  |
+| module_name | string | 是 | 模块名称 |
+
+#### 2、接口参数：
+
+| 字段            | 类型    | 是否必填 | 描述                   |
+| --------------- | ------- | -------- | ---------------------- |
+| package_url     | string  | 是       | 源码包下载路径         |
+| version         | string  | 否       | 源码包版本号           |
+| allow_overwrite | boolean | 否       | 是否允许覆盖原有的源码包 |
+
+### 请求示例
 ```bash
 curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sundy820/modules/default/source_package/link/' \
-  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' \
+  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' \
   -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohLfLFHX1EPDP7rB' \
   --data-binary $'------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="package_url"\r\n\r\n   你的源码包链接  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="version"\r\n\r\n  你的版本号  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="allow_overwrite"\r\n\r\nfalse\r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB--\r\n'
 ```
 
-### 请求参数说明
-<table class="parameters"><thead><tr><th class="col_header parameters-col_name">Name</th><th class="col_header parameters-col_description">Description</th></tr></thead><tbody><tr data-param-name="package_url" data-param-in="formData"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 5511 -->package_url<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 5514 -->string<!-- /react-text --><span class="prop-format"><!-- react-text: 5516 -->($<!-- /react-text --><!-- react-text: 5517 -->uri<!-- /react-text --><!-- react-text: 5518 -->)<!-- /react-text --></span></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 5521 -->(<!-- /react-text --><!-- react-text: 5522 -->formData<!-- /react-text --><!-- react-text: 5523 -->)<!-- /react-text --></div><div class="parameter__extension"><!-- react-text: 5525 -->minLength<!-- /react-text --><!-- react-text: 5526 -->: <!-- /react-text --><!-- react-text: 5527 -->1<!-- /react-text --></div></td><td class="parameters-col_description"><div class="markdown"><p>源码包下载路径</p>
-</div><input type="text" class="" title="" placeholder="package_url - 源码包下载路径" value="" disabled=""></td></tr><tr data-param-name="version" data-param-in="formData"><td class="parameters-col_name"><div class="parameter__name"><!-- react-text: 5534 -->version<!-- /react-text --></div><div class="parameter__type"><!-- react-text: 5536 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 5539 -->(<!-- /react-text --><!-- react-text: 5540 -->formData<!-- /react-text --><!-- react-text: 5541 -->)<!-- /react-text --></div><div class="parameter__extension"><!-- react-text: 5543 -->minLength<!-- /react-text --><!-- react-text: 5544 -->: <!-- /react-text --><!-- react-text: 5545 -->1<!-- /react-text --></div></td><td class="parameters-col_description"><div class="markdown"><p>源码包版本号</p>
-</div><input type="text" class="" title="" placeholder="version - 源码包版本号" value="v1" disabled=""></td></tr><tr data-param-name="allow_overwrite" data-param-in="formData"><td class="parameters-col_name"><div class="parameter__name"><!-- react-text: 5552 -->allow_overwrite<!-- /react-text --></div><div class="parameter__type"><!-- react-text: 5554 -->boolean<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 5557 -->(<!-- /react-text --><!-- react-text: 5558 -->formData<!-- /react-text --><!-- react-text: 5559 -->)<!-- /react-text --></div><div class="parameter__extension"><!-- react-text: 5561 -->x-nullable<!-- /react-text --><!-- react-text: 5562 -->: <!-- /react-text --><!-- react-text: 5563 -->true<!-- /react-text --></div></td><td class="parameters-col_description"><div class="markdown"><p>是否允许覆盖原有的源码包</p>
-</div><div class="parameter__default markdown"><p><i>Default value</i> : false</p>
-</div><select class="" disabled=""><option value="">--</option><option value="true">true</option><option value="false">false</option></select></td></tr><tr data-param-name="code" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 5574 -->code<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 5577 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 5580 -->(<!-- /react-text --><!-- react-text: 5581 -->path<!-- /react-text --><!-- react-text: 5582 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="code" value="" disabled=""></td></tr><tr data-param-name="module_name" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 5588 -->module_name<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 5591 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 5594 -->(<!-- /react-text --><!-- react-text: 5595 -->path<!-- /react-text --><!-- react-text: 5596 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="module_name" value="" disabled=""></td></tr></tbody></table>
+#### 获取你的 access_token
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### 返回结果
+### 返回结果示例
 ```json
 {
   "version": "v1",
@@ -31,11 +41,13 @@ curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sund
 }
 ```
 
-### 返回结果说明
-<table class="model"><tbody><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5643 -->version<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5651 -->title<!-- /react-text --><!-- react-text: 5652 -->: <!-- /react-text --><!-- react-text: 5653 -->Version<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5656 -->minLength<!-- /react-text --><!-- react-text: 5657 -->: <!-- /react-text --><!-- react-text: 5658 -->1<!-- /react-text --></span><div class="markdown"><p>版本信息</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5662 -->package_name<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5670 -->title<!-- /react-text --><!-- react-text: 5671 -->: <!-- /react-text --><!-- react-text: 5672 -->Package name<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5675 -->minLength<!-- /react-text --><!-- react-text: 5676 -->: <!-- /react-text --><!-- react-text: 5677 -->1<!-- /react-text --></span><div class="markdown"><p>源码包名称</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5681 -->package_size<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5689 -->title<!-- /react-text --><!-- react-text: 5690 -->: <!-- /react-text --><!-- react-text: 5691 -->Package size<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5694 -->minLength<!-- /react-text --><!-- react-text: 5695 -->: <!-- /react-text --><!-- react-text: 5696 -->1<!-- /react-text --></span><div class="markdown"><p>源码包大小</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5700 -->sha256_signature<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5708 -->title<!-- /react-text --><!-- react-text: 5709 -->: <!-- /react-text --><!-- react-text: 5710 -->Sha256 signature<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5713 -->minLength<!-- /react-text --><!-- react-text: 5714 -->: <!-- /react-text --><!-- react-text: 5715 -->1<!-- /react-text --></span><div class="markdown"><p>sha256数字签名</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5719 -->updated<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span class="prop-format"><!-- react-text: 5726 -->($<!-- /react-text --><!-- react-text: 5727 -->date-time<!-- /react-text --><!-- react-text: 5728 -->)<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5731 -->title<!-- /react-text --><!-- react-text: 5732 -->: <!-- /react-text --><!-- react-text: 5733 -->Updated<!-- /react-text --></span><div class="markdown"><p>更新时间</p>
-</div></span></span></td></tr><tr class="false"><td style="vertical-align: top; padding-right: 0.2em; font-weight: bold;"><!-- react-text: 5737 -->created<!-- /react-text --><span style="color: red;">*</span></td><td style="vertical-align: top;"><span class="model"><span class="prop"><span class="prop-type">string</span><span class="prop-format"><!-- react-text: 5744 -->($<!-- /react-text --><!-- react-text: 5745 -->date-time<!-- /react-text --><!-- react-text: 5746 -->)<!-- /react-text --></span><span style="color: rgb(107, 107, 107); font-style: italic;"><br><!-- react-text: 5749 -->title<!-- /react-text --><!-- react-text: 5750 -->: <!-- /react-text --><!-- react-text: 5751 -->Created<!-- /react-text --></span><div class="markdown"><p>创建时间</p>
-</div></span></span></td></tr><tr>&nbsp;</tr></tbody></table>
+### 返回结果参数说明
+
+| 字段             | 类型   | 描述       |
+| ---------------- | ------ | ---------- |
+| version          | string | 版本信息   |
+| package_name     | string | 源码包名称 |
+| package_size     | string | 源码包大小 |
+| sha256_signature | string | sha256数字签名 |
+| updated          | string | 更新时间   |
+| created          | string | 创建时间   |

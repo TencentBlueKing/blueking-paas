@@ -1,24 +1,29 @@
-### Resource Description
+### Function Description
+Query the list of all "Blueking Plugin" type applications on the platform, for internal system use only.
 
-Query the list of all "blue whale plug-in" type applications on the platform, which is only used by internal systems
+### Request Parameters
 
-### Authentication mode
+#### 1. Path Parameters:
+None.
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 2. API Parameters:
 
-### Input parameter Description
-| Field         | Type | Required | Description                                                  |
-|-----------------------|----------|-----|------------------------------------------------------------------|
-| private_token         |  string   | no | Token allocated by PaaS platform, which must be provided when the app identity of the requester is not authenticated by PaaS platform |
-| search_term           |  string   | no | Filter keywords to match code and name fields                                  |
-| order_by              |  string   | no | Sorting, default is "encrypted," and supports "encrypted,""code" and "encrypted code"                |
-| has_deployed          |  boolean  |no   | Filter by "has plug-in been deployed" and do not filter by default                                    |
-| distributor_code_name | string   | no | Filter by "authorized user code," such as "bksops," which is not filtered by default                    |
-| tag                   | integer  | 否   |  Filter by plugin tag and do not filter by default                    |
-| limit                 |  integer  |no   | Paging parameter, total, default is 100                                             |
-| offset                |  integer  | no       | Paging parameter, deviation number, default is 0                                             |
+| Parameter Name         | Parameter Type | Required | Parameter Description                                              |
+|------------------------|----------------|----------|--------------------------------------------------------------------|
+| search_term            | string         | No       | Filter keyword, will match code and name fields                    |
+| order_by               | string         | No       | Sorting, default is "-created", supports "created", "code", "-code" |
+| has_deployed           | boolean        | No       | Filter by "whether the plugin has been deployed", default is not filtered |
+| distributor_code_name  | string         | No       | Filter by "authorized user code", such as "bksops", default is not filtered |
+| tag                    | integer        | No       | Filter by plugin category, default is not filtered                 |
+| limit                  | integer        | No       | Pagination parameter, total number, default is 100                 |
+| offset                 | integer        | No       | Pagination parameter, offset, default is 0                         |
 
-### Return result
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/
+```
+
+### Response Result Example
 
 ```javascript
 {
@@ -37,17 +42,17 @@ Use Bearer method for authentication. Please apply to the administrator for spec
       "created": "2021-08-17 19:35:25",
       "updated": "2021-08-17 19:35:25",
       "tag_info": {
-        "id": 1,
-        "name": "tag-1",
-        "code_name": "tag1"
-      }     
+          "id": 1,
+          "name": "Category 1",
+          "code_name": "tag1"
+      }
     }
   ]
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| Field | Type | Description                                   |
-|--------------|----------|---------------------------------------------------|
-| has_deployed | bool     | Indicates whether the plug-in has been deployed after creation, which can be filtered by`has_deployed` parameters|
+| Parameter Name | Parameter Type | Parameter Description                                     |
+|----------------|----------------|------------------------------------------------------------|
+| has_deployed   | bool           | Indicates whether the plugin has been deployed after creation, can be filtered by `has_deployed` parameter |

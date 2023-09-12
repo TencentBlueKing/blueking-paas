@@ -1,25 +1,31 @@
-### Resource Description
-Query recoverable off-shelf operations
+### Description
+Query resumable offline operations
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Path interface description
+#### 1. Path Parameters:
 
-|   Field   | Type | Required |     Description     |
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-|   app_code   |   string     |   yes   | App ID    |
-|   module |   string     |   yes   | Module name, such as "default"|
-|   env | string |yes| Environment name, optional values "stag"/"prod"|
+| app_code   | string | Yes | Application ID |
+| module   | string | Yes | Module name, e.g. "default" |
+| env | string | Yes | Environment name, optional values: "stag" / "prod" |
 
-### Call example
+#### 2. API Parameters:
+None.
+
+### Request Example
 
 #### svn
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{Fill in your AccessToken}}/modules/{{Fill in your module name}}/envs/{Fill in the App deployment environment:stag or prod}/offlines/resumable/
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{Fill in your AppCode}}/modules/{{Fill in your module name}}/envs/{Fill in App deployment environment:stag or prod}/offlines/resumable/
 ```
 
-### Return result
+#### Get your access_token
+Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+
+### Response Result Example
 ```json
 {
   "result": {
@@ -47,15 +53,26 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Fill in your AccessT
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| id         | string($uuid)<br/>title: UUID<br/>readOnly: true             |
-| ---------- | ------------------------------------------------------------ |
-| status     | string<br/>title: Downline Status Enum:<br/>[ successful, failed, pending ] |
-| operator   | string<br/>title: Operator<br/>readOnly: true                |
-| created    | string($date-time)<br/>title: Created<br/>readOnly: true     |
-| log        | string<br/>title: Offline Log<br/>x-nullable: true           |
-| err_detail | string<br/>title: Reasons for downline anomalies<br/>x-nullable: true |
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| id | string | Yes | UUID |
+| status | string | Yes | Offline status, optional values: successful, failed, pending |
+| operator | string | Yes | Operator |
+| created | string | Yes | Created |
+| log | string | Yes | Offline log |
+| err_detail | string | Yes | Offline exception reason |
+| offline_operation_id | string | Yes | Offline operation ID |
+| environment | string | Yes | Environment name |
+| repo | object | Yes | Repository information |
 
-
-
+repo
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| source_type | string | Yes | Source type |
+| type | string | Yes | Type |
+| name | string | Yes | Name |
+| url | string | Yes | URL |
+| revision | string | Yes | Revision |
+| comment | string | Yes | Comment |

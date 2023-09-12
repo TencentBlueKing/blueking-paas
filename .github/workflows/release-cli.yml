@@ -42,5 +42,6 @@ jobs:
           project_path: bkpaas-cli
           build_command: make build GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} VERSION=${{ github.event.release.tag_name }}
           extra_files: LICENSE.txt bkpaas-cli/README.md bkpaas-cli/${{ matrix.bin_name }}
+          # tag_name 需要以 bkpaas-cli 为前缀
           asset_name: ${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
           md5sum: false

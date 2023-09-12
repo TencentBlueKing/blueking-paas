@@ -36,11 +36,12 @@ jobs:
         uses: wangyoucao577/go-release-action@v1.37
         with:
           github_token: ${{ secrets.REPO_RELEASE_ACCESS_TOKEN }}
-          goversion: 1.20
+          goversion: "1.20"
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           project_path: bkpaas-cli
           build_command: make build GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} VERSION=${{ github.event.release.tag_name }}
           extra_files: LICENSE.txt bkpaas-cli/README.md bkpaas-cli/${{ matrix.bin_name }}
-          asset_name: bkpaas-cli-${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          # tag_name 需要以 bkpaas-cli 为前缀
+          asset_name: ${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
           md5sum: false

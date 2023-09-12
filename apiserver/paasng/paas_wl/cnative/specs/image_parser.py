@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
@@ -24,24 +25,52 @@ from moby_distribution.registry.utils import parse_image
 from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 
+logger = logging.getLogger(__name__)
+
 
 class ImageParser:
     """A Helper for parsing image field in bkapp"""
 
     def __init__(self, bkapp: BkAppResource):
-        if bkapp.apiVersion not in [ApiVersion.V1ALPHA2]:
-            raise ValueError(
-                _("{value} is not valid, use {required").format(value=bkapp.apiVersion, required=ApiVersion.V1ALPHA2)
-            )
-        if bkapp.spec.build is None or bkapp.spec.build.image is None:
-            raise ValueError(_("spec.build.image is missing"))
-
         self.bkapp = bkapp
-        self.image = bkapp.spec.build.image
+        self.image = self.get_image_field(bkapp)
 
     def get_tag(self) -> Optional[str]:
+        """get part `tag` in image field"""
         return parse_image(self.image, default_registry="docker.io").tag
 
     def get_repository(self) -> str:
+        """get part `repository` in image field"""
         parsed = parse_image(self.image, default_registry="docker.io")
         return f"{parsed.domain}/{parsed.name}"
+
+    def get_image_field(self, bkapp: BkAppResource) -> str:
+        """get image field from app model resource"""
+        image = ""
+        if bkapp.apiVersion == ApiVersion.V1ALPHA2:
+            if bkapp.spec.build and bkapp.spec.build.image:
+                image = bkapp.spec.build.image
+            else:
+                raise ValueError(_("spec.build.image is missing"))
+        elif bkapp.apiVersion == ApiVersion.V1ALPHA1:
+            # 兼容 V1ALPHA1
+            # 优先使用 web 进程的镜像, 如无 web 进程, 则使用第一个进程的镜像
+            images = []
+            for proc in bkapp.spec.processes:
+                if proc.image:
+                    images.append(proc.image)
+                    if proc.name == "web":
+                        image = proc.image
+            if image == "":
+                image = images[0] if images else image
+            if len(images) > 1:
+                logger.warning(
+                    "multiple image are defined, "
+                    "only the image of the process named web or the first process's image will be used"
+                )
+        else:
+            NotImplementedError("unknown apiVersion: {}".format(bkapp.apiVersion))
+
+        if not image:
+            raise ValueError(_("image is missing"))
+        return image

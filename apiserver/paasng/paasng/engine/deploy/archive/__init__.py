@@ -16,7 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Process related functions"""
-from .procs import CNativeProcSpec, get_proc_specs, get_procfile, parse_proc_specs, parse_procfile
+from paasng.engine.deploy.archive.base import BaseArchiveManager
+from paasng.engine.deploy.archive.legacy import ApplicationArchiveManager
+from paasng.engine.deploy.archive.operator import BkAppArchiveManager
+from paasng.engine.models.offline import OfflineOperation
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ModuleEnvironment
 
-__all__ = ['get_proc_specs', 'CNativeProcSpec', 'parse_proc_specs', 'parse_procfile', 'get_procfile']
+
+def start_archive_step(env: ModuleEnvironment, operator: str) -> OfflineOperation:
+    """start an archive process"""
+    application = env.application
+
+    mgr: BaseArchiveManager
+    if application.type == ApplicationType.CLOUD_NATIVE:
+        mgr = BkAppArchiveManager(env)
+    else:
+        mgr = ApplicationArchiveManager(env)
+    return mgr.perform_env_offline(operator)

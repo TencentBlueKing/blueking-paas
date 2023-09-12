@@ -16,7 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Process related functions"""
-from .procs import CNativeProcSpec, get_proc_specs, get_procfile, parse_proc_specs, parse_procfile
+from typing import Type
 
-__all__ = ['get_proc_specs', 'CNativeProcSpec', 'parse_proc_specs', 'parse_procfile', 'get_procfile']
+from blue_krill.async_utils.poll_task import CallbackHandler
+
+from paas_wl.deploy.actions.archive import ArchiveOperationController
+from paasng.engine.deploy.archive.base import BaseArchiveManager
+from paasng.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
+from paasng.engine.models.offline import OfflineOperation
+
+
+class ApplicationArchiveManager(BaseArchiveManager):
+    def perform_implement(self, offline_operation: OfflineOperation, result_handler: Type[CallbackHandler]):
+        """Start the offline operation, this will start background task, and call result handler when task finished"""
+        op_id = str(offline_operation.pk)
+        ArchiveOperationController(env=self.env).start()
+        wait_for_all_stopped(env=self.env, result_handler=result_handler, extra_params={"operation_id": op_id})

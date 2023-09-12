@@ -77,7 +77,7 @@
             </bk-form-item>
 
             <bk-form-item
-              :label="$t('镜像仓库')"
+              :label="$t('镜像地址')"
               :required="true"
               :label-width="120"
               :property="'image'"
@@ -553,7 +553,7 @@
         <bk-form
           :model="formData">
           <bk-form-item
-            :label="$t('镜像仓库：')">
+            :label="isV1alpha2 ? $t('镜像仓库：') : $t('镜像地址：')">
             <span class="form-text">{{ isV1alpha2 ? buildData.image : (formData.image || '--') }}</span>
           </bk-form-item>
           <bk-form-item

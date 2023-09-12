@@ -3,35 +3,49 @@
     <!-- 部署中、部署成功、部署失败 -->
     <div v-if="isWatchDeploying || isDeploySuccess || isDeployFail">
       <bk-alert type="info" :show-icon="false" class="mb20 alert-cls" v-if="isWatchDeploying">
-        <div class="flex-row align-items-center" slot="title">
-          <div class="fl">
-            <round-loading
-              size="small"
-              ext-cls="deploy-round-loading"
-            />
+        <div class="flex-row align-items-center justify-content-between" slot="title">
+          <div class="flex-row align-items-center">
+            <div class="fl">
+              <round-loading
+                size="small"
+                ext-cls="deploy-round-loading"
+              />
+            </div>
+            <p class="deploy-pending-text pl20">
+              {{ $t('正在部署中...') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
+                <span class="version-text pl30"> {{ $t('版本：') }}
+                  {{ deploymentInfo.version_info.revision.substring(1,8) }}
+                </span>
+                <span class="branch-text"> {{ $t('分支：') }}
+                  {{ deploymentInfo.version_info.version_name }}
+                </span>
+              </span>
+              <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
+                <span class="branch-text"> {{ $t('镜像Tag：') }}
+                  {{ deploymentInfo.version_info.version_name.substring(0,16) }}
+                </span>
+              </span>
+              <span
+                v-if="deployTotalTime"
+                class="time-text"
+              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+            </p>
           </div>
-          <p class="deploy-pending-text pl20">
-            {{ $t('正在部署中...') }}
-          </p>
-          <p class="deploy-text-wrapper">
-            <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
-              <span class="version-text pl30"> {{ $t('版本：') }}
-                {{ deploymentInfo.version_info.revision.substring(1,8) }}
-              </span>
-              <span class="branch-text"> {{ $t('分支：') }}
-                {{ deploymentInfo.version_info.version_name }}
-              </span>
-            </span>
-            <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
-              <span class="branch-text"> {{ $t('镜像Tag：') }}
-                {{ deploymentInfo.version_info.version_name.substring(0,16) }}
-              </span>
-            </span>
-            <span
-              v-if="deployTotalTime"
-              class="time-text"
-            > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
-          </p>
+          <div
+            v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
+            class="action-wrapper"
+          >
+            <bk-button
+              theme="primary"
+              :outline="true"
+              @click="stopDeploy"
+            >
+              {{ $t('停止部署') }}
+            </bk-button>
+          </div>
         </div>
       </bk-alert>
       <bk-alert type="error" :show-icon="false" class="mb20 alert-cls" v-if="isDeployFail">
@@ -117,6 +131,27 @@
         :environment="environment"
       />
     </div>
+
+    <bk-dialog
+      v-model="stopDeployConf.visiable"
+      width="480"
+      :title="stopDeployConf.title"
+      :theme="'primary'"
+      :mask-close="false"
+      :draggable="false"
+      header-position="left"
+      @confirm="confirmStopDeploy"
+      @cancel="cancelStopDeploy"
+      @after-leave="afterLeaveStopDeploy"
+    >
+      <div v-if="stopDeployConf.stage === 'build'">
+        {{ $t('数据库如有变更操作') }}， <span style="color: #f00;">
+          {{ $t('数据库变更可能会异常中断且无法回滚') }} </span> ，{{ $t('请留意表结构') }}。
+      </div>
+      <div v-else>
+        {{ $t('部署命令已经下发') }}， <span style="color: #f00;">{{ $t('仅停止检查部署结果') }} </span> ，{{ $t('请留意进程状态') }}。
+      </div>
+    </bk-dialog>
   </div>
 </template>
 <script>
@@ -196,6 +231,12 @@ export default {
       curModuleInfo: {},  // 当前模块的信息
       serverProcessEvent: null,
       watchServerTimer: null,
+      stopDeployConf: {   // 停止部署
+        title: '',
+        visiable: false,
+        isLoading: false,
+        stage: '',
+      },
     };
   },
   computed: {
@@ -959,6 +1000,49 @@ export default {
           process.status = 'Running';
         }
       }
+    },
+
+    // 停止部署
+    stopDeploy() {
+      if (this.appearDeployState.includes('build')) {
+        this.stopDeployConf.title = this.$t('确认停止【构建阶段】吗？');
+        this.stopDeployConf.stage = 'build';
+      }
+
+      if (this.appearDeployState.includes('release')) {
+        this.stopDeployConf.title = this.$t('确认停止【部署阶段】吗？');
+        this.stopDeployConf.stage = 'release';
+      }
+      this.stopDeployConf.visiable = true;
+    },
+
+    // 确认停止部署
+    async confirmStopDeploy() {
+      try {
+        await this.$store.dispatch('deploy/stopDeploy', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          deployId: this.deploymentId,
+        });
+        // 停止部署 返回
+        this.handleCallback();
+        this.cancelStopDeploy();  // 关闭弹窗
+        this.closeServerPush();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('部署失败，请稍候再试'),
+        });
+      }
+    },
+
+    cancelStopDeploy() {
+      this.stopDeployConf.visiable = false;
+    },
+
+    afterLeaveStopDeploy() {
+      this.stopDeployConf.title = '';
+      this.stopDeployConf.stage = '';
     },
   },
 };

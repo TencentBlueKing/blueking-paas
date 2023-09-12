@@ -13,7 +13,7 @@
       @after-leave="handleAfterLeave"
     >
       <div v-if="isV1alpha2">
-        <div class="code-depot" v-if="deploymentInfoBackUp.exposed_url">
+        <div class="code-depot mb10" v-if="deploymentInfoBackUp.repo_url">
           <span class="pr20">
             {{ deploymentInfoBackUp.build_method === 'dockerfile' ?
               $t('代码仓库') : $t('镜像仓库') }}
@@ -91,7 +91,7 @@
           </div>
 
           <div class="image-source mt20" v-if="buttonActive === 'image'">
-            <div class="mb10 flex-row justify-content-between">
+            <div class="mb10 mt10 flex-row justify-content-between">
               <div>镜像Tag</div>
             </div>
             <bk-select
@@ -114,7 +114,7 @@
           </div>
         </div>
         <div v-else>
-          <div class="mb10 flex-row justify-content-between">
+          <div class="mb10 mt10 flex-row justify-content-between">
             <div>镜像Tag</div>
           </div>
           <bk-input

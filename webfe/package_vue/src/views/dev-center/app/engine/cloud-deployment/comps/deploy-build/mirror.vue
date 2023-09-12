@@ -2,7 +2,7 @@
   <div class="mirror-main">
     <section class="mirror-info">
       <div class="header-wrapper mb20">
-        <span class="build-title">{{ $t('镜像信息') }}</span>
+        <span :class="['build-title', { 'edit': isMirrorEdit }]">{{ $t('镜像信息') }}</span>
         <div class="edit-container" @click="handleEdit" v-if="!isMirrorEdit">
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
@@ -73,13 +73,17 @@
       <!-- 编辑态 -->
       <div class="content" v-else>
         <div class="form-wrapper">
-          <bk-form :model="mirrorData">
+          <bk-form ref="mirrorInfoRef" :model="mirrorData">
             <bk-form-item :label="$t('镜像仓库')">
               <span class="form-text">
                 {{ mirrorData.image_repository || "--" }}
               </span>
             </bk-form-item>
-            <bk-form-item :label="$t('镜像 tag 规则')">
+            <bk-form-item
+              :label="$t('镜像 tag 规则')"
+              :property="'tag_options.prefix'"
+              :rules="rules.prefix"
+              :icon-offset="518">
               <!-- 对应正则 -->
               <bk-input
                 v-model="mirrorData.tag_options.prefix"
@@ -94,7 +98,10 @@
               <span class="connector">+</span>
               <bk-checkbox v-model="mirrorData.tag_options.with_commit_id">CommitID</bk-checkbox>
             </bk-form-item>
-            <bk-form-item :label="$t('构建方式')">
+            <bk-form-item
+              :label="$t('构建方式')"
+              :property="'build_method'"
+              :rules="rules.buildMethod">
               <bk-radio-group v-model="mirrorData.build_method">
                 <bk-radio
                   :value="item.id"
@@ -105,7 +112,10 @@
               </bk-radio-group>
             </bk-form-item>
             <template v-if="mirrorData.build_method === 'buildpack'">
-              <bk-form-item :label="$t('基础镜像')">
+              <bk-form-item
+              :label="$t('基础镜像')"
+              :property="'bp_stack_name'"
+              :rules="rules.bp_stack_name">
                 <bk-select
                   :disabled="false"
                   v-model="mirrorData.bp_stack_name"
@@ -138,46 +148,74 @@
               </bk-form-item>
             </template>
             <template v-else>
-              <bk-form-item :label="$t('Dockerfile 路径')">
+              <bk-form-item
+                :label="$t('Dockerfile 路径')"
+                :property="'dockerfile_path'"
+                :rules="rules.dockerfilePath">
                 <bk-input v-model="mirrorData.dockerfile_path"></bk-input>
               </bk-form-item>
-              <bk-form-item :label="$t('构建参数')">
-                <template v-if="buildParams.length">
-                  <div class="build-params-header">
-                    <div class="name">{{$t('参数名')}}</div>
-                    <div class="value">{{$t('参数值')}}</div>
-                  </div>
-                  <div
-                    v-for="(item, index) in buildParams"
-                    class="build-params-item"
-                    :key="index"
-                  >
-                    <bk-input
-                      :clearable="true"
-                      v-model="item.name"
-                      :placeholder="$t('用户名')"
-                    >
-                    </bk-input>
-                    <span class="equal">=</span>
-                    <bk-input :clearable="true" v-model="item.value"></bk-input>
-                    <i
-                      class="paasng-icon paasng-minus-circle-shape"
-                      @click="removeBuildParams(index)"
-                    ></i>
-                  </div>
-                </template>
-                <bk-button :text="true" title="primary" @click="addBuildParams">
-                  <i class="paasng-icon paasng-plus-thick" />
-                  {{ $t('新建构建参数') }}
-                </bk-button>
-              </bk-form-item>
+
+              <!-- 构建参数 -->
+              <bk-form
+                :model="mirrorData"
+                form-type="vertical"
+                ext-cls="build-params-form">
+                <div class="form-label">
+                  {{$t('构建参数')}}
+                </div>
+                <div class="form-value-wrapper">
+                  <bk-button
+                    v-if="!buildParams.length"
+                    :text="true"
+                    title="primary"
+                    @click="addBuildParams">
+                    <i class="paasng-icon paasng-plus-thick" />
+                    {{ $t('新建构建参数') }}
+                  </bk-button>
+                  <template v-if="buildParams.length">
+                    <div class="build-params-header">
+                      <div class="name">{{$t('参数名')}}</div>
+                      <div class="value">{{$t('参数值')}}</div>
+                    </div>
+                    <div
+                      v-for="(item, index) in buildParams"
+                      class="build-params-item"
+                      :key="index">
+                      <bk-form :ref="`name-${index}`" :model="item">
+                        <bk-form-item :rules="rules.buildParams" :property="'name'">
+                          <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
+                        </bk-form-item>
+                      </bk-form>
+                      <span class="equal">=</span>
+                      <bk-form :ref="`value-${index}`" :model="item">
+                        <bk-form-item :rules="rules.buildParams" :property="'value'">
+                          <bk-input v-model="item.value"></bk-input>
+                        </bk-form-item>
+                      </bk-form>
+                      <i
+                        class="paasng-icon paasng-minus-circle-shape"
+                        @click="removeBuildParams(index)"
+                      ></i>
+                    </div>
+                  </template>
+                </div>
+              </bk-form>
+              <bk-button
+                v-if="buildParams.length"
+                ext-cls="add-build-params"
+                :text="true"
+                title="primary"
+                @click="addBuildParams">
+                <i class="paasng-icon paasng-plus-thick" />
+                {{ $t('新建构建参数') }}
+              </bk-button>
             </template>
-            <bk-form-item :label="''">
+            <bk-form-item :label="''" class="mt20">
               <bk-button
                 :theme="'primary'"
                 class="mr10"
                 :loading="switchLoading"
-                @click="saveMirrorInfo"
+                @click="handleSave"
               >
                 {{ $t('保存') }}
               </bk-button>
@@ -240,6 +278,48 @@ export default {
       sourceToolList: [],
       targetToolList: [],
       targetToolValues: [],
+      rules: {
+        prefix: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[a-zA-Z0-9]{0,24}$/,
+            message: this.$t('只能包含字母、数字，长度小于 24 个字符'),
+            trigger: 'blur',
+          },
+        ],
+        buildMethod: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        bp_stack_name: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        dockerfilePath: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        buildParams: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+      }
     };
   },
   computed: {
@@ -367,6 +447,35 @@ export default {
       }
     },
 
+    // 保存校验
+    async handleSave () {
+      try {
+        await this.$refs.mirrorInfoRef?.validate();
+        // 构建参数校验
+        const flag = await this.buildParamsValidate();
+        if (flag) {
+          this.saveMirrorInfo();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    async buildParamsValidate() {
+      let flag = true;
+      for (const index in this.buildParams) {
+        try {
+          await this.$refs[`name-${index}`][0]?.validate()
+          .finally(async ()=> {
+            await this.$refs[`value-${index}`][0]?.validate();
+          })
+        } catch (error) {
+          flag = false;
+        }
+      }
+      return flag;
+    },
+
     // 保存镜像信息
     async saveMirrorInfo() {
       this.switchLoading = true;
@@ -429,6 +538,7 @@ export default {
       this.setTools();
     },
     handleCancel() {
+      this.$refs.mirrorInfoRef?.clearError();
       this.isMirrorEdit = false;
       // 数据还原
       this.mirrorData = cloneDeep(this.oldMirrorData);
@@ -500,9 +610,23 @@ export default {
 }
 
 .build-title {
+  position: relative;
   font-weight: 700;
   font-size: 14px;
   color: #313238;
+
+  &.edit::after {
+    content: '*';
+    height: 8px;
+    line-height: 1;
+    color: #ea3636;
+    font-size: 12px;
+    position: absolute;
+    display: inline-block;
+    vertical-align: middle;
+    top: 50%;
+    transform: translate(3px,-50%);
+  }
 }
 
 .mirror-info {
@@ -522,6 +646,7 @@ export default {
 
   .build-params-header {
     display: flex;
+    line-height: 32px;
     .name,
     .value {
       flex: 1;
@@ -535,6 +660,7 @@ export default {
     display: flex;
     align-items: center;
     margin-bottom: 10px;
+    width: 100%;
 
     &:last-child {
       margin-bottom: 0;
@@ -551,6 +677,37 @@ export default {
       margin-left: 12px;
       color: #ea3636;
       cursor: pointer;
+    }
+  }
+
+  .add-build-params {
+    margin-left: 150px;
+  }
+
+  .build-params-form {
+    margin-top: 10px;
+    margin-bottom: 16px;
+    display: flex;
+
+    .form-label {
+      width: 150px;
+      line-height: 32px;
+      padding-right: 24px;
+      text-align: right;
+    }
+
+    .form-value-wrapper {
+      line-height: 32px;
+      width: 100%;
+      flex: 1;
+
+      .bk-form {
+        flex: 1;
+      }
+
+      .bk-form-item {
+        margin-top: 0 !important;
+      }
     }
   }
 }

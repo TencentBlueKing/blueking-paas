@@ -305,6 +305,17 @@ export default {
       }
     },
 
+    // 校验
+    async handleValidator () {
+      let flag = true;
+      try {
+        await this.$refs.commandRef.validate();
+      } catch (e) {
+        flag = false;
+      }
+      return flag;
+    },
+
     // 保存
     handleSave () {
       this.$refs.commandRef.validate().then(validator => {

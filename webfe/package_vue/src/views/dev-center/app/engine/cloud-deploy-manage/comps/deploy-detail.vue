@@ -111,10 +111,22 @@
             <div class="operation">
               <div class="operate-process-wrapper mr15">
                 <div class="round-wrapper" v-if="row.targetStatus === 'start'">
-                  <div class="square-icon" @click="handleProcessOperation(row, 'stop')"></div>
+
+                  <bk-popconfirm
+                    content="确认停止该进程？"
+                    width="288"
+                    trigger="click"
+                    @confirm="handleStopProcess">
+                    <div
+                      v-bk-tooltips="$t('停止进程')"
+                      class="square-icon"
+                      @click="handleProcessOperation(row, 'stop')">
+                    </div>
+                  </bk-popconfirm>
                 </div>
                 <i
                   class="paasng-icon paasng-play-circle-shape start"
+                  v-bk-tooltips="$t('启动进程')"
                   v-else @click="handleProcessOperation(row, 'start')"></i>
               </div>
               <i
@@ -266,7 +278,6 @@ let timeShortCutText = '';
 export default {
   components: {
     // dropdown,
-    // tooltipConfirm,
     // numInput,
     chart: ECharts,
   },
@@ -436,6 +447,10 @@ export default {
     handleProcessOperation(row, type) {
       console.log(row);
       row.status = type;
+    },
+
+    handleStopProcess() {
+
     },
     handleExpansionAndContraction() {
       console.log('click');
@@ -834,6 +849,65 @@ export default {
         series,
       });
     },
+
+    async updateProcess(process, index) {
+      // 判断上次操作是否结束
+      if (process.isActionLoading) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('进程操作过于频繁，请间隔 3 秒再试'),
+        });
+        return false;
+      }
+      process.isActionLoading = true;
+
+
+      // 判断是否已经下架
+      if (this.isAppOfflined) {
+        return false;
+      }
+
+      process.isShowTooltipConfirm = false;
+      if (!process.operateIconTitle) {
+        process.operateIconTitle = process.operateIconTitleCopy;
+      }
+
+      this.currentClickObj = Object.assign({}, {
+        operateIconTitle: process.operateIconTitle,
+        index,
+      });
+
+      const processType = process.name;
+      const { targetStatus } = process;
+      const patchForm = {
+        process_type: processType,
+        operate_type: targetStatus === 'start' ? 'stop' : 'start',
+      };
+
+      try {
+        await this.$store.dispatch('processes/updateProcess', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          data: patchForm,
+        });
+
+        // 更新当前操作状态
+        if (targetStatus === 'start') {
+          process.targetStatus = 'stop';
+        } else {
+          process.targetStatus = 'start';
+        }
+      } catch (err) {
+        this.$paasMessage({
+          theme: 'error',
+          message: err.message,
+        });
+      } finally {
+        this.getProcessList();
+        process.isActionLoading = false;
+      }
+    },
   },
 };
 </script>
@@ -879,7 +953,8 @@ export default {
       cursor: pointer;
     }
     .start {
-      color: #2DCB56 ;
+      color: #2DCB56;
+      font-size: 20px;
     }
     .detail {
       color: #979BA5;
@@ -1018,8 +1093,8 @@ export default {
     cursor: pointer;
     .round-wrapper {
       margin-top: -2px;
-      width: 14px;
-      height: 14px;
+      width: 20px;
+      height: 20px;
       background: #EA3636;
       border-radius: 50%;
       display: flex;
@@ -1027,8 +1102,8 @@ export default {
       justify-content: center;
     }
     .square-icon {
-        width: 7px;
-        height: 7px;
+        width: 8px;
+        height: 8px;
         background: #fff;
         border-radius: 1px;
     }

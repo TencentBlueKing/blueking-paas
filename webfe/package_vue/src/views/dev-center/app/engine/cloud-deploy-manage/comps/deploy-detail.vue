@@ -492,6 +492,7 @@ export default {
           cpuLimit: processInfo.cpu_limit,
           memLimit: processInfo.memory_limit,
           clusterLink: processInfo.cluster_link,
+          isExpand: true,
           type,
         };
 

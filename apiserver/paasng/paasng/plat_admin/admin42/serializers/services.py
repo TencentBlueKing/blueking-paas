@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.utils.translation import get_language
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -72,6 +73,16 @@ class ServiceObjSLZ(serializers.Serializer):
         elif isinstance(obj, RemoteServiceObj):
             return "remote"
         raise ValueError("unknown obj origin")
+
+    def to_internal_value(self, data):
+        # 需要将语言中的连字符转为下划线，如 zh-cn 转为: zh_cn
+        language_code = get_language().replace('-', '_')
+        # 国际化相关的字段需要按当前用户的语言来确定字段
+        i18n_fields = ['display_name', 'description', 'long_description', 'instance_tutorial']
+        for _field in i18n_fields:
+            data[f'{_field}_{language_code}'] = data.pop(_field, "")
+
+        return data
 
 
 class PlanObjSLZ(serializers.Serializer):

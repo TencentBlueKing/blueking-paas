@@ -35,7 +35,7 @@ from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.dev_resources.servicehub import constants, exceptions
 from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.dev_resources.servicehub.remote.client import RemoteServiceClient
-from paasng.dev_resources.servicehub.remote.collector import refresh_remote_service
+from paasng.dev_resources.servicehub.remote.collector import RemoteSpecDefinitionUpdateSLZ, refresh_remote_service
 from paasng.dev_resources.servicehub.remote.exceptions import (
     GetClusterEgressInfoError,
     ServiceNotFound,
@@ -518,17 +518,26 @@ class RemoteServiceMgr(BaseServiceMgr):
         for svc in items:
             yield RemoteServiceObj.from_data(svc, region=None)
 
+    def _handle_service_data(self, data: Dict) -> Dict:
+        # 由于远程增强服务在存储 category_id 的字段命名为 category, 因此这里需要做个重命名
+        data["category"] = data.pop("category_id")
+
+        # 远程增强服务的 specification 中的 display_name 是 TranslatedField
+        # 但本地增强服务并无 specification 字段, 仅将这些额外属性存储在 config 字段中
+        # specification.displayname 的国际化目前是由前端来处理
+        data['specifications'] = RemoteSpecDefinitionUpdateSLZ(data['specifications'], many=True).data
+        return data
+
     def update(self, service: ServiceObj, data: Dict):
         """update the service"""
         if not isinstance(service, RemoteServiceObj) or not service.supports_rest_upsert():
             raise UnsupportedOperationError("This service does not support update.")
 
         service_id = str(service.uuid)
-        # 由于远程增强服务在存储 category_id 的字段命名为 category, 因此这里需要做个重命名
-        data["category"] = data.pop("category_id")
-
         remote_config = self.store.get_source_config(service_id)
         remote_client = RemoteServiceClient(remote_config)
+
+        data = self._handle_service_data(data)
         remote_client.update_service(service_id=service_id, data=data)
         # 更新 store 中的信息
         refresh_remote_service(self.store, service_id)

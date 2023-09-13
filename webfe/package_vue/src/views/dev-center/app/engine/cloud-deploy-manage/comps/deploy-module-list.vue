@@ -199,8 +199,10 @@ export default {
       deploymentInfoDataBackUp: [],   //  部署信息列表备份
       curDeploymentInfoItem: {},      // 当前弹窗的部署信息
       isWatchOfflineing: false,   // 下架中
+      isWatctDeploying: false,
       cloudAppData: {},
       isShowSideslider: false,
+      initPage: false,       // 第一次进入页面
     };
   },
 
@@ -228,6 +230,15 @@ export default {
         });
       }
     },
+
+    isWatctDeploying(value) {
+      if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
+        this.$paasMessage({
+          theme: 'primary',
+          message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
+        });
+      }
+    },
   },
 
   created() {
@@ -235,6 +246,7 @@ export default {
   },
 
   mounted() {
+    this.initPage = true;   // 进入页面
     this.init();
   },
 
@@ -335,11 +347,13 @@ export default {
         const hasOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
         const hasDeployData = this.deploymentInfoData.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据
         this.isWatchOfflineing = !!(hasOfflinedData.length);   // 如果还存在下架中的数据，这说明还有模块在下架中
+        this.isWatctDeploying = !!(hasDeployData.length);
         if (hasOfflinedData.length || hasDeployData.length) {
           this.intervalTimer = setTimeout(async () => {
             this.getModuleReleaseInfo(false);
           }, 3000);
         } else {
+          this.initPage = false;
           this.intervalTimer && clearInterval(this.intervalTimer);
         }
       } catch (e) {

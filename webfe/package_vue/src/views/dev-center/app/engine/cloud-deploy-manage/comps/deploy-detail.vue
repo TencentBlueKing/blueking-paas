@@ -254,6 +254,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
+import i18n from '@/language/i18n.js';
 
 // let maxReplicasNum = 0;
 
@@ -275,11 +276,15 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    environment: {
+      type: String,
+      default: () => 'stag',
+    },
   },
   data() {
     const dateShortCut = [
       {
-        text: this.$t('最近5分钟'),
+        text: i18n.t('最近5分钟'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -288,11 +293,11 @@ export default {
         },
         onClick() {
           timeRangeCache = '5m';
-          timeShortCutText = this.$t('最近5分钟');
+          timeShortCutText = i18n.t('最近5分钟');
         },
       },
       {
-        text: this.$t('最近1小时'),
+        text: i18n.t('最近1小时'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -301,11 +306,11 @@ export default {
         },
         onClick() {
           timeRangeCache = '1h';
-          timeShortCutText = this.$t('最近1小时');
+          timeShortCutText = i18n.t('最近1小时');
         },
       },
       {
-        text: this.$t('最近3小时'),
+        text: i18n.t('最近3小时'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -314,11 +319,11 @@ export default {
         },
         onClick() {
           timeRangeCache = '3h';
-          timeShortCutText = this.$t('最近3小时');
+          timeShortCutText = i18n.t('最近3小时');
         },
       },
       {
-        text: this.$t('最近12小时'),
+        text: i18n.t('最近12小时'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -327,11 +332,11 @@ export default {
         },
         onClick() {
           timeRangeCache = '12h';
-          timeShortCutText = this.$t('最近12小时');
+          timeShortCutText = i18n.t('最近12小时');
         },
       },
       {
-        text: this.$t('最近1天'),
+        text: i18n.t('最近1天'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -340,7 +345,7 @@ export default {
         },
         onClick() {
           timeRangeCache = '1d';
-          timeShortCutText = this.$t('最近1天');
+          timeShortCutText = i18n.t('最近1天');
         },
       },
     ];
@@ -404,6 +409,12 @@ export default {
         maxReplicas: 0,
       },
     };
+  },
+  computed: {
+    curModuleId() {
+      // 当前模块的名称
+      return this.deploymentInfo.module_name;
+    },
   },
 
   watch: {
@@ -755,6 +766,74 @@ export default {
         ],
       });
     },
+
+    /**
+     * 图表初始化
+     * @param  {Object} instanceData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
+    renderChartNew(instanceData, type, ref) {
+      const series = [];
+      let xAxisData = [];
+      instanceData.forEach((item) => {
+        const chartData = [];
+        xAxisData = [];
+        item.results.forEach((itemData) => {
+          xAxisData.push(moment(itemData[0] * 1000).format('MM-DD HH:mm'));
+          // 内存由Byte转MB
+          if (type === 'mem') {
+            const dataMB = Math.ceil(itemData[1] / 1024 / 1024);
+            chartData.push(dataMB);
+          } else {
+            chartData.push(itemData[1]);
+          }
+        });
+
+        if (item.type_name === 'current') {
+          series.push({
+            name: item.display_name,
+            type: 'line',
+            smooth: true,
+            symbol: 'none',
+            areaStyle: {
+              normal: {
+                opacity: 0.2,
+              },
+            },
+            data: chartData,
+          });
+        } else {
+          series.push({
+            name: item.display_name,
+            type: 'line',
+            smooth: true,
+            symbol: 'none',
+            lineStyle: {
+              normal: {
+                width: 1,
+                type: 'dashed',
+              },
+            },
+            areaStyle: {
+              normal: {
+                opacity: 0,
+              },
+            },
+            data: chartData,
+          });
+        }
+      });
+
+      ref.mergeOptions({
+        xAxis: [
+          {
+            data: xAxisData,
+          },
+        ],
+        series,
+      });
+    },
   },
 };
 </script>
@@ -974,6 +1053,83 @@ export default {
       background: #3FC06D;
       border: 3px solid #daefe4;
     }
+  }
+
+  .chart-wrapper {
+      height: 100%;
+      overflow: auto;
+      background: #fafbfd;
+
+      .chart-box {
+          margin-bottom: 10px;
+          border-top: 1px solid #dde4eb;
+          border-bottom: 1px solid #dde4eb;
+
+          .title {
+              font-size: 14px;
+              display: block;
+              color: #666;
+              font-weight: normal;
+              padding: 10px 20px;
+          }
+
+          .sub-title {
+              font-size: 12px;
+          }
+          background-color: #fff !important;
+      }
+  }
+
+  .slider-detail-wrapper {
+      padding: 0 20px 20px 20px;
+      line-height: 32px;
+      .title {
+          display: block;
+          padding-bottom: 2px;
+          color: #313238;
+          border-bottom: 1px solid #dcdee5;
+      }
+      .detail-item {
+          display: flex;
+          justify-content: flex-start;
+          line-height: 32px;
+          .label {
+              color: #313238;
+          }
+      }
+  }
+
+  .action-btn {
+      position: relative;
+      height: 28px;
+      line-height: 28px;
+      min-width: 28px;
+      display: flex;
+      border-radius: 2px;
+      cursor: pointer;
+
+      .text {
+          min-width: 90px;
+          line-height: 28px;
+          text-align: left;
+          color: #63656E;
+          font-size: 12px;
+          display: inline-block;
+      }
+
+      .left-icon,
+      .right-icon {
+          width: 28px;
+          height: 28px;
+          line-height: 28px;
+          color: #C4C6CC;
+          display: inline-block;
+          text-align: center;
+      }
+
+      &.refresh {
+          width: 28px;
+      }
   }
 }
 </style>

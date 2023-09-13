@@ -103,8 +103,6 @@ class ImageReleaseMgr(DeployStep):
                 # 仅托管镜像的云原生应用需要构造 fake build
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                 build_id = self.engine_client.create_build(
-                    # 仅托管镜像的云原生应用目前并不会使用 build.image 字段
-                    # 目前仅托管镜像的云原生应用的 image 字段由前端组装
                     image=runtime_info.generate_image(self.version_info),
                     procfile={},
                     extra_envs={},

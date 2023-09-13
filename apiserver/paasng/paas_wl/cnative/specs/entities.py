@@ -100,7 +100,7 @@ class BkAppManifestProcessor:
         data["status"] = {"conditions": []}
         return data
 
-    def _patch_image(self, manifest: BkAppResource, image: Optional[str] = None) -> None:
+    def _patch_image(self, manifest: BkAppResource, image: Optional[str] = None):
         if manifest.apiVersion == ApiVersion.V1ALPHA2 and manifest.spec.build:
             manifest.spec.build.image = image
 
@@ -116,7 +116,7 @@ class BkAppManifestProcessor:
         wl_app: WlApp,
         use_cnb: bool = False,
         acl_enabled: bool = False,
-    ) -> None:
+    ):
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.model_deploy.pk)
 

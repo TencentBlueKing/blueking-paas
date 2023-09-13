@@ -33,8 +33,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cnative.specs.image_parser import ImageParser
-from paas_wl.cnative.specs.utils import get_bkapp
 from paas_wl.platform.applications.models import Build
 from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.accessories.iam.permissions.resources.application import AppAction
@@ -136,7 +134,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
             if not manifest:
                 version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
-                manifest = self._get_deployable_manifest(application, module, image_tag=params["version_name"])
             else:
                 # v1alpha1 的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
                 version_info = VersionInfo("", "manifest", "manifest")
@@ -207,19 +204,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not revision:
             raise error_codes.CANNOT_GET_REVISION
         return VersionInfo(revision, version_name, version_type)
-
-    @staticmethod
-    def _get_deployable_manifest(application, module: Module, image_tag: str) -> Dict:
-        """查询 module 关联的 bkapp 模型, 并将其转换成 manifest"""
-        bkapp = get_bkapp(application, module)
-        try:
-            repository = ImageParser(bkapp).get_repository()
-        except ValueError as e:
-            raise error_codes.CANNOT_DEPLOY_APP.f(str(e))
-        # 根据用户输入组装完整镜像名
-        assert bkapp.spec.build
-        bkapp.spec.build.image = f"{repository}:{image_tag}"
-        return bkapp.to_deployable()
 
     def _handle_deploy_failed(self, module: Module, deployment: Optional[Deployment], exception: Exception):
         DEPLOYMENT_INFO_COUNTER.labels(

@@ -54,7 +54,7 @@
                 <template slot="append">
                   <div
                     class="group-text form-text-append"
-                    @click="mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld'"
+                    @click="handleSetMirrorUrl"
                   >{{$t('应用示例')}}</div>
                 </template>
               </bk-input>

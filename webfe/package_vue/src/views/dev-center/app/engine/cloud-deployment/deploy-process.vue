@@ -974,7 +974,7 @@ export default {
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
           // 使用示例镜像，启动命令默认值
           if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE.includes(this.buildData.image)) {
-            this.formData.command.push(...['bash', '/app/start_web.sh']);
+            this.formData.command = ['bash', '/app/start_web.sh'];
           }
         }
         this.panels = _.cloneDeep(this.processData);

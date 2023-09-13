@@ -1,6 +1,6 @@
 <template>
   <div class="deploy-module-content" v-bkloading="{ isLoading: listLoading, opacity: 1}">
-    <bk-alert type="info" :show-icon="false" class="mt20" v-if="isWatchOfflineing">
+    <bk-alert type="info" :show-icon="false" class="mt20 mb20 alert-cls" v-if="isWatchOfflineing">
       <div class="flex-row align-items-center" slot="title">
         <div class="fl">
           <round-loading
@@ -9,7 +9,7 @@
           />
         </div>
         <p class="deploy-pending-text pl20">
-          {{ $t('正在下架中...') }}
+          模块 {{ curDeploymentInfoItem.module_name }} {{ $t('正在下架中...') }}
         </p>
       </div>
     </bk-alert>
@@ -25,20 +25,20 @@
                 <span class="name">{{deploymentInfo.module_name}}</span>
                 <i class="paasng-icon paasng-jump-link icon-cls-link" />
               </div>
-              <template v-if="deploymentInfo.is_deployed">
+              <template v-if="deploymentInfo.state.deployment.latest_succeeded">
                 <!-- 源码&镜像 -->
                 <div class="flex-row" v-if="deploymentInfo.build_method === 'dockerfile'">
                   <div class="version">
                     <span class="label">版本：</span>
                     <span class="value">
-                      {{ deploymentInfo.version_info.revision }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
                     </span>
                   </div>
                   <div class="line"></div>
                   <div class="branch">
                     <span class="label">分支：</span>
                     <span class="value">
-                      {{ deploymentInfo.version_info.version_name }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
                     </span>
                   </div>
                 </div>
@@ -47,7 +47,7 @@
                   <div class="version">
                     <span class="label">镜像Tag：</span>
                     <span class="value">
-                      {{ deploymentInfo.version_info.version_name }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
                     </span>
                   </div>
                 </div>
@@ -57,10 +57,31 @@
               </template>
             </div>
             <div class="right-btn">
-              <bk-button :theme="'primary'" class="mr10" size="small" @click="handleDeploy(deploymentInfo)">
+              <bk-button
+                v-if="!!deploymentInfo.state.deployment.pending"
+                :theme="'primary'"
+                class="mr10"
+                size="small"
+                text
+                @click="handleShowDeploy(deploymentInfo)">
+                部署详情
+              </bk-button>
+              <bk-button
+                :theme="'primary'"
+                class="mr10"
+                size="small"
+                @click="handleDeploy(deploymentInfo)"
+                :disabled="(!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending)"
+                :loading="!!deploymentInfo.state.deployment.pending">
                 部署
               </bk-button>
-              <bk-button :theme="'default'" size="small" @click="handleOfflineApp(deploymentInfo)">
+              <bk-button
+                :theme="'default'"
+                size="small"
+                @click="handleOfflineApp(deploymentInfo)"
+                :disabled="!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending
+                  || !deploymentInfo.state.deployment.latest_succeeded"
+                :loading="!!deploymentInfo.state.offline.pending">
                 下架
               </bk-button>
             </div>
@@ -68,18 +89,22 @@
           <!-- 内容 -->
           <section class="main">
             <!-- 详情表格 -->
-            <!-- <deploy-detail v-show="isExpand" /> -->
+            <deploy-detail
+              v-show="deploymentInfo.isExpand"
+              :deployment-info="deploymentInfo" />
             <!-- 预览 -->
-            <deploy-preview :deployment-info="deploymentInfo" />
-            <!-- <div class="operation-wrapper">
+            <deploy-preview
+              :deployment-info="deploymentInfo"
+              v-show="!deploymentInfo.isExpand" />
+            <div class="operation-wrapper">
               <div
                 class="btn"
-                @click="handleChangePanel">
-                {{ isExpand ? '收起' : '展开详情' }}
-                <i class="paasng-icon paasng-ps-arrow-down" v-if="!isExpand"></i>
+                @click="handleChangePanel(deploymentInfo)">
+                {{ deploymentInfo.isExpand ? '收起' : '展开详情' }}
+                <i class="paasng-icon paasng-ps-arrow-down" v-if="!deploymentInfo.isExpand"></i>
                 <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
               </div>
-            </div> -->
+            </div>
           </section>
         </div>
       </div>
@@ -106,22 +131,46 @@
       :show.sync="isShowDialog"
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
-      @refresh="handleRefresh"></deploy-dialog>
+      :cloud-app-data="cloudAppData"
+      @refresh="handleRefresh">
+    </deploy-dialog>
+
+
+    <bk-sideslider
+      :is-show.sync="isShowSideslider"
+      :title="$t('部署日志')"
+      :width="820"
+      :quick-close="true"
+      :before-close="handleCloseProcessWatch"
+    >
+      <div slot="content">
+        <!-- :deployment-id="curDeploymentInfoItem.state.deployment.pending.id" -->
+        <deploy-status-detail
+          ref="deployStatusRef"
+          :environment="environment"
+          :deployment-id="curDeploymentInfoItem.state?.deployment?.pending?.id"
+          :deployment-info="curDeploymentInfoItem"
+          @close="handleCloseSideslider"
+        ></deploy-status-detail>
+      </div>
+    </bk-sideslider>
   </div>
 </template>
 
 <script>
-// import deployDetail from './deploy-detail';
+import deployDetail from './deploy-detail';
 import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog.vue';
+import deployStatusDetail from './deploy-status-detail';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import _ from 'lodash';
 
 export default {
   components: {
-    // deployDetail,
+    deployDetail,
     deployPreview,
     deployDialog,
+    deployStatusDetail,
   },
   mixins: [appBaseMixin],
   props: {
@@ -150,6 +199,8 @@ export default {
       deploymentInfoDataBackUp: [],   //  部署信息列表备份
       curDeploymentInfoItem: {},      // 当前弹窗的部署信息
       isWatchOfflineing: false,   // 下架中
+      cloudAppData: {},
+      isShowSideslider: false,
     };
   },
 
@@ -169,6 +220,14 @@ export default {
           .filter(module => module.module_name === value);
       }
     },
+    isWatchOfflineing(newVal, oldVal) {
+      if (oldVal && !newVal) {    // 从true变为false，则代表下架完成
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('应用下架成功'),
+        });
+      }
+    },
   },
 
   created() {
@@ -183,20 +242,50 @@ export default {
     init() {
       this.getModuleReleaseInfo();
     },
-    handleChangePanel() {
-      this.isExpand = !this.isExpand;
+    handleChangePanel(payload) {
+      payload.isExpand = !payload.isExpand;
+      // this.$set(this, 'deploymentInfoData', res.data);
+      //   this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
+      // this.curDeploymentInfoItem = payload || {};
+      // this.isExpand = !this.isExpand;
     },
 
     // 部署
     handleDeploy(payload) {
-      this.isShowDialog = true;
       this.curDeploymentInfoItem = payload;
+      this.getCloudAppYaml();
+    },
+
+    // 部署侧边栏
+    handleShowDeploy(payload) {
+      this.curDeploymentInfoItem = payload || {};
+      this.isShowSideslider = true;
     },
 
     // 下架
     handleOfflineApp(payload) {
+      this.curDeploymentInfoItem = payload || {};
       this.offlineAppDialog.visiable = true;
-      this.curDeploymentInfoItem = payload;
+    },
+
+    // 获取云原生yaml
+    async getCloudAppYaml() {
+      try {
+        const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.cloudAppData = res.manifest;
+        this.isShowDialog = true;
+        console.log('this.cloudAppData', this.cloudAppData);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
 
 
@@ -204,12 +293,13 @@ export default {
     async confirmOfflineApp() {
       this.offlineAppDialog.isLoading = true;
       try {
-        const res = await this.$store.dispatch('deploy/offlineApp', {
+        await this.$store.dispatch('deploy/offlineApp', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
         });
-        this.watchOfflineOperation(res.offline_operation_id);   // 轮询获取下架的进度
+        this.isWatchOfflineing = true;
+        this.getModuleReleaseInfo(false); // 查询列表数据
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -221,86 +311,37 @@ export default {
       }
     },
 
-
-    /**
-     * 轮询获取应用下架进度
-     */
-    watchOfflineOperation(offlineOperationId) {
-      this.isWatchOfflineing = true;
-      this.offlineTimer = setInterval(async () => {
-        try {
-          const res = await this.$store.dispatch('deploy/getOfflineResult', {
-            appCode: this.appCode,
-            moduleId: this.curModuleId,
-            offlineOperationId,
-          });
-
-          // 下架进行中，三状态：pendding successful failed，pendding需要继续轮询
-          if (res.status === 'successful') {
-            this.isWatchOfflineing = false;
-            this.getModuleReleaseInfo();
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('应用下架成功'),
-            });
-            clearInterval(this.offlineTimer);
-          } else if (res.status === 'failed') {
-            const message = res.err_detail;
-            this.isWatchOfflineing = false;
-            this.$paasMessage({
-              theme: 'error',
-              message,
-            });
-            clearInterval(this.offlineTimer);
-          }
-        } catch (e) {
-          this.isWatchOfflineing = false;
-          clearInterval(this.offlineTimer);
-          this.$paasMessage({
-            theme: 'error',
-            message: e.detail || e.message || this.$t('下架失败，请稍候再试'),
-          });
-        }
-      }, 3000);
-    },
-
     cancelOfflineApp() {
       this.offlineAppDialog.visiable = false;
       this.offlineAppDialog.isLoading = false;
     },
 
     // 获取部署版本信息
-    async getModuleReleaseInfo() {
+    async getModuleReleaseInfo(listLoading = true) {
       try {
-        this.listLoading = true;
+        this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
           env: this.environment,
         });
-        this.deploymentInfoData = res.data;
+        // this.deploymentInfoData = res.data;
+        res.data = res.data.map((e) => {
+          e.isExpand = false;
+          return e;
+        });
+        this.$set(this, 'deploymentInfoData', res.data);
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
-        // if (!res.code) {
-        //   // 已下架
-        //   if (res.is_offlined) {
-        //     res.offline.repo.version = this.formatRevision(res.offline.repo.revision);
-        //     this.deploymentInfo = res.offline;
-        //     this.isAppOffline = true;
-        //   } else if (res.deployment) {
-        //     res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
-        //     this.deploymentInfo = res.deployment;
-        //     console.log('this.deploymentInfo', this.deploymentInfo);
-        //     this.isAppOffline = false;
-        //   } else {
-        //     this.deploymentInfo = {
-        //       repo: {},
-        //     };
-        //   }
-
-        //   // 是否第一次部署
-        //   this.isFirstDeploy = !res.deployment;
-        // } else {
-        //   this.isFirstDeploy = true;
-        // }
+        console.log(111, this.deploymentInfoData);
+        const hasOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
+        const hasDeployData = this.deploymentInfoData.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据
+        this.isWatchOfflineing = !!(hasOfflinedData.length);   // 如果还存在下架中的数据，这说明还有模块在下架中
+        if (hasOfflinedData.length || hasDeployData.length) {
+          this.intervalTimer = setTimeout(async () => {
+            this.getModuleReleaseInfo(false);
+          }, 3000);
+        } else {
+          this.intervalTimer && clearInterval(this.intervalTimer);
+        }
       } catch (e) {
         this.deploymentInfoData = null;
         this.isFirstDeploy = true;
@@ -330,7 +371,17 @@ export default {
 
     // 刷新列表
     handleRefresh() {
-      this.init();
+      this.getModuleReleaseInfo(false);
+    },
+
+    // 关闭进程的事件流
+    handleCloseProcessWatch() {
+      this.$refs.deployStatusRef.closeServerPush();
+      this.isShowSideslider = false;
+    },
+    // 关闭侧边栏
+    handleCloseSideslider() {
+      this.isShowSideslider = false;
     },
   },
 };
@@ -418,5 +469,11 @@ export default {
   }
   .loading-cls{
     top: 30vh;
+  }
+  .alert-cls{
+    border: none !important;
+    /deep/ .bk-alert-wraper{
+      padding: 5px 10px;
+    }
   }
 </style>

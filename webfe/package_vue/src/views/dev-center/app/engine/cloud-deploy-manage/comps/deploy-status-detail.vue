@@ -2,33 +2,54 @@
   <div class="deploy-view pl10 pr10 pt20">
     <!-- 部署中、部署成功、部署失败 -->
     <div v-if="isWatchDeploying || isDeploySuccess || isDeployFail">
-      <bk-alert type="info" :show-icon="false" class="mb20" v-if="isWatchDeploying">
-        <div class="flex-row align-items-center" slot="title">
-          <div class="fl">
-            <round-loading
-              size="small"
-              ext-cls="deploy-round-loading"
-            />
+      <bk-alert type="info" :show-icon="false" class="mb20 alert-cls" v-if="isWatchDeploying">
+        <div class="flex-row align-items-center justify-content-between" slot="title">
+          <div class="flex-row align-items-center">
+            <div class="fl">
+              <round-loading
+                size="small"
+                ext-cls="deploy-round-loading"
+              />
+            </div>
+            <p class="deploy-pending-text pl20">
+              {{ $t('正在部署中...') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
+                <span class="version-text pl30"> {{ $t('版本：') }}
+                  {{ deploymentInfo.version_info.revision.substring(1,8) }}
+                </span>
+                <span class="branch-text"> {{ $t('分支：') }}
+                  {{ deploymentInfo.version_info.version_name }}
+                </span>
+              </span>
+              <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
+                <span class="branch-text"> {{ $t('镜像Tag：') }}
+                  {{ deploymentInfo.version_info.version_name.substring(0,16) }}
+                </span>
+              </span>
+              <span
+                v-if="deployTotalTime"
+                class="time-text"
+              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+            </p>
           </div>
-          <p class="deploy-pending-text pl20">
-            {{ $t('正在部署中...') }}
-          </p>
-          <p class="deploy-text-wrapper">
-            <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
-              <span class="branch-text"> {{ $t('分支：') }} {{ deploymentInfo.version_info.version_name }}</span>
-              <span class="version-text pl30"> {{ $t('版本：') }} {{ deploymentInfo.version_info.revision }}</span>
-            </span>
-            <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
-              <span class="branch-text"> {{ $t('镜像Tag：') }} {{ deploymentInfo.version_info.version_name }}</span>
-            </span>
-            <span
-              v-if="deployTotalTime"
-              class="time-text"
-            > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
-          </p>
+          <div
+            v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
+            class="action-wrapper"
+          >
+            <bk-button
+              theme="primary"
+              size="small"
+              :outline="true"
+              @click="stopDeploy"
+            >
+              {{ $t('停止部署') }}
+            </bk-button>
+          </div>
         </div>
       </bk-alert>
-      <bk-alert type="error" :show-icon="false" class="mb20" v-if="isDeployFail">
+      <bk-alert type="error" :show-icon="false" class="mb20 alert-cls" v-if="isDeployFail">
         <div class="flex-row align-items-center" slot="title">
           <p class="deploy-pending-text pl10">
             {{ $t('部署失败') }}
@@ -52,28 +73,40 @@
           </p>
           <bk-button
             theme="danger"
-            ext-cls="paas-deploy-failed-btn"
+            ext-cls="paas-deploy-failed-btn ml10"
             outline
+            size="small"
             @click="handleCallback"
           >
             {{ $t('返回') }}
           </bk-button>
         </div>
       </bk-alert>
-      <bk-alert type="success" :show-icon="false" class="mb20" v-if="isDeploySuccess">
-        <div class="flex-row align-items-center" slot="title">
+      <bk-alert type="success" :show-icon="false" class="mb20 alert-cls" v-if="isDeploySuccess">
+        <div class="flex-row align-items-center justify-content-between" slot="title">
           <p class="deploy-pending-text pl10">
             {{ $t('部署成功') }}
           </p>
-          <bk-button
-            style="margin-left: 6px;"
-            theme="success"
-            ext-cls="paas-deploy-success-btn"
-            outline
-            @click="handleCallback"
-          >
-            {{ $t('返回') }}
-          </bk-button>
+          <section>
+            <bk-button
+              theme="success"
+              ext-cls="paas-deploy-success-btn"
+              outline
+              @click="handleOpenLink"
+            >
+              {{ $t('访问') }}
+            </bk-button>
+            <bk-button
+              style="margin-left: 6px;"
+              theme="success"
+              ext-cls="paas-deploy-success-btn"
+              outline
+              size="small"
+              @click="handleCallback"
+            >
+              {{ $t('返回') }}
+            </bk-button>
+          </section>
         </div>
       </bk-alert>
     </div>
@@ -101,6 +134,27 @@
         :environment="environment"
       />
     </div>
+
+    <bk-dialog
+      v-model="stopDeployConf.visiable"
+      width="480"
+      :title="stopDeployConf.title"
+      :theme="'primary'"
+      :mask-close="false"
+      :draggable="false"
+      header-position="left"
+      @confirm="confirmStopDeploy"
+      @cancel="cancelStopDeploy"
+      @after-leave="afterLeaveStopDeploy"
+    >
+      <div v-if="stopDeployConf.stage === 'build'">
+        {{ $t('数据库如有变更操作') }}， <span style="color: #f00;">
+          {{ $t('数据库变更可能会异常中断且无法回滚') }} </span> ，{{ $t('请留意表结构') }}。
+      </div>
+      <div v-else>
+        {{ $t('部署命令已经下发') }}， <span style="color: #f00;">{{ $t('仅停止检查部署结果') }} </span> ，{{ $t('请留意进程状态') }}。
+      </div>
+    </bk-dialog>
   </div>
 </template>
 <script>
@@ -166,7 +220,7 @@ export default {
       isDeployFail: false,
       isDeployInterrupted: false,
       isDeployInterrupting: false,
-      isWatchDeploying: true,
+      isWatchDeploying: false,
       timeLineList: [],     // 时间节点数据
       curDeployResult,
       deployTotalTime: 0,       // 部署总耗时
@@ -177,9 +231,15 @@ export default {
       prevInstanceVersion: 0,
       releaseId: '',   // 部署id
       isDeployReady: true,
-      curProcess: {},  // 当前模块的进程信息
+      curModuleInfo: {},  // 当前模块的信息
       serverProcessEvent: null,
       watchServerTimer: null,
+      stopDeployConf: {   // 停止部署
+        title: '',
+        visiable: false,
+        isLoading: false,
+        stage: '',
+      },
     };
   },
   computed: {
@@ -228,6 +288,7 @@ export default {
   },
   methods: {
     init() {
+      console.log('11111');
       this.getPreDeployDetail();
     //   this.watchDeployStatus();
     },
@@ -240,6 +301,7 @@ export default {
       this.streamLogs = [];
       this.streamPanelShowed = true;
       this.isDeploySseEof = false;
+      this.isWatchDeploying = true;
 
       clearInterval(this.watchTimer);
       if (this.serverLogEvent === null || this.serverLogEvent.readyState === this.eventSourceState.CLOSED) {
@@ -287,10 +349,12 @@ export default {
           if (item.name === 'release' && item.status === 'successful') {
             // 部署成功
             this.isDeploySuccess = true;
-            this.getModuleReleaseInfo();
+            // 更新当前模块信息
+            this.getModuleProcessList();
           } else if (item.status === 'failed') {
             // 部署失败
             this.isDeployFail = true;
+            this.isWatchDeploying = false;
           } else if (item.status === 'interrupted') {
             // 停止部署成功
             this.isDeployInterrupted = true;
@@ -309,7 +373,7 @@ export default {
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
             this.releaseId = item.release_id;
-            this.getProcessList(true);
+            this.getModuleProcessList(true);
 
             // 发起服务监听
             this.watchServerPush();
@@ -366,7 +430,7 @@ export default {
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleSetFailed();
 
           if (this.isDeploySuccess) {
-            this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
+            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
           }
           this.getDeployResult(deployId);
         }, false);
@@ -703,16 +767,17 @@ export default {
     },
 
 
-    // 获取进程列表
-    async getProcessList(isLoading = false) {
+    // 获取所有模块列表
+    async getModuleProcessList(isLoading = false) {
       this.processLoading = isLoading;
       try {
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
           env: this.environment,
         });
-        this.curProcess = res.data.find(e => e.module_name === this.curModuleId);
-        this.formatProcesses(this.curProcess);
+        this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
+        this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
+        this.formatProcesses(this.curModuleInfo);
       } catch (e) {
         // 无法获取进程目前状态
         console.error(e);
@@ -789,7 +854,7 @@ export default {
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=0&rv_inst=0`;
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });
@@ -799,12 +864,16 @@ export default {
         const data = JSON.parse(event.data);
         console.warn(data);
         if (data.object_type === 'process') {
-          // this.updateProcessData(data);
+          console.log('data', data);
+          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
-          // this.updateInstanceData(data);
+          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          this.updateInstanceData(data);
           if (data.type === 'ADDED') {
+            if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
             console.warn(this.$t('重新拉取进程...'));
-            // this.getProcessList(this.releaseId, false);
+            this.getModuleProcessList(false);
           }
         } else if (data.type === 'ERROR') {
           // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
@@ -840,18 +909,147 @@ export default {
       });
     },
 
-    // // 三秒轮询一次
-    // setIntervalWatchServerPush() {
-    //   this.watchServerPushTimer = setInterval(() => {
-    //     this.watchServerPush();
-    //   }, 3000);
-    // },
+    // 更新进程
+    updateProcessData(data) {
+      const processData = data.object || {};
+      this.prevProcessVersion = data.resource_version || 0;
+
+      if (data.type === 'ADDED') {
+        this.getModuleProcessList(false);
+      } else if (data.type === 'MODIFIED') {
+        this.allProcesses.forEach((process) => {
+          if (process.name === processData.type) {
+            process.available_instance_count = processData.success;
+            process.desired_replicas = processData.replicas;
+            process.failed = processData.failed;
+            this.updateProcessStatus(process);
+          }
+        });
+      } else if (data.type === 'DELETED') {
+        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
+      }
+    },
+
+    // 更新实例
+    updateInstanceData(data) {
+      const instanceData = data.object || {};
+      this.prevInstanceVersion = data.resource_version || 0;
+
+      instanceData.date_time = moment(instanceData.start_time).startOf('minute')
+        .fromNow();
+      this.allProcesses.forEach((process) => {
+        if (process.name === instanceData.process_type) {
+          // 新增
+          if (data.type === 'ADDED') {
+            // 防止在短时间内重复推送
+            // process.instances.forEach((instance, index) => {
+            //     if (instance.name === instanceData.name) {
+            //         process.instances.splice(index, 1)
+            //     }
+            // })
+            // process.instances.push(instanceData)
+          } else {
+            process.instances.forEach((instance, index) => {
+              if (instance.name === instanceData.name) {
+                if (data.type === 'DELETED') {
+                  // 删除
+                  process.instances.splice(index, 1);
+                } else {
+                  // 更新
+                  process.instances.splice(index, 1, instanceData);
+                }
+              }
+            });
+          }
+
+          this.updateProcessStatus(process);
+        }
+      });
+    },
 
     // 返回操作
     handleCallback() {
       this.$emit('close');
     },
 
+    // 打开链接
+    handleOpenLink() {
+      window.open(this.exposedLink);
+    },
+
+    // 更新进程状态
+    updateProcessStatus(process) {
+      /*
+      * 设置进程状态
+      * targetStatus: 进行的操作，start\stop\scale
+      * status: 操作状态，Running\stoped
+      *
+      * 如何判断进程当前是否为操作中（繁忙状态）？
+      * 主要根据 process_packages 里面的 target_status 判断：
+      * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
+      * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+      */
+      if (process.targetStatus === 'stop') {
+        // process.operateIconTitle = '启动进程'
+        // process.operateIconTitleCopy = '启动进程'
+        if (process.available_instance_count === 0 && process.instances.length === 0) {
+          process.status = 'Stopped';
+        } else {
+          process.status = 'Running';
+        }
+      } else if (process.targetStatus === 'start') {
+        // process.operateIconTitle = '停止进程'
+        // process.operateIconTitleCopy = '停止进程'
+        if (process.available_instance_count === process.targetReplicas && process.failed === 0) {
+          process.status = 'Stopped';
+        } else {
+          process.status = 'Running';
+        }
+      }
+    },
+
+    // 停止部署
+    stopDeploy() {
+      if (this.appearDeployState.includes('build')) {
+        this.stopDeployConf.title = this.$t('确认停止【构建阶段】吗？');
+        this.stopDeployConf.stage = 'build';
+      }
+
+      if (this.appearDeployState.includes('release')) {
+        this.stopDeployConf.title = this.$t('确认停止【部署阶段】吗？');
+        this.stopDeployConf.stage = 'release';
+      }
+      this.stopDeployConf.visiable = true;
+    },
+
+    // 确认停止部署
+    async confirmStopDeploy() {
+      try {
+        await this.$store.dispatch('deploy/stopDeploy', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          deployId: this.deploymentId,
+        });
+        // 停止部署 返回
+        this.handleCallback();
+        this.cancelStopDeploy();  // 关闭弹窗
+        this.closeServerPush();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('部署失败，请稍候再试'),
+        });
+      }
+    },
+
+    cancelStopDeploy() {
+      this.stopDeployConf.visiable = false;
+    },
+
+    afterLeaveStopDeploy() {
+      this.stopDeployConf.title = '';
+      this.stopDeployConf.stage = '';
+    },
   },
 };
 </script>
@@ -863,5 +1061,11 @@ export default {
   }
   .deploy-text-wrapper{
     padding-left: 30px;
+  }
+  .alert-cls{
+    border: none !important;
+    /deep/ .bk-alert-wraper{
+      padding: 5px 10px;
+    }
   }
 </style>

@@ -47,7 +47,7 @@
               <template slot="append">
                 <div
                   class="group-text form-text-append"
-                  @click="mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld'"
+                  @click="handleSetMirrorUrl"
                 >应用示例</div>
               </template>
             </bk-input>
@@ -345,7 +345,7 @@ export default {
   data() {
     return {
       isLoading: false,
-      buildData: {},
+      buildData: { image: '' },
       buildDataBackUp: {},
       localCloudAppData: {},
       localCloudAppDataBackUp: {},
@@ -736,6 +736,10 @@ export default {
       }
       this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
     },
+
+    handleSetMirrorUrl() {
+      this.$set(this.buildData, 'image', 'mirrors.tencent.com/bkpaas/django-helloworld');
+    },
   },
 };
 </script>
@@ -771,6 +775,7 @@ export default {
       color: #3a84ff;
       background: #FAFBFD;
       border-radius: 0 2px 2px 0;
+      cursor: pointer;
     }
 
     .border-b{

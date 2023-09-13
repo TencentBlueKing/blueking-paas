@@ -32,8 +32,6 @@ These modules will be refactored in the future.
 from typing import Dict, List, NamedTuple, Optional, Union
 from uuid import UUID
 
-from django.db import transaction
-
 from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.platform.applications.constants import WlAppType
@@ -79,7 +77,7 @@ def delete_wl_resources(env: ModuleEnvironment):
 
     :param env: Environment object.
     """
-    from paas_wl.resources.actions.delete import delete_env_resources
+    from paas_wl.deploy.actions.delete import delete_env_resources
 
     delete_env_resources(env)
 
@@ -89,17 +87,6 @@ def delete_wl_resources(env: ModuleEnvironment):
     # TODO: Remove below lines when data was fully migrated
     ProcessSpec.objects.filter(engine_app_id=wl_app.pk).delete()
     wl_app.delete()
-
-
-def delete_module_related_res(module: 'Module'):
-    """Delete module's related resources"""
-    from paas_wl.platform.applications.models_utils import delete_module_related_res as delete_wl_module_related_res
-
-    with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
-        delete_wl_module_related_res(module)
-        # Delete related EngineApp db records
-        for env in module.get_envs():
-            env.get_engine_app().delete()
 
 
 def create_cnative_app_model_resource(

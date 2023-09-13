@@ -16,8 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import copy
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 from uuid import UUID
 
 import arrow
@@ -37,7 +38,8 @@ from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.models import ProcessSpec
 from paasng.dev_resources.sourcectl.models import VersionInfo
-from paasng.engine.constants import RuntimeType
+from paasng.engine.constants import JobStatus, RuntimeType
+from paasng.engine.models import Deployment, OfflineOperation
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):
@@ -133,15 +135,56 @@ class ListWatcherRespSLZ(serializers.Serializer):
 
 
 class VersionInfoSLZ(serializers.Serializer):
+    """已部署的代码/镜像版本信息"""
+
     revision = serializers.CharField(help_text="版本hash")
     version_name = serializers.CharField(help_text="版本名称")
     version_type = serializers.CharField(help_text="版本类型(tag/branch)")
 
 
+class DeploymentOperationSLZ(serializers.Serializer):
+    """部署操作对象"""
+
+    id = serializers.CharField(help_text="部署ID")
+    status = serializers.ChoiceField(choices=JobStatus.get_choices())
+    created = serializers.DateTimeField(help_text="操作时间")
+
+    version_info = VersionInfoSLZ(help_text="版本信息")
+    err_detail = serializers.CharField(help_text="错误原因")
+
+
+class OfflineOperationSLZ(serializers.Serializer):
+    """下架操作对象"""
+
+    id = serializers.CharField(help_text="下架ID")
+    status = serializers.ChoiceField(choices=JobStatus.get_choices())
+    created = serializers.DateTimeField(help_text="操作时间")
+
+
+def make_operation_group_slz(child: serializers.Serializer):
+    return type(
+        f"{type(child).__name__}Group",
+        (serializers.Serializer,),
+        {
+            "latest": copy.deepcopy(child),
+            "latest_succeeded": copy.deepcopy(child),
+            "pending": copy.deepcopy(child),
+        },
+    )()
+
+
+class ModuleStateSLZ(serializers.Serializer):
+    """和模块相关的部署/下架对象"""
+
+    deployment = make_operation_group_slz(DeploymentOperationSLZ(help_text="部署操作对象", allow_null=True))
+    offline = make_operation_group_slz(OfflineOperationSLZ(help_text="下架操作对象", allow_null=True))
+
+
 class NamespaceScopedListWatchRespPartSLZ(serializers.Serializer):
     module_name = serializers.CharField()
-    is_deployed = serializers.BooleanField(help_text="是否已部署")
+    state = ModuleStateSLZ(help_text="模块状态")
     exposed_url = serializers.CharField(required=False, help_text="访问地址")
+    repo_url = serializers.CharField(required=False, help_text="源码/镜像仓库地址")
     build_method = serializers.CharField(help_text="构建方式")
     version_info = VersionInfoSLZ(required=False)
 
@@ -154,12 +197,29 @@ class NamespaceScopedListWatchRespPartSLZ(serializers.Serializer):
     total_failed = serializers.IntegerField(help_text="总异常实例数")
 
 
+OP = TypeVar("OP")
+
+
+@dataclass
+class OperationGroup(Generic[OP]):
+    latest: Optional[OP] = None
+    latest_succeeded: Optional[OP] = None
+    pending: Optional[OP] = None
+
+
+@dataclass
+class ModuleState:
+    deployment: OperationGroup[Deployment]
+    offline: OperationGroup[OfflineOperation]
+
+
 @dataclass
 class ModuleScopedData:
     module_name: str
     build_method: RuntimeType
-    is_deployed: bool
+    state: ModuleState
     exposed_url: Optional[str]
+    repo_url: Optional[str]
     version_info: Optional[VersionInfo] = None
 
     processes: List[Process] = field(default_factory=list)

@@ -24,6 +24,7 @@ from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.cnative.specs.resource import deploy_networking
+from paas_wl.core.env import env_is_running
 from paas_wl.networking.entrance.addrs import URL
 from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.networking.ingress.domains.independent import (
@@ -35,7 +36,6 @@ from paas_wl.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.publish.market.models import MarketConfig

@@ -1,6 +1,6 @@
 apigateway:
-  description: PaaS3.0 开发者中心 API 网关, 官方内置网关，请勿修改
-  description_en: PaaS3.0 developer center, official built-in gateway, please do not modify
+  description: PaaS3.0 开发者中心 API 网关，包含应用信息查询、应用部署、增强服务、轻应用等 API。
+  description_en: PaaS 3.0 Developer Center API Gateway, including APP information retrieval, APP deployment, Add-ons, Mini-App , and other APIs.
   is_public: true
   maintainers:
     - "admin"
@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.0.11
-  title: "add retrieve_addon_specs api"
-  comment: "add retrieve_addon_specs api"
+  version: 1.2.0
+  title: "Standardize documents according to the BK specification"
+  comment: "Standardize documents according to the BK specification"
 
 
 stage:

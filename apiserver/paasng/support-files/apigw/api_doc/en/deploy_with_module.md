@@ -1,34 +1,38 @@
-### Resource Description
-App deployment interface
+### Description
+App deployment interface for deploying applications to a specified environment.
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Path interface description
+#### 1. Path Parameters:
 
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-|   app_code   |   string     |   yes   | App ID    |
-|   module |   string     |   yes   | Module name, such as "default"|
-|   env | string |yes| Environment name, optional values "stag"/"prod"|
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| app_code       | string         | Yes      | Application ID        |
+| module         | string         | Yes      | Module name, e.g., "default" |
+| env            | string         | Yes      | Environment name, available values: "stag" / "prod" |
 
-### Input parameter Description
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-|   url   |   string     |   yes   | Deployment source path (including source code)    |
-|   revision |   string     |   yes   | Source warehouse version No.|
-|   version_name | string |yes| Name of branch or tag|
-|   version_type | string |yes| For svn, transfer/tag is supported; For git, transfer is supported|
+#### 2. API Parameters:
 
-### Call example
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| url            | string         | Yes      | Deployment source code path (including trunk) |
+| revision       | string         | Yes      | Source code repository version number |
+| version_name   | string         | Yes      | Branch or tag name |
+| version_type   | string         | Yes      | For svn, supports passing trunk / tag; for git, supports passing branch |
+
+
+### Request Example
+
+#### Get your access_token
+Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
 #### gitlab
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{Fill in your AppCode}/modules/default/envs/{Fill in the App deployment environment:stag或prod}/deployments/ -d '{"url": "http://git.example.com/Your project path.git", "revision": "commit sha value", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{Fill in your AppCode}/modules/default/envs/{Fill in App deployment environment: stag or prod}/deployments/ -d '{"url": "http://git.example.com/Your project path.git", "revision": "commit sha value", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
 ```
 
-### Return result
+### Response Result Example
 ```json
 {
     "stream_url": "/streams/22d0e9c8-9cfc-45a5-b5a8-718137c515db",
@@ -36,8 +40,9 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7
 }
 ```
 
-### Return result description
-|   Field   | Type | Description                     |
-| ------------ | ---------- | ------------------------------ |
-|  stream_url  |     string  |     Deployment log output stream ID          |
-|     deployment_id | string  | Deployment Operation ID |
+### Response Result Parameter Description
+
+| Parameter Name | Parameter Type | Parameter Description |
+| -------------- | -------------- | --------------------- |
+| stream_url     | string         | Deployment log output stream ID |
+| deployment_id  | string         | Deployment operation ID |

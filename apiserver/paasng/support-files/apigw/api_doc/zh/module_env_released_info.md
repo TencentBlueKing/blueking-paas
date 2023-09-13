@@ -1,18 +1,28 @@
-### 资源描述
+### 功能描述
 查询应用模块环境部署信息
 
 ### 获取你的 access_token
 在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### 调用示例
+### 请求参数
+
+#### 1、路径参数：
+
+|   参数名称   |    参数类型  |  必须  |     参数说明     |
+| ------------ | ------------ | ------ | ---------------- |
+| code   | string | 是 | 应用 ID |
+| module_name   | string | 是 | 模块名称 |
+| environment   | string | 是 | 环境名称 |
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_info/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_info/
 ```
 
-### 请求参数说明
-<table class="parameters"><thead><tr><th class="col_header parameters-col_name">Name</th><th class="col_header parameters-col_description">Description</th></tr></thead><tbody><tr data-param-name="code" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 10603 -->code<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 10606 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 10609 -->(<!-- /react-text --><!-- react-text: 10610 -->path<!-- /react-text --><!-- react-text: 10611 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="code" value="" disabled=""></td></tr><tr data-param-name="environment" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 10617 -->environment<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 10620 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 10623 -->(<!-- /react-text --><!-- react-text: 10624 -->path<!-- /react-text --><!-- react-text: 10625 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="environment" value="" disabled=""></td></tr><tr data-param-name="module_name" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 10631 -->module_name<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 10634 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 10637 -->(<!-- /react-text --><!-- react-text: 10638 -->path<!-- /react-text --><!-- react-text: 10639 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="module_name" value="" disabled=""></td></tr></tbody></table>
-
-### 返回结果
+### 返回结果示例
 ```json
 {
   "deployment": {
@@ -40,3 +50,43 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
   }
 }
 ```
+
+### 返回结果参数说明
+
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| deployment | dict | 部署信息 |
+| exposed_link | dict | 暴露的链接信息 |
+
+deployment
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| id | string | 部署 ID |
+| status | string | 部署状态 |
+| operator | dict | 操作者信息 |
+| created | string | 创建时间 |
+| deployment_id | string | 部署 ID |
+| environment | string | 环境名称 |
+| repo | dict | 仓库信息 |
+
+operator
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| id | string | 操作者 ID |
+| username | string | 操作者用户名 |
+| provider_type | int | 提供者类型 |
+
+repo
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| source_type | string | 源类型 |
+| type | string | 类型 |
+| name | string | 仓库名称 |
+| url | string | 仓库 URL |
+| revision | string | 修订版本 |
+| comment | string | 备注 |
+
+exposed_link
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| url | string | 链接地址 |

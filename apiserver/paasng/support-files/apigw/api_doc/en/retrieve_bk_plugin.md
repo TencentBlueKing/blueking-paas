@@ -1,20 +1,23 @@
-### Resource Description
+### Description
+Query the detailed information of a "Blueking Plugin" type application, for internal system use only.
 
-Query the details of a blue whale plug-in type app for internal system use only
+### Request Parameters
 
-### Authentication mode
+#### 1. Path Parameters:
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+| Parameter Name | Parameter Type | Required | Parameter Description          |
+| -------------- | -------------- | -------- | ------------------------------ |
+| code           | string         | No       | Position parameter, plugin code to be queried |
 
-### Input parameter Description
+#### 2. API Parameters:
+None.
 
-| Field | Type | Required | Description        |
-|---------------|----------|-----|------------------------|
-| private_token | string   | no | Token allocated by PaaS platform, which must be provided when the app identity of requester is not authenticated by PaaS platform |
-| code          |  string   | no | Location parameter, code of plug-in to be queried|
+### Request Example
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/bk-plugin-demo2/
+```
 
-### Return result
-
+### Response Result Example
 ```javascript
 {
   "plugin": {
@@ -54,34 +57,32 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
+- When the plugin cannot be queried through the code, the API will return a 404 status code.
 
-- The API returns a 404 status code when the plug-in can not be queried through code
+| Parameter Name    | Parameter Type | Parameter Description                                    |
+| ----------------- | -------------- | ----------------------------------------------------- |
+| plugin            | object         | Basic information of the plugin                          |
+| deployed_statuses | object         | Deployment status of the plugin in various environments, `addresses` field is `[]` when not deployed |
+| profile           | object         | Profile information of the plugin                        |
 
-| Field     | Type | Description                                       |
-|-------------------|----------|-------------------------------------------------------|
-| plugin            |  object   | Plug-in basics                                              |
-| deployed_statuses | object   | The deployment of the plug-in on each environment. When not deployed, the`addresses` field is`[]`|
+`deployed_statuses` object field description:
 
-`deployed_statuses` Object field Description:
+| Parameter Name | Parameter Type | Parameter Description     |
+| -------------- | -------------- | ------------------------- |
+| deployed       | boolean        | Whether it has been deployed |
+| addresses      | array[object]  | All access addresses in the current environment |
 
-| Field | Type  | Description    |
-|-----------|---------------|--------------------|
-| deployed  | boolean       | Has it been deployed         |
-| addresses |array [object] |All Access addresses in the current environment|
-| profile   |  object        | Profile information of plug-in         |
+`addresses` element object field description:
 
+| Parameter Name | Parameter Type | Parameter Description                            |
+| -------------- | -------------- | ----------------------------------------------- |
+| address        | str            | Access address                                  |
+| type           | integer        | Address type. Description: 2 - Default address; 4 - User-added independent domain. |
 
-`addresses` Element object field Description:
+`profile` element object field description:
 
-| Field | Type | Description                                 |
-|----------|----------|-------------------------------------------------|
-| address  | str      | Access address                                            |
-| type     |  integer  |Address type. Note: 2 default address; 4 separate domain names added by the user. |
-
-`profile` Element object field Description:
-
-| Field | Type | Description          |
-|--------------|----------|--------------------------|
-| introduction | str      | Plug-in introduction information                 |
-| contact      |  str      | Plug-in contact for multiple plug-ins; Partition|
+| Parameter Name | Parameter Type | Parameter Description              |
+| -------------- | -------------- | ----------------------------------- |
+| introduction   | str            | Plugin introduction information     |
+| contact        | str            | Plugin contact, multiple plugins separated by ; |

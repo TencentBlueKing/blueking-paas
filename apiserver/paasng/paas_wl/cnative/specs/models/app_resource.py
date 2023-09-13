@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import yaml
 from django.db import models
@@ -27,13 +27,13 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.cnative.specs.constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
 from paas_wl.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
+from paas_wl.core.env import EnvIsRunningHub
+from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.engine.constants import AppEnvName
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module
 
 
@@ -256,34 +256,13 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-class BkAppNameGenerator:
-    @classmethod
-    def generate(cls, obj: Union[Module, WlApp, ModuleEnvironment]) -> str:
-        """Generate name of the BkApp resource by env.
-
-        :param obj: Union[Module, WlApp, ModuleEnvironment] object
-        :return: BkApp resource name
-        """
-        if isinstance(obj, Module):
-            module_name = obj.name
-            code = obj.application.code
-        elif isinstance(obj, ModuleEnvironment):
-            module_name = obj.module.name
-            code = obj.application.code
-        else:
-            mdata = get_metadata(obj)
-            module_name = mdata.module_name
-            code = mdata.get_paas_app_code()
-        return cls.make_name(app_code=code, module_name=module_name)
-
-    @classmethod
-    def make_name(cls, app_code: str, module_name: str) -> str:
-        # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
-        if module_name == ModuleName.DEFAULT.value:
-            name = app_code
-        else:
-            name = f'{app_code}-m-{module_name}'
-        return name.replace("_", "0us0")
+generate_bkapp_name = CNativeBkAppNameGenerator.generate
 
 
-generate_bkapp_name = BkAppNameGenerator.generate
+# Register env_is_running implementations
+def _get_env_is_running(env):
+    """Get "is_running" status by querying for successful deploys."""
+    return AppModelDeploy.objects.any_successful(env) and not env.is_offlined
+
+
+EnvIsRunningHub.register_func(ApplicationType.CLOUD_NATIVE, _get_env_is_running)

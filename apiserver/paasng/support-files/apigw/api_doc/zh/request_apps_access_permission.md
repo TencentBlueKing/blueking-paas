@@ -1,23 +1,25 @@
-### 资源描述
-对内接口, 给一个申请人(一般是给开发商), 同时申请Tencent版平台访问权限以及多个应用的访问权限 目前仅支持 v3 平台的应用
+### 功能描述
+对内接口，用于给一个申请人（一般是给开发商）同时申请Tencent版平台访问权限以及多个应用的访问权限。目前仅支持v3平台的应用。
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 输入参数说明
-|   参数名称   |    参数类型  |  必须  |     参数说明     |
-| ------------ | ------------ | ------ | ---------------- |
-| applicant_account   | string | 是 | 权限申请人账号, 应该为qq号 |
-| name | string | 是 | 权限申请人姓名 |
-| phone | string | 是 | 手机号码 |
-| email | string | 是 | 邮箱地址 |
-| company | string | 是 | 申请人所在公司 |
-| business | string | 是 | 所属业务 |
-| reason | string | 是 | 申请原因 |
-| app_code_list | Array of strings | 是 | 申请访问的应用id列表 |
+#### 1、路径参数：
+暂无。
 
+#### 2、接口参数：
 
-### 调用示例
+| 参数名称          | 参数类型        | 是否必填 | 参数说明                   |
+| ----------------- | --------------- | -------- | -------------------------- |
+| applicant_account | string          | 是       | 权限申请人账号，应为QQ号    |
+| name              | string          | 是       | 权限申请人姓名             |
+| phone             | string          | 是       | 手机号码                   |
+| email             | string          | 是       | 邮箱地址                   |
+| company           | string          | 是       | 申请人所在公司             |
+| business          | string          | 是       | 所属业务                   |
+| reason            | string          | 是       | 申请原因                   |
+| app_code_list     | Array of strings | 是       | 申请访问的应用ID列表       |
+
+### 请求示例
 ```python
 import json
 import requests
@@ -45,7 +47,10 @@ headers = {'X-BKAPI-AUTHORIZATION': json.dumps(AUTHORIZATION)}
 res = requests.post(url, headers=headers, json=data)
 ```
 
-### 返回结果
+#### 获取你的 access_token
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### 返回结果示例
 ```python
 ret = res.json()
 ret == [{
@@ -79,7 +84,7 @@ ret == [{
 }]
 ```
 
-### 返回结果说明
+### 返回结果参数说明
 | 参数名称    | 参数类型 | 参数说明                                           |
 |-------------|----------|----------------------------------------------------|
 | application | Object   | 申请访问的应用, 申请平台权限时或应用不存在时为Null |
@@ -87,9 +92,9 @@ ret == [{
 | contacts    | string   | 联系人, 以逗号分隔                                 |
 | reason      | string   | 原因                                               |
 
-
-| Object 注解      | 参数名称 | 参数类型                                           | 参数说明           |
-|-------------|----------|----------------------------------------------------|--------------------|
-| application | id       | UUID                                               | 应用唯一标志(UUID) |
-|             | code     | string                                             | 应用id(code)       |
-|             | name     | string                                             | 应用名称           |
+#### application
+| 参数名称 | 参数类型 | 参数说明           |
+|----------|----------|--------------------|
+| id       | UUID     | 应用唯一标志(UUID) |
+| code     | string   | 应用ID(code)       |
+| name     | string   | 应用名称           |

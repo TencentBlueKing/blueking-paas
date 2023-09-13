@@ -55,7 +55,7 @@
                   <div
                     class="group-text form-text-append"
                     @click="mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld'"
-                  >应用示例</div>
+                  >{{$t('应用示例')}}</div>
                 </template>
               </bk-input>
               <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>

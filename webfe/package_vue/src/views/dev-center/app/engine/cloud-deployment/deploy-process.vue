@@ -1122,9 +1122,10 @@ export default {
       }
     },
   },
-  created() {
+  async created() {
+    await this.getQuotaPlans('stag');
+    this.getQuotaPlans('prod');
   },
-  mounted() {},
   methods: {
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');

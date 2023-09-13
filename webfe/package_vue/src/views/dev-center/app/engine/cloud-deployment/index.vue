@@ -34,6 +34,7 @@
             :key="renderIndex"
             :cloud-app-data="cloudAppData"
             :save-loading="buttonLoading"
+            :is-component-btn="true"
             @save="handleSave"
             @cancel="handleCancel"
           />

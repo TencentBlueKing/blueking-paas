@@ -118,7 +118,7 @@
           <div v-else class="pl10">--</div>
         </bk-form-item>
       </bk-form>
-      <div class="hook-btn-wrapper" v-if="isPageEdit">
+      <div class="hook-btn-wrapper" v-if="isPageEdit && isComponentBtn">
         <bk-button
           :loading="saveLoading"
           class="pl20 pr20"
@@ -154,6 +154,11 @@ export default {
       default: false,
     },
     saveLoading: {
+      type: Boolean,
+      default: false
+    },
+    // 组件内部按钮操作
+    isComponentBtn: {
       type: Boolean,
       default: false
     }
@@ -373,5 +378,9 @@ export default {
       font-size: 12px;
       cursor: pointer;
       padding-left: 10px;
+    }
+    .ps-switcher-wrapper .bk-switcher {
+      position: relative;
+      z-index: 99;
     }
 </style>

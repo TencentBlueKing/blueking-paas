@@ -34,7 +34,6 @@ export default {
   getters: {},
   mutations: {
     updateCloudAppData(state, data) {
-      console.log('data', data);
       state.cloudAppData = data;
     },
     updatePageEdit(state, data) {

@@ -2,7 +2,8 @@
   <paas-content-loader
     :is-loading="isLoading"
     placeholder="deploy-process-loading"
-    :offset-top="20"
+    :offset-top="0"
+    :is-transition="false"
     :offset-left="20"
     class="deploy-action-box"
   >
@@ -971,6 +972,10 @@ export default {
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+          // 使用示例镜像，启动命令默认值
+          if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE.includes(this.buildData.image)) {
+            this.formData.command.push(...['bash', '/app/start_web.sh']);
+          }
         }
         this.panels = _.cloneDeep(this.processData);
       },
@@ -1110,7 +1115,6 @@ export default {
       // v2每个进程不需要 image、imagePullPolicy
       if (val) {
         this.localCloudAppData?.spec?.processes.forEach((e) => {
-          console.log('e', e);
           delete e.image;
           delete e.imagePullPolicy;
         });
@@ -1122,9 +1126,10 @@ export default {
       }
     },
   },
-  created() {
+  async created() {
+    await this.getQuotaPlans('stag');
+    this.getQuotaPlans('prod');
   },
-  mounted() {},
   methods: {
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');

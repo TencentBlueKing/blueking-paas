@@ -1,10 +1,12 @@
 <template>
   <div class="right-main">
     <module-top-bar
+      :app-code="appCode"
       :title="$t('应用编排')"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
       :module-list="curAppModuleList"
+      :first-module-name="firstTabActiveName"
     />
     <paas-content-loader
       :is-loading="isLoading"
@@ -20,7 +22,7 @@
             </bk-button>
           </template>
           <bk-tab-panel
-            v-for="(panel, index) in panels"
+            v-for="(panel, index) in curTabPanels"
             v-bind="panel"
             :key="index">
           </bk-tab-panel>
@@ -31,11 +33,15 @@
             :ref="routerRefs"
             :key="renderIndex"
             :cloud-app-data="cloudAppData"
+            :save-loading="buttonLoading"
+            :is-component-btn="true"
+            @save="handleSave"
+            @cancel="handleCancel"
           />
         </div>
       </section>
 
-      <div class="deploy-btn-wrapper" v-if="isPageEdit">
+      <div class="deploy-btn-wrapper" v-if="isPageEdit && isFooterActionBtn">
         <bk-button
           :loading="buttonLoading"
           class="pl20 pr20"
@@ -112,7 +118,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.panels.find(e => e.name === this.active);
+      const curPenel = this.curTabPanels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -124,19 +130,49 @@ export default {
       const cloudAppData = cloneDeep(this.$store.state.cloudApi.cloudAppData);
       return mergeObjects(cloudAppData, this.manifestExt);
     },
+
+    // 仅镜像
+    isMirrorOnlyApp () {
+      return this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;
+    },
+
+    firstTabActiveName () {
+      return this.curTabPanels[0].name;
+    },
+
+    curTabPanels () {
+      if (this.isMirrorOnlyApp) {
+        return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
+      }
+      return this.panels;
+    },
+
+    // 是否需要保存操作按钮
+    isFooterActionBtn () {
+      // 无需展示外部操作按钮组
+      const hideTabItems = ['cloudAppDeployForHook'];
+      return !hideTabItems.includes(this.active);
+    }
   },
   watch: {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
+      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
   created() {
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    // 默认第一项
+    if (this.$route.name !== this.firstTabActiveName) {
+      this.$router.push({
+        ...this.$route,
+        name: this.firstTabActiveName,
+      });
+    }
     this.init();
-    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || 'cloudAppDeployForProcess';
   },
   methods: {
     async init() {
@@ -204,7 +240,13 @@ export default {
           const res = await this.$refs[this.routerRefs]?.handleProcessData();
           if (!res) return;
         }
-        const params = { ... this.$store.state.cloudApi.cloudAppData };
+        const data = this.$store.state.cloudApi.cloudAppData;
+        data.spec.processes = data.spec.processes.map(process => {
+          // 过滤空值容器端口
+          const { targetPort, ...processValue } = process;
+          return (targetPort === '' || targetPort === null) ? processValue : process;
+        });
+        const params = { ...data };
         await this.$store.dispatch('deploy/saveCloudAppInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -223,7 +265,6 @@ export default {
         });
       }
     },
-
 
     // 查看yaml
     handleYamlView() {

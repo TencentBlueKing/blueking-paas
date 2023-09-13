@@ -2,7 +2,10 @@
   <div class="build-container">
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="deploy-env-loading"
+      placeholder="build-config-loading"
+      :offset-top="0"
+      :offset-left="0"
+      :is-transition="false"
       class="middle"
     >
       <!-- 代码源 -->

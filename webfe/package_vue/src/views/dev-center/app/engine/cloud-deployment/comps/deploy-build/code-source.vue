@@ -3,7 +3,7 @@
     <!-- 查看态 -->
     <section class="source-code-info code-source">
       <div class="header-wrapper mb20">
-        <span class="build-title">{{$t('源码信息')}}</span>
+        <span :class="['build-title', { 'edit': isCodeSourceEdit }]">{{$t('源码信息')}}</span>
         <div
           class="edit-container" 
           v-if="!isCodeSourceEdit"
@@ -59,7 +59,10 @@
         <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
           <div v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
             <!-- 代码仓库 -->
-            <git-extend :key="sourceControlType" :git-control-type="sourceControlType"
+            <git-extend
+              :key="sourceControlType"
+              :label-width="150"
+              :git-control-type="sourceControlType"
               :is-auth="gitExtendConfig[sourceControlType].isAuth"
               :is-loading="gitExtendConfig[sourceControlType].isLoading"
               :auth-docs="gitExtendConfig[sourceControlType].authDocs"
@@ -702,9 +705,22 @@
   }
 
   .build-title {
+    position: relative;
     font-weight: 700;
     font-size: 14px;
     color: #313238;
+    &.edit::after {
+      content: '*';
+      height: 8px;
+      line-height: 1;
+      color: #ea3636;
+      font-size: 12px;
+      position: absolute;
+      display: inline-block;
+      vertical-align: middle;
+      top: 50%;
+      transform: translate(3px,-50%);
+    }
   }
 
   .code-quality {

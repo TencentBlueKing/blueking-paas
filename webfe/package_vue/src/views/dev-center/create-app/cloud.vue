@@ -843,9 +843,21 @@ export default {
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
     },
 
+    // 钩子命令校验
+    async handleHookValidator () {
+      if (this.$refs.hookRef) {
+        return await this.$refs.hookRef?.handleValidator();
+      }
+      return true;
+    },
 
     // 创建应用
     async handleCreateApp() {
+      const isVerificationPassed = await this.handleHookValidator();
+      if (!isVerificationPassed) {
+        return;
+      }
+
       this.formLoading = true;
       const params = {
         region: 'ieod',
@@ -907,7 +919,6 @@ export default {
           appCode: this.appCode,
           data: params,
         });
-        console.log(1, params, res);
         const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,

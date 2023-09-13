@@ -1,335 +1,345 @@
 <template>
-  <div class="module-info-container" v-bkloading="{ isLoading: pageLoading, opacity: 1 }">
-    <div class="base-info-container" v-if="isV1alpha2">
-      <div class="flex-row align-items-center">
-        <span class="base-info-title">
-          {{ $t('基本信息-title') }}
-        </span>
-        <div class="edit-container" @click="handleEdit('isBasePageEdit')" v-if="!isBasePageEdit">
-          <i class="paasng-icon paasng-edit-2 pl10" />
-          {{ $t('编辑') }}
+  <paas-content-loader
+    :is-loading="pageLoading"
+    placeholder="deploy-module-info-loading"
+    :offset-top="0"
+    :is-transition="false"
+    class="deploy-action-box"
+  >
+    <div class="module-info-container">
+      <div class="base-info-container" v-if="isV1alpha2">
+        <div class="flex-row align-items-center">
+          <span class="base-info-title">
+            {{ $t('基本信息-title') }}
+          </span>
+          <div class="edit-container" @click="handleEdit('isBasePageEdit')" v-if="!isBasePageEdit">
+            <i class="paasng-icon paasng-edit-2 pl10" />
+            {{ $t('编辑') }}
+          </div>
         </div>
-      </div>
-      <div class="form-detail mt20 pb20 border-b" v-if="!isBasePageEdit">
-        <bk-form
-          :model="buildData">
-          <bk-form-item
-            :label="$t('托管方式：')">
-            <span class="form-text">{{ artifactType || '--' }}</span>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('镜像仓库：')">
-            <span class="form-text">{{ buildData.image || '--' }}</span>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('镜像凭证：')">
-            <span class="form-text">{{ buildData.imageCredentialsName || '--' }}</span>
-          </bk-form-item>
-        </bk-form>
-      </div>
-
-      <div class="form-edit mt20 pb20 border-b" v-else>
-        <bk-form
-          :model="buildData">
-          <bk-form-item
-            :label="$t('托管方式：')">
-            <span class="form-text">{{ artifactType || '--' }}</span>
-          </bk-form-item>
-
-          <bk-form-item
-            :label="$t('镜像仓库：')">
-            <bk-input
-              v-model="buildData.image"
-              style="width: 450px;"
-              :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
-            >
-
-              <template slot="append">
-                <div
-                  class="group-text form-text-append"
-                  @click="handleSetMirrorUrl"
-                >应用示例</div>
-              </template>
-            </bk-input>
-            <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
-          </bk-form-item>
-
-          <bk-form-item
-            :label="$t('镜像凭证：')">
-            <bk-select
-              v-model="buildData.imageCredentialsName"
-              style="width: 450px;"
-              searchable
-            >
-              <bk-option
-                v-for="option in credentialList"
-                :id="option.name"
-                :key="option.name"
-                :name="option.name"
-              />
-            </bk-select>
-          </bk-form-item>
-        </bk-form>
-
-        <div class="ml150">
-          <bk-button
-            theme="primary"
-            title="保存"
-            class="mr20 mt20"
-            @click="handleSave">
-            {{ $t('保存') }}
-          </bk-button>
-
-          <bk-button
-            :theme="'default'"
-            title="取消"
-            class="mt20"
-            @click="handleCancel">
-            {{ $t('取消') }}
-          </bk-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 部署限制 -->
-    <div class="base-info-container">
-      <div class="flex-row align-items-center mt20">
-        <span class="base-info-title">
-          {{ $t('部署限制') }}
-        </span>
-        <div class="edit-container" @click="handleEdit('isDeployLimitEdit')" v-if="!isDeployLimitEdit">
-          <i class="paasng-icon paasng-edit-2 pl10" />
-          {{ $t('编辑') }}
+        <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isBasePageEdit">
+          <bk-form
+            :model="buildData">
+            <bk-form-item
+              :label="$t('托管方式：')">
+              <span class="form-text">{{ artifactType || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('镜像仓库：')">
+              <span class="form-text">{{ buildData.image || '--' }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('镜像凭证：')">
+              <span class="form-text">{{ buildData.imageCredentialsName || '--' }}</span>
+            </bk-form-item>
+          </bk-form>
         </div>
 
-        <div class="info pl20" v-else>
-          {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
-        </div>
-      </div>
-      <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
-        <bk-form
-          :model="buildData">
-          <bk-form-item
-            :label="$t('预发布环境：')">
-            <div class="form-text">{{ deployLimit.stag ? $t('已开启') : $t('未开启') }}</div>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('生产环境：')">
-            <div class="form-text">{{ deployLimit.prod ? $t('已开启') : $t('未开启') }}</div>
-          </bk-form-item>
-        </bk-form>
-      </div>
+        <div class="form-edit mt20 pb20 border-b" v-else>
+          <bk-form
+            :model="buildData">
+            <bk-form-item
+              :label="$t('托管方式：')">
+              <span class="form-text">{{ artifactType || '--' }}</span>
+            </bk-form-item>
 
-      <div class="form-edit mt20 pb20 border-b" v-else>
-        <div class="ml80">
-          <bk-checkbox v-model="deployLimit.stag">{{ $t('预发布环境') }}</bk-checkbox>
-          <bk-checkbox v-model="deployLimit.prod">{{ $t('生产环境') }}</bk-checkbox>
-        </div>
-        <div class="ml80">
-          <bk-button
-            :theme="'primary'"
-            title="保存"
-            class="mr20 mt20"
-            @click="handleSaveEnv">
-            {{ $t('保存') }}
-          </bk-button>
-          <bk-button
-            :theme="'default'"
-            title="取消"
-            class="mt20"
-            @click="handleCancel">
-            {{ $t('取消') }}
-          </bk-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 出口IP -->
-    <div class="base-info ip-info-container">
-      <div class="flex-row align-items-center mt20">
-        <span class="base-info-title">
-          {{ $t('出口IP') }}
-        </span>
-        <div class="edit-container" @click="handleEdit('isIpInfoEdit')" v-if="!isIpInfoEdit">
-          <i class="paasng-icon paasng-edit-2 pl10" />
-          {{ $t('编辑') }}
-        </div>
-
-        <div class="info pl20" v-else>
-          {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
-        </div>
-      </div>
-      <div class="form-detail mt20 pb20 pl40 flex-row" v-if="!isIpInfoEdit">
-        <bk-form>
-          <bk-form-item
-            :label="$t('预发布环境：')">
-            <div class="flex-row" v-if="gatewayInfos.stag.node_ip_addresses.length">
-              <div class="ip-address">
-                <div
-                  class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
-                  :key="nodeIpIndex">{{ nodeIp.internal_ip_address }}</div>
-
-              </div>
-              <div
-                class="copy-icon"
-                :title="$t('复制')"
-                @click="handleCopyIp('stag')"
+            <bk-form-item
+              :label="$t('镜像仓库：')">
+              <bk-input
+                v-model="buildData.image"
+                style="width: 450px;"
+                :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
               >
-                <i class="paasng-icon paasng-general-copy" />
-              </div>
-            </div>
-            <div v-else>{{ $t('无') }}</div>
-          </bk-form-item>
-        </bk-form>
-        <bk-form class="ml60">
-          <bk-form-item
-            :label="$t('生产环境：')">
-            <div class="flex-row" v-if="gatewayInfos.prod.node_ip_addresses.length">
-              <div class="ip-address">
-                <div
-                  class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
-                  :key="nodeIpIndex">
-                  {{ nodeIp.internal_ip_address }}
-                </div>
-              </div>
-              <div
-                class="copy-icon"
-                :title="$t('复制')"
-                @click="handleCopyIp('prod')"
-              >
-                <i class="paasng-icon paasng-general-copy" />
-              </div>
-            </div>
-            <div v-else>{{ $t('无') }}</div>
-          </bk-form-item>
-        </bk-form>
-      </div>
 
-      <div class="form-edit" v-else>
-        <div class="content no-border">
-          <div class="pre-release-wrapper">
-            <div class="header">
-              <div class="header-title">
-                {{ $t('预发布环境') }}
-              </div>
-              <div class="switcher-wrapper">
-                <span
-                  v-if="gatewayInfos.stag.created !== 'Invalid date'
-                    && gatewayInfos.stag.node_ip_addresses.length && !gatewayInfosStagLoading"
-                  class="f12 date-tip"
-                  @click="stopCapturing"
-                >{{ gatewayInfos.stag.created + $t('已获取') }}</span>
-                <bk-switcher
-                  v-model="gatewayEnabled.stag"
-                  :disabled="curStagDisabled"
-                  @change="gatewayInfosHandler(...arguments, 'stag')"
+                <template slot="append">
+                  <div
+                    class="group-text form-text-append"
+                    @click="mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld'"
+                  >{{$t('应用示例')}}</div>
+                </template>
+              </bk-input>
+              <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
+            </bk-form-item>
+
+            <bk-form-item
+              :label="$t('镜像凭证：')">
+              <bk-select
+                v-model="buildData.imageCredentialsName"
+                style="width: 450px;"
+                searchable
+              >
+                <bk-option
+                  v-for="option in credentialList"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.name"
                 />
-              </div>
-            </div>
-            <div
-              class="ip-content"
-              contenteditable="false"
-            >
-              <div
-                v-if="gatewayInfos.stag.node_ip_addresses.length"
-                class="copy-wrapper"
-                :title="$t('复制')"
-                @click="handleCopyIp('stag')"
-              >
-                <i class="paasng-icon paasng-general-copy" />
-              </div>
-              <template v-if="gatewayInfos.stag.node_ip_addresses.length">
-                <div
-                  v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
-                  :key="nodeIpIndex"
-                  class="ip-item"
-                >
-                  {{ nodeIp.internal_ip_address }}
-                </div>
-              </template>
-              <template v-else-if="!curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP">
-                <div class="no-ip">
-                  <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
-                </div>
-              </template>
-              <template v-else>
-                <div class="no-ip">
-                  <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                  <p> {{ $t('如有需要请联系管理员获取') }} </p>
-                </div>
-              </template>
-            </div>
-          </div>
-          <div class="production-wrapper has-left">
-            <div class="header">
-              <div class="header-title">
-                {{ $t('生产环境') }}
-              </div>
-              <div class="switcher-wrapper">
-                <span
-                  v-if="gatewayInfos.prod.created !== 'Invalid date'
-                    && gatewayInfos.prod.node_ip_addresses.length && !gatewayInfosProdLoading"
-                  class="f12 date-tip"
-                  @click="stopCapturing"
-                >{{ gatewayInfos.prod.created + $t('已获取') }}</span>
-                <bk-switcher
-                  v-model="gatewayEnabled.prod"
-                  :disabled="curProdDisabled"
-                  @change="gatewayInfosHandler(...arguments, 'prod')"
-                />
-              </div>
-            </div>
-            <div
-              class="ip-content"
-              contenteditable="false"
-            >
-              <div
-                v-if="gatewayInfos.prod.node_ip_addresses.length"
-                class="copy-wrapper"
-                :title="$t('复制')"
-                @click="handleCopyIp('prod')"
-              >
-                <i class="paasng-icon paasng-general-copy" />
-              </div>
-              <template v-if="gatewayInfos.prod.node_ip_addresses.length">
-                <div
-                  v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
-                  :key="nodeIpIndex"
-                  class="ip-item"
-                >
-                  {{ nodeIp.internal_ip_address }}
-                </div>
-              </template>
-              <template v-else-if="!curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP">
-                <div class="no-ip">
-                  <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
-                </div>
-              </template>
-              <template v-else>
-                <div class="no-ip">
-                  <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                  <p> {{ $t('如有需要请联系管理员获取') }} </p>
-                </div>
-              </template>
-            </div>
-          </div>
-          <div class="ip-tips">
-            <i class="paasng-icon paasng-info-circle" />
-            {{ $t('注意：重复获取列表可能会获得不一样的结果，请及时刷新外部服务白名单列表') }}
+              </bk-select>
+            </bk-form-item>
+          </bk-form>
+
+          <div class="ml150">
+            <bk-button
+              theme="primary"
+              title="保存"
+              class="mr20 mt20"
+              @click="handleSave">
+              {{ $t('保存') }}
+            </bk-button>
+
+            <bk-button
+              :theme="'default'"
+              title="取消"
+              class="mt20"
+              @click="handleCancel">
+              {{ $t('取消') }}
+            </bk-button>
           </div>
         </div>
-        <div class="ml80">
-          <bk-button
-            :theme="'default'"
-            title="取消"
-            class="mt20"
-            @click="handleCancel">
-            {{ $t('取消') }}
-          </bk-button>
+      </div>
+
+      <!-- 部署限制 -->
+      <div class="base-info-container">
+        <div class="flex-row align-items-center mt20">
+          <span class="base-info-title">
+            {{ $t('部署限制') }}
+          </span>
+          <div class="edit-container" @click="handleEdit('isDeployLimitEdit')" v-if="!isDeployLimitEdit">
+            <i class="paasng-icon paasng-edit-2 pl10" />
+            {{ $t('编辑') }}
+          </div>
+
+          <div class="info flex-row align-items-center pl20">
+            <bk-icon type="info-circle" class="mr5" v-if="!isDeployLimitEdit" />
+            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
+          </div>
+        </div>
+        <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
+          <bk-form
+            :model="buildData">
+            <bk-form-item
+              :label="$t('预发布环境：')">
+              <div class="form-text">{{ deployLimit.stag ? $t('已开启') : $t('未开启') }}</div>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('生产环境：')">
+              <div class="form-text">{{ deployLimit.prod ? $t('已开启') : $t('未开启') }}</div>
+            </bk-form-item>
+          </bk-form>
+        </div>
+
+        <div class="form-edit mt20 pb20 border-b" v-else>
+          <div class="ml80">
+            <bk-checkbox v-model="deployLimit.stag">{{ $t('预发布环境') }}</bk-checkbox>
+            <bk-checkbox v-model="deployLimit.prod">{{ $t('生产环境') }}</bk-checkbox>
+          </div>
+          <div class="ml80">
+            <bk-button
+              :theme="'primary'"
+              title="保存"
+              class="mr20 mt20"
+              @click="handleSaveEnv">
+              {{ $t('保存') }}
+            </bk-button>
+            <bk-button
+              :theme="'default'"
+              title="取消"
+              class="mt20"
+              @click="handleCancel">
+              {{ $t('取消') }}
+            </bk-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 出口IP -->
+      <div class="base-info ip-info-container">
+        <div class="flex-row align-items-center mt20">
+          <span class="base-info-title">
+            {{ $t('出口IP') }}
+          </span>
+          <div class="edit-container" @click="handleEdit('isIpInfoEdit')" v-if="!isIpInfoEdit">
+            <i class="paasng-icon paasng-edit-2 pl10" />
+            {{ $t('编辑') }}
+          </div>
+
+          <div class="info pl20 flex-row align-items-center">
+            <bk-icon type="info-circle mr5" v-if="!isIpInfoEdit" />
+            {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
+          </div>
+        </div>
+        <div class="form-detail mt20 pb20 pl40 flex-row" v-if="!isIpInfoEdit">
+          <bk-form>
+            <bk-form-item
+              :label="$t('预发布环境：')">
+              <div class="flex-row" v-if="gatewayInfos.stag.node_ip_addresses.length">
+                <div class="ip-address">
+                  <div
+                    class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
+                    :key="nodeIpIndex">{{ nodeIp.internal_ip_address }}</div>
+
+                </div>
+                <div
+                  class="copy-icon"
+                  :title="$t('复制')"
+                  @click="handleCopyIp('stag')"
+                >
+                  <i class="paasng-icon paasng-general-copy" />
+                </div>
+              </div>
+              <div v-else>{{ $t('无') }}</div>
+            </bk-form-item>
+          </bk-form>
+          <bk-form class="ml60">
+            <bk-form-item
+              :label="$t('生产环境：')">
+              <div class="flex-row" v-if="gatewayInfos.prod.node_ip_addresses.length">
+                <div class="ip-address">
+                  <div
+                    class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
+                    :key="nodeIpIndex">
+                    {{ nodeIp.internal_ip_address }}
+                  </div>
+                </div>
+                <div
+                  class="copy-icon"
+                  :title="$t('复制')"
+                  @click="handleCopyIp('prod')"
+                >
+                  <i class="paasng-icon paasng-general-copy" />
+                </div>
+              </div>
+              <div v-else>{{ $t('无') }}</div>
+            </bk-form-item>
+          </bk-form>
+        </div>
+
+        <div class="form-edit" v-else>
+          <div class="content no-border">
+            <div class="pre-release-wrapper">
+              <div class="header">
+                <div class="header-title">
+                  {{ $t('预发布环境') }}
+                </div>
+                <div class="switcher-wrapper">
+                  <span
+                    v-if="gatewayInfos.stag.created !== 'Invalid date'
+                      && gatewayInfos.stag.node_ip_addresses.length && !gatewayInfosStagLoading"
+                    class="f12 date-tip"
+                    @click="stopCapturing"
+                  >{{ gatewayInfos.stag.created + $t('已获取') }}</span>
+                  <bk-switcher
+                    v-model="gatewayEnabled.stag"
+                    :disabled="curStagDisabled"
+                    @change="gatewayInfosHandler(...arguments, 'stag')"
+                  />
+                </div>
+              </div>
+              <div
+                class="ip-content"
+                contenteditable="false"
+              >
+                <div
+                  v-if="gatewayInfos.stag.node_ip_addresses.length"
+                  class="copy-wrapper"
+                  :title="$t('复制')"
+                  @click="handleCopyIp('stag')"
+                >
+                  <i class="paasng-icon paasng-general-copy" />
+                </div>
+                <template v-if="gatewayInfos.stag.node_ip_addresses.length">
+                  <div
+                    v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
+                    :key="nodeIpIndex"
+                    class="ip-item"
+                  >
+                    {{ nodeIp.internal_ip_address }}
+                  </div>
+                </template>
+                <template v-else-if="!curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP">
+                  <div class="no-ip">
+                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="no-ip">
+                    <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="production-wrapper has-left">
+              <div class="header">
+                <div class="header-title">
+                  {{ $t('生产环境') }}
+                </div>
+                <div class="switcher-wrapper">
+                  <span
+                    v-if="gatewayInfos.prod.created !== 'Invalid date'
+                      && gatewayInfos.prod.node_ip_addresses.length && !gatewayInfosProdLoading"
+                    class="f12 date-tip"
+                    @click="stopCapturing"
+                  >{{ gatewayInfos.prod.created + $t('已获取') }}</span>
+                  <bk-switcher
+                    v-model="gatewayEnabled.prod"
+                    :disabled="curProdDisabled"
+                    @change="gatewayInfosHandler(...arguments, 'prod')"
+                  />
+                </div>
+              </div>
+              <div
+                class="ip-content"
+                contenteditable="false"
+              >
+                <div
+                  v-if="gatewayInfos.prod.node_ip_addresses.length"
+                  class="copy-wrapper"
+                  :title="$t('复制')"
+                  @click="handleCopyIp('prod')"
+                >
+                  <i class="paasng-icon paasng-general-copy" />
+                </div>
+                <template v-if="gatewayInfos.prod.node_ip_addresses.length">
+                  <div
+                    v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
+                    :key="nodeIpIndex"
+                    class="ip-item"
+                  >
+                    {{ nodeIp.internal_ip_address }}
+                  </div>
+                </template>
+                <template v-else-if="!curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP">
+                  <div class="no-ip">
+                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="no-ip">
+                    <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="ip-tips">
+              <i class="paasng-icon paasng-info-circle" />
+              {{ $t('注意：重复获取列表可能会获得不一样的结果，请及时刷新外部服务白名单列表') }}
+            </div>
+          </div>
+          <div class="ml80">
+            <bk-button
+              :theme="'default'"
+              title="取消"
+              class="mt20"
+              @click="handleCancel">
+              {{ $t('取消') }}
+            </bk-button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </paas-content-loader>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import moment from 'moment';

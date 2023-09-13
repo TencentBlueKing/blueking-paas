@@ -14,7 +14,7 @@
           {{$t('最近检查时间：')}}{{codeDetails.lastAnalysisTime || '--'}}
           <i class="paasng-icon paasng-process-file ml5"
             v-if="codeDetails.detailUrl"
-            @click="handleToDetail"
+            @click="handleToDetail(codeDetails.detailUrl)"
           />
         </p>
       </div>
@@ -45,7 +45,11 @@
     <section class="card-item check-details">
       <h4>{{$t('代码检查详情')}}</h4>
       <ul class="detail-wrapper" v-if="codeDetails.lastAnalysisResultList?.length">
-        <li class="item" v-for="(item, index) in codeDetails.lastAnalysisResultList" :key="index">
+        <li
+          v-for="(item, index) in codeDetails.lastAnalysisResultList"
+          :key="index"
+          class="item"
+          @click="handleToDetail(item.defectUrl)">
           <p>{{item.displayName}}</p>
           <div class="container">
             <span class="number">{{item.defectCount}}</span>
@@ -84,8 +88,8 @@ export default {
   },
 
   methods: {
-    handleToDetail() {
-      window.open(this.codeDetails.detailUrl, '_blank');
+    handleToDetail(url) {
+      window.open(url, '_blank');
     },
   },
 };
@@ -190,6 +194,7 @@ export default {
       border-radius: 2px;
       margin-right: 8px;
       margin-bottom: 8px;
+      cursor: pointer;
 
       &:nth-child(3n) {
         margin-right: 0;

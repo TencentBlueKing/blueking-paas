@@ -3,6 +3,9 @@
     <paas-content-loader
       class="app-container image-content"
       :is-loading="isLoading"
+      :is-transition="false"
+      :offset-top="0"
+      :offset-left="0"
       placeholder="roles-loading"
     >
       <div class="middle ps-main">

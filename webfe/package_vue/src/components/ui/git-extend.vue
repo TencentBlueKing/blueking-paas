@@ -10,7 +10,7 @@
         ref="formExtendRef"
         :model="formData"
         :rules="rules"
-        :label-width="100"
+        :label-width="labelWidth"
       >
         <bk-form-item
           :required="true"
@@ -124,6 +124,10 @@ export default {
     selectedRepoUrl: {
       type: String,
     },
+    labelWidth: {
+      type: Number,
+      default: 100
+    }
   },
   data() {
     return {

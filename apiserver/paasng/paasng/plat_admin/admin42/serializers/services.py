@@ -75,6 +75,7 @@ class ServiceObjSLZ(serializers.Serializer):
         raise ValueError("unknown obj origin")
 
     def to_internal_value(self, data):
+        data = super().to_internal_value(data)
         # 需要将语言中的连字符转为下划线，如 zh-cn 转为: zh_cn
         language_code = get_language().replace('-', '_')
         # 国际化相关的字段需要按当前用户的语言来确定字段

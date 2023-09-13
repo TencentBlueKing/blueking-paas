@@ -87,7 +87,9 @@ class TestUtils:
     def test_prepare_slugbuilder_template_without_metadata(self, _, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, {})
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
-        assert slug_tmpl.name == "slug-builder", "slugbuilder_template 的 name 与app的 name 不一致"
+        assert (
+            slug_tmpl.name == f"slug-builder--{wl_app.scheduler_safe_name}"
+        ), "slugbuilder_template 的 name 与app的 name 不一致"
         assert slug_tmpl.namespace == wl_app.namespace, "slugbuilder_template 的namespace与app的namespace不一致"
         assert slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE, "slugbuilder_template 的镜像与默认镜像不一致"
         assert slug_tmpl.runtime.envs == env_vars, "slugbuilder_template 的ConfigVars与生成的环境变量不一致"

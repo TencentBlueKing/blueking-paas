@@ -20,11 +20,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from paas_wl.deploy.app_res.generation import get_mapper_version
 from paas_wl.resources.base.exceptions import ResourceMissing
+from paas_wl.resources.generation.version import get_mapper_version
 from paas_wl.resources.utils.basic import get_client_by_app
+from paas_wl.utils.command import get_command_name
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.utils import get_command_name
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

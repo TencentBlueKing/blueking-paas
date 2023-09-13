@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -19,19 +18,14 @@ to the current version of the project delivered to anyone in the future.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paas_wl.platform.applications.models import Config, WlApp
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.resources.generation.version import AppResVerManager, get_latest_mapper_version
 
 
 @receiver(post_save, sender=WlApp)
-def on_app_created(sender, instance, created, *args, **kwargs):
-    """Do extra things when an app was created"""
+def set_default_version(sender, instance, created, *args, **kwargs):
+    """Set the default resource generation version for new application."""
     if created:
-        create_initial_config(instance)
-
-
-def create_initial_config(app: WlApp):
-    """Make sure the initial Config was created"""
-    try:
-        app.config_set.latest()
-    except Config.DoesNotExist:
-        Config.objects.create(app=app, owner=app.owner, runtime={})
+        # mapper version 概念应该只在 engine 中消化，当前在应用新建后更新
+        latest_version = get_latest_mapper_version().version
+        AppResVerManager(instance).update(latest_version)

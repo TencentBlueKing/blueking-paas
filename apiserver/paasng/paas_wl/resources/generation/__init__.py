@@ -16,22 +16,4 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-from paas_wl.platform.applications.models import Config, WlApp
-
-
-@receiver(post_save, sender=WlApp)
-def on_app_created(sender, instance, created, *args, **kwargs):
-    """Do extra things when an app was created"""
-    if created:
-        create_initial_config(instance)
-
-
-def create_initial_config(app: WlApp):
-    """Make sure the initial Config was created"""
-    try:
-        app.config_set.latest()
-    except Config.DoesNotExist:
-        Config.objects.create(app=app, owner=app.owner, runtime={})
+default_app_config = 'paas_wl.resources.generation.apps.GenerationConfig'

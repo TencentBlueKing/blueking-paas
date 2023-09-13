@@ -88,12 +88,6 @@ ignore_imports =
     paas_wl.networking.ingress.entities.service -> paas_wl.workloads.processes.readers
     # Back ref to paasng.engine.deploy module, to be removed
     paas_wl.cnative.specs.views_enduser -> paasng.engine.deploy.release.operator
-    # Only for type hints and generation module, to be removed
-    paas_wl.workloads.processes.serializers -> paas_wl.deploy.app_res.generation.mapper
-    paas_wl.resources.kube_res.base -> paas_wl.deploy.app_res.generation.mapper
-    paas_wl.platform.applications.models.managers.app_res_ver -> paas_wl.deploy.app_res.generation
-    paas_wl.platform.applications.handlers -> paas_wl.deploy.app_res.generation
-    paas_wl.platform.applications.models.managers.app_res_ver -> paas_wl.resources.**
     # views_enduser can import deploy
     paas_wl.workloads.processes.views_enduser -> paas_wl.deploy.processes
     # Replace the dep with signal
@@ -101,3 +95,14 @@ ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
     paas_wl.workloads.processes.views -> paasng.engine.deploy.version
     paas_wl.platform.applications.** -> paas_wl.workloads.processes.models
+
+[importlinter:contract:layers-paas-wl-resources]
+name=the layers for paas_wl.resources module
+type=layers
+layers = 
+    kube_res
+    generation
+    utils
+    base
+containers=
+    paas_wl.resources

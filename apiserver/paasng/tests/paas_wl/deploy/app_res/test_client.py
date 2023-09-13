@@ -27,7 +27,6 @@ from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.deploy.app_res.controllers import BuildHandler
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.base.exceptions import (
     PodAbsentError,
@@ -37,6 +36,7 @@ from paas_wl.resources.base.exceptions import (
     ResourceMissing,
 )
 from paas_wl.resources.base.kres import KPod, PatchType
+from paas_wl.resources.generation.version import AppResVerManager
 from paas_wl.resources.kube_res.base import Schedule
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod

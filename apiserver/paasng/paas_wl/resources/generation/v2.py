@@ -35,30 +35,30 @@ class PodMapper(CallThroughKresMapper[KPod]):
 
     @property
     def name(self) -> str:
-        return f"{self.process.app.scheduler_safe_name}--{self.process.type}"
+        return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
 
     @property
     def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.type}", 63)
+        return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
 
     @property
     def labels(self) -> dict:
-        mdata = get_metadata(self.process.app)
+        mdata = get_metadata(self.proc_config.app)
         return {
             "pod_selector": self.pod_selector,
-            "release_version": str(self.process.version),
-            "region": self.process.app.region,
+            "release_version": str(self.proc_config.version),
+            "region": self.proc_config.app.region,
             "app_code": mdata.get_paas_app_code(),
             "module_name": mdata.module_name,
             "env": mdata.environment,
-            "process_id": self.process.type,
+            "process_id": self.proc_config.type,
             "category": "bkapp",
             "mapper_version": "v2",
             # 新 labels
             BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
             MODULE_NAME_ANNO_KEY: mdata.module_name,
             ENVIRONMENT_ANNO_KEY: mdata.environment,
-            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            WLAPP_NAME_ANNO_KEY: self.proc_config.app.name,
             RESOURCE_TYPE_KEY: "process",
         }
 
@@ -74,26 +74,26 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.type}", 63)
+        return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
 
     @property
     def labels(self) -> dict:
-        mdata = get_metadata(self.process.app)
+        mdata = get_metadata(self.proc_config.app)
         return {
             "pod_selector": self.pod_selector,
-            "release_version": str(self.process.version),
-            "region": self.process.app.region,
+            "release_version": str(self.proc_config.version),
+            "region": self.proc_config.app.region,
             "app_code": mdata.get_paas_app_code(),
             "module_name": mdata.module_name,
             "env": mdata.environment,
-            "process_id": self.process.type,
+            "process_id": self.proc_config.type,
             "category": "bkapp",
             "mapper_version": "v2",
             # 云原生应用新增的 labels
             BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
             MODULE_NAME_ANNO_KEY: mdata.module_name,
             ENVIRONMENT_ANNO_KEY: mdata.environment,
-            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            WLAPP_NAME_ANNO_KEY: self.proc_config.app.name,
             RESOURCE_TYPE_KEY: "process",
         }
 
@@ -105,7 +105,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def name(self) -> str:
-        return f"{self.process.app.scheduler_safe_name}--{self.process.type}"
+        return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
 
 
 class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
@@ -113,11 +113,11 @@ class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
 
     @property
     def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.type}", 63)
+        return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
 
     @property
     def name(self) -> str:
-        return f"{self.process.app.scheduler_safe_name}--{self.process.type}"
+        return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
 
     @property
     def match_labels(self) -> dict:

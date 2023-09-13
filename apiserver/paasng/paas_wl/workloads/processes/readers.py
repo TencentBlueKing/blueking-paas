@@ -30,9 +30,9 @@ from paas_wl.cnative.specs.constants import (
 )
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.base.exceptions import NotAppScopedResource
 from paas_wl.resources.base.kres import KPod
+from paas_wl.resources.generation.version import AppResVerManager
 from paas_wl.resources.kube_res.base import AppEntityReader, NamespaceScopedReader, ResourceList
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY

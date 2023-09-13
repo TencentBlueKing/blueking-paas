@@ -27,9 +27,9 @@ from paas_wl.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.resources.base.exceptions import KubeException
+from paas_wl.utils.command import get_command_name
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paas_wl.workloads.processes.utils import get_command_name
 from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:

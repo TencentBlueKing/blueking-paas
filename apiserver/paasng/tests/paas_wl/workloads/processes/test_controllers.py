@@ -21,7 +21,7 @@ from unittest import mock
 import pytest
 
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
+from paas_wl.resources.generation.version import AppResVerManager
 from paas_wl.resources.kube_res.base import ResourceField, ResourceList
 from paas_wl.workloads.processes.controllers import list_processes
 from paas_wl.workloads.processes.entities import Instance, Process, Runtime, Schedule

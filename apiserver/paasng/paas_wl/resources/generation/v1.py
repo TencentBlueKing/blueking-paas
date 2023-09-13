@@ -26,7 +26,6 @@ from paas_wl.cnative.specs.constants import (
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base.kres import KDeployment, KPod, KReplicaSet
-from paas_wl.workloads.processes.utils import get_command_name
 
 from .mapper import CallThroughKresMapper, MapperField, MapperPack
 
@@ -42,29 +41,29 @@ class PodMapper(CallThroughKresMapper[KPod]):
 
     @property
     def pod_selector(self) -> str:
-        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-deployment"
+        return f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-deployment"
 
     @property
     def name(self):
         return (
-            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-"
-            f"{get_command_name(self.process.runtime.proc_command)}-deployment"
+            f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-"
+            f"{self.proc_config.command_name}-deployment"
         )
 
     @property
     def labels(self) -> dict:
-        mdata = get_metadata(self.process.app)
+        mdata = get_metadata(self.proc_config.app)
         # module_name 将作为日志采集的标识 label，拥有 module_name 的 pod ，app_code 将是
         # paasng_app_code，而没有 module_name 的 pod，则是 engine_app.name
         # 理论上，这里的 app_code 就应该是 paasng_app_code，label 中尽量将信息拆散，由上层组装
         return {
             "pod_selector": self.pod_selector,
-            "release_version": str(self.process.version),
-            "region": self.process.app.region,
+            "release_version": str(self.proc_config.version),
+            "region": self.proc_config.app.region,
             "app_code": mdata.get_paas_app_code(),
             "module_name": mdata.module_name,
             "env": mdata.environment,
-            "process_id": self.process.type,
+            "process_id": self.proc_config.type,
             # mark deployment as bkapp, maybe we will have other category in the future.
             "category": "bkapp",
             "mapper_version": "v1",
@@ -72,7 +71,7 @@ class PodMapper(CallThroughKresMapper[KPod]):
             BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
             MODULE_NAME_ANNO_KEY: mdata.module_name,
             ENVIRONMENT_ANNO_KEY: mdata.environment,
-            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            WLAPP_NAME_ANNO_KEY: self.proc_config.app.name,
             RESOURCE_TYPE_KEY: "process",
         }
 
@@ -88,22 +87,22 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def pod_selector(self) -> str:
-        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-deployment"
+        return f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-deployment"
 
     @property
     def labels(self) -> dict:
-        mdata = get_metadata(self.process.app)
+        mdata = get_metadata(self.proc_config.app)
         # module_name 将作为日志采集的标识 label，拥有 module_name 的 pod ，app_code 将是
         # paasng_app_code，而没有 module_name 的 pod，则是 engine_app.name
         # 理论上，这里的 app_code 就应该是 paasng_app_code，label 中尽量将信息拆散，由上层组装
         return {
             "pod_selector": self.pod_selector,
-            "release_version": str(self.process.version),
-            "region": self.process.app.region,
+            "release_version": str(self.proc_config.version),
+            "region": self.proc_config.app.region,
             "app_code": mdata.get_paas_app_code(),
             "module_name": mdata.module_name,
             "env": mdata.environment,
-            "process_id": self.process.type,
+            "process_id": self.proc_config.type,
             # mark deployment as bkapp, maybe we will have other category in the future.
             "category": "bkapp",
             "mapper_version": "v1",
@@ -111,7 +110,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
             BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
             MODULE_NAME_ANNO_KEY: mdata.module_name,
             ENVIRONMENT_ANNO_KEY: mdata.environment,
-            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            WLAPP_NAME_ANNO_KEY: self.proc_config.app.name,
             RESOURCE_TYPE_KEY: "process",
         }
 
@@ -124,8 +123,8 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
     @property
     def name(self) -> str:
         return (
-            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-"
-            f"{get_command_name(self.process.runtime.proc_command)}-deployment"
+            f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-"
+            f"{self.proc_config.command_name}-deployment"
         )
 
 
@@ -134,13 +133,13 @@ class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
 
     @property
     def pod_selector(self) -> str:
-        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-deployment"
+        return f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-deployment"
 
     @property
     def name(self) -> str:
         return (
-            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-"
-            f"{get_command_name(self.process.runtime.proc_command)}-deployment"
+            f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-"
+            f"{self.proc_config.command_name}-deployment"
         )
 
     @property

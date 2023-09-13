@@ -97,6 +97,8 @@
     position: relative;
     flex: 1;
     background: #F5F7FA;
+    // 解决外层flex布局表格无法自适应问题
+    overflow: hidden;
     // border-left: solid 1px rgba(220, 222, 229, 0.6);
     
     .right-main {

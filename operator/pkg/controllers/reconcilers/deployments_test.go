@@ -163,7 +163,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			).To(Equal(true))
 
 			By("update deploy")
-			Expect(r.deploy(ctx, want[0])).NotTo(HaveOccurred())
+			Expect(r.deploy(ctx, want[0], bkapp.GetProcessUpdateStrategy())).NotTo(HaveOccurred())
 
 			Expect(
 				apierrors.IsNotFound(client.Get(ctx, objKey, &appsv1.Deployment{})),
@@ -183,7 +183,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			By("deploy with same RevisionAnnoKey")
 			one := current.DeepCopy()
 			one.Spec.Replicas = lo.ToPtr(*one.Spec.Replicas + 1)
-			Expect(r.deploy(ctx, one)).NotTo(HaveOccurred())
+			Expect(r.deploy(ctx, one, bkapp.GetProcessUpdateStrategy())).NotTo(HaveOccurred())
 
 			got1 := appsv1.Deployment{}
 			_ = client.Get(ctx, objKey, &got1)
@@ -194,7 +194,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			By("deploy with changed RevisionAnnoKey")
 			two := fakeDeploy.DeepCopy()
 			two.Annotations[paasv1alpha2.RevisionAnnoKey] = "2"
-			Expect(r.deploy(ctx, two)).NotTo(HaveOccurred())
+			Expect(r.deploy(ctx, two, bkapp.GetProcessUpdateStrategy())).NotTo(HaveOccurred())
 
 			got2 := appsv1.Deployment{}
 			_ = client.Get(ctx, objKey, &got2)

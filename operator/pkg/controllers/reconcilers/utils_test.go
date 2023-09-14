@@ -136,7 +136,7 @@ var _ = Describe("Test utils", func() {
 				},
 				false,
 			),
-			Entry("deployment's handleUpdate", NewDeploymentReconciler(nil).updateHandler, false),
+			Entry("deployment's handleUpdate", NewDeploymentReconciler(nil).RollingUpdateHandler, false),
 		)
 
 		It("test create object", func() {

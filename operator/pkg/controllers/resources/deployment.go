@@ -22,8 +22,10 @@ import (
 	"strconv"
 
 	"github.com/samber/lo"
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,6 +53,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 		newRevision = rev.Revision
 	}
 
+	// 将 revision 注入到 annotations 中, 实现每次发布都让 Pod 滚动更新
 	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
 	volMountMap := GetVolumeMountMap(app)
@@ -202,4 +205,54 @@ func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
 		return results
 	}
 	return nil
+}
+
+// IsDeploymentNeedUpdate inspect whether the current Deployment should be updated to the want one.
+func IsDeploymentNeedUpdate(current *appsv1.Deployment,
+	want *appsv1.Deployment,
+) (need bool) {
+	// Labels 用于将 Deployment 关联到 Process, 不一致时必须更新
+	if !equality.Semantic.DeepEqual(current.Labels, want.Labels) {
+		return true
+	}
+
+	// 调整进程副本数需要更新
+	if !equality.Semantic.DeepEqual(current.Spec.Replicas, want.Spec.Replicas) {
+		return true
+	}
+
+	// Spec.Template.Labels 用于将 Pod 关联到 Process, 不一致时必须更新
+	if !equality.Semantic.DeepEqual(current.Spec.Template.Labels, want.Spec.Template.Labels) {
+		return true
+	}
+
+	// Spec.Template.Spec 描述了 Process 的启动信息, 不一致时必须更新
+	if !equality.Semantic.DeepEqual(current.Spec.Template.Spec, want.Spec.Template.Spec) {
+		return true
+	}
+
+	// Annotations 可能会用于存储某些特性的配置信息, 不一致时必须更新
+	if !deepEqualAnnotations(current.Annotations, want.Annotations) {
+		return true
+	}
+	if !deepEqualAnnotations(current.Spec.Template.Annotations, want.Spec.Template.Annotations) {
+		return true
+	}
+
+	// 逻辑上两个 Deployment 行为一致
+	return false
+}
+
+// deepEqualAnnotations compares two annotations, checks if they are deeply equal after removing specified key.
+func deepEqualAnnotations(current map[string]string, want map[string]string) bool {
+	currentClone := maps.Clone(current)
+	wantClone := maps.Clone(want)
+
+	maps.DeleteFunc(currentClone, func(k string, v string) bool {
+		return k == paasv1alpha2.RevisionAnnoKey
+	})
+	maps.DeleteFunc(wantClone, func(k string, v string) bool {
+		return k == paasv1alpha2.RevisionAnnoKey
+	})
+	return equality.Semantic.DeepEqual(currentClone, wantClone)
 }

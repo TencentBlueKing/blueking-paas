@@ -70,8 +70,9 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 			}
 		}
 	}
+
 	for _, deploy := range expected {
-		if err = r.deploy(ctx, deploy); err != nil {
+		if err = r.deploy(ctx, deploy, bkapp.GetProcessUpdateStrategy()); err != nil {
 			return r.Result.withError(err)
 		}
 	}
@@ -103,12 +104,16 @@ func (r *DeploymentReconciler) getCurrentState(
 }
 
 // 将给定的 deployment 发布至 k8s, 如果不存在则创建, 如果同名对象已存在且版本Hash不一致, 则更新
-func (r *DeploymentReconciler) deploy(ctx context.Context, deploy *appsv1.Deployment) error {
-	return UpsertObject(ctx, r.Client, deploy, r.updateHandler)
+func (r *DeploymentReconciler) deploy(
+	ctx context.Context,
+	deploy *appsv1.Deployment,
+	updateStrategy paasv1alpha2.ProcessUpdateStrategy,
+) error {
+	return UpsertObject(ctx, r.Client, deploy, r.RollingUpdateHandler)
 }
 
-// updateHandler Deployment 更新策略: 当集群中存在的 Deployment 与期望的 Deployment 的版本 Hash 不一致时, 更新
-func (r *DeploymentReconciler) updateHandler(
+// RollingUpdateHandler Deployment 更新策略: 当集群中存在的 Deployment 与期望的 Deployment 版本不一致时, 更新
+func (r *DeploymentReconciler) RollingUpdateHandler(
 	ctx context.Context,
 	cli client.Client,
 	current *appsv1.Deployment,
@@ -123,6 +128,25 @@ func (r *DeploymentReconciler) updateHandler(
 			)
 		}
 	}
+	return nil
+}
+
+// OnNecessaryUpdateHandler Deployment 更新策略: 当集群中存在的 Deployment.Spec 与期望的 Deployment.Spec 不一致时, 更新
+func (r *DeploymentReconciler) OnNecessaryUpdateHandler(
+	ctx context.Context,
+	cli client.Client,
+	current *appsv1.Deployment,
+	want *appsv1.Deployment,
+) error {
+	if resources.IsDeploymentNeedUpdate(current, want) {
+		if err := cli.Update(ctx, want); err != nil {
+			return errors.Wrapf(
+				err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+			)
+		}
+	}
+	log := logf.FromContext(ctx)
+	log.V(2).Info("Skip update deployment", "name", want.GetName())
 	return nil
 }
 

@@ -238,6 +238,31 @@ const (
 	ScalingPolicyDefault ScalingPolicy = "default"
 )
 
+// ProcessUpdateStrategy indicates the strategy that the BkApp
+// controller will use to perform updates.
+type ProcessUpdateStrategy struct {
+	// Type indicates the type of the ProcessUpdateStrategyType.
+	// Default is RollingUpdate.
+	// +optional
+	Type ProcessUpdateStrategyType `json:"type,omitempty"`
+}
+
+// ProcessUpdateStrategyType is a string enumeration type that enumerates
+// all possible Process(Deployment) update strategies for the BkApp controller.
+// +enum
+type ProcessUpdateStrategyType string
+
+const (
+	// RollingUpdateProcessUpdateStrategyType indicates that update will be
+	// applied to all Process(Deployment) in the BkApp. When a scale operation is performed with this
+	// strategy, new Process Instance(Pod) will be created from the specification version indicated
+	// by the BkApp's Revision.
+	RollingUpdateProcessUpdateStrategyType ProcessUpdateStrategyType = "RollingUpdate"
+	// OnNecessaryProcessUpdateStrategyType indicates that the update will only be applied
+	// to the Process(Deployment) in the BkApp when the Process(Deployment) spec is changed.
+	OnNecessaryProcessUpdateStrategyType ProcessUpdateStrategyType = "OnNecessary"
+)
+
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {
 	PreRelease *Hook `json:"preRelease,omitempty"`
@@ -604,6 +629,24 @@ func (status *HookStatus) setLastTransitionTime(time *metav1.Time) {
 type Revision struct {
 	// BkApp's version
 	Revision int64 `json:"revision"`
+}
+
+// GetProcessUpdateStrategy return the Process(Deployment) update strategies for the BkApp controller.
+func (bkapp *BkApp) GetProcessUpdateStrategy() ProcessUpdateStrategy {
+	defaultUpdateStrategy := ProcessUpdateStrategy{
+		Type: RollingUpdateProcessUpdateStrategyType,
+	}
+	if value, ok := bkapp.Annotations[ProcessUpdateStrategyTypeAnnoKey]; !ok {
+		return defaultUpdateStrategy
+	} else {
+		processUpdateStrategyType := ProcessUpdateStrategyType(value)
+		if processUpdateStrategyType == RollingUpdateProcessUpdateStrategyType || processUpdateStrategyType == OnNecessaryProcessUpdateStrategyType {
+			return ProcessUpdateStrategy{
+				Type: processUpdateStrategyType,
+			}
+		}
+		return defaultUpdateStrategy
+	}
 }
 
 func init() {

@@ -92,6 +92,8 @@ const (
 	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
 	// UseCNBAnnoKey 注解中声明镜像类型是否 cnb 的键名
 	UseCNBAnnoKey = "bkapp.paas.bk.tencent.com/use-cnb"
+	// ProcessUpdateStrategyTypeAnnoKey 注解中存储 BkApp 进程更新策略类型的键名
+	ProcessUpdateStrategyTypeAnnoKey = "bkapp.paas.bk.tencent.com/process-update-strategy-type"
 	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"
 )

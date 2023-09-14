@@ -554,7 +554,7 @@
         <bk-form
           :model="formData">
           <bk-form-item
-            :label="isV1alpha2 ? `${$t('镜像仓库：')}：` : `${$t('镜像地址')}：`">
+            :label="isV1alpha2 ? `${$t('镜像仓库')}：` : `${$t('镜像地址')}：`">
             <span class="form-text">{{ isV1alpha2 ? buildData.image : (formData.image || '--') }}</span>
           </bk-form-item>
           <bk-form-item
@@ -1128,6 +1128,11 @@ export default {
     },
   },
   async created() {
+    // 非创建应用初始化为查看态
+    if (!this.isCreate) {
+      this.$store.commit('cloudApi/updateProcessPageEdit', false);
+      this.$store.commit('cloudApi/updatePageEdit', false);
+    }
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
   },

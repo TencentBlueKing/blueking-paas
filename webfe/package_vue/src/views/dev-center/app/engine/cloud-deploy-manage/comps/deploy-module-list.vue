@@ -98,7 +98,7 @@
             <deploy-preview
               :deployment-info="deploymentInfo"
               v-if="!deploymentInfo.isExpand" />
-            <div class="operation-wrapper" v-if="deploymentInfo.total_available_instance_count">
+            <div class="operation-wrapper">
               <div
                 class="btn"
                 @click="handleChangePanel(deploymentInfo)">

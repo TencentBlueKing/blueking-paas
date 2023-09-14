@@ -168,13 +168,13 @@
                     :key="option.name"
                     :name="option.name"
                   />
-                  <div
+                  <!-- <div
                     slot="extension"
                     style="cursor: pointer;"
                     @click="handlerCreateImageCredential"
                   >
                     <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
-                  </div>
+                  </div> -->
                 </bk-select>
               </bk-form-item>
             </bk-form>
@@ -1065,7 +1065,7 @@ export default {
         this.cloudAppData.spec.build.image = this.mirrorData.url;   // 镜像仓库的值赋值给cloudAppData
         this.cloudAppData.spec.build.imageCredentialsName = this.imageCredentialsData.name;   // 镜像凭证的值赋值给cloudAppData
         // 镜像仓库的值赋值给cloudAppData.metadata.name 必须等于 `${应用ID}-m-${模块名称}`
-        this.cloudAppData.metadata = { name: `${this.curAppInfo.application.name}-m-${this.formData.name}` } ;
+        this.cloudAppData.metadata = { name: `${this.appCode}-m-${this.formData.name}` } ;
         this.localCloudAppData = _.cloneDeep(this.cloudAppData);
         // 创建模块，钩子命令数据重置
         this.cloudAppData.spec.hooks = null;

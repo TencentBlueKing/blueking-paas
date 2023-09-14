@@ -77,12 +77,12 @@ class DeploymentDeclarativeController:
 
     def sync_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
         """同步 SaaS 探针配置"""
-        #
         if not probes:
             delete_process_probe(
                 env=self.deployment.app_environment,
                 process_type=process_type,
             )
+            return
 
         for probe_type, probe in vars(probes).items():
             if probe:

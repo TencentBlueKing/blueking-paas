@@ -103,17 +103,17 @@ def underscore_to_camel(word: str) -> str:
     return parts[0] + ''.join(part.capitalize() for part in parts[1:])
 
 
-def convert_dict_underscore_to_camel(data: dict) -> dict:
+def convert_key_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
     """将字典中的所有下划线分隔的键转换为驼峰格式"""
-    result: Dict[Any, Any] = {}
+    result: Dict[str, Any] = {}
     for key, value in data.items():
+        if not isinstance(key, str):
+            raise TypeError("key must be a string")
         camel_key = underscore_to_camel(key)
         if isinstance(value, dict):
-            result[camel_key] = convert_dict_underscore_to_camel(value)
+            result[camel_key] = convert_key_to_camel(value)
         elif isinstance(value, list):
-            result[camel_key] = [
-                convert_dict_underscore_to_camel(item) if isinstance(item, dict) else item for item in value
-            ]
+            result[camel_key] = [convert_key_to_camel(item) if isinstance(item, dict) else item for item in value]
         else:
             result[camel_key] = value
     return result

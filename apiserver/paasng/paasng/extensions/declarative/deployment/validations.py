@@ -67,7 +67,7 @@ class ExecSLZ(serializers.Serializer):
 
 
 class HTTPGetSLZ(serializers.Serializer):
-    port = serializers.IntegerField(help_text="访问端口或者端口名称")
+    port = serializers.CharField(help_text="访问端口或者端口名称")
     host = serializers.CharField(help_text="主机名", required=False)
     path = serializers.CharField(help_text="访问路径", required=False)
     http_headers = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ())
@@ -75,11 +75,11 @@ class HTTPGetSLZ(serializers.Serializer):
 
 
 class TCPSocketSLZ(serializers.Serializer):
-    port = serializers.IntegerField(help_text="访问端口或者端口名称")
+    port = serializers.CharField(help_text="访问端口或者端口名称")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
 
-class ProbesSLZ(serializers.Serializer):
+class ProbeSLZ(serializers.Serializer):
     exec = ExecSLZ(help_text="命令行探活检测机制", required=False)
     http_get = HTTPGetSLZ(help_text="http 请求探活检测机制", required=False)
     tcp_socket = TCPSocketSLZ(help_text="tcp 请求探活检测机制", required=False)
@@ -90,12 +90,25 @@ class ProbesSLZ(serializers.Serializer):
     success_threshold = serializers.IntegerField(help_text="连续几次检测成功后，判定容器是健康的", required=False)
     failure_threshold = serializers.IntegerField(help_text="连续几次检测失败后，判定容器是不健康", required=False)
 
+    def validate(self, data):
+        # 根据实际需求进行校验
+        if not any([data.get('exec'), data.get('http_get'), data.get('tcp_socket')]):
+            raise serializers.ValidationError("至少需要指定一个有效的探活检测机制")
+
+        return super().validate(data)
+
+
+class ProbeSetSLZ(serializers.Serializer):
+    liveness = ProbeSLZ(default=None, help_text="存活探针", required=False)
+    readiness = ProbeSLZ(default=None, help_text="就绪探针", required=False)
+    startup = ProbeSLZ(default=None, help_text="启动探针", required=False)
+
 
 class ProcessSLZ(serializers.Serializer):
     command = serializers.CharField(help_text="进程启动指令")
     replicas = serializers.IntegerField(default=None, help_text="进程副本数", allow_null=True)
     plan = serializers.CharField(help_text="资源方案名称", required=False, allow_blank=True, allow_null=True)
-    probes = serializers.DictField(help_text="key: 探针类型, value: 探针信息信息", required=False, child=ProbesSLZ())
+    probes = ProbeSetSLZ(default=None, help_text="探针集合", required=False)
 
 
 class BluekingMonitorSLZ(serializers.Serializer):

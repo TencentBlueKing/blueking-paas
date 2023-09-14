@@ -17,20 +17,20 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import io
-import os
 from textwrap import dedent
 
 import pytest
 
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.workloads.processes.models import WlAppProbe
+from paas_wl.workloads.processes.constants import ProbeType
+from paas_wl.workloads.processes.models import ProcessProbe
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_saas_probes(bk_deployment):
-    """验证 saas 应用探针对象 WlAppProbe 成功创建 """
+    """验证 saas 应用探针对象 ProcessProbe 成功创建 """
     yaml_content = dedent(
         '''
         spec_version: 2
@@ -65,15 +65,17 @@ def test_saas_probes(bk_deployment):
     region = bk_deployment.app_environment.engine_app.region
     wlapp = WlApp.objects.create(name=name, region=region)
 
-    os.environ['PORT'] = "50"
-
     fp = io.StringIO(yaml_content)
     AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
-    liveness_probe: WlAppProbe = WlAppProbe.objects.get(app=wlapp, process_type='web', probe_type='liveness')
-    readiness_probe: WlAppProbe = WlAppProbe.objects.get(app=wlapp, process_type='web', probe_type='readiness')
+    liveness_probe: ProcessProbe = ProcessProbe.objects.get(
+        app=wlapp, process_type='web', probe_type=ProbeType.LIVENESS
+    )
+    readiness_probe: ProcessProbe = ProcessProbe.objects.get(
+        app=wlapp, process_type='web', probe_type=ProbeType.READINESS
+    )
 
     assert liveness_probe.check_mechanism
-    assert liveness_probe.check_mechanism['exec']['command'] == ['cat', '/tmp/healthy']
+    assert liveness_probe.check_mechanism.exec.command == ['cat', '/tmp/healthy']
 
     assert readiness_probe.check_mechanism
-    assert readiness_probe.check_mechanism['tcp_socket']['port'] == 50
+    assert readiness_probe.check_mechanism.tcp_socket.port == "${PORT}"

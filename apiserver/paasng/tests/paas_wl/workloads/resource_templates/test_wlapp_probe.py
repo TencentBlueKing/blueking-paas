@@ -16,29 +16,34 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import os
+
 import pytest
 
-from paas_wl.workloads.processes.models import WlAppProbe
-from paas_wl.workloads.resource_templates.utils import AppProbeManager
+from paas_wl.workloads.processes.constants import ProbeType
+from paas_wl.workloads.processes.models import ProcessProbe
+from paas_wl.workloads.resource_templates.utils import ProcessProbeManager
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_app_probe_mgr(wl_app, process_type, check_mechanism_templates):
-    WlAppProbe.objects.create(
+def test_process_probe_mgr(wl_app, process_type, check_mechanism_templates, port_env):
+    ProcessProbe.objects.create(
         app=wl_app,
         process_type=process_type,
-        probe_type='readiness',
+        probe_type=ProbeType.READINESS,
         check_mechanism=check_mechanism_templates['readiness'],
     )
-    WlAppProbe.objects.create(
+    ProcessProbe.objects.create(
         app=wl_app,
         process_type=process_type,
-        probe_type='liveness',
+        probe_type=ProbeType.LIVENESS,
         check_mechanism=check_mechanism_templates['liveness'],
     )
 
-    app_probe_mgr = AppProbeManager(app=wl_app, process_type=process_type)
+    os.environ["PORT"] = port_env
+
+    app_probe_mgr = ProcessProbeManager(app=wl_app, process_type=process_type)
     readiness_probe = app_probe_mgr.get_readiness_probe()
     liveness_probe = app_probe_mgr.get_liveness_probe()
 
@@ -48,4 +53,4 @@ def test_app_probe_mgr(wl_app, process_type, check_mechanism_templates):
     assert readiness_probe.httpGet.path == "/healthz"
     assert liveness_probe
     assert liveness_probe.tcpSocket
-    assert liveness_probe.tcpSocket.port == 60
+    assert liveness_probe.tcpSocket.port == 80

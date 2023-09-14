@@ -17,11 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import os
 import re
 import subprocess
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Tuple
+from typing import TYPE_CHECKING, Any, Iterable, Tuple
 
 import requests
 import requests.adapters
@@ -241,25 +240,3 @@ def unique_id_generator(name: str, max_length: int = 16, namespace: str = 'defau
     """The function which generates unique ID."""
     func: UniqueIDGenerator = import_string(settings.UNIQUE_ID_GEN_FUNC)
     return func(name, max_length=max_length, namespace=namespace)
-
-
-def replace_env_vars_in_json(data: dict) -> dict:
-    result: Dict[Any, Any] = {}
-    pattern = re.compile(r'\$\{(.+?)\}')
-
-    for key, value in data.items():
-        if isinstance(value, str):
-            match = pattern.match(value)
-            if match:
-                env_var = match.group(1)
-                result[key] = os.environ.get(env_var, value)
-            else:
-                result[key] = value
-        elif isinstance(value, dict):
-            result[key] = replace_env_vars_in_json(value)
-        elif isinstance(value, list):
-            result[key] = [replace_env_vars_in_json(item) if isinstance(item, dict) else item for item in value]
-        else:
-            result[key] = value
-
-    return result

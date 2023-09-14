@@ -16,50 +16,66 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
+import os
 from typing import Dict, List, Optional
 
 import cattr
+from jinja2 import Environment
 
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.utils.basic import convert_dict_underscore_to_camel
-from paas_wl.workloads.processes.models import WlAppProbe
+from paas_wl.utils.basic import convert_key_to_camel
+from paas_wl.workloads.processes.constants import ProbeType
+from paas_wl.workloads.processes.models import ProcessProbe
 from paas_wl.workloads.resource_templates.components.probe import Probe, get_default_readiness_probe
 from paas_wl.workloads.resource_templates.components.volume import Volume, VolumeMount
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
 from paas_wl.workloads.resource_templates.models import AppAddOn
 
 
-class AppProbeManager:
+class ProcessProbeManager:
     def __init__(self, app: WlApp, process_type: str):
         self.app = app
         self.process_type = process_type
 
     def get_probe(self, probe_type: str) -> Optional[Probe]:
-        try:
-            wlapp_probe: WlAppProbe = WlAppProbe.objects.get(
-                app=self.app, process_type=self.process_type, probe_type=probe_type
-            )
-            check_mechanism_json = convert_dict_underscore_to_camel(wlapp_probe.check_mechanism)
+        process_probe: ProcessProbe = ProcessProbe.objects.filter(
+            app=self.app, process_type=self.process_type, probe_type=probe_type
+        ).first()
+        if process_probe:
+            check_mechanism = convert_key_to_camel(cattr.unstructure(process_probe.check_mechanism))
+            # 占位符 ${PORT} 替换为环境变量 PORT
+            check_mechanism = _render_by_env(check_mechanism)
             parameters_json = {
-                'initialDelaySeconds': wlapp_probe.initial_delay_seconds,
-                'timeoutSeconds': wlapp_probe.timeout_seconds,
-                'periodSeconds': wlapp_probe.period_seconds,
-                'successThreshold': wlapp_probe.success_threshold,
-                'failureThreshold': wlapp_probe.failure_threshold,
+                'initialDelaySeconds': process_probe.initial_delay_seconds,
+                'timeoutSeconds': process_probe.timeout_seconds,
+                'periodSeconds': process_probe.period_seconds,
+                'successThreshold': process_probe.success_threshold,
+                'failureThreshold': process_probe.failure_threshold,
             }
-            combined_json = {**check_mechanism_json, **parameters_json}
+            combined_json = {**check_mechanism, **parameters_json}
+
             return cattr.structure(combined_json, Probe)
-        except WlAppProbe.DoseNotExit:
+        else:
             return None
 
     def get_readiness_probe(self) -> Optional[Probe]:
-        return self.get_probe(probe_type='readiness')
+        return self.get_probe(probe_type=ProbeType.READINESS)
 
     def get_liveness_probe(self) -> Optional[Probe]:
-        return self.get_probe(probe_type='liveness')
+        return self.get_probe(probe_type=ProbeType.LIVENESS)
 
     def get_startup_probe(self) -> Optional[Probe]:
-        return self.get_probe(probe_type='startup')
+        return self.get_probe(probe_type=ProbeType.STARTUP)
+
+
+def _render_by_env(data: dict) -> dict:
+    template_str = json.dumps(data)
+    env = Environment(variable_start_string="${", variable_end_string="}")
+    template = env.from_string(template_str)
+    port_env = os.getenv("PORT")
+    rendered_str = template.render({"PORT": port_env})
+    return json.loads(rendered_str)
 
 
 class AddonManager:

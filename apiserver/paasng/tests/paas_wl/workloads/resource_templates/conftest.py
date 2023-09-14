@@ -76,8 +76,13 @@ def check_mechanism_templates():
         "readiness": {
             "http_get": {"path": "/healthz", "port": 8080},
         },
-        "liveness": {"tcp_socket": {"port": 60}},
+        "liveness": {"tcp_socket": {"port": "${PORT}"}},
     }
+
+
+@pytest.fixture
+def port_env():
+    return '80'
 
 
 @pytest.fixture

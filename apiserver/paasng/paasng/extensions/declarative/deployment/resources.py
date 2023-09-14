@@ -65,13 +65,13 @@ class ExecAction:
 
 @define
 class HTTPHeader:
-    name: Optional[str] = None
-    value: Optional[str] = None
+    name: str
+    value: str
 
 
 @define
 class HTTPGetAction:
-    port: Optional[int]
+    port: str
     host: Optional[str] = None
     path: Optional[str] = None
     http_headers: Optional[List[HTTPHeader]] = None
@@ -80,8 +80,15 @@ class HTTPGetAction:
 
 @define
 class TCPSocketAction:
-    port: Optional[int]
+    port: str
     host: Optional[str] = None
+
+
+@define
+class ProbeHandler:
+    exec: Optional[ExecAction] = None
+    http_get: Optional[HTTPGetAction] = None
+    tcp_socket: Optional[TCPSocketAction] = None
 
 
 @define
@@ -108,22 +115,33 @@ class Probe:
     success_threshold: Optional[int] = 1
     failure_threshold: Optional[int] = 3
 
-    def get_check_mechanism_json(self) -> Optional[dict]:
-        """返回 check_mechanism 即（"exec", "http_get", "tcp_socket"）这几个检测机制的json字符串 """
-        probe_dict = cattr.unstructure(self)
-        check_mechanism_types = ("exec", "http_get", "tcp_socket")
-        data = [
-            (probe_dict[mechanism], mechanism)
-            for mechanism in check_mechanism_types
-            if probe_dict[mechanism] is not None
-        ]
-        if data:
-            check_mechanism, check_mechanism_type = data[0]
-            check_mechanism_data = {check_mechanism_type: check_mechanism}
-            return check_mechanism_data
-        else:
-            # 处理找不到机制的情况（例如，设置默认值）
-            return None
+    # def get_check_mechanism_json(self) -> Optional[dict]:
+    #     """返回 check_mechanism 即（"exec", "http_get", "tcp_socket"）这几个检测机制的json字符串 """
+    #     probe_dict = cattr.unstructure(self)
+    #     check_mechanism_types = ("exec", "http_get", "tcp_socket")
+    #     data = [
+    #         (probe_dict[mechanism], mechanism)
+    #         for mechanism in check_mechanism_types
+    #         if probe_dict[mechanism] is not None
+    #     ]
+    #     if data:
+    #         check_mechanism, check_mechanism_type = data[0]
+    #         check_mechanism_data = {check_mechanism_type: check_mechanism}
+    #         return check_mechanism_data
+    #     else:
+    #         # 处理找不到机制的情况（例如，设置默认值）
+    #         return None
+
+    def get_probe_handler(self) -> ProbeHandler:
+        """返回 ProbeHandler 对象 """
+        return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
+
+
+@define(slots=False)
+class ProbeSet:
+    liveness: Optional[Probe] = None
+    readiness: Optional[Probe] = None
+    startup: Optional[Probe] = None
 
 
 @define
@@ -138,7 +156,7 @@ class Process:
     command: str
     replicas: Optional[int] = field(default=None, validator=validators.optional(validators.gt(0)))
     plan: Optional[str] = None
-    probes: Dict[str, Probe] = field(factory=dict)
+    probes: Optional[ProbeSet] = None
 
 
 @define

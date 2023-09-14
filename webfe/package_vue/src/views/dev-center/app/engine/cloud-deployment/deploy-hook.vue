@@ -71,7 +71,7 @@
             :has-delete-icon="hasDeleteIcon"
             :paste-fn="copyCommand"
           />
-          <span slot="tip" class="whole-item-tips">{{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} 如：./bin/pre-task.sh</span>
+          <span slot="tip" class="whole-item-tips">{{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh</span>
         </bk-form-item>
         <bk-form-item
           :label="$t('命令参数')"

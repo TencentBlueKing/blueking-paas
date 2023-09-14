@@ -2,15 +2,15 @@
   <div class="deploy-detail">
     <section class="instance-details">
       <div class="instance-item">
-        <span class="label">运行实例数：</span>
+        <span class="label">{{$t('运行实例数')}}：</span>
         <span class="value">{{deployData.total_available_instance_count}}</span>
       </div>
       <div class="instance-item">
-        <span class="label">期望实例数：</span>
+        <span class="label">{{$t('期望实例数')}}：</span>
         <span class="value">{{deployData.total_desired_replicas}}</span>
       </div>
       <div class="instance-item">
-        <span class="label">异常实例数：</span>
+        <span class="label">{{$t('异常实例数')}}：</span>
         <span class="value">{{deployData.total_failed}}</span>
       </div>
     </section>
@@ -98,15 +98,15 @@
               :key="instance.process_name"
             >
               <bk-button class="mr10" :text="true" title="primary">
-                查看日志
+                {{$t('查看日志')}}
               </bk-button>
               <bk-button :text="true" title="primary">
-                访问控制台
+                {{$t('访问控制台')}}
               </bk-button>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column label="进程操作" width="120" class-name="table-colum-operation-cls">
+        <bk-table-column :label="$t('进程操作')" width="120" class-name="table-colum-operation-cls" :render-header="$renderHeader">
           <template slot-scope="{ row }">
             <div class="operation">
               <div class="operate-process-wrapper mr15">
@@ -127,7 +127,7 @@
                 placement="bottom">
                 <i class="paasng-icon paasng-ellipsis more"></i>
                 <div slot="content" style="white-space: normal;">
-                  <div class="option" @click="handleExpansionAndContraction">扩缩容</div>
+                  <div class="option" @click="handleExpansionAndContraction">{{$t('扩缩容')}}</div>
                 </div>
               </bk-popover>
             </div>

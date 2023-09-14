@@ -55,6 +55,7 @@
           :filters="sourceFilters"
           :filter-multiple="false"
           :render-header="$renderHeader"
+          show-overflow-tooltip
         >
           <template slot-scope="{ row }">
             <span v-if="row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
@@ -90,7 +91,7 @@
           prop="operation_act"
           :render-header="$renderHeader"
         />
-        <bk-table-column :label="$t('结果')">
+        <bk-table-column :label="$t('结果')" min-width="100">
           <template slot-scope="{ row }">
             <div class="flex-row align-items-center" v-if="row.status !== 'pending'">
               <span :class="['dot', row.status]" /> {{ $t(deployStatus[row.status]) }}
@@ -120,11 +121,13 @@
           :label="$t('操作人')"
           prop="operator.username"
           :render-header="$renderHeader"
+          show-overflow-tooltip
         />
         <bk-table-column
           width="180"
           :label="$t('操作时间')"
           prop="created"
+          show-overflow-tooltip
         />
         <bk-table-column
           width="115"

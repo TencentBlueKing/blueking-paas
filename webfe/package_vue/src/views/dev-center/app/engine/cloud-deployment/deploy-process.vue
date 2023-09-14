@@ -554,31 +554,31 @@
         <bk-form
           :model="formData">
           <bk-form-item
-            :label="isV1alpha2 ? $t('镜像仓库：') : $t('镜像地址：')">
+            :label="isV1alpha2 ? `${$t('镜像仓库：')}：` : `${$t('镜像地址')}：`">
             <span class="form-text">{{ isV1alpha2 ? buildData.image : (formData.image || '--') }}</span>
           </bk-form-item>
           <bk-form-item
-            :label="$t('镜像凭证：')">
+            :label="`${$t('镜像凭证')}：`">
             <span class="form-text">
               {{ isV1alpha2 ? buildData.imageCredentialsName : (bkappAnnotations[imageCrdlAnnoKey] || '--') }}
             </span>
           </bk-form-item>
           <bk-form-item
-            :label="$t('启动命令：')">
+            :label="`${$t('启动命令')}：`">
             <span v-if="formData.command.length">
               <bk-tag v-for="item in formData.command" :key="item">{{ item }}</bk-tag>
             </span>
             <span class="form-text" v-else>--</span>
           </bk-form-item>
           <bk-form-item
-            :label="$t('命令参数：')">
+            :label="`${$t('命令参数')}：`">
             <span v-if="formData.args.length">
               <bk-tag v-for="item in formData.args" :key="item">{{ item }}</bk-tag>
             </span>
             <span class="form-text" v-else>--</span>
           </bk-form-item>
           <bk-form-item
-            :label="$t('容器端口：')">
+            :label="`${$t('容器端口')}：`">
             <span class="form-text">{{ formData.targetPort || '--' }}</span>
           </bk-form-item>
           <bk-form-item :label-width="50">
@@ -596,7 +596,7 @@
           </bk-form-item>
           <section class="mt20 extra-config-cls" v-if="ifopen">
             <bk-form-item
-              :label="$t('配置环境：')">
+              :label="`${$t('配置环境')}：`">
               <!-- <span class="form-text">{{ ENV_ENUM[envName] || '--' }}</span> -->
               <div class="flex-row env-detail">
                 <div v-for="item in envsData" :key="item.value" :class="item.value === 'prod' ? 'ml20' : ''">
@@ -617,13 +617,13 @@
 
                     <section v-if="extraConfigData[item.value].isAutoscaling">
                       <bk-form-item
-                        :label="$t('最小副本数：')">
+                        :label="`${$t('最小副本数')}：`">
                         <span class="form-text">
                           {{ extraConfigData[item.value].formAutoscalingData.minReplicas || '--' }}
                         </span>
                       </bk-form-item>
                       <bk-form-item
-                        :label="$t('最大副本数：')">
+                        :label="`${$t('最大副本数')}：`">
                         <span class="form-text">
                           {{ extraConfigData[item.value].formAutoscalingData.maxReplicas || '--' }}
                         </span>
@@ -671,7 +671,8 @@
   </paas-content-loader>
 </template>
 
-<script>import _ from 'lodash';
+<script>
+import _ from 'lodash';
 import { bus } from '@/common/bus';
 import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
 
@@ -836,7 +837,7 @@ export default {
         processName: [
           {
             required: true,
-            message: this.$t('请输入进程名'),
+            message: this.$t('请输入进程名称'),
             trigger: 'blur',
           },
           {

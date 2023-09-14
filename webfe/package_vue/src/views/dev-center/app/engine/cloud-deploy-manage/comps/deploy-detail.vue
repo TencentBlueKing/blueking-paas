@@ -26,7 +26,7 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
+              <span class="ml5">{{ row.available_instance_count }} / {{ row.desired_replicas }}</span>
               <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div>
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <i

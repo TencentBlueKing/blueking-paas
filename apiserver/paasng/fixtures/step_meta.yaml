@@ -1,3 +1,4 @@
+# <- start 通用构建步骤
 - fields:
     builder_provider:
     - blueking
@@ -37,6 +38,48 @@
     started_patterns: '[]'
     updated: 2021-04-27 03:12:15.331817+00:00
   model: engine.deploystepmeta
+# -- 分割线 --
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.376855+00:00
+    finished_patterns: '[]'
+    name: 部署应用
+    display_name_zh_cn: 部署应用
+    display_name_en: Deploying the app
+    phase: release
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.376878+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 检测部署结果
+    display_name_zh_cn: 检测部署结果
+    display_name_en: View Deploy results
+    phase: release
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 执行部署前置命令
+    display_name_zh_cn: 执行部署前置命令
+    display_name_en: Execute Pre-release cmd
+    phase: release
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+# <- end 通用构建步骤
+# <- start Heroku buildpack 构建步骤
 - fields:
     builder_provider:
     - blueking
@@ -207,45 +250,6 @@
     updated: 2021-04-27 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
-    created: 2021-04-27 03:12:15.376855+00:00
-    finished_patterns: '[]'
-    name: 部署应用
-    display_name_zh_cn: 部署应用
-    display_name_en: Deploying the app
-    phase: release
-    started_patterns: '[]'
-    updated: 2021-04-27 03:12:15.376878+00:00
-  model: engine.deploystepmeta
-- fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
-    created: 2021-04-27 03:12:15.381758+00:00
-    finished_patterns: '[]'
-    name: 检测部署结果
-    display_name_zh_cn: 检测部署结果
-    display_name_en: View Deploy results
-    phase: release
-    started_patterns: '[]'
-    updated: 2021-04-27 03:12:15.381779+00:00
-  model: engine.deploystepmeta
-- fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
-    created: 2021-04-27 03:12:15.381758+00:00
-    finished_patterns: '[]'
-    name: 执行部署前置命令
-    display_name_zh_cn: 执行部署前置命令
-    display_name_en: Execute Pre-release cmd
-    phase: release
-    started_patterns: '[]'
-    updated: 2021-04-27 03:12:15.381779+00:00
-  model: engine.deploystepmeta
-- fields:
     created: 2021-04-27 03:12:15.388464+00:00
     is_default: true
     metas:
@@ -278,3 +282,51 @@
     name: slug-pilot
     updated: 2021-04-27 03:12:15.388489+00:00
   model: engine.stepmetaset
+# <- end Heroku buildpack 构建步骤
+# <- start Dockerfile 构建步骤
+- fields:
+    builder_provider: null
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    name: 下载构建上下文
+    display_name_zh_cn: 下载构建上下文
+    display_name_en: Download docker build context
+    phase: build
+    started_patterns: '["Downloading docker build context\.\.\."]'
+    finished_patterns: '["\* Docker build context is ready"]'
+    updated: 2023-09-14 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider: null
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    name: 构建镜像
+    display_name_zh_cn: 构建镜像
+    display_name_en: Building image
+    phase: build
+    started_patterns: '["Start building\.\.\."]'
+    finished_patterns: '["\* Build success"]'
+    updated: 2023-09-14 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    created: 2021-04-27 03:12:15.388464+00:00
+    is_default: true
+    metas:
+    - - preparation
+      - 解析应用进程信息
+    - - preparation
+      - 上传仓库代码
+    - - preparation
+      - 配置资源实例
+    - - build
+      - 下载构建上下文
+    - - build
+      - 构建镜像
+    - - release
+      - 部署应用
+    - - release
+      - 检测部署结果
+    name: dockerbuild
+    updated: 2021-04-27 03:12:15.388489+00:00
+  model: engine.stepmetaset
+# <- end Dockerfile 构建步骤

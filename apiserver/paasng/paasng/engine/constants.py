@@ -24,6 +24,7 @@ from django.utils.translation import gettext_lazy as _
 from paasng.utils.basic import ChoicesEnum
 
 PROC_DEFAULT_REPLICAS = 1
+DOCKER_BUILD_STEPSET_NAME = "dockerbuild"
 
 
 class ClusterType(str, StructuredEnum):

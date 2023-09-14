@@ -1589,7 +1589,7 @@ export default {
     border-radius: 50%;
     margin-right: 8px;
 
-    &.failed {
+    &.Failed {
       background: #EA3636;
       border: 3px solid #fce0e0;
     }

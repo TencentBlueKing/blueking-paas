@@ -106,17 +106,28 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column label="进程操作" width="120" class-name="table-colum-operation-cls">
+        <bk-table-column label="进程操作" width="200" class-name="table-colum-operation-cls">
           <template slot-scope="{ row }">
             <div class="operation">
+              <div
+                v-if="row.status === 'Running'"
+                class="flex-row align-items-center mr10"
+              >
+                <img
+                  src="/static/images/btn_loading.gif"
+                  class="loading"
+                >
+                <span class="pl10">
+                  {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                </span>
+              </div>
               <div class="operate-process-wrapper mr15">
                 <div class="round-wrapper" v-if="row.targetStatus === 'start'">
-
                   <bk-popconfirm
                     content="确认停止该进程？"
                     width="288"
                     trigger="click"
-                    @confirm="handleStopProcess">
+                    @confirm="handleUpdateProcess">
                     <div
                       v-bk-tooltips="$t('停止进程')"
                       class="square-icon"
@@ -124,10 +135,18 @@
                     </div>
                   </bk-popconfirm>
                 </div>
-                <i
-                  class="paasng-icon paasng-play-circle-shape start"
-                  v-bk-tooltips="$t('启动进程')"
-                  v-else @click="handleProcessOperation(row, 'start')"></i>
+                <div v-else>
+                  <bk-popconfirm
+                    content="确认启动该进程？"
+                    width="288"
+                    trigger="click"
+                    @confirm="handleUpdateProcess">
+                    <i
+                      class="paasng-icon paasng-play-circle-shape start"
+                      v-bk-tooltips="$t('启动进程')"
+                      @click="handleProcessOperation(row, 'start')"></i>
+                  </bk-popconfirm>
+                </div>
               </div>
               <i
                 v-bk-tooltips="$t('进程详情')"
@@ -267,6 +286,7 @@ import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import i18n from '@/language/i18n.js';
+import { bus } from '@/common/bus';
 
 // let maxReplicasNum = 0;
 
@@ -290,6 +310,10 @@ export default {
     environment: {
       type: String,
       default: () => 'stag',
+    },
+    rvData: {
+      type: Object,
+      default: () => ({}),
     },
   },
   data() {
@@ -419,6 +443,8 @@ export default {
         targetReplicas: 0,
         maxReplicas: 0,
       },
+      watchServerTimer: null,
+      curUpdateProcess: {},
     };
   },
   computed: {
@@ -436,8 +462,17 @@ export default {
         this.formatProcesses(this.deployData);
       },
       immediate: true,
-      deep: true,
+      // deep: true,
     },
+  },
+  mounted() {
+    // 进入页面启动事件流
+    this.watchServerPush();
+  },
+
+  beforedestroy() {
+    // 页面销毁 关闭stream
+    this.closeServerPush();
   },
 
   methods: {
@@ -445,12 +480,12 @@ export default {
       row.isExpand = !row.isExpand;
     },
     handleProcessOperation(row, type) {
-      console.log(row);
+      this.curUpdateProcess = row;    // 当前点击的进程
       row.status = type;
     },
 
-    handleStopProcess() {
-
+    handleUpdateProcess() {
+      this.updateProcess();
     },
     handleExpansionAndContraction() {
       console.log('click');
@@ -850,32 +885,34 @@ export default {
       });
     },
 
-    async updateProcess(process, index) {
+    async updateProcess() {
+      const process = this.curUpdateProcess;
+      console.log('process', process);
       // 判断上次操作是否结束
-      if (process.isActionLoading) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('进程操作过于频繁，请间隔 3 秒再试'),
-        });
-        return false;
-      }
-      process.isActionLoading = true;
+      // if (process.isActionLoading) {
+      //   this.$paasMessage({
+      //     theme: 'error',
+      //     message: this.$t('进程操作过于频繁，请间隔 3 秒再试'),
+      //   });
+      //   return false;
+      // }
+      // process.isActionLoading = true;
 
 
-      // 判断是否已经下架
-      if (this.isAppOfflined) {
-        return false;
-      }
+      // // 判断是否已经下架
+      // if (this.isAppOfflined) {
+      //   return false;
+      // }
 
-      process.isShowTooltipConfirm = false;
-      if (!process.operateIconTitle) {
-        process.operateIconTitle = process.operateIconTitleCopy;
-      }
+      // process.isShowTooltipConfirm = false;
+      // if (!process.operateIconTitle) {
+      //   process.operateIconTitle = process.operateIconTitleCopy;
+      // }
 
-      this.currentClickObj = Object.assign({}, {
-        operateIconTitle: process.operateIconTitle,
-        index,
-      });
+      // this.currentClickObj = Object.assign({}, {
+      //   operateIconTitle: process.operateIconTitle,
+      //   index,
+      // });
 
       const processType = process.name;
       const { targetStatus } = process;
@@ -898,14 +935,173 @@ export default {
         } else {
           process.targetStatus = 'start';
         }
+        if (!this.watchServerTimer) {
+          this.watchServerPush();
+        }
       } catch (err) {
         this.$paasMessage({
           theme: 'error',
           message: err.message,
         });
       } finally {
-        this.getProcessList();
+        // this.getProcessList();
         process.isActionLoading = false;
+      }
+    },
+
+
+    // 监听进程事件流
+    watchServerPush() {
+      console.log('监听');
+      // 停止轮询的标志
+      if (this.watchServerTimer) {
+        clearTimeout(this.watchServerTimer);
+      };
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}`;
+      console.log('url', url);
+      this.serverProcessEvent = new EventSource(url, {
+        withCredentials: true,
+      });
+
+      // 收藏服务推送消息
+      this.serverProcessEvent.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.warn(data);
+        if (data.object_type === 'process') {
+          console.log('data', data);
+          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          this.updateProcessData(data);
+        } else if (data.object_type === 'instance') {
+          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          this.updateInstanceData(data);
+          if (data.type === 'ADDED') {
+            if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+            console.warn(this.$t('重新拉取进程...'));
+            // this.getModuleProcessList(false);
+          }
+        } else if (data.type === 'ERROR') {
+          // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
+          clearTimeout(this.timer);
+          this.timer = setTimeout(() => {
+            // this.getProcessList(this.releaseId, false);
+          }, 2000);
+        }
+      };
+
+      // 服务异常
+      this.serverProcessEvent.onerror = (event) => {
+        // 异常后主动关闭，否则会继续重连
+        console.error(this.$t('推送异常'), event);
+        this.serverProcessEvent.close();
+
+        // 推迟调用，防止过于频繁导致服务性能问题
+        // this.watchServerTimer = setTimeout(() => {
+        //   this.watchServerPush();
+        // }, 3000);
+      };
+
+      // 服务结束
+      this.serverProcessEvent.addEventListener('EOF', () => {
+        this.serverProcessEvent.close();
+      });
+    },
+
+    // 更新进程
+    updateProcessData(data) {
+      const processData = data.object || {};
+      this.prevProcessVersion = data.resource_version || 0;
+
+      if (data.type === 'ADDED') {
+        // ADDED 是要将 process 添加到 allProcesses 里面
+        // 重新拉一次 list 接口也可以间接实现
+        bus.$emit('get-release-info', true);
+      } else if (data.type === 'MODIFIED') {
+        this.allProcesses.forEach((process) => {
+          if (process.name === processData.type) {
+            process.available_instance_count = processData.success;
+            process.desired_replicas = processData.replicas;
+            process.failed = processData.failed;
+            this.updateProcessStatus(process);
+          }
+        });
+      } else if (data.type === 'DELETED') {
+        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
+      }
+    },
+
+    // 更新实例
+    updateInstanceData(data) {
+      const instanceData = data.object || {};
+      this.prevInstanceVersion = data.resource_version || 0;
+
+      instanceData.date_time = moment(instanceData.start_time).startOf('minute')
+        .fromNow();
+      this.allProcesses.forEach((process) => {
+        if (process.type === instanceData.process_type) {
+          // 新增
+          if (data.type === 'ADDED') {
+            // 防止在短时间内重复推送
+            process.instances.forEach((instance, index) => {
+              if (instance.name === instanceData.name) {
+                process.instances.splice(index, 1);
+              }
+            });
+            process.instances.push(instanceData);
+          } else {
+            process.instances.forEach((instance, index) => {
+              if (instance.name === instanceData.name) {
+                if (data.type === 'DELETED') {
+                  // 删除
+                  process.instances.splice(index, 1);
+                } else {
+                  // 更新
+                  process.instances.splice(index, 1, instanceData);
+                }
+              }
+            });
+          }
+          this.updateProcessStatus(process);
+        }
+      });
+    },
+
+    updateProcessStatus(process) {
+      /*
+        * 设置进程状态
+        * targetStatus: 进行的操作，start\stop\scale
+        * status: 操作状态，Running\stoped
+        *
+        * 如何判断进程当前是否为操作中（繁忙状态）？
+        * 主要根据 process_packages 里面的 target_status 判断：
+        * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
+        * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+        */
+      if (process.targetStatus === 'stop') {
+        process.operateIconTitle = this.$t('启动进程');
+        process.operateIconTitleCopy = this.$t('启动进程');
+        if (process.available_instance_count === 0 && process.instances.length === 0) {
+          process.status = 'Stopped';
+        } else {
+          process.status = 'Running';
+        }
+      } else if (process.targetStatus === 'start') {
+        process.operateIconTitle = this.$t('停止进程');
+        process.operateIconTitleCopy = this.$t('停止进程');
+        if (process.available_instance_count === process.targetReplicas && process.failed === 0) {
+          process.status = 'Stopped';
+        } else {
+          process.status = 'Running';
+        }
+      }
+    },
+
+    closeServerPush() {
+      // 把当前服务监听关闭
+      if (this.serverProcessEvent) {
+        this.serverProcessEvent.close();
+        if (this.watchServerTimer) {
+          clearTimeout(this.watchServerTimer);
+        };
       }
     },
   },

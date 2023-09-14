@@ -156,7 +156,7 @@ const actions = {
    * @param {Object} params 请求参数：appCode, env
    */
   getModuleReleaseList({ }, { appCode, env },  config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list/`;
     return http.get(url, config);
   },
 

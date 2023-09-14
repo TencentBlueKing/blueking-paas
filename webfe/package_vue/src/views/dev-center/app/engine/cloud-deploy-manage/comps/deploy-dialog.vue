@@ -544,6 +544,7 @@ export default {
 .deploy-dialog-container{
 }
 .version-code{
+    cursor: pointer;
     color: #3A84FF;
     font-size: 12px;
   }

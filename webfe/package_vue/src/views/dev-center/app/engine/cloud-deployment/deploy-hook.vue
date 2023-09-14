@@ -13,17 +13,13 @@
           <div class="item-title">
             {{ $t('部署前置命令') }}
           </div>
-          <div
-            class="ps-switcher-wrapper mr10 ml20"
-            @click="togglePermission"
+          <bk-switcher
             v-if="isPageEdit"
-          >
-            <bk-switcher
-              v-model="preFormData.loaclEnabled"
-              theme="primary"
-              :disabled="!isPageEdit"
-            />
-          </div>
+            class="ml20 mr10"
+            v-model="preFormData.loaclEnabled"
+            theme="primary"
+            @change="switcherChange"
+          />
           <div v-else class="ml10">
             <bk-tag
               :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用') "
@@ -47,6 +43,7 @@
           {{ $t('编辑') }}
         </div>
       </div>
+      <!-- 不启用时隐藏 -->
       <bk-form
         v-if="isPageEdit"
         ref="commandRef"
@@ -249,10 +246,8 @@ export default {
   },
 
   methods: {
-    // 是否开启部署前置命令
-    togglePermission() {
-      if (!this.isPageEdit) return;
-      this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
+    switcherChange (value) {
+      this.$set(this.preFormData, 'loaclEnabled', value);
     },
 
     trimStr(str) {
@@ -389,9 +384,5 @@ export default {
       font-size: 12px;
       cursor: pointer;
       padding-left: 10px;
-    }
-    .ps-switcher-wrapper .bk-switcher {
-      position: relative;
-      z-index: 99;
     }
 </style>

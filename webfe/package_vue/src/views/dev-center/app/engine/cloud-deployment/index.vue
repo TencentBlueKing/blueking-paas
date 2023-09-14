@@ -34,7 +34,7 @@
             :key="renderIndex"
             :cloud-app-data="cloudAppData"
             :save-loading="buttonLoading"
-            :is-component-btn="true"
+            :is-component-btn="!isFooterActionBtn"
             @save="handleSave"
             @cancel="handleCancel"
           />
@@ -127,13 +127,12 @@ export default {
     },
 
     dialogCloudAppData() {
-      const cloudAppData = cloneDeep(this.$store.state.cloudApi.cloudAppData);
+      const cloudAppData = cloneDeep(this.storeCloudAppData);
       return mergeObjects(cloudAppData, this.manifestExt);
     },
 
-    // 仅镜像
-    isMirrorOnlyApp () {
-      return this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;
+    storeCloudAppData () {
+      return this.$store.state.cloudApi.cloudAppData;
     },
 
     firstTabActiveName () {
@@ -141,10 +140,10 @@ export default {
     },
 
     curTabPanels () {
-      if (this.isMirrorOnlyApp) {
-        return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
+      if (this.curAppModule.web_config?.runtime_type !== 'custom_image') {
+        return this.panels;
       }
-      return this.panels;
+      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
     },
 
     // 是否需要保存操作按钮
@@ -212,7 +211,7 @@ export default {
     },
 
     handleGoPage(routeName) {
-      this.cloudAppData = this.$store.state.cloudApi.cloudAppData;
+      this.cloudAppData = this.storeCloudAppData;
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.$router.push({
         name: routeName,
@@ -240,7 +239,7 @@ export default {
           const res = await this.$refs[this.routerRefs]?.handleProcessData();
           if (!res) return;
         }
-        const data = this.$store.state.cloudApi.cloudAppData;
+        const data = this.storeCloudAppData;
         data.spec.processes = data.spec.processes.map(process => {
           // 过滤空值容器端口
           const { targetPort, ...processValue } = process;

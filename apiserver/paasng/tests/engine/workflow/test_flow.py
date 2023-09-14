@@ -38,6 +38,7 @@ def setup_cluster():
         yield
 
 
+@pytest.mark.django_db(databases=["default", "workloads"])
 class TestDeployProcedure:
     @pytest.fixture
     def phases(self, bk_prod_env, bk_deployment):
@@ -101,6 +102,7 @@ class TestDeployProcedure:
             assert d.step_obj
 
 
+@pytest.mark.django_db(databases=["default", "workloads"])
 class TestDeploymentCoordinator:
     def test_normal(self, bk_stag_env):
         env_mgr = DeploymentCoordinator(bk_stag_env)

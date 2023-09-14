@@ -28,6 +28,7 @@ from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner
 pytestmark = pytest.mark.django_db
 
 
+@pytest.mark.django_db(databases=["default", "workloads"])
 class TestDeployStepPicker:
     """测试 DeployStep"""
 

@@ -47,6 +47,7 @@ def auto_binding_phases(bk_prod_env, bk_deployment):
         manager.attach(DeployPhaseTypes(p.type), bk_deployment)
 
 
+@pytest.mark.django_db(databases=["default", "workloads"])
 class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""
 

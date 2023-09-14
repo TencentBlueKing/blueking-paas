@@ -91,12 +91,13 @@
             <!-- 详情表格 -->
             <deploy-detail
               v-show="deploymentInfo.isExpand"
+              :rv-data="rvData"
               :deployment-info="deploymentInfo" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"
               v-show="!deploymentInfo.isExpand" />
-            <div class="operation-wrapper">
+            <div class="operation-wrapper" v-if="deploymentInfo.total_available_instance_count">
               <div
                 class="btn"
                 @click="handleChangePanel(deploymentInfo)">
@@ -164,6 +165,7 @@ import deployDialog from './deploy-dialog.vue';
 import deployStatusDetail from './deploy-status-detail';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import _ from 'lodash';
+import { bus } from '@/common/bus';
 
 export default {
   components: {
@@ -203,6 +205,7 @@ export default {
       cloudAppData: {},
       isShowSideslider: false,
       initPage: false,       // 第一次进入页面
+      rvData: {},
     };
   },
 
@@ -247,6 +250,9 @@ export default {
 
   mounted() {
     this.initPage = true;   // 进入页面
+    bus.$on('get-release-info', () => {
+      this.handleRefresh();   // 请求模块列表数据
+    });
     this.init();
   },
 
@@ -258,7 +264,7 @@ export default {
       payload.isExpand = !payload.isExpand;
       // this.$set(this, 'deploymentInfoData', res.data);
       //   this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
-      // this.curDeploymentInfoItem = payload || {};
+      this.curDeploymentInfoItem = payload || {};
       // this.isExpand = !this.isExpand;
     },
 
@@ -330,6 +336,7 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
+      if (!this.intervalTimer) true;  // 如果已经有了timer则return
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -338,18 +345,22 @@ export default {
         });
         // this.deploymentInfoData = res.data;
         res.data = res.data.map((e) => {
-          e.isExpand = false;
+          e.isExpand = this.curDeploymentInfoItem.isExpand || false;
           return e;
         });
         this.$set(this, 'deploymentInfoData', res.data);
+        this.rvData = {
+          rvInst: res.rv_inst,
+          rvProc: res.rv_proc,
+        };
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
-        console.log(111, this.deploymentInfoData);
         const hasOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
         const hasDeployData = this.deploymentInfoData.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据
         this.isWatchOfflineing = !!(hasOfflinedData.length);   // 如果还存在下架中的数据，这说明还有模块在下架中
         this.isWatctDeploying = !!(hasDeployData.length);
         if (hasOfflinedData.length || hasDeployData.length) {
           this.intervalTimer = setTimeout(async () => {
+            this.intervalTimer = null;
             this.getModuleReleaseInfo(false);
           }, 3000);
         } else {

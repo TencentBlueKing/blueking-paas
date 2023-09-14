@@ -76,8 +76,6 @@ class AsCodeClient:
     def _render_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
 
-        ├── notice
-          └── notice.yaml
         └── rule
           ├── high_cpu_usage.yaml
           └── high_mem_usage.yaml

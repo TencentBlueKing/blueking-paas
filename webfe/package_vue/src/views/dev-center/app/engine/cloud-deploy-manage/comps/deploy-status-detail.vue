@@ -50,27 +50,29 @@
         </div>
       </bk-alert>
       <bk-alert type="error" :show-icon="false" class="mb20 alert-cls" v-if="isDeployFail">
-        <div class="flex-row align-items-center" slot="title">
-          <p class="deploy-pending-text pl10">
-            {{ $t('部署失败') }}
-          </p>
-          <p class="pl20">
-            <span>{{ curDeployResult.possible_reason }}</span>
-            <span class="pl10" v-if="curDeployResult.result === 'failed'">
-              <span
-                v-for="(help, index) in curDeployResult.error_tips.helpers"
-                :key="index"
-              >
-                <a
-                  :href="help.link"
-                  target="_blank"
-                  class="mr10"
+        <div class="flex-row align-items-center justify-content-between" slot="title">
+          <div class="flex-row align-items-center">
+            <p class="deploy-pending-text pl10">
+              {{ $t('部署失败') }}
+            </p>
+            <p class="pl20">
+              <span>{{ curDeployResult.possible_reason }}</span>
+              <span class="pl10" v-if="curDeployResult.result === 'failed'">
+                <span
+                  v-for="(help, index) in curDeployResult.error_tips.helpers"
+                  :key="index"
                 >
-                  {{ help.text }}
-                </a>
+                  <a
+                    :href="help.link"
+                    target="_blank"
+                    class="mr10"
+                  >
+                    {{ help.text }}
+                  </a>
+                </span>
               </span>
-            </span>
-          </p>
+            </p>
+          </div>
           <bk-button
             theme="danger"
             ext-cls="paas-deploy-failed-btn ml10"

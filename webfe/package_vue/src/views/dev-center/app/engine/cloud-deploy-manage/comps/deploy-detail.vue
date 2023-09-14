@@ -320,9 +320,9 @@
                 :disabled="isLogsLoading"
               >
                 <bk-option
-                  v-for="(option, index) in chartRangeList"
+                  v-for="(option, i) in chartRangeList"
                   :id="option.id"
-                  :key="index"
+                  :key="i"
                   :name="option.name"
                 />
               </bk-select>
@@ -337,8 +337,8 @@
             <template v-if="!isLogsLoading && instanceLogs.length">
               <ul>
                 <li
-                  v-for="(log, index) of instanceLogs"
-                  :key="index"
+                  v-for="(log, idx) of instanceLogs"
+                  :key="idx"
                   class="stream-log"
                 >
                   <span
@@ -1141,6 +1141,9 @@ export default {
       // 服务结束
       this.serverProcessEvent.addEventListener('EOF', () => {
         this.serverProcessEvent.close();
+        this.watchServerTimer = setTimeout(() => {
+          this.watchServerPush();
+        }, 3000);
       });
     },
 

@@ -90,14 +90,14 @@
           <section class="main">
             <!-- 详情表格 -->
             <deploy-detail
-              v-show="deploymentInfo.isExpand"
+              v-if="deploymentInfo.isExpand"
               :rv-data="rvData"
               :index="index"
               :deployment-info="deploymentInfo" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"
-              v-show="!deploymentInfo.isExpand" />
+              v-if="!deploymentInfo.isExpand" />
             <div class="operation-wrapper" v-if="deploymentInfo.total_available_instance_count">
               <div
                 class="btn"
@@ -134,6 +134,7 @@
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
       :cloud-app-data="cloudAppData"
+      :rv-data="rvData"
       @refresh="handleRefresh">
     </deploy-dialog>
 
@@ -152,6 +153,7 @@
           :environment="environment"
           :deployment-id="curDeploymentInfoItem.state?.deployment?.pending?.id"
           :deployment-info="curDeploymentInfoItem"
+          :rv-data="rvData"
           @close="handleCloseSideslider"
         ></deploy-status-detail>
       </div>
@@ -358,6 +360,7 @@ export default {
           rvInst: res.rv_inst,
           rvProc: res.rv_proc,
         };
+        console.log('this.rvData', this.rvData);
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
         const hasOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
         const hasDeployData = this.deploymentInfoData.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据

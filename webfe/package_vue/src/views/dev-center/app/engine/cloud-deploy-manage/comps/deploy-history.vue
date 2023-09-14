@@ -1,122 +1,143 @@
 <template>
   <div class="deploy-history">
-    <section class="search-wrapper">
-      <!-- 只支持从操作人搜索 -->
-      <user
-        v-model="personnelSelectorList"
-        style="width: 320px;"
-        :placeholder="$t('请输入')"
-        :max-data="1"
-      />
-    </section>
-    <bk-table
-      v-bkloading="{ isLoading: isPageLoading }"
-      class="mt15 ps-history-list"
-      :data="historyList"
-      :outer-border="false"
-      :size="'small'"
-      :pagination="pagination"
-      @page-limit-change="handlePageLimitChange"
-      @page-change="handlePageChange"
-      @sort-change="handleSortChange"
+    <paas-content-loader
+      :is-loading="isLoading"
+      :is-transition="false"
+      placeholder="event-list-loading"
+      :class="{ 'deploy-history-loader': isLoading }"
     >
-      <div slot="empty">
-        <table-empty
-          :keyword="tableEmptyConf.keyword"
-          :abnormal="tableEmptyConf.isAbnormal"
-          @reacquire="getDeployHistory"
-          @clear-filter="clearFilter"
+      <section class="search-wrapper">
+        <!-- 模块列表 -->
+        <bk-select
+          v-model="moduleValue"
+          style="width: 154px;"
+          :clearable="false"
+          searchable>
+          <bk-option v-for="option in curAppModuleList"
+              :key="option.name"
+              :id="option.name"
+              :name="option.name">
+          </bk-option>
+        </bk-select>
+        <!-- 只支持从操作人搜索 -->
+        <user
+          v-model="personnelSelectorList"
+          style="width: 320px;"
+          :placeholder="$t('请输入')"
+          :max-data="1"
         />
-      </div>
-      <bk-table-column
-        :label="$t('部署环境')"
-        prop="environment"
-        :filters="sourceFilters"
-        :filter-method="sourceFilterMethod"
-        :filter-multiple="false"
-        :render-header="$renderHeader"
+      </section>
+      <bk-table
+        v-bkloading="{ isLoading: isPageLoading }"
+        ref="historyRef"
+        class="mt15 ps-history-list"
+        :data="historyList"
+        :outer-border="false"
+        :size="'small'"
+        :pagination="pagination"
+        @page-limit-change="handlePageLimitChange"
+        @page-change="handlePageChange"
+        @sort-change="handleSortChange"
+        @filter-change="handleFilterChange"
       >
-        <template slot-scope="{ row }">
-          <span v-if="row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
-          <span v-else> {{ $t('生产环境') }} </span>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        width="150"
-        :label="$t('分支')"
-        :show-overflow-tooltip="false"
-      >
-        <template slot-scope="{ row }">
-          <bk-popover>
-            <span class="branch-name">{{ row.name }}</span>
-            <div slot="content">
-              <p class="flex">
-                <span class="label"> {{ $t('部署分支：') }} </span><span class="value">{{ row.name }}</span>
-              </p>
-              <p class="flex">
-                <span class="label"> {{ $t('仓库地址：') }} </span><span class="value">{{ row.url }}</span>
-              </p>
-            </div>
-          </bk-popover>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('版本')"
-        prop="revision"
-        :show-overflow-tooltip="true"
-      />
-      <bk-table-column
-        :label="$t('类型')"
-        prop="operation_act"
-        :render-header="$renderHeader"
-      />
-      <bk-table-column :label="$t('结果')">
-        <template slot-scope="{ row }">
-          <div class="flex-row align-items-center" v-if="row.status !== 'pending'">
-            <span :class="['dot', row.status]" /> {{ $t(deployStatus[row.status]) }}
-          </div>
-          <template v-else>
-            <div class="flex-row align-items-center" v-if="row.status === 'pending' && row.operation_type === 'online'">
-              <span class="dot warning" /> {{ $t('部署中') }}
-            </div>
-            <div
-              class="flex-row align-items-center" v-if="row.status === 'pending'
-                && row.operation_type === 'offline'">
-              <span class="dot warning" /> {{ $t('下架中') }}
-            </div>
+        <div slot="empty">
+          <table-empty
+            :keyword="tableEmptyConf.keyword"
+            :abnormal="tableEmptyConf.isAbnormal"
+            @reacquire="getDeployHistory"
+            @clear-filter="handleClearFilter"
+          />
+        </div>
+        <bk-table-column
+          :label="$t('部署环境')"
+          prop="environment"
+          column-key="env"
+          :filters="sourceFilters"
+          :filter-multiple="false"
+          :render-header="$renderHeader"
+        >
+          <template slot-scope="{ row }">
+            <span v-if="row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
+            <span v-else> {{ $t('生产环境') }} </span>
           </template>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('耗时')"
-        sortable
-        :render-header="$renderHeader"
-      >
-        <template slot-scope="{ row }">
-          {{ computedDeployTime(row) }}
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('操作人')"
-        prop="operator.username"
-        :render-header="$renderHeader"
-      />
-      <bk-table-column
-        width="180"
-        :label="$t('操作时间')"
-        prop="created"
-      />
-      <bk-table-column
-        width="115"
-        :label="$t('操作')"
-      >
-        <template slot-scope="{ row }">
-          <bk-button :text="true" @click="handleShowLogSideslider(row)">
-            {{$t('部署日志')}}
-          </bk-button>
-        </template>
-      </bk-table-column>
-    </bk-table>
+        </bk-table-column>
+        <bk-table-column
+          width="150"
+          :label="$t('分支')"
+          :show-overflow-tooltip="false"
+        >
+          <template slot-scope="{ row }">
+            <bk-popover>
+              <span class="branch-name">{{ row.name }}</span>
+              <div slot="content">
+                <p class="flex">
+                  <span class="label"> {{ $t('部署分支：') }} </span><span class="value">{{ row.name }}</span>
+                </p>
+                <p class="flex">
+                  <span class="label"> {{ $t('仓库地址：') }} </span><span class="value">{{ row.url }}</span>
+                </p>
+              </div>
+            </bk-popover>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('版本')"
+          prop="revision"
+          :show-overflow-tooltip="true"
+        />
+        <bk-table-column
+          :label="$t('类型')"
+          prop="operation_act"
+          :render-header="$renderHeader"
+        />
+        <bk-table-column :label="$t('结果')">
+          <template slot-scope="{ row }">
+            <div class="flex-row align-items-center" v-if="row.status !== 'pending'">
+              <span :class="['dot', row.status]" /> {{ $t(deployStatus[row.status]) }}
+            </div>
+            <template v-else>
+              <div class="flex-row align-items-center" v-if="row.status === 'pending' && row.operation_type === 'online'">
+                <span class="dot warning" /> {{ $t('部署中') }}
+              </div>
+              <div
+                class="flex-row align-items-center" v-if="row.status === 'pending'
+                  && row.operation_type === 'offline'">
+                <span class="dot warning" /> {{ $t('下架中') }}
+              </div>
+            </template>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('耗时')"
+          sortable
+          :render-header="$renderHeader"
+        >
+          <template slot-scope="{ row }">
+            {{ computedDeployTime(row) }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('操作人')"
+          prop="operator.username"
+          :render-header="$renderHeader"
+        />
+        <bk-table-column
+          width="180"
+          :label="$t('操作时间')"
+          prop="created"
+        />
+        <bk-table-column
+          width="115"
+          :label="$t('操作')"
+        >
+          <template slot-scope="{ row }">
+            <bk-button :text="true" @click="handleShowLogSideslider(row)">
+              {{$t('部署日志')}}
+            </bk-button>
+          </template>
+        </bk-table-column>
+      </bk-table>
+    </paas-content-loader>
 
     <!-- 部署日志 -->
     <deploy-log-sideslider
@@ -132,6 +153,7 @@ import user from '@/components/user';
 import deployLogSideslider from '@/components/deploy/deploy-log-sideslider.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { DEPLOY_STATUS } from '@/common/constants';
+import { clearFilter } from '@/common/utils';
 import { cloneDeep } from 'lodash';
 
 export default {
@@ -142,6 +164,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      isLoading: true,
       isPageLoading: false,
       historyList: [],
       oldHistoryList: [],
@@ -158,6 +181,8 @@ export default {
       personnelSelectorList: [],
       // 部署日志
       logSidesliderData: {},
+      moduleValue: 'default',
+      filterEnv: []
     };
   },
 
@@ -174,6 +199,13 @@ export default {
     personnelSelectorList() {
       this.getDeployHistory();
     },
+    moduleValue (value) {
+      // 重新发起请求并附带参数
+      this.getDeployHistory();
+    },
+    filterEnv () {
+      this.getDeployHistory();
+    }
   },
 
   created() {
@@ -252,6 +284,11 @@ export default {
         offset: this.pagination.limit * (curPage - 1),
       };
 
+      // 部署环境
+      if (this.filterEnv.length) {
+        pageParams.environment = this.filterEnv[0];
+      }
+
       // 操作人
       if (this.personnelSelectorList.length) {
         pageParams.operator = this.personnelSelectorList[0];
@@ -260,9 +297,7 @@ export default {
       try {
         const res = await this.$store.dispatch('deploy/getDeployHistory', {
           appCode: this.appCode,
-          // moduleId: this.curModuleId,
-          // appCode: 'appid1',
-          moduleId: 'default',
+          moduleId: this.moduleValue,
           pageParams,
         });
 
@@ -302,6 +337,7 @@ export default {
         });
       } finally {
         this.isPageLoading = false;
+        this.isLoading = false
       }
     },
 
@@ -335,10 +371,8 @@ export default {
       }
     },
 
-    sourceFilterMethod(value, row, column) {
-      // 筛选当前页的数据
-      const { property } = column;
-      return row[property] === value;
+    handleFilterChange (filter) {
+      this.filterEnv = filter.env || [];
     },
 
     getTimeConsuming(payload) {
@@ -380,12 +414,18 @@ export default {
       this.$refs.logSidesliderRef?.handleShowLog(row);
     },
 
-    clearFilter() {
+    handleClearFilter() {
+      this.personnelSelectorList = [];
+      // 手动清空表头筛选
+      if (this.$refs.historyRef.$refs?.tableHeader) {
+        const { tableHeader } = this.$refs.historyRef.$refs;
+        clearFilter(tableHeader);
+      }
       this.getDeployHistory();
     },
 
     updateTableEmptyConfig() {
-      if (this.personnelSelectorList.length) {
+      if (this.personnelSelectorList.length || this.filterEnv.length) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
@@ -402,9 +442,13 @@ export default {
   box-shadow: 0 2px 4px 0 #1919290d;
   border-radius: 2px;
 
+  .deploy-history-loader {
+    height: 520px;
+  }
+
   .search-wrapper {
     display: flex;
-    flex-direction: row-reverse;
+    justify-content: space-between;
   }
 
   .deploy-detail {

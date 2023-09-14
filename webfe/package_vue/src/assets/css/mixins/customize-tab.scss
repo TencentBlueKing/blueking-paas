@@ -1,0 +1,46 @@
+@import '~@/assets/css/mixins/border-active-logo.scss';
+
+@mixin tab-item ($width: 144px, $height: 32px) {
+    .tab-box {
+        display: flex;
+        list-style: none;
+        
+        .tab-item {
+            margin-right: 10px;
+            width: $width;
+            height: $height;
+            line-height: $height;
+            text-align: center;
+            background: #f0f1f5;
+            border-radius: 2px;
+            font-size: 14px;
+            color: #63656e;
+            cursor: pointer;
+            position: relative;
+    
+            &.template {
+                width: 200px;
+                height: 48px;
+                line-height: 48px;
+            }
+    
+            &.active {
+                background: #fff;
+                border: 2px solid #3a84ff;
+                border-radius: 2px;
+                color: #3a84ff;
+    
+                @include border-active-logo;
+            }
+
+            &.disabled {
+              cursor: not-allowed;
+              color: #979BA5;
+            }
+
+            &:last-child {
+              margin-right: 0;
+            }
+        }
+    }
+}

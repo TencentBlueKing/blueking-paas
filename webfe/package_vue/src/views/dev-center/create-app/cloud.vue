@@ -269,7 +269,7 @@
               <div
                 class="group-text form-text-append"
                 @click="handleSetMirrorUrl"
-              >应用示例</div>
+              >{{$t('应用示例')}}</div>
             </template>
           </bk-input>
           <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -295,6 +295,7 @@
             >
             </bk-input>
             <bk-input
+              type="password"
               v-model="formData.imageCredentialPassWord"
               clearable
               :placeholder="$t('请输入密码')"
@@ -338,12 +339,22 @@
 
 
     <div class="mt20" v-if="formData.sourceOrigin === 'image' && curStep === 2">
-      <collapseContent :title="$t('进程配置')">
+      <!-- 默认展开为编辑态 -->
+      <collapseContent
+        active-name="process"
+        collapse-item-name="process"
+        :title="$t('进程配置')"
+      >
         <deploy-process ref="processRef" :cloud-app-data="initCloudAppData" :is-create="isCreate"></deploy-process>
       </collapseContent>
 
-      <collapseContent :title="$t('钩子命令')" class="mt20">
-        <deploy-hook :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
+      <collapseContent
+        active-name="hook"
+        collapse-item-name="hook"
+        :title="$t('钩子命令')"
+        class="mt20"
+      >
+        <deploy-hook ref="hookRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
       </collapseContent>
     </div>
 
@@ -806,6 +817,11 @@ export default {
         this.repoData = this.$refs?.repoInfo?.getData();
         this.initCloudAppDataFunc();   // 初始化应用编排数据
         this.curStep = 2;
+        this.$nextTick(() => {
+          // 默认编辑态
+          this.$refs.processRef?.handleEditClick();
+          this.$refs.hookRef?.handleEditClick();
+        })
         // if (this.structureType === 'mirror') {
         //   this.getProcessData();
         // }
@@ -827,9 +843,21 @@ export default {
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
     },
 
+    // 钩子命令校验
+    async handleHookValidator () {
+      if (this.$refs.hookRef) {
+        return await this.$refs.hookRef?.handleValidator();
+      }
+      return true;
+    },
 
     // 创建应用
     async handleCreateApp() {
+      const isVerificationPassed = await this.handleHookValidator();
+      if (!isVerificationPassed) {
+        return;
+      }
+
       this.formLoading = true;
       const params = {
         region: 'ieod',
@@ -891,7 +919,6 @@ export default {
           appCode: this.appCode,
           data: params,
         });
-        console.log(1, params, res);
         const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,

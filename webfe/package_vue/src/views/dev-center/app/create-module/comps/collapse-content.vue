@@ -1,7 +1,14 @@
 <template>
-  <bk-collapse :accordion="true" @item-click="handlerClick" class="collapse-cls">
+  <bk-collapse
+    class="collapse-cls"
+    v-model="active"
+    :accordion="true"
+    @item-click="handlerClick"
+  >
     <bk-collapse-item
-      :hide-arrow="true">
+      :hide-arrow="true"
+      :name="collapseItemName"
+    >
       <i
         class="paasng-icon paasng-bold"
         :class="isFold ? 'paasng-right-shape' : 'paasng-down-shape'"
@@ -24,11 +31,24 @@ export default {
         return 'title';
       },
     },
+    activeName: {
+      type: String,
+      default: ''
+    },
+    collapseItemName: {
+      type: String,
+      default: ''
+    }
   },
   data() {
     return {
       isFold: true,
+      active: '',
     };
+  },
+  created () {
+    // 未传高亮 activeName， 默认不高亮
+    this.active = this.activeName || ('' + new Date());
   },
   methods: {
     handlerClick() {

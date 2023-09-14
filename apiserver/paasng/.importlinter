@@ -42,12 +42,14 @@ layers =
 name=the layers for paasng.engine mod
 type=layers
 layers =
-    paasng.engine.deploy | paasng.engine.streaming
-    paasng.engine.workflow | paasng.engine.processes
-    paasng.engine.mobile_config | paasng.engine.phases_steps 
-    paasng.engine.utils
-    paasng.engine.configurations
-    paasng.engine.models
+    deploy | streaming
+    workflow | processes
+    mobile_config | phases_steps 
+    utils
+    configurations
+    models
+containers=
+    paasng.engine
 ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
     paasng.engine.models.base -> paasng.engine.utils.output
@@ -74,9 +76,10 @@ layers =
     paas_wl.cnative
     paas_wl.tracing | paas_wl.networking | paas_wl.configuration | paas_wl.release_controller | paas_wl.workloads.images
     paas_wl.workloads.autoscaling
+    paas_wl.core
     # -- The infrastructure and data models layer
     paas_wl.resources | paas_wl.workloads.resource_templates
-    paas_wl.cluster | paas_wl.core
+    paas_wl.cluster
     paas_wl.platform.applications
     # -- The utils layer
     paas_wl.utils
@@ -84,16 +87,9 @@ ignore_imports =
     # Depend on the "constants" submodule is excluded because "constants" is treated like
     # a shared settings globally.
     paas_wl.** -> paas_wl.**.constants
-    # To share process labels, to be removed
-    paas_wl.networking.ingress.entities.service -> paas_wl.workloads.processes.readers
-    # Back ref to paasng.engine.deploy module, to be removed
+    # view_enduser -> engine.deploy module, to be removed in the future if we find a better way
     paas_wl.cnative.specs.views_enduser -> paasng.engine.deploy.release.operator
-    # views_enduser can import deploy
-    paas_wl.workloads.processes.views_enduser -> paas_wl.deploy.processes
-    # Replace the dep with signal
-    paas_wl.networking.ingress.domains.manager -> paas_wl.cnative.specs.resource
-    # TODO: Remove these rules after the dependency relations are fixed.
-    paas_wl.platform.applications.** -> paas_wl.workloads.processes.models
+
 
 [importlinter:contract:layers-paas-wl-resources]
 name=the layers for paas_wl.resources module

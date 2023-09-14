@@ -20,7 +20,7 @@ import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Protocol, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Protocol, Tuple, Type, TypeVar, Union
 
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.kres import BaseKresource, KDeployment, KPod, KReplicaSet
@@ -57,10 +57,13 @@ class Mapper(Generic[MapperResource]):
 
     kres_class: Type[MapperResource]
 
-    def __init__(self, process: Process, client: Optional['EnhancedApiClient'] = None):
-        _proc_config = get_mapper_proc_config(process)
-        if not _proc_config:
-            raise TypeError('process argument is invalid')
+    def __init__(self, process: 'Union[Process, MapperProcConfig]', client: Optional['EnhancedApiClient'] = None):
+        if not isinstance(process, MapperProcConfig):
+            _proc_config = get_mapper_proc_config(process)
+            if not _proc_config:
+                raise TypeError('process argument is invalid')
+        else:
+            _proc_config = process
 
         self.proc_config: 'MapperProcConfig' = _proc_config
         self.client = client

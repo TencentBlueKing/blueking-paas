@@ -28,30 +28,19 @@ from paas_wl.cnative.specs.constants import (
     RESOURCE_TYPE_KEY,
     WLAPP_NAME_ANNO_KEY,
 )
+from paas_wl.core.resource import get_process_selector
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.exceptions import NotAppScopedResource
 from paas_wl.resources.base.kres import KPod
-from paas_wl.resources.generation.version import AppResVerManager
 from paas_wl.resources.kube_res.base import AppEntityReader, NamespaceScopedReader, ResourceList
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
 from paas_wl.workloads.processes.entities import Instance, Process
-from paas_wl.workloads.processes.managers import AppProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 
 class ProcessAPIAdapter:
     """Data adapter for Process"""
-
-    @staticmethod
-    def process_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
-        """Return labels selector dict, useful for construct Deployment body and related Service"""
-        if app.type == WlAppType.CLOUD_NATIVE:
-            return {MODULE_NAME_ANNO_KEY: app.module_name, PROCESS_NAME_KEY: process_type}
-
-        proc = AppProcessManager(app).assemble_process(process_type)
-        return {"pod_selector": AppResVerManager(app).curr_version.deployment(proc).pod_selector}
 
     @staticmethod
     def app_selector(app: 'WlApp') -> Dict[str, str]:
@@ -79,7 +68,7 @@ class ProcessReader(AppEntityReader[Process]):
 
     def get_by_type(self, app: 'WlApp', type: str) -> 'Process':
         """Get object by process type"""
-        labels = ProcessAPIAdapter.process_selector(app, type)
+        labels = get_process_selector(app, type)
         objs = self.list_by_app(app, labels=labels)
         if objs:
             return objs[0]
@@ -94,7 +83,7 @@ class InstanceReader(AppEntityReader[Instance]):
 
     def list_by_process_type(self, app: 'WlApp', process_type: str) -> List[Instance]:
         """List instances by process type"""
-        labels = ProcessAPIAdapter.process_selector(app, process_type)
+        labels = get_process_selector(app, process_type)
         return self.list_by_app(app, labels=labels)
 
     def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:

@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.core.app_structure import get_structure
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release
 from paas_wl.platform.applications.models.managers import AppConfigVarManager
@@ -174,7 +175,7 @@ class Process(AppEntity):
             name="should-set-by-mapper",
             type=type_,
             version=release.version,
-            replicas=release.app.get_structure().get(type_, 0),
+            replicas=get_structure(release.app).get(type_, 0),
             runtime=Runtime(
                 envs=envs,
                 image=build.get_image(),

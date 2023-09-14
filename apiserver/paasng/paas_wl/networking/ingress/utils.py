@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from paas_wl.core.app_structure import get_structure
 from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.platform.applications.constants import WlAppType
@@ -63,12 +64,12 @@ def get_service_dns_name(app: WlApp, process_type: str) -> str:
 
 def guess_default_service_name(app: WlApp) -> str:
     """Guess the default service name should be used when a brand new ingress creation is required."""
-    if not app.get_structure():
+    if not get_structure(app):
         return make_service_name(app, 'web')
-    if 'web' in app.get_structure():
+    if 'web' in get_structure(app):
         return make_service_name(app, 'web')
     # Pick a random process type for generating service name
-    return make_service_name(app, list(app.get_structure().keys())[0])
+    return make_service_name(app, list(get_structure(app).keys())[0])
 
 
 def get_main_process_service_name(app: WlApp) -> str:

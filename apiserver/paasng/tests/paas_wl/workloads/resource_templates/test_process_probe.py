@@ -46,7 +46,6 @@ def test_process_probe_mgr(wl_app, process_type, check_mechanism_templates, port
     app_probe_mgr = ProcessProbeManager(app=wl_app, process_type=process_type)
     readiness_probe = app_probe_mgr.get_readiness_probe()
     liveness_probe = app_probe_mgr.get_liveness_probe()
-
     assert readiness_probe
     assert readiness_probe.httpGet
     assert readiness_probe.httpGet.port == 8080

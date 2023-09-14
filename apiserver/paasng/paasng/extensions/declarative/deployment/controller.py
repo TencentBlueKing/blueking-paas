@@ -23,7 +23,7 @@ import cattr
 from django.db.transaction import atomic
 
 from paas_wl.monitoring.app_monitor.shim import upsert_app_monitor
-from paas_wl.workloads.processes.utils import upsert_wl_app_probe
+from paas_wl.workloads.processes.utils import delete_process_probe, upsert_process_probe
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
 from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet
@@ -65,7 +65,7 @@ class DeploymentDeclarativeController:
             self.update_bkmonitor(desc.bk_monitor)
 
         for process_type, process in desc.processes.items():
-            self.update_probes(process_type=process_type, probes=process.probes)
+            self.sync_probes(process_type=process_type, probes=process.probes)
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
@@ -75,16 +75,26 @@ class DeploymentDeclarativeController:
             target_port=bk_monitor.target_port,  # type: ignore
         )
 
-    def update_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
-        """更新 SaaS 探针配置"""
+    def sync_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
+        """同步 SaaS 探针配置"""
+        #
         if not probes:
-            return
+            delete_process_probe(
+                env=self.deployment.app_environment,
+                process_type=process_type,
+            )
 
         for probe_type, probe in vars(probes).items():
             if probe:
-                upsert_wl_app_probe(
+                upsert_process_probe(
                     env=self.deployment.app_environment,
                     process_type=process_type,
                     probe_type=probe_type,
                     probe=probe,
+                )
+            else:
+                delete_process_probe(
+                    env=self.deployment.app_environment,
+                    process_type=process_type,
+                    probe_type=probe_type,
                 )

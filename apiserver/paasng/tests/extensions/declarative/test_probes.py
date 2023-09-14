@@ -29,9 +29,9 @@ from paasng.extensions.declarative.handlers import AppDescriptionHandler
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_saas_probes(bk_deployment):
-    """验证 saas 应用探针对象 ProcessProbe 成功创建 """
-    yaml_content = dedent(
+@pytest.fixture
+def yaml_content():
+    return dedent(
         '''
         spec_version: 2
         app_version: "1.0"
@@ -60,22 +60,95 @@ def test_saas_probes(bk_deployment):
                                     port: ${PORT}
         '''
     )
-    # bk_deployment 外键对象未创建，补全
-    name = bk_deployment.app_environment.engine_app.name
-    region = bk_deployment.app_environment.engine_app.region
-    wlapp = WlApp.objects.create(name=name, region=region)
 
-    fp = io.StringIO(yaml_content)
-    AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
-    liveness_probe: ProcessProbe = ProcessProbe.objects.get(
-        app=wlapp, process_type='web', probe_type=ProbeType.LIVENESS
+
+@pytest.fixture
+def yaml_content_after_change():
+    return dedent(
+        '''
+        spec_version: 2
+        app_version: "1.0"
+        app:
+            region: default
+            bk_app_code: "foo-app"
+            bk_app_name: 默认应用名称
+            bk_app_name_en: default-app-name
+        modules:
+            default:
+                source_dir: src/frontend
+                language: NodeJS
+                processes:
+                    web:
+                        command: npm run server
+                        plan: 4C1G5R
+                        replicas: 2
+                        probes:
+                            liveness:
+                                exec:
+                                    command:
+                                    - cat
+                                    - /tmp/healthy
+                            startup:
+                                tcp_socket:
+                                    port: ${PORT}
+        '''
     )
-    readiness_probe: ProcessProbe = ProcessProbe.objects.get(
-        app=wlapp, process_type='web', probe_type=ProbeType.READINESS
-    )
 
-    assert liveness_probe.check_mechanism
-    assert liveness_probe.check_mechanism.exec.command == ['cat', '/tmp/healthy']
 
-    assert readiness_probe.check_mechanism
-    assert readiness_probe.check_mechanism.tcp_socket.port == "${PORT}"
+class TestSaasProbes:
+    def test_saas_probes(self, bk_deployment, yaml_content):
+        """验证 saas 应用探针对象 ProcessProbe 成功创建 """
+        # bk_deployment 外键对象未创建，补全
+        name = bk_deployment.app_environment.engine_app.name
+        region = bk_deployment.app_environment.engine_app.region
+        wlapp = WlApp.objects.create(name=name, region=region)
+
+        fp = io.StringIO(yaml_content)
+        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+        liveness_probe: ProcessProbe = ProcessProbe.objects.get(
+            app=wlapp, process_type='web', probe_type=ProbeType.LIVENESS
+        )
+        readiness_probe: ProcessProbe = ProcessProbe.objects.get(
+            app=wlapp, process_type='web', probe_type=ProbeType.READINESS
+        )
+
+        assert liveness_probe.check_mechanism
+        assert liveness_probe.check_mechanism.exec.command == ['cat', '/tmp/healthy']
+
+        assert readiness_probe.check_mechanism
+        assert readiness_probe.check_mechanism.tcp_socket.port == "${PORT}"
+
+    def test_saas_probes_changes(self, bk_deployment, yaml_content, yaml_content_after_change):
+        """验证 saas 应用探针对象 ProcessProbe 成功修改 """
+        # bk_deployment 外键对象未创建，补全
+        name = bk_deployment.app_environment.engine_app.name
+        region = bk_deployment.app_environment.engine_app.region
+        wlapp = WlApp.objects.create(name=name, region=region)
+
+        fp = io.StringIO(yaml_content)
+        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+
+        # 模拟重新部署过程
+        fp = io.StringIO(yaml_content_after_change)
+        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+
+        # liveness_probe 无变化
+        liveness_probe: ProcessProbe = ProcessProbe.objects.get(
+            app=wlapp, process_type='web', probe_type=ProbeType.LIVENESS
+        )
+        # readiness_probe 被删除
+        readiness_probe_exists: ProcessProbe = ProcessProbe.objects.filter(
+            app=wlapp, process_type='web', probe_type=ProbeType.READINESS
+        ).exists()
+        # start_probe 新增
+        start_probe: ProcessProbe = ProcessProbe.objects.get(
+            app=wlapp, process_type='web', probe_type=ProbeType.STARTUP
+        )
+
+        assert liveness_probe.check_mechanism
+        assert liveness_probe.check_mechanism.exec.command == ['cat', '/tmp/healthy']
+
+        assert not readiness_probe_exists
+
+        assert start_probe.check_mechanism
+        assert start_probe.check_mechanism.tcp_socket.port == "${PORT}"

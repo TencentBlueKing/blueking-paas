@@ -74,6 +74,8 @@ def _render_by_env(data: dict) -> dict:
     env = Environment(variable_start_string="${", variable_end_string="}")
     template = env.from_string(template_str)
     port_env = os.getenv("PORT")
+    if not port_env:
+        raise ValueError("The 'port' environment variable for ProcessProbe is empty")
     rendered_str = template.render({"PORT": port_env})
     return json.loads(rendered_str)
 

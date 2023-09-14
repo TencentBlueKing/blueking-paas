@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import os
-from typing import List
+from typing import List, Optional
 
 import cattr
 
@@ -66,7 +66,7 @@ def list_unavailable_deployment(client: CoreDynamicClient) -> List:
     return unavailable_deployments
 
 
-def upsert_wl_app_probe(
+def upsert_process_probe(
     env: ModuleEnvironment,
     process_type: str,
     probe_type: str,
@@ -86,3 +86,15 @@ def upsert_wl_app_probe(
         process_type=process_type,
         probe_type=probe_type,
     )
+
+
+def delete_process_probe(
+    env: ModuleEnvironment,
+    process_type: str,
+    probe_type: Optional[str] = None,
+):
+    """删除应用探针的配置"""
+    if probe_type:
+        ProcessProbe.objects.filter(app=env.wl_app, process_type=process_type, probe_type=probe_type).delete()
+    else:
+        ProcessProbe.objects.filter(app=env.wl_app, process_type=process_type).delete()

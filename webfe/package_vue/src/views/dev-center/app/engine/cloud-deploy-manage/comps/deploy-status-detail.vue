@@ -94,6 +94,7 @@
               theme="success"
               ext-cls="paas-deploy-success-btn"
               outline
+              size="small"
               @click="handleOpenLink"
             >
               {{ $t('访问') }}

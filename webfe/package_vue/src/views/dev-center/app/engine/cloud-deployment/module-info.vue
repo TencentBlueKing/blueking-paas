@@ -55,7 +55,7 @@
                   <div
                     class="group-text form-text-append"
                     @click="handleSetMirrorUrl"
-                  >{{$t('应用示例')}}</div>
+                  >{{$t('使用示例')}}</div>
                 </template>
               </bk-input>
               <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -118,11 +118,11 @@
           <bk-form
             :model="buildData">
             <bk-form-item
-              :label="$t('预发布环境：')">
+              :label="`${$t('预发布环境')}：`">
               <div class="form-text">{{ deployLimit.stag ? $t('已开启') : $t('未开启') }}</div>
             </bk-form-item>
             <bk-form-item
-              :label="$t('生产环境：')">
+              :label="`${$t('生产环境')}：`">
               <div class="form-text">{{ deployLimit.prod ? $t('已开启') : $t('未开启') }}</div>
             </bk-form-item>
           </bk-form>
@@ -171,7 +171,7 @@
         <div class="form-detail mt20 pb20 pl40 flex-row" v-if="!isIpInfoEdit">
           <bk-form>
             <bk-form-item
-              :label="$t('预发布环境：')">
+              :label="`${$t('预发布环境')}：`">
               <div class="flex-row" v-if="gatewayInfos.stag.node_ip_addresses.length">
                 <div class="ip-address">
                   <div
@@ -192,7 +192,7 @@
           </bk-form>
           <bk-form class="ml60">
             <bk-form-item
-              :label="$t('生产环境：')">
+              :label="`${$t('生产环境')}：`">
               <div class="flex-row" v-if="gatewayInfos.prod.node_ip_addresses.length">
                 <div class="ip-address">
                   <div
@@ -341,7 +341,8 @@
     </div>
   </paas-content-loader>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import moment from 'moment';
 import _ from 'lodash';
 export default {
@@ -398,7 +399,6 @@ export default {
         return this.$t('仅源码');
       }
       return this.$t('源码&镜像');
-      return '--';
     },
 
     curStagDisabled() {

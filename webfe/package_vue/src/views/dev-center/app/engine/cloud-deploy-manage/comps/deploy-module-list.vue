@@ -29,14 +29,14 @@
                 <!-- 源码&镜像 -->
                 <div class="flex-row" v-if="deploymentInfo.build_method === 'dockerfile'">
                   <div class="version">
-                    <span class="label">版本：</span>
+                    <span class="label">{{$t('版本：')}}</span>
                     <span class="value">
                       {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
                     </span>
                   </div>
                   <div class="line"></div>
                   <div class="branch">
-                    <span class="label">分支：</span>
+                    <span class="label">{{$t('分支：')}}</span>
                     <span class="value">
                       {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
                     </span>
@@ -45,7 +45,7 @@
                 <!-- 仅镜像 -->
                 <div class="flex-row" v-if="deploymentInfo.build_method === 'custom_image'">
                   <div class="version">
-                    <span class="label">镜像Tag：</span>
+                    <span class="label">{{$t('镜像Tag：')}}</span>
                     <span class="value">
                       {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
                     </span>
@@ -53,7 +53,7 @@
                 </div>
               </template>
               <template v-else>
-                <div class="not-deployed">暂未部署</div>
+                <div class="not-deployed">{{$t('暂未部署')}}</div>
               </template>
             </div>
             <div class="right-btn">
@@ -64,7 +64,7 @@
                 size="small"
                 text
                 @click="handleShowDeploy(deploymentInfo)">
-                部署详情
+                {{$t('部署详情')}}
               </bk-button>
               <bk-button
                 :theme="'primary'"
@@ -73,7 +73,7 @@
                 @click="handleDeploy(deploymentInfo)"
                 :disabled="(!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending)"
                 :loading="!!deploymentInfo.state.deployment.pending">
-                部署
+                {{$t('部署')}}
               </bk-button>
               <bk-button
                 :theme="'default'"
@@ -82,7 +82,7 @@
                 :disabled="!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending
                   || !deploymentInfo.state.deployment.latest_succeeded"
                 :loading="!!deploymentInfo.state.offline.pending">
-                下架
+                {{$t('下架')}}
               </bk-button>
             </div>
           </section>
@@ -102,7 +102,7 @@
               <div
                 class="btn"
                 @click="handleChangePanel(deploymentInfo)">
-                {{ deploymentInfo.isExpand ? '收起' : '展开详情' }}
+                {{ deploymentInfo.isExpand ? $t('收起') : $t('展开详情') }}
                 <i class="paasng-icon paasng-ps-arrow-down" v-if="!deploymentInfo.isExpand"></i>
                 <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
               </div>

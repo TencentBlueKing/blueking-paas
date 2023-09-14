@@ -142,7 +142,7 @@
                       <div
                         class="group-text form-text-append"
                         @click="handleSetMirrorUrl"
-                      >应用示例</div>
+                      >{{$t('使用示例')}}</div>
                     </template>
                   </bk-input>
                   <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -168,13 +168,13 @@
                     :key="option.name"
                     :name="option.name"
                   />
-                  <div
+                  <!-- <div
                     slot="extension"
                     style="cursor: pointer;"
                     @click="handlerCreateImageCredential"
                   >
                     <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
-                  </div>
+                  </div> -->
                 </bk-select>
               </bk-form-item>
             </bk-form>
@@ -399,14 +399,21 @@
             </collapseContent>
           </div>
 
-          <!-- 仅镜像 -->
+          <!-- 仅镜像，默认编辑态 -->
           <div class="mt20" v-if="structureType === 'mirror' && curStep === 2">
-            <collapseContent :title="$t('进程配置')">
+            <collapseContent
+              active-name="process"
+              collapse-item-name="process"
+              :title="$t('进程配置')">
               <deploy-process ref="processRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-process>
             </collapseContent>
 
-            <collapseContent :title="$t('钩子命令')" class="mt20">
-              <deploy-hook :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
+            <collapseContent
+              active-name="hook"
+              collapse-item-name="hook"
+              :title="$t('钩子命令')"
+              class="mt20">
+              <deploy-hook ref="hookRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
             </collapseContent>
           </div>
 
@@ -658,7 +665,6 @@ export default {
     },
 
     createCloudAppData() {
-      console.log('this.$store.state.cloudApi.cloudAppData', this.$store.state.cloudApi.cloudAppData);
       return this.$store.state.cloudApi.cloudAppData;
     },
   },
@@ -887,6 +893,14 @@ export default {
       this.sourceDirError = !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(val);
     },
 
+    // 钩子命令校验
+    async handleHookValidator () {
+      if (this.$refs.hookRef) {
+        return await this.$refs.hookRef?.handleValidator();
+      }
+      return true;
+    },
+
     /**
      * 创建应用模块
      */
@@ -901,6 +915,14 @@ export default {
 
       if (this.sourceDirError) {
         return;
+      }
+
+      // 启动命令校验
+      if (this.createCloudAppData.spec?.hooks) {
+        const isVerificationPassed = await this.handleHookValidator();
+        if (!isVerificationPassed) {
+          return;
+        }
       }
 
       this.formLoading = true;
@@ -1014,6 +1036,11 @@ export default {
         }
       }
       this.curStep = 2;
+      this.$nextTick(() => {
+        // 默认编辑态
+        this.$refs.processRef?.handleEditClick();
+        this.$refs.hookRef?.handleEditClick();
+      })
     },
 
     // 上一步
@@ -1038,8 +1065,10 @@ export default {
         this.cloudAppData.spec.build.image = this.mirrorData.url;   // 镜像仓库的值赋值给cloudAppData
         this.cloudAppData.spec.build.imageCredentialsName = this.imageCredentialsData.name;   // 镜像凭证的值赋值给cloudAppData
         // 镜像仓库的值赋值给cloudAppData.metadata.name 必须等于 `${应用ID}-m-${模块名称}`
-        this.cloudAppData.metadata = { name: `${this.curAppInfo.application.name}-m-${this.formData.name}` } ;
+        this.cloudAppData.metadata = { name: `${this.appCode}-m-${this.formData.name}` } ;
         this.localCloudAppData = _.cloneDeep(this.cloudAppData);
+        // 创建模块，钩子命令数据重置
+        this.cloudAppData.spec.hooks = null;
         this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
       } catch (e) {
         this.$paasMessage({

@@ -269,7 +269,7 @@
               <div
                 class="group-text form-text-append"
                 @click="handleSetMirrorUrl"
-              >{{$t('应用示例')}}</div>
+              >{{$t('使用示例')}}</div>
             </template>
           </bk-input>
           <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -853,9 +853,11 @@ export default {
 
     // 创建应用
     async handleCreateApp() {
-      const isVerificationPassed = await this.handleHookValidator();
-      if (!isVerificationPassed) {
-        return;
+      if (this.cloudAppData.spec?.hooks) {
+        const isVerificationPassed = await this.handleHookValidator();
+        if (!isVerificationPassed) {
+          return;
+        }
       }
 
       this.formLoading = true;
@@ -912,8 +914,7 @@ export default {
         };
         params.source_config.source_repo_url = this.formData.url;   // 镜像
       }
-      console.log('params', params);
-      debugger;
+
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
           appCode: this.appCode,
@@ -986,5 +987,5 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
- @import "./cloud.scss";
+@import "./cloud.scss";
 </style>

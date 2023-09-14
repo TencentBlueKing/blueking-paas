@@ -45,8 +45,8 @@ export default {
       active: 'stag',
       routeIndex: 0,
       panels: [
-        { name: 'stag', label: '预发布环境', routeName: 'cloudAppDeployManageStag' },
-        { name: 'prod', label: '生产环境', routeName: 'cloudAppDeployManageProd' },
+        { name: 'stag', label: this.$t('预发布环境'), routeName: 'cloudAppDeployManageStag' },
+        { name: 'prod', label: this.$t('生产环境'), routeName: 'cloudAppDeployManageProd' },
       ],
     };
   },

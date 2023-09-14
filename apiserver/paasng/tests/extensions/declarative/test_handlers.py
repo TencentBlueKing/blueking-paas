@@ -41,7 +41,7 @@ from paasng.platform.applications.models import Application
 from paasng.publish.market.models import Product
 from tests.sourcectl.packages.utils import gen_tar
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppDescriptionHandler:

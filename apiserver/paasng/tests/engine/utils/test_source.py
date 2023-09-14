@@ -46,7 +46,7 @@ from paasng.extensions.declarative.deployment.controller import DeploymentDescri
 from paasng.extensions.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:

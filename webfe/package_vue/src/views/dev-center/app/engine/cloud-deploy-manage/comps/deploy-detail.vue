@@ -430,6 +430,10 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    index: {
+      type: Number,
+      default: () => 0,
+    },
   },
   data() {
     const dateShortCut = [
@@ -580,6 +584,9 @@ export default {
       // 当前模块的名称
       return this.deploymentInfo.module_name;
     },
+    isWatchProcess() {
+      return this.$route.params.id;
+    },
   },
 
   watch: {
@@ -595,7 +602,9 @@ export default {
   },
   mounted() {
     // 进入页面启动事件流
-    this.watchServerPush();
+    if (this.index === 0) {   // 只需要启动一次strem
+      this.watchServerPush();
+    }
   },
 
   beforedestroy() {
@@ -1072,7 +1081,8 @@ export default {
           message: err.message,
         });
       } finally {
-        // this.getProcessList();
+        // 请求列表数据
+        bus.$emit('get-release-info');
         process.isActionLoading = false;
       }
     },
@@ -1085,7 +1095,7 @@ export default {
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
       console.log('url', url);
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
@@ -1142,7 +1152,7 @@ export default {
       if (data.type === 'ADDED') {
         // ADDED 是要将 process 添加到 allProcesses 里面
         // 重新拉一次 list 接口也可以间接实现
-        bus.$emit('get-release-info', true);
+        bus.$emit('get-release-info');
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
           if (process.name === processData.type) {
@@ -1388,7 +1398,7 @@ export default {
     align-items: center;
     justify-content: center;
     i {
-      font-size: 14px;
+      font-size: 20px;
       cursor: pointer;
     }
     .start {

@@ -14,7 +14,7 @@
       </div>
     </bk-alert>
     <div v-if="deploymentInfoData.length">
-      <div class="deploy-module-list" v-for="deploymentInfo in deploymentInfoData" :key="deploymentInfo.name">
+      <div class="deploy-module-list" v-for="(deploymentInfo, index) in deploymentInfoData" :key="deploymentInfo.name">
         <div class="deploy-module-item">
           <!-- 预览模式 / 详情模式 / 未部署 -->
           <section class="top-info-wrapper">
@@ -92,6 +92,7 @@
             <deploy-detail
               v-show="deploymentInfo.isExpand"
               :rv-data="rvData"
+              :index="index"
               :deployment-info="deploymentInfo" />
             <!-- 预览 -->
             <deploy-preview
@@ -345,7 +346,11 @@ export default {
         });
         // this.deploymentInfoData = res.data;
         res.data = res.data.map((e) => {
-          e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+          if (e.module_name === this.curDeploymentInfoItem.module_name) {
+            e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+          } else {
+            e.isExpand = false;
+          }
           return e;
         });
         this.$set(this, 'deploymentInfoData', res.data);

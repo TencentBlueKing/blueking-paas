@@ -21,7 +21,6 @@ from textwrap import dedent
 
 import pytest
 
-from paas_wl.platform.applications.models import WlApp
 from paas_wl.workloads.processes.constants import ProbeType
 from paas_wl.workloads.processes.models import ProcessProbe
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
@@ -98,13 +97,11 @@ def yaml_content_after_change():
 class TestSaasProbes:
     def test_saas_probes(self, bk_deployment, yaml_content):
         """验证 saas 应用探针对象 ProcessProbe 成功创建 """
-        # bk_deployment 外键对象未创建，补全
-        name = bk_deployment.app_environment.engine_app.name
-        region = bk_deployment.app_environment.engine_app.region
-        wlapp = WlApp.objects.create(name=name, region=region)
 
+        wlapp = bk_deployment.app_environment.wl_app
         fp = io.StringIO(yaml_content)
         AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(
             app=wlapp, process_type='web', probe_type=ProbeType.LIVENESS
         )
@@ -120,17 +117,15 @@ class TestSaasProbes:
 
     def test_saas_probes_changes(self, bk_deployment, yaml_content, yaml_content_after_change):
         """验证 saas 应用探针对象 ProcessProbe 成功修改 """
-        # bk_deployment 外键对象未创建，补全
-        name = bk_deployment.app_environment.engine_app.name
-        region = bk_deployment.app_environment.engine_app.region
-        wlapp = WlApp.objects.create(name=name, region=region)
+
+        wlapp = bk_deployment.app_environment.wl_app
 
         fp = io.StringIO(yaml_content)
         AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
 
         # 模拟重新部署过程
         fp = io.StringIO(yaml_content_after_change)
-        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment.app_environment)
 
         # liveness_probe 无变化
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(

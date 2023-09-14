@@ -56,8 +56,8 @@ class RedisFixedWindowRateLimiter(abc.ABC):
                                                            | [✗] cause rate limit |
                                                            +----------------------+
         """
-        self.cur_window = int(time.time() / self.window_size)
-        key = self._gen_key()
+        cur_window = int(time.time() / self.window_size)
+        key = self._gen_key(cur_window)
         count = self.redis_db.get(key)
         if not count:
             self.redis_db.set(key, 1, ex=self.window_size)
@@ -70,7 +70,7 @@ class RedisFixedWindowRateLimiter(abc.ABC):
         return False
 
     @abc.abstractmethod
-    def _gen_key(self) -> str:
+    def _gen_key(self, cur_window: int) -> str:
         """生成 redis 中的 key"""
         raise NotImplementedError
 
@@ -97,8 +97,8 @@ class UserActionRateLimiter(RedisFixedWindowRateLimiter):
         self.username = username
         self.action = action
 
-    def _gen_key(self) -> str:
-        return f'bk_paas3:rate_limits:{self.username}:{self.action}:{self.cur_window}'
+    def _gen_key(self, cur_window: int) -> str:
+        return f'bk_paas3:rate_limits:{self.username}:{self.action}:{cur_window}'
 
 
 def rate_limits_by_user(action: UserAction, window_size: int, threshold: int):

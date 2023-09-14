@@ -360,7 +360,6 @@ export default {
           rvInst: res.rv_inst,
           rvProc: res.rv_proc,
         };
-        console.log('this.rvData', this.rvData);
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
         const hasOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
         const hasDeployData = this.deploymentInfoData.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据

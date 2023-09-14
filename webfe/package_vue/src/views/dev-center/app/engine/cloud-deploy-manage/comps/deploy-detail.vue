@@ -26,7 +26,7 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5">{{ row.available_instance_count }} / {{ row.desired_replicas }}</span>
+              <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
               <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div>
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <i
@@ -139,7 +139,7 @@
                     <div
                       v-bk-tooltips="$t('停止进程')"
                       class="square-icon"
-                      @click="handleProcessOperation(row, 'stop')">
+                      @click="handleProcessOperation(row)">
                     </div>
                   </bk-popconfirm>
                 </div>
@@ -152,7 +152,7 @@
                     <i
                       class="paasng-icon paasng-play-circle-shape start"
                       v-bk-tooltips="$t('启动进程')"
-                      @click="handleProcessOperation(row, 'start')"></i>
+                      @click="handleProcessOperation(row)"></i>
                   </bk-popconfirm>
                 </div>
               </div>
@@ -616,9 +616,8 @@ export default {
     handleExpand(row) {
       row.isExpand = !row.isExpand;
     },
-    handleProcessOperation(row, type) {
+    handleProcessOperation(row) {
       this.curUpdateProcess = row;    // 当前点击的进程
-      row.status = type;
     },
 
     handleUpdateProcess() {
@@ -693,6 +692,8 @@ export default {
           isExpand: true,
           type,
         };
+
+        this.updateProcessStatus(process);
 
         // 日期转换
         process.instances.forEach((item) => {

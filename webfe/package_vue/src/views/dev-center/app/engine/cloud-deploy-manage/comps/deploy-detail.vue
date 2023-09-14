@@ -97,10 +97,18 @@
               v-for="instance in row.instances"
               :key="instance.process_name"
             >
-              <bk-button class="mr10" :text="true" title="primary">
+              <bk-button
+                class="mr10"
+                :text="true"
+                title="primary"
+                @click="showInstanceLog(instance)">
                 查看日志
               </bk-button>
-              <bk-button :text="true" title="primary">
+              <bk-button
+                :text="true"
+                title="primary"
+                v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
+                @click="showInstanceConsole(instance, row)">
                 访问控制台
               </bk-button>
             </div>
@@ -276,6 +284,113 @@
         </div>
       </div>
     </bk-sideslider>
+    <!-- 日志侧栏 -->
+    <bk-sideslider
+      :width="800"
+      :is-show.sync="processSlider.isShow"
+      :title="processSlider.title"
+      :quick-close="true"
+      :before-close="handleBeforeClose"
+    >
+      <div
+        id="log-container"
+        slot="content"
+        class="p0 instance-log-wrapper paas-log-box"
+      >
+        <div class="action-box">
+          <bk-button
+            :key="isLogsLoading"
+            class="fr p0 f12 refresh-btn"
+            style="width: 32px; min-width: 32px;"
+            :disabled="isLogsLoading"
+            @click="loadInstanceLog"
+          >
+            <span class="bk-icon icon-refresh f18" />
+          </bk-button>
+
+          <bk-form
+            form-type="inline"
+            class="fr mr5"
+          >
+            <bk-form-item :label="$t('时间段：')">
+              <bk-select
+                v-model="curLogTimeRange"
+                style="width: 250px;"
+                :clearable="false"
+                :disabled="isLogsLoading"
+              >
+                <bk-option
+                  v-for="(option, index) in chartRangeList"
+                  :id="option.id"
+                  :key="index"
+                  :name="option.name"
+                />
+              </bk-select>
+            </bk-form-item>
+          </bk-form>
+        </div>
+        <div class="instance-textarea">
+          <div
+            class="textarea"
+            style="height: 100%;"
+          >
+            <template v-if="!isLogsLoading && instanceLogs.length">
+              <ul>
+                <li
+                  v-for="(log, index) of instanceLogs"
+                  :key="index"
+                  class="stream-log"
+                >
+                  <span
+                    class="mr10"
+                    style="min-width: 140px;"
+                  >{{ log.timestamp }}</span>
+                  <span class="pod-name">{{ log.podShortName }}</span>
+                  <pre
+                    class="message"
+                    v-html="log.message || '--'"
+                  />
+                </li>
+              </ul>
+            </template>
+            <template v-else-if="isLogsLoading">
+              <div class="log-loading-container">
+                <div class="log-loading">
+                  {{ $t('日志获取中...') }}
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <p>
+                {{ $t('暂时没有日志记录') }}
+              </p>
+            </template>
+          </div>
+        </div>
+      </div>
+    </bk-sideslider>
+
+
+    <!-- 无法使用控制台 -->
+    <bk-dialog
+      v-model="processRefuseDialog.visiable"
+      width="650"
+      :title="$t('无法使用控制台功能')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="processRefuseDialog.isLoading"
+    >
+      <div>
+        {{ processRefuseDialog.description }}
+        <div class="mt10">
+          <a
+            :href="processRefuseDialog.link"
+            target="_blank"
+          > {{ $t('文档：') }} {{ processRefuseDialog.title }}</a>
+        </div>
+      </div>
+    </bk-dialog>
+    <!-- 无法使用控制台 end -->
   </div>
 </template>
 
@@ -445,6 +560,19 @@ export default {
       },
       watchServerTimer: null,
       curUpdateProcess: {},
+      processSlider: {
+        isShow: false,
+        title: '',
+      },
+      isLogsLoading: false,
+      instanceLogs: [],
+      processRefuseDialog: {
+        isLoading: false,
+        visiable: false,
+        description: '',
+        title: '',
+        link: '',
+      },
     };
   },
   computed: {
@@ -1095,6 +1223,121 @@ export default {
       }
     },
 
+
+    /**
+     * 展示实例日志侧栏
+     * @param {Object} instance 实例对象
+    */
+    showInstanceLog(instance) {
+      this.curInstance = instance;
+      this.instanceLogs = [];
+      this.processSlider.isShow = true;
+      this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
+      this.loadInstanceLog();
+      // 收集初始状态
+      this.initSidebarFormData(this.curLogTimeRange);
+    },
+
+    /**
+     * 加载实例日志
+     */
+    async loadInstanceLog() {
+      if (this.isLogsLoading) {
+        return false;
+      }
+
+      this.isLogsLoading = true;
+      try {
+        const { appCode } = this;
+        const moduleId = this.curModuleId;
+        const params = this.getParams();
+        const filter = this.getFilterParams();
+
+        const res = await this.$store.dispatch('log/getStreamLogList', {
+          appCode,
+          moduleId,
+          params,
+          filter,
+        });
+        const data = res.logs.reverse();
+        data.forEach((item) => {
+          item.podShortName = item.pod_name.split('-').reverse()[0];
+        });
+        this.instanceLogs = data;
+        // 滚动到底部
+        setTimeout(() => {
+          const container = document.getElementById('log-container');
+          container.scrollTop = container.scrollHeight;
+        }, 500);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        this.isLogsLoading = false;
+      }
+    },
+
+    /**
+     * 显示进程webConsole
+     * @param {Object} instance, processes
+    */
+    async showInstanceConsole(instance, processes) {
+      this.processRefuseDialog.isLoading = true;
+      try {
+        const params = {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          instanceName: instance.name,
+          processType: processes.type,
+        };
+        const res = await this.$store.dispatch('processes/getInstanceConsole', params);
+        if (res.web_console_url) {
+          window.open(res.web_console_url);
+        }
+      } catch (e) {
+        if (e.status === 403) {
+          this.processRefuseDialog.visiable = true;
+          this.processRefuseDialog.isLoading = false;
+          this.processRefuseDialog.description = e.description;
+          this.processRefuseDialog.title = e.title;
+          this.processRefuseDialog.link = e.link;
+        } else {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.message,
+          });
+        }
+      }
+    },
+
+    getParams() {
+      return {
+        start_time: '',
+        end_time: '',
+        time_range: this.curLogTimeRange,
+        log_type: 'STANDARD_OUTPUT',
+      };
+    },
+
+    /**
+     * 构建过滤参数
+     */
+    getFilterParams() {
+      const params = {
+        query: {
+          terms: {},
+        },
+      };
+
+      params.query.terms.pod_name = [this.curInstance.name];
+      params.query.terms.environment = [this.environment];
+
+      return params;
+    },
+
     closeServerPush() {
       // 把当前服务监听关闭
       if (this.serverProcessEvent) {
@@ -1401,6 +1644,30 @@ export default {
       &.refresh {
           width: 28px;
       }
+  }
+  .instance-log-wrapper {
+      height: 100%;
+      overflow: auto;
+
+      .instance-textarea {
+          border: none;
+      }
+  }
+  .instance-textarea {
+      border-radius: 2px;
+      line-height: 19px;
+      font-size: 12px;
+      padding: 10px 20px 10px 20px;
+
+      p {
+          padding: 0px 0;
+          padding-bottom: 5px;
+      }
+    }
+  .action-box {
+    position: absolute;
+    top: 12px;
+    right: 10px;
   }
 }
 </style>

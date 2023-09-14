@@ -22,7 +22,6 @@ from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
 from paasng.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
-from .alert_rules.manager import AlertRuleManager
 from .models import AppAlertRule
 
 
@@ -45,18 +44,6 @@ class AlertRuleSLZ(serializers.ModelSerializer):
             'display_name': {'read_only': True},
             'environment': {'read_only': True},
         }
-
-    def update(self, instance, validated_data):
-        manager = AlertRuleManager(instance.application)
-        instance = manager.update_rule(
-            instance,
-            update_fields={
-                'threshold_expr': validated_data['threshold_expr'],
-                'receivers': validated_data['receivers'],
-                'enabled': validated_data['enabled'],
-            },
-        )
-        return instance
 
 
 class SupportedAlertSLZ(serializers.Serializer):

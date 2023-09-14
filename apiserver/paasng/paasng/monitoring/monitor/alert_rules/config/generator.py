@@ -16,11 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-from django.db.models import QuerySet
-
-from paasng.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
 from .app_rule import AppScopedRuleConfig, ModuleScopedRuleConfig, RuleConfig, get_supported_alert_codes
@@ -80,28 +77,3 @@ class AppRuleConfigGenerator:
             rule_configs.extend([c for c in r_configs if c.is_valid()])
 
         return rule_configs
-
-    def gen_rule_configs_from_qs(self, qs: 'QuerySet[AppAlertRule]') -> List[RuleConfig]:
-        """从 AppAlertRule queryset 中生成告警规则配置"""
-        rule_configs: List[RuleConfig] = []
-        config: RuleConfig
-
-        for rule_obj in qs or []:
-            if rule_obj.module:
-                config = ModuleScopedRuleConfig.from_alert_rule_obj(rule_obj)
-            else:
-                config = AppScopedRuleConfig.from_alert_rule_obj(rule_obj)
-
-            rule_configs.append(config)
-
-        return rule_configs
-
-    def gen_rule_config_from_obj(self, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> RuleConfig:
-        """从 AppAlertRule object 中生成告警规则配置
-
-        :param rule_obj: 告警规则对象
-        :param override_fields: 覆盖 rule_obj 中的字段
-        """
-        if rule_obj.module:
-            return ModuleScopedRuleConfig.from_alert_rule_obj(rule_obj, override_fields)
-        return AppScopedRuleConfig.from_alert_rule_obj(rule_obj, override_fields)

@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 # Try to load the access control module
 ApplicationAccessControlSwitch: Optional[Type]
 try:
-    from paasng.security.access_control.models import ApplicationAccessControlSwitch
+    from paasng.security.access_control.models import ApplicationAccessControlSwitch  # type: ignore
 except ImportError:
     logger.info('access control only supported in te edition, skip import')
     ApplicationAccessControlSwitch = None

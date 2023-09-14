@@ -45,48 +45,57 @@
         </bk-table-column>
         <bk-table-column :label="$t('实例名称')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
-            <div
-              class="instance-item-cls cell-container"
-              :class="row.isExpand ? 'expand' : 'close'"
-              v-for="instance in row.instances"
-              :key="instance.process_name"
-            >
-              {{ instance.display_name }}
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                {{ instance.display_name }}
+              </div>
             </div>
+            <div v-else class="instance-item-cls cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
-            <div
-              class="instance-item-cls cell-container status"
-              :class="row.isExpand ? 'expand' : 'close'"
-              v-for="instance in row.instances"
-              :key="instance.process_name"
-            >
+            <div v-if="row.instances.length">
               <div
-                class="dot"
-                :class="instance.state"
+                class="instance-item-cls cell-container status"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
               >
+                <div
+                  class="dot"
+                  :class="instance.state"
+                >
+                </div>
+                {{ instance.state || '--' }}
               </div>
-              {{ instance.state }}
             </div>
+            <div v-else class="instance-item-cls cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('创建时间')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
-            <div
-              class="instance-item-cls cell-container"
-              :class="row.isExpand ? 'expand' : 'close'"
-              v-for="instance in row.instances"
-              :key="instance.process_name"
-            >
-              <template v-if="instance.date_time !== 'Invalid date'">
-                {{ $t('创建于') }} {{ instance.date_time }}
-              </template>
-              <template v-else>
-                --
-              </template>
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                <template v-if="instance.date_time !== 'Invalid date'">
+                  {{ $t('创建于') }} {{ instance.date_time }}
+                </template>
+                <template v-else>
+                  --
+                </template>
+              </div>
             </div>
+            <div v-else class="instance-item-cls cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column label="" class-name="table-colum-instance-cls">
@@ -137,7 +146,6 @@
                     trigger="click"
                     @confirm="handleUpdateProcess">
                     <div
-                      v-bk-tooltips="$t('停止进程')"
                       class="square-icon"
                       @click="handleProcessOperation(row)">
                     </div>
@@ -151,7 +159,6 @@
                     @confirm="handleUpdateProcess">
                     <i
                       class="paasng-icon paasng-play-circle-shape start"
-                      v-bk-tooltips="$t('启动进程')"
                       @click="handleProcessOperation(row)"></i>
                   </bk-popconfirm>
                 </div>
@@ -653,7 +660,22 @@ export default {
       // 遍历进行数据组装
       const packages = processesData.proc_specs;
       const { instances } = processesData;
-
+      // 如果是下架的进程则processesData.proc_specs会有数据
+      if (!processesData.processes.length && processesData.proc_specs.length) {
+        processesData.processes = [   // 默认值
+          {
+            module_name: 'default',
+            name: '',
+            type: 'web',
+            command: '',
+            replicas: 0,
+            success: 0,
+            failed: 0,
+            version: 0,
+            cluster_link: '',
+          },
+        ];
+      }
       processesData.processes.forEach((processItem) => {
         const { type } = processItem;
         const packageInfo = packages.find(item => item.name === type);
@@ -1105,9 +1127,8 @@ export default {
       // 收藏服务推送消息
       this.serverProcessEvent.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.warn(data);
+        console.log(this.$t('接受到推送'), data);
         if (data.object_type === 'process') {
-          console.log('data', data);
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {

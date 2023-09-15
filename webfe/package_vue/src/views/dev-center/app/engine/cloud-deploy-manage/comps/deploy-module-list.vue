@@ -93,7 +93,8 @@
               v-if="deploymentInfo.isExpand"
               :rv-data="rvData"
               :index="index"
-              :deployment-info="deploymentInfo" />
+              :deployment-info="deploymentInfo"
+              :module-name="deploymentInfo.module_name" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"

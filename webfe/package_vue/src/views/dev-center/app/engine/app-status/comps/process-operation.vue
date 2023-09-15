@@ -798,7 +798,7 @@ export default {
     });
     this.isDateChange = false;
   },
-  beforedestroy() {
+  beforeDestroy() {
     this.closeServerPush();
     this.closeLogDetail();
   },

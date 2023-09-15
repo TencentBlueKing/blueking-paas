@@ -1397,7 +1397,7 @@ export default {
         process: this.processNameActive,
         plan: this.extraConfigData[this.envName].resQuotaPlan.plan,
       };
-      if (!this.localCloudAppData.spec.envOverlay) {
+      if (!this.localCloudAppData?.spec?.envOverlay) {
         this.localCloudAppData.spec.envOverlay = {};
       }
 

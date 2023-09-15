@@ -1032,7 +1032,7 @@ export default {
     this.isDateChange = false;
     this.getAutoScalFlag();
   },
-  beforedestroy() {
+  beforeDestroy() {
     this.closeServerPush();
     this.closeLogDetail();
   },

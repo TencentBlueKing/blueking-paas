@@ -614,7 +614,7 @@ export default {
     }
   },
 
-  beforedestroy() {
+  beforeDestroy() {
     // 页面销毁 关闭stream
     this.closeServerPush();
   },

@@ -21,7 +21,7 @@
             <!-- 已部署 -->
             <div class="left-info">
               <div class="module">
-                <i class="paasng-icon paasng-restore-screen"></i>
+                <i class="icon paasng-icon paasng-deploy-item-dot"></i>
                 <span class="name">{{deploymentInfo.module_name}}</span>
                 <i class="paasng-icon paasng-jump-link icon-cls-link" />
               </div>
@@ -342,7 +342,6 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      console.log(123, this.intervalTimer);
       if (this.intervalTimer) true;  // 如果已经有了timer则return
       try {
         this.listLoading = listLoading;

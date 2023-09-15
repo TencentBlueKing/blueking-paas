@@ -239,6 +239,10 @@ export default {
     },
   },
 
+  mounted() {
+    this.$store.commit('cloudApi/updateHookPageEdit', false);
+  },
+
   methods: {
     switcherChange(value) {
       this.$set(this.preFormData, 'loaclEnabled', value);
@@ -345,7 +349,6 @@ export default {
 <style lang="scss" scoped>
     .form-pre {
         padding: 0 20px 20px;
-        min-height: 300px;
 
         .item-title-container{
             display: flex;

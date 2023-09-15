@@ -310,12 +310,12 @@ class ProcessSerializer(AppEntitySerializer['Process']):
 
     def _construct_pod_body_specs(self, process: 'Process') -> Dict:
         addon_mgr = AddonManager(process.app)
-        app_probe_mgr = ProcessProbeManager(app=process.app, process_type=process.type)
-        readiness_probe = cattr.unstructure(app_probe_mgr.get_readiness_probe())
+        process_probe_mgr = ProcessProbeManager(app=process.app, process_type=process.type)
+        readiness_probe = cattr.unstructure(process_probe_mgr.get_readiness_probe())
         if readiness_probe is None and process.type == "web":
             readiness_probe = cattr.unstructure(addon_mgr.get_readiness_probe())
-        liveness_probe = cattr.unstructure(app_probe_mgr.get_liveness_probe())
-        startup_probe = cattr.unstructure(app_probe_mgr.get_startup_probe())
+        liveness_probe = cattr.unstructure(process_probe_mgr.get_liveness_probe())
+        startup_probe = cattr.unstructure(process_probe_mgr.get_startup_probe())
         main_container = {
             'env': [{"name": str(key), "value": str(value)} for key, value in process.runtime.envs.items()],
             # add preStop to avoid 502 when redeploy or rolling update app

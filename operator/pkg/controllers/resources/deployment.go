@@ -208,9 +208,7 @@ func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
 }
 
 // IsDeploymentNeedUpdate inspect whether the current Deployment should be updated to the want one.
-func IsDeploymentNeedUpdate(current *appsv1.Deployment,
-	want *appsv1.Deployment,
-) (need bool) {
+func IsDeploymentNeedUpdate(current *appsv1.Deployment, want *appsv1.Deployment) (need bool) {
 	// Labels 用于将 Deployment 关联到 Process, 不一致时必须更新
 	if !equality.Semantic.DeepEqual(current.Labels, want.Labels) {
 		return true
@@ -248,11 +246,10 @@ func deepEqualAnnotations(current map[string]string, want map[string]string) boo
 	currentClone := maps.Clone(current)
 	wantClone := maps.Clone(want)
 
-	maps.DeleteFunc(currentClone, func(k string, v string) bool {
+	annotationDeleter := func(k string, v string) bool {
 		return k == paasv1alpha2.RevisionAnnoKey
-	})
-	maps.DeleteFunc(wantClone, func(k string, v string) bool {
-		return k == paasv1alpha2.RevisionAnnoKey
-	})
+	}
+	maps.DeleteFunc(currentClone, annotationDeleter)
+	maps.DeleteFunc(wantClone, annotationDeleter)
 	return equality.Semantic.DeepEqual(currentClone, wantClone)
 }

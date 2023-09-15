@@ -636,16 +636,18 @@ func (bkapp *BkApp) GetProcessUpdateStrategy() ProcessUpdateStrategy {
 	defaultUpdateStrategy := ProcessUpdateStrategy{
 		Type: RollingUpdateProcessUpdateStrategyType,
 	}
-	if value, ok := bkapp.Annotations[ProcessUpdateStrategyTypeAnnoKey]; !ok {
+	if v, ok := bkapp.Annotations[ProcessUpdateStrategyTypeAnnoKey]; !ok {
 		return defaultUpdateStrategy
 	} else {
-		processUpdateStrategyType := ProcessUpdateStrategyType(value)
-		if processUpdateStrategyType == RollingUpdateProcessUpdateStrategyType || processUpdateStrategyType == OnNecessaryProcessUpdateStrategyType {
+		processUpdateStrategyType := ProcessUpdateStrategyType(v)
+		switch processUpdateStrategyType {
+		case RollingUpdateProcessUpdateStrategyType, OnNecessaryProcessUpdateStrategyType:
 			return ProcessUpdateStrategy{
 				Type: processUpdateStrategyType,
 			}
+		default:
+			return defaultUpdateStrategy
 		}
-		return defaultUpdateStrategy
 	}
 }
 

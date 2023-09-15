@@ -109,7 +109,11 @@ func (r *DeploymentReconciler) deploy(
 	deploy *appsv1.Deployment,
 	updateStrategy paasv1alpha2.ProcessUpdateStrategy,
 ) error {
-	return UpsertObject(ctx, r.Client, deploy, r.RollingUpdateHandler)
+	var updateHandler updateHandler[*appsv1.Deployment] = r.RollingUpdateHandler
+	if updateStrategy.Type == paasv1alpha2.OnNecessaryProcessUpdateStrategyType {
+		updateHandler = r.OnNecessaryUpdateHandler
+	}
+	return UpsertObject(ctx, r.Client, deploy, updateHandler)
 }
 
 // RollingUpdateHandler Deployment 更新策略: 当集群中存在的 Deployment 与期望的 Deployment 版本不一致时, 更新
@@ -121,14 +125,16 @@ func (r *DeploymentReconciler) RollingUpdateHandler(
 ) error {
 	currentRevision, _ := revision.GetRevision(current)
 	wantRevision, _ := revision.GetRevision(want)
-	if currentRevision != wantRevision {
-		if err := cli.Update(ctx, want); err != nil {
-			return errors.Wrapf(
-				err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
-			)
-		}
+	if currentRevision == wantRevision {
+		log := logf.FromContext(ctx)
+		log.V(2).Info("Skip update deployment because of equivalent revisions", "name", want.GetName())
+		return nil
 	}
-	return nil
+	err := cli.Update(ctx, want)
+	// If err is nil, errors.Wrapf returns nil.
+	return errors.Wrapf(
+		err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+	)
 }
 
 // OnNecessaryUpdateHandler Deployment 更新策略: 当集群中存在的 Deployment.Spec 与期望的 Deployment.Spec 不一致时, 更新
@@ -138,16 +144,16 @@ func (r *DeploymentReconciler) OnNecessaryUpdateHandler(
 	current *appsv1.Deployment,
 	want *appsv1.Deployment,
 ) error {
-	if resources.IsDeploymentNeedUpdate(current, want) {
-		if err := cli.Update(ctx, want); err != nil {
-			return errors.Wrapf(
-				err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
-			)
-		}
+	if !resources.IsDeploymentNeedUpdate(current, want) {
+		log := logf.FromContext(ctx)
+		log.V(2).Info("Skip update deployment because of not necessary", "name", want.GetName())
+		return nil
 	}
-	log := logf.FromContext(ctx)
-	log.V(2).Info("Skip update deployment", "name", want.GetName())
-	return nil
+	err := cli.Update(ctx, want)
+	// If err is nil, errors.Wrapf returns nil.
+	return errors.Wrapf(
+		err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+	)
 }
 
 // update condition `AppAvailable`

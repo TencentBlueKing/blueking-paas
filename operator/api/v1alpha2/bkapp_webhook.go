@@ -156,10 +156,10 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	annotations := r.GetAnnotations()
 	annosPath := field.NewPath("metadata").Child("annotations")
 	if _, ok := annotations[BkAppCodeKey]; !ok {
-		return field.Invalid(annosPath, annotations, "missing "+BkAppCodeKey)
+		return field.Required(annosPath.Child(BkAppCodeKey), "missing "+BkAppCodeKey)
 	}
 	if _, ok := annotations[ModuleNameKey]; !ok {
-		return field.Invalid(annosPath, annotations, "missing "+ModuleNameKey)
+		return field.Required(annosPath.Child(ModuleNameKey), "missing "+ModuleNameKey)
 	}
 
 	// 校验 BkApp 的 name 是否满足注解 bkapp.paas.bk.tencent.com/code 和 bkapp.paas.bk.tencent.com/module-name 的拼接规则
@@ -172,7 +172,10 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	if r.Name != DNSSafeName(expectedRawName) {
 		return field.Invalid(
 			annosPath,
-			annotations,
+			map[string]string{
+				BkAppCodeKey:  annotations[BkAppCodeKey],
+				ModuleNameKey: annotations[ModuleNameKey],
+			},
 			fmt.Sprintf(
 				"%s and %s don't match with %s %s",
 				BkAppCodeKey,
@@ -209,6 +212,17 @@ func (r *BkApp) validateAnnotations() *field.Error {
 		}
 	}
 
+	// 校验存储 BkApp 进程更新策略类型
+	if v, ok := annotations[ProcessUpdateStrategyTypeAnnoKey]; ok {
+		processUpdateStrategyType := ProcessUpdateStrategyType(v)
+		switch processUpdateStrategyType {
+		case RollingUpdateProcessUpdateStrategyType, OnNecessaryProcessUpdateStrategyType:
+			break
+		default:
+			validValues := []string{string(RollingUpdateProcessUpdateStrategyType), string(OnNecessaryProcessUpdateStrategyType)}
+			return field.NotSupported(annosPath.Child(ProcessUpdateStrategyTypeAnnoKey), v, validValues)
+		}
+	}
 	return nil
 }
 
@@ -217,7 +231,7 @@ func (r *BkApp) validateAppSpec() *field.Error {
 
 	numOfProcs := int32(len(r.Spec.Processes))
 	if numOfProcs == 0 {
-		return field.Invalid(procsField, r.Spec.Processes, "processes can't be empty")
+		return field.Required(procsField, "processes can't be empty")
 	}
 
 	if numOfProcs > config.Global.GetMaxProcesses() {

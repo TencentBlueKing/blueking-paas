@@ -24,7 +24,7 @@ from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.core.app_structure import set_structure_func
+from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
@@ -196,7 +196,7 @@ def _get_structure(app: 'WlApp') -> Dict:
 
 
 # Set the "get_structure" function to current implementation
-set_structure_func(_get_structure)
+set_global_get_structure(_get_structure)
 
 # Django models end
 

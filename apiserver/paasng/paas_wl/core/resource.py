@@ -68,6 +68,9 @@ def get_process_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
     and related Service. To get a result, the app must has been released successfully and
     the process_type must exists.
 
+    NOTE: Modify this function carefully as it might disrupt the process of updating
+    the related deployment resources.
+
     :param app: The app object.
     :param process_type: The type of process, such as "web"
     """

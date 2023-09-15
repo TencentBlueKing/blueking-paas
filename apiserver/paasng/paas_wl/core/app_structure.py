@@ -22,7 +22,7 @@ from paas_wl.platform.applications.models import WlApp
 _get_structure_func = None
 
 
-def set_structure_func(func: Callable[[WlApp], Dict]):
+def set_global_get_structure(func: Callable[[WlApp], Dict]):
     """Set the structure function, to be called by other higher modules."""
     global _get_structure_func
     _get_structure_func = func

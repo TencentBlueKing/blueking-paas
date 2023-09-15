@@ -84,7 +84,6 @@ class AppDescriptionHandler:
 
     def __init__(self, json_data: Dict):
         """The app_desc.yml json data"""
-        # 使用环境变量替换 json_data 中符合 ${env} 格式的值字段
         self.json_data = json_data
 
     @property
@@ -119,7 +118,6 @@ class AppDescriptionHandler:
         if not module_desc:
             logger.info('Skip running deployment controller because not content was provided')
             raise DescriptionValidationError({"module": _('内容不能为空')})
-
         desc = validate_desc(DeploymentDescSLZ, module_desc)
         return desc
 

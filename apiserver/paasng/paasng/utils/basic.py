@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 else:
     from aenum import Enum
 
+
 logger = logging.getLogger(__name__)
 
 MOSAIC_REG = re.compile(r"(?<=\d{3})(\d{4})(?=\d{4})")

@@ -33,7 +33,6 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
     operator = operator or application.owner
 
     deploy_config = module.get_deploy_config()
-
     return Deployment.objects.create(
         region=application.region,
         operator=operator,

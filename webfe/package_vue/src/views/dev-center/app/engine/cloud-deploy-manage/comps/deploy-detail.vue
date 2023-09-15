@@ -45,48 +45,57 @@
         </bk-table-column>
         <bk-table-column :label="$t('实例名称')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
-            <div
-              class="instance-item-cls cell-container"
-              :class="row.isExpand ? 'expand' : 'close'"
-              v-for="instance in row.instances"
-              :key="instance.process_name"
-            >
-              {{ instance.display_name }}
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                {{ instance.display_name }}
+              </div>
             </div>
+            <div v-else class="instance-item-cls cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
-            <div
-              class="instance-item-cls cell-container status"
-              :class="row.isExpand ? 'expand' : 'close'"
-              v-for="instance in row.instances"
-              :key="instance.process_name"
-            >
+            <div v-if="row.instances.length">
               <div
-                class="dot"
-                :class="instance.state"
+                class="instance-item-cls cell-container status"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
               >
+                <div
+                  class="dot"
+                  :class="instance.state"
+                >
+                </div>
+                {{ instance.state || '--' }}
               </div>
-              {{ instance.state }}
             </div>
+            <div v-else class="instance-item-cls cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('创建时间')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
-            <div
-              class="instance-item-cls cell-container"
-              :class="row.isExpand ? 'expand' : 'close'"
-              v-for="instance in row.instances"
-              :key="instance.process_name"
-            >
-              <template v-if="instance.date_time !== 'Invalid date'">
-                {{ $t('创建于') }} {{ instance.date_time }}
-              </template>
-              <template v-else>
-                --
-              </template>
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                <template v-if="instance.date_time !== 'Invalid date'">
+                  {{ $t('创建于') }} {{ instance.date_time }}
+                </template>
+                <template v-else>
+                  --
+                </template>
+              </div>
             </div>
+            <div v-else class="instance-item-cls cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column label="" class-name="table-colum-instance-cls">
@@ -137,9 +146,8 @@
                     trigger="click"
                     @confirm="handleUpdateProcess">
                     <div
-                      v-bk-tooltips="$t('停止进程')"
                       class="square-icon"
-                      @click="handleProcessOperation(row, 'stop')">
+                      @click="handleProcessOperation(row)">
                     </div>
                   </bk-popconfirm>
                 </div>
@@ -151,8 +159,7 @@
                     @confirm="handleUpdateProcess">
                     <i
                       class="paasng-icon paasng-play-circle-shape start"
-                      v-bk-tooltips="$t('启动进程')"
-                      @click="handleProcessOperation(row, 'start')"></i>
+                      @click="handleProcessOperation(row)"></i>
                   </bk-popconfirm>
                 </div>
               </div>
@@ -320,9 +327,9 @@
                 :disabled="isLogsLoading"
               >
                 <bk-option
-                  v-for="(option, index) in chartRangeList"
+                  v-for="(option, i) in chartRangeList"
                   :id="option.id"
-                  :key="index"
+                  :key="i"
                   :name="option.name"
                 />
               </bk-select>
@@ -337,8 +344,8 @@
             <template v-if="!isLogsLoading && instanceLogs.length">
               <ul>
                 <li
-                  v-for="(log, index) of instanceLogs"
-                  :key="index"
+                  v-for="(log, idx) of instanceLogs"
+                  :key="idx"
                   class="stream-log"
                 >
                   <span
@@ -393,7 +400,7 @@
     <!-- 无法使用控制台 end -->
 
     <!-- 扩缩容 -->
-    <scale-dialog key="moduleName" :ref="`${moduleName}ScaleDialog`"></scale-dialog>
+    <scale-dialog :key="moduleName" :ref="`${moduleName}ScaleDialog`"></scale-dialog>
   </div>
 </template>
 
@@ -438,7 +445,11 @@ export default {
     moduleName: {
       type: String,
       default: 'default',
-    }
+    },
+    index: {
+      type: Number,
+      default: () => 0,
+    },
   },
   data() {
     const dateShortCut = [
@@ -589,6 +600,9 @@ export default {
       // 当前模块的名称
       return this.deploymentInfo.module_name;
     },
+    isWatchProcess() {
+      return this.$route.params.id;
+    },
   },
 
   watch: {
@@ -604,7 +618,9 @@ export default {
   },
   mounted() {
     // 进入页面启动事件流
-    this.watchServerPush();
+    if (this.index === 0) {   // 只需要启动一次strem
+      this.watchServerPush();
+    }
   },
 
   beforedestroy() {
@@ -616,9 +632,8 @@ export default {
     handleExpand(row) {
       row.isExpand = !row.isExpand;
     },
-    handleProcessOperation(row, type) {
+    handleProcessOperation(row) {
       this.curUpdateProcess = row;    // 当前点击的进程
-      row.status = type;
     },
 
     handleUpdateProcess() {
@@ -655,7 +670,22 @@ export default {
       // 遍历进行数据组装
       const packages = processesData.proc_specs;
       const { instances } = processesData;
-
+      // 如果是下架的进程则processesData.proc_specs会有数据
+      if (!processesData.processes.length && processesData.proc_specs.length) {
+        processesData.processes = [   // 默认值
+          {
+            module_name: 'default',
+            name: '',
+            type: 'web',
+            command: '',
+            replicas: 0,
+            success: 0,
+            failed: 0,
+            version: 0,
+            cluster_link: '',
+          },
+        ];
+      }
       processesData.processes.forEach((processItem) => {
         const { type } = processItem;
         const packageInfo = packages.find(item => item.name === type);
@@ -694,6 +724,8 @@ export default {
           isExpand: true,
           type,
         };
+
+        this.updateProcessStatus(process);
 
         // 日期转换
         process.instances.forEach((item) => {
@@ -1082,7 +1114,8 @@ export default {
           message: err.message,
         });
       } finally {
-        // this.getProcessList();
+        // 请求列表数据
+        bus.$emit('get-release-info');
         process.isActionLoading = false;
       }
     },
@@ -1095,7 +1128,7 @@ export default {
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
       console.log('url', url);
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
@@ -1104,9 +1137,8 @@ export default {
       // 收藏服务推送消息
       this.serverProcessEvent.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.warn(data);
+        console.log(this.$t('接受到推送'), data);
         if (data.object_type === 'process') {
-          console.log('data', data);
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
@@ -1141,6 +1173,9 @@ export default {
       // 服务结束
       this.serverProcessEvent.addEventListener('EOF', () => {
         this.serverProcessEvent.close();
+        this.watchServerTimer = setTimeout(() => {
+          this.watchServerPush();
+        }, 3000);
       });
     },
 
@@ -1152,7 +1187,7 @@ export default {
       if (data.type === 'ADDED') {
         // ADDED 是要将 process 添加到 allProcesses 里面
         // 重新拉一次 list 接口也可以间接实现
-        bus.$emit('get-release-info', true);
+        bus.$emit('get-release-info');
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
           if (process.name === processData.type) {
@@ -1398,7 +1433,7 @@ export default {
     align-items: center;
     justify-content: center;
     i {
-      font-size: 14px;
+      font-size: 20px;
       cursor: pointer;
     }
     .start {
@@ -1564,7 +1599,7 @@ export default {
     border-radius: 50%;
     margin-right: 8px;
 
-    &.failed {
+    &.Failed {
       background: #EA3636;
       border: 3px solid #fce0e0;
     }

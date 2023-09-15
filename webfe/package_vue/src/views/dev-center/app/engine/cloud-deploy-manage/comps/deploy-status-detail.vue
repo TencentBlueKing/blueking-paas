@@ -94,6 +94,7 @@
               theme="success"
               ext-cls="paas-deploy-success-btn"
               outline
+              size="small"
               @click="handleOpenLink"
             >
               {{ $t('访问') }}
@@ -183,6 +184,10 @@ export default {
       type: Object,
       default: () => {},
     },
+    rvData: {
+      type: Object,
+      default: () => ({}),
+    },
   },
   data() {
     const curDeployResult = {
@@ -242,6 +247,7 @@ export default {
         isLoading: false,
         stage: '',
       },
+      serverTimeout: 30,
     };
   },
   computed: {
@@ -856,7 +862,7 @@ export default {
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=0&rv_inst=0`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });

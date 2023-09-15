@@ -14,7 +14,7 @@
       </div>
     </bk-alert>
     <div v-if="deploymentInfoData.length">
-      <div class="deploy-module-list" v-for="deploymentInfo in deploymentInfoData" :key="deploymentInfo.name">
+      <div class="deploy-module-list" v-for="(deploymentInfo, index) in deploymentInfoData" :key="deploymentInfo.name">
         <div class="deploy-module-item">
           <!-- 预览模式 / 详情模式 / 未部署 -->
           <section class="top-info-wrapper">
@@ -90,15 +90,16 @@
           <section class="main">
             <!-- 详情表格 -->
             <deploy-detail
-              v-show="deploymentInfo.isExpand"
+              v-if="deploymentInfo.isExpand"
               :rv-data="rvData"
+              :index="index"
               :deployment-info="deploymentInfo"
               :module-name="deploymentInfo.module_name" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"
-              v-show="!deploymentInfo.isExpand" />
-            <div class="operation-wrapper" v-if="deploymentInfo.total_available_instance_count">
+              v-if="!deploymentInfo.isExpand" />
+            <div class="operation-wrapper">
               <div
                 class="btn"
                 @click="handleChangePanel(deploymentInfo)">
@@ -134,6 +135,7 @@
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
       :cloud-app-data="cloudAppData"
+      :rv-data="rvData"
       @refresh="handleRefresh">
     </deploy-dialog>
 
@@ -152,6 +154,7 @@
           :environment="environment"
           :deployment-id="curDeploymentInfoItem.state?.deployment?.pending?.id"
           :deployment-info="curDeploymentInfoItem"
+          :rv-data="rvData"
           @close="handleCloseSideslider"
         ></deploy-status-detail>
       </div>
@@ -346,7 +349,11 @@ export default {
         });
         // this.deploymentInfoData = res.data;
         res.data = res.data.map((e) => {
-          e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+          if (e.module_name === this.curDeploymentInfoItem.module_name) {
+            e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+          } else {
+            e.isExpand = false;
+          }
           return e;
         });
         this.$set(this, 'deploymentInfoData', res.data);

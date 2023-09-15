@@ -146,6 +146,7 @@
           :environment="environment"
           :deployment-id="deploymentId"
           :deployment-info="deploymentInfoBackUp"
+          :rv-data="rvData"
           @close="handleCloseSideslider"
         ></deploy-status-detail>
       </div>
@@ -178,6 +179,10 @@ export default {
     cloudAppData: {
       type: Object,
       default: () => {},
+    },
+    rvData: {
+      type: Object,
+      default: () => ({}),
     },
   },
 

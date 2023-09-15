@@ -17,7 +17,7 @@
         {{$t('取消')}}
       </bk-button>
     </template>
-    <div class="scaling-wrapper">
+    <div class="scaling-wrapper" v-bkloading="{ isLoading: isContentLoading, zIndex: 10 }">
       <bk-form :model="scalingConfig" form-type="vertical" ref="scalingConfigForm">
         <bk-form-item :label="$t('当前副本数：')" :label-width="90" ext-cls="horizontal-cls">
           <span class="form-text">{{processPlan.targetReplicas}}</span>
@@ -121,6 +121,7 @@ export default {
     return {
       environment: 'stag',
       isLoading: false,
+      isContentLoading: true,
       scaleDialog: {
         visible: false
       },
@@ -191,11 +192,6 @@ export default {
     }
   },
 
-  created () {
-    // 获取featureflag
-    this.getAutoScalFlag();
-  },
-
   methods: {
     // 校验
     handleConfirm () {
@@ -219,7 +215,6 @@ export default {
 
     // 进程实例设置
     async updateProcessConfig() {
-      // 自动调节不走当前接口
       if (!this.autoscaling && (this.scalingConfig.targetReplicas > this.processPlan.maxReplicas)) {
         this.isLoading = false;
         return;
@@ -279,6 +274,8 @@ export default {
           theme: 'error',
           message: e.message || e.detail || this.$t('接口异常'),
         });
+      } finally {
+        this.isContentLoading = false;
       }
     },
 
@@ -389,30 +386,9 @@ export default {
      * @param process {Object} 当前进程数据
      * @param env {string} 环境
      */
-    handleShowDialog (process, env = 'stag') {
+    async handleShowDialog (process, env = 'stag') {
+      this.getAutoScalFlag();
       this.environment = env;
-      process = {
-    "name": "web",
-    "target_replicas": 1,
-    "target_status": "start",
-    "max_replicas": 2,
-    "resource_limit": {
-        "cpu": "4096m",
-        "memory": "512Mi"
-    },
-    "resource_requests": {
-        "cpu": "100m",
-        "memory": "256Mi"
-    },
-    "plan_id": "1",
-    "plan_name": "Starter",
-    "resource_limit_quota": {
-        "cpu": 4096,
-        "memory": 512
-    },
-    "autoscaling": false,
-    "scaling_config": {}
-};
 
       // 最大副本数
       maxReplicasNum = process.maxReplicas;

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf.urls import url
 
-from paasng.accessories.bk_auth import views
+from paasng.accessories.app_secret import views
 
 urlpatterns = [
     url(
@@ -27,7 +27,7 @@ urlpatterns = [
         name='api.bkauth.secrets',
     ),
     url(
-        r'^api/bkapps/applications/(?P<code>[^/]+)/secret/(?P<bk_app_secret_id>\d+)/$',
+        r'^api/bkapps/applications/(?P<code>[^/]+)/secrets/(?P<bk_app_secret_id>\d+)/$',
         views.BkAuthSecretViewSet.as_view({'post': 'toggle', 'delete': 'delete'}),
         name='api.bkauth.secret',
     ),
@@ -39,7 +39,7 @@ urlpatterns = [
     ),
     url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/builtin_secret/$',
-        views.BuiltinSecretViewSet.as_view({'get': 'get', 'post': 'update'}),
+        views.BuiltinSecretViewSet.as_view({'get': 'get', 'post': 'rotate'}),
         name='api.bkauth.builtin_secret',
     ),
 ]

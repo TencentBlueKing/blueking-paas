@@ -16,33 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from datetime import datetime
-
 from rest_framework import serializers
 
 
-def desensitize_secret(secret: str) -> str:
-    """密钥脱敏展示"""
-    # 应用密钥，仅展示前4、后4位，中间用12个 * 代替
-    return secret[:4] + "************" + secret[-4:]
+class SecretField(serializers.ReadOnlyField):
+    def to_representation(self, value):
+        if len(value) < 8:
+            return "*" * 12
+
+        # 应用密钥，仅展示前4、后4位，中间用12个 * 代替
+        return value[:4] + "*" * 12 + value[-4:]
 
 
 class AppSecretSLZ(serializers.Serializer):
     id = serializers.IntegerField()
     bk_app_code = serializers.CharField(help_text="应用 ID")
-    bk_app_secret = serializers.CharField(help_text="应用密钥，仅展示前4、后4位，中间用12个 * 代替")
+    bk_app_secret = SecretField(help_text="应用密钥，仅展示前4、后4位，中间用12个 * 代替")
     enabled = serializers.BooleanField(help_text="是否启用")
     created_at = serializers.DateTimeField(help_text="创建时间")
-
-    def to_representation(self, obj):
-        if isinstance(obj.created_at, str):
-            # bkAuth API 返回的时间格式需要格式化
-            obj.created_at = datetime.strptime(obj.created_at, "%Y-%m-%dT%H:%M:%SZ")
-        result = super().to_representation(obj)
-
-        # 应用密钥脱敏展示
-        result["bk_app_secret"] = desensitize_secret(obj.bk_app_secret)
-        return result
 
 
 class AppSecretStatusSLZ(serializers.Serializer):
@@ -53,23 +44,13 @@ class AppSecretIdSLZ(serializers.Serializer):
     id = serializers.IntegerField()
 
 
-class AppSecretInEnvSLZ(serializers.Serializer):
+class DeployedSecretSLZ(serializers.Serializer):
     module = serializers.CharField(help_text="模块")
     environment = serializers.CharField(help_text="环境")
-    bk_app_secret = serializers.CharField(help_text="密钥")
+    bk_app_secret = SecretField(help_text="密钥")
     latest_deployed_at = serializers.DateTimeField(help_text="最近部署时间")
 
-    def to_representation(self, obj):
-        result = super().to_representation(obj)
-        result["bk_app_secret"] = desensitize_secret(obj['bk_app_secret'])
-        return result
 
-
-class BulitinAppSecretSLZ(serializers.Serializer):
-    bulitin_app_secret = serializers.CharField(help_text="内置密钥")
-    deployed_secret_list = serializers.ListField(child=AppSecretInEnvSLZ())
-
-    def to_representation(self, obj):
-        result = super().to_representation(obj)
-        result["bulitin_app_secret"] = desensitize_secret(obj['bulitin_app_secret'])
-        return result
+class AppSecretInEnvVarSLZ(serializers.Serializer):
+    app_secret_in_config_var = SecretField(help_text="环境变量默认密钥")
+    deployed_secret_list = serializers.ListField(child=DeployedSecretSLZ())

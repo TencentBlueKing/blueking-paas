@@ -16,14 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Optional
-
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
 from paasng.platform.oauth2.api import BkAppSecret, BkOauthClient
 from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.platform.oauth2.models import BuiltinBkAppSecret, OAuth2Client
+from paasng.platform.oauth2.models import BkAppSecretInEnvVar, OAuth2Client
 
 
 def get_random_secret_key():
@@ -45,19 +43,19 @@ def create_oauth2_client(bk_app_code: str, region: str) -> bool:
     return True
 
 
-def get_builtin_app_secret_id(bk_app_code: str) -> Optional[int]:
-    try:
-        return BuiltinBkAppSecret.objects.get(bk_app_code=bk_app_code).bk_app_secret_id
-    except BuiltinBkAppSecret.DoesNotExist:
-        return None
-
-
-def get_bulitin_app_secret(bk_app_code: str) -> BkAppSecret:
+def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:
+    """应用部署时，写入环境变量中的密钥
+    如果用户未主动设置，则为 BkAuth API 中返回的默认密钥
+    """
     client = BkOauthClient()
 
-    # 如果平台 DB 中记录了内置密钥的 ID，则以平台记录的为准
-    if bk_app_secret_id := get_builtin_app_secret_id(bk_app_code):
-        secret_in_db = client.get_secret_by_id(bk_app_code, str(bk_app_secret_id))
+    # 如果平台 DB 中记录了环境变量默认密钥的 ID，则以平台记录的为准
+    try:
+        secret_in_db = BkAppSecretInEnvVar.objects.get(bk_app_code=bk_app_code).bk_app_secret_id
+    except BkAppSecretInEnvVar.DoesNotExist:
+        secret_in_db = None
+    if secret_in_db:
+        secret_in_db = client.get_secret_by_id(bk_app_code, secret_in_db)
         if secret_in_db:
             return secret_in_db
 
@@ -66,8 +64,9 @@ def get_bulitin_app_secret(bk_app_code: str) -> BkAppSecret:
 
 
 def get_oauth2_client_secret(bk_app_code: str, region: str) -> str:
+    """获取应用的 OAuth 默认密钥"""
     if settings.ENABLE_BK_OAUTH:
-        return get_bulitin_app_secret(bk_app_code).bk_app_secret
+        return get_app_secret_in_env_var(bk_app_code).bk_app_secret
 
     try:
         client_secret = OAuth2Client.objects.get(region=region, client_id=bk_app_code).client_secret

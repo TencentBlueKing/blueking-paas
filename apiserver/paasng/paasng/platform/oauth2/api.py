@@ -40,6 +40,10 @@ class BkAppSecret:
     enabled: bool
     created_at: datetime
 
+    def __post_init__(self):
+        if isinstance(self.created_at, str):
+            self.created_at = datetime.strptime(self.created_at, "%Y-%m-%dT%H:%M:%SZ")  # type: ignore
+
 
 @contextmanager
 def wrap_request_exc():
@@ -95,14 +99,16 @@ class BkOauthClient:
             self._validate_resp(resp)
 
     def create_app_secret(self, bk_app_code: str):
-        """同一个App最多拥有 2 个 bk_app_secret, 一般只有一个，两个主要是用于更换时，老的不会失效，除非管理方主动删除"""
+        """同一个App最多拥有 2 个 bk_app_secret, 一般只有一个，两个主要是用于更换时，老的不会失效，除非管理方主动删除
+        BkAuth API 会限制仅能创建 2 个 secret
+        """
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys"
         with wrap_request_exc():
             resp = requests.post(url, headers=self.headers)
             self._validate_resp(resp)
             return
 
-    def del_app_secret(self, bk_app_code: str, bk_app_secret_id: str):
+    def del_app_secret(self, bk_app_code: str, bk_app_secret_id: int):
         """主要用于更换 bk_app_secret 后, 对老的 bk_app_secret进行删除, 若App只剩下唯一一个bk_app_secret, 则无法删除"""
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys/{bk_app_secret_id}"
         with wrap_request_exc():
@@ -110,7 +116,7 @@ class BkOauthClient:
             self._validate_resp(resp)
             return
 
-    def toggle_app_secret(self, bk_app_code: str, bk_app_secret_id: str, enabled: bool):
+    def toggle_app_secret(self, bk_app_code: str, bk_app_secret_id: int, enabled: bool):
         """禁用或启用应用 bk_app_secret"""
         url = f"{self.bk_oauth_url}/api/v1/apps/{bk_app_code}/access-keys/{bk_app_secret_id}"
         with wrap_request_exc():
@@ -138,6 +144,9 @@ class BkOauthClient:
             ]
 
     def get_default_app_secret(self, bk_app_code: str) -> BkAppSecret:
+        """获取默认的密钥，应用有多个密钥时，按统一的规则获取一个默认的密钥。
+        BkAuth 返回的多个 Secret 中，默认使用已启用且创建时间最早的
+        """
         secret_list = self.get_app_secret_list(bk_app_code)
 
         # 只包含已启用（enabled 为 True）的 bk_app_secret,并按 created_at 升序排列
@@ -149,6 +158,7 @@ class BkOauthClient:
         sorted_data = sorted(filtered_data, key=lambda x: x.created_at, reverse=False)
         return sorted_data[0]
 
-    def get_secret_by_id(self, bk_app_code: str, bk_app_secret_id: str) -> Optional[BkAppSecret]:
+    def get_secret_by_id(self, bk_app_code: str, bk_app_secret_id: int) -> Optional[BkAppSecret]:
+        """根据密钥 ID 查询密钥的详细信息"""
         secret_list = self.get_app_secret_list(bk_app_code)
         return next((x for x in secret_list if str(x.id) == str(bk_app_secret_id)), None)

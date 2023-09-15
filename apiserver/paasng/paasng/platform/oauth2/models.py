@@ -42,9 +42,9 @@ class OAuth2Client(TimestampedModel):
     client_secret = EncryptField(verbose_name=u"安全密钥")
 
 
-class BuiltinBkAppSecret(TimestampedModel):
+class BkAppSecretInEnvVar(TimestampedModel):
     """
-    写入应用内置环境变量中的 bk_app_sercret 的信息
+    环境变量默认密钥：内置环境变量 BKPAAS_APP_SECRET 使用的密钥
     """
 
     bk_app_code = models.CharField(max_length=20, unique=True)

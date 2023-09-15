@@ -21,7 +21,7 @@ import re
 from contextlib import suppress
 from typing import TYPE_CHECKING, Dict, List
 
-from paasng.engine.constants import DOCKER_BUILD_STEPSET_NAME, RuntimeType
+from paasng.engine.constants import DOCKER_BUILD_STEPSET_NAME, IMAGE_RELEASE_STEPSET_NAME, RuntimeType
 from paasng.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.models.steps import DeployStepMeta, StepMetaSet
@@ -76,6 +76,17 @@ def setup_dockerbuild_stepmeta():
     )
 
 
+def bind_step_to_metaset(metaset: StepMetaSet, phase: DeployPhaseTypes, step_name: str):
+    try:
+        metaset.metas.get(phase=phase, name=step_name)
+    except DeployStepMeta.DoesNotExist:
+        try:
+            step_meta = DeployStepMeta.objects.get(phase=phase, name=step_name)
+        except DeployStepMeta.DoesNotExist:
+            return
+        metaset.metas.add(step_meta)
+
+
 def setup_dockerbuild_metaset() -> StepMetaSet:
     """初始化 dockerbuild 的构建步骤"""
     setup_dockerbuild_stepmeta()
@@ -98,14 +109,29 @@ def setup_dockerbuild_metaset() -> StepMetaSet:
         (DeployPhaseTypes.RELEASE, "检测部署结果"),
     ]
     for phase, step_name in steps:
-        try:
-            metaset.metas.get(phase=phase, name=step_name)
-        except DeployStepMeta.DoesNotExist:
-            try:
-                step_meta = DeployStepMeta.objects.get(phase=phase, name=step_name)
-            except DeployStepMeta.DoesNotExist:
-                continue
-            metaset.metas.add(step_meta)
+        bind_step_to_metaset(metaset, phase, step_name)
+    return metaset
+
+
+def setup_image_release_metaset() -> StepMetaSet:
+    """初始化 image release 的构建步骤"""
+    metaset, created = StepMetaSet.objects.update_or_create(
+        defaults={
+            "is_default": False,
+        },
+        name=IMAGE_RELEASE_STEPSET_NAME,
+    )
+    if not created:
+        return metaset
+
+    steps = [
+        (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
+        (DeployPhaseTypes.PREPARATION, "配置资源实例"),
+        (DeployPhaseTypes.RELEASE, "部署应用"),
+        (DeployPhaseTypes.RELEASE, "检测部署结果"),
+    ]
+    for phase, step_name in steps:
+        bind_step_to_metaset(metaset, phase, step_name)
     return metaset
 
 
@@ -121,6 +147,11 @@ class DeployStepPicker:
                 return StepMetaSet.objects.get(name=DOCKER_BUILD_STEPSET_NAME)
             except StepMetaSet.DoesNotExist:
                 return setup_dockerbuild_metaset()
+        elif m.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            try:
+                return StepMetaSet.objects.get(name=IMAGE_RELEASE_STEPSET_NAME)
+            except StepMetaSet.DoesNotExist:
+                return setup_image_release_metaset()
 
         # 以 SlugBuilder 匹配为主, 不存在绑定直接走缺省步骤集
         builder = m.get_slug_builder(raise_exception=False)

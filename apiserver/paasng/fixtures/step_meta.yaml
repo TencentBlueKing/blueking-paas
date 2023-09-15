@@ -299,7 +299,7 @@
 - fields:
     builder_provider: null
     buildpack_provider: null
-    created: 2021-04-27 03:12:15.381758+00:00
+    created: 2023-09-14 03:12:15.381779+00:00
     name: 构建镜像
     display_name_zh_cn: 构建镜像
     display_name_en: Building image
@@ -309,7 +309,7 @@
     updated: 2023-09-14 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    created: 2021-04-27 03:12:15.388464+00:00
+    created: 2023-09-14 03:12:15.388464+00:00
     is_default: true
     metas:
     - - preparation
@@ -327,6 +327,23 @@
     - - release
       - 检测部署结果
     name: dockerbuild
-    updated: 2021-04-27 03:12:15.388489+00:00
+    updated: 2023-09-14 03:12:15.381779+00:00
   model: engine.stepmetaset
 # <- end Dockerfile 构建步骤
+# <- start 镜像部署步骤
+- fields:
+    created: 2023-09-14 03:12:15.381779+00:00
+    is_default: true
+    metas:
+    - - preparation
+      - 解析应用进程信息
+    - - preparation
+      - 配置资源实例
+    - - release
+      - 部署应用
+    - - release
+      - 检测部署结果
+    name: image
+    updated: 2023-09-14 03:12:15.381779+00:00
+  model: engine.stepmetaset
+# <- end 镜像部署步骤

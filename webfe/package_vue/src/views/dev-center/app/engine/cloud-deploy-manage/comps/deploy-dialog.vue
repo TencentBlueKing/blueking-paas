@@ -472,6 +472,8 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.deployAppDialog.isLoading = false;
       }
     },
 

@@ -99,7 +99,9 @@
             <deploy-preview
               :deployment-info="deploymentInfo"
               v-if="!deploymentInfo.isExpand" />
-            <div class="operation-wrapper">
+            <div
+              class="operation-wrapper"
+              v-if="deploymentInfo.processes.length || deploymentInfo.proc_specs.length">
               <div
                 class="btn"
                 @click="handleChangePanel(deploymentInfo)">
@@ -210,6 +212,7 @@ export default {
       isShowSideslider: false,
       initPage: false,       // 第一次进入页面
       rvData: {},
+      intervalTimer: null,
     };
   },
 
@@ -340,7 +343,8 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      if (!this.intervalTimer) true;  // 如果已经有了timer则return
+      console.log(123, this.intervalTimer);
+      if (this.intervalTimer) true;  // 如果已经有了timer则return
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -404,15 +408,16 @@ export default {
 
     // 刷新列表
     handleRefresh() {
+      if (this.intervalTimer) return;
       this.getModuleReleaseInfo(false);
     },
 
     // 关闭进程的事件流
     handleCloseProcessWatch() {
-      this.$refs.deployStatusRef.closeServerPush();
+      this.handleRefresh();
       this.isShowSideslider = false;
     },
-    // 关闭侧边栏
+    // // 关闭侧边栏
     handleCloseSideslider() {
       this.isShowSideslider = false;
     },

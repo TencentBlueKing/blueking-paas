@@ -294,9 +294,12 @@ export default {
     this.isDeployReady = true;
     this.init();
   },
+  beforeDestroy() {
+    // 页面销毁 关闭stream
+    this.closeServerPush();
+  },
   methods: {
     init() {
-      console.log('11111');
       this.getPreDeployDetail();
     //   this.watchDeployStatus();
     },
@@ -896,12 +899,12 @@ export default {
       this.serverProcessEvent.onerror = (event) => {
         // 异常后主动关闭，否则会继续重连
         console.error(this.$t('推送异常'), event);
-        this.serverProcessEvent.close();
+        // this.serverProcessEvent.close();
 
         // 推迟调用，防止过于频繁导致服务性能问题
-        this.watchServerTimer = setTimeout(() => {
-          this.watchServerPush();
-        }, 3000);
+        // this.watchServerTimer = setTimeout(() => {
+        //   this.watchServerPush();
+        // }, 3000);
       };
 
       // 服务结束

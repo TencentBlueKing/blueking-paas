@@ -22,13 +22,11 @@
         </bk-select>
       </div>
     </section>
-    <section class="content">
-      <!-- 根据模块渲染 -->
-      <deploy-module-list
-        :module-data="showModuleList"
-        v-bind="$attrs"
-      />
-    </section>
+    <!-- 根据模块渲染 -->
+    <deploy-module-list
+      :model-name="moduleValue"
+      v-bind="$attrs"
+    />
   </div>
 </template>
 
@@ -91,8 +89,10 @@ export default {
 
 <style lang="scss" scoped>
 .stag-wrapper {
+  height: 100%;
   .top-operate {
     display: flex;
+    margin-bottom: 16px;
   }
   .module-select-wrapper {
     background: #fff;

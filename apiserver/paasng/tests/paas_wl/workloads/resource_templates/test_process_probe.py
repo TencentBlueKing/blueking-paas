@@ -16,9 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import os
-
 import pytest
+from django.test import override_settings
 
 from paas_wl.workloads.processes.constants import ProbeType
 from paas_wl.workloads.processes.models import ProcessProbe
@@ -28,28 +27,27 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_process_probe_mgr(wl_app, process_type, check_mechanism_templates, port_env):
-    ProcessProbe.objects.create(
-        app=wl_app,
-        process_type=process_type,
-        probe_type=ProbeType.READINESS,
-        check_mechanism=check_mechanism_templates['readiness'],
-    )
-    ProcessProbe.objects.create(
-        app=wl_app,
-        process_type=process_type,
-        probe_type=ProbeType.LIVENESS,
-        check_mechanism=check_mechanism_templates['liveness'],
-    )
+    with override_settings(CONTAINER_PORT=port_env):
+        ProcessProbe.objects.create(
+            app=wl_app,
+            process_type=process_type,
+            probe_type=ProbeType.READINESS,
+            check_mechanism=check_mechanism_templates['readiness'],
+        )
+        ProcessProbe.objects.create(
+            app=wl_app,
+            process_type=process_type,
+            probe_type=ProbeType.LIVENESS,
+            check_mechanism=check_mechanism_templates['liveness'],
+        )
 
-    os.environ["PORT"] = port_env
-
-    app_probe_mgr = ProcessProbeManager(app=wl_app, process_type=process_type)
-    readiness_probe = app_probe_mgr.get_readiness_probe()
-    liveness_probe = app_probe_mgr.get_liveness_probe()
-    assert readiness_probe
-    assert readiness_probe.httpGet
-    assert readiness_probe.httpGet.port == 8080
-    assert readiness_probe.httpGet.path == "/healthz"
-    assert liveness_probe
-    assert liveness_probe.tcpSocket
-    assert liveness_probe.tcpSocket.port == 80
+        app_probe_mgr = ProcessProbeManager(app=wl_app, process_type=process_type)
+        readiness_probe = app_probe_mgr.get_readiness_probe()
+        liveness_probe = app_probe_mgr.get_liveness_probe()
+        assert readiness_probe
+        assert readiness_probe.httpGet
+        assert readiness_probe.httpGet.port == 8080
+        assert readiness_probe.httpGet.path == "/healthz"
+        assert liveness_probe
+        assert liveness_probe.tcpSocket
+        assert liveness_probe.tcpSocket.port == port_env

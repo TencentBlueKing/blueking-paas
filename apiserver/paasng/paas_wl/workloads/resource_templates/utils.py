@@ -17,11 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
-import os
 from typing import Dict, List, Optional
 
 import cattr
-from jinja2 import Environment
+from django.conf import settings
 
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.utils.basic import convert_key_to_camel
@@ -71,15 +70,14 @@ class ProcessProbeManager:
 
 def _render_by_env(data: dict) -> dict:
     template_str = json.dumps(data)
-    rendered_str = template_str
+
     # 检查template_str是否包含$PORT
     if "${PORT}" in template_str:
-        env = Environment(variable_start_string="${", variable_end_string="}")
-        template = env.from_string(template_str)
-        port_env = os.getenv("PORT")
-        if not port_env:
+        if not settings.CONTAINER_PORT:
             raise ValueError("The 'port' environment variable for ProcessProbe is empty")
-        rendered_str = template.render({"PORT": port_env})
+        rendered_str = template_str.replace("${PORT}", str(settings.CONTAINER_PORT))
+    else:
+        rendered_str = template_str
 
     return json.loads(rendered_str)
 

@@ -25,6 +25,7 @@ from uuid import UUID
 import cattr
 import requests
 import requests.adapters
+from blue_krill.cubing_case import shortcuts
 from django.utils.encoding import force_bytes
 
 # Register cattr custom hooks
@@ -97,19 +98,13 @@ def get_requests_session() -> requests.Session:
     return _requests_session
 
 
-def underscore_to_camel(word: str) -> str:
-    """将下划线分隔的字符串转换为驼峰格式 """
-    parts = word.split('_')
-    return parts[0] + ''.join(part.capitalize() for part in parts[1:])
-
-
 def convert_key_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
     """将字典中的所有下划线分隔的键转换为驼峰格式"""
     result: Dict[str, Any] = {}
     for key, value in data.items():
         if not isinstance(key, str):
             raise TypeError("key must be a string")
-        camel_key = underscore_to_camel(key)
+        camel_key = shortcuts.to_lower_camel_case(key)
         if isinstance(value, dict):
             result[camel_key] = convert_key_to_camel(value)
         elif isinstance(value, list):

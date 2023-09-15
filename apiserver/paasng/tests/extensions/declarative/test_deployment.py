@@ -38,7 +38,6 @@ from tests.utils.mocks.engine import mock_cluster_service
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestEnvVariablesField:
     def test_invalid_input(self, bk_deployment):
         json_data = {'env_variables': 'not_a_valid_value'}
@@ -62,7 +61,6 @@ class TestEnvVariablesField:
         assert len(desc_obj.env_variables) == 2
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestEnvVariablesReader:
     @pytest.fixture(autouse=True)
     def setup_tasks(self, bk_user, bk_deployment):
@@ -83,7 +81,6 @@ class TestEnvVariablesReader:
         assert EnvVariablesReader(desc_obj).read_as_dict() == {'FOO': '1', 'BAR': '2', 'PROD': '4'}
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestSvcDiscoveryField:
     @staticmethod
     def apply_config(bk_deployment):
@@ -152,7 +149,6 @@ class TestSvcDiscoveryField:
             }
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestHookField:
     @pytest.mark.parametrize(
         "json_data, expected",

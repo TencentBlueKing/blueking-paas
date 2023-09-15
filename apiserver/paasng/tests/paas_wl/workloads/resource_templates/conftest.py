@@ -82,7 +82,7 @@ def check_mechanism_templates():
 
 @pytest.fixture
 def port_env():
-    return '80'
+    return 80
 
 
 @pytest.fixture

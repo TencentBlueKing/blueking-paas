@@ -335,7 +335,6 @@ class ProcessSerializer(AppEntitySerializer['Process']):
             'volumeMounts': cattr.unstructure(
                 get_app_logging_volume_mounts(process.app) + addon_mgr.get_volume_mounts()
             ),
-            # TODO: 重构「主入口」时需要改这里, 不再用 process.type 作为判断条件
             'readinessProbe': readiness_probe,
             'livenessProbe': liveness_probe,
             'startupProbe': startup_probe,

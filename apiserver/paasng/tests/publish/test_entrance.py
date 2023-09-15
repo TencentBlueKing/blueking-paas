@@ -93,7 +93,6 @@ def test_get_module_exposed_links(
     }
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestUpdateExposedURLType:
     @pytest.fixture(autouse=True)
     def setUp(self, bk_module):

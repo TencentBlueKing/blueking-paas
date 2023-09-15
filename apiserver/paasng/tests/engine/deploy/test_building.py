@@ -33,7 +33,7 @@ from paasng.engine.phases_steps.phases import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
@@ -42,7 +42,6 @@ def setup_cluster():
         yield
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
 class TestNormalApp:
     """Tests for ApplicationBuilder"""
@@ -213,7 +212,6 @@ class TestCloudNative:
             }
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestBuildProcessResultHandler:
     """Tests for BuildProcessResultHandler"""
 

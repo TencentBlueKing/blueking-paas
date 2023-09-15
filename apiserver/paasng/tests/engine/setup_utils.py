@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 from copy import deepcopy
 
-from paas_wl.platform.applications.models import WlApp
 from paasng.engine.models import Deployment
 from paasng.engine.models.deployment import AdvancedOptions
 
@@ -34,7 +33,8 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
     operator = operator or application.owner
 
     deploy_config = module.get_deploy_config()
-    deployment = Deployment.objects.create(
+
+    return Deployment.objects.create(
         region=application.region,
         operator=operator,
         app_environment=module.get_envs(app_environment),
@@ -49,10 +49,3 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
         hooks=deepcopy(deploy_config.hooks),
         **kwargs
     )
-
-    # bk_deployment.app_environment  外键未实例化，补全
-    name = deployment.app_environment.engine_app.name
-    region = deployment.app_environment.engine_app.region
-    WlApp.objects.create(name=name, region=region)
-
-    return deployment

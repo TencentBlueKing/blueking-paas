@@ -20,12 +20,13 @@ import logging
 from typing import Optional
 
 import cattr
+from attrs import fields
 from django.db.transaction import atomic
 
 from paas_wl.monitoring.app_monitor.shim import upsert_app_monitor
-from paas_wl.workloads.processes.utils import delete_process_probe, upsert_process_probe
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
+from paasng.extensions.declarative.deployment.process_probe_handler import create_process_probe, delete_process_probe
 from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet
 from paasng.extensions.declarative.models import DeploymentDescription
 
@@ -45,6 +46,9 @@ class DeploymentDeclarativeController:
         :param desc: deployment specification
         """
         logger.debug('Update related deployment description object.')
+
+        deployment_desc_before = DeploymentDescription.objects.filter(deployment=self.deployment).first()
+
         # Save given description config into database
         DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
@@ -64,8 +68,15 @@ class DeploymentDeclarativeController:
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
 
+        # 为了保证 Probe 对象不遗留，再更新配置文件时，对 Probe 进行全量删除和全量创建
+        # 根据未更新前配置，对probe进行全量删除
+        if deployment_desc_before:
+            processes = deployment_desc_before.get_processes()
+            for process_type, _ in processes.items():
+                self.delete_probes(process_type=process_type)
+        # 根据更新后配置，对probe进行全量创建
         for process_type, process in desc.processes.items():
-            self.sync_probes(process_type=process_type, probes=process.probes)
+            self.create_probes(process_type=process_type, probes=process.probes)
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
@@ -75,26 +86,24 @@ class DeploymentDeclarativeController:
             target_port=bk_monitor.target_port,  # type: ignore
         )
 
-    def sync_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
-        """同步 SaaS 探针配置"""
+    def delete_probes(self, process_type: str):
+        """创建 SaaS 探针配置"""
+        delete_process_probe(
+            env=self.deployment.app_environment,
+            process_type=process_type,
+        )
+
+    def create_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
+        """创建 SaaS 探针配置"""
         if not probes:
-            delete_process_probe(
-                env=self.deployment.app_environment,
-                process_type=process_type,
-            )
             return
 
-        for probe_type, probe in vars(probes).items():
+        for probe_field in fields(ProbeSet):
+            probe = getattr(probes, probe_field.name)
             if probe:
-                upsert_process_probe(
+                create_process_probe(
                     env=self.deployment.app_environment,
                     process_type=process_type,
-                    probe_type=probe_type,
+                    probe_type=probe_field.name,
                     probe=probe,
-                )
-            else:
-                delete_process_probe(
-                    env=self.deployment.app_environment,
-                    process_type=process_type,
-                    probe_type=probe_type,
                 )

@@ -111,6 +111,26 @@ class TestConvertKeyToCamel:
             ({'foo_bar': 1, 'baz_qux': 2}, {'fooBar': 1, 'bazQux': 2}),
             ({'foo_bar': {'baz_qux': 1}}, {'fooBar': {'bazQux': 1}}),
             ({'foo_bar': 'foo_bar', 'baz_qux': 'baz_qux'}, {'fooBar': 'foo_bar', 'bazQux': 'baz_qux'}),
+            (
+                {"foo_bar": [{"baz_qux": 1, "qux_quux": 2}, {"baz_qux": 3, "qux_quux": 4}]},
+                {"fooBar": [{"bazQux": 1, "quxQuux": 2}, {"bazQux": 3, "quxQuux": 4}]},
+            ),
+            (
+                {
+                    "foo_bar": [
+                        {"baz_qux": "baz_qux", "qux_quux": "qux_quux"},
+                        {"baz_qux": "baz_qux", "qux_quux": "qux_quux"},
+                        "qux_quuux",
+                    ]
+                },
+                {
+                    "fooBar": [
+                        {"bazQux": "baz_qux", "quxQuux": "qux_quux"},
+                        {"bazQux": "baz_qux", "quxQuux": "qux_quux"},
+                        "qux_quuux",
+                    ]
+                },
+            ),
         ],
     )
     def test_convert_key_to_camel(self, data, expected):

@@ -38,25 +38,26 @@ class ProcessProbeManager:
         self.process_type = process_type
 
     def get_probe(self, probe_type: str) -> Optional[Probe]:
-        process_probe: ProcessProbe = ProcessProbe.objects.filter(
-            app=self.app, process_type=self.process_type, probe_type=probe_type
-        ).first()
-        if process_probe:
-            check_mechanism = convert_key_to_camel(cattr.unstructure(process_probe.check_mechanism))
-            # 占位符 ${PORT} 替换为环境变量 PORT
-            check_mechanism = _render_by_env(check_mechanism)
-            parameters_json = {
-                'initialDelaySeconds': process_probe.initial_delay_seconds,
-                'timeoutSeconds': process_probe.timeout_seconds,
-                'periodSeconds': process_probe.period_seconds,
-                'successThreshold': process_probe.success_threshold,
-                'failureThreshold': process_probe.failure_threshold,
-            }
-            combined_json = {**check_mechanism, **parameters_json}
-
-            return cattr.structure(combined_json, Probe)
-        else:
+        try:
+            process_probe: ProcessProbe = ProcessProbe.objects.get(
+                app=self.app, process_type=self.process_type, probe_type=probe_type
+            )
+        except ProcessProbe.DoesNotExist:
             return None
+
+        check_mechanism = convert_key_to_camel(cattr.unstructure(process_probe.check_mechanism))
+        # 占位符 ${PORT} 替换为环境变量 PORT
+        check_mechanism = _render_by_env(check_mechanism)
+        parameters_json = {
+            'initialDelaySeconds': process_probe.initial_delay_seconds,
+            'timeoutSeconds': process_probe.timeout_seconds,
+            'periodSeconds': process_probe.period_seconds,
+            'successThreshold': process_probe.success_threshold,
+            'failureThreshold': process_probe.failure_threshold,
+        }
+        combined_json = {**check_mechanism, **parameters_json}
+
+        return cattr.structure(combined_json, Probe)
 
     def get_readiness_probe(self) -> Optional[Probe]:
         return self.get_probe(probe_type=ProbeType.READINESS)

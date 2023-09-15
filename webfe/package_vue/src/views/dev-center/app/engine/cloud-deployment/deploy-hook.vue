@@ -20,10 +20,14 @@
             theme="primary"
             @change="switcherChange"
           />
-          <div v-else class="ml10">
+          <div
+            v-else
+            class="ml10"
+          >
             <bk-tag
-              :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用') "
-              :theme="preFormData.loaclEnabled ? 'info' : ''">
+              :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用')"
+              :theme="preFormData.loaclEnabled ? 'info' : ''"
+            >
               {{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}
             </bk-tag>
           </div>
@@ -38,7 +42,11 @@
           {{ $t('编辑') }}
         </bk-button> -->
 
-        <div class="edit-container" @click="handleEditClick" v-if="!isPageEdit">
+        <div
+          class="edit-container"
+          @click="handleEditClick"
+          v-if="!isPageEdit"
+        >
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
         </div>
@@ -57,7 +65,7 @@
           :rules="rules.command"
           :error-display-type="'normal'"
           class="pt20"
-          style="position:relative; margin-left: 5px"
+          style="position: relative; margin-left: 5px"
         >
           <bk-tag-input
             v-model="preFormData.command"
@@ -68,12 +76,17 @@
             :has-delete-icon="hasDeleteIcon"
             :paste-fn="copyCommand"
           />
-          <span slot="tip" class="whole-item-tips">{{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh</span>
+          <span
+            slot="tip"
+            class="whole-item-tips"
+          >
+            {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh
+          </span>
         </bk-form-item>
         <bk-form-item
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
-          style="width: 510px; position:relative; margin-left: 5px;"
+          style="width: 510px; position: relative; margin-left: 5px"
         >
           <bk-tag-input
             v-model="preFormData.args"
@@ -97,25 +110,48 @@
         <bk-form-item
           :label="$t('启动命令')"
           class="pt20"
-          style="position:relative; margin-left: 5px"
+          style="position: relative; margin-left: 5px"
         >
           <div v-if="preFormData.command.length">
-            <bk-tag v-for="item in preFormData.command" :key="item">{{ item }}</bk-tag>
+            <bk-tag
+              v-for="item in preFormData.command"
+              :key="item"
+            >
+              {{ item }}
+            </bk-tag>
           </div>
-          <div v-else class="pl10">--</div>
+          <div
+            v-else
+            class="pl10"
+          >
+            --
+          </div>
         </bk-form-item>
         <bk-form-item
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
-          style="position:relative; margin-left: 5px"
+          style="position: relative; margin-left: 5px"
         >
           <div v-if="preFormData.args.length">
-            <bk-tag v-for="item in preFormData.args" :key="item">{{ item }}</bk-tag>
+            <bk-tag
+              v-for="item in preFormData.args"
+              :key="item"
+            >
+              {{ item }}
+            </bk-tag>
           </div>
-          <div v-else class="pl10">--</div>
+          <div
+            v-else
+            class="pl10"
+          >
+            --
+          </div>
         </bk-form-item>
       </bk-form>
-      <div class="hook-btn-wrapper" v-if="isPageEdit && isComponentBtn">
+      <div
+        class="hook-btn-wrapper"
+        v-if="isPageEdit && isComponentBtn"
+      >
         <bk-button
           :loading="saveLoading"
           class="pl20 pr20"
@@ -124,7 +160,10 @@
         >
           {{ $t('保存') }}
         </bk-button>
-        <bk-button class="pl20 pr20 ml20" @click="$emit('cancel')">
+        <bk-button
+          class="pl20 pr20 ml20"
+          @click="$emit('cancel')"
+        >
           {{ $t('取消') }}
         </bk-button>
       </div>
@@ -208,7 +247,6 @@ export default {
           this.processData = val.spec.processes;
           this.hooks = val.spec.hooks;
           this.preFormData.loaclEnabled = !!this.hooks;
-          console.log('this.preFormData.loaclEnabled', this.preFormData.loaclEnabled);
           if (this.preFormData.loaclEnabled) {
             this.preFormData.command = (this.hooks && this.hooks.preRelease.command) || [];
             this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
@@ -239,16 +277,21 @@ export default {
     },
   },
 
+  created() {
+    // 非创建应用初始化为查看态
+    if (!this.isCreate) {
+      this.$store.commit('cloudApi/updatePageEdit', false);
+      this.$store.commit('cloudApi/updateHookPageEdit', false);
+    }
+  },
+
   methods: {
     switcherChange(value) {
       this.$set(this.preFormData, 'loaclEnabled', value);
       if (!this.preFormData.loaclEnabled) {
         this.$set(this.localCloudAppData.spec, 'hooks', null);
       } else {
-        this.$set(
-          this.localCloudAppData.spec, 'hooks',
-          { preRelease: { command: this.preRelease?.command || [], args: this.preRelease?.args || [] } },
-        );
+        this.$set(this.localCloudAppData.spec, 'hooks', { preRelease: { command: this.preRelease?.command || [], args: this.preRelease?.args || [] } });
       }
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
     },
@@ -319,14 +362,17 @@ export default {
     // 保存
     handleSave() {
       if (this.$refs.commandRef) {
-        this.$refs.commandRef.validate().then(() => {
-          this.$emit('save');
-          this.$nextTick(() => {
-            this.rawData = _.cloneDeep(this.preFormData);
-          });
-        }, (err) => {
-          console.error(err);
-        });
+        this.$refs.commandRef.validate().then(
+          () => {
+            this.$emit('save');
+            this.$nextTick(() => {
+              this.rawData = _.cloneDeep(this.preFormData);
+            });
+          },
+          (err) => {
+            console.error(err);
+          }
+        );
       } else {
         this.$emit('save');
       }
@@ -343,55 +389,55 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .form-pre {
-        padding: 0 20px 20px;
-        min-height: 300px;
+.form-pre {
+  padding: 0 20px 20px;
+  min-height: 300px;
 
-        .item-title-container{
-            display: flex;
-            align-items: center;
-        }
+  .item-title-container {
+    display: flex;
+    align-items: center;
+  }
 
-        .item-title{
-            font-size: 14px;
-        }
+  .item-title {
+    font-size: 14px;
+  }
 
-        .item-info{
-            font-size: 14px;
-            color: #313238;
-            margin: 24px 0 0 30px;
-        }
+  .item-info {
+    font-size: 14px;
+    color: #313238;
+    margin: 24px 0 0 30px;
+  }
 
-        .whole-item-tips {
-            line-height: 26px;
-            color: #979ba5;
-            font-size: 12px;
-        }
+  .whole-item-tips {
+    line-height: 26px;
+    color: #979ba5;
+    font-size: 12px;
+  }
 
-        .hook-btn-wrapper {
-          margin-left: 105px;
-          margin-top: 24px;
-        }
-    }
+  .hook-btn-wrapper {
+    margin-left: 105px;
+    margin-top: 24px;
+  }
+}
 
-    .info-special-form.bk-form.bk-inline-form {
-        width: auto;
-    }
+.info-special-form.bk-form.bk-inline-form {
+  width: auto;
+}
 
-    .form-pre-command.bk-form.bk-inline-form .bk-form-input {
-        height: 32px !important;
-    }
+.form-pre-command.bk-form.bk-inline-form .bk-form-input {
+  height: 32px !important;
+}
 
-    .hook-form-cls{
-        margin-top: 0;
-    }
-    .value-cls{
-        color: #313238;
-    }
-    .edit-container{
-      color: #3A84FF;
-      font-size: 12px;
-      cursor: pointer;
-      padding-left: 10px;
-    }
+.hook-form-cls {
+  margin-top: 0;
+}
+.value-cls {
+  color: #313238;
+}
+.edit-container {
+  color: #3a84ff;
+  font-size: 12px;
+  cursor: pointer;
+  padding-left: 10px;
+}
 </style>

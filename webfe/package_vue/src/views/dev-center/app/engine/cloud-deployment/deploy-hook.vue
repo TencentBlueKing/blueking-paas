@@ -45,7 +45,7 @@
       </div>
       <!-- 不启用时隐藏 -->
       <bk-form
-        v-if="isPageEdit"
+        v-if="isPageEdit && preFormData.loaclEnabled"
         ref="commandRef"
         :model="preFormData"
         :label-width="100"
@@ -152,13 +152,13 @@ export default {
     },
     saveLoading: {
       type: Boolean,
-      default: false
+      default: false,
     },
     // 组件内部按钮操作
     isComponentBtn: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
 
   data() {
@@ -180,7 +180,7 @@ export default {
       rules: {
         command: [
           {
-            validator: (val) => {
+            validator: () => {
               if (this.preFormData.command.length) {
                 return true;
               }
@@ -189,8 +189,8 @@ export default {
             message: () => `${this.$t('必填项')}`,
             trigger: 'blur',
           },
-        ]
-      }
+        ],
+      },
     };
   },
 
@@ -207,8 +207,8 @@ export default {
           this.localCloudAppData = _.cloneDeep(val);
           this.processData = val.spec.processes;
           this.hooks = val.spec.hooks;
-          this.preFormData.loaclEnabled = !!this.hooks && !!(this.hooks.preRelease.command.length
-          || this.hooks.preRelease.args.length);
+          this.preFormData.loaclEnabled = !!this.hooks;
+          console.log('this.preFormData.loaclEnabled', this.preFormData.loaclEnabled);
           if (this.preFormData.loaclEnabled) {
             this.preFormData.command = (this.hooks && this.hooks.preRelease.command) || [];
             this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
@@ -227,7 +227,7 @@ export default {
       handler(val) {
         if (this.localCloudAppData.spec) {
           let hooks = { preRelease: { command: val.command, args: val.args } };
-          if (!this.preFormData.loaclEnabled || (!this.preFormData.command.length && !this.preFormData.args.length)) {
+          if (!this.preFormData.loaclEnabled) {
             hooks = null;
           }
           this.$set(this.localCloudAppData.spec, 'hooks', hooks);
@@ -237,17 +237,20 @@ export default {
       immediate: true,
       deep: true,
     },
-    'preFormData.loaclEnabled'(value) {
-      if (!value) {
-        this.$set(this.localCloudAppData.spec, 'hooks', null);
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-      }
-    },
   },
 
   methods: {
-    switcherChange (value) {
+    switcherChange(value) {
       this.$set(this.preFormData, 'loaclEnabled', value);
+      if (!this.preFormData.loaclEnabled) {
+        this.$set(this.localCloudAppData.spec, 'hooks', null);
+      } else {
+        this.$set(
+          this.localCloudAppData.spec, 'hooks',
+          { preRelease: { command: this.preRelease?.command || [], args: this.preRelease?.args || [] } },
+        );
+      }
+      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
     },
 
     trimStr(str) {
@@ -301,10 +304,12 @@ export default {
     },
 
     // 校验
-    async handleValidator () {
+    async handleValidator() {
       let flag = true;
       try {
-        await this.$refs.commandRef.validate();
+        if (this.$refs.commandRef) {
+          await this.$refs.commandRef.validate();
+        }
       } catch (e) {
         flag = false;
       }
@@ -312,23 +317,27 @@ export default {
     },
 
     // 保存
-    handleSave () {
-      this.$refs.commandRef.validate().then(validator => {
-        this.$emit('save');
-        this.$nextTick(() => {
-          this.rawData = _.cloneDeep(this.preFormData);
+    handleSave() {
+      if (this.$refs.commandRef) {
+        this.$refs.commandRef.validate().then(() => {
+          this.$emit('save');
+          this.$nextTick(() => {
+            this.rawData = _.cloneDeep(this.preFormData);
+          });
+        }, (err) => {
+          console.error(err);
         });
-      }, err => {
-        console.error(err);
-      });
+      } else {
+        this.$emit('save');
+      }
     },
 
     // 数据还原
-    handleCancel () {
+    handleCancel() {
       this.$refs.commandRef.clearError();
       this.preFormData.command = this.rawData.command;
       this.preFormData.args = this.rawData.args;
-    }
+    },
   },
 };
 </script>

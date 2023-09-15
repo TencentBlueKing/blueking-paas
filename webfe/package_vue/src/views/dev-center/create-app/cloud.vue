@@ -821,7 +821,7 @@ export default {
           // 默认编辑态
           this.$refs.processRef?.handleEditClick();
           this.$refs.hookRef?.handleEditClick();
-        })
+        });
         // if (this.structureType === 'mirror') {
         //   this.getProcessData();
         // }
@@ -844,7 +844,7 @@ export default {
     },
 
     // 钩子命令校验
-    async handleHookValidator () {
+    async handleHookValidator() {
       if (this.$refs.hookRef) {
         return await this.$refs.hookRef?.handleValidator();
       }

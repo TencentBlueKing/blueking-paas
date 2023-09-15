@@ -61,7 +61,7 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.controllers.docker import DockerRegistryController
 from paasng.dev_resources.sourcectl.serializers import AlternativeVersionSLZ
 from paasng.engine.deploy.release.operator import release_by_k8s_operator
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)

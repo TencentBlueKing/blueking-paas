@@ -1,15 +1,27 @@
-### Resource Description
+### Description
 Get deployment history
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Call example
+#### 1. Path Parameters:
+
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
+| ------------ | ------------ | ------ | ---------------- |
+| app_code   | string | Yes | Application ID, e.g. "vision" |
+| module   | string | Yes | Module name, e.g. "default" |
+
+#### 2. API Parameters:
+None.
+
+### Request Example
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{你的appcode}/modules/{你的模块名}/deployments/lists/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{your_appcode}/modules/{your_module_name}/deployments/lists/
 ```
 
-### Return result
+#### Get your access_token
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### Response Result Example
 ```json
 {
     "count": 27,
@@ -40,19 +52,39 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| count*   | integer                                     |
-| -------- | ------------------------------------------- |
-| next     | string($uri)<br/>x-nullable: true           |
-| previous | string($uri)<br/>x-nullable: true           |
-| results* | dict, see the table below for field details |
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| count | integer | Yes | Total number of deployment history |
+| next | string | No | Next page link |
+| previous | string | No | Previous page link |
+| results | array | Yes | Deployment history list |
 
-#### results Field Details
+results
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| id | string | Yes | Deployment history ID |
+| status | string | Yes | Deployment status (successful, failed, pending) |
+| operator | object | Yes | Operator information |
+| created | string | Yes | Creation time |
+| deployment_id | string | Yes | Deployment ID |
+| environment | string | Yes | Deployment environment |
+| repo | object | Yes | Repository information |
 
-| id       | string($uuid)<br/>title: UUID<br/>readOnly: true             |
-| -------- | ------------------------------------------------------------ |
-| status   | string<br/>title: 部署状态Enum:<br/>[ successful, failed, pending ] |
-| operator | string<br/>title: Operator<br/>readOnly: true                |
-| created  | string($date-time)<br/>title: Created<br/>readOnly: true     |
+operator
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| id | string | Yes | Operator ID |
+| username | string | Yes | Operator username |
+| provider_type | integer | Yes | Provider type |
 
+repo
+| Field |   Type |  Required | Description |
+| ------ | ------ | ------ | ------ |
+| source_type | string | Yes | Repository source type |
+| type | string | Yes | Branch type |
+| name | string | Yes | Branch name |
+| url | string | Yes | Repository URL |
+| revision | string | Yes | Revision number |
+| comment | string | Yes | Comment |

@@ -20,8 +20,8 @@ import logging
 
 from django.dispatch import receiver
 
+from paas_wl.core.env import env_is_running
 from paas_wl.networking.ingress.shim import sync_subdomains, sync_subpaths
-from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.modules.models import Module
 

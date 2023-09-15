@@ -24,12 +24,12 @@ from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 from django.utils.encoding import force_text
 
+from paas_wl.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.platform.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
 from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
-from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.utils.kubestatus import check_pod_health_status
 from paasng.engine.constants import BuildStatus
 from paasng.engine.deploy.bg_build.utils import (

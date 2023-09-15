@@ -1,32 +1,37 @@
-### Resource Description
-Query app module environment deployment information
+### Description
+Query application module environment deployment information
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Call example
+#### 1. Path Parameters:
+
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| code           | string         | Yes      | Application code      |
+| module_name    | string         | Yes      | Module name           |
+| environment    | string         | Yes      | Environment name      |
+
+#### 2. API Parameters:
+None.
+
+### Request Example
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_state/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_state/
 ```
 
-### Request parameter Description
+#### Get your access_token
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-| Name                                | Description |
-| ----------------------------------- | ----------- |
-| code * <br/>string<br/>(path)       | code        |
-| environment *<br/>string<br/>(path) | environment |
-| module_name *<br/>string<br/>(path) | module_name |
+### Response Result Example
 
-### Return result
-#### Normal return
+#### Normal Return
 ```json
 {
-    // Process information is only provided when passing with_processes
     "processes":[
         {
             "web":{
                 "command":"gunicorn go.wsgi -b :$PORT --log-file -",
-                "replicas":[                                            // Process details
+                "replicas":[
                     {
                         "status":"Running"
                     }
@@ -35,13 +40,13 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
         }
     ],
     "exposed_link":{
-        "url":"http://apps.example.com/stag--appid/"           // Access Address
+        "url":"http://apps.example.com/stag--appid/"
     },
     "deployment":{
         "id":"66e5d4fe-89d3-45bd-aa93-4d213815cc42",
         "status":"successful",
         "operator":{
-            "username":"admin",                                    // Deployment Initiators
+            "username":"admin",
             "id":"0226c9f39893459abac3eb"
         },
         "created":"2017-06-14 11:22:06",
@@ -56,22 +61,75 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
         }
     },
     "feature_flag":{
-        "release_to_bk_market": True/False,         # Whether to publish to BlueKing App Market
-        "release_to_wx_miniprogram": True/False,    # Whether to publish to WeChat applet
-        "release_to_wx_qiye": True/False            # Whether to publish to WeChat Enterprise
+        "release_to_bk_market": True/False,
+        "release_to_wx_miniprogram": True/False,
+        "release_to_wx_qiye": True/False
     },
-    "module_mobile_config_enabled": True/False,     # Whether the mobile function is enabled or not (corresponding to the general switch of region)
+    "module_mobile_config_enabled": True/False,
     "mobile_config": {
-        "is_enabled": True/False,                   # Whether to open the enterprise side of WeChat
-        "access_domain": "https://balabala"         # Access Portal
+        "is_enabled": True/False,
+        "access_domain": "https://balabala"
     }
 }
 ```
 
-#### Abnormal return
+#### Exception Return
 ```json
 {
     "code": "APP_NOT_RELEASED",
-    "detail": "The application has not been published in this environment"
+    "detail": "The application has not been released in this environment"
 }
 ```
+
+### Response Result Parameter Description
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| processes | list | Yes | Process information |
+| exposed_link | dict | Yes | Access address information |
+| deployment | dict | Yes | Deployment information |
+| feature_flag | dict | Yes | Release flag information |
+| module_mobile_config_enabled | bool | Yes | Whether the mobile function is enabled |
+| mobile_config | dict | Yes | Mobile configuration information |
+
+processes
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| web | dict | Yes | Process information |
+
+web
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| command | string | Yes | Process command |
+| replicas | list | Yes | Process details |
+
+replicas
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| status | string | Yes | Process status |
+
+exposed_link
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| url | string | Yes | Access address |
+
+deployment
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| id | string | Yes | Deployment ID |
+| status | string | Yes | Deployment status |
+| operator | dict | Yes | Deployment initiator information |
+| created | string | Yes | Creation time |
+| environment | string | Yes | Environment name |
+| deployment_id | string | Yes | Deployment ID |
+| repo | dict | Yes | Repository information |
+
+repo
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| url | string | Yes | Repository URL |
+| comment | string | Yes | Comment |
+| type | string | Yes | Repository type |
+| name | string | Yes | Repository name |
+| revision | string | Yes | Repository revision |
+

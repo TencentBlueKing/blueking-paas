@@ -24,12 +24,12 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.cluster.utils import get_default_cluster_by_region
+from paas_wl.core.resource import get_process_selector
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.platform.applications.models import Config, WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KPod
-from paas_wl.workloads.processes.readers import ProcessAPIAdapter
 from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.wl_app import create_wl_release
@@ -157,7 +157,7 @@ def echo_ingress(e2e_app, http_ingress_domain, echo_service):
 @pytest.fixture(scope="module")
 def echo_pod(namespace_maker, framework, e2e_app):
     """An echo server is a server that replicates the request sent by the client and sends it back."""
-    kube_selector = ProcessAPIAdapter.process_selector(e2e_app, "web")
+    kube_selector = get_process_selector(e2e_app, "web")
     pod_dict = {
         'apiVersion': 'v1',
         'kind': 'Pod',

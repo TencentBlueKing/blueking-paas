@@ -137,7 +137,7 @@ class Probe:
         return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
 
 
-@define(slots=False)
+@define
 class ProbeSet:
     liveness: Optional[Probe] = None
     readiness: Optional[Probe] = None

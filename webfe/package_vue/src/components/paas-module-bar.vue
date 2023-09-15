@@ -17,7 +17,10 @@
           v-bind="panel"
         />
       </bk-tab>
-      <div class="module-manager" @click="handleModuleAdd">
+      <div
+        class="module-manager"
+        @click="handleModuleAdd"
+      >
         <i class="icon paasng-icon paasng-gear"></i>
         <span class="pl10">{{ $t('模块管理') }}</span>
       </div>
@@ -33,11 +36,15 @@
       :title="dialog.title"
       :loading="dialog.loading"
     >
-
-      <bk-alert class="mb20" type="error" :title="$t('删除操作无法撤回，请在删除前与应用其他成员沟通')"></bk-alert>
+      <bk-alert
+        class="mb20"
+        type="error"
+        :title="$t('删除操作无法撤回，请在删除前与应用其他成员沟通')"
+      ></bk-alert>
       <bk-button
         theme="primary"
-        @click="handleToAddModulePage">
+        @click="handleToAddModulePage"
+      >
         <i class="paasng-icon paasng-plus-thick add-icon" />
         {{ $t('新增模块') }}
       </bk-button>
@@ -48,15 +55,16 @@
         v-for="(panel, index) in moduleList"
         :key="index"
         @mouseenter="handleMouseEnter(index)"
-        @mouseleave="moduleItemIndex = ''">
+        @mouseleave="moduleItemIndex = ''"
+      >
         {{ panel.name }}
         <i
           v-if="index === moduleItemIndex && !panel.is_default"
           class="icon paasng-icon paasng-delete delete-module-icon"
-          @click="handleDeleteModule(panel)"></i>
+          @click="handleDeleteModule(panel)"
+        ></i>
       </div>
     </bk-dialog>
-
 
     <bk-dialog
       v-model="delAppDialog.visiable"
@@ -69,14 +77,16 @@
     >
       <div class="ps-form">
         <div class="spacing-x1">
-          {{ $t('请完整输入') }} <code>{{ curAppModuleName }}</code> {{ $t('来确认删除模块！') }}
+          {{ $t('请完整输入') }}
+          <code>{{ curAppModuleName }}</code>
+          {{ $t('来确认删除模块！') }}
         </div>
         <div class="ps-form-group">
           <input
             v-model="formRemoveConfirmCode"
             type="text"
             class="ps-form-control"
-          >
+          />
         </div>
       </div>
       <div slot="footer">
@@ -97,7 +107,8 @@
     </bk-dialog>
   </div>
 </template>
-<script>import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
+<script>
+import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
 import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
@@ -106,7 +117,7 @@ export default defineComponent({
   name: 'EditorStatus',
   props: {
     appCode: {
-      type: String | Number
+      type: String | Number,
     },
     title: {
       type: String,
@@ -128,7 +139,7 @@ export default defineComponent({
     },
     firstModuleName: {
       type: String,
-      default: ''
+      default: '',
     },
   },
   setup(props) {
@@ -153,7 +164,7 @@ export default defineComponent({
 
     // 切换tab
     const handleTabChange = async () => {
-      const curModule = (props.moduleList || []).find(e => e.name === active.value);
+      const curModule = (props.moduleList || []).find((e) => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
 
       const name = props.firstModuleName || route.name;
@@ -210,11 +221,15 @@ export default defineComponent({
           theme: 'success',
           message: '模块删除成功',
         });
+        await store.dispatch('getAppInfo', {
+          appCode: props.appCode,
+          moduleId: props.moduleList.find((item) => item.is_default).name,
+        });
         router.push({
-          name: 'appSummary',
+          name: props.firstModuleName || route.name,
           params: {
             id: props.appCode,
-            moduleId: props.moduleList.find(item => item.is_default).name,
+            moduleId: props.moduleList.find((item) => item.is_default).name,
           },
         });
         store.dispatch('getAppInfo', { appCode: props.appCode, moduleId: curAppModuleName.value });
@@ -253,43 +268,43 @@ export default defineComponent({
 });
 </script>
 <style lang="scss" scoped>
-    .module-bar-container{
-      background: #fff;
-      box-shadow: 0 3px 4px 0 #0000000a;
-      .title{
-          font-size: 16px;
-          color: #313238;
-          padding: 0 24px;
-      }
-    }
-    .module-tab-cls{
-      /deep/ .bk-tab-section{
-        padding: 0 !important;
-      }
-      /deep/ .bk-tab-header {
-        background-image: none !important;
-      }
-    }
-    .module-manager{
-      color: #3A84FF;
-      cursor: pointer;
-    }
+.module-bar-container {
+  background: #fff;
+  box-shadow: 0 3px 4px 0 #0000000a;
+  .title {
+    font-size: 16px;
+    color: #313238;
+    padding: 0 24px;
+  }
+}
+.module-tab-cls {
+  /deep/ .bk-tab-section {
+    padding: 0 !important;
+  }
+  /deep/ .bk-tab-header {
+    background-image: none !important;
+  }
+}
+.module-manager {
+  color: #3a84ff;
+  cursor: pointer;
+}
 
-    .module-item{
-      width: 592px;
-      height: 40px;
-      background: #FAFBFD;
-      border: 1px solid #DCDEE5;
-      border-radius: 2px;
-      padding: 0 20px;
-      margin-top: 20px;
-      cursor: pointer;
-      .delete-module-icon{
-        color: #EA3636;
-        font-size: 16px;
-      }
-    }
-    .module-item-active{
-      background: #F0F1F5;
-    }
+.module-item {
+  width: 592px;
+  height: 40px;
+  background: #fafbfd;
+  border: 1px solid #dcdee5;
+  border-radius: 2px;
+  padding: 0 20px;
+  margin-top: 20px;
+  cursor: pointer;
+  .delete-module-icon {
+    color: #ea3636;
+    font-size: 16px;
+  }
+}
+.module-item-active {
+  background: #f0f1f5;
+}
 </style>

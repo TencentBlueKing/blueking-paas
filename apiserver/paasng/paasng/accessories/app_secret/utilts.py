@@ -20,7 +20,7 @@ from django.conf import settings
 
 from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.engine.constants import AppInfoBuiltinEnv
-from paasng.engine.models.deployment import Deployment
+from paasng.engine.utils.query import DeploymentGetter
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
@@ -29,11 +29,11 @@ def get_deployed_secret_list(application: Application) -> list:
     envs = ModuleEnvironment.objects.filter(module__in=application.modules.all()).all()
     deployed_secret_list = []
     for env in envs:
-        try:
-            # 当前环境的最近部署成功的时间
-            latest_deployed_at = Deployment.objects.filter_by_env(env).latest_succeeded().created
-        except Deployment.DoesNotExist:
-            latest_deployed_at = None
+        # 当前环境的最近部署成功的时间
+        latest_deployed_at = None
+        latest_deployment = DeploymentGetter(env).get_latest_succeeded()
+        if latest_deployment:
+            latest_deployed_at = latest_deployment.created
 
         # 查询线上运行进程中的环境变量信息
         process_manager = ProcessManager(env)

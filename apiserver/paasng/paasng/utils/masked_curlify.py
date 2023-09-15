@@ -5,6 +5,8 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 import curlify
 import requests
 
+# 脱敏需要处理的字段
+# 包含这些内容的字段都会被脱敏，例如 app_secret 也会被脱敏处理
 DEFAULT_SCRUBBED_FIELDS = (
     'password',
     'secret',
@@ -16,8 +18,10 @@ DEFAULT_SCRUBBED_FIELDS = (
     'access_token',
     'auth',
     'credentials',
-    'X-Bk-App-Secret',
 )
+
+# 敏感信息替换后的内容
+MASKED_CONTENT = '******'
 
 
 def scrub_data(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -44,7 +48,7 @@ def scrub_data(data: Dict[str, Any]) -> Dict[str, Any]:
 
         for key, value in current_data.items():
             if _key_is_sensitive(key):
-                current_result[key] = '******'
+                current_result[key] = MASKED_CONTENT
                 continue
 
             # Process nested data by push it to the stack

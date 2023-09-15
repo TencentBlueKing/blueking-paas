@@ -1,36 +1,53 @@
 <template>
   <!-- 扩缩容弹窗 -->
-  <bk-dialog v-model="scaleDialog.visible"
+  <bk-dialog
+    v-model="scaleDialog.visible"
     header-position="left"
     theme="primary"
     :width="480"
     :mask-close="false"
-    :title="$t('web 进程扩缩容')">
+    :title="$t('web 进程扩缩容')"
+  >
     <template #footer>
-      <bk-button 
+      <bk-button
         :theme="'primary'"
         :loading="isLoading"
-        @click="handleConfirm">
-        {{$t('确定')}}
+        @click="handleConfirm"
+      >
+        {{ $t('确定') }}
       </bk-button>
-      <bk-button :theme="'default'" @click="handleCancel">
-        {{$t('取消')}}
+      <bk-button
+        :theme="'default'"
+        @click="handleCancel"
+      >
+        {{ $t('取消') }}
       </bk-button>
     </template>
-    <div class="scaling-wrapper" v-bkloading="{ isLoading: isContentLoading, zIndex: 10 }">
-      <bk-form :model="scalingConfig" form-type="vertical" ref="scalingConfigForm">
-        <bk-form-item :label="$t('当前副本数：')" :label-width="90" ext-cls="horizontal-cls">
-          <span class="form-text">{{processPlan.targetReplicas}}</span>
+    <div
+      class="scaling-wrapper"
+      v-bkloading="{ isLoading: isContentLoading, zIndex: 10 }"
+    >
+      <bk-form
+        :model="scalingConfig"
+        form-type="vertical"
+        ref="scalingConfigForm"
+      >
+        <bk-form-item
+          :label="$t('当前副本数：')"
+          :label-width="90"
+          ext-cls="horizontal-cls"
+        >
+          <span class="form-text">{{ processPlan.targetReplicas }}</span>
         </bk-form-item>
         <bk-form-item :label="$t('扩缩容方式')">
           <div class="tab-box">
             <li
               v-for="item in scaleTypes"
               :key="item.type"
-              :class="['tab-item', { 'active': curActiveType === item.type }, { 'disabled': item.value && !autoScalDisableConfig.ENABLE_AUTOSCALING }]"
+              :class="['tab-item', { active: curActiveType === item.type }, { disabled: item.value && !autoScalDisableConfig.ENABLE_AUTOSCALING }]"
               @click="handleChangeType(item)"
             >
-              {{item.label}}
+              {{ item.label }}
             </li>
           </div>
         </bk-form-item>
@@ -40,7 +57,8 @@
           property="targetReplicas"
           :label="$t('副本数量')"
           :rules="rules.targetReplicas"
-          :error-display-type="'normal'">
+          :error-display-type="'normal'"
+        >
           <bk-input
             v-model="scalingConfig.targetReplicas"
             type="number"
@@ -54,17 +72,31 @@
           v-if="autoscaling"
           :label="$t('触发条件：')"
           :label-width="76"
-          ext-cls="horizontal-cls">
-          <span class="form-text mr10">CPU 使用率 = 85%</span>
-          <bk-icon class="info-circle-cls" type="info-circle" v-bk-tooltips="autoScalingTip" />
+          ext-cls="horizontal-cls"
+        >
+          <span class="form-text mr10">{{ $t('CPU 使用率') }} = 85%</span>
+          <bk-icon
+            class="info-circle-cls"
+            type="info-circle"
+            v-bk-tooltips="autoScalingTip"
+          />
         </bk-form-item>
         <bk-form-item
           v-if="autoscaling"
           label=""
-          :label-width="0">
+          :label-width="0"
+        >
           <div class="trigger-tips-wrapper">
-            <p>当 CPU 使用率 &gt; <span class="usage">85%</span> 时，会触发扩容</p>
-            <p>当 CPU 使用率 &lt; <span class="usage">42.5%</span> 时，会触发缩容</p>
+            <p>
+              {{ $t('当 CPU 使用率') }} &gt;
+              <span class="usage">85%</span>
+              {{ $t('时，会触发扩容') }}
+            </p>
+            <p>
+              {{ $t('当 CPU 使用率') }} &lt;
+              <span class="usage">{{ shrinkLimit }}</span>
+              {{ $t('时，会触发缩容') }}
+            </p>
           </div>
         </bk-form-item>
         <div class="replica-count-cls">
@@ -73,7 +105,8 @@
             property="maxReplicas"
             :label="$t('最大副本数量')"
             :rules="rules.maxReplicas"
-            :error-display-type="'normal'">
+            :error-display-type="'normal'"
+          >
             <bk-input
               v-model="scalingConfig.maxReplicas"
               type="number"
@@ -87,7 +120,8 @@
             property="minReplicas"
             :label="$t('最小副本数量')"
             :rules="rules.minReplicas"
-            :error-display-type="'normal'">
+            :error-display-type="'normal'"
+          >
             <bk-input
               v-model="scalingConfig.minReplicas"
               type="number"
@@ -113,17 +147,17 @@ export default {
   props: {
     value: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   mixins: [appBaseMixin],
-  data () {
+  data() {
     return {
       environment: 'stag',
       isLoading: false,
       isContentLoading: true,
       scaleDialog: {
-        visible: false
+        visible: false,
       },
       // false 手动 / true 自动
       autoscaling: false,
@@ -153,11 +187,14 @@ export default {
       // CPU 使用率
       defaultUtilizationRate: '85%',
       processData: {},
+      curTargetReplicas: 0,
       autoScalingTip: {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('动态扩缩容计算规则')}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
+        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t(
+          '动态扩缩容计算规则'
+        )}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
         placements: ['top'],
       },
       rules: {
@@ -182,19 +219,25 @@ export default {
             trigger: 'blur',
           },
         ],
-      }
-    }
+      },
+    };
+  },
+
+  computed: {
+    shrinkLimit() {
+      return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * 85).toFixed(1)}%`;
+    },
   },
 
   watch: {
-    value (val) {
+    value(val) {
       this.scaleDialog.visible = val;
-    }
+    },
   },
 
   methods: {
     // 校验
-    handleConfirm () {
+    handleConfirm() {
       this.isLoading = true;
       setTimeout(async () => {
         try {
@@ -209,13 +252,13 @@ export default {
       });
     },
 
-    isScalingConfigChange () {
+    isScalingConfigChange() {
       return JSON.stringify(this.scalingConfig) === JSON.stringify(this.initScalingConfig);
     },
 
     // 进程实例设置
     async updateProcessConfig() {
-      if (!this.autoscaling && (this.scalingConfig.targetReplicas > this.processPlan.maxReplicas)) {
+      if (!this.autoscaling && this.scalingConfig.targetReplicas > this.processPlan.maxReplicas) {
         this.isLoading = false;
         return;
       }
@@ -280,7 +323,7 @@ export default {
     },
 
     // 添加校验规则
-    addRules () {
+    addRules() {
       const that = this;
       const replicasRules = {
         maxReplicas: [
@@ -358,12 +401,12 @@ export default {
     },
 
     // 切换扩容方式
-    handleChangeType (data) {
+    handleChangeType(data) {
       if (data.value && !this.autoScalDisableConfig.ENABLE_AUTOSCALING) {
         return;
       }
       this.curActiveType = data.type;
-      this.autoscaling = data.value
+      this.autoscaling = data.value;
       // 数据重置
       this.scalingConfig.maxReplicas = this.initScalingConfig.maxReplicas;
       this.scalingConfig.minReplicas = this.initScalingConfig.minReplicas;
@@ -372,10 +415,10 @@ export default {
     },
 
     // 取消
-    handleCancel () {
+    handleCancel() {
       this.scaleDialog.visible = false;
       this.isLoading = false;
-      this.autoscaling = false
+      this.autoscaling = false;
       this.scalingConfig.maxReplicas = 0;
       this.scalingConfig.minReplicas = 0;
       this.scalingConfig.targetReplicas = 0;
@@ -386,7 +429,7 @@ export default {
      * @param process {Object} 当前进程数据
      * @param env {string} 环境
      */
-    async handleShowDialog (process, env = 'stag') {
+    handleShowDialog(process, env = 'stag') {
       this.getAutoScalFlag();
       this.environment = env;
 
@@ -409,12 +452,13 @@ export default {
       this.scalingConfig.targetReplicas = process.available_instance_count;
 
       this.initScalingConfig = { ...this.scalingConfig };
+      this.curTargetReplicas = this.processPlan.targetReplicas;
 
       this.scaleDialog.visible = true;
       this.addRules();
     },
-  }
-}
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -433,19 +477,19 @@ export default {
   }
   .info-circle-cls {
     cursor: pointer;
-    color: #979BA5;
+    color: #979ba5;
   }
   .trigger-tips-wrapper {
     padding: 8px 16px;
-    background: #F5F7FA;
+    background: #f5f7fa;
     font-size: 12px;
-    color: #63656E;
+    color: #63656e;
     .usage {
       font-weight: 700;
-      color: #FF9C01;
+      color: #ff9c01;
     }
   }
-  :deep(.horizontal-cls){
+  :deep(.horizontal-cls) {
     display: flex;
     align-items: center;
     .bk-label {
@@ -471,6 +515,7 @@ export default {
 .trigger-conditions-cls .tippy-tooltip {
   padding: 8px;
   .bk-tooltip-content {
+    transition: none;
     .content {
       cursor: pointer;
       color: #3a84ff;

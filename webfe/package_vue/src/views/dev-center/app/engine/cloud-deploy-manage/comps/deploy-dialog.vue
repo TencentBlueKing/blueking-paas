@@ -44,8 +44,8 @@
           </div>
           <div class="image-source mt20" v-if="buttonActive === 'branch'">
             <div class="mb10 flex-row justify-content-between">
-              <div>代码分支选择</div>
-              <div class="version-code" @click="handleShowCommits">查看代码版本差异</div>
+              <div>{{$t('代码分支选择')}}</div>
+              <div class="version-code" @click="handleShowCommits">{{$t('查看代码版本差异')}}</div>
             </div>
             <bk-select
               v-model="branchValue"
@@ -92,7 +92,7 @@
 
           <div class="image-source mt20" v-if="buttonActive === 'image'">
             <div class="mb10 mt10 flex-row justify-content-between">
-              <div>镜像Tag</div>
+              <div>{{$t('镜像Tag')}}</div>
             </div>
             <bk-select
               v-model="tagValue"
@@ -115,7 +115,7 @@
         </div>
         <div v-else>
           <div class="mb10 mt10 flex-row justify-content-between">
-            <div>镜像Tag</div>
+            <div>{{$t('镜像Tag')}}</div>
           </div>
           <bk-input
             v-model="tagValue"
@@ -125,7 +125,7 @@
         </div>
       </div>
       <div v-else class="v1-container">
-        <div>请确认模块下进程对应的镜像地址</div>
+        <div>{{$t('请确认模块下进程对应的镜像地址')}}</div>
         <div class="mt10" v-for="item in processesData" :key="item.name">
           <span class="name">{{ item.name }}：</span>
           <span class="value">{{ item.image }}</span>
@@ -549,6 +549,7 @@ export default {
 .deploy-dialog-container{
 }
 .version-code{
+    cursor: pointer;
     color: #3A84FF;
     font-size: 12px;
   }

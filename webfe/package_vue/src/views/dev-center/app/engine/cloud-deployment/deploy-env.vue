@@ -1011,7 +1011,7 @@ export default {
           columnName = 'Value';
           break;
         case 2:
-          columnName = '生效环境';
+          columnName = this.$t('生效环境');
           break;
         default:
           break;

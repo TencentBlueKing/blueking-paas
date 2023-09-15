@@ -23,13 +23,13 @@ import os
 from typing import ClassVar, Dict, List
 
 import cattr
-import curlify
 import requests
 from attrs import define, evolve, field
 from django.conf import settings
 from requests.models import Response
 from requests_oauthlib import OAuth2Session
 
+import paasng.utils.masked_curlify as curlify
 from paasng.accounts.oauth.exceptions import BKAppOauthRequestError, BKAppOauthResponseError
 from paasng.utils.error_codes import error_codes
 

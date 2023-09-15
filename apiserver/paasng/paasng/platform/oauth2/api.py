@@ -23,10 +23,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
-import curlify
 import requests
 from django.conf import settings
 
+import paasng.utils.masked_curlify as curlify
 from paasng.platform.oauth2.exceptions import BkOauthApiException, BkOauthApiResponseError, BkOauthClientDoesNotExist
 
 logger = logging.getLogger(__name__)
@@ -72,6 +72,7 @@ class BkOauthClient:
     def _validate_resp(resp: requests.Response):
         """Validate response status code"""
         if not (resp.status_code >= 200 and resp.status_code < 300):
+            # 去掉 header 头中的敏感信息
             logger.error("request bkAuth api: %s", curlify.to_curl(resp.request))
             request_url = resp.request.url or ''
             raise BkOauthApiResponseError(

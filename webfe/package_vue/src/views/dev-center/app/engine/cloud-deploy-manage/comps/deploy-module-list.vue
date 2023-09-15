@@ -373,7 +373,7 @@ export default {
           this.intervalTimer = setTimeout(async () => {
             this.intervalTimer = null;
             this.getModuleReleaseInfo(false);
-          }, 5000);
+          }, 3000);
         } else {
           this.initPage = false;
           this.intervalTimer && clearInterval(this.intervalTimer);

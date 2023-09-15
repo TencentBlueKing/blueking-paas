@@ -26,7 +26,7 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus, Pol
 
 from paas_wl.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.cnative.specs.resource import ModelResState
-from paasng.engine.deploy.bg_wait.wait_bkapp import AppModelDeployStatusPoller, DeployStatusHandler
+from paasng.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy, create_condition, create_res_with_conds
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -41,7 +41,7 @@ def dp(bk_stag_env, bk_stag_wl_app, bk_user):
 def poller(bk_stag_env, dp):
     """A poller fixture for testing"""
     metadata = PollingMetadata(retries=0, query_started_at=time.time(), queried_count=1)
-    return AppModelDeployStatusPoller(params={'deploy_id': dp.id}, metadata=metadata)
+    return WaitAppModelReady(params={'env_id': bk_stag_env.id, 'deploy_id': dp.id}, metadata=metadata)
 
 
 class TestAppModelDeployStatusPoller:

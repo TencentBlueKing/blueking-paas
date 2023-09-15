@@ -19,9 +19,18 @@ to the current version of the project delivered to anyone in the future.
 """Wait for BkApp's reconciliation cycle to be stable"""
 import datetime
 import logging
-from typing import Optional
+import time
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional
 
-from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, TaskPoller
+from blue_krill.async_utils.poll_task import (
+    CallbackHandler,
+    CallbackResult,
+    PollingMetadata,
+    PollingResult,
+    PollingStatus,
+    TaskPoller,
+)
 from django.utils import timezone
 
 from paas_wl.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS, DeployStatus
@@ -29,7 +38,9 @@ from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.cnative.specs.signals import post_cnative_env_deploy
 from paasng.engine.constants import JobStatus
+from paasng.engine.deploy.bg_wait.base import AbortedDetails, AbortedDetailsPolicy
 from paasng.engine.exceptions import StepNotInPresetListError
+from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.workflow.flow import DeploymentStateMgr
 from paasng.platform.applications.models import ModuleEnvironment
@@ -37,24 +48,121 @@ from paasng.platform.applications.models import ModuleEnvironment
 logger = logging.getLogger(__name__)
 
 
-class AppModelDeployStatusPoller(TaskPoller):
+class AbortPolicy(ABC):
+    """Base class for wait policy"""
+
+    @abstractmethod
+    def get_reason(self) -> str:
+        """Reason of abortion"""
+
+    @property
+    def is_interrupted(self) -> bool:
+        """If the wait procedure was aborted by current policy, whether is was considered as an interruption
+        or a regular failure.
+        """
+        return False
+
+    @abstractmethod
+    def evaluate(self, already_waited: float, extra_params: Dict) -> bool:
+        """Determine if current wait procedure should be aborted
+
+        :param already_waited: how long since current procedure has been started, in seconds
+        :param extra_params: extra params of current procedure
+        """
+
+
+class UserInterruptedPolicy(AbortPolicy):
+    """Abort procedure when user requested an interruption"""
+
+    def get_reason(self) -> str:
+        return 'User interrupted release'
+
+    @property
+    def is_interrupted(self) -> bool:
+        return True
+
+    def evaluate(self, already_waited: float, params: Dict) -> bool:
+        deployment_id = params.get('deployment_id')
+        if not deployment_id:
+            logger.warning('Deployment was not provided for UserInterruptedPolicy, will not proceed.')
+            return False
+
+        try:
+            deployment = Deployment.objects.get(pk=deployment_id)
+        except Deployment.DoesNotExist:
+            logger.warning('Deployment not exists for UserInterruptedPolicy, will not proceed.')
+            return False
+        return bool(deployment.release_int_requested_at)
+
+
+class WaitProcedurePoller(TaskPoller):
+    """Base class of process waiting procedure
+
+    `params` schema:
+    :param module_env_id: id of ModuleEnvironment object
+    """
+
+    # Abort policies were extra rules which were used to break current polling procedure
+    abort_policies: List[AbortPolicy] = []
+
+    def __init__(self, params: Dict, metadata: PollingMetadata):
+        super().__init__(params, metadata)
+        self.env = ModuleEnvironment.objects.get(pk=self.params['env_id'])
+
+    def query(self) -> PollingResult:
+        already_waited = time.time() - self.metadata.query_started_at
+        logger.info(f'wait procedure started {already_waited} seconds, env: {self.env}')
+        # Check all abort policies
+        for policy in self.abort_policies:
+            if policy.evaluate(already_waited, self.params):
+                policy_name = policy.__class__.__name__
+                logger.info(f'AbortPolicy: {policy_name} evaluated, got positive result, abort current procedure')
+                return PollingResult(
+                    PollingStatus.DONE,
+                    data=AbortedDetails(
+                        aborted=True,
+                        policy=AbortedDetailsPolicy(
+                            reason=policy.get_reason(),
+                            name=policy_name,
+                            is_interrupted=policy.is_interrupted,
+                        ),
+                    ).dict(),
+                )
+
+        polling_result = self.get_status()
+        if polling_result.status != PollingStatus.DOING:
+            # reserve original data in `extra_data` field
+            polling_result.data = AbortedDetails(aborted=False, extra_data=polling_result.data).dict()
+        return polling_result
+
+    def get_status(self) -> PollingResult:
+        raise NotImplementedError()
+
+
+class WaitAppModelReady(WaitProcedurePoller):
     """A task poller to query status for fresh AppModelDeploy objects
 
     It takes below params:
 
-    - deploy_id: int, ID of AppModelDeploy object
+    `params` schema:
+    :param module_env_id: id of ModuleEnvironment object
+    :param deploy_id: int, ID of AppModelDeploy object
+    :param deployment_id: Optional[uuid]: ID of Deployment object
     """
 
     # over 15 min considered as timeout
     overall_timeout_seconds = 15 * 60
+    # Abort policies were extra rules which were used to break current polling procedure
+    abort_policies: List[AbortPolicy] = [UserInterruptedPolicy()]
 
-    def query(self) -> PollingResult:
+    def get_status(self) -> PollingResult:
         dp = AppModelDeploy.objects.get(id=self.params['deploy_id'])
         mres = get_mres_from_cluster(
             ModuleEnvironment.objects.get(
                 application_id=dp.application_id, module_id=dp.module_id, environment=dp.environment_name
             )
         )
+
         if not mres:
             return PollingResult.doing()
 

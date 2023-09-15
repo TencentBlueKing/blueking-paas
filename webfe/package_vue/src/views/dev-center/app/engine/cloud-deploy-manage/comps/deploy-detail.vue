@@ -166,7 +166,7 @@
                 placement="bottom">
                 <i class="paasng-icon paasng-ellipsis more"></i>
                 <div slot="content" style="white-space: normal;">
-                  <div class="option" @click="handleExpansionAndContraction">{{$t('扩缩容')}}</div>
+                  <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
                 </div>
               </bk-popover>
             </div>
@@ -391,6 +391,9 @@
       </div>
     </bk-dialog>
     <!-- 无法使用控制台 end -->
+
+    <!-- 扩缩容 -->
+    <scale-dialog key="moduleName" :ref="`${moduleName}ScaleDialog`"></scale-dialog>
   </div>
 </template>
 
@@ -400,6 +403,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
+import scaleDialog from './scale-dialog'
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
@@ -415,6 +419,7 @@ export default {
     // dropdown,
     // numInput,
     chart: ECharts,
+    scaleDialog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -430,6 +435,10 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    moduleName: {
+      type: String,
+      default: 'default',
+    }
   },
   data() {
     const dateShortCut = [
@@ -615,8 +624,9 @@ export default {
     handleUpdateProcess() {
       this.updateProcess();
     },
-    handleExpansionAndContraction() {
-      console.log('click');
+    handleExpansionAndContraction(row) {
+      const refName = `${this.moduleName}ScaleDialog`;
+      this.$refs[refName].handleShowDialog(row, this.environment);
     },
     // 处理进程与实例的关系
     // handleDeployInstanceData() {
@@ -1668,6 +1678,15 @@ export default {
     position: absolute;
     top: 12px;
     right: 10px;
+  }
+}
+</style>
+
+<style lang="scss">
+.more-operations .tippy-tooltip .tippy-content {
+  cursor: pointer;
+  &:hover {
+    color: #3a84ff;
   }
 }
 </style>

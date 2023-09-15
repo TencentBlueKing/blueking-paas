@@ -92,7 +92,8 @@
             <deploy-detail
               v-show="deploymentInfo.isExpand"
               :rv-data="rvData"
-              :deployment-info="deploymentInfo" />
+              :deployment-info="deploymentInfo"
+              :module-name="deploymentInfo.module_name" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"

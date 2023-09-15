@@ -1070,7 +1070,9 @@ export default {
     'extraConfigData.stag': {
       handler(val) {
         this.envName = 'stag';
-        this.handleExtraConfig();   // 处理额外的配置
+        if (Object.keys(this.localCloudAppData).length) {
+          this.handleExtraConfig();   // 处理额外的配置
+        }
 
         // 扩缩容
         if (val?.formAutoscalingData?.maxReplicas >= val?.formAutoscalingData?.minReplicas) {
@@ -1086,7 +1088,9 @@ export default {
     'extraConfigData.prod': {
       handler(val) {
         this.envName = 'prod';
-        this.handleExtraConfig();   // 处理额外的配置
+        if (Object.keys(this.localCloudAppData).length) {
+          this.handleExtraConfig();   // 处理额外的配置
+        }
 
         // 扩缩容
         if (val?.formAutoscalingData?.maxReplicas >= val?.formAutoscalingData?.minReplicas) {

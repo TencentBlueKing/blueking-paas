@@ -371,7 +371,7 @@ export default {
           },
           (err) => {
             console.error(err);
-          }
+          },
         );
       } else {
         this.$emit('save');
@@ -390,8 +390,7 @@ export default {
 
 <style lang="scss" scoped>
 .form-pre {
-  padding: 0 20px 20px;
-  min-height: 300px;
+    padding: 0 20px 20px;
 
   .item-title-container {
     display: flex;

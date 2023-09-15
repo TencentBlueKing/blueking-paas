@@ -72,7 +72,6 @@ class BkOauthClient:
     def _validate_resp(resp: requests.Response):
         """Validate response status code"""
         if not (resp.status_code >= 200 and resp.status_code < 300):
-            # 去掉 header 头中的敏感信息
             logger.error("request bkAuth api: %s", curlify.to_curl(resp.request))
             request_url = resp.request.url or ''
             raise BkOauthApiResponseError(

@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 
 from paas_wl.deploy.app_res.client import K8sScheduler
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
+from paas_wl.resources.generation.version import AppResVerManager
 from paas_wl.resources.kube_res.base import Schedule
 from paas_wl.resources.utils.basic import (
     get_client_by_app,

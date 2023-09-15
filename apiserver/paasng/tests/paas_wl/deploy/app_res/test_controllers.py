@@ -22,11 +22,11 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.deploy.app_res.controllers import CommandHandler
-from paas_wl.deploy.app_res.generation import get_mapper_version
 from paas_wl.release_controller.constants import ImagePullPolicy
 from paas_wl.release_controller.hooks.entities import Command, command_kmodel
 from paas_wl.release_controller.hooks.models import Command as CommandModel
 from paas_wl.resources.base.exceptions import PodTimeoutError
+from paas_wl.resources.generation.version import get_mapper_version
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
 from paas_wl.workloads.resource_templates.models import AppAddOnTemplate

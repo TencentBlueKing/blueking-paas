@@ -29,7 +29,6 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.core.signals import new_operation_happened
-from paas_wl.deploy.processes import get_proc_ctl
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
@@ -38,7 +37,7 @@ from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.controllers import judge_operation_frequent
+from paas_wl.workloads.processes.controllers import get_proc_ctl, judge_operation_frequent
 from paas_wl.workloads.processes.drf_serializers import (
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,

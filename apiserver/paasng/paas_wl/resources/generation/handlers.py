@@ -15,12 +15,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.resources.generation.version import AppResVerManager, get_latest_mapper_version
 
 
-class DeployAppConfig(AppConfig):
-    name = 'paas_wl.deploy'
-
-    def ready(self):
-        # Register controllers
-        from . import processes  # noqa: F401
+@receiver(post_save, sender=WlApp)
+def set_default_version(sender, instance, created, *args, **kwargs):
+    """Set the default resource generation version for new application."""
+    if created:
+        # mapper version 概念应该只在 engine 中消化，当前在应用新建后更新
+        latest_version = get_latest_mapper_version().version
+        AppResVerManager(instance).update(latest_version)

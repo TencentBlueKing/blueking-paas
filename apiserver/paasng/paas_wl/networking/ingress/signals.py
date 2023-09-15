@@ -15,12 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from django.dispatch import Signal
 
-
-class DeployAppConfig(AppConfig):
-    name = 'paas_wl.deploy'
-
-    def ready(self):
-        # Register controllers
-        from . import processes  # noqa: F401
+# Triggered when the custom domains of a cloud-native app have been updated
+cnative_custom_domain_updated = Signal(providing_args=['env'])

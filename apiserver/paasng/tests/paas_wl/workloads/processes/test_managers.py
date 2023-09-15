@@ -21,8 +21,8 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paas_wl.deploy.app_res.generation import get_mapper_version
 from paas_wl.resources.base.kres import KPod
+from paas_wl.resources.generation.version import get_mapper_version
 from paas_wl.resources.kube_res.base import AppEntityManager
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.processes.entities import Process

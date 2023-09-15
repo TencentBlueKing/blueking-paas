@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 from django.apps import AppConfig
 
 
-class DeployAppConfig(AppConfig):
-    name = 'paas_wl.deploy'
+class GenerationConfig(AppConfig):
+    name = 'paas_wl.resources.generation'
 
     def ready(self):
-        # Register controllers
-        from . import processes  # noqa: F401
+        # Register signal handlers
+        from . import handlers  # noqa: F401

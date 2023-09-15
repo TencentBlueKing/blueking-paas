@@ -22,12 +22,13 @@ from typing import Dict, List, Optional
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.core.app_structure import get_structure
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release
 from paas_wl.platform.applications.models.managers import AppConfigVarManager
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.release_controller.constants import ImagePullPolicy
 from paas_wl.resources.base import kres
+from paas_wl.resources.generation.version import AppResVerManager
 from paas_wl.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
@@ -174,7 +175,7 @@ class Process(AppEntity):
             name="should-set-by-mapper",
             type=type_,
             version=release.version,
-            replicas=release.app.get_structure().get(type_, 0),
+            replicas=get_structure(release.app).get(type_, 0),
             runtime=Runtime(
                 envs=envs,
                 image=build.get_image(),
@@ -191,7 +192,6 @@ class Process(AppEntity):
             ),
             resources=Resources(**config.resource_requirements.get(type_, {})),
         )
-        # TODO: 解决 MapperVersion 与 Process 循环依赖的问题
         process.name = mapper_version.deployment(process=process).name
         return process
 

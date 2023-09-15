@@ -15,12 +15,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+import os
 
 
-class DeployAppConfig(AppConfig):
-    name = 'paas_wl.deploy'
+def get_command_name(command: str) -> str:
+    """Get name from command"""
+    # fit for old paas app celery start by django-celery: python manage.py celery beat/worker....
+    if command.startswith("python manage.py celery"):
+        return "celery"
 
-    def ready(self):
-        # Register controllers
-        from . import processes  # noqa: F401
+    process_exec = command.split(' ')[0]
+    return os.path.basename(process_exec)

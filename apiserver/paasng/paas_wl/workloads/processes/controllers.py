@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
-from typing import List, NamedTuple
+from typing import Dict, List, NamedTuple, Optional, Protocol, Type
 
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -26,10 +26,12 @@ from django.utils.translation import ugettext_lazy as _
 from paas_wl.cnative.specs.procs import get_procfile
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release, WlApp
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.entities import Process
 from paas_wl.workloads.processes.exceptions import ProcessOperationTooOften
 from paas_wl.workloads.processes.models import ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, ns_instance_kmodel, ns_process_kmodel, process_kmodel
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -115,3 +117,49 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
         rv_proc=procs_in_k8s.get_resource_version(),
         rv_inst=insts_in_k8s.get_resource_version(),
     )
+
+
+class ProcController(Protocol):
+    """Control app's processes"""
+
+    def __init__(self, env: ModuleEnvironment):
+        ...
+
+    def start(self, proc_type: str):
+        ...
+
+    def stop(self, proc_type: str):
+        ...
+
+    def scale(
+        self,
+        proc_type: str,
+        autoscaling: bool = False,
+        target_replicas: Optional[int] = None,
+        scaling_config: Optional[AutoscalingConfig] = None,
+    ):
+        ...
+
+
+class ProcControllerHub:
+    """Get proc controller by different application type."""
+
+    _map: Dict[str, Type[ProcController]] = {}
+
+    @classmethod
+    def register_controller(cls, type: ApplicationType, controller: Type[ProcController]):
+        cls._map[type.value] = controller
+
+    @classmethod
+    def get(cls, env: ModuleEnvironment) -> ProcController:
+        """Get the proc controller by env object."""
+        app_type = env.application.type
+        controller_cls = cls._map.get(app_type)
+        if not controller_cls:
+            raise RuntimeError(f'The proc controller for {app_type} is not registered')
+        return controller_cls(env)
+
+
+def get_proc_ctl(env: ModuleEnvironment) -> ProcController:
+    """Get a process controller by env"""
+    return ProcControllerHub.get(env)

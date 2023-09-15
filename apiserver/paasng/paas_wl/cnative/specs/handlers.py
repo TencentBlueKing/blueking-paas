@@ -15,12 +15,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from django.dispatch import receiver
+
+from paas_wl.cnative.specs.resource import deploy_networking
+from paas_wl.networking.ingress.signals import cnative_custom_domain_updated
+from paasng.platform.applications.models import ModuleEnvironment
 
 
-class DeployAppConfig(AppConfig):
-    name = 'paas_wl.deploy'
-
-    def ready(self):
-        # Register controllers
-        from . import processes  # noqa: F401
+@receiver(cnative_custom_domain_updated)
+def on_custom_domain_updated(sender, env: ModuleEnvironment, **kwargs):
+    """Trigger a new networking deploy."""
+    deploy_networking(env)

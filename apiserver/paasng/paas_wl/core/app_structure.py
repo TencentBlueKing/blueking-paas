@@ -15,12 +15,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from typing import Callable, Dict
+
+from paas_wl.platform.applications.models import WlApp
+
+_get_structure_func = None
 
 
-class DeployAppConfig(AppConfig):
-    name = 'paas_wl.deploy'
+def set_global_get_structure(func: Callable[[WlApp], Dict]):
+    """Set the structure function, to be called by other higher modules."""
+    global _get_structure_func
+    _get_structure_func = func
 
-    def ready(self):
-        # Register controllers
-        from . import processes  # noqa: F401
+
+def get_structure(app: WlApp) -> Dict:
+    """This function provide compatibility with the field `App.structure`"""
+    if _get_structure_func is None:
+        raise RuntimeError('The function for getting app structure is not set.')
+    return _get_structure_func(app)
+
+
+def has_proc_type(app: WlApp, proc_type: str) -> bool:
+    """Check if current app has a process type, e.g. "web" """
+    return proc_type in get_structure(app)

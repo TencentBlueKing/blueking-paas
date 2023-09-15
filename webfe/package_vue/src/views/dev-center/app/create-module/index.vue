@@ -629,6 +629,7 @@ export default {
       isCreate: true,
       localCloudAppData: {},
       repoData: {},
+      initCloudAppData: {}
     };
   },
   computed: {
@@ -1022,7 +1023,8 @@ export default {
       await this.$refs.formDataRef.validate();    // 基本信息检验
       if (this.structureType === 'mirror') {      // 仅镜像
         await this.$refs.validate2?.validate();
-        this.getProcessData();
+        // 初始化
+        this.initCloudAppDataFunc();
       } else {      // 源码&镜像
         await this.$refs?.extend?.valid();    // 代码仓库检验
         if (['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
@@ -1054,30 +1056,32 @@ export default {
       this.$refs.validate2.clearError();
     },
 
-    // 获取进程信息
-    async getProcessData() {
-      try {
-        const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.cloudAppData = res.manifest;
-        this.cloudAppData.spec.build.image = this.mirrorData.url;   // 镜像仓库的值赋值给cloudAppData
-        this.cloudAppData.spec.build.imageCredentialsName = this.imageCredentialsData.name;   // 镜像凭证的值赋值给cloudAppData
-        // 镜像仓库的值赋值给cloudAppData.metadata.name 必须等于 `${应用ID}-m-${模块名称}`
-        this.cloudAppData.metadata = { name: `${this.appCode}-m-${this.formData.name}` } ;
-        this.localCloudAppData = _.cloneDeep(this.cloudAppData);
-        // 创建模块，钩子命令数据重置
-        this.cloudAppData.spec.hooks = null;
-        this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.isLoading = false;
-      }
+    // 初始化部署配置数据
+    initCloudAppDataFunc() {
+      this.initCloudAppData = {
+        apiVersion: 'paas.bk.tencent.com/v1alpha2',
+        kind: 'BkApp',
+        metadata: { name: `${this.appCode}-m-${this.formData.name}` },
+        spec: {
+          build: {
+            image: this.mirrorData.url,  // 镜像信息-镜像仓库
+            imageCredentialsName: this.imageCredentialsData.name, // 镜像信息-镜像凭证-名称
+          },
+          processes: [
+            {
+              image: '',
+              name: 'web',
+              command: [],
+              args: [],
+              memory: '256Mi',
+              cpu: '500m',
+              targetPort: 5000,
+            }
+          ],
+        },
+      };
+      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
 
     // 处理取消

@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict
 
 from django.db import models
 from django.utils.functional import cached_property
@@ -77,16 +76,6 @@ class App(UuidAuditedModel):
     @property
     def latest_config(self):
         return self.config_set.latest()
-
-    def get_structure(self) -> Dict:
-        """This function provide compatibility with the field `App.structure`"""
-        from paas_wl.workloads.processes.models import ProcessSpec
-
-        return {item.name: item.computed_replicas for item in ProcessSpec.objects.filter(engine_app_id=self.uuid)}
-
-    def has_proc_type(self, proc_type: str) -> bool:
-        """Check if current app has a process type, e.g. "web" """
-        return proc_type in self.get_structure()
 
     def __str__(self) -> str:
         return f'<{self.name}, region: {self.region}, type: {self.type}>'

@@ -1,22 +1,25 @@
-### 资源描述
+### 功能描述
 获取部署步骤(结构体)
 
-### 调用示例
+### 请求参数
+
+#### 1、路径参数：
+
+|   参数名称   |    参数类型  |  必须  |     参数说明     |
+| ------------ | ------------ | ------ | ---------------- |
+| app_code   | string | 是 | 应用 ID |
+| module   | string | 是 | 模块名称，如 "default" |
+| env | string | 是 | 环境名称，可选值 "stag" / "prod" |
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
 ```bash
 curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"bk_app_code": "***", "bk_app_secret": "***", "access_token": "***"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/envs/{env}/get_deploy_phases/
 ```
 
-### 路径接口说明
-
-|   参数名称   |    参数类型  |  必须  |     参数说明     |
-| ------------ | ------------ | ------ | ---------------- |
-|   app_code   |   string     |   是   |  应用 ID    |
-|   module |   string     |   是   |  模块名称，如 "default" |
-|   env | string |  是 | 环境名称，可选值 "stag" / "prod" |
-
-
-
-### 返回结果
+### 返回结果示例
 ```json
 [{
         "display_name": "准备阶段",
@@ -77,7 +80,7 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"bk_app_code": "***", "bk_app_secret": "
     ]
 ```
 
-### 返回结果说明
+### 返回结果参数说明
 
 #### Phase 对象各字段说明
 |   参数名称   |    参数类型  |     参数说明     |
@@ -85,7 +88,6 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"bk_app_code": "***", "bk_app_secret": "
 | display_name | string | 当前阶段的展示用名称(会随着 i18n 改变) |
 | type | string | 当前阶段类型(可用作标识符) |
 | steps | List | 当前阶段包含的步骤 |
-
 
 #### Step 对象各字段说明
 |   参数名称   |    参数类型  |     参数说明     |

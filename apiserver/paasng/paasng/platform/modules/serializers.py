@@ -31,7 +31,7 @@ from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import to_error_string
-from paas_wl.cnative.specs.models.app_resource import BkAppNameGenerator
+from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
@@ -320,7 +320,7 @@ class CreateCNativeModuleSLZ(serializers.Serializer):
             if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
                 raise ValidationError(_('请使用 BkApp v1alpha2 以支持多模块'))
 
-            if bkapp_res.metadata.name != BkAppNameGenerator.make_name(
+            if bkapp_res.metadata.name != CNativeBkAppNameGenerator.make_name(
                 app_code=application.code, module_name=attrs["name"]
             ):
                 raise ValidationError(_("Manifest 中定义的应用模型名称与模块信息不一致"))

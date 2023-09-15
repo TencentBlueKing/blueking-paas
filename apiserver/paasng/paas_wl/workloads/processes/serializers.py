@@ -36,7 +36,7 @@ from paas_wl.workloads.resource_templates.logging import get_app_logging_volume,
 from paas_wl.workloads.resource_templates.utils import AddonManager
 
 if TYPE_CHECKING:
-    from paas_wl.resources.base.generation.mapper import MapperPack
+    from paas_wl.resources.generation.mapper import MapperPack
     from paas_wl.workloads.processes.entities import Instance, Process
 
 

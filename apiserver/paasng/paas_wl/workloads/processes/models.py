@@ -24,6 +24,7 @@ from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
+from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
@@ -189,6 +190,13 @@ def initialize_default_proc_spec_plans():
             logger.info(f'Creating default plan: {name}...')
             ProcessSpecPlan.objects.create(name=name, **config)
 
+
+def _get_structure(app: 'WlApp') -> Dict:
+    return {item.name: item.computed_replicas for item in ProcessSpec.objects.filter(engine_app_id=app.uuid)}
+
+
+# Set the "get_structure" function to current implementation
+set_global_get_structure(_get_structure)
 
 # Django models end
 

@@ -1,37 +1,26 @@
-### Resource Description
-A brief description of the registered resource
+### Description
+Obtain the database connection information for the specified application, module, and environment.
 
-### Input parameter Description
-|   Field   | Type | Required |     Description     |
-| ------------ | ------------ | ------ | ---------------- |
-| app_code   |  string |yes| App ID (app id), you can get it from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
-| app_secret | string |no| The security key (app secret) can be obtained from BlueKing Developer Center -> App Basic Settings -> Basic Information -> Authentication Information |
+### Request Parameters
 
-### Call example
-```python
-from bkapigw.paasv3.shortcuts import get_client_by_request
-client = get_client_by_request(request)
-# Fill Parameters
-kwargs = {
+#### 1. Path Parameters:
 
-}
-result = client.api.api_test(kwargs)
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| app_code       | string         | Yes      | Application ID        |
+| module         | string         | Yes      | Module name           |
+| env            | string         | Yes      | Environment, e.g. "prod" |
+
+#### 2. API Parameters:
+None.
+
+### Request Example
+```
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "appid1", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/appid1/modules/default/envs/prod/lesscode/query_db_credentials
 ```
 
-### Return result
+### Response Result Example
 ```json
-# Internal version
-{
-    "credentials": {
-        "GCS_MYSQL_HOST": "--",
-        "GCS_MYSQL_PORT": --,
-        "GCS_MYSQL_NAME": "--",
-        "GCS_MYSQL_USER": "--",
-        "GCS_MYSQL_PASSWORD": "--"
-    }
-}
-
-# Enterprise version
 {
     "credentials": {
         "MYSQL_HOST": "--",
@@ -42,15 +31,23 @@ result = client.api.api_test(kwargs)
     }
 }
 
-# Failure to return
+# Failure response
 {
     "code": "CANNOT_READ_INSTANCE_INFO",
-    "detail": "Failed to read Enhanced Service Instance information: No valid configuration information could be retrieved."
+    "detail": "Failed to read enhanced service instance information: Unable to obtain valid configuration information."
 }
 
 ```
 
-### Return result description
-|   Field   | Type |           Description  |
-| ------------ | ---------- | ------------------------------ |
-|              |            |                                |
+### Response Result Parameter Description
+
+| Parameter Name   | Parameter Type | Parameter Description          |
+| ---------------- | -------------- | ------------------------------ |
+| credentials      | dict           | Database connection information|
+| MYSQL_HOST       | string         | Database host address          |
+| MYSQL_PORT       | int            | Database port                  |
+| MYSQL_NAME       | string         | Database name                  |
+| MYSQL_USER       | string         | Database username              |
+| MYSQL_PASSWORD   | string         | Database password              |
+| code             | string         | Error code                     |
+| detail           | string         | Error details                  |

@@ -168,6 +168,8 @@ INSTALLED_APPS = [
     'paas_wl.workloads.images',
     'paas_wl.monitoring.app_monitor',
     'paas_wl.cnative.specs',
+    'paas_wl.deploy',
+    'paas_wl.resources.generation',
 ]
 
 # Allow extending installed apps

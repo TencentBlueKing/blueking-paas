@@ -20,8 +20,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from paas_wl.platform.applications.models import Config, WlApp
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
-from paas_wl.resources.base.generation import get_latest_mapper_version
 
 
 @receiver(post_save, sender=WlApp)
@@ -29,7 +27,6 @@ def on_app_created(sender, instance, created, *args, **kwargs):
     """Do extra things when an app was created"""
     if created:
         create_initial_config(instance)
-        set_res_ver(instance)
 
 
 def create_initial_config(app: WlApp):
@@ -38,9 +35,3 @@ def create_initial_config(app: WlApp):
         app.config_set.latest()
     except Config.DoesNotExist:
         Config.objects.create(app=app, owner=app.owner, runtime={})
-
-
-def set_res_ver(app: WlApp):
-    # mapper version 概念应该只在 engine 中消化，当前在应用新建后更新
-    latest_version = get_latest_mapper_version().version
-    AppResVerManager(app).update(latest_version)

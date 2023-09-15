@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
-from typing import Optional
+from typing import Optional, Type
 
 from django.db import IntegrityError
 
@@ -40,6 +40,14 @@ from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
+
+# Try to load the access control module
+ApplicationAccessControlSwitch: Optional[Type]
+try:
+    from paasng.security.access_control.models import ApplicationAccessControlSwitch
+except ImportError:
+    logger.info('access control only supported in te edition, skip import')
+    ApplicationAccessControlSwitch = None
 
 
 class BkAppReleaseMgr(DeployStep):
@@ -126,8 +134,13 @@ def release_by_k8s_operator(
         # 下发待挂载的 volume source
         VolumeSourceManager(env).deploy()
 
+        if ApplicationAccessControlSwitch is not None:
+            acl_enabled = ApplicationAccessControlSwitch.objects.is_enabled(application)
+        else:
+            acl_enabled = False
+
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build)
+            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build, acl_enabled=acl_enabled)
         )
 
         # 下发日志采集配置

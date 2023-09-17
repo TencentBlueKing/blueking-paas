@@ -368,6 +368,7 @@ export default {
             this.isWatchDeploying = false;
           } else if (item.status === 'interrupted') {
             // 停止部署成功
+            console.log('停止部署');
             this.isDeployInterrupted = true;
             this.isDeployInterrupting = false;
           }
@@ -1044,6 +1045,7 @@ export default {
         // 停止部署 返回
         this.handleCallback();
         this.cancelStopDeploy();  // 关闭弹窗
+        // this.getDeployResult(this.deploymentId);
         this.closeServerPush();
       } catch (e) {
         this.$paasMessage({

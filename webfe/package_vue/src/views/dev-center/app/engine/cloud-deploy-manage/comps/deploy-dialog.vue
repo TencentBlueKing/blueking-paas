@@ -110,6 +110,9 @@
                 :key="option.id"
                 :name="option.tag"
               />
+              <div slot="extension" @click="handleNext" style="cursor: pointer;">
+                下一页
+              </div>
             </bk-select>
           </div>
         </div>
@@ -212,6 +215,7 @@ export default {
       isTagLoading: false,
       tagValue: '',
       deploymentInfoBackUp: {},  // 模块信息备份
+      imageTagListCount: 0,
     };
   },
   computed: {
@@ -261,6 +265,9 @@ export default {
         this.deployAppDialog.visiable = !!value;
         this.buttonActive = 'branch';
         this.tagValue = '';
+        // 初始化镜像taglist
+        this.pagination.limit = 10;
+        this.imageTagListCount = 0;
         // 仅镜像部署不需要获取分支数据
         if (this.deployAppDialog.visiable && this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches();   // 获取分支数据
@@ -486,11 +493,12 @@ export default {
           moduleId: this.curModuleId,
           data: {
             limit: this.pagination.limit,
-            offset: this.pagination.limit * (this.pagination.current - 1),
+            offset: 0,
           },
         });
-        this.imageTagList = res.results;
+        this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
         console.log('res', res);
+        this.imageTagListCount = res.count;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -528,10 +536,12 @@ export default {
     handleSelected(item) {
       this.buttonActive = item.value;
       if (this.buttonActive === 'branch') {
-
+        console.log('代码分支');
       } else {
         this.getImageTagList();
       }
+      this.pagination.limit = 10;
+      this.imageTagListCount = 0;
     },
 
     // 关闭进程的事件流
@@ -544,12 +554,16 @@ export default {
     handleCloseSideslider() {
       this.handleCloseProcessWatch();
     },
+
+    handleNext() {
+      if (this.pagination.limit >= this.imageTagListCount || this.isTagLoading) return;
+      this.pagination.limit += 10;
+      this.getImageTagList();
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
-.deploy-dialog-container{
-}
 .version-code{
     cursor: pointer;
     color: #3A84FF;

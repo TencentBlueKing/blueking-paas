@@ -187,7 +187,6 @@
       :is-show.sync="chartSlider.isShow"
       :title="chartSlider.title"
       :quick-close="true"
-      :before-close="handleChartBeforeClose"
       @hidden="handlerChartHide"
     >
       <div
@@ -410,7 +409,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
-import scaleDialog from './scale-dialog'
+import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
@@ -817,11 +816,6 @@ export default {
 
     async handleBeforeClose() {
       return this.$isSidebarClosed(JSON.stringify(this.curLogTimeRange));
-    },
-
-    async handleChartBeforeClose() {
-      const time = this.initDateTimeRange.map(time => moment(time).format('YYYY-MM-DD HH:mm:ss'));
-      return this.$isSidebarClosed(JSON.stringify(time));
     },
 
     /**

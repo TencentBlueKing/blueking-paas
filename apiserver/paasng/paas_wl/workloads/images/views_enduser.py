@@ -30,7 +30,7 @@ from paas_wl.workloads.images.models import AppUserCredential
 from paas_wl.workloads.images.serializers import UsernamePasswordPairSLZ
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 
 class AppUserCredentialViewSet(ApplicationCodeInPathMixin, GenericViewSet):

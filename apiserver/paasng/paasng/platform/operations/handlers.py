@@ -17,12 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Dict, Optional
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.signals import post_cnative_env_deploy
+from paas_wl.core.signals import new_operation_happened
 from paasng.engine.constants import JobStatus, OperationTypes
 from paasng.engine.models import Deployment, ModuleEnvironmentOperations
 from paasng.engine.signals import post_appenv_deploy
@@ -207,6 +209,22 @@ def on_operation_created(sender, instance, created, raw, using, update_fields, *
             'operation_id': instance.id,
             'latest_operated_at': instance.created,
         },
+    )
+
+
+@receiver(new_operation_happened)
+def on_new_operation_happened(
+    sender, env: ModuleEnvironment, operate_type: int, operator: str, extra_values: Optional[Dict], **kwargs
+):
+    """Record operation by signal"""
+    Operation.objects.create(
+        application=env.application,
+        type=operate_type,
+        user=operator,
+        region=env.application.region,
+        module_name=env.module.name,
+        source_object_id=str(env.id),
+        extra_values=extra_values,
     )
 
 

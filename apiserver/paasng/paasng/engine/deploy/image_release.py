@@ -63,11 +63,10 @@ class ImageReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
-        self.try_handle_app_description()
-
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
+            self.try_handle_app_description()
             with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
                 build_id = self.deployment.advanced_options.build_id
                 if not build_id:
@@ -104,8 +103,6 @@ class ImageReleaseMgr(DeployStep):
                 # 仅托管镜像的云原生应用需要构造 fake build
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                 build_id = self.engine_client.create_build(
-                    # 仅托管镜像的云原生应用目前并不会使用 build.image 字段
-                    # 目前仅托管镜像的云原生应用的 image 字段由前端组装
                     image=runtime_info.generate_image(self.version_info),
                     procfile={},
                     extra_envs={},

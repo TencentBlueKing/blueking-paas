@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -25,7 +26,6 @@ from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.engine.models.base import OperationVersionBase
@@ -67,6 +67,21 @@ class AdvancedOptions:
     build_id: Optional[str] = None
     # 触发消息
     invoke_message: Optional[str] = None
+
+
+@dataclass
+class ProcessTmpl:
+    """This class is a duplication of paas_wl.workloads.processes.models.ProcessTmpl, it
+    avoids a circular import problem.
+    """
+
+    name: str
+    command: str
+    replicas: Optional[int] = None
+    plan: Optional[str] = None
+
+    def __post_init__(self):
+        self.name = self.name.lower()
 
 
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)

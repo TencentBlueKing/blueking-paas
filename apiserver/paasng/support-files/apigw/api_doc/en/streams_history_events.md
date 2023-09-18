@@ -1,22 +1,28 @@
-### Resource Description
-Query deployment log
+### Description
+Query deployment logs
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Call example
+#### 1. Path Parameters:
+
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| channel_id     | string         | Yes      | Deployment ID         |
+
+#### 2. API Parameters:
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| last_event_id     | int         | No      | Last event id         |
+
+### Request Example
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/streams/{channel_id}/history_events
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/streams/{channel_id}/history_events
 ```
 
-### Request parameter Description
+#### Get your access_token
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-| Name                                   | Description                               |
-| -------------------------------------- | ----------------------------------------- |
-| last_event_id <br/>integer<br/>(query) | last event id<br/>Default value : 0<br/>0 |
-| channel_id  * <br/>string <br/>(path)  | 即deployment_id                           |
-
-### Return result
+### Response Result Example
 ```json
 [
   {
@@ -27,7 +33,7 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
   {
     "id": 2,
     "event": "title",
-    "data": "Trying to create CI-related resources"
+    "data": "Attempting to create CI-related resources"
   },
   ...
   {
@@ -44,7 +50,7 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
   {
     "id": 137,
     "event": "title",
-    "data": "Successful project deployment"
+    "data": "Project deployment succeeded"
   },
   {
     "id": 138,
@@ -54,10 +60,10 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
 ]
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| id*    | integer <br/>title: id<br/><br/>Event id                     |
-| ------ | ------------------------------------------------------------ |
-| event* | string <br/>title: event<br/><br/>event type<br/><br/>Enum:<br/>[init, close, msg, title ] |
-| data*  | string <br/>title: Data <br/>minlength: 1<br/><br/>event content |
-
+| Field | Type    | Required | Description                                  |
+| ----- | ------- | -------- | -------------------------------------------- |
+| id    | integer | Yes      | Event ID                                     |
+| event | string  | Yes      | Event type, enum values: [init, close, msg, title] |
+| data  | string  | Yes      | Event content                                |

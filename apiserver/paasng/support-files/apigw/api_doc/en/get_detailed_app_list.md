@@ -1,28 +1,31 @@
-### Resource Description
+### Description
 Get App details
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### Request Parameters
 
-### Call example
+#### 1. API Parameters:
+
+| Field | Type | Required | Description |
+| ------ | ------ | ------ | ------ |
+| limit | number | No | Result quantity |
+| offset | number | No | Pagination skip quantity |
+| exclude_collaborated | boolean | No | Whether to exclude apps with collaborator permissions, default is not excluded. If true, it means to return only the apps I created |
+| include_inactive | boolean | No | Whether to include inactive apps, default is not included |
+| language | string | No | APP programming language |
+| search_term | string | No | Search keyword |
+| source_origin | int | No | Source code origin, currently supports 1 (code repository) and 2 (BlueKing LessCode) |
+| type | str | No | Filter by app type, currently supports: default (default), engineless_app (engineless app), bk_plugin (BlueKing plugin) |
+| order_by | string | No | Sort, optional values: code, created, last_deployed_date, latest_operated_at, default is ascending, add - for descending, such as -created |
+
+### Request Example
 ```bash
-curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your access_token"}' http://bkapi.example.com/api/bkpaas3/bkapps/applications/lists/detailed
+curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/bkapps/applications/lists/detailed
 ```
 
-### Request parameter Description
+#### Get your access_token
+Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-| limit                | number number <br/>of results                                |
-| -------------------- | ------------------------------------------------------------ |
-| offset               | number <br/>page turn skip number                            |
-| Exclude_collaborated | boolean<br/>Default: false <br/><br/>whether to exclude apps with collaborator permissions, which is not excluded by default. If true, it means that only the |
-| Include_apps         | boolean<br/>Default: false <br/><br/>whether to include off-shelf apps, default not |
-| language             | string <br/><br/>APP programming language                    |
-| Search_term          | string <br/><br/>search keyword                              |
-| Source_source        | int <br/><br/>source code source, currently supports 1 (code warehouse), 2 (blue whale LessCode) |
-| type                 | str <br/>is <br/><br/>filtered by app type. Currently, it supports: default, engineless_app, bk_plugin |
-| Order_by             | string <br/><br/>sorting, optional values: code, created, last_deployed_date, latest_operated_at, default is ascending, and descending is followed by "increment," such as "increment created |
-
-### Return result
+### Response Result Example
 ```json
 {
     "count": 2,
@@ -32,7 +35,7 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your a
         {
             "application": {
                 "id": "130bd72a-dbf5-419c-8357-9ed914341234",
-                "region_name": "Internal version",
+                "region_name": "内部版",
                 "logo_url": "http://example.com/app-logo/blueking_app_default.png",
                 "deploy_status": true,
                 "deploy_info": {
@@ -50,7 +53,7 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your a
                 "updated": "2018-06-19 16:54:37",
                 "owner": "0236c4ff908f528b",
                 "code": "verylongnameaaaa",
-                "name": "I am v3t",
+                "name": "我就是v3t",
                 "language": "Go",
                 "source_init_template": "go_gin_hello_world",
                 "source_type": "bk_svn",
@@ -67,7 +70,7 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your a
         {
             "application": {
                 "id": "d403880b-6c46-4edf-b1a0-24363b61234",
-                "region_name": "Hybrid Cloud Version",
+                "region_name": "混合云版",
                 "logo_url": "http://example.com/app-logo/blueking_app_default.png",
                 "deploy_status": true,
                 "deploy_info": {
@@ -85,7 +88,7 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your a
                 "updated": "2018-04-10 16:34:36",
                 "owner": "0236c4ff908f528b",
                 "code": "appid8",
-                "name": "Test 8",
+                "name": "测试8",
                 "language": "Python",
                 "source_init_template": "dj18_hello_world",
                 "source_type": "bk_svn",
@@ -104,58 +107,60 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "Your a
 
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| count    | number<br/>Total                            |
-| -------- | ------------------------------------------- |
-| next     | string<br/>next page address                |
-| previous | string<br/>previous page address            |
-| results  | dict, see the table below for field details |
+| Field | Type | Description |
+| ------ | ------ | ------ |
+| count | number | Total count |
+| next | string | Next page address |
+| previous | string | Previous page address |
+| results | array | Result list, including app information |
 
-#### result Field Detail
+results internal field description:
 
-| application | dict, see the table below for field details                  |
-| ----------- | ------------------------------------------------------------ |
-| product     | dict, see the table below for field details                  |
-| marked      | boolean<br/>descripton: Whether to focus on<br/>example: true |
+| Field | Type | Description |
+| ------ | ------ | ------ |
+| application | object | BlueKing app information |
+| product | object | App market app information |
+| marked | boolean | Whether it is marked |
 
-- ##### application Field Detail
+application internal field description:
 
-  | description:         | BlueKing App                                                 |
-  | -------------------- | ------------------------------------------------------------ |
-  | id                   | string<br/>example: 87ce9623-39e9-4d10-bfc4-c6827d781fc7<br/>APP UUID |
-  | region               | string<br/>example: ieod<br/>App area                        |
-  | region_name          | string<br/>example: Tencent internal version<br/>Chinese name of the region |
-  | source_type          | string<br/>App Source Code Hosting Types                     |
-  | source_repo_id       | string<br/>App Source Code Hosting id                        |
-  | is_active            | boolean<br/>Is the app active                                |
-  | last_deployed_date   | boolean<br/>App Recent Deployment Time                       |
-  | code                 | string<br/>App Code                                          |
-  | name                 | string<br/>descrition: App Name                              |
-  | logo_url             | string<br/>descrition: App Logo Address<br/>example: http://example.com/app-logo/blueking_app_default.png |
-  | language             | string<br/>Programming languages used by the app             |
-  | source_init_template | string<br/>Name of the template used during app initialization |
-  | created              | string($dateTime)<br/>App Creation Time                      |
-  | updated              | string($dateTime)<br/>App modification time                  |
-  | deploy_info          | dict, see the table below for field details                  |
+| Field | Type | Description |
+| ------ | ------ | ------ |
+| id | string | App UUID |
+| region | string | App region |
+| region_name | string | Chinese name corresponding to the region |
+| source_type | string | App source code hosting type |
+| source_repo_id | string | App source code hosting id |
+| is_active | boolean | Whether the app is active |
+| last_deployed_date | boolean | App last deployment time |
+| code | string | App Code |
+| name | string | App name |
+| logo_url | string | App Logo address |
+| language | string | App programming language |
+| source_init_template | string | Template name used when initializing the app |
+| created | string | App creation time |
+| updated | string | App modification time |
+| deploy_info | object | Deployment information |
 
-  ##### deploy_info Field Detail
+deploy_info internal field description:
 
-  - stag
+| Field | Type | Description |
+| ------ | ------ | ------ |
+| stag | object | Stage information |
+| prod | object | Production information |
 
-    | deployed | bool<br/>example: true<br/>Whether to deploy                 |
-    | -------- | ------------------------------------------------------------ |
-    | url      | string<br/>example:<br/> http://apps.example.com/stag--appid/<br/>Access Links |
+stag and prod internal field description:
 
-  - prod
+| Field | Type | Description |
+| ------ | ------ | ------ |
+| deployed | bool | Whether it is deployed |
+| url | string | Access link |
 
-    | deployed | bool<br/>example: false<br/>Whether to deploy                |
-    | -------- | ------------------------------------------------------------ |
-    | url      | string<br/>example: <br/>http://apps.example.com/appid/<br/> |
+product internal field description:
 
-- ##### product Field Detail
-
-  | description: | App Market App                                               |
-  | ------------ | ------------------------------------------------------------ |
-  | name         | string<br/>example: Awesome App<br/>APP UUID                 |
-  | logo         | string<br/>example: http://example.com/app-logo/awesome-app.png<br/>App Logo Address |
+| Field | Type | Description |
+| ------ | ------ | ------ |
+| name | string | App UUID |
+| logo | string | App logo address |

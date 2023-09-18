@@ -22,7 +22,7 @@ from celery import shared_task
 from django.utils.translation import gettext_lazy as _
 
 from paasng.engine.constants import AppEnvName
-from paasng.engine.deploy.archive import OfflineManager
+from paasng.engine.deploy.archive import start_archive_step
 from paasng.engine.exceptions import OfflineOperationExistError
 from paasng.engine.models import Deployment
 from paasng.platform.applications.models import Application
@@ -41,11 +41,10 @@ def archive_prod_env(app_code: str, operator: str):
     module = application.get_default_module()
     prod = module.get_envs(environment=AppEnvName.PROD)
 
-    manager = OfflineManager(prod)
     log_extra = {"app_code": app_code, "action": "plugin.archive"}
 
     try:
-        manager.perform_env_offline(operator=operator)
+        start_archive_step(prod, operator=operator)
     except Deployment.DoesNotExist:
         # 未曾部署，跳过该环境的下架操作
         logger.warning("该插件<%s>未曾部署，跳过该环境的下架操作", str(application))

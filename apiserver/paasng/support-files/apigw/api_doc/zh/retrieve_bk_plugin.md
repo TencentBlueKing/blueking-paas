@@ -1,20 +1,23 @@
-### 资源描述
+### 功能描述
+查询某个“蓝鲸插件”类型应用的详细信息，仅供内部系统使用。
 
-查询某个“蓝鲸插件”类型应用的详细信息，仅供内部系统使用
+### 请求参数
 
-### 认证方式
+#### 1、路径参数：
 
-使用 Bearer 方式认证，具体的 token 请向管理员申请。
+| 参数名称 | 参数类型 | 必须 | 参数说明               |
+| -------- | -------- | ---- | -------------------- |
+| code     | string   | 否   | 位置参数，待查询插件的 code |
 
-### 输入参数说明
+#### 2、接口参数：
+暂无。
 
-| 参数名称      | 参数类型 | 必须 | 参数说明                   |
-|---------------|----------|-----|------------------------|
-| private_token | string   | 否   | PaaS 平台分配的 token,当请求方的应用身份未被 PaaS 平台认证时必须提供|
-| code          | string   | 否   | 位置参数，待查询插件的 code |
+### 请求示例
+```bash
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/bk-plugin-demo2/
+```
 
-### 返回结果
-
+### 返回结果示例
 ```javascript
 {
   "plugin": {
@@ -54,14 +57,14 @@
 }
 ```
 
-### 返回结果说明
-
+### 返回结果参数说明
 - 当通过 code 无法查询到插件时，API 将返回 404 状态码
 
 | 参数名称          | 参数类型 | 参数说明                                                  |
 |-------------------|----------|-------------------------------------------------------|
 | plugin            | object   | 插件基本信息                                              |
 | deployed_statuses | object   | 插件在各环境上的部署情况，未部署时 `addresses` 字段为 `[]` |
+| profile           | object   | 插件的档案信息                                            |
 
 `deployed_statuses` 对象字段说明：
 
@@ -69,8 +72,6 @@
 |-----------|---------------|--------------------|
 | deployed  | boolean       | 是否已经部署过         |
 | addresses | array[object] | 当前环境下所有访问地址 |
-| profile   | object        | 插件的档案信息         |
-
 
 `addresses` 元素对象字段说明：
 

@@ -296,8 +296,15 @@ export default {
     // 发布二次确认信息
     async getCloudAppInfo(env) {
       try {
+        const data = this.$store.state.cloudApi.cloudAppData;
+        data.spec.processes = data.spec.processes.map(process => {
+          // 过滤空值容器端口
+          const { targetPort, ...processValue } = process;
+          return (targetPort === '' || targetPort === null) ? processValue : process;
+        });
+
         const res = await this.$store.dispatch('deploy/getCloudAppInfo', {
-          params: { manifest: this.$store.state.cloudApi.cloudAppData },
+          params: { manifest: data },
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env,

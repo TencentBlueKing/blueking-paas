@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, List, Optional
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
-from paas_wl.networking.egress.misc import ClusterEgressIps, get_cluster_egress_ips
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
@@ -28,12 +27,6 @@ from paasng.utils.configs import get_region_aware
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
-
-
-def get_cluster_egress_info(cluster_name: str) -> ClusterEgressIps:
-    """Get cluster's egress info"""
-    cluster = Cluster.objects.get(name=cluster_name)
-    return get_cluster_egress_ips(cluster)
 
 
 class RegionClusterService:

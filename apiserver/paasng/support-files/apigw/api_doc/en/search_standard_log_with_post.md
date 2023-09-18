@@ -1,102 +1,66 @@
 ### Description
 
-Query application standard output log
+Query application standard output logs.
 
-### Input parameters
+### Request Parameters
 
-| Parameter Name | Parameter Location | Type | Required | Description |
-|------|--------|------| :------: |-------------|
-| end_time | `query` | string | | |
-| log_type | `query` | string | | |
-| scroll_id | `query` | string | | |
-| start_time | `query` | string | | |
-| time_range | `query` | string | yes | |
-| data | `body` | SearchStandardLogWithPostBody | yes | |
+#### 1. Path Parameters:
 
-### Responses
-| Status Code | Status | Description |
-|------|--------|-------------|
-| 200 | OK | Query successful |
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| app_code       | string         | Yes      | Application ID, such as "monitor" |
+| module         | string         | Yes      | Module name, such as "default" |
 
-### 响应
+#### 2. API Parameters:
 
-#### 200 - 查询成功
-Status: OK
+| Parameter Name | Parameter Location | Type                              | Required | Description |
+| -------------- | ------------------ | --------------------------------- | -------- | ----------- |
+| end_time       | `query`            | string                            | No       |             |
+| log_type       | `query`            | string                            | No       |             |
+| scroll_id      | `query`            | string                            | No       |             |
+| start_time     | `query`            | string                            | No       |             |
+| time_range     | `query`            | string                            | Yes      |             |
+| data           | `body`             | SearchStandardLogWithPostBody     | Yes      |             |
 
-##### Schema
+data
+| Field  | Type                              | Required | Description |
+| ------ | --------------------------------- | -------- | ----------- |
+| query  | SearchStandardLogWithPostParamsBodyQuery | Yes       |             |
+| sort   | interface{}                       | No       | Sort, e.g., {'response_time': 'desc', 'other': 'asc'} |
 
-SearchStandardLogWithPostOKBody
+### Request Example
 
-##### 内联模型
+```bash
+curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{app_code}/modules/{module}/log/standard_output/list/?time_range=1h'
+```
 
-**SearchStandardLogWithPostBody**
+### Response Result Example
 
+```json
+{
+  "code": 200,
+  "data": {
+    "logs": [
+      {
+        "environment": "prod",
+        "message": "log message",
+        "pod_name": "app-1",
+        "process_id": "123",
+        "timestamp": "2021-01-01T00:00:00Z"
+      }
+    ],
+    "scroll_id": "scroll_id",
+    "total": 1
+  }
+}
+```
 
-> 简化的 dsl 结构
+### Response Result Parameter Description
 
-
-
-**Properties**
-
-| Name | Type | Required | Description | Example |
-|------|------|:------------:|-------------|---------|
-| query | SearchStandardLogWithPostParamsBodyQuery| yes | | |
-| sort | interface{}| | 排序规则 | {'response_time': 'desc', 'other': 'asc'} |
-
-
-**SearchStandardLogWithPostOKBody**
-
-
-
-**Properties**
-
-| Name | Type | Required | Description | Example |
-|------|------|:------------:|-------------|---------|
-| code | integer| | status code | |
-| data | SearchStandardLogWithPostOKBodyData| | | |
-
-
-
-**SearchStandardLogWithPostOKBodyData**
-**Properties**
-
-| Name | Type | Required | Description | Example |
-|------|------|:------------:|-------------|---------|
-| logs | []SearchStandardLogWithPostOKBodyDataLogsItems0| | | |
-| scroll_id | string| | scroll_id for ES paging query | |
-| total | integer| | number of logs | |
-
-
-**SearchStandardLogWithPostOKBodyDataLogsItems0**
-
-
-
-**Properties**
-
-| Name | Type | Required | Description | Example |
-|------|------|:------------:|-------------|---------|
-| environment | string| | Deployment environment | |
-| message | string| | log content | |
-| pod_name | string| | instance name | |
-| process_id | string| | application process | |
-| timestamp | string| | log timestamp | |
-
-
-
-**SearchStandardLogWithPostParamsBodyQuery**
-
-
-> Simplified dsl-query structure
-Currently only supports: query_string/terms two query methods
-query_string: search using ES's query_string
-terms: exact match (scenario filtered by field)
-
-
-
-**Properties**
-
-| Name | Type | Required | Description | Example |
-|------|------|:------------:|-------------|---------|
-| exclude | map of[]string| | negated terms, non-standard DSL | |
-| query_string | string| | Search using `query_string` syntax | |
-| terms | map of[]string| | Multi-value exact match | |
+| Field          | Type                                            | Required | Description       |
+| -------------- | ----------------------------------------------- | -------- | ----------------- |
+| code           | integer                                         | Yes      | Status code       |
+| data           | SearchStandardLogWithPostOKBodyData             | Yes      | Returned data     |
+| data.logs      | []SearchStandardLogWithPostOKBodyDataLogsItems0 | Yes      | Log list          |
+| data.scroll_id | string                                          | Yes      | ES scroll_id for pagination |
+| data.total     | integer                                         | Yes      | Log count         |

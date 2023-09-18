@@ -57,7 +57,7 @@ class TestGetClusterByApp:
         # 导致创建 WlApp 后触发的信号处理逻辑中，无法获取到集群的 context，因此抛出 ValueError
         # 考虑到本处不获取集群 client，并不影响当前测试，因此通过 mock 处理
         with mock.patch(
-            'paas_wl.platform.applications.models.managers.app_res_ver.get_client_by_app',
+            'paas_wl.resources.generation.version.get_client_by_app',
             new=lambda *args, **kwargs: None,
         ):
             yield

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 from operator import attrgetter
-from typing import Dict
+from typing import Dict, Optional
 
 from django.http import StreamingHttpResponse
 from drf_yasg.utils import swagger_auto_schema
@@ -27,11 +27,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from paas_wl.cnative.specs.image_parser import ImageParser
+from paas_wl.cnative.specs.utils import get_bkapp
 from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.processes.drf_serializers import (
     ModuleScopedData,
+    ModuleState,
     NamespaceScopedListWatchRespSLZ,
+    OperationGroup,
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
@@ -39,8 +43,12 @@ from paas_wl.workloads.processes.shim import ProcessManager
 from paas_wl.workloads.processes.watch import ProcInstByEnvListWatcher, WatchEvent
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.engine.constants import RuntimeType
 from paasng.engine.deploy.version import get_env_deployed_version_info
+from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.modules.models import Module
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
 
@@ -66,6 +74,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         processes_status = ProcInstByEnvListWatcher(application, environment).list()
 
         for module_env in module_envs:
+            module = module_env.module
             module_name = module_env.module.name
             is_living, addr = get_builtin_addr_preferred(module_env)
             exposed_url = None
@@ -73,11 +82,26 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 exposed_url = addr.url
 
             build_method, version_info = get_env_deployed_version_info(module_env)
+            deployment_getter = DeploymentGetter(env=module_env)
+            offline_getter = OfflineOperationGetter(env=module_env)
+
             grouped_data[module_name] = ModuleScopedData(
                 module_name=module_name,
-                is_deployed=is_living,
-                exposed_url=exposed_url,
                 build_method=build_method,
+                state=ModuleState(
+                    deployment=OperationGroup(
+                        latest=deployment_getter.get_latest_deployment(),
+                        latest_succeeded=deployment_getter.get_latest_succeeded(),
+                        pending=deployment_getter.get_current_deployment(),
+                    ),
+                    offline=OperationGroup(
+                        latest=offline_getter.get_latest_operation(),
+                        latest_succeeded=offline_getter.get_latest_succeeded(),
+                        pending=offline_getter.get_current_operation(),
+                    ),
+                ),
+                exposed_url=exposed_url,
+                repo_url=self.get_repo_url(module=module) or "--",
                 version_info=version_info,
                 proc_specs=grouped_proc_specs.get(module_name) or [],
             )
@@ -139,3 +163,23 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def process_event(event: WatchEvent) -> Dict:
         """Process event payload to Dict of primitive datatypes."""
         return WatchEventSLZ(event).data
+
+    @staticmethod
+    def get_repo_url(module: Module) -> Optional[str]:
+        """获取给定模块的"仓库地址",
+        对于从源码构建的应用, 仓库地址即源码仓库地址;
+        对于从镜像部署的应用, 仓库地址即镜像仓库地址;
+        """
+        application = module.application
+        if (
+            application.type == ApplicationType.CLOUD_NATIVE
+            and module.build_config.build_method == RuntimeType.CUSTOM_IMAGE
+        ):
+            try:
+                return ImageParser(get_bkapp(application, module)).get_repository()
+            except ValueError:
+                return None
+        repo = module.get_source_obj()
+        if repo is None:
+            return None
+        return repo.get_repo_url()

@@ -1043,8 +1043,8 @@ export default {
           deployId: this.deploymentId,
         });
         // 停止部署 返回
-        this.handleCallback();
-        this.cancelStopDeploy();  // 关闭弹窗
+        // this.handleCallback();
+        // this.cancelStopDeploy();  // 关闭弹窗
         // this.getDeployResult(this.deploymentId);
         this.closeServerPush();
       } catch (e) {

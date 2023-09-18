@@ -71,8 +71,9 @@ class DeploymentDeclarativeController:
         self.delete_probes()
 
         # 根据配置，对 probe 进行全量更新
-        for process_type, process in desc.processes.items():
-            self.updata_probes(process_type=process_type, probes=process.probes)
+        if desc.processes:
+            for process_type, process in desc.processes.items():
+                self.updata_probes(process_type=process_type, probes=process.probes)
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""

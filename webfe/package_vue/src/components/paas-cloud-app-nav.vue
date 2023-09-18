@@ -77,7 +77,8 @@ export default {
         'appServiceInner',
         'cloudAppDeployManageStag',
         'cloudAppDeployManageProd',
-        'cloudAppDeployHistory'
+        'cloudAppDeployHistory',
+        'appObservability',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -109,8 +110,8 @@ export default {
           'cloudAppDeployHistory',
           // 部署状态
           'appStatus',
-          // 日志查询
-          'appLog',
+          // 可观测性
+          'appObservability',
           // 访问入口
           'appAccessPortal',
           // 增强服务
@@ -129,6 +130,7 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          'basicConfig',
         ],
         developer: [
           // 概览
@@ -157,8 +159,8 @@ export default {
           'cloudAppDeployHistory',
           // 部署状态
           'appStatus',
-          // 日志查询
-          'appLog',
+          // 可观测性
+          'appObservability',
           // 访问入口
           'appAccessPortal',
           // 增强服务
@@ -175,6 +177,7 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          'basicConfig',
         ],
         operator: [
           // 权限管理
@@ -225,8 +228,8 @@ export default {
   },
   methods: {
     /**
-             * 侧导航初始化入口
-             */
+     * 侧导航初始化入口
+     */
     async init(isReload = true) {
       if (!this.curAppInfo.application) return;
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
@@ -386,7 +389,8 @@ export default {
         'appServiceInner',
         'cloudAppDeployManageStag',
         'cloudAppDeployManageProd',
-        'cloudAppDeployHistory'
+        'cloudAppDeployHistory',
+        'appObservability',
       ];
 
       this.navTree.forEach((nav) => {
@@ -407,8 +411,8 @@ export default {
     },
 
     /**
-             * 根据当前routeName选中导航
-             */
+     * 根据当前routeName选中导航
+     */
     async selectRouterByName(routeName) {
       try {
         await this.checkPermission(routeName);
@@ -491,7 +495,8 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
+          || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
@@ -600,10 +605,10 @@ export default {
     },
 
     /**
-             * 访问相应路由
-             *
-             * @param {Object} nav 导航对象
-             */
+     * 访问相应路由
+     *
+     * @param {Object} nav 导航对象
+     */
     async goPage(navItem) {
       try {
         await this.checkPermission(navItem.destRoute.name);

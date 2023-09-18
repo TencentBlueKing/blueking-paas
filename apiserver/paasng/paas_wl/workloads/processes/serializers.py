@@ -33,7 +33,7 @@ from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySeri
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.processes.constants import PROCESS_MAPPER_VERSION_KEY, PROCESS_NAME_KEY
 from paas_wl.workloads.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
-from paas_wl.workloads.resource_templates.utils import AddonManager
+from paas_wl.workloads.resource_templates.utils import AddonManager, ProcessProbeManager
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.generation.mapper import MapperPack
@@ -310,6 +310,12 @@ class ProcessSerializer(AppEntitySerializer['Process']):
 
     def _construct_pod_body_specs(self, process: 'Process') -> Dict:
         addon_mgr = AddonManager(process.app)
+        process_probe_mgr = ProcessProbeManager(app=process.app, process_type=process.type)
+        readiness_probe = cattr.unstructure(process_probe_mgr.get_readiness_probe())
+        if readiness_probe is None and process.type == "web":
+            readiness_probe = cattr.unstructure(addon_mgr.get_readiness_probe())
+        liveness_probe = cattr.unstructure(process_probe_mgr.get_liveness_probe())
+        startup_probe = cattr.unstructure(process_probe_mgr.get_startup_probe())
         main_container = {
             'env': [{"name": str(key), "value": str(value)} for key, value in process.runtime.envs.items()],
             # add preStop to avoid 502 when redeploy or rolling update app
@@ -329,8 +335,9 @@ class ProcessSerializer(AppEntitySerializer['Process']):
             'volumeMounts': cattr.unstructure(
                 get_app_logging_volume_mounts(process.app) + addon_mgr.get_volume_mounts()
             ),
-            # TODO: 重构「主入口」时需要改这里, 不再用 process.type 作为判断条件
-            'readinessProbe': None if process.type != "web" else cattr.unstructure(addon_mgr.get_readiness_probe()),
+            'readinessProbe': readiness_probe,
+            'livenessProbe': liveness_probe,
+            'startupProbe': startup_probe,
         }
 
         return {

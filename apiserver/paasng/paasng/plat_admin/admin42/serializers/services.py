@@ -25,6 +25,7 @@ from paasng.dev_resources.servicehub.remote.manager import RemoteServiceObj
 from paasng.dev_resources.servicehub.services import ServiceSpecificationDefinition
 from paasng.dev_resources.services.models import Plan, PreCreatedInstance
 from paasng.plat_admin.admin42.serializers.engine import EnvironmentSLZ
+from paasng.utils.i18n import to_translated_field
 
 
 class ServiceSpecificationDefinitionSLZ(serializers.Serializer):
@@ -76,12 +77,13 @@ class ServiceObjSLZ(serializers.Serializer):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-        # 需要将语言中的连字符转为下划线，如 zh-cn 转为: zh_cn
-        language_code = get_language().replace('-', '_')
+        language_code = get_language()
         # 国际化相关的字段需要按当前用户的语言来确定字段
         i18n_fields = ['display_name', 'description', 'long_description', 'instance_tutorial']
         for _field in i18n_fields:
-            data[f'{_field}_{language_code}'] = data.pop(_field, "")
+            # 需要将语言中的连字符转为下划线，如 zh-cn 转为: zh_cn
+            _translated_field = to_translated_field(_field, language_code)
+            data[_translated_field] = data.pop(_field, "")
 
         return data
 

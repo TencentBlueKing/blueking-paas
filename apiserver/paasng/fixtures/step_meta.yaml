@@ -343,7 +343,7 @@
       - 部署应用
     - - release
       - 检测部署结果
-    name: image
+    name: image-release
     updated: 2023-09-14 03:12:15.381779+00:00
   model: engine.stepmetaset
 # <- end 镜像部署步骤

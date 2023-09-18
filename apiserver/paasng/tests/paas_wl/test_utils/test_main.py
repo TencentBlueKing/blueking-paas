@@ -22,7 +22,7 @@ import pytest
 from attrs import define
 from django.utils.crypto import get_random_string
 
-from paas_wl.utils.basic import digest_if_length_exceeded
+from paas_wl.utils.basic import convert_key_to_camel, digest_if_length_exceeded
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import make_json_field
 
@@ -101,3 +101,37 @@ class TestDynamicJSONField:
     )
     def test_get_prep_value(self, value, expected, field):
         assert field.get_prep_value(value) == expected
+
+
+class TestConvertKeyToCamel:
+    @pytest.mark.parametrize(
+        'data, expected',
+        [
+            ({}, {}),
+            ({'foo_bar': 1, 'baz_qux': 2}, {'fooBar': 1, 'bazQux': 2}),
+            ({'foo_bar': {'baz_qux': 1}}, {'fooBar': {'bazQux': 1}}),
+            ({'foo_bar': 'foo_bar', 'baz_qux': 'baz_qux'}, {'fooBar': 'foo_bar', 'bazQux': 'baz_qux'}),
+            (
+                {"foo_bar": [{"baz_qux": 1, "qux_quux": 2}, {"baz_qux": 3, "qux_quux": 4}]},
+                {"fooBar": [{"bazQux": 1, "quxQuux": 2}, {"bazQux": 3, "quxQuux": 4}]},
+            ),
+            (
+                {
+                    "foo_bar": [
+                        {"baz_qux": "baz_qux", "qux_quux": "qux_quux"},
+                        {"baz_qux": "baz_qux", "qux_quux": "qux_quux"},
+                        "qux_quuux",
+                    ]
+                },
+                {
+                    "fooBar": [
+                        {"bazQux": "baz_qux", "quxQuux": "qux_quux"},
+                        {"bazQux": "baz_qux", "quxQuux": "qux_quux"},
+                        "qux_quuux",
+                    ]
+                },
+            ),
+        ],
+    )
+    def test_convert_key_to_camel(self, data, expected):
+        assert convert_key_to_camel(data) == expected

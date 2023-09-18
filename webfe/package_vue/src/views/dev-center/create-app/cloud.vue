@@ -950,7 +950,7 @@ export default {
         metadata: { name: this.formData.code },
         spec: {
           build: {
-            image: this.formData.url,  // 镜像信息-镜像仓库
+            image: this.formData.url.trim(),  // 镜像信息-镜像仓库
             imageCredentialsName: this.formData.imageCredentialName, // 镜像信息-镜像凭证-名称
           },
           processes: [this.cloudAppProcessData],

@@ -65,6 +65,7 @@ def mask_sensitive_data(request):
     """
     脱敏请求对象中的敏感数据。
     """
+    # 脱敏请求头的数据
     request.headers = scrub_data(request.headers)
 
     # 脱敏 URL 中的查询参数
@@ -92,6 +93,6 @@ def mask_sensitive_data(request):
 
 
 def to_curl(request, compressed=False, verify=True):
-    """将请求对象转换为一个 cURL 命令，同时对密码进行脱敏处理。"""
+    """将请求对象转换为一个 cURL 命令，同时对敏感信息进行脱敏处理。"""
     masked_request = mask_sensitive_data(request)
     return curlify.to_curl(masked_request, compressed=False, verify=True)

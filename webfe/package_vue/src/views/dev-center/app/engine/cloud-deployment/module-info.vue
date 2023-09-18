@@ -21,15 +21,15 @@
           <bk-form
             :model="buildData">
             <bk-form-item
-              :label="$t('托管方式：')">
+              :label="`${$t('托管方式')}：`">
               <span class="form-text">{{ artifactType || '--' }}</span>
             </bk-form-item>
             <bk-form-item
-              :label="$t('镜像仓库：')">
+              :label="`${$t('镜像仓库')}：`">
               <span class="form-text">{{ buildData.image || '--' }}</span>
             </bk-form-item>
             <bk-form-item
-              :label="$t('镜像凭证：')">
+              :label="`${$t('镜像凭证')}：`">
               <span class="form-text">{{ buildData.imageCredentialsName || '--' }}</span>
             </bk-form-item>
           </bk-form>
@@ -39,12 +39,12 @@
           <bk-form
             :model="buildData">
             <bk-form-item
-              :label="$t('托管方式：')">
+              :label="`${$t('托管方式')}：`">
               <span class="form-text">{{ artifactType || '--' }}</span>
             </bk-form-item>
 
             <bk-form-item
-              :label="$t('镜像仓库：')">
+              :label="`${$t('镜像仓库')}：`">
               <bk-input
                 v-model="buildData.image"
                 style="width: 450px;"
@@ -62,7 +62,7 @@
             </bk-form-item>
 
             <bk-form-item
-              :label="$t('镜像凭证：')">
+              :label="`${$t('镜像凭证')}：`">
               <bk-select
                 v-model="buildData.imageCredentialsName"
                 style="width: 450px;"

@@ -540,7 +540,7 @@ export default {
               const reg = /^[a-z][a-z0-9-]*$/;
               return reg.test(val);
             },
-            message: '格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母',
+            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
             trigger: 'blur',
           },
           {
@@ -548,7 +548,7 @@ export default {
               const reg = /^[a-z][a-z0-9-]{3,16}$/;
               return reg.test(val);
             },
-            message: '请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头',
+            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
             trigger: 'blur',
           },
         ],
@@ -563,7 +563,7 @@ export default {
               const reg = /^[a-z][a-z0-9-]*$/;
               return reg.test(val);
             },
-            message: '格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母',
+            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
             trigger: 'blur',
           },
           {
@@ -571,7 +571,7 @@ export default {
               const reg = /^[a-z][a-z0-9-]{1,16}$/;
               return reg.test(val);
             },
-            message: '由小写字母和数字以及连接符(-)组成，不能超过 16 个字符',
+            message: this.$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符'),
             trigger: 'blur',
           },
         ],
@@ -586,7 +586,7 @@ export default {
               const reg = /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/;
               return reg.test(val);
             },
-            message: '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头',
+            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
             trigger: 'blur',
           },
         ],
@@ -842,6 +842,9 @@ export default {
       this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
+      this.$router.push({
+        name: 'myApplications',
+      });
     },
 
     // 钩子命令校验

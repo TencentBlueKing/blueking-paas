@@ -111,19 +111,23 @@
                 :text="true"
                 title="primary"
                 @click="showInstanceLog(instance)">
-                查看日志
+                {{$t('查看日志')}}
               </bk-button>
               <bk-button
                 :text="true"
                 title="primary"
                 v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
                 @click="showInstanceConsole(instance, row)">
-                访问控制台
+                {{$t('访问控制台')}}
               </bk-button>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column label="进程操作" width="200" class-name="table-colum-operation-cls">
+        <bk-table-column
+          :label="$t('进程操作')"
+          width="200"
+          class-name="table-colum-operation-cls"
+        >
           <template slot-scope="{ row }">
             <div class="operation">
               <div
@@ -141,7 +145,7 @@
               <div class="operate-process-wrapper mr15">
                 <div class="round-wrapper" v-if="row.targetStatus === 'start'">
                   <bk-popconfirm
-                    content="确认停止该进程？"
+                    :content="$t('确认停止该进程？')"
                     width="288"
                     trigger="click"
                     @confirm="handleUpdateProcess">
@@ -153,7 +157,7 @@
                 </div>
                 <div v-else>
                   <bk-popconfirm
-                    content="确认启动该进程？"
+                    :content="$t('确认启动该进程？')"
                     width="288"
                     trigger="click"
                     @confirm="handleUpdateProcess">
@@ -739,7 +743,6 @@ export default {
 
     // 进程详情
     showProcessDetailDialog(process) {
-      console.log('process', process);
       this.processPlan = {
         replicas: process.instance,
         processType: process.type,
@@ -1051,7 +1054,6 @@ export default {
 
     async updateProcess() {
       const process = this.curUpdateProcess;
-      console.log('process', process);
       // 判断上次操作是否结束
       // if (process.isActionLoading) {
       //   this.$paasMessage({
@@ -1123,7 +1125,6 @@ export default {
         clearTimeout(this.watchServerTimer);
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
-      console.log('url', url);
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });

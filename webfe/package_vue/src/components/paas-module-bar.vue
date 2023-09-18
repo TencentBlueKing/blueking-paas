@@ -33,7 +33,7 @@
       :header-position="'left'"
       :show-footer="false"
       :mask-close="true"
-      :title="dialog.title"
+      :title="$t(dialog.title)"
       :loading="dialog.loading"
     >
       <bk-alert

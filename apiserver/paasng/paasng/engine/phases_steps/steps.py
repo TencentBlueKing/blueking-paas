@@ -84,6 +84,8 @@ def bind_step_to_metaset(metaset: StepMetaSet, phase: DeployPhaseTypes, step_nam
             step_meta = DeployStepMeta.objects.get(phase=phase, name=step_name)
         except DeployStepMeta.DoesNotExist:
             return
+        except DeployStepMeta.MultipleObjectsReturned:
+            step_meta = DeployStepMeta.objects.filter(phase=phase, name=step_name)[0]
         metaset.metas.add(step_meta)
 
 

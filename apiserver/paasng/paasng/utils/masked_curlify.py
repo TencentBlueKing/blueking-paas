@@ -6,7 +6,7 @@ import curlify
 import requests
 
 # 脱敏需要处理的字段
-# 包含这些内容的字段都会被脱敏，例如 app_secret 也会被脱敏处理
+# 包含这些内容的字段都会被脱敏，例如 X-BK-APP-SECRET 也会被脱敏处理
 DEFAULT_SCRUBBED_FIELDS = (
     'password',
     'secret',

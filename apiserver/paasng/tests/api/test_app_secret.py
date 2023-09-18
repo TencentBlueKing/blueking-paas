@@ -64,7 +64,7 @@ def two_enabled_app_secret_list(bk_app):
 
 
 @pytest.fixture
-def change_bulitin_app_secret(bk_app):
+def change_default_app_secret(bk_app):
     return G(BkAppSecretInEnvVar, bk_app_code=bk_app.code, bk_app_secret_id=2)
 
 
@@ -141,7 +141,7 @@ class TestAppSecret:
             (False, 2, 403),
         ],
     )
-    def test_toggle_secret_whit_no_db_bulitin_secret(
+    def test_toggle_secret_whit_no_db_default_secret(
         self, bk_app, two_enabled_app_secret_list, api_client, has_app_permission, toggle_secret_id, status_code
     ):
         with mock.patch(
@@ -160,12 +160,12 @@ class TestAppSecret:
         "has_app_permission, toggle_secret_id, status_code",
         [(True, 1, 204), (True, 2, 400), (False, 1, 403), (False, 2, 403)],
     )
-    def test_toggle_secret_whit_db_bulitin_secret(
+    def test_toggle_secret_whit_db_default_secret(
         self,
         bk_app,
         two_enabled_app_secret_list,
         api_client,
-        change_bulitin_app_secret,
+        change_default_app_secret,
         has_app_permission,
         toggle_secret_id,
         status_code,
@@ -183,7 +183,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, delete_secret_id, is_enabled, is_bulitin, status_code",
+        "has_app_permission, delete_secret_id, is_enabled, is_default, status_code",
         [
             (True, 1, True, False, 400),
             (True, 1, False, True, 400),
@@ -200,7 +200,7 @@ class TestAppSecret:
         api_client,
         delete_secret_id,
         is_enabled,
-        is_bulitin,
+        is_default,
         status_code,
     ):
         if is_enabled:
@@ -208,7 +208,7 @@ class TestAppSecret:
         else:
             app_secret_list = two_disabled_app_secret_list
 
-        if is_bulitin:
+        if is_default:
             default_app_secret = two_enabled_app_secret_list[0]
         else:
             default_app_secret = two_enabled_app_secret_list[1]

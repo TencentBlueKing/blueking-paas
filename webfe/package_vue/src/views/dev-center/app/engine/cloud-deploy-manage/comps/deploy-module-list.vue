@@ -57,15 +57,25 @@
               </template>
             </div>
             <div class="right-btn">
-              <bk-button
-                v-if="!!deploymentInfo.state.deployment.pending"
-                :theme="'primary'"
-                class="mr10"
-                size="small"
-                text
-                @click="handleShowDeploy(deploymentInfo)">
-                {{$t('部署详情')}}
-              </bk-button>
+              <span v-if="!!deploymentInfo.state.deployment.pending">
+                <bk-button
+                  v-if="deploymentInfo.state.deployment.pending.has_requested_in"
+                  :theme="'primary'"
+                  class="mr10"
+                  size="small"
+                  text>
+                  {{$t('正在中断部署...')}}
+                </bk-button>
+                <bk-button
+                  v-else
+                  :theme="'primary'"
+                  class="mr10"
+                  size="small"
+                  text
+                  @click="handleShowDeploy(deploymentInfo)">
+                  {{$t('部署详情')}}
+                </bk-button>
+              </span>
               <bk-button
                 :theme="'primary'"
                 class="mr10"

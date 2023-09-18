@@ -648,6 +648,7 @@ export default {
         this.initCloudAppData.metadata = {};
       }
       this.initCloudAppData.metadata.name = value;
+      this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
   },
   mounted() {

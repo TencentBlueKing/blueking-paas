@@ -113,11 +113,11 @@ class TestSaasProbes:
             app=wlapp, process_type='web', probe_type=ProbeType.READINESS
         )
 
-        assert liveness_probe.check_mechanism
-        assert liveness_probe.check_mechanism.exec.command == ['cat', '/tmp/healthy']
+        assert liveness_probe.probe_handler
+        assert liveness_probe.probe_handler.exec.command == ['cat', '/tmp/healthy']
 
-        assert readiness_probe.check_mechanism
-        assert readiness_probe.check_mechanism.tcp_socket.port == "${PORT}"
+        assert readiness_probe.probe_handler
+        assert readiness_probe.probe_handler.tcp_socket.port == "${PORT}"
 
     def test_saas_probes_changes(self, bk_deployment, yaml_content, yaml_content_after_change):
         """验证 saas 应用探针对象 ProcessProbe 成功修改 """
@@ -147,10 +147,10 @@ class TestSaasProbes:
             app=wlapp, process_type='web', probe_type=ProbeType.STARTUP
         )
 
-        assert liveness_probe.check_mechanism
-        assert liveness_probe.check_mechanism.exec.command == ['cat', '/tmp/healthy']
+        assert liveness_probe.probe_handler
+        assert liveness_probe.probe_handler.exec.command == ['cat', '/tmp/healthy']
 
         assert not readiness_probe_exists
 
-        assert start_probe.check_mechanism
-        assert start_probe.check_mechanism.tcp_socket.port == "${PORT}"
+        assert start_probe.probe_handler
+        assert start_probe.probe_handler.tcp_socket.port == "${PORT}"

@@ -26,19 +26,19 @@ from paas_wl.workloads.resource_templates.utils import ProcessProbeManager
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_process_probe_mgr(wl_app, process_type, check_mechanism_templates, port_env):
+def test_process_probe_mgr(wl_app, process_type, probe_handler_templates, port_env):
     with override_settings(CONTAINER_PORT=port_env):
         ProcessProbe.objects.create(
             app=wl_app,
             process_type=process_type,
             probe_type=ProbeType.READINESS,
-            check_mechanism=check_mechanism_templates['readiness'],
+            probe_handler=probe_handler_templates['readiness'],
         )
         ProcessProbe.objects.create(
             app=wl_app,
             process_type=process_type,
             probe_type=ProbeType.LIVENESS,
-            check_mechanism=check_mechanism_templates['liveness'],
+            probe_handler=probe_handler_templates['liveness'],
         )
 
         app_probe_mgr = ProcessProbeManager(app=wl_app, process_type=process_type)

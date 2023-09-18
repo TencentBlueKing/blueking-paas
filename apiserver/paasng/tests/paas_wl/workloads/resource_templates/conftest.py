@@ -71,7 +71,7 @@ def probe_addon_template(probe_template):
 
 
 @pytest.fixture
-def check_mechanism_templates():
+def probe_handler_templates():
     return {
         "readiness": {
             "http_get": {"path": "/healthz", "port": 8080},

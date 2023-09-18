@@ -45,9 +45,9 @@ class ProcessProbeManager:
         except ProcessProbe.DoesNotExist:
             return None
 
-        check_mechanism = convert_key_to_camel(cattr.unstructure(process_probe.check_mechanism))
+        probe_handler = convert_key_to_camel(cattr.unstructure(process_probe.probe_handler))
         # 占位符 ${PORT} 替换为环境变量 PORT
-        check_mechanism = _render_by_env(check_mechanism)
+        probe_handler = _render_by_env(probe_handler)
         parameters_json = {
             'initialDelaySeconds': process_probe.initial_delay_seconds,
             'timeoutSeconds': process_probe.timeout_seconds,
@@ -55,7 +55,7 @@ class ProcessProbeManager:
             'successThreshold': process_probe.success_threshold,
             'failureThreshold': process_probe.failure_threshold,
         }
-        combined_json = {**check_mechanism, **parameters_json}
+        combined_json = {**probe_handler, **parameters_json}
 
         return cattr.structure(combined_json, Probe)
 

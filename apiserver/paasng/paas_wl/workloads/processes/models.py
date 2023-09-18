@@ -222,7 +222,7 @@ class ProcessProbe(models.Model):
     process_type = models.CharField(max_length=255)
     probe_type = models.CharField(max_length=255, choices=ProbeType.get_django_choices())
 
-    check_mechanism = ProbeHandlerField(default=dict, help_text="具体的检测机制配置，例如 httpGet 完整配置")
+    probe_handler = ProbeHandlerField(default=dict, help_text="具体的检测机制配置，例如 httpGet 完整配置")
     initial_delay_seconds = models.IntegerField(default=0)
     timeout_seconds = models.PositiveIntegerField(default=1)
     period_seconds = models.PositiveIntegerField(default=10)

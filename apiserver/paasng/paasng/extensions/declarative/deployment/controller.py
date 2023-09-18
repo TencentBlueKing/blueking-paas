@@ -68,13 +68,13 @@ class DeploymentDeclarativeController:
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
 
-        # 为了保证 Probe 对象不遗留，再更新配置文件时，对 Probe 进行全量删除和全量创建
-        # 根据未更新前配置，对probe进行全量删除
+        # 为了保证 probe 对象不遗留，再更新配置文件时，对 probe 进行全量删除和全量创建
+        # 根据未更新前配置，对 probe 进行全量删除
         if deployment_desc_before:
             processes = deployment_desc_before.get_processes()
             for process_type, _ in processes.items():
                 self.delete_probes(process_type=process_type)
-        # 根据更新后配置，对probe进行全量创建
+        # 根据更新后配置，对 probe 进行全量创建
         for process_type, process in desc.processes.items():
             self.create_probes(process_type=process_type, probes=process.probes)
 
@@ -87,7 +87,7 @@ class DeploymentDeclarativeController:
         )
 
     def delete_probes(self, process_type: str):
-        """创建 SaaS 探针配置"""
+        """删除 SaaS 探针配置"""
         delete_process_probe(
             env=self.deployment.app_environment,
             process_type=process_type,

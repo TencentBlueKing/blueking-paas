@@ -217,7 +217,7 @@ ProbeHandlerField = make_json_field("ProbeHandlerField", ProbeHandler)
 
 
 class ProcessProbe(models.Model):
-    app = models.ForeignKey('api.App', related_name='wlapp_probes', on_delete=models.CASCADE, db_constraint=False)
+    app = models.ForeignKey('api.App', related_name='process_probe', on_delete=models.CASCADE, db_constraint=False)
     # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
     process_type = models.CharField(max_length=255)
     probe_type = models.CharField(max_length=255, choices=ProbeType.get_django_choices())

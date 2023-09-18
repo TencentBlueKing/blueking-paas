@@ -63,7 +63,7 @@ class HTTPHeaderSLZ(serializers.Serializer):
 
 
 class ExecSLZ(serializers.Serializer):
-    command = serializers.ListField(help_text="访问路径", child=serializers.CharField())
+    command = serializers.ListField(help_text="命令", child=serializers.CharField())
 
 
 class HTTPGetSLZ(serializers.Serializer):

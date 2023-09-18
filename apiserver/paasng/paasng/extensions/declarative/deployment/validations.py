@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import cattr
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.engine.constants import ConfigVarEnvName
@@ -93,7 +94,7 @@ class ProbeSLZ(serializers.Serializer):
     def validate(self, data):
         # 根据实际需求进行校验
         if not any([data.get('exec'), data.get('http_get'), data.get('tcp_socket')]):
-            raise serializers.ValidationError("至少需要指定一个有效的探活检测机制")
+            raise serializers.ValidationError(_("至少需要指定一个有效的探活检测机制"))
 
         return super().validate(data)
 

@@ -23,7 +23,7 @@ from paasng.extensions.declarative.deployment.resources import Probe
 from paasng.platform.applications.models import ModuleEnvironment
 
 
-def create_process_probe(
+def upsert_process_probe(
     env: ModuleEnvironment,
     process_type: str,
     probe_type: str,
@@ -45,9 +45,8 @@ def create_process_probe(
     )
 
 
-def delete_process_probe(
+def delete_process_probes(
     env: ModuleEnvironment,
-    process_type: str,
 ):
     """删除应用探针的配置"""
-    ProcessProbe.objects.filter(app=env.wl_app, process_type=process_type).delete()
+    ProcessProbe.objects.filter(app=env.wl_app).delete()

@@ -119,20 +119,24 @@ class TestSaasProbes:
         assert readiness_probe.probe_handler
         assert readiness_probe.probe_handler.tcp_socket.port == "${PORT}"
 
-    def test_saas_probes_changes(self, bk_deployment, yaml_content, yaml_content_after_change):
+    @pytest.mark.parametrize("mock_delete_process_probe", [True], indirect=True)
+    def test_saas_probes_changes(self, bk_deployment, bk_deployment_full, yaml_content, yaml_content_after_change):
         """验证 saas 应用探针对象 ProcessProbe 成功修改 """
-
         # bk_deployment.app_environment  外键未实例化，补全
         name = bk_deployment.app_environment.engine_app.name
         region = bk_deployment.app_environment.engine_app.region
         wlapp = WlApp.objects.create(name=name, region=region)
+
+        # bk_deployment_full.app_environment  外键未实例化，补全
+        bk_deployment_full.app_environment.engine_app.name = name
+        bk_deployment_full.app_environment.engine_app.region = region
 
         fp = io.StringIO(yaml_content)
         AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
 
         # 模拟重新部署过程
         fp = io.StringIO(yaml_content_after_change)
-        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment_full)
 
         # liveness_probe 无变化
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(

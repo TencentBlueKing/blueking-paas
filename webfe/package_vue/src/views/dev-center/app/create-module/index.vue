@@ -981,6 +981,11 @@ export default {
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
+        // 空值端口过滤
+        this.createCloudAppData.spec.processes = this.createCloudAppData.spec?.processes?.map(p => {
+          const { targetPort, ...targetValue } = p;
+          return (targetPort === '' || targetPort === null) ? targetValue : p;
+        });
         params.source_config = {
           source_repo_url: this.mirrorData.url,
           source_origin: this.sourceOrigin,

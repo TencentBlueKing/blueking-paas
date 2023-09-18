@@ -39,7 +39,11 @@
               </div>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('预发布环境')" width="100">
+          <bk-table-column
+            :label="$t('预发布环境')"
+            width="100"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.stag">
                 <i
@@ -49,7 +53,11 @@
               <span v-else>--</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('生产环境')" width="100">
+          <bk-table-column
+            :label="$t('生产环境')"
+            width="100"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.prod">
                 <i
@@ -59,7 +67,10 @@
               <span v-else>--</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('配置信息')">
+          <bk-table-column
+            :label="$t('配置信息')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="{row}">
               <span v-if="row.isStartUp && row.specifications && row.specifications.length">
                 <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
@@ -69,7 +80,10 @@
               <span v-else>--</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('共享信息')">
+          <bk-table-column
+            :label="$t('共享信息')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.ref_modules && row.ref_modules.length">
                 {{ $t('被') }} {{ row.ref_modules.map(e => e.name).join(',') }} {{ $t('共享') }}
@@ -84,6 +98,7 @@
             width="180"
             :label="$t('启/停')"
             class-name="services-table-cloumn"
+            :render-header="$renderHeader"
           >
             <template slot-scope="{row, $index}">
               <div
@@ -399,7 +414,6 @@ export default {
           return e;
         });
         this.tableList = [...res.bound, ...res.shared, ...res.unbound];
-        console.log('this.tableList', this.tableList);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -435,7 +449,6 @@ export default {
     },
 
     toggleSwitch(payload, index) {
-      console.log('payload', payload);
       this.curData = payload;
       this.curIndex = index;
       if (payload.isStartUp) {    // 已经启动的状态
@@ -454,7 +467,6 @@ export default {
       // eslint-disable-next-line no-underscore-dangle
       this.$refs[`tooltipsHtml${this.curIndex}`]._tippy.hide();
       if (payload.value === 'start') {  // 直接启动
-        console.log('payload', payload);
         if (this.curData.specifications.length) { // 配置并启动
           this.isShowStartDialog = true;
           this.fetchServicesSpecsDetail();
@@ -491,7 +503,6 @@ export default {
     // 获取启动时需要的配置信息
     async fetchServicesSpecsDetail() {
       try {
-        console.log(this.region);
         const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
           id: this.curData.uuid,
           region: this.region,
@@ -507,7 +518,6 @@ export default {
           this.$set(item, 'showError', false);
         });
         this.definitions = [...res.definitions];
-        console.log('res', this.definitions);
         this.values = [...res.values];
       } catch (res) {
         this.$paasMessage({

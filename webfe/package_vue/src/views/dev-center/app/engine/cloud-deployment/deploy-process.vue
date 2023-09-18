@@ -26,7 +26,7 @@
 
 
             <bk-popconfirm
-              content="确认删除该进程"
+              :content="$t('确认删除该进程')"
               width="288"
               style="display: inline-block;"
               class="item-close-icon"
@@ -218,7 +218,7 @@
               <bk-button
                 text
                 theme="primary"
-                title="更多配置"
+                :title="$t('更多配置')"
                 @click="ifopen = !ifopen">
                 {{ $t('更多配置') }}
                 <i
@@ -287,7 +287,7 @@
                     :label="$t('扩缩容方式')"
                     :label-width="120"
                   >
-                    <section class="flex-row">
+                    <section :class="{ 'flex-row': localLanguage !== 'en' }">
                       <bk-radio-group
                         v-model="extraConfigData.stag.isAutoscaling"
                         @change="handleRadioChange('stag')" style="flex: 1">
@@ -300,7 +300,12 @@
                         </bk-radio-button>
                       </bk-radio-group>
 
-                      <bk-alert type="info" v-if="extraConfigData.stag.isAutoscaling" style="margin-right: 60px;">
+                      <bk-alert
+                        v-if="extraConfigData.stag.isAutoscaling"
+                        type="info"
+                        :class="{ mt10: localLanguage === 'en' }"
+                        style="margin-right: 60px;"
+                      >
                         <span slot="title">
                           {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
                           <a
@@ -438,7 +443,7 @@
                     :label="$t('扩缩容方式')"
                     :label-width="120"
                   >
-                    <section class="flex-row">
+                    <section :class="{ 'flex-row': localLanguage !== 'en' }">
                       <bk-radio-group
                         v-model="extraConfigData.prod.isAutoscaling"
                         @change="handleRadioChange('prod')" style="flex: 1">
@@ -451,7 +456,12 @@
                         </bk-radio-button>
                       </bk-radio-group>
 
-                      <bk-alert type="info" v-if="extraConfigData.prod.isAutoscaling" style="margin-right: 60px;">
+                      <bk-alert
+                        v-if="extraConfigData.prod.isAutoscaling"
+                        type="info"
+                        :class="{ mt10: localLanguage === 'en' }"
+                        style="margin-right: 60px;"
+                      >
                         <span slot="title">
                           {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
                           <a
@@ -585,7 +595,7 @@
             <bk-button
               text
               theme="primary"
-              title="更多配置"
+              :title="$t('更多配置')"
               @click="ifopen = !ifopen">
               {{ $t('更多配置') }}
               <i
@@ -603,13 +613,13 @@
                   <div class="env-name">{{ item.label }}</div>
                   <div class="env-item">
                     <bk-form-item
-                      :label="$t('资源配额方案：')"
+                      :label="`${$t('资源配额方案')}：`"
                       ext-cls="form-first-cls">
                       <span class="form-text">{{ extraConfigData[item.value].resQuotaPlan.plan || '--' }}</span>
                     </bk-form-item>
 
                     <bk-form-item
-                      :label="$t('扩缩容方式：')">
+                      :label="`${$t('扩缩容方式')}：`">
                       <span class="form-text">
                         {{ extraConfigData[item.value].isAutoscaling ? $t('自动调节') : $t('手动调节') }}
                       </span>
@@ -936,10 +946,10 @@ export default {
         content: this.$t('提示信息'),
         html: `
               <div>
-                最大资源限制： <span>cpu：${this.extraConfigData.stag.limit.cpu} </span> <span>内存：${this.extraConfigData.stag.limit.memory} </span>
+                ${this.$t('最大资源限制')}： <span>cpu：${this.extraConfigData.stag.limit.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.stag.limit.memory} </span>
               </div>
               <div>
-                最小资源请求：<span>cpu：${this.extraConfigData.stag.request.cpu} </span> <span>内存：${this.extraConfigData.stag.request.memory} </span>
+                ${this.$t('最小资源请求')}：<span>cpu：${this.extraConfigData.stag.request.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.stag.request.memory} </span>
               </div>
               `,
         placements: ['bottom'],
@@ -952,14 +962,18 @@ export default {
         content: this.$t('提示信息'),
         html: `
               <div>
-                最大资源限制： <span>cpu：${this.extraConfigData.prod.limit.cpu} </span> <span>内存：${this.extraConfigData.prod.limit.memory} </span>
+                ${this.$t('最大资源限制')}： <span>cpu：${this.extraConfigData.prod.limit.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.prod.limit.memory} </span>
               </div>
               <div>
-                最小资源请求：<span>cpu：${this.extraConfigData.prod.request.cpu} </span> <span>内存：${this.extraConfigData.prod.request.memory} </span>
+                ${this.$t('最小资源请求')}：<span>cpu：${this.extraConfigData.prod.request.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.prod.request.memory} </span>
               </div>
               `,
         placements: ['bottom'],
       };
+    },
+
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -989,7 +1003,6 @@ export default {
     },
     formData: {
       handler(val) {
-        console.log('this.localCloudAppData', this.localCloudAppData);
         this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
         if (this.localCloudAppData.spec) {
           val.name = this.processNameActive;
@@ -1312,7 +1325,6 @@ export default {
           if (this.isV1alpha2) {
             delete this.formData.image;   // v2不需要image
           }
-          console.log('this.localCloudAppData.spec.processes', this.localCloudAppData.spec);
           this.localCloudAppData.spec.processes.push(this.formData);
         }
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);

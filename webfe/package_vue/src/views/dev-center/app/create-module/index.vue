@@ -190,7 +190,7 @@
             </div>
             <div class="establish-tab mt10">
               <section class="code-type">
-                <span class="pl20">模板来源：</span><span class="pl10 module-name">蓝鲸开发框架</span>
+                <span class="pl20">{{$t('模板来源')}}：</span><span class="pl10 module-name">{{$t('蓝鲸开发框架')}}</span>
               </section>
             </div>
 
@@ -589,7 +589,7 @@ export default {
             validator(val) {
               return !val.includes(':');
             },
-            message: '镜像地址中不能包含版本(tag)信息',
+            message: this.$t('镜像地址中不能包含版本(tag)信息'),
             trigger: 'blur',
           },
         ],
@@ -606,7 +606,7 @@ export default {
               const reg = /^[a-z][a-z0-9-]*$/;
               return reg.test(val);
             },
-            message: '格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母',
+            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
             trigger: 'blur',
           },
           {
@@ -614,7 +614,7 @@ export default {
               const reg = /^[a-z][a-z0-9-]{1,16}$/;
               return reg.test(val);
             },
-            message: '由小写字母和数字以及连接符(-)组成，不能超过 16 个字符',
+            message: this.$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符'),
             trigger: 'blur',
           },
         ],
@@ -634,7 +634,6 @@ export default {
   },
   computed: {
     region() {
-      console.log('this.curAppInfo', this.curAppInfo);
       return this.curAppInfo.application.region;
     },
     isShowRegionsService() {

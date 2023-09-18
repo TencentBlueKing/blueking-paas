@@ -66,11 +66,11 @@ class DeploymentDeclarativeController:
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
 
-        # 为了保证 probe 对象不遗留，再更新配置文件时，对 probe 进行全量删除和全量创建
+        # 为了保证 probe 对象不遗留，对 probe 进行全量删除和全量更新
         # 对该环境下的 probe 进行全量删除
         self.delete_probes()
 
-        # 根据配置，对 probe 进行全量创建
+        # 根据配置，对 probe 进行全量更新
         for process_type, process in desc.processes.items():
             self.updata_probes(process_type=process_type, probes=process.probes)
 
@@ -89,7 +89,7 @@ class DeploymentDeclarativeController:
         )
 
     def updata_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
-        """创建 SaaS 探针配置"""
+        """更新 SaaS 探针配置"""
         if not probes:
             return
 

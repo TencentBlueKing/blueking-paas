@@ -26,7 +26,7 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus, Pol
 
 from paas_wl.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.cnative.specs.resource import ModelResState
-from paasng.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
+from paasng.engine.deploy.bg_wait.wait_bkapp import AbortedDetails, DeployStatusHandler, WaitAppModelReady
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy, create_condition, create_res_with_conds
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -44,7 +44,7 @@ def poller(bk_stag_env, dp):
     return WaitAppModelReady(params={'env_id': bk_stag_env.id, 'deploy_id': dp.id}, metadata=metadata)
 
 
-class TestAppModelDeployStatusPoller:
+class TestWaitAppModelReady:
     @patch('paasng.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster', return_value=create_res_with_conds([]))
     def test_pending(self, mocker, dp, poller):
         ret = poller.query()
@@ -71,8 +71,10 @@ class TestAppModelDeployStatusPoller:
     def test_stable(self, mocker, poller):
         ret = poller.query()
         assert ret.status == PollingStatus.DONE
-        assert 'state' in ret.data
-        assert 'last_update' in ret.data
+
+        extra_data = ret.data["extra_data"]
+        assert 'state' in extra_data
+        assert 'last_update' in extra_data
 
 
 class TestDeployStatusHandler:
@@ -86,10 +88,13 @@ class TestDeployStatusHandler:
         DeployStatusHandler().handle(
             result=CallbackResult(
                 status=CallbackStatus.NORMAL,
-                data={
-                    'state': ModelResState(DeployStatus.READY, 'ready', 'foo ready'),
-                    'last_update': arrow.get('2020-10-10').datetime,
-                },
+                data=AbortedDetails(
+                    aborted=False,
+                    extra_data={
+                        'state': ModelResState(DeployStatus.READY, 'ready', 'foo ready'),
+                        'last_update': arrow.get('2020-10-10').datetime,
+                    },
+                ).dict(),
             ),
             poller=poller,
         )
@@ -100,3 +105,22 @@ class TestDeployStatusHandler:
         assert dp.reason == 'ready'
         assert dp.message == 'foo ready'
         assert dp.last_transition_time.date() == datetime.date(2020, 10, 10)
+
+    def test_is_interrupted(self, dp, poller):
+        DeployStatusHandler().handle(
+            result=CallbackResult(
+                status=CallbackStatus.NORMAL,
+                data=AbortedDetails(
+                    aborted=True,
+                    policy={"is_interrupted": True, "reason": "User interrupted release", "name": ""},
+                    extra_data={},
+                ).dict(),
+            ),
+            poller=poller,
+        )
+
+        dp.refresh_from_db()
+        # Assert deploy has been updated
+        assert dp.status == DeployStatus.UNKNOWN
+        assert dp.reason == 'interrupted'
+        assert dp.message == 'User interrupted release'

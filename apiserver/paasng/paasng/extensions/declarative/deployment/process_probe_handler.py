@@ -32,7 +32,7 @@ def create_process_probe(
     """更新或创建应用探针的配置"""
     instance, _ = ProcessProbe.objects.update_or_create(
         defaults={
-            "check_mechanism": cattr.unstructure(probe.get_probe_handler()),
+            "probe_handler": cattr.unstructure(probe.get_probe_handler()),
             "initial_delay_seconds": probe.initial_delay_seconds,
             "timeout_seconds": probe.timeout_seconds,
             "period_seconds": probe.period_seconds,

@@ -142,6 +142,11 @@ const appEntryConfig = () => import(/* webpackChunkName: 'app-engine' */'@/views
   window.showDeployTip(error);
 });
 
+
+const visitUrl = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/basic-config/visit-url/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appEnvVars = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/env-vars').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -179,6 +184,12 @@ const appMobileMarket = () => import(/* webpackChunkName: 'app-market' */'@/view
 });
 
 const appCreateModule = () => import(/* webpackChunkName: 'app-create-module' */'@/views/dev-center/app/create-module').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+
+// App: basic config
+const basicConfig = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -437,6 +448,64 @@ const router = new Router({
           meta: {
             capture403Error: false,
           },
+        },
+        {
+          path: ':id/app-configs',
+          component: basicConfig,
+          name: 'basicConfig',
+          redirect: {
+            name: 'appCloudAPI',
+          },
+          children: [
+            {
+              path: 'api',
+              component: appCloudAPI,
+              name: 'appCloudAPI',
+              meta: {
+                module: 'api',
+              },
+            },
+            {
+              path: 'url',
+              component: visitUrl,
+              name: 'visitUrl',
+              meta: {
+                module: 'url',
+              },
+            },
+            {
+              path: 'market',
+              component: appMarket,
+              name: 'appMarket',
+              meta: {
+                module: 'market',
+              },
+            },
+            {
+              path: 'mobile-market',
+              component: appMobileMarket,
+              name: 'appMobileMarket',
+              meta: {
+                module: 'appMobileMarket',
+              },
+            },
+            {
+              path: 'api',
+              component: appBasicInfo,
+              name: 'appBasicInfo',
+              meta: {
+                module: 'api',
+              },
+            },
+            {
+              path: 'member',
+              component: appMembers,
+              name: 'appMembers',
+              meta: {
+                module: 'member',
+              },
+            },
+          ],
         },
         {
           path: ':id/roles',

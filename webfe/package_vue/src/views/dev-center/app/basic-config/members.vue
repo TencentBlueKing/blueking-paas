@@ -409,7 +409,7 @@ export default {
       // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
     },
 
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
 
@@ -661,7 +661,8 @@ export default {
     },
     handleSearch() {
       if (this.keyword) {
-        this.memberListShow = this.memberList.filter(apigw => apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1);
+        this.memberListShow = this.memberList
+          .filter(apigw => apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1);
         this.memberListClone = [...this.memberListShow];
         this.pagination.count = this.memberListClone.length;
         if (this.memberListClone.length > 10) {

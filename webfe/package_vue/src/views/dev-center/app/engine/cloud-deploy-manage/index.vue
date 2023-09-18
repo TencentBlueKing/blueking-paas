@@ -28,15 +28,11 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
-// import stag from './comps/stag.vue';
-// import prod from './comps/prod.vue';
 
 export default {
   name: 'CloudDeployManagement',
   components: {
     cloudAppTopBar,
-    // stag,
-    // prod,
   },
   mixins: [appBaseMixin],
   data() {

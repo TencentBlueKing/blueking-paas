@@ -26,7 +26,7 @@ from django.db.transaction import atomic
 from paas_wl.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
-from paasng.extensions.declarative.deployment.process_probe_handler import delete_process_probes, upsert_process_probe
+from paasng.extensions.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
 from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet
 from paasng.extensions.declarative.models import DeploymentDescription
 

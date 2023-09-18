@@ -109,11 +109,14 @@ export default {
     },
   },
   watch: {
-    list() {
-      console.log('list', this.list);
-      this.$nextTick(() => {
-        this.toggle(this.list[0]);
-      });
+    list: {
+      handler() {
+        this.$nextTick(() => {
+          this.toggle(this.list[0]);
+        });
+      },
+      immediate: true,
+      deep: true,
     },
   },
   created() {
@@ -143,8 +146,8 @@ export default {
     },
 
     /**
-             * 部署开始后如果在部署准备阶段就失败的话，此时整个进程状态未变，获取未变的状态
-             */
+     * 部署开始后如果在部署准备阶段就失败的话，此时整个进程状态未变，获取未变的状态
+     */
     handleGetIsInit() {
       return this.list.every(item => item.status === 'default') || this.list[0].status === 'pending';
     },
@@ -163,8 +166,8 @@ export default {
     },
 
     /**
-             * 部署发生错误结束时，当sse没有返回失败的数据时需手动设置处于pending状态的进程的状态为失败
-             */
+     * 部署发生错误结束时，当sse没有返回失败的数据时需手动设置处于pending状态的进程的状态为失败
+     */
     handleSetFailed() {
       const pendingStage = this.list.filter(item => item.status === 'pending');
       if (pendingStage.length > 0) {
@@ -206,6 +209,7 @@ export default {
 
     editNodeStatus(name, status, content) {
       const isMainStage = ['build', 'release', 'preparation'].includes(name);
+      console.log('this.list', this.list, name, status);
       const curNode = this.list.find(item => item.name === name);
       if (curNode) {
         curNode.status = status;

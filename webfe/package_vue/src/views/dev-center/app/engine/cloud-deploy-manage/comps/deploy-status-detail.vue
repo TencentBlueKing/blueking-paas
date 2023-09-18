@@ -268,7 +268,9 @@ export default {
   watch: {
     deploymentId: {
       handler(v) {
-        this.watchDeployStatus(v);
+        this.$nextTick(() => {
+          this.watchDeployStatus(v);
+        });
       },
       immediate: true,
     },
@@ -288,7 +290,7 @@ export default {
     });
 
     window.addEventListener('resize', () => {
-      this.computedBoxFixed();
+      // this.computedBoxFixed();
     });
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
@@ -301,7 +303,6 @@ export default {
   methods: {
     init() {
       this.getPreDeployDetail();
-    //   this.watchDeployStatus();
     },
     /**
      * 监听部署进度，打印日志
@@ -360,6 +361,7 @@ export default {
           if (item.name === 'release' && item.status === 'successful') {
             // 部署成功
             this.isDeploySuccess = true;
+            this.isWatchDeploying = false;
             // 更新当前模块信息
             this.getModuleProcessList();
           } else if (item.status === 'failed') {
@@ -437,12 +439,12 @@ export default {
           // 判断是否在准备阶段就失败
           const isReadyFailed = this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleGetIsInit();
 
-          isReadyFailed && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'failed', '');
+          isReadyFailed && this.$refs.deployTimelineRef.editNodeStatus('release', 'failed', '');
 
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleSetFailed();
 
           if (this.isDeploySuccess) {
-            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
+            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('release', 'successful', '');
           }
           this.getDeployResult(deployId);
         }, false);

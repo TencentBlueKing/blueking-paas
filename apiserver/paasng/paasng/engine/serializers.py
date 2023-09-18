@@ -77,7 +77,9 @@ class CreateDeploymentSLZ(serializers.Serializer):
 
     advanced_options = DeploymentAdvancedOptionsSLZ(required=False, default={})
     # 仅云原生应用需要该参数
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), required=False)
+    manifest = serializers.JSONField(
+        label=_('BkApp 配置信息'), required=False, help_text="提供 manifest 时将覆盖部署配置(兼容cli), 不提供则使用最新的部署配置"
+    )
 
 
 class CreateDeploymentResponseSLZ(serializers.Serializer):

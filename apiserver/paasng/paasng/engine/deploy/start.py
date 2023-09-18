@@ -65,8 +65,9 @@ def initialize_deployment(
         source_location = version_service.build_url(version_info)
 
     bkapp_revision_id = None
-    if application.type == ApplicationType.CLOUD_NATIVE and manifest:
-        update_app_resource(application, module, manifest)
+    if application.type == ApplicationType.CLOUD_NATIVE:
+        if manifest:
+            update_app_resource(application, module, manifest)
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         bkapp_revision_id = model_resource.revision.id

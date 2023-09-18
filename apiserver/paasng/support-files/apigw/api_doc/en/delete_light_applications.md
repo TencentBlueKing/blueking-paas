@@ -1,18 +1,24 @@
-### Resource Description
+### Description
 
-Delete the light APP for use only by the management app.
+Delete lightweight applications, for management-side APP use only.
 
-### Authentication mode
+### Request Parameters
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 1. Path Parameters:
+None.
 
-### Input parameter Description
+#### 2. API Parameters:
 
-| Field | Type | Required | Description |
-| -------- | -------- | ---- | ----------------- |
-| app_code | string   | yes | APP Code for light apps|
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| app_code       | string         | Yes      | Lightweight APP Code  |
 
-### Return result
+### Request Example
+```
+curl -X DELETE -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret": "***"}' --insecure 'http://bkapi.example.com/api/bkpaas3/prod/system/light-applications?light_app_code=bk_sops_xxxxx'
+```
+
+### Response Result Example
 
 ```json
 {
@@ -25,8 +31,8 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| Name         | Type   | Description              |
-| ------------ | ------ | ----------------- |
-| count     |  int |Number of apps deleted|
+| Field  | Type | Description      |
+| ------ | ---- | ---------------- |
+| count  | int  | Deleted app count |

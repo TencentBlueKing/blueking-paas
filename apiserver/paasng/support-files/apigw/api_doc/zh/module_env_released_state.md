@@ -1,27 +1,37 @@
-### 资源描述
+### 功能描述
 查询应用模块环境部署信息
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 调用示例
+#### 1、路径参数：
+
+| 参数名称 | 参数类型 | 必须 | 参数说明 |
+| -------- | -------- | ---- | -------- |
+| code     | string   | 是   | 应用代码 |
+| module_name | string | 是 | 模块名称 |
+| environment | string | 是 | 环境名称 |
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_state/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_state/
 ```
 
-### 请求参数说明
-<table class="parameters"><thead><tr><th class="col_header parameters-col_name">Name</th><th class="col_header parameters-col_description">Description</th></tr></thead><tbody><tr data-param-name="code" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 10603 -->code<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 10606 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 10609 -->(<!-- /react-text --><!-- react-text: 10610 -->path<!-- /react-text --><!-- react-text: 10611 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="code" value="" disabled=""></td></tr><tr data-param-name="environment" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 10617 -->environment<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 10620 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 10623 -->(<!-- /react-text --><!-- react-text: 10624 -->path<!-- /react-text --><!-- react-text: 10625 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="environment" value="" disabled=""></td></tr><tr data-param-name="module_name" data-param-in="path"><td class="parameters-col_name"><div class="parameter__name required"><!-- react-text: 10631 -->module_name<!-- /react-text --><span style="color: red;">&nbsp;*</span></div><div class="parameter__type"><!-- react-text: 10634 -->string<!-- /react-text --></div><div class="parameter__deprecated"></div><div class="parameter__in"><!-- react-text: 10637 -->(<!-- /react-text --><!-- react-text: 10638 -->path<!-- /react-text --><!-- react-text: 10639 -->)<!-- /react-text --></div></td><td class="parameters-col_description"><input type="text" class="" title="" placeholder="module_name" value="" disabled=""></td></tr></tbody></table>
+#### 获取你的 access_token
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### 返回结果
+### 返回结果示例
+
 #### 正常返回
 ```json
 {
-    // 进程信息仅当传递 with_processes 时提供
     "processes":[
         {
             "web":{
                 "command":"gunicorn go.wsgi -b :$PORT --log-file -",
-                "replicas":[                                            // 进程详情
+                "replicas":[
                     {
                         "status":"Running"
                     }
@@ -30,13 +40,13 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
         }
     ],
     "exposed_link":{
-        "url":"http://apps.example.com/stag--appid/"           // 访问地址
+        "url":"http://apps.example.com/stag--appid/"
     },
     "deployment":{
         "id":"66e5d4fe-89d3-45bd-aa93-4d213815cc42",
         "status":"successful",
         "operator":{
-            "username":"admin",                                    // 部署发起人
+            "username":"admin",
             "id":"0226c9f39893459abac3eb"
         },
         "created":"2017-06-14 11:22:06",
@@ -51,14 +61,14 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
         }
     },
     "feature_flag":{
-        "release_to_bk_market": True/False,         # 是否发布到蓝鲸应用市场
-        "release_to_wx_miniprogram": True/False,    # 是否发布到微信小程序
-        "release_to_wx_qiye": True/False            # 是否发布到微信企业端
+        "release_to_bk_market": True/False,
+        "release_to_wx_miniprogram": True/False,
+        "release_to_wx_qiye": True/False
     },
-    "module_mobile_config_enabled": True/False,     # 移動端功能是否开启(对应region的总开关)
+    "module_mobile_config_enabled": True/False,
     "mobile_config": {
-        "is_enabled": True/False,                   # 是否开启微信企业号端,
-        "access_domain": "https://balabala"         # 访问入口
+        "is_enabled": True/False,
+        "access_domain": "https://balabala"
     }
 }
 ```
@@ -70,3 +80,55 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
     "detail": "应用尚未在该环境发布过"
 }
 ```
+
+### 返回结果参数说明
+
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| processes | list | 是 | 进程信息 |
+| exposed_link | dict | 是 | 访问地址信息 |
+| deployment | dict | 是 | 部署信息 |
+| feature_flag | dict | 是 | 发布标志信息 |
+| module_mobile_config_enabled | bool | 是 | 移动端功能是否开启 |
+| mobile_config | dict | 是 | 移动端配置信息 |
+
+processes
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| web | dict | 是 | 进程信息 |
+
+web
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| command | string | 是 | 进程命令 |
+| replicas | list | 是 | 进程详情 |
+
+replicas
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| status | string | 是 | 进程状态 |
+
+exposed_link
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| url | string | 是 | 访问地址 |
+
+deployment
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| id | string | 是 | 部署ID |
+| status | string | 是 | 部署状态 |
+| operator | dict | 是 | 部署发起人信息 |
+| created | string | 是 | 创建时间 |
+| environment | string | 是 | 环境 |
+| deployment_id | string | 是 | Deployment ID |
+| repo | dict | 是 | 代码仓库信息 |
+
+repo
+| 字段 | 类型 | 是否必填 | 描述 |
+| ---- | ---- | -------- | ---- |
+| url | string | 是| 代码仓库地址 |
+| comment | string | 是 | Comment |
+| type | string | 是 | 代码仓库类型 |
+| name | string | 是| 代码仓库名称|
+| revision | string | 是 | 代码仓库版本 |

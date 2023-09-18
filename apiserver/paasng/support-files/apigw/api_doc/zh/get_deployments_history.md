@@ -1,15 +1,25 @@
-### 资源描述
+### 功能描述
 获取部署历史
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 调用示例
+#### 1、路径参数：
+暂无。
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
+
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}'  http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{你的appcode}/deployments/lists
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}'  http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{appcode}/deployments/lists
 ```
 
-### 返回结果
+#### 获取你的 access_token
+
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### 返回结果示例
 ```json
 {
     "count": 2,
@@ -55,3 +65,38 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}'  
 	]
 }
 ```
+
+### 返回结果参数说明
+
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| count | int | 部署历史数量 |
+| next | string/null | 下一页链接 |
+| previous | string/null | 上一页链接 |
+| results | array | 部署历史列表 |
+
+results
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| id | string | 部署历史ID |
+| status | string | 部署状态 |
+| operator | object | 操作者信息 |
+| created | string | 创建时间 |
+| environment | string | 环境 |
+| repo | object | 仓库信息 |
+| deployment_id | string | 部署ID |
+
+operator
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| username | string | 用户名 |
+| id | string | 用户ID |
+
+repo
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| url | string | 仓库地址 |
+| comment | string | 备注 |
+| type | string | 类型 |
+| name | string | 名称 |
+| revision | string | 版本号 |

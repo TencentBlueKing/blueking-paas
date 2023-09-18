@@ -27,6 +27,7 @@ from paasng.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.preallocated import (
     _default_preallocated_urls,
+    get_exposed_url_type,
     get_preallocated_address,
     get_preallocated_url,
     get_preallocated_urls,
@@ -35,6 +36,24 @@ from tests.utils.helpers import override_region_configs
 from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
+
+
+class TestGetExposedUrlType:
+    def test_non_existent(self):
+        assert get_exposed_url_type('foo', 'bar-module') is None
+
+    def test_normal(self, bk_module):
+        bk_module.exposed_url_type = ExposedURLType.SUBPATH.value
+        bk_module.save()
+        assert get_exposed_url_type(bk_module.application.code, bk_module.name) == ExposedURLType.SUBPATH
+
+        # Change the exposed URL type and test again
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
+        bk_module.save()
+        assert get_exposed_url_type(bk_module.application.code, bk_module.name) == ExposedURLType.SUBDOMAIN
+        assert (
+            get_exposed_url_type(bk_module.application.code, None) == ExposedURLType.SUBDOMAIN
+        ), 'test default module'
 
 
 def test_default_preallocated_urls_empty(bk_stag_env):
@@ -71,6 +90,20 @@ class TestGetPreallocatedAddress:
     def test_normal(self, ingress_config, expected_address):
         with mock_cluster_service(replaced_ingress_config=ingress_config):
             assert get_preallocated_address('test-code').prod == expected_address
+
+    @pytest.mark.parametrize(
+        'preferred_url_type,expected_address',
+        [
+            (ExposedURLType.SUBDOMAIN, 'http://test-code.foo.com'),
+            (ExposedURLType.SUBPATH, 'http://foo.com/test-code/'),
+        ],
+    )
+    def test_preferred_url_type(self, preferred_url_type, expected_address):
+        ingress_config = {'sub_path_domains': [{"name": 'foo.com'}], 'app_root_domains': [{"name": 'foo.com'}]}
+        with mock_cluster_service(replaced_ingress_config=ingress_config):
+            assert (
+                get_preallocated_address('test-code', preferred_url_type=preferred_url_type).prod == expected_address
+            )
 
     @pytest.mark.parametrize(
         'clusters, stag_address, prod_address',

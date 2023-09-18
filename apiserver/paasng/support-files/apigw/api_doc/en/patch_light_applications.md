@@ -1,25 +1,31 @@
-### Resource Description
-Modify the light app information for use by the management APP only.
+### Description
+Modify the light application information, only for management-side APP use.
 
-### Authentication mode
+### Request Parameters
 
-Use Bearer method for authentication. Please apply to the administrator for specific authentication.
+#### 1. Path Parameters:
+None.
 
-### Input parameter Description
-| Field | Type | Required | Description                                          |
-| ------------ | -------- | ---- | ------------------------------------------------------------ |
-| app_code     |  string   | yes | APP Code for light apps                                            |
-| app_name     |  string   | yes | Light app name                                                   |
-| app_url      |  string   | yes | App link                                                     |
-| developers   |  array    | yes | List of app developer usernames                                         |
-| app_tag      |  string   | yes | App category, optional category: "OpsTools,""MonitorAlarm,""ConfManage,""DevTools,""enterprise IT,""Office app,""other." Use "Other" if you pass in an empty parameter or if it is not an appeal classification |
-| logo         |  string   | no | Icon png file base64 encode form                                |
-| introduction | string   | no       | Introduction to applications                                                   |
-| width        |  int      | no | The width of the open window of the app on the desktop, which defaults to the width of the parent app                     |
-| height       |  int      | no | Height of open window of app on desktop, default is parent app height                     |
+#### 2. API Parameters:
 
-### Return result
+| Parameter Name | Parameter Type | Required | Parameter Description                                                                                           |
+| -------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| app_code       | string         | Yes      | Light application APP Code                                                                                      |
+| app_name       | string         | Yes      | Light application name                                                                                          |
+| app_url        | string         | Yes      | Application link                                                                                                |
+| developers     | array          | Yes      | Application developer username list                                                                             |
+| app_tag        | string         | Yes      | Application category, optional categories: "OpsTools" (Operation Tools), "MonitorAlarm" (Monitoring Alarm), "ConfManage" (Configuration Management), "DevTools" (Development Tools), "EnterpriseIT" (Enterprise IT), "OfficeApp" (Office Application), "Other" (Others). If an empty parameter or not in the above categories is passed, use "Other" |
+| logo           | string         | No       | Icon png file in base64 encoding format                                                                         |
+| introduction   | string         | No       | Application introduction                                                                                        |
+| width          | int            | No       | Application window width when opened on the desktop, default is the parent application width                   |
+| height         | int            | No       | Application window height when opened on the desktop, default is the parent application height                 |
 
+### Request Example
+```bash
+curl -X PUT -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret": "***"}' -d '{ "parent_app_code": "bksops", "app_url": "http://example.com", "developers": "admin", "creator: "admin" }' --insecure http://bkapi.example.com/api/bkpaas3/prod/system/light-applications
+```
+
+### Response Result Example
 ```json
 {
   "bk_error_msg": "",
@@ -28,7 +34,7 @@ Use Bearer method for authentication. Please apply to the administrator for spec
     "app_code": "demo-0727-001_ps",
     "app_name": "demo-0727-001_ps",
     "app_url": "http://app.demo.com",
-    "introduction": "Test App",
+    "introduction": "Test application",
     "creator": "admin",
     "logo": "http://demo.com/app-logo/o_demo-0727-001_ps.png",
     "developers": [
@@ -39,15 +45,15 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 }
 ```
 
-### Return result description
+### Response Result Parameter Description
 
-| Name         | Type   | Description              |
-| ------------ | ------ | ----------------- |
-| app_code     |  string |APP Code for light apps|
-| app_name     |  string |Name of light app      |
-| app_url      |  string |App link          |
-| introduction | string |App introduction          |
-| creator      |  string |Creator            |
-| logo         |  string |Icon address          |
-| developers   |  array  |List of developers        |
-| state        |  int    | App status          |
+| Name          | Type   | Description        |
+| ------------- | ------ | ------------------ |
+| app_code      | string | Light application APP Code |
+| app_name      | string | Light application name      |
+| app_url       | string | Application link          |
+| introduction  | string | Application introduction          |
+| creator       | string | Creator            |
+| logo          | string | Icon address          |
+| developers    | array  | Developer list        |
+| state         | int    | Application status          |

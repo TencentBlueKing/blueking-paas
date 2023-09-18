@@ -105,7 +105,7 @@ class TestRemoteEngineAppInstanceRel:
         assert plan.is_eager is plan_data["properties"]["is_eager"]  # type: ignore
         assert plan.properties == plan_data["properties"]
 
-    @mock.patch("paas_wl.cluster.shim.get_cluster_egress_info")
+    @mock.patch("paas_wl.networking.egress.shim.get_cluster_egress_info")
     @mock.patch('paasng.dev_resources.servicehub.remote.client.RemoteServiceClient.provision_instance')
     @pytest.mark.parametrize(
         "plans",

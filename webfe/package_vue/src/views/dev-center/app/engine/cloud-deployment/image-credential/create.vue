@@ -11,7 +11,7 @@
         ref="versionForm"
         class="mt20 mb10"
         style="width: 540px;"
-        :label-width="80"
+        :label-width="localLanguage === 'en' ? 100 : 80"
         :model="crdlParams"
         :rules="rules"
       >
@@ -144,6 +144,9 @@ export default {
   computed: {
     appCode() {
       return this.$route.params.id;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
 

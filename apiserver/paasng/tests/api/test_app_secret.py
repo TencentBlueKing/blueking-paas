@@ -253,6 +253,6 @@ class TestAppSecret:
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(
-                reverse('api.bkauth.builtin_secret', args=(bk_app.code,)), data={"id": 1}, format='json'
+                reverse('api.bkauth.default_secret', args=(bk_app.code,)), data={"id": 1}, format='json'
             )
             assert response.status_code == status_code

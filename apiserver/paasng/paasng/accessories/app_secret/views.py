@@ -138,10 +138,10 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({"bk_app_secret": secret.bk_app_secret})
 
 
-class BuiltinSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(tags=["内置密钥"], responses={"200": AppSecretInEnvVarSLZ})
+    @swagger_auto_schema(tags=["环境变量默认密钥"], responses={"200": AppSecretInEnvVarSLZ})
     def get(self, request, code):
         """查询应用的环境变量默认密钥"""
         application = self.get_application()
@@ -154,9 +154,9 @@ class BuiltinSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             ).data
         )
 
-    @swagger_auto_schema(tags=["内置密钥"], request_body=AppSecretIdSLZ, responses={"204": "没有返回数据"})
+    @swagger_auto_schema(tags=["环境变量默认密钥"], request_body=AppSecretIdSLZ, responses={"204": "没有返回数据"})
     def rotate(self, request, code):
-        """更换应用的内置密钥"""
+        """更换应用的环境变量默认密钥"""
         application = self.get_application()
         serializer = AppSecretIdSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)

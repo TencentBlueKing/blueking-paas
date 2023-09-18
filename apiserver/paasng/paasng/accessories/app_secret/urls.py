@@ -38,8 +38,8 @@ urlpatterns = [
         name='api.bkauth.secret_verification',
     ),
     url(
-        r'^api/bkapps/applications/(?P<code>[^/]+)/builtin_secret/$',
-        views.BuiltinSecretViewSet.as_view({'get': 'get', 'post': 'rotate'}),
-        name='api.bkauth.builtin_secret',
+        r'^api/bkapps/applications/(?P<code>[^/]+)/default_secret/$',
+        views.BkAppSecretInEnvVaViewSet.as_view({'get': 'get', 'post': 'rotate'}),
+        name='api.bkauth.default_secret',
     ),
 ]

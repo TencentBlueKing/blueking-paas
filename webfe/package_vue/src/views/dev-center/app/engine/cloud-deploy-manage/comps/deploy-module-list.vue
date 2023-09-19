@@ -25,7 +25,7 @@
                 <span class="name">{{deploymentInfo.module_name}}</span>
                 <i
                   class="paasng-icon paasng-jump-link icon-cls-link"
-                  v-bk-tooltips="$t('访问链接')"
+                  v-bk-tooltips="$t('点击访问')"
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                   v-if="deploymentInfo.exposed_url" />
               </div>

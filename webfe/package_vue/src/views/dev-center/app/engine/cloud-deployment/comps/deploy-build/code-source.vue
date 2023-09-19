@@ -668,6 +668,10 @@
     }
   }
 
+  .source-code-info.code-source {
+    width: 100%;
+  }
+  
   .source-code-info .content {
     display: flex;
 

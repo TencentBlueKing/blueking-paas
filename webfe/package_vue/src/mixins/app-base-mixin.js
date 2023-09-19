@@ -34,7 +34,6 @@ export default {
       return this.$store.state.curAppCode;
     },
     curAppInfo() {
-      console.log('curAppInfo', this.$store.state.curAppInfo);
       return this.$store.state.curAppInfo;
     },
     curAppModuleList() {

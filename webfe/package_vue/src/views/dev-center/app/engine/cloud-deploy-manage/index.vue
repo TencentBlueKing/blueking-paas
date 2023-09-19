@@ -87,7 +87,7 @@ export default {
 <style lang="scss" scoped>
 .right-main {
   .top-title {
-    padding-left: 24px;
+    padding-left: 20px;
     h3 {
       font-size: 16px;
       color: #313238;

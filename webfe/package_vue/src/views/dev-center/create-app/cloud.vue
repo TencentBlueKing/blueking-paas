@@ -27,7 +27,7 @@
           class="form-input-width"
         >
         </bk-input>
-        <p class="input-tips">
+        <p slot="tip" class="input-tips">
           {{ $t('应用的唯一标识，创建后不可修改') }}
         </p>
       </bk-form-item>
@@ -272,7 +272,7 @@
               >{{$t('使用示例')}}</div>
             </template>
           </bk-input>
-          <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
+          <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
         </bk-form-item>
         <bk-form-item
           error-display-type="normal"
@@ -406,7 +406,7 @@
           </span>
         </bk-form-item>
         <bk-form-item :label="$t('镜像 tag 规则：')">
-          v-{分支/标签}-构建时间-commitID
+          {{ mirrorTag }}
         </bk-form-item>
         <bk-form-item :label="$t('构建方式：')">
           {{ buildDialog.formData.buildMethod }}
@@ -433,6 +433,7 @@ import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
+import { TAG_MAP } from "@/common/constants.js";
 export default {
   components: {
     gitExtend,
@@ -536,6 +537,11 @@ export default {
             trigger: 'blur',
           },
           {
+            max: 16,
+            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+            trigger: 'blur',
+          },
+          {
             validator(val) {
               const reg = /^[a-z][a-z0-9-]*$/;
               return reg.test(val);
@@ -556,6 +562,11 @@ export default {
           {
             required: true,
             message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            max: 16,
+            message: this.$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符'),
             trigger: 'blur',
           },
           {
@@ -620,6 +631,20 @@ export default {
       const imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
         .replace('{app_code}', this.formData.code);
       return imageRepositoryTemplate.replace('{module_name}', 'default');
+    },
+    mirrorTag() {
+      const tagOptions = this.buildDialog.formData?.tagOptions || {};
+      const tagStrList = [];
+      for (const key in tagOptions) {
+        console.log('tagOptions[key]', tagOptions[key]);
+        if (tagOptions[key] && key !== 'prefix') {
+          tagStrList.push(TAG_MAP[key]);
+        }
+      }
+      if (tagOptions.prefix) {
+        tagStrList.unshift(tagOptions.prefix);
+      }
+      return tagStrList.join('-');
     },
   },
   watch: {
@@ -917,6 +942,14 @@ export default {
           ...this.cloudAppData,
         };
         params.source_config.source_repo_url = this.formData.url;   // 镜像
+      }
+
+      // 过滤空值容器端口
+      if (params.manifest?.spec) {
+        params.manifest.spec.processes = params.manifest.spec.processes.map(process => {
+          const { targetPort, ...processValue } = process;
+          return (targetPort === '' || targetPort === null) ? processValue : process;
+        });
       }
 
       try {

@@ -9,7 +9,7 @@
           />
         </div>
         <p class="deploy-pending-text pl20">
-          模块 {{ curDeploymentInfoItem.module_name }} {{ $t('正在下架中...') }}
+          {{ $t('模块') }} {{ curDeploymentInfoItem.module_name }} {{ $t('正在下架中...') }}
         </p>
       </div>
     </bk-alert>
@@ -167,7 +167,6 @@
       :rv-data="rvData"
       @refresh="handleRefresh">
     </deploy-dialog>
-
 
     <bk-sideslider
       :is-show.sync="isShowSideslider"
@@ -452,7 +451,8 @@ export default {
       this.handleRefresh();
       this.isShowSideslider = false;
     },
-    // // 关闭侧边栏
+
+    // 关闭侧边栏
     handleCloseSideslider() {
       this.isShowSideslider = false;
     },
@@ -462,6 +462,16 @@ export default {
       this.curDeploymentInfoItem.isExpand = false;
       this.deploymentInfoData.forEach((e) => {
         e.isExpand = false;
+      });
+    },
+
+    // 将模块的进程实例全部展开
+    handleSetOpenExpand() {
+      this.curDeploymentInfoItem.isExpand = true;
+      this.deploymentInfoData.forEach((instance) => {
+        if (instance.processes.length || instance.proc_specs.length) {
+          instance.isExpand = true;
+        }
       });
     },
 
@@ -500,6 +510,7 @@ export default {
 
         i {
           cursor: pointer;
+          color: #C4C6CC;
         }
 
         .name {

@@ -29,20 +29,33 @@
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                   v-if="deploymentInfo.exposed_url" />
               </div>
+              <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
                 <!-- 源码&镜像 -->
-                <div class="flex-row" v-if="deploymentInfo.build_method === 'dockerfile'">
-                  <div class="version">
-                    <span class="label">{{$t('版本：')}}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
-                    </span>
+                <div v-if="deploymentInfo.build_method === 'dockerfile'">
+                  <!-- 源码分支 -->
+                  <div
+                    class="flex-row"
+                    v-if="deploymentInfo.state.deployment.latest_succeeded.version_info.version_type === 'branch'">
+                    <div class="version">
+                      <span class="label">{{$t('版本：')}}</span>
+                      <span class="value">
+                        {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
+                      </span>
+                    </div>
+                    <div class="line"></div>
+                    <div class="branch">
+                      <span class="label">{{$t('分支：')}}</span>
+                      <span class="value">
+                        {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="line"></div>
-                  <div class="branch">
-                    <span class="label">{{$t('分支：')}}</span>
+                  <!-- 镜像构建 -->
+                  <div class="version" v-else>
+                    <span class="label">{{$t('镜像Tag：')}}</span>
                     <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
                     </span>
                   </div>
                 </div>
@@ -298,6 +311,8 @@ export default {
     // 部署侧边栏
     handleShowDeploy(payload) {
       this.curDeploymentInfoItem = payload || {};
+      // 将正在部署的信息赋值给模块版本信息
+      this.curDeploymentInfoItem.version_info = { ...payload.state.deployment.pending.version_info };
       this.isShowSideslider = true;
     },
 
@@ -373,7 +388,9 @@ export default {
           }
           return e;
         });
-        this.$set(this, 'deploymentInfoData', res.data);
+        this.$nextTick(() => {
+          this.$set(this, 'deploymentInfoData', res.data);
+        });
         this.rvData = {
           rvInst: res.rv_inst,
           rvProc: res.rv_proc,

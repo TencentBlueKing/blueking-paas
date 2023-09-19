@@ -403,7 +403,9 @@
     <!-- 无法使用控制台 end -->
 
     <!-- 扩缩容 -->
-    <scale-dialog :key="moduleName" :ref="`${moduleName}ScaleDialog`"></scale-dialog>
+    <scale-dialog
+      :key="moduleName" :ref="`${moduleName}ScaleDialog`"
+      @updateStatus="handleProcessStatus"></scale-dialog>
   </div>
 </template>
 
@@ -613,6 +615,7 @@ export default {
       handler(value) {
         this.deployData = value;
         // this.handleDeployInstanceData();
+        console.log('this.deployData', this.deployData);
         this.formatProcesses(this.deployData);
       },
       immediate: true,
@@ -621,7 +624,7 @@ export default {
   },
   mounted() {
     // 进入页面启动事件流
-    if (this.index === 0) {   // 只需要启动一次strem
+    if (this.index === 0) {   // 只需要启动一次stream
       this.watchServerPush();
     }
   },
@@ -643,6 +646,7 @@ export default {
       this.updateProcess();
     },
     handleExpansionAndContraction(row) {
+      this.curUpdateProcess = row;    // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment);
     },
@@ -1139,11 +1143,6 @@ export default {
         } else if (data.object_type === 'instance') {
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateInstanceData(data);
-          if (data.type === 'ADDED') {
-            if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
-            console.warn(this.$t('重新拉取进程...'));
-            // this.getModuleProcessList(false);
-          }
         } else if (data.type === 'ERROR') {
           // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
           clearTimeout(this.timer);
@@ -1167,6 +1166,8 @@ export default {
 
       // 服务结束
       this.serverProcessEvent.addEventListener('EOF', () => {
+        // 服务结束请求列表接口
+        bus.$emit('get-release-info');
         this.serverProcessEvent.close();
         this.watchServerTimer = setTimeout(() => {
           this.watchServerPush();
@@ -1387,6 +1388,12 @@ export default {
         };
       }
     },
+
+    // 处理进程状态
+    handleProcessStatus() {
+      // 进程之后请求列表数据
+      // bus.$emit('get-release-info');
+    },
   },
 };
 </script>
@@ -1599,7 +1606,7 @@ export default {
       border: 3px solid #fce0e0;
     }
     &.interrupted,
-    &.warning {
+    &.Pending {
       background: #FF9C01;
       border: 3px solid #ffefd6;
     }

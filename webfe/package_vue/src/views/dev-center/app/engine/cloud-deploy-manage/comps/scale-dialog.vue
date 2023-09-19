@@ -44,7 +44,8 @@
             <li
               v-for="item in scaleTypes"
               :key="item.type"
-              :class="['tab-item', { active: curActiveType === item.type }, { disabled: item.value && !autoScalDisableConfig.ENABLE_AUTOSCALING }]"
+              :class="['tab-item', { active: curActiveType === item.type },
+                       { disabled: item.value && !autoScalDisableConfig.ENABLE_AUTOSCALING }]"
               @click="handleChangeType(item)"
             >
               {{ item.label }}
@@ -142,7 +143,8 @@ import i18n from '@/language/i18n.js';
 let maxReplicasNum = 0;
 
 export default {
-  name: 'scaleDialog',
+  name: 'ScaleDialog',
+  mixins: [appBaseMixin],
 
   props: {
     value: {
@@ -150,7 +152,6 @@ export default {
       default: false,
     },
   },
-  mixins: [appBaseMixin],
   data() {
     return {
       environment: 'stag',
@@ -192,9 +193,7 @@ export default {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t(
-          '动态扩缩容计算规则'
-        )}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
+        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('动态扩缩容计算规则')}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
         placements: ['top'],
       },
       rules: {
@@ -293,6 +292,7 @@ export default {
           theme: 'success',
           message: this.$t('扩缩容策略已更新'),
         });
+        this.$emit('updateStatus');
         this.scaleDialog.visible = false;
       } catch (err) {
         this.$paasMessage({

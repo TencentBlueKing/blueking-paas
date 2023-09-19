@@ -2,7 +2,8 @@
   <div
     :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']"
   >
-    <div class="ps-top-bar">
+    <!-- 云原生应用没有头部导航 -->
+    <div class="ps-top-bar" v-if="!isCloudNativeApp">
       <div class="header-title">
         {{ $t('云API权限管理') }}
         <div class="guide-wrapper">
@@ -76,73 +77,75 @@
             v-if="active === 'applyRecord'"
             @data-ready="handlerDataReady"
           />
-      </div>
+        </div>
       </paas-content-loader>
     </section>
   </div>
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import RenderApi from './comps/render-api';
-    import AppPerm from './comps/app-perm';
-    import ApplyRecord from './comps/apply-record';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import RenderApi from './comps/render-api';
+import AppPerm from './comps/app-perm';
+import ApplyRecord from './comps/apply-record';
 
-    export default {
-        components: {
-            AppPerm,
-            ApplyRecord,
-            RenderApi
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: true,
-                linkMap: {
-                    'gateway': this.GLOBAL.DOC.APIGW_QUICK_START,
-                    'API': this.GLOBAL.DOC.APIGW_USER_API,
-                    'FAQ': this.GLOBAL.DOC.APIGW_FAQ
-                },
-                panels: [
-                    { name: 'gatewayApi', label: this.$t('网关API') },
-                    { name: 'componentApi', label: this.$t('组件API') },
-                    { name: 'appPerm', label: this.$t('已申请的权限') },
-                    { name: 'applyRecord', label: this.$t('申请记录') }
-                ],
-                active: 'gatewayApi',
-                comKey: -1,
-                pageKey: -1,
-                isPlugin: false
-            };
-        },
-        watch: {
-            '$route' () {
-                this.active = 'gatewayApi';
-                this.pageKey = +new Date();
-                this.isLoading = true;
-            }
-        },
-        created () {
-            this.isPlugin = this.$route.meta && this.$route.meta.isGetAppInfo;
-            const tabActive = this.$route.params.tabActive;
-            if (tabActive) {
-                this.active = tabActive;
-            }
-        },
-        methods: {
-            toLink (type) {
-                window.open(this.linkMap[type]);
-            },
-
-            handlerDataReady () {
-                this.isLoading = false;
-            },
-
-            handleTabChange () {
-                this.comKey = +new Date();
-            }
-        }
+export default {
+  components: {
+    AppPerm,
+    ApplyRecord,
+    RenderApi,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: true,
+      linkMap: {
+        gateway: this.GLOBAL.DOC.APIGW_QUICK_START,
+        API: this.GLOBAL.DOC.APIGW_USER_API,
+        FAQ: this.GLOBAL.DOC.APIGW_FAQ,
+      },
+      panels: [
+        { name: 'gatewayApi', label: this.$t('网关API') },
+        { name: 'componentApi', label: this.$t('组件API') },
+        { name: 'appPerm', label: this.$t('已申请的权限') },
+        { name: 'applyRecord', label: this.$t('申请记录') },
+      ],
+      active: 'gatewayApi',
+      comKey: -1,
+      pageKey: -1,
+      isPlugin: false,
     };
+  },
+  computed: {
+  },
+  watch: {
+    '$route'() {
+      this.active = 'gatewayApi';
+      this.pageKey = +new Date();
+      this.isLoading = true;
+    },
+  },
+  created() {
+    this.isPlugin = this.$route.meta && this.$route.meta.isGetAppInfo;
+    const { tabActive } = this.$route.params;
+    if (tabActive) {
+      this.active = tabActive;
+    }
+  },
+  methods: {
+    toLink(type) {
+      window.open(this.linkMap[type]);
+    },
+
+    handlerDataReady() {
+      this.isLoading = false;
+    },
+
+    handleTabChange() {
+      this.comKey = +new Date();
+    },
+  },
+};
 
 </script>
 

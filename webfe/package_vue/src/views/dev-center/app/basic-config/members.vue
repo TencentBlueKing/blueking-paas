@@ -1,6 +1,6 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar">
+    <div class="ps-top-bar" v-if="!isCloudNativeApp">
       <h2>
         {{ $t('成员管理') }}
         <template v-if="pagination.count">

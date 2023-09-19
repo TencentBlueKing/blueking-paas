@@ -142,11 +142,6 @@ const appEntryConfig = () => import(/* webpackChunkName: 'app-engine' */'@/views
   window.showDeployTip(error);
 });
 
-
-const visitUrl = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/basic-config/visit-url/index').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const appEnvVars = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/env-vars').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -467,8 +462,8 @@ const router = new Router({
             },
             {
               path: 'url',
-              component: visitUrl,
-              name: 'visitUrl',
+              component: appAccessPortal,
+              name: 'appAccessPortal',
               meta: {
                 module: 'url',
               },

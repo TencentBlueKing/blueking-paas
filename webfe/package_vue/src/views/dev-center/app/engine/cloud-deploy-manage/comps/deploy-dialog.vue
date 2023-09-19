@@ -444,15 +444,20 @@ export default {
             version_name: this.curSelectData.name,
             advanced_options: advancedOptions,
           };
+          if (!this.deploymentInfoBackUp.version_info) {
+            this.deploymentInfoBackUp.version_info = {};
+          }
+          // 部署的分支或tag需要修改为选中的分支或者tag
+          this.deploymentInfoBackUp.version_info.version_name = this.curSelectData.name;
+          this.deploymentInfoBackUp.version_info.version_type = this.buttonActive;
+          console.log('this.deploymentInfoBackUp', this.deploymentInfoBackUp);
+          debugger;
           // 仅镜像部署
           if (this.deploymentInfoBackUp.build_method === 'custom_image') {
             params = {
               version_type: 'image',
               version_name: this.tagValue,
             };
-            if (!this.deploymentInfoBackUp.version_info) {
-              this.deploymentInfoBackUp.version_info = {};
-            }
             this.deploymentInfoBackUp.version_info.version_name = this.tagValue;
           }
         } else {
@@ -497,8 +502,9 @@ export default {
           },
         });
         this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
-        console.log('res', res);
         this.imageTagListCount = res.count;
+        // 默认选中第一个
+        this.tagValue = this.imageTagList[0].id;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

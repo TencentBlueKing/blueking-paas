@@ -71,15 +71,19 @@ export default defineComponent({
 <style lang="scss" scoped>
     .nav-wrapper{
       background: #fff;
-        .title{
-            font-size: 16px;
-            color: #313238;
-            padding: 0 24px;
-        }
+      box-shadow: 0 3px 4px 0 #0000000a;
+      .title{
+          font-size: 16px;
+          color: #313238;
+          padding: 0 24px;
+      }
     }
     .app-tab-cls{
       /deep/ .bk-tab-section{
         padding: 0 !important;
+      }
+      /deep/ .bk-tab-header {
+        background-image: none !important;
       }
     }
     .module-manager{

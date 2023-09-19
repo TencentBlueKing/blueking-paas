@@ -58,7 +58,7 @@
                   >{{$t('使用示例')}}</div>
                 </template>
               </bk-input>
-              <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
+              <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
             </bk-form-item>
 
             <bk-form-item

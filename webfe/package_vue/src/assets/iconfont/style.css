@@ -1007,3 +1007,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-deploy-item-dot:before {
 	content: "\e260";
 }
+.paasng-shouqi:before {
+	content: "\e262";
+}
+.paasng-zhankai:before {
+	content: "\e263";
+}

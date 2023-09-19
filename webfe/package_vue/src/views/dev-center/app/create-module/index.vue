@@ -133,19 +133,18 @@
                   <bk-input
                     v-model="mirrorData.url"
                     style="width: 520px;"
-                    size="large"
                     clearable
                     :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
                   >
 
                     <template slot="append">
                       <div
-                        class="group-text form-text-append"
+                        class="group-text"
                         @click="handleSetMirrorUrl"
                       >{{$t('使用示例')}}</div>
                     </template>
                   </bk-input>
-                  <span class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
+                  <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
                 </div>
               </bk-form-item>
 
@@ -1124,6 +1123,14 @@ export default {
 
 <style lang="scss" scoped>
     @import "./index.scss";
+    .item-cls {
+        /deep/ .bk-form-control .group-text {
+            color: #3a84ff !important;
+            background: #FAFBFD;
+            line-height: 30px;
+            cursor: pointer;
+        }
+    }
 </style>
 <style lang="scss">
 .module-item-cls {

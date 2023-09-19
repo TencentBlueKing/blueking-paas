@@ -400,8 +400,8 @@ export default {
           rvProc: res.rv_proc,
         };
         this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
-        const hasOfflinedData = this.deploymentInfoData.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
-        const hasDeployData = this.deploymentInfoData.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据
+        const hasOfflinedData = res.data.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
+        const hasDeployData = res.data.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据
         this.isWatchOfflineing = !!(hasOfflinedData.length);   // 如果还存在下架中的数据，这说明还有模块在下架中
         this.isWatctDeploying = !!(hasDeployData.length);
         if (hasOfflinedData.length || hasDeployData.length) {
@@ -412,6 +412,7 @@ export default {
         } else {
           this.initPage = false;
           this.intervalTimer && clearInterval(this.intervalTimer);
+          this.intervalTimer = null;
         }
       } catch (e) {
         this.deploymentInfoData = null;

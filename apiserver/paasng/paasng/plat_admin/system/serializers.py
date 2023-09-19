@@ -153,5 +153,5 @@ class AddonSpecsSLZ(serializers.Serializer):
 
 
 class ClusterNamespaceSLZ(serializers.Serializer):
-    cluster_id = serializers.CharField(help_text="集群 ID")
+    bcs_cluster_id = serializers.CharField(help_text="BCS 集群 ID")
     namespace = serializers.CharField(help_text="命名空间名称")

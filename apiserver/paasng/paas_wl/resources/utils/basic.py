@@ -19,10 +19,10 @@ to the current version of the project delivered to anyone in the future.
 """Basic utils for scheduler
 """
 import logging
+from collections import Callable, OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.egress.models import RCStateAppBinding
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.utils.basic import make_subdict
@@ -31,6 +31,46 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models.config import Config
+
+
+def _make_id(target):
+    if hasattr(target, '__func__'):
+        return (id(target.__self__), id(target.__func__))
+    return id(target)
+
+
+class LabelTolerationProviders:
+    """Allow registering extra functions for labels/tolerations"""
+
+    def __init__(self):
+        self._registered_funcs_labels = OrderedDict()
+        self._registered_funcs_tolerations = OrderedDict()
+
+    def register_labels(self, func: Callable):
+        # Use id to avoid duplicated registrations
+        self._registered_funcs_labels[_make_id(func)] = func
+        return func
+
+    def register_tolerations(self, func: Callable):
+        self._registered_funcs_tolerations[_make_id(func)] = func
+        return func
+
+    def get_labels(self, app: WlApp) -> Dict:
+        """Gather all labels for given app."""
+        result = {}
+        for func in self._registered_funcs_labels.values():
+            result.update(func(app))
+        return result
+
+    def get_tolerations(self, app: WlApp) -> Dict:
+        """Gather all tolerations for given app."""
+        result = {}
+        for func in self._registered_funcs_tolerations.values():
+            result.update(func(app))
+        return result
+
+
+label_toleration_providers = LabelTolerationProviders()
 
 
 def get_full_node_selector(app: WlApp, config: Optional['Config'] = None) -> Dict:
@@ -49,14 +89,7 @@ def get_full_node_selector(app: WlApp, config: Optional['Config'] = None) -> Dic
     # Merge with app's config
     config = config or app.config_set.latest()
     result.update(config.node_selector or {})
-
-    # Inject ClusterState labels when bound
-    try:
-        binding = RCStateAppBinding.objects.get(app=app)
-    except RCStateAppBinding.DoesNotExist:
-        pass
-    else:
-        result.update(binding.state.to_labels())
+    result.update(label_toleration_providers.get_labels(app))
     return result
 
 

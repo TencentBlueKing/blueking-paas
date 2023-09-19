@@ -44,8 +44,8 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
 from paasng.accessories.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
+from paasng.accessories.bkmonitorv3.shim import update_or_create_bk_monitor_space
 from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
@@ -61,6 +61,7 @@ from paasng.accounts.models import AccountFeatureFlag, make_verifier
 from paasng.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.permissions import HasPostRegionPermission
 from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
@@ -106,13 +107,11 @@ from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
-from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.manager import init_module_in_view
-from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.region.models import get_all_regions
-from paasng.platform.region.permissions import HasPostRegionPermission
+from paasng.publish.entrance.exposer import get_exposed_links
 from paasng.publish.market.constant import AppState, ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig, Product
 from paasng.publish.sync_market.managers import AppDeveloperManger
@@ -172,6 +171,9 @@ class ApplicationViewSet(viewsets.ViewSet):
         else:
             page_applications = paginator.paginate_queryset(applications, self.request, view=self)
 
+        # Set exposed links property, to be used by the serializer later
+        for app in page_applications:
+            app._deploy_info = get_exposed_links(app)
         data = [
             {
                 'application': application,
@@ -334,8 +336,9 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # 修改应用在蓝鲸监控命名空间的名称
         # 蓝鲸监控查询、更新一个不存在的应用返回的 code 都是 500，没有具体的错误码来标识是不是应用不存在，故直接调用更新API，忽略错误信息
+
         try:
-            make_bk_monitor_client().update_space(application.code, application.name, request.user.username)
+            update_or_create_bk_monitor_space(application)
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
             logger.info(f'Failed to update app space on BK Monitor, {e}')
         except Exception:
@@ -490,16 +493,16 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 raise ValidationError(_('你无法使用高级创建选项'))
             cluster_name = advanced_options.get('cluster_name')
 
-        source_config: Dict[str, Any] = {}
-        if src_cfg := params.get('source_config'):
-            source_origin = SourceOrigin(src_cfg['source_origin'])
+        module_src_cfg: Dict[str, Any] = {"source_origin": SourceOrigin.CNATIVE_IMAGE}
+        if source_config := params.get('source_config'):
+            source_origin = SourceOrigin(source_config['source_origin'])
             self._ensure_source_origin_available(request.user, source_origin)
 
-            source_config['source_origin'] = source_origin
+            module_src_cfg['source_origin'] = source_origin
             # 如果指定模板信息，则需要提取并保存
-            if tmpl_name := src_cfg['source_init_template']:
+            if tmpl_name := source_config['source_init_template']:
                 tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
-                source_config.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+                module_src_cfg.update({'language': tmpl.language, 'source_init_template': tmpl_name})
 
         application = create_application(
             region=params["region"],
@@ -509,38 +512,23 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
         )
-        module = create_default_module(application, **source_config)
+        module = create_default_module(application, **module_src_cfg)
 
         # 初始化应用镜像凭证信息
         if image_credentials := params.get('image_credentials'):
             self._init_image_credentials(application, image_credentials)
 
-        # 为默认模块绑定构建信息
-        if build_cfg := params.get('build_config'):
-            build_config = BuildConfig.objects.get_or_create_by_module(module)
-            try:
-                build_config.update_with_build_method(
-                    build_cfg['build_method'],
-                    module,
-                    build_cfg.get('bp_stack_name'),
-                    build_cfg.get('buildpacks'),
-                    build_cfg.get('dockerfile_path'),
-                    build_cfg.get('docker_build_args'),
-                    build_cfg.get('tag_options'),
-                )
-            except BPNotFound:
-                raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
-
         source_init_result = None
         if cloud_native_params := params.get('cloud_native_params'):
             initialize_simple(module=module, cluster_name=cluster_name, **cloud_native_params)
         else:
+            source_config = params["source_config"]
             source_init_result = init_module_in_view(
                 module,
-                repo_type=src_cfg.get('source_control_type'),
-                repo_url=src_cfg.get('source_repo_url'),
-                repo_auth_info=src_cfg.get('source_repo_auth_info'),
-                source_dir=src_cfg.get('source_dir', ''),
+                repo_type=source_config.get('source_control_type'),
+                repo_url=source_config.get('source_repo_url'),
+                repo_auth_info=source_config.get('source_repo_auth_info'),
+                source_dir=source_config.get('source_dir', ''),
                 cluster_name=cluster_name,
                 manifest=params.get('manifest'),
             ).source_init_result
@@ -711,7 +699,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     def _init_image_credentials(self, application: Application, image_credentials: Dict):
         try:
             AppUserCredential.objects.create(application_id=application.id, **image_credentials)
-        except IntegrityError:
+        except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
 

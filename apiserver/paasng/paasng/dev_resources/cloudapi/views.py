@@ -28,7 +28,7 @@ from rest_framework.response import Response
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.cloudapi import serializers
-from paasng.dev_resources.cloudapi.components.apigw_dashboard import apigw_dashboard_component
+from paasng.dev_resources.cloudapi.components.bk_apigateway_inner import bk_apigateway_inner_component
 from paasng.dev_resources.cloudapi.utils import get_user_auth_type
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.operations.constant import OperationType
@@ -165,7 +165,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self._get(request, app_code, *args, **kwargs)
 
     def _get(self, request, app_code: str, *args, **kwargs):
-        logger.debug("[cloudapi] getting %s", self._get_apigw_dashboard_path(request.path, app_code))
+        logger.debug("[cloudapi] getting %s", self._get_bk_apigateway_inner_api_path(request.path, app_code))
         params = copy.copy(request.query_params)
         params.update(
             {
@@ -174,15 +174,15 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
 
-        result = apigw_dashboard_component.get(
-            self._get_apigw_dashboard_path(request.path, app_code),
+        result = bk_apigateway_inner_component.get(
+            self._get_bk_apigateway_inner_api_path(request.path, app_code),
             params=params,
             bk_username=request.user.username,
         )
         return Response(result)
 
     def _post(self, request, operation_type: int, app_code: str, *args, **kwargs):
-        logger.debug("[cloudapi] posting %s", self._get_apigw_dashboard_path(request.path, app_code))
+        logger.debug("[cloudapi] posting %s", self._get_bk_apigateway_inner_api_path(request.path, app_code))
         data = copy.copy(request.data)
         data.update(
             {
@@ -191,8 +191,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
 
-        result = apigw_dashboard_component.post(
-            self._get_apigw_dashboard_path(request.path, app_code),
+        result = bk_apigateway_inner_component.post(
+            self._get_bk_apigateway_inner_api_path(request.path, app_code),
             json=data,
             bk_username=request.user.username,
         )
@@ -215,9 +215,9 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(result)
 
-    def _get_apigw_dashboard_path(self, path: str, app_code: str) -> str:
-        # 请求 apigw-dashboard 接口时，约定 `/api/cloudapi/apps/{app_code}/` 为 bk-paas-ng 的 url 前缀，
-        # `/api/v1/` + `其他部分` 即为 apigw-dashboard 接口地址
+    def _get_bk_apigateway_inner_api_path(self, path: str, app_code: str) -> str:
+        # 请求 bk-apigateway-inner 接口时，约定 `/api/cloudapi/apps/{app_code}/` 为 bk-paas-ng 的 url 前缀，
+        # `/api/v1/` + `其他部分` 即为 bk-apigateway-inner 接口地址
         prefix = self._get_request_path_prefix(path, app_code)
         if path.startswith(prefix):
             return f'/api/v1/{path[len(prefix):]}'

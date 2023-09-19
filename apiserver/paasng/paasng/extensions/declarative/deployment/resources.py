@@ -22,8 +22,8 @@ import cattr
 from attrs import define, field, validators
 
 from paasng.engine.constants import ConfigVarEnvName
-from paasng.engine.serializers import RE_CONFIG_VAR_KEY
 from paasng.platform.applications.constants import AppLanguage
+from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
 @define

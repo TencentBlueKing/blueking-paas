@@ -16,12 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import re
 from datetime import datetime
-from typing import List, Optional
 
 import yaml
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -41,15 +38,15 @@ from paasng.engine.constants import (
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.managers import DeployDisplayBlockRenderer
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations
+from paasng.engine.phases_steps.display_blocks import DeployDisplayBlockRenderer
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.publish.market.serializers import AvailableAddressSLZ
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.models import OrderByField
-from paasng.utils.serializers import UserField
+from paasng.utils.serializers import UserField, field_env_var_key
 
 
 class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
@@ -80,7 +77,9 @@ class CreateDeploymentSLZ(serializers.Serializer):
 
     advanced_options = DeploymentAdvancedOptionsSLZ(required=False, default={})
     # 仅云原生应用需要该参数
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), required=False)
+    manifest = serializers.JSONField(
+        label=_('BkApp 配置信息'), required=False, help_text="提供 manifest 时将覆盖部署配置(兼容cli), 不提供则使用最新的部署配置"
+    )
 
 
 class CreateDeploymentResponseSLZ(serializers.Serializer):
@@ -193,25 +192,6 @@ class GetReleasedInfoSLZ(serializers.Serializer):
     with_processes = serializers.BooleanField(default=False)
 
 
-RE_CONFIG_VAR_KEY = re.compile(r'^[A-Z][A-Z0-9_]*$')
-
-
-class ConfigVarReservedKeyValidator:
-    def __init__(
-        self, protected_key_list: Optional[List[str]] = None, protected_prefix_list: Optional[List[str]] = None
-    ):
-        self.protected_key_set = set(protected_key_list or [])
-        self.protected_prefix_list = protected_prefix_list or []
-
-    def __call__(self, value: str):
-        if value in self.protected_key_set:
-            raise serializers.ValidationError(f"保留关键字: {value}")
-        for prefix in self.protected_prefix_list:
-            if value.startswith(prefix):
-                raise serializers.ValidationError(f"保留前缀: {prefix}，请尝试其他前缀")
-        return value
-
-
 class ConfigVarApplyResultSLZ(serializers.Serializer):
     """Serializer for ConfigVar ApplyResult"""
 
@@ -219,21 +199,6 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
     overwrited_num = serializers.IntegerField()
     ignore_num = serializers.IntegerField()
     deleted_num = serializers.IntegerField()
-
-
-def field_env_var_key():
-    return serializers.RegexField(
-        RE_CONFIG_VAR_KEY,
-        max_length=1024,
-        required=True,
-        error_messages={'invalid': _('格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。')},
-        validators=[
-            ConfigVarReservedKeyValidator(
-                protected_key_list=getattr(settings, "CONFIGVAR_PROTECTED_NAMES", []),
-                protected_prefix_list=getattr(settings, "CONFIGVAR_PROTECTED_PREFIXES", []),
-            )
-        ],
-    )
 
 
 class ConfigVarFormatSLZ(serializers.Serializer):
@@ -547,7 +512,7 @@ class DeployStepSLZ(DeployStepFrameSLZ):
 class DeployFramePhaseSLZ(serializers.Serializer):
     display_name = serializers.SerializerMethodField()
     type = serializers.ChoiceField(choices=DeployPhaseTypes.get_choices())
-    steps = DeployStepFrameSLZ(source="get_sorted_steps", many=True)
+    steps = DeployStepFrameSLZ(source="_sorted_steps", many=True)
     display_blocks = serializers.SerializerMethodField()
 
     def get_display_name(self, obj) -> str:
@@ -564,7 +529,7 @@ class DeployPhaseSLZ(DeployFramePhaseSLZ):
     status = serializers.ChoiceField(choices=JobStatus.get_choices(), required=False)
     start_time = serializers.DateTimeField(required=False)
     complete_time = serializers.DateTimeField(required=False)
-    steps = DeployStepSLZ(source="get_sorted_steps", many=True)
+    steps = DeployStepSLZ(source="_sorted_steps", many=True)
 
 
 class ImageArtifactMinimalSLZ(serializers.Serializer):

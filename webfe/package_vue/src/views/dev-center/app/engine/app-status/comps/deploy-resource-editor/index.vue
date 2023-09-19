@@ -8,7 +8,7 @@
 </template>
 <script>
 /* eslint-disable no-unused-expressions */
-import { computed, defineComponent, ref, toRefs, watch, onMounted, onBeforeMount } from '@vue/composition-api';
+import { computed, defineComponent, ref, toRefs, watch, onMounted, onBeforeMount } from 'vue';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.main.js';
 import yamljs from 'js-yaml';
 import BcsEditorTheme from './theme.json';

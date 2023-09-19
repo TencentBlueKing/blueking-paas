@@ -22,11 +22,11 @@ from typing import Any, Dict, List
 from attrs import define
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.core.resource import get_process_selector
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
-from paas_wl.workloads.processes.readers import ProcessAPIAdapter
 
 
 class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
@@ -52,7 +52,7 @@ class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
         """
         assert isinstance(obj, ProcessService), 'obj must be "ProcessService" type'
         service = obj
-        kube_selector = ProcessAPIAdapter.process_selector(service.app, service.process_type)
+        kube_selector = get_process_selector(service.app, service.process_type)
         body: Dict[str, Any] = {
             'metadata': {
                 'name': service.name,

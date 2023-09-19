@@ -23,8 +23,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from paasng.engine.constants import JobStatus
-from paasng.engine.models.managers import DeployPhaseManager
 from paasng.engine.models.phases import DeployPhaseTypes
+from paasng.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 from .signals import post_appenv_deploy, post_phase_end, pre_appenv_deploy, pre_phase_start

@@ -21,9 +21,9 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.engine.constants import ConfigVarEnvName
-from paasng.engine.serializers import field_env_var_key
 from paasng.extensions.declarative.deployment.resources import DeploymentDesc
 from paasng.extensions.declarative.serializers import validate_language
+from paasng.utils.serializers import field_env_var_key
 
 
 class EnvVariableSLZ(serializers.Serializer):

@@ -23,6 +23,7 @@ from django.conf import settings
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
@@ -30,15 +31,18 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.cnative.specs.image_parser import ImageParser
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
+from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
@@ -48,16 +52,40 @@ from paas_wl.cnative.specs.serializers import (
     DeploySerializer,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    ResQuotaPlanSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.images.models import AppImageCredential
+from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.dev_resources.sourcectl.controllers.docker import DockerRegistryController
+from paasng.dev_resources.sourcectl.serializers import AlternativeVersionSLZ
 from paasng.engine.deploy.release.operator import release_by_k8s_operator
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
+
+
+class ResQuotaPlanOptionsView(APIView):
+    """资源配额方案 选项视图"""
+
+    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
+    def get(self, request):
+        return Response(
+            data=ResQuotaPlanSLZ(
+                [
+                    {
+                        "name": ResQuotaPlan.get_choice_label(plan),
+                        "value": str(plan),
+                        "limit": PLAN_TO_LIMIT_QUOTA_MAP[plan],
+                        "request": PLAN_TO_REQUEST_QUOTA_MAP[plan],
+                    }
+                    for plan in ResQuotaPlan.get_values()
+                ],
+                many=True,
+            ).data
+        )
 
 
 class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):
@@ -254,3 +282,44 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.INVALID_MRES.f(f"missing Annotations[{BKPAAS_DEPLOY_ID_ANNO_KEY!r}]")
         if str(deploy_id) != str(deployment.id):
             raise error_codes.GET_DEPLOYMENT_FAILED.f("The deployed version is inconsistent with the cluster state")
+
+
+class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
+    def list_tags(self, request, code, module_name):
+        """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
+        bkapp = BkAppResource(**model_resource.revision.json_value)
+
+        try:
+            repository = ImageParser(bkapp).get_repository()
+        except ValueError as e:
+            raise error_codes.INVALID_MRES.f(str(e))
+
+        assert bkapp.spec.build
+        if repository != bkapp.spec.build.image:
+            logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+
+        credential_name = bkapp.spec.build.imageCredentialsName
+        username, password = "", ""
+        if credential_name:
+            try:
+                credential = AppUserCredential.objects.get(application_id=application.id, name=credential_name)
+            except AppUserCredential.DoesNotExist:
+                raise error_codes.INVALID_CREDENTIALS.f(_("镜像凭证不存在"))
+            username, password = credential.username, credential.password
+
+        endpoint, slash, repo = repository.partition("/")
+        version_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
+
+        if not version_service.touch():
+            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足"))
+
+        try:
+            alternative_versions = AlternativeVersionSLZ(version_service.list_alternative_versions(), many=True).data
+        except Exception:
+            logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
+            raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
+        return Response(data=alternative_versions)

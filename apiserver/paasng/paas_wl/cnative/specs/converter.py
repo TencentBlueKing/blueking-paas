@@ -21,8 +21,9 @@ from typing import Tuple
 
 from kubernetes.utils import parse_quantity
 
-from paas_wl.cnative.specs.constants import PLAN_TO_QUOTA_MAP, ApiVersion, ResQuotaPlan
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppResource
+from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +76,10 @@ class BkAppResourceConverter:
         但是需要移除原有的 cpu，memory 配置，避免出现优先级覆盖问题
         """
         for p in self.bkapp.spec.processes:
-            for plan in ResQuotaPlan:
-                cpu, mem = PLAN_TO_QUOTA_MAP[plan]
-                if parse_quantity(p.cpu) <= parse_quantity(cpu) and parse_quantity(p.memory) <= parse_quantity(mem):
+            for plan, quota in PLAN_TO_LIMIT_QUOTA_MAP.items():
+                if parse_quantity(p.cpu) <= parse_quantity(quota.cpu) and parse_quantity(p.memory) <= parse_quantity(
+                    quota.memory
+                ):
                     p.resQuotaPlan = plan
                     p.cpu, p.memory = "", ""
                     break

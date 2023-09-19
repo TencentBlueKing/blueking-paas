@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     'paasng.accessories.bk_lesscode',
     'paasng.accessories.iam.bkpaas_iam_migration',
     'paasng.accessories.iam.members',
+    'paasng.accessories.bkmonitorv3',
     'paasng.extensions.declarative',
     'paasng.extensions.scene_app',
     'paasng.extensions.smart_app',
@@ -167,6 +168,8 @@ INSTALLED_APPS = [
     'paas_wl.workloads.images',
     'paas_wl.monitoring.app_monitor',
     'paas_wl.cnative.specs',
+    'paas_wl.deploy',
+    'paas_wl.resources.generation',
 ]
 
 # Allow extending installed apps
@@ -517,6 +520,8 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
 # Celery 队列名称
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
 
+# 用于生成唯一且有意义的 ID 的函数导入路径，默认复用增强服务模块下的工具函数，一般情况下无需调整
+UNIQUE_ID_GEN_FUNC = 'paasng.dev_resources.services.utils.gen_unique_id'
 
 # --------
 # 系统配置
@@ -551,8 +556,6 @@ BK_COMPONENT_API_URL = settings.get('BK_COMPONENT_API_URL', '')
 COMPONENT_SYSTEM_HOST = settings.get('COMPONENT_SYSTEM_HOST', BK_COMPONENT_API_URL)
 # 蓝鲸的组件 API 测试环境地址
 COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'http://localhost:8080')
-# APIGW-Dashboard 接口地址
-APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 # 网关运行环境
@@ -560,6 +563,8 @@ BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
+# 网关 API 默认网关环境
+BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系
 REGION_TO_USER_AUTH_TYPE_MAP = settings.get('REGION_TO_USER_AUTH_TYPE_MAP', {'default': 'default'})

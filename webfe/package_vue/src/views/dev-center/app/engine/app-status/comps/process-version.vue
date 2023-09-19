@@ -40,7 +40,6 @@
         :outer-border="false"
         :size="'small'"
         :pagination="pagination"
-        :height="historyList.length ? '' : '520px'"
         @row-click="handleShowLog"
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"

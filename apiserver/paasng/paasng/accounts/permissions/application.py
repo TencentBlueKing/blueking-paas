@@ -24,9 +24,9 @@ from iam.exceptions import AuthAPIError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
+from paasng.accessories.iam.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 from paasng.accessories.iam.helpers import user_group_apply_url
 from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
-from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id

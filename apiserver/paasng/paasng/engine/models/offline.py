@@ -34,7 +34,7 @@ class OfflineOperationQuerySet(models.QuerySet):
         """Return the latest succeeded deployment of queryset"""
         return self.filter(status=JobStatus.SUCCESSFUL.value).latest('created')
 
-    def get_latest_resumable(self, max_resumable_seconds):
+    def get_latest_resumable(self, max_resumable_seconds: int) -> 'OfflineOperation':
         """return the latest resumable offline_operation queryset"""
         offline_operation = self.latest('created')
         if (

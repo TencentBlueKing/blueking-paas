@@ -30,12 +30,13 @@ from django.db.transaction import atomic
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.cluster.shim import EnvClusterService, get_cluster_egress_info
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
+from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.networking.egress.shim import get_cluster_egress_info
+from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.dev_resources.servicehub import constants, exceptions
 from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.dev_resources.servicehub.remote.client import RemoteServiceClient
-from paasng.dev_resources.servicehub.remote.collector import refresh_remote_service
+from paasng.dev_resources.servicehub.remote.collector import RemoteSpecDefinitionUpdateSLZ, refresh_remote_service
 from paasng.dev_resources.servicehub.remote.exceptions import (
     GetClusterEgressInfoError,
     ServiceNotFound,
@@ -322,11 +323,9 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         if 'bk_monitor_space_id' in params_tmpl:
             # 蓝鲸监控命名空间的成员只能初始化一个成员，默认初始化应用的创建者
             # 已测试用离职用户也能创建成功
-            owner_username = self.db_application.owner.username
-
-            bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
-                self.db_application.code, self.db_application.name, owner_username
-            )
+            space, _ = get_or_create_bk_monitor_space(self.db_application)
+            # TODO: 统一术语
+            bk_monitor_space_id = space.space_uid
 
         for key, tmpl_str in params_tmpl.items():
             result[key] = tmpl_str.format(
@@ -520,17 +519,26 @@ class RemoteServiceMgr(BaseServiceMgr):
         for svc in items:
             yield RemoteServiceObj.from_data(svc, region=None)
 
+    def _handle_service_data(self, data: Dict) -> Dict:
+        # 由于远程增强服务在存储 category_id 的字段命名为 category, 因此这里需要做个重命名
+        data["category"] = data.pop("category_id")
+
+        # 远程增强服务的 specification 中的 display_name 是 TranslatedField
+        # 但本地增强服务并无 specification 字段, 仅将这些额外属性存储在 config 字段中
+        # specification.displayname 的国际化目前是由前端来处理
+        data['specifications'] = RemoteSpecDefinitionUpdateSLZ(data['specifications'], many=True).data
+        return data
+
     def update(self, service: ServiceObj, data: Dict):
         """update the service"""
         if not isinstance(service, RemoteServiceObj) or not service.supports_rest_upsert():
             raise UnsupportedOperationError("This service does not support update.")
 
         service_id = str(service.uuid)
-        # 由于远程增强服务在存储 category_id 的字段命名为 category, 因此这里需要做个重命名
-        data["category"] = data.pop("category_id")
-
         remote_config = self.store.get_source_config(service_id)
         remote_client = RemoteServiceClient(remote_config)
+
+        data = self._handle_service_data(data)
         remote_client.update_service(service_id=service_id, data=data)
         # 更新 store 中的信息
         refresh_remote_service(self.store, service_id)

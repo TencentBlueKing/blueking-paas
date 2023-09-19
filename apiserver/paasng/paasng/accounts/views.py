@@ -34,8 +34,8 @@ from paasng.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.accounts.oauth.exceptions import BKAppOauthError
 from paasng.accounts.oauth.utils import get_available_backends, get_backend
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.accounts.serializers import OAuthRefreshTokenSLZ
-from paasng.accounts.utils import get_user_avatar
+from paasng.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
+from paasng.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
@@ -140,7 +140,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取代表指定应用和用户身份的 AccessToken"""
         application = self.get_application()
         try:
-            backend = get_bkapp_oauth_backend_cls().from_app(application, env_name=env_name)
+            backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
         try:
@@ -157,7 +157,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """刷新代表指定应用和用户身份的 AccessToken"""
         application = self.get_application()
         try:
-            backend = get_bkapp_oauth_backend_cls().from_app(application, env_name=env_name)
+            backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
 
@@ -173,7 +173,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def validate_app_token(self, request, app_code: str, env_name: str):
         application = self.get_application()
         try:
-            backend = get_bkapp_oauth_backend_cls().from_app(application, env_name=env_name)
+            backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
 
@@ -274,3 +274,19 @@ class AccountFeatureFlagViewSet(viewsets.ViewSet):
     def list(self, request):
         flags = AccountFeatureFlag.objects.get_user_features(request.user)
         return Response(flags)
+
+
+class RegionSpecsViewSet(viewsets.ViewSet):
+    """ViewSet for region"""
+
+    permission_classes = [IsAuthenticated]
+
+    def retrieve(self, request):
+        # TODO: 当前存在漏洞，如果用户没有创建某 region 应用的权限，但他又是这个 region 下应用的开发者。那么当他进入该应用后，
+        # 点击创建新模块页面，访问 specs 接口时，不会返回对应 region 的相关信息（因为没权限），最终会导致前端页面报错。
+        #
+        # Region 的创建应用权限和管理某个 Region 下应用（创建模块）权限等没有细化。
+        user_profile = UserProfile.objects.get_profile(self.request.user)
+        regions = user_profile.enable_regions
+        all_spec_slz = AllRegionSpecsSLZ(regions)
+        return Response(all_spec_slz.serialize())

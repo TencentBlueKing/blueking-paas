@@ -53,6 +53,7 @@ from paasng.plat_admin.system.serializers import (
 from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.publish.entrance.exposer import get_exposed_links
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
 
                 # 部署信息中的访问地址信息很耗时，所以指定参数时才返回
                 if include_deploy_info:
-                    deploy_info = app._db_object.get_deploy_info()
+                    deploy_info = get_exposed_links(app._db_object)
 
             basic_info['contact_info'] = contact_info
             if include_deploy_info:
@@ -294,7 +295,9 @@ class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
         namespace_cluster_map: Dict[str, str] = {}
         for wl_app in wl_apps:
             if (ns := wl_app.namespace) not in namespace_cluster_map:
-                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).name
+                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).bcs_cluster_id or ''
 
-        data = [{'namespace': ns, 'cluster_id': cluster_id} for ns, cluster_id in namespace_cluster_map.items()]
+        data = [
+            {'namespace': ns, 'bcs_cluster_id': bcs_cluster_id} for ns, bcs_cluster_id in namespace_cluster_map.items()
+        ]
         return Response(ClusterNamespaceSLZ(data, many=True).data)

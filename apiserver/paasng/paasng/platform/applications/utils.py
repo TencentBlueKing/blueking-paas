@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
@@ -39,9 +38,6 @@ from paasng.platform.region.models import get_region
 from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
-
-RE_APP_CODE = re.compile(r'^[a-z0-9-]{1,16}$')
-RE_APP_SEARCH = re.compile(u'[\u4300-\u9fa5\\w_\\-\\d]{1,20}')
 
 logger = logging.getLogger(__name__)
 

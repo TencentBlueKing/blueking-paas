@@ -32,6 +32,7 @@ import (
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
@@ -559,6 +560,41 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
+	})
+
+	Context("Test resQuota in annotations", func() {
+		It("Normal", func() {
+			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
+			legacyProcResConfig["web"] = map[string]string{"cpu": "2", "memory": "2G"}
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("Invalid unset", func() {
+			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
+			legacyProcResConfig["web"] = map[string]string{"cpu": "", "memory": "2G"}
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+		})
+		It("Invalid exceed cpu max limit", func() {
+			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
+			legacyProcResConfig["web"] = map[string]string{"cpu": "6", "memory": "2G"}
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+		})
+		It("Invalid exceed memory max limit", func() {
+			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
+			legacyProcResConfig["web"] = map[string]string{"cpu": "2", "memory": "8G"}
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
 		})
 	})
 })

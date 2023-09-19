@@ -19,11 +19,11 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
+from blue_krill.web.std_error import APIError
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.networking.ingress.domains.manager import CNativeCustomDomainManager, check_domain_used_by_market
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.utils.error_codes import APIError
 from paasng.publish.market.models import MarketConfig
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
@@ -59,7 +59,7 @@ class TestCNativeDftCustomDomainManager:
         with pytest.raises(ValidationError):
             mgr.create(env=bk_stag_env, host='foo.example.com', path_prefix='/', https_enabled=False)
 
-    @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')
+    @mock.patch('paas_wl.cnative.specs.handlers.deploy_networking')
     def test_create_successfully(self, mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy
@@ -69,7 +69,7 @@ class TestCNativeDftCustomDomainManager:
         assert mocker.called
         assert domain is not None
 
-    @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking', side_effect=ValueError('foo'))
+    @mock.patch('paas_wl.cnative.specs.handlers.deploy_networking', side_effect=ValueError('foo'))
     def test_create_failed(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy
@@ -78,7 +78,7 @@ class TestCNativeDftCustomDomainManager:
             mgr.create(env=bk_stag_env, host='foo.example.com', path_prefix='/', https_enabled=False)
 
     @pytest.fixture
-    @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')
+    @mock.patch('paas_wl.cnative.specs.handlers.deploy_networking')
     def domain_foo_com(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_prod_wl_app, bk_user) -> Domain:
         """Create a Domain fixture"""
         mgr = CNativeCustomDomainManager(bk_cnative_app)
@@ -87,7 +87,7 @@ class TestCNativeDftCustomDomainManager:
         domain = mgr.create(env=bk_stag_env, host='foo.example.com', path_prefix='/', https_enabled=False)
         return domain
 
-    @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')
+    @mock.patch('paas_wl.cnative.specs.handlers.deploy_networking')
     def test_update(self, mocker, bk_cnative_app, bk_stag_env, domain_foo_com):
         assert Domain.objects.get(environment_id=bk_stag_env.id).name == 'foo.example.com'
         CNativeCustomDomainManager(bk_cnative_app).update(
@@ -96,7 +96,7 @@ class TestCNativeDftCustomDomainManager:
         assert mocker.called
         assert Domain.objects.get(environment_id=bk_stag_env.id).name == 'bar.example.com'
 
-    @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')
+    @mock.patch('paas_wl.cnative.specs.handlers.deploy_networking')
     def test_delete(self, mocker, bk_cnative_app, domain_foo_com):
         assert Domain.objects.count() == 1
         CNativeCustomDomainManager(bk_cnative_app).delete(domain_foo_com)

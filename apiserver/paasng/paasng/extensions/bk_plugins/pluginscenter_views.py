@@ -42,11 +42,12 @@ from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import AppEnvName
-from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.models import ConfigVar, Deployment
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
+from paasng.engine.phases_steps.steps import get_sorted_steps
 from paasng.engine.streaming.constants import EventType
+from paasng.engine.utils.client import get_all_logs
 from paasng.engine.workflow import DeploymentCoordinator
 from paasng.extensions.bk_plugins import api_serializers, serializers
 from paasng.extensions.bk_plugins.apigw import safe_update_gateway_status
@@ -226,7 +227,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         phases = DeployPhaseManager(env).get_or_create_all()
         steps = []
         for phase in phases:
-            steps.extend(phase.get_sorted_steps())
+            steps.extend(get_sorted_steps(phase))
 
         return Response(
             data=api_serializers.PluginDeployResponseSLZ(
@@ -255,7 +256,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         steps = []
         for phase in phases:
-            steps.extend(phase.get_sorted_steps())
+            steps.extend(get_sorted_steps(phase))
 
         return Response(
             data=api_serializers.PluginDeployResponseSLZ(

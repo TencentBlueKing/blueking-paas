@@ -129,25 +129,13 @@ class ScalingPolicy(str, StructuredEnum):
 class ResQuotaPlan(str, StructuredEnum):
     """ResQuotaPlan is used to specify process resource quota"""
 
-    P_DEFAULT = EnumField("default")
-    P_1C512M = EnumField("1C512M")
-    P_2C1G = EnumField("2C1G")
-    P_2C2G = EnumField("2C2G")
-    P_4C1G = EnumField("4C1G")
-    P_4C2G = EnumField("4C2G")
-    P_4C4G = EnumField("4C4G")
-
-
-# 资源配额方案到配额的映射表
-PLAN_TO_QUOTA_MAP = {
-    ResQuotaPlan.P_DEFAULT: (DEFAULT_PROC_CPU, DEFAULT_PROC_MEM),
-    ResQuotaPlan.P_1C512M: ("1000m", "512Mi"),
-    ResQuotaPlan.P_2C1G: ("2000m", "1024Mi"),
-    ResQuotaPlan.P_2C2G: ("2000m", "2048Mi"),
-    ResQuotaPlan.P_4C1G: ("4000m", "1024Mi"),
-    ResQuotaPlan.P_4C2G: ("4000m", "2048Mi"),
-    ResQuotaPlan.P_4C4G: ("4000m", "4096Mi"),
-}
+    P_DEFAULT = EnumField("default", label="default")
+    P_1C512M = EnumField("1C512M", label="1C512M")
+    P_2C1G = EnumField("2C1G", label="2C1G")
+    P_2C2G = EnumField("2C2G", label="2C2G")
+    P_4C1G = EnumField("4C1G", label="4C1G")
+    P_4C2G = EnumField("4C2G", label="4C2G")
+    P_4C4G = EnumField("4C4G", label="4C4G")
 
 
 class MountEnvName(str, StructuredEnum):

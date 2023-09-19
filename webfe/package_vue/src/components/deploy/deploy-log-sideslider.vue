@@ -164,6 +164,9 @@ export default {
           env: params.environment,
           deployId: params.deployment_id,
         });
+        if (res.logs && res.logs === '\n') {
+          res.logs = this.$t('暂无日志');
+        }
         this.curDeployLog = this.ansiUp ? this.ansiUp.ansi_to_html(res.logs) : res.logs;
         this.errorTips = Object.assign({}, res.error_tips);
       } catch (e) {

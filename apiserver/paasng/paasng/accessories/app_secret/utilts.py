@@ -29,20 +29,20 @@ def get_deployed_secret_list(application: Application) -> list:
     envs = ModuleEnvironment.objects.filter(module__in=application.modules.all()).all()
     deployed_secret_list = []
     for env in envs:
-        # 当前环境的最近部署成功的时间
-        latest_deployed_at = None
-        latest_deployment = DeploymentGetter(env).get_latest_succeeded()
-        if latest_deployment:
-            latest_deployed_at = latest_deployment.created
-
         # 查询线上运行进程中的环境变量信息
         process_manager = ProcessManager(env)
         process_list = process_manager.list_processes()
         if not process_list:
             continue
 
+        # 当前环境的最近部署成功的时间
+        latest_deployed_at = None
+        latest_deployment = DeploymentGetter(env).get_latest_succeeded()
+        if latest_deployment:
+            latest_deployed_at = latest_deployment.created
+
         # 只查询一个进程的内置密钥即可
-        _secret = process_list[0].runtime.envs.get(f"{settings. EnvVar_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}")
+        _secret = process_list[0].runtime.envs.get(f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}")
         deployed_secret_list.append(
             {
                 "module": env.module.name,

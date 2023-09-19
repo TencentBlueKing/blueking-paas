@@ -25,24 +25,37 @@
                 <span class="name">{{deploymentInfo.module_name}}</span>
                 <i
                   class="paasng-icon paasng-jump-link icon-cls-link"
-                  v-bk-tooltips="$t('访问链接')"
+                  v-bk-tooltips="$t('点击访问')"
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                   v-if="deploymentInfo.exposed_url" />
               </div>
+              <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
                 <!-- 源码&镜像 -->
-                <div class="flex-row" v-if="deploymentInfo.build_method === 'dockerfile'">
-                  <div class="version">
-                    <span class="label">{{$t('版本：')}}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
-                    </span>
+                <div v-if="deploymentInfo.build_method === 'dockerfile'">
+                  <!-- 源码分支 -->
+                  <div
+                    class="flex-row"
+                    v-if="deploymentInfo.state.deployment.latest_succeeded.version_info.version_type === 'branch'">
+                    <div class="version">
+                      <span class="label">{{$t('版本：')}}</span>
+                      <span class="value">
+                        {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
+                      </span>
+                    </div>
+                    <div class="line"></div>
+                    <div class="branch">
+                      <span class="label">{{$t('分支：')}}</span>
+                      <span class="value">
+                        {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="line"></div>
-                  <div class="branch">
-                    <span class="label">{{$t('分支：')}}</span>
+                  <!-- 镜像构建 -->
+                  <div class="version" v-else>
+                    <span class="label">{{$t('镜像Tag：')}}</span>
                     <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
                     </span>
                   </div>
                 </div>
@@ -84,9 +97,9 @@
                 :theme="'primary'"
                 class="mr10"
                 size="small"
-                @click="handleDeploy(deploymentInfo)"
+                @click="handleDeploy(deploymentInfo, index)"
                 :disabled="(!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending)"
-                :loading="!!deploymentInfo.state.deployment.pending">
+                :loading="!!deploymentInfo.state.deployment.pending || (curDeployItemIndex === index && yamlLoading)">
                 {{$t('部署')}}
               </bk-button>
               <bk-button
@@ -226,6 +239,8 @@ export default {
       initPage: false,       // 第一次进入页面
       rvData: {},
       intervalTimer: null,
+      yamlLoading: false,
+      curDeployItemIndex: '',
     };
   },
 
@@ -289,14 +304,17 @@ export default {
     },
 
     // 部署
-    handleDeploy(payload) {
+    handleDeploy(payload, index) {
       this.curDeploymentInfoItem = payload;
+      this.curDeployItemIndex = index;
       this.getCloudAppYaml();
     },
 
     // 部署侧边栏
     handleShowDeploy(payload) {
       this.curDeploymentInfoItem = payload || {};
+      // 将正在部署的信息赋值给模块版本信息
+      this.curDeploymentInfoItem.version_info = { ...payload.state.deployment.pending.version_info };
       this.isShowSideslider = true;
     },
 
@@ -309,6 +327,7 @@ export default {
     // 获取云原生yaml
     async getCloudAppYaml() {
       try {
+        this.yamlLoading = true;
         const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -322,7 +341,7 @@ export default {
           message: e.detail || e.message,
         });
       } finally {
-        this.isLoading = false;
+        this.yamlLoading = false;
       }
     },
 
@@ -372,7 +391,9 @@ export default {
           }
           return e;
         });
-        this.$set(this, 'deploymentInfoData', res.data);
+        this.$nextTick(() => {
+          this.$set(this, 'deploymentInfoData', res.data);
+        });
         this.rvData = {
           rvInst: res.rv_inst,
           rvProc: res.rv_proc,

@@ -1,11 +1,11 @@
 <template>
   <bk-sideslider
-    :title="historySideslider.title"
     :width="920"
     :is-show.sync="historySideslider.isShow"
     :quick-close="true"
     @hidden="errorTips = {}"
   >
+    <div slot="header" class="deploy-header">{{ historySideslider.title }}</div>
     <div
       slot="content"
       v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
@@ -66,20 +66,20 @@ import deployTimeline from './deploy-timeline';
 
 export default {
   components: {
-      deployTimeline
+    deployTimeline,
   },
   props: {
     appCode: {
       type: String | Number,
-      default: ''
+      default: '',
     },
     moduleId: {
       type: String | Number,
-      default: ''
-    }
+      default: '',
+    },
   },
 
-  data () {
+  data() {
     return {
       isLogLoading: false,
       isTimelineLoading: false,
@@ -87,22 +87,22 @@ export default {
       curDeployLog: '',
       timeLineList: [],
       historySideslider: {
-          title: '',
-          isShow: false
+        title: '',
+        isShow: false,
       },
       errorTips: {},
-    }
+    };
   },
 
   computed: {
-      isMatchedSolutionsFound () {
-          return this.errorTips.matched_solutions_found;
-      }
+    isMatchedSolutionsFound() {
+      return this.errorTips.matched_solutions_found;
+    },
   },
 
-  mounted () {
-      const AU = require('ansi_up');
-      // eslint-disable-next-line
+  mounted() {
+    const AU = require('ansi_up');
+    // eslint-disable-next-line
       this.ansiUp = new AU.default
   },
 
@@ -110,148 +110,155 @@ export default {
     /**
      * 获取部署阶段详情
      */
-    async getDeployTimeline (params) {
-        if (this.isTimelineLoading) {
-            return false;
-        }
+    async getDeployTimeline(params) {
+      if (this.isTimelineLoading) {
+        return false;
+      }
 
-        this.isTimelineLoading = true;
-        try {
-            const res = await this.$store.dispatch('deploy/getDeployTimeline', {
-                appCode: this.appCode,
-                moduleId: this.moduleId,
-                env: params.environment,
-                deployId: params.deployment_id
-            });
-            const timeLineList = [];
-            res.forEach(stageItem => {
-                timeLineList.push({
-                    tag: stageItem.display_name,
-                    content: this.computedDeployTimelineTime(stageItem.start_time, stageItem.complete_time),
-                    status: stageItem.status || 'default',
-                    stage: stageItem.type
-                });
+      this.isTimelineLoading = true;
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployTimeline', {
+          appCode: this.appCode,
+          moduleId: this.moduleId,
+          env: params.environment,
+          deployId: params.deployment_id,
+        });
+        const timeLineList = [];
+        res.forEach((stageItem) => {
+          timeLineList.push({
+            tag: stageItem.display_name,
+            content: this.computedDeployTimelineTime(stageItem.start_time, stageItem.complete_time),
+            status: stageItem.status || 'default',
+            stage: stageItem.type,
+          });
 
-                stageItem.steps.forEach(stepItem => {
-                    timeLineList.push({
-                        tag: stepItem.display_name,
-                        content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
-                        status: stepItem.status || 'default',
-                        parentStage: stageItem.type
-                    });
-                });
+          stageItem.steps.forEach((stepItem) => {
+            timeLineList.push({
+              tag: stepItem.display_name,
+              content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
+              status: stepItem.status || 'default',
+              parentStage: stageItem.type,
             });
-            this.timeLineList = timeLineList;
-        } catch (e) {
-            this.timeLineList = [];
-        } finally {
-            this.isTimelineLoading = false;
-        }
+          });
+        });
+        this.timeLineList = timeLineList;
+      } catch (e) {
+        this.timeLineList = [];
+      } finally {
+        this.isTimelineLoading = false;
+      }
     },
 
     /**
      * 获取部署日志
      */
-    async getDeployLog (params) {
-        if (this.isLogLoading) {
-            return false;
+    async getDeployLog(params) {
+      if (this.isLogLoading) {
+        return false;
+      }
+      this.isLogLoading = true;
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployLog', {
+          appCode: this.appCode,
+          moduleId: this.moduleId,
+          env: params.environment,
+          deployId: params.deployment_id,
+        });
+        if (res.logs && res.logs === '\n') {
+          res.logs = this.$t('暂无日志');
         }
-        this.isLogLoading = true;
-        try {
-            const res = await this.$store.dispatch('deploy/getDeployLog', {
-                appCode: this.appCode,
-                moduleId: this.moduleId,
-                env: params.environment,
-                deployId: params.deployment_id
-            });
-            this.curDeployLog = this.ansiUp ? this.ansiUp.ansi_to_html(res.logs) : res.logs;
-            this.errorTips = Object.assign({}, res.error_tips);
-        } catch (e) {
-            this.curDeployLog = '';
-            this.$paasMessage({
-                theme: 'error',
-                message: e.detail || e.message
-            });
-        } finally {
-            this.isLogLoading = false;
-        }
-    },
-
-    computedDeployTimelineTime (startTime, endTime) {
-        if (!startTime || !endTime) {
-            return '--';
-        }
-
-        const start = (new Date(startTime).getTime()) / 1000;
-        const end = (new Date(endTime).getTime()) / 1000;
-        const interval = Math.ceil(end - start);
-
-        if (!interval) {
-            return `< 1${this.$t('秒')}`;
-        }
-
-        return this.getDisplayTime(interval);
-    },
-
-    getDisplayTime (payload) {
-        let theTime = payload;
-        if (theTime < 1) {
-            return `< 1${this.$t('秒')}`;
-        }
-        let middle = 0;
-        let hour = 0;
-
-        if (theTime > 60) {
-            middle = parseInt(theTime / 60, 10);
-            theTime = parseInt(theTime % 60, 10);
-            if (middle > 60) {
-                hour = parseInt(middle / 60, 10);
-                middle = parseInt(middle % 60, 10);
-            }
-        }
-
-        let result = '';
-
-        if (theTime > 0) {
-            result = `${theTime}${this.$t('秒')}`;
-        }
-        if (middle > 0) {
-            result = `${middle}${this.$t('分')}${result}`;
-        }
-        if (hour > 0) {
-            result = `${hour}${this.$t('时')}${result}`;
-        }
-
-        return result;
-    },
-
-    handleShowLog (row) {
-        this.timeLineList = [];
+        this.curDeployLog = this.ansiUp ? this.ansiUp.ansi_to_html(res.logs) : res.logs;
+        this.errorTips = Object.assign({}, res.error_tips);
+      } catch (e) {
         this.curDeployLog = '';
-        if (this.isTimelineLoading || this.isLogLoading) {
-            return false;
-        }
-
-        const operator = row.operator.username;
-        const time = row.created;
-        if (row.operation_type === 'offline') {
-            const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
-            this.historySideslider.title = title;
-            this.curDeployLog = row.logDetail;
-        } else {
-            const branch = row.name;
-            this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} (${operator}${this.$t('于')}${time}${this.$t('部署')}${branch}${this.$t('分支')})`;
-            this.getDeployTimeline(row);
-            this.getDeployLog(row);
-        }
-        this.historySideslider.isShow = true;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLogLoading = false;
+      }
     },
 
-  }
-}
+    computedDeployTimelineTime(startTime, endTime) {
+      if (!startTime || !endTime) {
+        return '--';
+      }
+
+      const start = (new Date(startTime).getTime()) / 1000;
+      const end = (new Date(endTime).getTime()) / 1000;
+      const interval = Math.ceil(end - start);
+
+      if (!interval) {
+        return `< 1${this.$t('秒')}`;
+      }
+
+      return this.getDisplayTime(interval);
+    },
+
+    getDisplayTime(payload) {
+      let theTime = payload;
+      if (theTime < 1) {
+        return `< 1${this.$t('秒')}`;
+      }
+      let middle = 0;
+      let hour = 0;
+
+      if (theTime > 60) {
+        middle = parseInt(theTime / 60, 10);
+        theTime = parseInt(theTime % 60, 10);
+        if (middle > 60) {
+          hour = parseInt(middle / 60, 10);
+          middle = parseInt(middle % 60, 10);
+        }
+      }
+
+      let result = '';
+
+      if (theTime > 0) {
+        result = `${theTime}${this.$t('秒')}`;
+      }
+      if (middle > 0) {
+        result = `${middle}${this.$t('分')}${result}`;
+      }
+      if (hour > 0) {
+        result = `${hour}${this.$t('时')}${result}`;
+      }
+
+      return result;
+    },
+
+    handleShowLog(row) {
+      this.timeLineList = [];
+      this.curDeployLog = '';
+      if (this.isTimelineLoading || this.isLogLoading) {
+        return false;
+      }
+
+      const operator = row.operator.username;
+      const time = row.created;
+      if (row.operation_type === 'offline') {
+        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
+        this.historySideslider.title = title;
+        this.curDeployLog = row.logDetail;
+      } else {
+        this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`;
+        this.getDeployTimeline(row);
+        this.getDeployLog(row);
+      }
+      this.historySideslider.isShow = true;
+    },
+
+  },
+};
 </script>
 
 <style lang="scss" scoped>
+.deploy-header{
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
 .deploy-detail {
     display: flex;
     height: 100%;

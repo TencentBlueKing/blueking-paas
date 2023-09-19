@@ -13,10 +13,11 @@
           style="width: 154px;"
           :clearable="false"
           searchable>
-          <bk-option v-for="option in curAppModuleList"
-              :key="option.name"
-              :id="option.name"
-              :name="option.name">
+          <bk-option
+            v-for="option in curAppModuleList"
+            :key="option.name"
+            :id="option.name"
+            :name="option.name">
           </bk-option>
         </bk-select>
         <!-- 只支持从操作人搜索 -->
@@ -97,7 +98,9 @@
               <span :class="['dot', row.status]" /> {{ $t(deployStatus[row.status]) }}
             </div>
             <template v-else>
-              <div class="flex-row align-items-center" v-if="row.status === 'pending' && row.operation_type === 'online'">
+              <div
+                class="flex-row align-items-center"
+                v-if="row.status === 'pending' && row.operation_type === 'online'">
                 <span class="dot warning" /> {{ $t('部署中') }}
               </div>
               <div
@@ -145,7 +148,7 @@
     <!-- 部署日志 -->
     <deploy-log-sideslider
       ref="logSidesliderRef"
-      :app-code="'appid1'"
+      :app-code="appCode"
       :module-id="curModuleId"
     />
   </div>
@@ -185,7 +188,7 @@ export default {
       // 部署日志
       logSidesliderData: {},
       moduleValue: 'default',
-      filterEnv: []
+      filterEnv: [],
     };
   },
 
@@ -202,13 +205,13 @@ export default {
     personnelSelectorList() {
       this.getDeployHistory();
     },
-    moduleValue (value) {
+    moduleValue() {
       // 重新发起请求并附带参数
       this.getDeployHistory();
     },
-    filterEnv () {
+    filterEnv() {
       this.getDeployHistory();
-    }
+    },
   },
 
   created() {
@@ -340,7 +343,7 @@ export default {
         });
       } finally {
         this.isPageLoading = false;
-        this.isLoading = false
+        this.isLoading = false;
       }
     },
 
@@ -374,7 +377,7 @@ export default {
       }
     },
 
-    handleFilterChange (filter) {
+    handleFilterChange(filter) {
       this.filterEnv = filter.env || [];
     },
 

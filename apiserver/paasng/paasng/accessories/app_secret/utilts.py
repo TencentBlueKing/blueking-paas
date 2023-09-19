@@ -38,6 +38,9 @@ def get_deployed_secret_list(application: Application) -> list:
         # 查询线上运行进程中的环境变量信息
         process_manager = ProcessManager(env)
         process_list = process_manager.list_processes()
+        if not process_list:
+            continue
+
         # 只查询一个进程的内置密钥即可
         _secret = process_list[0].runtime.envs.get(f"{settings. EnvVar_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}")
         deployed_secret_list.append(

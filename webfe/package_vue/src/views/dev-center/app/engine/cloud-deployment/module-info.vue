@@ -7,7 +7,7 @@
     class="deploy-action-box"
   >
     <div class="module-info-container">
-      <div class="base-info-container" v-if="isV1alpha2">
+      <div class="base-info-container" v-if="curAppModule.web_config?.runtime_type === 'custom_image'">
         <div class="flex-row align-items-center">
           <span class="base-info-title">
             {{ $t('基本信息-title') }}
@@ -17,7 +17,8 @@
             {{ $t('编辑') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isBasePageEdit">
+        <div
+          class="form-detail mt20 pb20 pl40 border-b" v-if="!isBasePageEdit">
           <bk-form
             :model="buildData">
             <bk-form-item
@@ -35,7 +36,8 @@
           </bk-form>
         </div>
 
-        <div class="form-edit mt20 pb20 border-b" v-else>
+        <div
+          class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
           <bk-form
             :model="buildData">
             <bk-form-item

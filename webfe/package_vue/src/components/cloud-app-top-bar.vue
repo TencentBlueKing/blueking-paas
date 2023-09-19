@@ -17,7 +17,7 @@
           v-bind="panel"
         />
       </bk-tab>
-      <div class="module-manager" @click="handleRightConfigClick">
+      <div class="module-manager" @click="handleRightConfigClick" v-if="rightTitle">
         <i class="paasng-icon paasng-lishijilu"></i>
         <span class="title">{{ rightTitle }}</span>
       </div>

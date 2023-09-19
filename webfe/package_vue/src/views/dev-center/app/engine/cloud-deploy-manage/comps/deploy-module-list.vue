@@ -23,7 +23,11 @@
               <div class="module">
                 <i class="icon paasng-icon paasng-deploy-item-dot"></i>
                 <span class="name">{{deploymentInfo.module_name}}</span>
-                <i class="paasng-icon paasng-jump-link icon-cls-link" />
+                <i
+                  class="paasng-icon paasng-jump-link icon-cls-link"
+                  v-bk-tooltips="$t('访问链接')"
+                  @click="handleOpenUrl(deploymentInfo.exposed_url)"
+                  v-if="deploymentInfo.exposed_url" />
               </div>
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
                 <!-- 源码&镜像 -->
@@ -429,6 +433,19 @@ export default {
     // // 关闭侧边栏
     handleCloseSideslider() {
       this.isShowSideslider = false;
+    },
+
+    // 将模块的进程实例全部收起
+    handleSetCloseExpand() {
+      this.curDeploymentInfoItem.isExpand = false;
+      this.deploymentInfoData.forEach((e) => {
+        e.isExpand = false;
+      });
+    },
+
+    // 点击访问链接
+    handleOpenUrl(url) {
+      window.open(url);
     },
   },
 };

@@ -1,6 +1,6 @@
 <template>
   <div class="right-main">
-    <div class="ps-top-bar">
+    <div class="ps-top-bar" v-if="!isCloudNativeApp">
       <h2> {{ $t('应用市场 (移动端)') }} </h2>
     </div>
     <paas-content-loader
@@ -271,206 +271,206 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin.js';
-    import wxQiyeQrcode from '@/components/ui/Qrcode';
+import appBaseMixin from '@/mixins/app-base-mixin.js';
+import wxQiyeQrcode from '@/components/ui/Qrcode';
 
-    export default {
-        components: {
-            wxQiyeQrcode
+export default {
+  components: {
+    wxQiyeQrcode,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isDataLoading: false,
+      dialogConfig: {
+        visiable: false,
+        title: '',
+        isLoading: false,
+        url: '',
+      },
+      disableDialogConfig: {
+        visiable: false,
+        title: '',
+        isLoading: false,
+        appCode: '',
+      },
+      mobileConfig: {
+        stag: {
+          is_enabled: false,
+          access_domain: '',
         },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isDataLoading: false,
-                dialogConfig: {
-                    visiable: false,
-                    title: '',
-                    isLoading: false,
-                    url: ''
-                },
-                disableDialogConfig: {
-                    visiable: false,
-                    title: '',
-                    isLoading: false,
-                    appCode: ''
-                },
-                mobileConfig: {
-                    stag: {
-                        is_enabled: false,
-                        access_domain: ''
-                    },
-                    prod: {
-                        is_enabled: false,
-                        access_domain: ''
-                    },
-                    canReleaseToMobile: false,
-                    errMsg: `${this.$t('请联系')}${this.GLOBAL.HELPER.name}${this.$t('开启权限!')}`
-                },
-                rules: {
-                    url: [
-                        {
-                            required: true,
-                            message: this.$t('必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            validator: function (val) {
-                                return (val.startsWith('http://') || val.startsWith('https://')) && val.indexOf(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`) > -1;
-                            },
-                            message: `${this.$t('只支持 woa 域名，如')}：http://appid.${this.GLOBAL.WOA_DOMAIN}${this.$t('/mobile/')}`,
-                            trigger: 'blur'
-                        }
-                    ]
-                }
-            };
+        prod: {
+          is_enabled: false,
+          access_domain: '',
         },
-        watch: {
-            '$route' () {
-                this.init();
-            }
-        },
-        mounted () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.loadMobileConfig();
+        canReleaseToMobile: false,
+        errMsg: `${this.$t('请联系')}${this.GLOBAL.HELPER.name}${this.$t('开启权限!')}`,
+      },
+      rules: {
+        url: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+          {
+            validator(val) {
+              return (val.startsWith('http://') || val.startsWith('https://')) && val.indexOf(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`) > -1;
             },
-            async loadMobileConfig () {
-                this.isDataLoading = true;
-                try {
-                    const res = await this.$store.dispatch('market/getMobileMarketInfo', {
-                        appCode: this.appCode
-                    });
-                    this.mobileConfig = Object.assign(this.mobileConfig, res, { canReleaseToMobile: true });
-                } catch (err) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: err.detail
-                    });
-                    this.mobileConfig.canReleaseToMobile = false;
-                } finally {
-                    this.isDataLoading = false;
-                    this.$emit('data-ready', 'mobile-config');
-                }
-            },
-            handleShowDialog (env) {
-                const isEnabled = this.mobileConfig[env].is_enabled;
-
-                if (isEnabled) {
-                    this.disableDialogConfig.env = env;
-                    this.disableDialogConfig.title = `${this.$t('是否停用【')}${env === 'stag' ? this.$t('预发布环境') : this.$t('正式环境')}】${this.$t('移动端配置')}`;
-                    // 判断下 access_url 为空的话：弹出一个二次确认框；不为空的话，弹出一个普通的二次确认框
-                    this.disableDialogConfig.enableConfirm = !this.mobileConfig[env].access_url;
-                    this.disableDialogConfig.visiable = true;
-                } else {
-                    this.dialogConfig.env = env;
-                    this.dialogConfig.title = `${this.$t('是否开启【')}${env === 'stag' ? this.$t('预发布环境') : this.$t('正式环境')}】${this.$t('移动端配置')}`;
-                    this.dialogConfig.visiable = true;
-                }
-            },
-            handleReset () {
-                this.dialogConfig.url = '';
-                this.dialogConfig.isLoading = false;
-                this.$refs.form.clearError();
-            },
-            handleConfirm () {
-                this.$refs.form.validate().then(() => {
-                    this.enableMobileMarket();
-                });
-            },
-            handleEdit (env = 'stag', url = '') {
-                this.dialogConfig.env = env;
-                this.dialogConfig.url = url;
-                this.dialogConfig.title = `【${env === 'stag' ? this.$t('预发布环境') : this.$t('正式环境')}】${this.$t('移动端配置')}`;
-                this.dialogConfig.visiable = true;
-            },
-            handleCancel () {
-                this.dialogConfig.visiable = false;
-            },
-            async enableMobileMarket () {
-                if (!this.mobileConfig.canReleaseToMobile) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.mobileConfig.errMsg
-                    });
-                    return false;
-                }
-
-                if (this.dialogConfig.isLoading) {
-                    return false;
-                }
-
-                this.dialogConfig.isLoading = true;
-                try {
-                    const env = this.dialogConfig.env;
-                    const res = await this.$store.dispatch('market/enableMobileMarket', {
-                        appCode: this.appCode,
-                        env: env,
-                        data: {
-                            access_domain: this.dialogConfig.url
-                        }
-                    });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('开启成功')
-                    });
-                    this.dialogConfig.visiable = false;
-                    this.mobileConfig[env] = res;
-                } catch (err) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: err.detail
-                    });
-                } finally {
-                    this.dialogConfig.isLoading = false;
-                }
-            },
-            handleCancelDisable () {
-                this.disableDialogConfig.visiable = false;
-                this.disableDialogConfig.enableConfirm = false;
-            },
-            async disableMobileMarket () {
-                if (!this.mobileConfig.canReleaseToMobile) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.mobileConfig.errMsg
-                    });
-                    return false;
-                }
-
-                if (this.disableDialogConfig.isLoading) {
-                    return false;
-                }
-
-                this.disableDialogConfig.isLoading = true;
-                try {
-                    const env = this.disableDialogConfig.env;
-                    await this.$store.dispatch('market/disableMobileMarket', {
-                        appCode: this.appCode,
-                        env: env
-                    });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('停用成功')
-                    });
-                    this.mobileConfig[env] = {
-                        is_enabled: false,
-                        access_domain: ''
-                    };
-                    this.disableDialogConfig.visiable = false;
-                    this.disableDialogConfig.enableConfirm = false;
-                } catch (err) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: err.detail
-                    });
-                } finally {
-                    this.disableDialogConfig.isLoading = false;
-                }
-            }
-        }
+            message: `${this.$t('只支持 woa 域名，如')}：http://appid.${this.GLOBAL.WOA_DOMAIN}${this.$t('/mobile/')}`,
+            trigger: 'blur',
+          },
+        ],
+      },
     };
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.loadMobileConfig();
+    },
+    async loadMobileConfig() {
+      this.isDataLoading = true;
+      try {
+        const res = await this.$store.dispatch('market/getMobileMarketInfo', {
+          appCode: this.appCode,
+        });
+        this.mobileConfig = Object.assign(this.mobileConfig, res, { canReleaseToMobile: true });
+      } catch (err) {
+        this.$paasMessage({
+          theme: 'error',
+          message: err.detail,
+        });
+        this.mobileConfig.canReleaseToMobile = false;
+      } finally {
+        this.isDataLoading = false;
+        this.$emit('data-ready', 'mobile-config');
+      }
+    },
+    handleShowDialog(env) {
+      const isEnabled = this.mobileConfig[env].is_enabled;
+
+      if (isEnabled) {
+        this.disableDialogConfig.env = env;
+        this.disableDialogConfig.title = `${this.$t('是否停用【')}${env === 'stag' ? this.$t('预发布环境') : this.$t('正式环境')}】${this.$t('移动端配置')}`;
+        // 判断下 access_url 为空的话：弹出一个二次确认框；不为空的话，弹出一个普通的二次确认框
+        this.disableDialogConfig.enableConfirm = !this.mobileConfig[env].access_url;
+        this.disableDialogConfig.visiable = true;
+      } else {
+        this.dialogConfig.env = env;
+        this.dialogConfig.title = `${this.$t('是否开启【')}${env === 'stag' ? this.$t('预发布环境') : this.$t('正式环境')}】${this.$t('移动端配置')}`;
+        this.dialogConfig.visiable = true;
+      }
+    },
+    handleReset() {
+      this.dialogConfig.url = '';
+      this.dialogConfig.isLoading = false;
+      this.$refs.form.clearError();
+    },
+    handleConfirm() {
+      this.$refs.form.validate().then(() => {
+        this.enableMobileMarket();
+      });
+    },
+    handleEdit(env = 'stag', url = '') {
+      this.dialogConfig.env = env;
+      this.dialogConfig.url = url;
+      this.dialogConfig.title = `【${env === 'stag' ? this.$t('预发布环境') : this.$t('正式环境')}】${this.$t('移动端配置')}`;
+      this.dialogConfig.visiable = true;
+    },
+    handleCancel() {
+      this.dialogConfig.visiable = false;
+    },
+    async enableMobileMarket() {
+      if (!this.mobileConfig.canReleaseToMobile) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.mobileConfig.errMsg,
+        });
+        return false;
+      }
+
+      if (this.dialogConfig.isLoading) {
+        return false;
+      }
+
+      this.dialogConfig.isLoading = true;
+      try {
+        const { env } = this.dialogConfig;
+        const res = await this.$store.dispatch('market/enableMobileMarket', {
+          appCode: this.appCode,
+          env,
+          data: {
+            access_domain: this.dialogConfig.url,
+          },
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('开启成功'),
+        });
+        this.dialogConfig.visiable = false;
+        this.mobileConfig[env] = res;
+      } catch (err) {
+        this.$paasMessage({
+          theme: 'error',
+          message: err.detail,
+        });
+      } finally {
+        this.dialogConfig.isLoading = false;
+      }
+    },
+    handleCancelDisable() {
+      this.disableDialogConfig.visiable = false;
+      this.disableDialogConfig.enableConfirm = false;
+    },
+    async disableMobileMarket() {
+      if (!this.mobileConfig.canReleaseToMobile) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.mobileConfig.errMsg,
+        });
+        return false;
+      }
+
+      if (this.disableDialogConfig.isLoading) {
+        return false;
+      }
+
+      this.disableDialogConfig.isLoading = true;
+      try {
+        const { env } = this.disableDialogConfig;
+        await this.$store.dispatch('market/disableMobileMarket', {
+          appCode: this.appCode,
+          env,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('停用成功'),
+        });
+        this.mobileConfig[env] = {
+          is_enabled: false,
+          access_domain: '',
+        };
+        this.disableDialogConfig.visiable = false;
+        this.disableDialogConfig.enableConfirm = false;
+      } catch (err) {
+        this.$paasMessage({
+          theme: 'error',
+          message: err.detail,
+        });
+      } finally {
+        this.disableDialogConfig.isLoading = false;
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

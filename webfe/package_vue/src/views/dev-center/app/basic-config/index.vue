@@ -8,7 +8,7 @@
       @change="handleTabChange"
       @right-config-click="toDeployHistory"
     />
-    <div class="router-container m20">
+    <div class="router-container">
       <router-view :key="routeIndex" :environment="active"></router-view>
     </div>
   </div>
@@ -28,7 +28,7 @@ export default {
       routeIndex: 0,
       panels: [
         { name: 'api', label: this.$t('云API权限'), routeName: 'appCloudAPI' },
-        { name: 'url', label: this.$t('访问地址'), routeName: 'visitUrl' },
+        { name: 'url', label: this.$t('访问地址'), routeName: 'appAccessPortal' },
         { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
         { name: 'mobile-market', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
@@ -61,3 +61,5 @@ export default {
   },
 };
 </script>
+<style lang="scss" scoped>
+</style>

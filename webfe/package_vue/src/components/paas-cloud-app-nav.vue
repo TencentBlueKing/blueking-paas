@@ -251,10 +251,12 @@ export default {
         const res = await this.$store.dispatch('fetchRegionInfo', region);
         this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
 
-        // 添加增强服务
-        res.services.categories.forEach((category) => {
-          navTree = this.addServiceNavItem(navTree, category.id, category.name);
-        });
+        // 非云原生应用添加增强服务
+        if (this.curAppInfo.application.type !== 'cloud_native') {
+          res.services.categories.forEach((category) => {
+            navTree = this.addServiceNavItem(navTree, category.id, category.name);
+          });
+        }
 
         // 添加权限管理
         if (res.access_control && res.access_control.module) {

@@ -102,7 +102,7 @@ class TestAppSecret:
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
 
-            response = api_client.get(reverse('api.bkauth.secrets', args=(bk_app.code,)))
+            response = api_client.get(reverse('api.app_secret.secrets', args=(bk_app.code,)))
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
@@ -129,7 +129,7 @@ class TestAppSecret:
         ), mock.patch('paasng.platform.oauth2.api.BkOauthClient.create_app_secret', return_value=None), mock.patch(
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
-            response = api_client.post(reverse('api.bkauth.secrets', args=(bk_app.code,)))
+            response = api_client.post(reverse('api.app_secret.secrets', args=(bk_app.code,)))
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
@@ -150,7 +150,7 @@ class TestAppSecret:
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(
-                reverse('api.bkauth.secret', args=(bk_app.code, toggle_secret_id)),
+                reverse('api.app_secret.secret', args=(bk_app.code, toggle_secret_id)),
                 data={"enabled": False},
                 format='json',
             )
@@ -176,7 +176,7 @@ class TestAppSecret:
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(
-                reverse('api.bkauth.secret', args=(bk_app.code, toggle_secret_id)),
+                reverse('api.app_secret.secret', args=(bk_app.code, toggle_secret_id)),
                 data={"enabled": False},
                 format='json',
             )
@@ -220,7 +220,7 @@ class TestAppSecret:
         ), mock.patch(
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
-            response = api_client.delete(reverse('api.bkauth.secret', args=(bk_app.code, delete_secret_id)))
+            response = api_client.delete(reverse('api.app_secret.secret', args=(bk_app.code, delete_secret_id)))
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
@@ -253,6 +253,35 @@ class TestAppSecret:
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(
-                reverse('api.bkauth.default_secret', args=(bk_app.code,)), data={"id": 1}, format='json'
+                reverse('api.app_secret.default_secret', args=(bk_app.code,)), data={"id": 1}, format='json'
             )
+            assert response.status_code == status_code
+
+    @pytest.mark.parametrize(
+        "has_app_permission, status_code",
+        [(True, 200), (False, 403)],
+    )
+    def test_get_default_secret_perm(
+        self, bk_app, api_client, two_enabled_app_secret_list, has_app_permission, status_code
+    ):
+        with mock.patch(
+            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list',
+            return_value=two_enabled_app_secret_list,
+        ), mock.patch(
+            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+        ):
+
+            response = api_client.get(reverse('api.app_secret.default_secret', args=(bk_app.code,)))
+            assert response.status_code == status_code
+
+    @pytest.mark.parametrize(
+        "has_app_permission, status_code",
+        [(False, 403)],
+    )
+    def test_get_deployed_secret_perm(self, bk_app, api_client, has_app_permission, status_code):
+        with mock.patch('paasng.accessories.app_secret.utilts.get_deployed_secret_list', return_value=[],), mock.patch(
+            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+        ):
+
+            response = api_client.get(reverse('api.app_secret.deployed_secret', args=(bk_app.code,)))
             assert response.status_code == status_code

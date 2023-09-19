@@ -53,4 +53,3 @@ class DeployedSecretSLZ(serializers.Serializer):
 
 class AppSecretInEnvVarSLZ(serializers.Serializer):
     app_secret_in_config_var = SecretField(help_text="环境变量默认密钥")
-    deployed_secret_list = serializers.ListField(child=DeployedSecretSLZ())

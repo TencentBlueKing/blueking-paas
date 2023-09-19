@@ -24,22 +24,31 @@ urlpatterns = [
     url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/secrets/$',
         views.BkAuthSecretViewSet.as_view({'get': 'list', 'post': 'create'}),
-        name='api.bkauth.secrets',
+        name='api.app_secret.secrets',
     ),
     url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/secrets/(?P<bk_app_secret_id>\d+)/$',
         views.BkAuthSecretViewSet.as_view({'post': 'toggle', 'delete': 'delete'}),
-        name='api.bkauth.secret',
+        name='api.app_secret.secret',
     ),
     # 验证验证码查看密钥详情
     url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/secret_verification/(?P<bk_app_secret_id>\d+)/$',
         views.BkAuthSecretViewSet.as_view({'post': 'view_secret_detail'}),
-        name='api.bkauth.secret_verification',
+        name='api.app_secret.secret_verification',
     ),
     url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/default_secret/$',
-        views.BkAppSecretInEnvVaViewSet.as_view({'get': 'get', 'post': 'rotate'}),
-        name='api.bkauth.default_secret',
+        views.BkAppSecretInEnvVaViewSet.as_view({'get': 'get_default_secret', 'post': 'rotate_default_secret'}),
+        name='api.app_secret.default_secret',
+    ),
+    url(
+        r'^api/bkapps/applications/(?P<code>[^/]+)/deployed_secret/$',
+        views.BkAppSecretInEnvVaViewSet.as_view(
+            {
+                'get': 'get_deployed_secret',
+            }
+        ),
+        name='api.app_secret.deployed_secret',
     ),
 ]

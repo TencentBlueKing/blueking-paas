@@ -31,6 +31,7 @@ from paasng.accessories.app_secret.serializers import (
     AppSecretInEnvVarSLZ,
     AppSecretSLZ,
     AppSecretStatusSLZ,
+    DeployedSecretSLZ,
 )
 from paasng.accessories.app_secret.utilts import get_deployed_secret_list
 from paasng.accessories.iam.permissions.resources.application import AppAction
@@ -142,20 +143,23 @@ class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(tags=["环境变量默认密钥"], responses={"200": AppSecretInEnvVarSLZ})
-    def get(self, request, code):
+    def get_default_secret(self, request, code):
         """查询应用的环境变量默认密钥"""
         application = self.get_application()
         app_secret_in_config_var = get_app_secret_in_env_var(application.code).bk_app_secret
+
+        return Response(AppSecretInEnvVarSLZ({"app_secret_in_config_var": app_secret_in_config_var}).data)
+
+    @swagger_auto_schema(tags=["环境变量默认密钥"], responses={"200": DeployedSecretSLZ(many=True)})
+    def get_deployed_secret(self, request, code):
+        """查询应用的已部署密钥概览"""
+        application = self.get_application()
         deployed_secret_list = get_deployed_secret_list(application)
 
-        return Response(
-            AppSecretInEnvVarSLZ(
-                {"app_secret_in_config_var": app_secret_in_config_var, "deployed_secret_list": deployed_secret_list}
-            ).data
-        )
+        return Response(DeployedSecretSLZ(deployed_secret_list, many=True).data)
 
     @swagger_auto_schema(tags=["环境变量默认密钥"], request_body=AppSecretIdSLZ, responses={"204": "没有返回数据"})
-    def rotate(self, request, code):
+    def rotate_default_secret(self, request, code):
         """更换应用的环境变量默认密钥"""
         application = self.get_application()
         serializer = AppSecretIdSLZ(data=request.data)

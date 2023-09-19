@@ -450,8 +450,6 @@ export default {
           // 部署的分支或tag需要修改为选中的分支或者tag
           this.deploymentInfoBackUp.version_info.version_name = this.curSelectData.name;
           this.deploymentInfoBackUp.version_info.version_type = this.buttonActive;
-          console.log('this.deploymentInfoBackUp', this.deploymentInfoBackUp);
-          debugger;
           // 仅镜像部署
           if (this.deploymentInfoBackUp.build_method === 'custom_image') {
             params = {

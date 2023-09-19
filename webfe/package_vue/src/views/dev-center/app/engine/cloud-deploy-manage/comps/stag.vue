@@ -46,7 +46,7 @@ export default {
     return {
       moduleValue: '全部模块',
       showModuleList: [],
-      isExpand: false
+      isExpand: false,
     };
   },
 

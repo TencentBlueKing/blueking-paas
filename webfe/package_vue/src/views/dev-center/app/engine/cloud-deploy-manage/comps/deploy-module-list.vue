@@ -97,9 +97,9 @@
                 :theme="'primary'"
                 class="mr10"
                 size="small"
-                @click="handleDeploy(deploymentInfo)"
+                @click="handleDeploy(deploymentInfo, index)"
                 :disabled="(!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending)"
-                :loading="!!deploymentInfo.state.deployment.pending">
+                :loading="!!deploymentInfo.state.deployment.pending || (curDeployItemIndex === index && yamlLoading)">
                 {{$t('部署')}}
               </bk-button>
               <bk-button
@@ -240,6 +240,8 @@ export default {
       initPage: false,       // 第一次进入页面
       rvData: {},
       intervalTimer: null,
+      yamlLoading: false,
+      curDeployItemIndex: '',
     };
   },
 
@@ -303,8 +305,9 @@ export default {
     },
 
     // 部署
-    handleDeploy(payload) {
+    handleDeploy(payload, index) {
       this.curDeploymentInfoItem = payload;
+      this.curDeployItemIndex = index;
       this.getCloudAppYaml();
     },
 
@@ -325,6 +328,7 @@ export default {
     // 获取云原生yaml
     async getCloudAppYaml() {
       try {
+        this.yamlLoading = true;
         const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -338,7 +342,7 @@ export default {
           message: e.detail || e.message,
         });
       } finally {
-        this.isLoading = false;
+        this.yamlLoading = false;
       }
     },
 

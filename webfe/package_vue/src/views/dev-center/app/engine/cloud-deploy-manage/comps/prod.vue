@@ -1,10 +1,6 @@
 <template>
   <div class="stag-wrapper">
     <section class="top-operate">
-      <bk-button :theme="'default'" class="mr10">
-        <i class="paasng-icon paasng-restore-screen"></i>
-        {{$t('全部收起')}}
-      </bk-button>
       <div class="module-select-wrapper">
         <bk-select
           :disabled="false"

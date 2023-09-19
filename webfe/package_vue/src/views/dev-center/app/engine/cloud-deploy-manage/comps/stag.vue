@@ -1,7 +1,7 @@
 <template>
   <div class="stag-wrapper">
     <section class="top-operate">
-      <bk-button :theme="'default'" class="mr10">
+      <bk-button :theme="'default'" class="mr10" @click="handleSetCloseExpand">
         <i class="paasng-icon paasng-restore-screen"></i>
         {{$t('全部收起')}}
       </bk-button>
@@ -25,6 +25,7 @@
     <!-- 根据模块渲染 -->
     <deploy-module-list
       :model-name="moduleValue"
+      ref="moduleListRef"
       v-bind="$attrs"
     />
   </div>
@@ -83,6 +84,10 @@ export default {
   },
 
   methods: {
+    // 将模块的进程实例全部收起
+    handleSetCloseExpand() {
+      this.$refs.moduleListRef && this.$refs.moduleListRef.handleSetCloseExpand();
+    },
   },
 };
 </script>

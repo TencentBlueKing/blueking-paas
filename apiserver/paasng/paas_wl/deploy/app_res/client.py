@@ -29,20 +29,20 @@ from paas_wl.deploy.app_res.controllers import (
     ProcAutoscalingHandler,
     ProcessesHandler,
 )
-from paas_wl.deploy.app_res.generation import get_mapper_version
 from paas_wl.monitoring.app_monitor.utils import build_monitor_port
 from paas_wl.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.release_controller.hooks.entities import Command
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import set_default_options
+from paas_wl.resources.generation.version import get_mapper_version
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.processes.entities import Process
 
 if TYPE_CHECKING:
-    from paas_wl.deploy.app_res.generation import MapperPack
     from paas_wl.resources.base.base import EnhancedApiClient
+    from paas_wl.resources.generation.mapper import MapperPack
     from paasng.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)

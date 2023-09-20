@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Sequence, Type
 
 from django.conf import settings
 
+from paas_wl.core.app_structure import has_proc_type
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress, ingress_kmodel
 from paas_wl.networking.ingress.entities.service import service_kmodel
 from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
@@ -253,6 +254,6 @@ class IngressUpdater:
         #
         # Why check both conditions? An ingress could be created before the service object,
         # so the process type was also checked to avoid an unintended result.
-        if name not in svc_names and not self.app.has_proc_type(proc_type):
+        if name not in svc_names and not has_proc_type(self.app, proc_type):
             return False
         return True

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import asdict
-from typing import Optional, Protocol
+from typing import Optional
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.utils import get_cluster_by_app
@@ -31,6 +31,7 @@ from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
+from paas_wl.workloads.processes.controllers import ProcControllerHub
 from paas_wl.workloads.processes.entities import Process
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
@@ -39,25 +40,6 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
-
-
-class ProcController(Protocol):
-    """Control app's processes"""
-
-    def start(self, proc_type: str):
-        ...
-
-    def stop(self, proc_type: str):
-        ...
-
-    def scale(
-        self,
-        proc_type: str,
-        autoscaling: bool = False,
-        target_replicas: Optional[int] = None,
-        scaling_config: Optional[AutoscalingConfig] = None,
-    ):
-        ...
 
 
 class AppProcessesController:
@@ -245,8 +227,9 @@ class CNativeProcController:
             raise ProcessNotFound(str(e))
 
 
-def get_proc_ctl(env: ModuleEnvironment) -> ProcController:
-    """Get a process controller by env"""
-    if env.application.type == ApplicationType.CLOUD_NATIVE:
-        return CNativeProcController(env)
-    return AppProcessesController(env)
+# Register controllers
+ProcControllerHub.register_controller(ApplicationType.DEFAULT, AppProcessesController)
+ProcControllerHub.register_controller(ApplicationType.BK_PLUGIN, AppProcessesController)
+ProcControllerHub.register_controller(ApplicationType.ENGINELESS_APP, AppProcessesController)
+
+ProcControllerHub.register_controller(ApplicationType.CLOUD_NATIVE, CNativeProcController)

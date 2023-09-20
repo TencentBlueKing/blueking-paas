@@ -47,7 +47,7 @@ from paas_wl.resources.kube_res.exceptions import APIServerVersionIncompatible, 
 from paas_wl.resources.utils.basic import get_client_by_app, get_client_by_cluster_name
 
 if TYPE_CHECKING:
-    from paas_wl.deploy.app_res.generation.mapper import MapperPack
+    from paas_wl.resources.generation.mapper import MapperPack
 
 
 logger = logging.getLogger(__name__)

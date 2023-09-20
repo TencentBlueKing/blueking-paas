@@ -20,3 +20,7 @@ from django.apps import AppConfig
 
 class DeployAppConfig(AppConfig):
     name = 'paas_wl.deploy'
+
+    def ready(self):
+        # Register controllers
+        from . import processes  # noqa: F401

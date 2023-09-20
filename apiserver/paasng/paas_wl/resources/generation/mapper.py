@@ -16,17 +16,31 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Generic, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Protocol, Tuple, Type, TypeVar, Union
 
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.kres import BaseKresource, KDeployment, KPod, KReplicaSet
+from paas_wl.utils.command import get_command_name
 
 if TYPE_CHECKING:
     from paas_wl.resources.base.base import EnhancedApiClient
-    from paas_wl.workloads.processes.entities import Process
 
 MapperResource = TypeVar("MapperResource", bound=BaseKresource)
+
+logger = logging.getLogger(__name__)
+
+
+class Process(Protocol):
+    """A protocol that represents a process object with necessary field only."""
+
+    app: WlApp
+    type: str
+    version: int
+    runtime: Any
 
 
 class Mapper(Generic[MapperResource]):
@@ -43,8 +57,15 @@ class Mapper(Generic[MapperResource]):
 
     kres_class: Type[MapperResource]
 
-    def __init__(self, process: 'Process', client: Optional['EnhancedApiClient'] = None):
-        self.process = process
+    def __init__(self, process: 'Union[Process, MapperProcConfig]', client: Optional['EnhancedApiClient'] = None):
+        if not isinstance(process, MapperProcConfig):
+            _proc_config = get_mapper_proc_config(process)
+            if not _proc_config:
+                raise TypeError('process argument is invalid')
+        else:
+            _proc_config = process
+
+        self.proc_config: 'MapperProcConfig' = _proc_config
         self.client = client
 
     ##############
@@ -73,7 +94,7 @@ class Mapper(Generic[MapperResource]):
     @property
     def namespace(self):
         """对于目前所有资源，namespace 都和 process 保持一致"""
-        return self.process.app.namespace
+        return self.proc_config.app.namespace
 
 
 class CallThroughKresMapper(Mapper, Generic[MapperResource]):
@@ -140,7 +161,7 @@ class MapperField(Generic[MapperResource]):
         self.mapper_class = mapper_class
 
     def __call__(
-        self, instance: 'MapperPack', process: 'Process', client: Optional['EnhancedApiClient'] = None
+        self, instance: 'MapperPack', process: Process, client: Optional['EnhancedApiClient'] = None
     ) -> CallThroughKresMapper[MapperResource]:
         return self.mapper_class(process=process, client=client or instance.client)
 
@@ -167,3 +188,34 @@ class MapperPack:
     @property
     def ignore_command_name(self) -> bool:
         return self._ignore_command_name
+
+
+@dataclass
+class MapperProcConfig:
+    """The config object for initializing a resource mapper."""
+
+    app: WlApp
+    # The type of the process, such as "web"
+    type: str
+    # The release version of the process
+    version: int
+    command_name: str
+
+
+def get_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
+    """Try to get the proc_config object by the given process object.
+
+    :param proc: The input process object.
+    :return: None if given object is not a valid Process.
+    """
+    try:
+        # Try parse `Process` type from the process package
+        return MapperProcConfig(
+            app=proc.app,
+            type=proc.type,
+            version=proc.version,
+            command_name=get_command_name(proc.runtime.proc_command),
+        )
+    except Exception:
+        logger.warning('Error getting mapper_proc_config object, process: %s', proc)
+        return None

@@ -37,7 +37,8 @@ from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.constants import JobStatus, ReleaseStatus
-from paasng.engine.deploy.bg_wait.wait_deployment import AbortedDetails, wait_for_release
+from paasng.engine.deploy.bg_wait.base import AbortedDetails
+from paasng.engine.deploy.bg_wait.wait_deployment import wait_for_release
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes

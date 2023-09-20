@@ -463,7 +463,7 @@ const router = new Router({
             {
               path: 'market',
               component: appMarket,
-              name: 'appMarket',
+              name: 'cloudAppMarket',
               meta: {
                 module: 'market',
               },
@@ -471,7 +471,7 @@ const router = new Router({
             {
               path: 'mobile-market',
               component: appMobileMarket,
-              name: 'appMobileMarket',
+              name: 'cloudAppMobileMarket',
               meta: {
                 module: 'mobile-market',
               },

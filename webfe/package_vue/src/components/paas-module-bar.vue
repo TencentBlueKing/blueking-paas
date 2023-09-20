@@ -164,7 +164,7 @@ export default defineComponent({
 
     // 切换tab
     const handleTabChange = async () => {
-      const curModule = (props.moduleList || []).find((e) => e.name === active.value);
+      const curModule = (props.moduleList || []).find(e => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
 
       const name = props.firstModuleName || route.name;
@@ -223,13 +223,13 @@ export default defineComponent({
         });
         await store.dispatch('getAppInfo', {
           appCode: props.appCode,
-          moduleId: props.moduleList.find((item) => item.is_default).name,
+          moduleId: props.moduleList.find(item => item.is_default).name,
         });
         router.push({
           name: props.firstModuleName || route.name,
           params: {
             id: props.appCode,
-            moduleId: props.moduleList.find((item) => item.is_default).name,
+            moduleId: props.moduleList.find(item => item.is_default).name,
           },
         });
         store.dispatch('getAppInfo', { appCode: props.appCode, moduleId: curAppModuleName.value });

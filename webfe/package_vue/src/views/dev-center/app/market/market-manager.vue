@@ -18,7 +18,8 @@
             <div class="flex-row align-items-center">
               {{ baseInfo.name || '--' }}
               <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div>
-              <router-link :to="{ name: 'appBaseInfo' }">
+              <!-- 云原生相邻tab可以修改基本信息 所以不需要跳转 -->
+              <router-link :to="{ name: 'appBaseInfo' }" v-if="!isCloudNativeApp">
                 {{ $t('点击修改基本信息') }}
               </router-link>
             </div>

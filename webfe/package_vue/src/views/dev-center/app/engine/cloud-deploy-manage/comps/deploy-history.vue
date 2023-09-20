@@ -7,26 +7,48 @@
       :class="{ 'deploy-history-loader': isLoading }"
     >
       <section class="search-wrapper">
-        <!-- 模块列表 -->
-        <bk-select
-          v-model="moduleValue"
-          style="width: 154px;"
-          :clearable="false"
-          searchable>
-          <bk-option
-            v-for="option in curAppModuleList"
-            :key="option.name"
-            :id="option.name"
-            :name="option.name">
-          </bk-option>
-        </bk-select>
-        <!-- 只支持从操作人搜索 -->
-        <user
-          v-model="personnelSelectorList"
-          style="width: 320px;"
-          :placeholder="$t('请输入')"
-          :max-data="1"
-        />
+        <bk-form form-type="inline">
+          <bk-form-item
+            :label="$t('模块')"
+            style="vertical-align: top;"
+          >
+            <bk-select
+              v-model="moduleValue"
+              style="width: 150px;"
+              :clearable="false"
+            >
+              <bk-option
+                v-for="option in curAppModuleList"
+                :key="option.name"
+                :id="option.name"
+                :name="option.name">
+              </bk-option>
+            </bk-select>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('操作人')"
+            style="vertical-align: top;"
+          >
+            <user
+              v-model="personnelSelectorList"
+              style="width: 350px;"
+              :placeholder="$t('请输入')"
+              :max-data="1"
+            />
+          </bk-form-item>
+          <bk-form-item
+            label=""
+            style="vertical-align: top;"
+          >
+            <bk-button
+              theme="primary"
+              type="button"
+              @click.stop.prevent="getDeployHistory(1)"
+            >
+              {{ $t('查询') }}
+            </bk-button>
+          </bk-form-item>
+        </bk-form>
       </section>
       <bk-table
         v-bkloading="{ isLoading: isPageLoading }"
@@ -202,13 +224,6 @@ export default {
   },
 
   watch: {
-    personnelSelectorList() {
-      this.getDeployHistory();
-    },
-    moduleValue() {
-      // 重新发起请求并附带参数
-      this.getDeployHistory();
-    },
     filterEnv() {
       this.getDeployHistory();
     },

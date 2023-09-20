@@ -79,6 +79,7 @@ export default {
         'cloudAppDeployManageProd',
         'cloudAppDeployHistory',
         'appObservability',
+        'cloudAppAnalysis'
       ],
       allNavItems: [],
       region: 'ieod',
@@ -130,7 +131,10 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          // 应用配置
           'basicConfig',
+          // 访问统计
+          'cloudAppAnalysis',
         ],
         developer: [
           // 概览
@@ -177,7 +181,10 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          // 应用配置
           'basicConfig',
+          // 访问统计
+          'cloudAppAnalysis'
         ],
         operator: [
           // 权限管理
@@ -393,6 +400,7 @@ export default {
         'cloudAppDeployManageProd',
         'cloudAppDeployHistory',
         'appObservability',
+        'cloudAppAnalysis'
       ];
 
       this.navTree.forEach((nav) => {

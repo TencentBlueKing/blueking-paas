@@ -725,10 +725,10 @@ export default {
       return this.curCodeSource !== 'smart';
     },
     defaultAlertText() {
-      return this.$t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。');
+      return this.$t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于 PaaS 平台开发 SaaS 的场景');
     },
     smartAlertText() {
-      return this.$t('平台为该类应用提供应用引擎、增强服务等功能，并提供源码包部署和通过配置文件定义应用信息的能力；适用于熟知蓝鲸官方S-mart打包流程的SaaS开发场景。');
+      return this.$t('平台为该类应用提供应用引擎、增强服务等功能，并提供源码包部署和通过配置文件定义应用信息的能力；适用于熟知蓝鲸官方 S-mart 打包流程的 SaaS 开发场景');
     },
     curUserFeature() {
       return this.$store.state.userFeature;

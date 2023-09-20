@@ -621,14 +621,10 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("云 API 管理"),
                 "iconfontName": "cloudapi",
                 "supportModule": false,
-                "children": [
-                    {
-                        "name": staticI18n.$t("云 API 权限"),
-                        "destRoute": {
-                            "name": "appCloudAPI"
-                        }
-                    }
-                ]
+                "destRoute": {
+                    "name": "appCloudAPI"
+                },
+                "children": []
             },
             {
                 "name": "appConfigs",

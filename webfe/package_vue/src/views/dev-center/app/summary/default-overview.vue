@@ -428,7 +428,7 @@ export default {
       curEnvName: 'prod',
       topInfo: {
         type: i18n.t('普通应用'),
-        description: i18n.t('平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能。'),
+        description: i18n.t('平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能'),
         data: {},
       },
       curTime: {},
@@ -583,10 +583,10 @@ export default {
     initTopText() {
       if (this.isCloudApp) {
         this.topInfo.type = this.$t('云原生应用');
-        this.topInfo.description = this.$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力。');
+        this.topInfo.description = this.$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力');
       } else {
         this.topInfo.type = this.$t('普通应用');
-        this.topInfo.description = this.$t('平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能。');
+        this.topInfo.description = this.$t('平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能');
       }
     },
     // 最新动态

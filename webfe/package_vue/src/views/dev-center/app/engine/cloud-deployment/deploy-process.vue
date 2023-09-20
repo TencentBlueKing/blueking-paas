@@ -229,7 +229,7 @@
                 style="right: 8px"
               />
               <p class="whole-item-tips">
-                {{ $t('接收HTTP请求的端口号．建议镜像直接监听$PORT环境变量不修改本值') }}
+                {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
               </p>
             </bk-form-item>
             <bk-form-item :label-width="40">

@@ -967,10 +967,8 @@ export default {
           appCode: this.appCode,
           data: params,
         });
-        const path =
-          this.formData.sourceOrigin === 'soundCode'
-            ? `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`
-            : `/developer-center/apps/${res.application.code}/create/mirror/success`;
+
+        const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,
         });

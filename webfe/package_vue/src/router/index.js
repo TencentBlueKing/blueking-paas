@@ -61,10 +61,6 @@ const createAppFail = () => import(/* webpackChunkName: 'create-app' */'@/views/
   window.showDeployTip(error);
 });
 
-const createMirrorAppSucc = () => import(/* webpackChunkName: 'create-app' */'@/views/dev-center/create-app/success-cloud').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const appMigration = () => import(/* webpackChunkName: 'migration' */'@/views/dev-center/migration').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -931,11 +927,6 @@ const router = new Router({
       path: '/developer-center/apps/:id/create/success',
       name: 'createSimpleAppSucc',
       component: createSimpleAppSucc,
-    },
-    {
-      path: '/developer-center/apps/:id/create/mirror/success',
-      name: 'createMirrorAppSucc',
-      component: createMirrorAppSucc,
     },
     {
       path: '/developer-center/apps/:id/create/smart/success',

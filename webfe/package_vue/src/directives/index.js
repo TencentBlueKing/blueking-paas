@@ -20,14 +20,12 @@ import copy from './copy';
 import charts from './charts';
 import dashed from './dashed';
 import enClass from './en-class';
-import childExist from './child-exist';
 
 const directives = {
   copy,
   charts,
   dashed,
   enClass,
-  childExist
 };
 
 export default {

@@ -141,7 +141,7 @@
                       <div
                         class="group-text"
                         @click="handleSetMirrorUrl"
-                      >{{$t('使用示例')}}</div>
+                      >{{$t('使用示例镜像')}}</div>
                     </template>
                   </bk-input>
                   <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -447,7 +447,7 @@
                 :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
                 @click="createAppModule"
               >
-                {{ $t('提交') }}
+                {{ $t('创建模块') }}
               </bk-button>
               <div
                 v-else
@@ -582,6 +582,11 @@ export default {
           {
             required: true,
             message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            message: this.$t('地址格式不正确'),
             trigger: 'blur',
           },
           {
@@ -979,16 +984,20 @@ export default {
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
-        // 空值端口过滤
-        this.createCloudAppData.spec.processes = this.createCloudAppData.spec?.processes?.map(p => {
-          const { targetPort, ...targetValue } = p;
-          return (targetPort === '' || targetPort === null) ? targetValue : p;
-        });
         params.source_config = {
           source_repo_url: this.mirrorData.url,
           source_origin: this.sourceOrigin,
         };
         params.manifest = { ...this.createCloudAppData };
+      }
+
+      // 空值端口过滤
+      if (params.manifest?.spec && params.manifest.spec?.processes) {
+        params.manifest.spec?.processes?.forEach(process => {
+          if (process.targetPort === '' || process.targetPort === null) {
+            delete process.targetPort;
+          }
+        });
       }
 
       try {
@@ -1005,7 +1014,7 @@ export default {
 
         this.$store.commit('addAppModule', res.module);
         this.$router.push({
-          name: 'appSummary',
+          name: 'cloudAppDeployForProcess',
           params: {
             id: this.appCode,
             moduleId: res.module.name,

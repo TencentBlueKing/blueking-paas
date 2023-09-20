@@ -633,7 +633,7 @@ export default {
       isCreate: true,
       localCloudAppData: {},
       repoData: {},
-      initCloudAppData: {}
+      initCloudAppData: {},
     };
   },
   computed: {
@@ -702,6 +702,14 @@ export default {
         }
       },
       deep: true,
+    },
+    'formData.name'(value) {
+      if (Object.keys(this.createCloudAppData).length) {
+        this.localCloudAppData = _.cloneDeep(this.createCloudAppData);
+        this.localCloudAppData.metadata.name = `${this.appCode}-m-${value}`;
+
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }
     },
   },
   async created() {
@@ -794,9 +802,9 @@ export default {
     },
 
     /**
-             * 根据应用类型获取支持的语言（内部、混合云...）
-             * @return {[type]} [description]
-             */
+     * 根据应用类型获取支持的语言（内部、混合云...）
+     * @return {[type]} [description]
+     */
     async getLanguageByRegion() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
@@ -898,7 +906,7 @@ export default {
     },
 
     // 钩子命令校验
-    async handleHookValidator () {
+    async handleHookValidator() {
       if (this.$refs.hookRef) {
         return await this.$refs.hookRef?.handleValidator();
       }
@@ -993,7 +1001,7 @@ export default {
 
       // 空值端口过滤
       if (params.manifest?.spec && params.manifest.spec?.processes) {
-        params.manifest.spec?.processes?.forEach(process => {
+        params.manifest.spec?.processes?.forEach((process) => {
           if (process.targetPort === '' || process.targetPort === null) {
             delete process.targetPort;
           }
@@ -1054,7 +1062,7 @@ export default {
         // 默认编辑态
         this.$refs.processRef?.handleEditClick();
         this.$refs.hookRef?.handleEditClick();
-      })
+      });
     },
 
     // 上一步
@@ -1088,7 +1096,7 @@ export default {
               memory: '256Mi',
               cpu: '500m',
               targetPort: 5000,
-            }
+            },
           ],
         },
       };

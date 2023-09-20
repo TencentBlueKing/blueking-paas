@@ -23,11 +23,15 @@
               <div class="module">
                 <i class="icon paasng-icon paasng-deploy-item-dot"></i>
                 <span class="name">{{deploymentInfo.module_name}}</span>
-                <i
-                  class="paasng-icon paasng-jump-link icon-cls-link"
-                  v-bk-tooltips="$t('点击访问')"
-                  @click="handleOpenUrl(deploymentInfo.exposed_url)"
-                  v-if="deploymentInfo.exposed_url" />
+                <bk-button
+                  v-if="deploymentInfo.exposed_url"
+                  :theme="'primary'"
+                  class="mr10"
+                  size="small"
+                  text
+                  @click="handleOpenUrl(deploymentInfo.exposed_url)">
+                  {{$t('点击访问')}}
+                </bk-button>
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">

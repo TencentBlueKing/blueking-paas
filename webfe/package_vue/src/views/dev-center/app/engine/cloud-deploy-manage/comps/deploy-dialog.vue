@@ -110,7 +110,7 @@
                 :key="option.id"
                 :name="option.tag"
               />
-              <div slot="extension" @click="handleNext" style="cursor: pointer;">
+              <div slot="extension" @click="handleNext" style="cursor: pointer;" v-if="isShowNext">
                 下一页
               </div>
             </bk-select>
@@ -257,6 +257,10 @@ export default {
 
     processesData() {
       return this.cloudAppData?.spec?.processes || [];
+    },
+
+    isShowNext() {
+      return this.imageTagListCount > 10;
     },
   },
   watch: {
@@ -502,7 +506,7 @@ export default {
         this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
         this.imageTagListCount = res.count;
         // 默认选中第一个
-        this.tagValue = this.imageTagList[0].id;
+        this.tagValue = this.imageTagList[0]?.id || '';
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

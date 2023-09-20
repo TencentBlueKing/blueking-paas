@@ -7,7 +7,7 @@
     class="deploy-action-box"
   >
     <div class="module-info-container">
-      <div class="base-info-container" v-if="curAppModule.web_config?.runtime_type === 'custom_image'">
+      <div class="base-info-container" v-if="curAppModule?.web_config?.runtime_type === 'custom_image'">
         <div class="flex-row align-items-center">
           <span class="base-info-title">
             {{ $t('基本信息-title') }}

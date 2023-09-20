@@ -379,7 +379,7 @@
           :loading="formLoading"
           @click="handleCreateApp"
         >
-          {{ $t('提交') }}
+          {{ $t('创建应用') }}
         </bk-button>
       </div>
       <bk-button @click="handleCancel">

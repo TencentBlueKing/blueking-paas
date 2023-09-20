@@ -447,7 +447,7 @@
                 :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
                 @click="createAppModule"
               >
-                {{ $t('提交') }}
+                {{ $t('创建模块') }}
               </bk-button>
               <div
                 v-else
@@ -1014,7 +1014,7 @@ export default {
 
         this.$store.commit('addAppModule', res.module);
         this.$router.push({
-          name: 'appSummary',
+          name: 'cloudAppDeployForProcess',
           params: {
             id: this.appCode,
             moduleId: res.module.name,

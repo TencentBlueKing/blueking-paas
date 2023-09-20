@@ -269,7 +269,7 @@
               <div
                 class="group-text form-text-append"
                 @click="handleSetMirrorUrl"
-              >{{$t('使用示例')}}</div>
+              >{{$t('使用示例镜像')}}</div>
             </template>
           </bk-input>
           <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -379,7 +379,7 @@
           :loading="formLoading"
           @click="handleCreateApp"
         >
-          {{ $t('提交') }}
+          {{ $t('创建应用') }}
         </bk-button>
       </div>
       <bk-button @click="handleCancel">
@@ -605,6 +605,11 @@ export default {
           {
             required: true,
             message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            message: this.$t('地址格式不正确'),
             trigger: 'blur',
           },
         ],

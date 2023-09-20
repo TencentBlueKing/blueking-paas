@@ -673,7 +673,8 @@
           <bk-input
             class="path-input-cls"
             v-model="processDialog.name"
-            :placeholder="$t('请输入进程名称')">
+            :placeholder="$t('请输入进程名称')"
+            @enter="handleConfirm">
           </bk-input>
         </bk-form-item>
       </bk-form>

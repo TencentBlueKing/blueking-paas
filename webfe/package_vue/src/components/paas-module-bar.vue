@@ -69,7 +69,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`${$t('确认删除模块')}【${curAppModuleName.value}】？`"
+      :title="`${$t('确认删除模块')}【${curAppModuleName}】？`"
       :theme="'primary'"
       :mask-close="false"
       :loading="delAppDialog.isLoading"

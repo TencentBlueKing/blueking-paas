@@ -1,6 +1,6 @@
 <template>
   <div class="right-main">
-    <div class="ps-top-bar" v-if="!isCloudNativeApp">
+    <div class="ps-top-bar">
       <h2>
         {{ $t('访问管理') }}
       </h2>

@@ -3,7 +3,7 @@
     <div class="title pt15">
       {{ title }}
     </div>
-    <div class="flex-row justify-content-between align-items-center pr40">
+    <div class="flex-row align-items-center pr40">
       <bk-tab
         :active.sync="active"
         ext-cls="module-tab-cls"
@@ -17,12 +17,23 @@
           v-bind="panel"
         />
       </bk-tab>
-      <div
-        class="module-manager"
-        @click="handleModuleAdd"
-      >
-        <i class="icon paasng-icon paasng-gear"></i>
-        <span class="pl10">{{ $t('模块管理') }}</span>
+      <div class="module-operate">
+        <!-- 新增模块 -->
+        <div
+          class="icon-warapper"
+          :title="$t('新增模块')"
+          @click="handleToAddModulePage"
+        >
+          <i class="paasng-icon paasng-plus"></i>
+        </div>
+        <!-- 模块管理 -->
+        <div
+          class="icon-warapper"
+          :title="$t('模块管理')"
+          @click="handleModuleAdd"
+        >
+          <i class="icon paasng-icon paasng-gear"></i>
+        </div>
       </div>
     </div>
 
@@ -288,6 +299,35 @@ export default defineComponent({
 .module-manager {
   color: #3a84ff;
   cursor: pointer;
+}
+
+.module-operate {
+  position: sticky;
+  right: 20px;
+  background: #fff;
+  padding: 12px 0 12px 12px;
+  display: flex;
+  .icon-warapper {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F0F5FF;
+    border-radius: 2px;
+    cursor: pointer;
+    i {
+      line-height: 26px;
+      color: #3a84ff;
+    }
+    &:first-child {
+      margin-right: 8px;
+      i {
+        font-weight: 700;
+        font-size: 12px;
+      }
+    }
+  }
 }
 
 .module-item {

@@ -473,14 +473,6 @@ const router = new Router({
               },
             },
             {
-              path: 'mobile-market',
-              component: appMobileMarket,
-              name: 'cloudAppMobileMarket',
-              meta: {
-                module: 'mobile-market',
-              },
-            },
-            {
               path: 'info',
               component: appBasicInfo,
               name: 'appBasicInfo',
@@ -531,7 +523,7 @@ const router = new Router({
                 module: 'event',
               },
             },
-          ]
+          ],
         },
         {
           path: ':id/roles',

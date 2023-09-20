@@ -433,7 +433,7 @@ import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
-import { TAG_MAP } from "@/common/constants.js";
+import { TAG_MAP } from '@/common/constants.js';
 export default {
   components: {
     gitExtend,
@@ -677,7 +677,13 @@ export default {
       if (!this.initCloudAppData.metadata) {
         this.initCloudAppData.metadata = {};
       }
+      // 如果有cloudAppData 则将cloudAppData赋值给initCloudAppData
+      if (Object.keys(this.cloudAppData).length) {
+        this.initCloudAppData = _.cloneDeep(this.cloudAppData);
+      }
       this.initCloudAppData.metadata.name = value;
+      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
   },
@@ -951,7 +957,7 @@ export default {
 
       // 过滤空值容器端口
       if (params.manifest?.spec) {
-        params.manifest.spec.processes = params.manifest.spec.processes.map(process => {
+        params.manifest.spec.processes = params.manifest.spec.processes.map((process) => {
           const { targetPort, ...processValue } = process;
           return (targetPort === '' || targetPort === null) ? processValue : process;
         });

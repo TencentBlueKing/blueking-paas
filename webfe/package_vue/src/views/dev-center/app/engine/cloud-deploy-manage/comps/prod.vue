@@ -26,7 +26,8 @@
     <!-- 根据模块渲染 -->
     <deploy-module-list
       :model-name="moduleValue"
-      ref="prodModuleListRef"
+      ref="moduleListRef"
+      :environment="environment"
       v-bind="$attrs"
     />
   </div>
@@ -41,12 +42,18 @@ export default {
     deployModuleList,
   },
   mixins: [appBaseMixin],
+  props: {
+    environment: {
+      type: String,
+      default: () => 'stag',
+    },
+  },
 
   data() {
     return {
       moduleValue: '全部模块',
       showModuleList: [],
-      isExpand: false
+      isExpand: false,
     };
   },
 
@@ -105,6 +112,10 @@ export default {
   .top-operate {
     display: flex;
     margin-bottom: 16px;
+    .paasng-shouqi,
+    .paasng-zhankai {
+      margin-right: 3px;
+    }
   }
   .module-select-wrapper {
     background: #fff;

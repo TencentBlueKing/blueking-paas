@@ -419,6 +419,10 @@ import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
+moment.locale('zh-cn');
+// localLanguage () {
+//  return this.$store.state.localLanguage;
+//  }
 // let maxReplicasNum = 0;
 
 const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');

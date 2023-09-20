@@ -121,6 +121,7 @@
               :rv-data="rvData"
               :index="index"
               :deployment-info="deploymentInfo"
+              :environment="environment"
               :module-name="deploymentInfo.module_name" />
             <!-- 预览 -->
             <deploy-preview
@@ -193,7 +194,7 @@
 <script>
 import deployDetail from './deploy-detail';
 import deployPreview from './deploy-preview';
-import deployDialog from './deploy-dialog.vue';
+import deployDialog from './deploy-dialog';
 import deployStatusDetail from './deploy-status-detail';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import _ from 'lodash';

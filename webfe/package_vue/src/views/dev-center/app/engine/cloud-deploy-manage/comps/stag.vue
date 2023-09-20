@@ -27,6 +27,7 @@
     <deploy-module-list
       :model-name="moduleValue"
       ref="moduleListRef"
+      :environment="environment"
       v-bind="$attrs"
     />
   </div>
@@ -41,6 +42,12 @@ export default {
     deployModuleList,
   },
   mixins: [appBaseMixin],
+  props: {
+    environment: {
+      type: String,
+      default: () => 'stag',
+    },
+  },
 
   data() {
     return {
@@ -83,6 +90,7 @@ export default {
 
   created() {
     this.showModuleList = this.moduleInfoList;
+    console.log(this.environment);
   },
 
   methods: {

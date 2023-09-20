@@ -17,17 +17,16 @@
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 export default {
-  name: 'BasicConfig',
+  name: 'AppConfigs',
   components: {
     cloudAppTopBar,
   },
   mixins: [appBaseMixin],
   data() {
     return {
-      active: 'api',
+      active: 'url',
       routeIndex: 0,
       panels: [
-        { name: 'api', label: this.$t('云API权限'), routeName: 'appCloudAPI' },
         { name: 'url', label: this.$t('访问地址'), routeName: 'appAccessPortal' },
         { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
         { name: 'mobile-market', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
@@ -35,6 +34,14 @@ export default {
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
       ],
     };
+  },
+  watch: {
+    $route: {
+      handler(v) {
+        this.active = v.meta.module;
+      },
+      immediate: true,
+    },
   },
   methods: {
     handleTabChange(name) {

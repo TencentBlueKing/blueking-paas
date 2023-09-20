@@ -1107,7 +1107,7 @@ export default {
     // 处理取消
     handleCancel() {
       if (this.curStep === 1) {
-        window.history.go(-1);
+        this.$router.go(-1);
       } else {
         this.$refs?.processRef?.handleCancel();
         this.cloudAppData = _.cloneDeep(this.localCloudAppData);

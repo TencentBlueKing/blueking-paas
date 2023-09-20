@@ -39,14 +39,21 @@
         <div
           class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
           <bk-form
-            :model="buildData">
+            :model="buildData"
+            :rules="rules"
+            ref="baseInfoRef"
+          >
             <bk-form-item
               :label="`${$t('托管方式')}：`">
               <span class="form-text">{{ artifactType || '--' }}</span>
             </bk-form-item>
 
             <bk-form-item
-              :label="`${$t('镜像仓库')}：`">
+              :label="`${$t('镜像仓库')}：`"
+              :required="true"
+              :property="'image'"
+              error-display-type="normal"
+            >
               <bk-input
                 v-model="buildData.image"
                 style="width: 450px;"
@@ -57,7 +64,7 @@
                   <div
                     class="group-text form-text-append"
                     @click="handleSetMirrorUrl"
-                  >{{$t('使用示例')}}</div>
+                  >{{$t('使用示例镜像')}}</div>
                 </template>
               </bk-input>
               <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
@@ -383,6 +390,20 @@ export default {
       gatewayInfosStagLoading: false,
       pageLoading: true,
       envs: [],
+      rules: {
+        image: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            message: this.$t('地址格式不正确'),
+            trigger: 'blur',
+          },
+        ],
+      }
     };
   },
   computed: {
@@ -471,6 +492,7 @@ export default {
       if (this.isBasePageEdit) {
         const params = { ... this.$store.state.cloudApi.cloudAppData };
         try {
+          await this.$refs.baseInfoRef.validate();
           await this.$store.dispatch('deploy/saveCloudAppInfo', {
             appCode: this.appCode,
             moduleId: this.curModuleId,
@@ -480,7 +502,7 @@ export default {
             theme: 'success',
             message: this.$t('操作成功'),
           });
-
+          this.$refs.baseInfoRef.clearError();
           this.isBasePageEdit = false;
         } catch (error) {
           console.log(error);
@@ -492,11 +514,12 @@ export default {
       this.isDeployLimitEdit = false;
       this.isIpInfoEdit = false;
       if (this.isBasePageEdit) {
-        this.buildData = this.buildDataBackUp;
-        this.localCloudAppData = this.localCloudAppDataBackUp;
+        this.buildData = _.cloneDeep(this.buildDataBackUp);
+        this.localCloudAppData = _.cloneDeep(this.localCloudAppDataBackUp);
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         this.isBasePageEdit = false;
       }
+      this.$refs.baseInfoRef.clearError();
     },
 
 

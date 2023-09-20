@@ -1,6 +1,11 @@
 <template>
   <div class="stag-wrapper">
     <section class="top-operate">
+      <bk-button :theme="'default'" class="mr10" @click="handleSetCloseExpand">
+        <i class="paasng-icon paasng-shouqi" v-if="isExpand"></i>
+        <i class="paasng-icon paasng-zhankai" v-else></i>
+        {{ isExpand ? $t('全部收起') : $t('全部展开') }}
+      </bk-button>
       <div class="module-select-wrapper">
         <bk-select
           :disabled="false"
@@ -48,6 +53,7 @@ export default {
     return {
       moduleValue: '全部模块',
       showModuleList: [],
+      isExpand: false,
     };
   },
 
@@ -87,6 +93,15 @@ export default {
   },
 
   methods: {
+    // 将模块的进程实例全部收起
+    handleSetCloseExpand() {
+      if (this.isExpand) {
+        this.$refs.prodModuleListRef && this.$refs.prodModuleListRef.handleSetCloseExpand();
+      } else {
+        this.$refs.prodModuleListRef && this.$refs.prodModuleListRef.handleSetOpenExpand();
+      }
+      this.isExpand = !this.isExpand;
+    },
   },
 };
 </script>

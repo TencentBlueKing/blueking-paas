@@ -21,6 +21,8 @@
     <!-- 根据模块渲染 -->
     <deploy-module-list
       :model-name="moduleValue"
+      ref="moduleListRef"
+      :environment="environment"
       v-bind="$attrs"
     />
   </div>
@@ -35,6 +37,12 @@ export default {
     deployModuleList,
   },
   mixins: [appBaseMixin],
+  props: {
+    environment: {
+      type: String,
+      default: () => 'stag',
+    },
+  },
 
   data() {
     return {

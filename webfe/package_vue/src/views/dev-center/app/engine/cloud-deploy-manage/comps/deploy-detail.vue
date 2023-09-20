@@ -420,9 +420,6 @@ import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
 moment.locale('zh-cn');
-// localLanguage () {
-//  return this.$store.state.localLanguage;
-//  }
 // let maxReplicasNum = 0;
 
 const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -612,6 +609,9 @@ export default {
     isWatchProcess() {
       return this.$route.params.id;
     },
+    localLanguage () {
+      return this.$store.state.localLanguage;
+    }
   },
 
   watch: {
@@ -627,6 +627,7 @@ export default {
     },
   },
   mounted() {
+    moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
     if (this.index === 0) {   // 只需要启动一次stream
       this.watchServerPush();

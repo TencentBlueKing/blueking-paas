@@ -15,7 +15,9 @@
             <span
               class="built-in-env"
               @click="handleShoEnvDialog"
-            >{{ $t('查看内置环境变量') }}</span>
+            >
+              {{ $t('查看内置环境变量') }}
+            </span>
           </span>
         </bk-alert>
         <div class="flex-row align-items-center justify-content-between mt20">
@@ -38,18 +40,22 @@
                 <li>
                   <a
                     href="javascript:;"
-                    style="margin: 0;"
-                    :class="(addedModuleList.length < 1 || !canModifyEnvVariable) ? 'is-disabled' : ''"
+                    style="margin: 0"
+                    :class="addedModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
                     @click="handleCloneFromModule"
-                  > {{ $t('从模块导入') }} </a>
+                  >
+                    {{ $t('从模块导入') }}
+                  </a>
                 </li>
                 <li>
                   <a
                     href="javascript:;"
-                    style="margin: 0;"
+                    style="margin: 0"
                     :class="!canModifyEnvVariable ? 'is-disabled' : ''"
                     @click="handleImportFromFile"
-                  > {{ $t('从文件导入') }} </a>
+                  >
+                    {{ $t('从文件导入') }}
+                  </a>
                 </li>
               </ul>
             </bk-dropdown-menu>
@@ -69,7 +75,8 @@
               theme="primary"
               title="编辑"
               :outline="true"
-              @click="handleEditClick">
+              @click="handleEditClick"
+            >
               {{ $t('编辑') }}
             </bk-button>
           </div>
@@ -78,21 +85,36 @@
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
           v-if="envVarList.length"
-          class="table-cls mt20">
+          class="table-cls mt20"
+        >
           <bk-table-column
             :render-header="handleRenderHander"
-            class-name="table-colum-module-cls" :sortable="!isPageEdit">
+            class-name="table-colum-module-cls"
+            :sortable="!isPageEdit"
+          >
             <template slot-scope="{ row, $index }">
-              <div v-if="isPageEdit" class="table-colum-cls">
+              <div
+                v-if="isPageEdit"
+                class="table-colum-cls"
+              >
                 <bk-form
-                  :label-width="0" form-type="inline" :ref="`envRefKey${$index}`"
-                  class="env-from-cls" :model="row">
-                  <bk-form-item :required="true" :property="'key'" :rules="rules.key">
+                  :label-width="0"
+                  form-type="inline"
+                  :ref="`envRefKey${$index}`"
+                  class="env-from-cls"
+                  :model="row"
+                >
+                  <bk-form-item
+                    :required="true"
+                    :property="'key'"
+                    :rules="rules.key"
+                  >
                     <bk-input
-                      v-model="row.key" class="env-input-cls"
+                      v-model="row.key"
+                      class="env-input-cls"
                       @enter="handleInputEvent(row, $index)"
-                      @blur="handleInputEvent(row, $index)">
-                    </bk-input>
+                      @blur="handleInputEvent(row, $index)"
+                    ></bk-input>
                   </bk-form-item>
                 </bk-form>
               </div>
@@ -100,19 +122,30 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column :render-header="handleRenderHander" class-name="table-colum-module-cls">
+          <bk-table-column
+            :render-header="handleRenderHander"
+            class-name="table-colum-module-cls"
+          >
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit">
                 <bk-form
-                  :label-width="0" form-type="inline" :ref="`envRefValue${$index}`"
-                  class="env-from-cls" :model="row">
-                  <bk-form-item :required="true" :property="'value'" :rules="rules.value">
+                  :label-width="0"
+                  form-type="inline"
+                  :ref="`envRefValue${$index}`"
+                  class="env-from-cls"
+                  :model="row"
+                >
+                  <bk-form-item
+                    :required="true"
+                    :property="'value'"
+                    :rules="rules.value"
+                  >
                     <bk-input
                       v-model="row.value"
                       @enter="handleInputEvent(row, $index)"
                       @blur="handleInputEvent(row, $index)"
-                      class="env-input-cls">
-                    </bk-input>
+                      class="env-input-cls"
+                    ></bk-input>
                   </bk-form-item>
                 </bk-form>
               </div>
@@ -126,12 +159,14 @@
             :filters="envSelectList"
             :filter-method="sourceFilterMethod"
             :filter-multiple="false"
-            prop="environment_name">
+            prop="environment_name"
+          >
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
                   form-type="inline"
-                  class="env-from-cls">
+                  class="env-from-cls"
+                >
                   <bk-form-item :required="true">
                     <bk-select
                       v-model="row.environment_name"
@@ -153,15 +188,26 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column :label="$t('描述')" class-name="table-colum-module-cls">
+          <bk-table-column
+            :label="$t('描述')"
+            class-name="table-colum-module-cls"
+          >
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
                 <bk-form
-                  form-type="inline" :ref="`envRefDescription`"
-                  class="env-from-cls">
-                  <bk-form-item :required="true" :property="'description'" :rules="rules.description">
-                    <bk-input v-model="row.description" class="env-input-cls">
-                    </bk-input>
+                  form-type="inline"
+                  :ref="`envRefDescription`"
+                  class="env-from-cls"
+                >
+                  <bk-form-item
+                    :required="true"
+                    :property="'description'"
+                    :rules="rules.description"
+                  >
+                    <bk-input
+                      v-model="row.description"
+                      class="env-input-cls"
+                    ></bk-input>
                   </bk-form-item>
                 </bk-form>
               </div>
@@ -169,14 +215,26 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column :label="$t('操作')" width="100" class-name="table-colum-module-cls" v-if="isPageEdit">
+          <bk-table-column
+            :label="$t('操作')"
+            width="100"
+            class-name="table-colum-module-cls"
+            v-if="isPageEdit"
+          >
             <template slot-scope="{ $index }">
-              <div v-if="isPageEdit" class="env-table-icon">
-                <i class="icon paasng-icon paasng-plus-circle-shape" @click="handleEnvTableListData('add', $index)"></i>
+              <div
+                v-if="isPageEdit"
+                class="env-table-icon"
+              >
+                <i
+                  class="icon paasng-icon paasng-plus-circle-shape"
+                  @click="handleEnvTableListData('add', $index)"
+                ></i>
                 <i
                   class="icon paasng-icon paasng-minus-circle-shape pl20"
                   v-if="envVarList.length > 1"
-                  @click="handleEnvTableListData('reduce', $index)"></i>
+                  @click="handleEnvTableListData('reduce', $index)"
+                ></i>
               </div>
             </template>
           </bk-table-column>
@@ -186,6 +244,25 @@
           class="ps-no-result"
         >
           <table-empty empty />
+        </div>
+
+        <div
+          class="env-btn-wrapper"
+          v-if="isPageEdit && isComponentBtn"
+        >
+          <bk-button
+            class="pl20 pr20"
+            :theme="'primary'"
+            @click="$emit('save')"
+          >
+            {{ $t('保存') }}
+          </bk-button>
+          <bk-button
+            class="pl20 pr20 ml20"
+            @click="$emit('cancel')"
+          >
+            {{ $t('取消') }}
+          </bk-button>
         </div>
       </section>
     </paas-content-loader>
@@ -215,7 +292,9 @@
               <span
                 ref="basicText"
                 v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >{{ item.label }}: {{ item.value }}</span>
+              >
+                {{ item.label }}: {{ item.value }}
+              </span>
             </p>
           </div>
         </div>
@@ -232,7 +311,9 @@
               <span
                 ref="appRuntimeText"
                 v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >{{ item.label }}: {{ item.value }}</span>
+              >
+                {{ item.label }}: {{ item.value }}
+              </span>
             </p>
           </div>
         </div>
@@ -249,7 +330,9 @@
               <span
                 ref="bkPlatformText"
                 v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >{{ item.label }}={{ item.value }}</span>
+              >
+                {{ item.label }}={{ item.value }}
+              </span>
             </p>
           </div>
         </div>
@@ -268,13 +351,13 @@
     >
       <div>
         <div class="paas-env-var-export">
-          <label class="title"> {{ $t('模块：') }} </label>
+          <label class="title">{{ $t('模块：') }}</label>
           <bk-select
             v-model="moduleValue"
             :disabled="false"
             :clearable="false"
             searchable
-            style="flex: 0 0 390px;"
+            style="flex: 0 0 390px"
             @selected="handleModuleSelected"
           >
             <bk-option
@@ -291,14 +374,11 @@
         >
           <p
             v-if="exportDialog.count"
-            style="line-height: 20px;"
+            style="line-height: 20px"
           >
-            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }}
-            {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
           </p>
-          <p v-else>
-            【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}
-          </p>
+          <p v-else>【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}</p>
         </div>
       </div>
       <div slot="footer">
@@ -345,7 +425,7 @@
             text
             theme="primary"
             size="small"
-            style="line-height: 40px;"
+            style="line-height: 40px"
             @click="handleDownloadTemplate"
           >
             {{ $t('下载模板') }}
@@ -380,9 +460,9 @@
         <input
           ref="upload"
           type="file"
-          style="position: absolute; width: 0; height: 0;"
+          style="position: absolute; width: 0; height: 0"
           @change="handleStartUpload"
-        >
+        />
       </div>
       <div slot="footer">
         <bk-button
@@ -402,15 +482,22 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>
+import _ from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
 
 export default {
-  components: {
-  },
+  components: {},
   mixins: [appBaseMixin],
+  props: {
+    // 组件内部按钮操作
+    isComponentBtn: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       curItem: {},
@@ -435,9 +522,9 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter(item => item.key === this.curItem.key
-              && item.environment_name === this.curItem.environment_name);
-              if (flag.length <= 1) {   // 如果符合要求需要清除错误
+              const flag = this.envVarList.filter((item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
+              if (flag.length <= 1) {
+                // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
                   this.$refs[`envRefKey${i}`].clearError();
                 });
@@ -530,11 +617,10 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
     },
   },
-  watch: {
-  },
+  watch: {},
   created() {
     this.init();
   },
@@ -576,7 +662,8 @@ export default {
         return p;
       }, []);
       console.log('flag', flag);
-      if (flag.length) {  // 有数据时
+      if (flag.length) {
+        // 有数据时
         for (let index = 0; index < flag.length; index++) {
           console.log(index);
           try {
@@ -596,7 +683,8 @@ export default {
           validate = false;
         }
       }
-      if (validate) {   // 通过检验才可以保存
+      if (validate) {
+        // 通过检验才可以保存
         this.save();
       }
     },
@@ -604,13 +692,7 @@ export default {
     // 保存
     async save() {
       try {
-        await this.$store.dispatch(
-          'envVar/saveEnvItem',
-          { appCode: this.appCode,
-            moduleId: this.curModuleId,
-            data: this.envVarList,
-          },
-        );
+        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: this.envVarList });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('添加环境变量成功'),
@@ -744,9 +826,9 @@ export default {
     // 选中环境
     handleEnvChange(curItem) {
       this.curItem = curItem;
-      const flag = this.envVarList.filter(item => item.name === this.curItem.name
-              && item.envName === this.curItem.envName);
-      if (flag.length <= 1) {   // 如果符合要求需要清除错误
+      const flag = this.envVarList.filter((item) => item.name === this.curItem.name && item.envName === this.curItem.envName);
+      if (flag.length <= 1) {
+        // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {
           this.$refs[`envRefKey${i}`].clearError();
         });
@@ -769,15 +851,20 @@ export default {
     handleModuleSelected(value, { name }) {
       this.curSelectModuleName = name;
       this.exportDialog.isLoading = true;
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`).then((response) => {
-        this.exportDialog.count = (response || []).length;
-      }, (errRes) => {
-        const errorMsg = errRes.detail;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-        });
-      })
+      this.$http
+        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`)
+        .then(
+          (response) => {
+            this.exportDialog.count = (response || []).length;
+          },
+          (errRes) => {
+            const errorMsg = errRes.detail;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+            });
+          }
+        )
         .finally(() => {
           this.exportDialog.isLoading = false;
         });
@@ -795,38 +882,36 @@ export default {
         const overwritedNum = res.overwrited_num;
         const ignoreNum = res.ignore_num;
         this.isEdited = createNum > 0 || overwritedNum > 0;
-        const message = (
-          () => {
-            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
-            let messageText = '';
-            switch (numStr) {
-              case '111':
-                messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                break;
-              case '110':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                break;
-              case '100':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
-                break;
-              case '101':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                break;
-              case '011':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                break;
-              case '010':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                break;
-              case '001':
-                messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
-                break;
-              default:
-                messageText = `${this.$t('导入成功')}`;
-            }
-            return messageText;
+        const message = (() => {
+          const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+          let messageText = '';
+          switch (numStr) {
+            case '111':
+              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              break;
+            case '110':
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+              break;
+            case '100':
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
+              break;
+            case '101':
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              break;
+            case '011':
+              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              break;
+            case '010':
+              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+              break;
+            case '001':
+              messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
+              break;
+            default:
+              messageText = `${this.$t('导入成功')}`;
           }
-        )();
+          return messageText;
+        })();
         this.$paasMessage({
           theme: 'success',
           message,
@@ -864,20 +949,24 @@ export default {
       this.importFileDialog.visiable = true;
     },
 
-
     handleExportToFile() {
       this.exportLoading = true;
       console.log('this.curSortKey', this.curSortKey);
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
-      this.$http.get(url).then((response) => {
-        this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
-      }, (errRes) => {
-        const errorMsg = errRes.detail;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-        });
-      })
+      this.$http
+        .get(url)
+        .then(
+          (response) => {
+            this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
+          },
+          (errRes) => {
+            const errorMsg = errRes.detail;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+            });
+          }
+        )
         .finally(() => {
           this.exportLoading = false;
         });
@@ -890,15 +979,18 @@ export default {
 
     handleDownloadTemplate() {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/template/`;
-      this.$http.get(url).then((response) => {
-        this.invokeBrowserDownload(response, 'bk_paas3_env_vars_import_template.yaml');
-      }, (errRes) => {
-        const errorMsg = errRes.detail;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
-        });
-      });
+      this.$http.get(url).then(
+        (response) => {
+          this.invokeBrowserDownload(response, 'bk_paas3_env_vars_import_template.yaml');
+        },
+        (errRes) => {
+          const errorMsg = errRes.detail;
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
+          });
+        }
+      );
     },
 
     handleTriggerUpload() {
@@ -923,61 +1015,63 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/import/`;
       const params = new FormData();
       params.append('file', this.curFile);
-      this.$http.post(url, params).then((response) => {
-        const createNum = response.create_num;
-        const overwritedNum = response.overwrited_num;
-        const ignoreNum = response.ignore_num;
-        this.isEdited = createNum > 0 || overwritedNum > 0;
-        const message = (
-          () => {
-            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
-            let messageText = '';
-            switch (numStr) {
-              case '111':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                break;
-              case '110':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                break;
-              case '100':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
-                break;
-              case '101':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                break;
-              case '011':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
-                break;
-              case '010':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
-                break;
-              case '001':
-                messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
-                break;
-              default:
-                messageText = `${this.$t('导入成功')}`;
-            }
-            return messageText;
+      this.$http
+        .post(url, params)
+        .then(
+          (response) => {
+            const createNum = response.create_num;
+            const overwritedNum = response.overwrited_num;
+            const ignoreNum = response.ignore_num;
+            this.isEdited = createNum > 0 || overwritedNum > 0;
+            const message = (() => {
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+              let messageText = '';
+              switch (numStr) {
+                case '111':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  break;
+                case '110':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                  break;
+                case '100':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
+                  break;
+                case '101':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  break;
+                case '011':
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  break;
+                case '010':
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                  break;
+                case '001':
+                  messageText = this.$t('所有环境变量都已在当前模块中，已全部忽略');
+                  break;
+                default:
+                  messageText = `${this.$t('导入成功')}`;
+              }
+              return messageText;
+            })();
+            this.$paasMessage({
+              theme: 'success',
+              message,
+            });
+            this.getEnvVarList();
+          },
+          (errRes) => {
+            const errorMsg = errRes.detail;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
+            });
           }
-        )();
-        this.$paasMessage({
-          theme: 'success',
-          message,
-        });
-        this.getEnvVarList();
-      }, (errRes) => {
-        const errorMsg = errRes.detail;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
-        });
-      })
+        )
         .finally(() => {
           this.importFileDialog.loading = false;
           this.importFileDialog.visiable = false;
         });
     },
-
 
     // 处理下载
     invokeBrowserDownload(content, filename) {
@@ -994,7 +1088,6 @@ export default {
     handleCancel() {
       this.envVarList = _.cloneDeep(this.envLocalVarList);
     },
-
 
     sourceFilterMethod(value, row, column) {
       const { property } = column;
@@ -1028,482 +1121,480 @@ export default {
 };
 </script>
 
-  <style media="screen">
-      .query-button {
-          width: auto;
-          padding-right: 30px;
-      }
-  </style>
+<style media="screen">
+.query-button {
+  width: auto;
+  padding-right: 30px;
+}
+</style>
 
-  <style lang="scss">
-      .ps-table-default {
-          .bk-form-item {
-              .bk-form-content {
-                  width: 100%;
-                  float: none !important;
-                  display: block !important;
-              }
-          }
-      }
-  </style>
+<style lang="scss">
+.ps-table-default {
+  .bk-form-item {
+    .bk-form-content {
+      width: 100%;
+      float: none !important;
+      display: block !important;
+    }
+  }
+}
+</style>
 
-  <style lang="scss" scoped>
+<style lang="scss" scoped>
+.env-container {
+  padding: 0 20px 20px;
+  min-height: 200px;
+}
+.variable-instruction {
+  font-size: 14px;
+  color: #7b7d8a;
+  padding: 15px 30px;
+  line-height: 28px;
+  border-bottom: 1px solid #eaeeee;
+}
 
-      .env-container{
-          padding: 0 20px 20px;
-          min-height: 200px;
-      }
-      .variable-instruction {
-          font-size: 14px;
-          color: #7b7d8a;
-          padding: 15px 30px;
-          line-height: 28px;
-          border-bottom: 1px solid #eaeeee;
-      }
+.paas-env-var-upload-dialog {
+  .header {
+    font-size: 24px;
+    color: #313238;
+  }
+  .title {
+    max-width: 150px;
+    margin: 0;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+  .download-tips {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    line-height: 40px;
+    background: #fefaf2;
+    font-size: 12px;
+    color: #ffb400;
+  }
+}
 
-      .paas-env-var-upload-dialog {
-          .header {
-              font-size: 24px;
-              color: #313238;
-          }
-          .title {
-              max-width: 150px;
-              margin: 0;
-              display: inline-block;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              vertical-align: bottom;
-          }
-          .download-tips {
-              display: flex;
-              justify-content: space-between;
-              padding: 0 10px;
-              line-height: 40px;
-              background: #fefaf2;
-              font-size: 12px;
-              color: #ffb400;
-          }
-      }
+a.is-disabled {
+  color: #dcdee5 !important;
+  cursor: not-allowed !important;
+  &:hover {
+    background: #fff !important;
+  }
+}
 
-      a.is-disabled {
-          color: #dcdee5 !important;
-          cursor: not-allowed !important;
-          &:hover {
-              background: #fff !important;
-          }
-      }
+.upload-content {
+  margin-top: 15px;
+  text-align: center;
+  .file-icon {
+    font-size: 40px;
+    color: #dae1e8;
+  }
+  .cur-upload-file {
+    display: inline-block;
+    line-height: 1;
+    font-size: 12px;
+    color: #3a84ff;
+    border-bottom: 1px solid #3a84ff;
+  }
+  .file-error-tips {
+    display: inline-block;
+    line-height: 1;
+    font-size: 12px;
+    color: #ff4d4d;
+  }
+}
 
-      .upload-content {
-          margin-top: 15px;
-          text-align: center;
-          .file-icon {
-              font-size: 40px;
-              color: #dae1e8;
-          }
-          .cur-upload-file {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #3a84ff;
-              border-bottom: 1px solid #3a84ff;
-          }
-          .file-error-tips {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #ff4d4d;
-          }
-      }
+.ps-table-width-overflowed {
+  width: 100%;
+  margin-left: 0;
 
-      .ps-table-width-overflowed {
-          width: 100%;
-          margin-left: 0;
+  td {
+    border-bottom: 0;
+    padding: 15px 0 0 0;
+  }
 
-          td {
-              border-bottom: 0;
-              padding: 15px 0 0 0;
-          }
+  .desc-form-content {
+    display: inline-block;
+    padding: 0 10px;
+    width: 100%;
+    height: 32px;
+    border: 1px solid #dcdee5;
+    border-radius: 2px;
+    text-align: left;
+    font-size: 12px;
+    color: #63656e;
+    overflow: hidden;
+    background-color: #fafbfd;
+    vertical-align: middle;
+    cursor: default;
+  }
+  .bk-inline-form {
+    display: flex;
+  }
+}
 
-          .desc-form-content {
-              display: inline-block;
-              padding: 0 10px;
-              width: 100%;
-              height: 32px;
-              border: 1px solid #dcdee5;
-              border-radius: 2px;
-              text-align: left;
-              font-size: 12px;
-              color: #63656e;
-              overflow: hidden;
-              background-color: #fafbfd;
-              vertical-align: middle;
-              cursor: default;
-          }
-          .bk-inline-form {
-              display: flex;
-          }
-      }
+.variable-main {
+  border-bottom: 0;
 
-      .variable-main {
-          border-bottom: 0;
+  h3 {
+    line-height: 1;
+    padding: 10px 0;
+  }
 
-          h3 {
-              line-height: 1;
-              padding: 10px 0;
-          }
+  .ps-alert-content {
+    color: #666;
+  }
+}
 
-          .ps-alert-content {
-              color: #666;
-          }
-      }
+.variable-input {
+  margin-right: 10px;
 
-      .variable-input {
-          margin-right: 10px;
+  input {
+    height: 36px;
+  }
+}
 
-          input {
-              height: 36px;
-          }
-      }
+.variable-select {
+  margin-right: 10px;
+}
 
-      .variable-select {
-          margin-right: 10px;
-      }
+.variable-operation {
+  font-size: 0;
 
-      .variable-operation {
-          font-size: 0;
+  button {
+    width: 72px;
+    line-height: 18px;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    box-sizing: border-box;
+    -webkit-transition: 0s all;
+    -moz-transition: 0s all;
+    -ms-transition: 0s all;
+    transition: 0s all;
+  }
 
-          button {
-              width: 72px;
-              line-height: 18px;
-              -webkit-box-sizing: border-box;
-              -moz-box-sizing: border-box;
-              -ms-box-sizing: border-box;
-              box-sizing: border-box;
-              -webkit-transition: 0s all;
-              -moz-transition: 0s all;
-              -ms-transition: 0s all;
-              transition: 0s all;
-          }
+  a {
+    &.paasng-delete {
+      font-size: 16px;
+    }
 
-          a {
-              &.paasng-delete {
-                  font-size: 16px;
-              }
+    &.paasng-check-1 {
+      font-size: 15px;
+    }
+  }
+}
 
-              &.paasng-check-1 {
-                  font-size: 15px;
-              }
-          }
-      }
+.middle {
+  > p {
+    line-height: 46px;
+  }
+}
 
-      .middle {
-          > p {
-              line-height: 46px;
-          }
-      }
+.variabletext {
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 30px;
+  height: 34px;
+}
 
-      .variabletext {
-          width: 100%;
-          box-sizing: border-box;
-          line-height: 30px;
-          height: 34px;
-      }
+.filter-list {
+  position: relative;
+  font-size: 0;
+  letter-spacing: -5px;
+  margin: 25px 0 5px 0;
 
-      .filter-list {
-          position: relative;
-          font-size: 0;
-          letter-spacing: -5px;
-          margin: 25px 0 5px 0;
+  .label {
+    position: relative;
+    display: inline-block;
+    top: 4px;
+    letter-spacing: 0;
+    font-size: 14px;
+  }
 
-          .label {
-              position: relative;
-              display: inline-block;
-              top: 4px;
-              letter-spacing: 0;
-              font-size: 14px;
-          }
+  .reset-button {
+    position: relative;
+    top: 4px;
+    padding-left: 10px;
+  }
 
-          .reset-button {
-              position: relative;
-              top: 4px;
-              padding-left: 10px;
-          }
+  .env-export-wrapper {
+    position: absolute;
+    right: 80px;
+  }
 
-          .env-export-wrapper {
-              position: absolute;
-              right: 80px;
-          }
+  .env-sort-wrapper {
+    position: absolute;
+    left: 410px;
+    .sort-icon {
+      position: absolute;
+      // width: 26px;
+      font-size: 26px;
+      left: 5px;
+      top: 2px;
+    }
+    .text {
+      padding-left: 15px;
+    }
+    a.active {
+      background-color: #eaf3ff;
+      color: #3a84ff;
+    }
+  }
 
-          .env-sort-wrapper {
-              position: absolute;
-              left: 410px;
-              .sort-icon {
-                  position: absolute;
-                  // width: 26px;
-                  font-size: 26px;
-                  left: 5px;
-                  top: 2px;
-              }
-              .text {
-                  padding-left: 15px;
-              }
-              a.active {
-                  background-color: #eaf3ff;
-                  color: #3a84ff;
-              }
-          }
+  a {
+    letter-spacing: 0;
+    font-size: 14px;
+    padding: 8px 20px;
+    line-height: 14px;
+    margin-right: 10px;
 
-          a {
-              letter-spacing: 0;
-              font-size: 14px;
-              padding: 8px 20px;
-              line-height: 14px;
-              margin-right: 10px;
+    &.ps-btn {
+      border: 1px solid #ccc;
+      color: #999;
 
-              &.ps-btn {
-                  border: 1px solid #ccc;
-                  color: #999;
-
-                  &:hover {
-                      border: 1px solid #3c96ff;
-                      color: #3c96ff;
-                  }
-              }
-
-              &.ps-btn-primary {
-                  background: #3c96ff;
-                  border: 1px solid #3A84FF;
-                  color: #FFF;
-
-                  &:hover {
-                      color: #FFF;
-                  }
-              }
-          }
-
-          .env-sort-btn {
-              position: absolute;
-              right: 0;
-              .sort-icon {
-                  position: absolute;
-                  font-size: 26px;
-                  left: 5px;
-                  top: 2px;
-              }
-              .text {
-                  padding-left: 15px;
-              }
-              &:hover {
-                  color: #3a84ff;
-                  border-color: #3a84ff;
-              }
-          }
-      }
-
-      .selectize-control * {
-          cursor: pointer;
-      }
-
-      .editingEnvRow {
-          color: #3a84ff;
-      }
-
-      .disabledButton:hover {
-          cursor: pointer;
-          color: #666;
-          background: #fafafa;
-      }
-
-      .releasebg {
-          padding: 0 20px 20px 20px;
-          position: relative;
-          border: solid 1px #e5e5e5;
-
-          &-compact {
-              padding-bottom: 5px;
-          }
-
-          .warningIcon {
-              position: absolute;
-              left: 20px;
-              top: 28px;
-              width: 24px;
-              height: 24px;
-
-              img {
-                  width: 100%;
-              }
-          }
-
-          .warningText {
-              margin-left: 10px;
-              padding-bottom: 20px;
-              position: relative;
-              top: 0;
-              right: 0;
-
-              h2 {
-                  padding-left: 0;
-              }
-
-              &-compact {
-                  padding-bottom: 5px;
-              }
-          }
-      }
-
-      .ps-btn-xs {
-          line-height: 34px;
-      }
-
-      .ps-form-control[readonly] {
-          background-color: #fafafa;
-      }
-
-      .middle h4 {
-          padding-top: 0;
-      }
-
-      .ps-alert h4 {
-          margin: 0;
-      }
-
-      .ps-btn-dropdown,
-      .ps-btn-l {
-          box-sizing: border-box;
-          height: 36px;
-      }
-
-      .form-grid {
-          display: flex;
-      }
-
-      .builder-item {
-          padding: 0 10px;
-          line-height: 20px;
-          position: relative;
-
-          &:before {
-              content: '';
-              font-size: 12px;
-              position: absolute;
-              left: 0;
-              top: 8px;
-              width: 3px;
-              height: 3px;
-              display: inline-block;
-              background: #656565;
-          }
-      }
-
-      .export-by-module-tips {
-          padding: 4px 0 0 37px;
-          line-height: 32px;
-          color: #979ba5;
-          font-size: 12px;
-      }
-
-      .paas-env-var-export {
-          display: flex;
-          justify-content: flex-start;
-          .title {
-              line-height: 30px;
-          }
-      }
-
-      .link-a:hover {
-          color: #699df4;
-      }
-
-      .img-exception {
-          width: 300px;
-      }
-      .text-exception {
-          color: #979ba5;
-          font-size: 14px;
-          text-align: center;
-          margin-top: 14px;
-      }
-      .built-in-env {
-          text-decoration: none !important;
-          color: #699df4;
-
-          &:hover {
-              cursor: pointer;
-          }
-      }
-
-      .slider-env-content {
-          padding: 30px;
-          min-height: calc(100vh - 50px);
-      }
-      .env-title {
-          font-size: 14px;
-          font-weight: bold;
-          margin-bottom: 5px;
-          color: #313238;
-          line-height: 1;
-      }
-
-      .env-item {
-          font-size: 12px;
-          line-height: 24px;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-      }
-
-      .reminder {
-          margin-top: 15px;
-          line-height: 24px;
-          font-size: 13px;
-          color: #ff9c01;
-      }
-
-      .desc-env {
-          font-size: 12px;
-          color: #979BA5;
-          margin-bottom: 10px;
-      }
-
-      .env-table-icon{
-        color: #C4C6CC;
-        font-size: 14px;
-        .icon{
-          cursor: pointer;
-        }
-      }
-
-      .env-from-cls{
-        width: 100%;
-        /deep/ .bk-form-item{
-          width: 100%;
-          .bk-form-content{
-            width: 100%;
-            .tooltips-icon {
-              right: 1% !important;
-            }
-          }
-        }
-      }
-    .env-input-cls{
-      /deep/ .bk-form-input{
-        width: 90%;
+      &:hover {
+        border: 1px solid #3c96ff;
+        color: #3c96ff;
       }
     }
 
-    .export-btn-cls{
-      font-size: 12px;
+    &.ps-btn-primary {
+      background: #3c96ff;
+      border: 1px solid #3a84ff;
+      color: #fff;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+  }
+
+  .env-sort-btn {
+    position: absolute;
+    right: 0;
+    .sort-icon {
+      position: absolute;
+      font-size: 26px;
+      left: 5px;
+      top: 2px;
+    }
+    .text {
+      padding-left: 15px;
+    }
+    &:hover {
+      color: #3a84ff;
+      border-color: #3a84ff;
+    }
+  }
+}
+
+.selectize-control * {
+  cursor: pointer;
+}
+
+.editingEnvRow {
+  color: #3a84ff;
+}
+
+.disabledButton:hover {
+  cursor: pointer;
+  color: #666;
+  background: #fafafa;
+}
+
+.releasebg {
+  padding: 0 20px 20px 20px;
+  position: relative;
+  border: solid 1px #e5e5e5;
+
+  &-compact {
+    padding-bottom: 5px;
+  }
+
+  .warningIcon {
+    position: absolute;
+    left: 20px;
+    top: 28px;
+    width: 24px;
+    height: 24px;
+
+    img {
+      width: 100%;
+    }
+  }
+
+  .warningText {
+    margin-left: 10px;
+    padding-bottom: 20px;
+    position: relative;
+    top: 0;
+    right: 0;
+
+    h2 {
+      padding-left: 0;
     }
 
-    .custom-header-cls{
-
+    &-compact {
+      padding-bottom: 5px;
     }
-    /deep/ .header-required{
-      color: #EA3636;
-      padding-left: 5px;
-      padding-top: 5px;
-    }
-  </style>
+  }
+}
 
+.ps-btn-xs {
+  line-height: 34px;
+}
+
+.ps-form-control[readonly] {
+  background-color: #fafafa;
+}
+
+.middle h4 {
+  padding-top: 0;
+}
+
+.ps-alert h4 {
+  margin: 0;
+}
+
+.ps-btn-dropdown,
+.ps-btn-l {
+  box-sizing: border-box;
+  height: 36px;
+}
+
+.form-grid {
+  display: flex;
+}
+
+.builder-item {
+  padding: 0 10px;
+  line-height: 20px;
+  position: relative;
+
+  &:before {
+    content: '';
+    font-size: 12px;
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 3px;
+    height: 3px;
+    display: inline-block;
+    background: #656565;
+  }
+}
+
+.export-by-module-tips {
+  padding: 4px 0 0 37px;
+  line-height: 32px;
+  color: #979ba5;
+  font-size: 12px;
+}
+
+.paas-env-var-export {
+  display: flex;
+  justify-content: flex-start;
+  .title {
+    line-height: 30px;
+  }
+}
+
+.link-a:hover {
+  color: #699df4;
+}
+
+.img-exception {
+  width: 300px;
+}
+.text-exception {
+  color: #979ba5;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 14px;
+}
+.built-in-env {
+  text-decoration: none !important;
+  color: #699df4;
+
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.slider-env-content {
+  padding: 30px;
+  min-height: calc(100vh - 50px);
+}
+.env-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #313238;
+  line-height: 1;
+}
+
+.env-item {
+  font-size: 12px;
+  line-height: 24px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reminder {
+  margin-top: 15px;
+  line-height: 24px;
+  font-size: 13px;
+  color: #ff9c01;
+}
+
+.desc-env {
+  font-size: 12px;
+  color: #979ba5;
+  margin-bottom: 10px;
+}
+
+.env-table-icon {
+  color: #c4c6cc;
+  font-size: 14px;
+  .icon {
+    cursor: pointer;
+  }
+}
+
+.env-from-cls {
+  width: 100%;
+  /deep/ .bk-form-item {
+    width: 100%;
+    .bk-form-content {
+      width: 100%;
+      .tooltips-icon {
+        right: 1% !important;
+      }
+    }
+  }
+}
+.env-input-cls {
+  /deep/ .bk-form-input {
+    width: 90%;
+  }
+}
+
+.export-btn-cls {
+  font-size: 12px;
+}
+
+/deep/ .header-required {
+  color: #ea3636;
+  padding-left: 5px;
+  padding-top: 5px;
+}
+.env-btn-wrapper {
+  margin-top: 24px;
+}
+</style>

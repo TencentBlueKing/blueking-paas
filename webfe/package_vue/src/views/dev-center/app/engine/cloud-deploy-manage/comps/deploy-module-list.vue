@@ -160,8 +160,7 @@
       @cancel="cancelOfflineApp"
     >
       <div class="tl">
-        {{ $t('将模块从') }}{{ environment === 'stag' ? $t('预发布环境') : $t('生产环境') }}
-        {{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
+        {{ $t('将模块从') }}<em>{{ environment === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>{{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
       </div>
     </bk-dialog>
     <deploy-dialog
@@ -564,18 +563,21 @@ export default {
   }
 }
 .deploy-pending-text{
-    font-size: 14px;
-    color: #313238;
-    font-weight: 500;
-    line-height: 32px;
+  font-size: 14px;
+  color: #313238;
+  font-weight: 500;
+  line-height: 32px;
+}
+.loading-cls{
+  top: 30vh;
+}
+.alert-cls{
+  border: none !important;
+  /deep/ .bk-alert-wraper{
+    padding: 5px 10px;
   }
-  .loading-cls{
-    top: 30vh;
-  }
-  .alert-cls{
-    border: none !important;
-    /deep/ .bk-alert-wraper{
-      padding: 5px 10px;
-    }
-  }
+}
+.tl em {
+  font-weight: bold;
+}
 </style>

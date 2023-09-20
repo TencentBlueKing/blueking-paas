@@ -22,7 +22,7 @@
           />
           <div
             v-else
-            class="ml10"
+            class="ml20"
           >
             <bk-tag
               :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用')"
@@ -373,7 +373,7 @@ export default {
           },
           (err) => {
             console.error(err);
-          },
+          }
         );
       } else {
         this.$emit('save');
@@ -392,7 +392,7 @@ export default {
 
 <style lang="scss" scoped>
 .form-pre {
-    padding: 0 20px 20px;
+  padding: 0 20px 20px;
 
   .item-title-container {
     display: flex;

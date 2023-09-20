@@ -2293,4 +2293,5 @@ export default {
   '确认启动该进程？': 'Confirm to start this process?',
   '请输入名称，如 default': 'Please input name, such as default',
   私有镜像需要填写镜像凭证才能拉取镜像: 'Private images need to fill in the image credentials to pull the image',
+  '镜像Tag：': 'Image Tag: ',
 };

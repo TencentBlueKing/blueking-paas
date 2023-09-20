@@ -17,7 +17,7 @@
             <p class="deploy-text-wrapper">
               <span v-if="deploymentInfo.build_method === 'dockerfile' && deploymentInfo.version_info">
                 <!-- 分支 -->
-                <span v-if="deploymentInfo.version_info.version_type ==='branch'">
+                <span v-if="deploymentInfo.version_info.version_type === 'branch'">
                   <span class="version-text pl10"> {{ $t('版本：') }}
                     {{ deploymentInfo.version_info.revision
                       ? deploymentInfo.version_info.revision.substring(0,8) : '--' }}

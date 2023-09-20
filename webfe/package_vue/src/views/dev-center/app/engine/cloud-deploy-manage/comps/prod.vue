@@ -112,6 +112,10 @@ export default {
   .top-operate {
     display: flex;
     margin-bottom: 16px;
+    .paasng-shouqi,
+    .paasng-zhankai {
+      margin-right: 3px;
+    }
   }
   .module-select-wrapper {
     background: #fff;

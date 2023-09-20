@@ -2,7 +2,7 @@
   <div class="right-main">
     <module-top-bar
       :app-code="appCode"
-      :title="$t('应用编排')"
+      :title="$t('模块配置')"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
       :module-list="curAppModuleList"
@@ -131,15 +131,15 @@ export default {
       return mergeObjects(cloudAppData, this.manifestExt);
     },
 
-    storeCloudAppData () {
+    storeCloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
     },
 
-    firstTabActiveName () {
+    firstTabActiveName() {
       return this.curTabPanels[0].name;
     },
 
-    curTabPanels () {
+    curTabPanels() {
       if (this.curAppModule.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
@@ -147,11 +147,11 @@ export default {
     },
 
     // 是否需要保存操作按钮
-    isFooterActionBtn () {
+    isFooterActionBtn() {
       // 无需展示外部操作按钮组
       const hideTabItems = ['cloudAppDeployForHook'];
       return !hideTabItems.includes(this.active);
-    }
+    },
   },
   watch: {
     '$route'() {
@@ -240,7 +240,7 @@ export default {
           if (!res) return;
         }
         const data = this.storeCloudAppData;
-        data.spec.processes = data.spec.processes.map(process => {
+        data.spec.processes = data.spec.processes.map((process) => {
           // 过滤空值容器端口
           const { targetPort, ...processValue } = process;
           return (targetPort === '' || targetPort === null) ? processValue : process;

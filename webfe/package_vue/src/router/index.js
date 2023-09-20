@@ -184,7 +184,7 @@ const appCreateModule = () => import(/* webpackChunkName: 'app-create-module' */
 
 
 // App: basic config
-const basicConfig = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/index').then(module => module).catch((error) => {
+const appConfigs = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -446,20 +446,12 @@ const router = new Router({
         },
         {
           path: ':id/app-configs',
-          component: basicConfig,
-          name: 'basicConfig',
+          component: appConfigs,
+          name: 'appConfigs',
           redirect: {
-            name: 'appCloudAPI',
+            name: 'appAccessPortal',
           },
           children: [
-            {
-              path: 'api',
-              component: appCloudAPI,
-              name: 'appCloudAPI',
-              meta: {
-                module: 'api',
-              },
-            },
             {
               path: 'url',
               component: appAccessPortal,
@@ -481,15 +473,15 @@ const router = new Router({
               component: appMobileMarket,
               name: 'appMobileMarket',
               meta: {
-                module: 'appMobileMarket',
+                module: 'mobile-market',
               },
             },
             {
-              path: 'api',
+              path: 'info',
               component: appBasicInfo,
               name: 'appBasicInfo',
               meta: {
-                module: 'api',
+                module: 'info',
               },
             },
             {

@@ -291,6 +291,8 @@ export default {
       if (!this.preFormData.loaclEnabled) {
         this.$set(this.localCloudAppData.spec, 'hooks', null);
       } else {
+        // 重新设置一遍数据
+        this.localCloudAppData = this.$store.state.cloudApi.cloudAppData;
         this.$set(this.localCloudAppData.spec, 'hooks', { preRelease: { command: this.preRelease?.command || [], args: this.preRelease?.args || [] } });
       }
       this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);

@@ -1,93 +1,91 @@
 <template lang="html">
-  <div class="container biz-create-success">
-    <div class="success-wrapper">
-      <div class="info">
-        <p>
-          <i class="paasng-icon paasng-check-circle-shape text-success" />
-        </p>
-        <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
-        <p>
-          {{ $t('常用操作：') }}
-          <router-link
-            :to="{ name: 'appSummary', params: { id: appCode } }"
-            class="link"
-          >
-            {{ $t('查看应用概览') }}
-          </router-link>
-          <span class="success-dividing-line">|</span>
-          <router-link
-            :to="{ name: 'appDeploy', params: { id: appCode } }"
-            class="link"
-          >
-            {{ $t('部署应用') }}
-          </router-link>
-          <span class="success-dividing-line">|</span>
-          <router-link
-            :to="{ name: 'appRoles', params: { id: appCode } }"
-            class="link"
-          >
-            {{ $t('添加成员') }}
-          </router-link>
-        </p>
-      </div>
-      <div class="content">
-        <div
-          v-if="application.config_info.require_templated_source"
-          class="input-wrapper"
-        >
-          <div class="input-item">
-            <input
-              v-model="trunkURL"
-              class="ps-form-control svn-input"
-              type="text"
-              readonly
-              style="background: #fff;"
-            >
-          </div>
-          <div class="btn-item">
-            <a
-              class="btn-checkout ps-btn ps-btn-primary"
-              :href="trunkURL"
-            > {{ $t('签出代码') }} </a>
-          </div>
+  <div class="app-success-wrapper">
+    <!-- bare_svn、bk_svn  -->
+    <top-bar />
+    <div class="container biz-create-success">
+      <div class="success-wrapper">
+        <div class="info">
+          <p>
+            <i class="paasng-icon paasng-check-1 text-success" />
+          </p>
+          <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>
+            <bk-button :theme="'primary'" class="mr10" @click="handlePageJump('appDeploy')">
+              {{ $t('部署应用') }}
+            </bk-button>
+            <bk-button :theme="'default'" type="submit" @click="handlePageJump('appSummary')">
+              {{ $t('应用概览') }}
+            </bk-button>
+          </p>
         </div>
-        <div
-          v-if="application.type === 'bk_plugin'"
-          class="btn-check-svn spacing-x4"
-        >
-          <div class="tips-wrapper">
-            <div class="tips">
-              <code> {{ $t('初始化插件项目') }} {{ pluginTips }}
-              </code>
-              <i
-                v-copy="pluginTips"
-                class="paasng-icon paasng-general-copy copy-icon"
-              />
+        <div class="content" v-child-exist>
+          <div
+            v-if="application.config_info.require_templated_source"
+            class="input-wrapper"
+          >
+            <div class="input-item">
+              <input
+                v-model="trunkURL"
+                class="ps-form-control svn-input"
+                type="text"
+                readonly
+                style="background: #fff;"
+              >
+            </div>
+            <div class="btn-item">
+              <a
+                class="btn-checkout ps-btn ps-btn-primary"
+                :href="trunkURL"
+              > {{ $t('签出代码') }} </a>
+            </div>
+          </div>
+          <div
+            class="btn-check-svn spacing-x4"
+          >
+            <div class="tips-wrapper">
+              <div class="title">
+                {{ $t('初始化插件项目') }}
+                <div class="icon-wrapper" v-copy="pluginTips">
+                  <i class="paasng-icon paasng-general-copy copy-icon" />
+                  {{ $t('复制') }}
+                </div>
+              </div>
+              <div class="tips">
+                <code> {{ pluginTips }}
+                </code>
+              </div>
             </div>
           </div>
         </div>
-        <template v-if="advisedDocLinks.length > 0">
-          <p class="help-doc">
-            {{ $t('帮助文档') }}
-          </p>
-          <p
-            v-for="(link, linkIndex) in advisedDocLinks"
-            :key="linkIndex"
-          >
-            <a
-              :href="link.location"
-              :title="link.short_description"
-              target="_blank"
-            >{{ link.title }}</a>
-          </p>
-        </template>
+        <section class="doc-panel" v-if="advisedDocLinks.length > 0">
+          <template>
+            <p class="help-doc">
+              {{ $t('帮助文档') }}
+            </p>
+            <p
+              v-for="(link, linkIndex) in advisedDocLinks"
+              :key="linkIndex"
+              class="doc-item"
+            >
+              <a
+                :href="link.location"
+                :title="link.short_description"
+                target="_blank"
+              >{{ link.title }}</a>
+            </p>
+          </template>
+        </section>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+    import topBar from './comps/top-bar.vue';
     export default {
+        components: {
+            topBar,
+        },
         data () {
             const appCode = this.$route.params.id;
             return {
@@ -118,29 +116,91 @@
             this.$http.get(linkUrl).then((response) => {
                 this.advisedDocLinks = response.links;
             });
+        },
+        methods: {
+          handlePageJump (name) {
+            this.$router.push({
+              name,
+              params: {
+                id: this.appCode
+              }
+            })
+          }
         }
     };
 </script>
 
 <style lang="scss" scoped>
-    .biz-create-success {
-        padding: 120px 0 20px 0;
+    .app-success-wrapper {
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        background: #F5F7FA;
+
+        .biz-create-success {
+            background: #F5F7FA;
+            padding: 76px 0 20px 0;
+        }
+        .success-wrapper {
+            .info,
+            .content,
+            .doc-panel {
+                background: #FFFFFF;
+                box-shadow: 0 2px 4px 0 #1919290d;
+                border-radius: 2px;
+            }
+            
+            .content {
+                margin-top: 16px;
+                padding: 24px 40px;
+            }
+
+            .doc-panel {
+                padding: 24px 40px;
+                margin-top: 16px;
+                .help-doc {
+                    margin-bottom: 10px;
+                    color: #63656e;
+                    font-weight: bold;
+                }
+                .doc-item {
+                    line-height: 32px;
+                }
+            }
+        }
     }
     .tips-wrapper {
-        background-color: #f7f7f7;
         border-radius: 3px;
         padding: 16px;
         overflow: auto;
         font-size: 85%;
         line-height: 1.45;
-        .tips {
+        .title {
             position: relative;
-            &:first-child {
-                margin-bottom: 16px;
+            font-size: 14px;
+            color: #63656E;
+            margin-bottom: 6px;
+            .icon-wrapper {
+                position: absolute;
+                top: 1px;
+                right: 0px;
+                display: flex;
+                align-items: center;
+                color: #3a84ff;
+                cursor: pointer;
+                font-size: 14px;
                 .copy-icon {
-                    left: 165px;
+                    font-size: 16px;
+                    margin-right: 3px;
                 }
             }
+
+        }
+        .tips {
+            position: relative;
+            padding: 12px 16px;
+            border-radius: 2px;
+            background: #F5F7FA;
             code {
                 display: inline;
                 max-width: initial;
@@ -156,34 +216,31 @@
                 white-space: pre-line;
                 background: 0 0;
                 box-sizing: inherit;
-                color: #24292e;
-            }
-            .copy-icon {
-                position: absolute;
-                left: 175px;
-                cursor: pointer;
-                font-size: 20px;
-                top: 1px;
-                &:hover {
-                    color: #3a84ff;
-                }
+                font-family: MicrosoftYaHei;
+                font-size: 14px;
+                color: #313238;
             }
         }
     }
     .success-wrapper {
         width: 100%;
-        height: 520px;
-        border: 1px solid #dcdee5;
         border-radius: 2px;
         .info {
             padding-top: 45px;
-            height: 200px;
-            border-bottom: 1px solid #dcdee5;
+            padding-bottom: 40px;
             p:nth-child(1) {
+                margin: 0 auto;
+                width: 84px;
+                height: 84px;
+                border-radius: 50%;
                 text-align: center;
+                background: #E5F6EA;
                 .text-success {
-                    font-size: 49px;
-                    color: #2dcb56;
+                    font-weight: bold;
+                    line-height: 84px;
+                    transform: scale(2);
+                    font-size: 20px;
+                    color: #3FC06D;
                 }
             }
             p:nth-child(2) {
@@ -208,7 +265,6 @@
             }
         }
         .content {
-            padding: 40px 60px;
             .input-wrapper {
                 display: table;
                 width: 100%;
@@ -218,7 +274,6 @@
                     .svn-input {
                         box-sizing: border-box;
                         position: relative;
-                        top: -1px;
                         width: 100%;
                         height: 31px;
                         border-right: 0;
@@ -236,11 +291,6 @@
             }
             .view-svn {
                 margin-top: 7px;
-            }
-            .help-doc {
-                margin: 37px 0 10px 0;
-                color: #63656e;
-                font-weight: bold;
             }
         }
     }

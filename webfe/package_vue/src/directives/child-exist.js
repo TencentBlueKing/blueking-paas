@@ -16,24 +16,18 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-import copy from './copy';
-import charts from './charts';
-import dashed from './dashed';
-import enClass from './en-class';
-import childExist from './child-exist';
 
-const directives = {
-  copy,
-  charts,
-  dashed,
-  enClass,
-  childExist
+const vChildExist = {
+  bind(el) {
+    const childNodes = el.childNodes;
+
+    // 判断子元素是否存在
+    const allChildNodes = Array.from(childNodes).filter(node => node.nodeType !== 8); // 过滤掉注释节点
+
+    if (allChildNodes.length === 0) {
+      el.style.display = 'none'; // 隐藏当前元素
+    }
+  },
 };
 
-export default {
-  install(Vue) {
-    Object.keys(directives).forEach((key) => {
-      Vue.directive(key, directives[key]);
-    });
-  }
-};
+export default vChildExist;

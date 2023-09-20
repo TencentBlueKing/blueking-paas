@@ -1,37 +1,32 @@
 <template>
-  <div>
+  <div class="app-success-wrapper">
+    <top-bar />
+    <!-- github、gitee、tc_git、bare_git、bk_gitlab -->
     <div class="container biz-create-success">
       <div class="success-wrapper">
         <div class="info">
           <p>
-            <i class="paasng-icon paasng-check-circle-shape text-success" />
+            <i class="paasng-icon paasng-check-1 text-success" />
           </p>
           <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
-          <p>
-            {{ $t('常用操作：') }}
-            <router-link
-              :to="{ name: 'appSummary', params: { id: appCode } }"
-              class="link"
-            >
-              {{ $t('查看应用概览') }}
-            </router-link>
-            <span class="success-dividing-line">|</span>
-            <router-link
-              :to="{ name: 'appDeploy', params: { id: appCode } }"
-              class="link"
-            >
+          <p v-if="application.type === 'cloud_native'">
+            <bk-button :theme="'primary'" class="mr10" @click="handlePageJump('cloudAppDeployManageStag')">
               {{ $t('部署应用') }}
-            </router-link>
-            <span class="success-dividing-line">|</span>
-            <router-link
-              :to="{ name: 'appRoles', params: { id: appCode } }"
-              class="link"
-            >
-              {{ $t('添加成员') }}
-            </router-link>
+            </bk-button>
+            <bk-button :theme="'default'" type="submit" @click="handlePageJump('cloudAppDeployForBuild ')">
+              {{ $t('模块配置') }}
+            </bk-button>
+          </p>
+          <p v-else>
+            <bk-button :theme="'primary'" class="mr10" @click="handlePageJump('appDeploy')">
+              {{ $t('部署应用') }}
+            </bk-button>
+            <bk-button :theme="'default'" type="submit" @click="handlePageJump('appSummary')">
+              {{ $t('应用概览') }}
+            </bk-button>
           </p>
         </div>
-        <div class="content">
+        <div class="content" v-child-exist>
           <div
             v-if="application.config_info.require_templated_source && downloadableAddress"
             class="input-wrapper"
@@ -58,29 +53,34 @@
             class="btn-check-svn spacing-x4"
           >
             <div class="tips-wrapper">
-              <div class="tips">
-                <code># {{ $t('初始化插件项目') }}
+              <div class="title">
+                {{ $t('初始化插件项目') }}
+                <div class="icon-wrapper" v-copy="pluginTips">
+                  <i :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']" />
+                  {{ $t('复制') }}
+                </div>
+              </div>
+              <div class="tips line">
+                <code>
                   <p>{{ pluginTips }}</p>
                 </code>
-                <i
-                  v-copy="pluginTips"
-                  :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
-                />
               </div>
-              <div class="tips tips-plugin">
+              <div class="tips tips-plugin line">
                 <code>
                   {{ initTips }}
                 </code>
               </div>
+              <div class="title">
+                {{ $t('添加远程仓库地址并完成推送') }}
+                <div class="icon-wrapper" v-copy="pushTips">
+                  <i :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']" />
+                  {{ $t('复制') }}
+                </div>
+              </div>
               <div class="tips">
-                <code># {{ $t('添加远程仓库地址并完成推送') }}
+                <code>
                   <p>{{ pushTips }}</p>
                 </code>
-                <i
-                  v-copy="pushTips"
-                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon',
-                           localLanguage === 'en' ? 'copy-icon-two' : '']"
-                />
               </div>
             </div>
           </div>
@@ -92,34 +92,42 @@
               {{ $t('使用 Git 命令推送代码到远程仓库') }}
             </p>
             <div class="tips-wrapper">
-              <div class="tips">
-                <code># {{ $t('下载并解压代码到本地目录') }}
+              <div class="title">
+                {{ $t('下载并解压代码到本地目录') }}
+                <div class="icon-wrapper" v-copy="downloadTips">
+                  <i :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']" />
+                  {{ $t('复制') }}
+                </div>
+              </div>
+              <div class="tips line">
+                <code>
                   <p>{{ downloadTips }}</p>
                 </code>
-                <i
-                  v-copy="downloadTips"
-                  :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
-                />
+              </div>
+              <div class="title mt10">
+                {{ $t('添加远程仓库地址并完成推送') }}
+                <div class="icon-wrapper" v-copy="pushTips">
+                  <i :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']" />
+                  {{ $t('复制') }}
+                </div>
               </div>
               <div class="tips">
-                <code># {{ $t('添加远程仓库地址并完成推送') }}
+                <code>
                   <p>{{ pushTips }}</p>
                 </code>
-                <i
-                  v-copy="pushTips"
-                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon',
-                           localLanguage === 'en' ? 'copy-icon-two' : '']"
-                />
               </div>
             </div>
           </div>
-          <template v-if="advisedDocLinks.length > 0">
+        </div>
+        <section class="doc-panel" v-if="advisedDocLinks.length > 0">
+          <template>
             <p class="help-doc">
               {{ $t('帮助文档') }}
             </p>
             <p
               v-for="(link, linkIndex) in advisedDocLinks"
               :key="linkIndex"
+              class="doc-item"
             >
               <a
                 :href="link.location"
@@ -128,16 +136,20 @@
               >{{ link.title }}</a>
             </p>
           </template>
-        </div>
+        </section>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import topBar from './comps/top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import auth from '@/auth';
 export default {
+  components: {
+    topBar,
+  },
   mixins: [appBaseMixin],
   data() {
     // const appCode = this.$route.params.id
@@ -225,6 +237,14 @@ export default {
       auth.requestCurrentUser().then((user) => {
         this.user = user;
       });
+    },
+    handlePageJump (name) {
+      this.$router.push({
+        name,
+        params: {
+          id: this.appCode
+        }
+      })
     },
   },
 };

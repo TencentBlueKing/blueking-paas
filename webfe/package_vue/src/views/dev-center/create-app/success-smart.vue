@@ -1,41 +1,34 @@
 <template lang="html">
-  <div class="container biz-create-success">
-    <div class="success-wrapper">
-      <div class="info">
-        <p>
-          <i class="paasng-icon paasng-check-circle-shape text-success" />
-        </p>
-        <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
-        <p>
-          {{ $t('常用操作：') }}
-          <router-link
-            :to="{ name: 'appRoles', params: { id: appCode } }"
-            class="link"
-          >
-            {{ $t('添加成员') }}
-          </router-link>
-          <span class="success-dividing-line">|</span>
-          <router-link
-            :to="{ name: 'appDeploy', params: { id: appCode } }"
-            class="link"
-          >
-            {{ $t('部署应用') }}
-          </router-link>
-          <span class="success-dividing-line">|</span>
-          <router-link
-            :to="{ name: 'appCloudAPI', params: { id: appCode } }"
-            class="link"
-          >
-            {{ $t('云API申请') }}
-          </router-link>
-        </p>
+  <div class="app-success-wrapper">
+    <top-bar />
+    <!-- smart 应用 -->
+    <div class="container biz-create-success">
+      <div class="success-wrapper">
+        <div class="info">
+          <p>
+            <i class="paasng-icon paasng-check-1 text-success" />
+          </p>
+          <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>
+            <bk-button :theme="'primary'" class="mr10" @click="handlePageJump('appDeploy')">
+              {{ $t('部署应用') }}
+            </bk-button>
+            <bk-button :theme="'default'" type="submit" @click="handlePageJump('appSummary')">
+              {{ $t('应用概览') }}
+            </bk-button>
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+    import topBar from './comps/top-bar.vue';
     export default {
+        components: {
+            topBar
+        },
         data () {
             const appCode = this.$route.params.id;
             return {
@@ -49,27 +42,58 @@
                 const body = response;
                 this.application = body.application;
             });
+        },
+        methods: {
+          handlePageJump (name) {
+            this.$router.push({
+              name,
+              params: {
+                id: this.appCode
+              }
+            })
+          }
         }
     };
 </script>
 
 <style lang="scss" scoped>
-    .biz-create-success {
-        padding: 120px 0 20px 0;
+    .app-success-wrapper {
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        background: #F5F7FA;
+
+        .biz-create-success {
+            background: #F5F7FA;
+            padding: 76px 0 20px 0;
+        }
+        .success-wrapper {
+            .info {
+                background: #FFFFFF;
+                box-shadow: 0 2px 4px 0 #1919290d;
+                border-radius: 2px;
+            }
+        }
     }
     .success-wrapper {
         width: 100%;
-        height: 245px;
-        border: 1px solid #dcdee5;
         border-radius: 2px;
         .info {
             padding-top: 45px;
-            height: 200px;
+            padding-bottom: 40px;
             p:nth-child(1) {
+                margin: 0 auto;
+                width: 84px;
+                height: 84px;
+                border-radius: 50%;
                 text-align: center;
+                background: #E5F6EA;
                 .text-success {
-                    font-size: 49px;
-                    color: #2dcb56;
+                    font-weight: bold;
+                    line-height: 84px;
+                    transform: scale(2);
+                    font-size: 20px;
+                    color: #3FC06D;
                 }
             }
             p:nth-child(2) {

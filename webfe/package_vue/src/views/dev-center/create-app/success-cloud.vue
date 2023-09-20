@@ -1,20 +1,20 @@
 <template lang="html">
   <div class="app-success-wrapper">
     <top-bar />
-    <!-- 外链应用 -->
+    <!-- 仅镜像 -->
     <div class="container biz-create-success">
       <div class="success-wrapper">
         <div class="info">
           <p>
             <i class="paasng-icon paasng-check-1 text-success" />
           </p>
-          <p>{{ $t('恭喜，应用 simale') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
           <p>
-            <bk-button :theme="'primary'" class="mr10" @click="handlePageJump('appCloudAPI')">
-              {{ $t('云API申请') }}
+            <bk-button :theme="'primary'" class="mr10" @click="handlePageJump('cloudAppDeployManageStag')">
+              {{ $t('部署应用') }}
             </bk-button>
-            <bk-button :theme="'default'" type="submit" @click="handlePageJump('appSummary')">
-              {{ $t('应用概览') }}
+            <bk-button :theme="'default'" type="submit" @click="handlePageJump('cloudAppDeployForProcess ')">
+              {{ $t('模块配置') }}
             </bk-button>
           </p>
         </div>

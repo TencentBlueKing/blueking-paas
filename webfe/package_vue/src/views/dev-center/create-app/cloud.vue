@@ -91,9 +91,6 @@
           <div>{{ $t('蓝鲸开发框架') }}</div>
         </bk-form-item>
         <bk-form-item
-          :required="true"
-          :property="'code'"
-          :rules="rules.name"
           error-display-type="normal"
           ext-cls="form-item-cls mt10"
         >

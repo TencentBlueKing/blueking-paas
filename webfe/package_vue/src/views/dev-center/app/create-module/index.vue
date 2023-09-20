@@ -628,7 +628,7 @@ export default {
       isCreate: true,
       localCloudAppData: {},
       repoData: {},
-      initCloudAppData: {}
+      initCloudAppData: {},
     };
   },
   computed: {
@@ -697,6 +697,14 @@ export default {
         }
       },
       deep: true,
+    },
+    'formData.name'(value) {
+      if (Object.keys(this.createCloudAppData).length) {
+        this.localCloudAppData = _.cloneDeep(this.createCloudAppData);
+        this.localCloudAppData.metadata.name = `${this.appCode}-m-${value}`;
+
+        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }
     },
   },
   async created() {
@@ -789,9 +797,9 @@ export default {
     },
 
     /**
-             * 根据应用类型获取支持的语言（内部、混合云...）
-             * @return {[type]} [description]
-             */
+     * 根据应用类型获取支持的语言（内部、混合云...）
+     * @return {[type]} [description]
+     */
     async getLanguageByRegion() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
@@ -893,7 +901,7 @@ export default {
     },
 
     // 钩子命令校验
-    async handleHookValidator () {
+    async handleHookValidator() {
       if (this.$refs.hookRef) {
         return await this.$refs.hookRef?.handleValidator();
       }
@@ -980,7 +988,7 @@ export default {
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
         // 空值端口过滤
-        this.createCloudAppData.spec.processes = this.createCloudAppData.spec?.processes?.map(p => {
+        this.createCloudAppData.spec.processes = this.createCloudAppData.spec?.processes?.map((p) => {
           const { targetPort, ...targetValue } = p;
           return (targetPort === '' || targetPort === null) ? targetValue : p;
         });
@@ -990,7 +998,6 @@ export default {
         };
         params.manifest = { ...this.createCloudAppData };
       }
-
       try {
         this.formLoading = true;
 
@@ -1045,7 +1052,7 @@ export default {
         // 默认编辑态
         this.$refs.processRef?.handleEditClick();
         this.$refs.hookRef?.handleEditClick();
-      })
+      });
     },
 
     // 上一步
@@ -1079,7 +1086,7 @@ export default {
               memory: '256Mi',
               cpu: '500m',
               targetPort: 5000,
-            }
+            },
           ],
         },
       };

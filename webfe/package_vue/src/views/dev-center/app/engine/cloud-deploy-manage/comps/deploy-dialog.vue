@@ -8,7 +8,8 @@
       :header-position="'left'"
       :mask-close="false"
       :loading="deployAppDialog.isLoading"
-      @confirm="handleConfirm"
+      :auto-close="false"
+      @confirm="handleConfirmValidate"
       @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
@@ -117,14 +118,20 @@
           </div>
         </div>
         <div v-else>
-          <div class="mb10 mt10 flex-row justify-content-between">
-            <div>{{$t('镜像Tag')}}</div>
-          </div>
-          <bk-input
-            v-model="tagValue"
-            :placeholder="$t('请输入镜像Tag')"
-            clearable
-          />
+          <bk-form ref="imageFormRef" form-type="vertical">
+            <bk-form-item
+              label="镜像Tag"
+              :rules="rules.tag"
+              :required="true"
+              :error-display-type="'normal'"
+            >
+              <bk-input
+                v-model="tagValue"
+                :placeholder="$t('请输入镜像Tag')"
+                clearable
+              />
+            </bk-form-item>
+          </bk-form>
         </div>
       </div>
       <div v-else class="v1-container">
@@ -134,7 +141,6 @@
           <span class="value">{{ item.image }}</span>
         </div>
       </div>
-
     </bk-dialog>
     <bk-sideslider
       :is-show.sync="isShowSideslider"
@@ -216,6 +222,15 @@ export default {
       tagValue: '',
       deploymentInfoBackUp: {},  // 模块信息备份
       imageTagListCount: 0,
+      rules: {
+        tag: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ]
+      }
     };
   },
   computed: {
@@ -428,6 +443,17 @@ export default {
       win.location.href = res.result;
     },
 
+    async handleConfirmValidate () {
+      try {
+        if (this.$refs?.imageFormRef) {
+          await this.$refs.imageFormRef?.validate();
+        }
+        this.handleConfirm();
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
     // 弹窗确认
     async handleConfirm() {
       try {
@@ -477,6 +503,7 @@ export default {
           env: this.environment,
           data: params,
         });
+        this.deployAppDialog.visiable = false;
         this.deployAppDialog.isLoading = false;    // 成功之后关闭弹窗打开侧栏
         this.deploymentId = res.deployment_id;
         this.handleAfterLeave(); // 关闭弹窗
@@ -539,7 +566,9 @@ export default {
         }
       });
     },
-    handleCancel() {},
+    handleCancel() {
+      this.$refs.imageFormRef.clearError();
+    },
     // 点击镜像来源
     handleSelected(item) {
       this.buttonActive = item.value;

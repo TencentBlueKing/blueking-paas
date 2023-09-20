@@ -660,6 +660,7 @@ export default {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP; // 1
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       }
+      this.$refs.formImageRef.clearError();
     },
 
     cloudAppData: {

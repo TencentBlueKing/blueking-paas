@@ -284,7 +284,7 @@
               class="mr10"
               v-model="formData.imageCredentialName"
               clearable
-              :placeholder="$t('请输入名称')"
+              :placeholder="$t('请输入名称，如 default')"
             >
             </bk-input>
             <bk-input
@@ -302,6 +302,7 @@
             >
             </bk-input>
           </div>
+          <p slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</p>
         </bk-form-item>
       </bk-form>
     </section>

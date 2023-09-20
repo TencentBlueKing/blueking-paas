@@ -2290,5 +2290,7 @@ export default {
   应用进程介绍: 'Application Process Introduction',
   '钩子命令的 bkapp.yaml 文件中定义。': 'The hook command is defined in the bkapp.yaml file.',
   '确认停止该进程？': 'Confirm to stop this process?',
-  '确认启动该进程？': 'Confirm to start this process?'
+  '确认启动该进程？': 'Confirm to start this process?',
+  '请输入名称，如 default': 'Please input name, such as default',
+  私有镜像需要填写镜像凭证才能拉取镜像: 'Private images need to fill in the image credentials to pull the image',
 };

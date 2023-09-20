@@ -79,7 +79,7 @@ export default {
         'cloudAppDeployManageProd',
         'cloudAppDeployHistory',
         'appObservability',
-        'cloudAppAnalysis'
+        'cloudAppAnalysis',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -184,7 +184,7 @@ export default {
           // 应用配置
           'basicConfig',
           // 访问统计
-          'cloudAppAnalysis'
+          'cloudAppAnalysis',
         ],
         operator: [
           // 权限管理
@@ -314,7 +314,7 @@ export default {
         // 初始化属性
         this.allNavItems = [];
         navTree = navTree.map((nav) => {
-          nav.isExpanded = false; // 是否展开，有子项时可应用
+          nav.isExpanded = true; // 是否展开，有子项时可应用
           nav.isActived = false; // 是否激活，本身匹配或子项匹配时应用
           nav.hasChildSelected = false; // 是否展开，只有子项匹配时应用
 
@@ -400,7 +400,7 @@ export default {
         'cloudAppDeployManageProd',
         'cloudAppDeployHistory',
         'appObservability',
-        'cloudAppAnalysis'
+        'cloudAppAnalysis',
       ];
 
       this.navTree.forEach((nav) => {
@@ -430,7 +430,7 @@ export default {
           // 如果有子项，先遍历匹配
           if (nav.children && nav.children.length) {
             nav.isActived = false;
-            nav.isExpanded = false;
+            nav.isExpanded = true;
 
             nav.children.forEach((child) => {
               // 优先使用matchRouters来匹配，其次是destRoute
@@ -459,7 +459,7 @@ export default {
             });
           } else {
             // 优先使用matchRouters来匹配，其次是destRoute
-            nav.isExpanded = false;
+            nav.isExpanded = true;
             nav.hasChildSelected = false;
 
             if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
@@ -608,8 +608,6 @@ export default {
       this.navTree.forEach((item) => {
         if (category.name === item.name) {
           category.isExpanded = !category.isExpanded;
-        } else {
-          item.isExpanded = false;
         }
       });
     },

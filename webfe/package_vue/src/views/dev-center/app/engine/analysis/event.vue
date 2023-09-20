@@ -952,6 +952,7 @@ export default {
         margin: 16px auto 30px;
         padding: 1px 24px;
         width: calc(100% - 50px);
+        padding-bottom: 24px;
     }
     .content-header {
         position: relative;

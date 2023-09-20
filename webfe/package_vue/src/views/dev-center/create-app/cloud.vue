@@ -2,7 +2,7 @@
   <div class="cloud-app-container" v-bkloading="{ isLoading: formLoading, opacity: 1 }">
     <bk-alert
       class="mb20 mt20" type="info"
-      :title="$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力。')"></bk-alert>
+      :title="$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力')"></bk-alert>
     <bk-form
       ref="formBaseRef"
       :model="formData"
@@ -269,7 +269,7 @@
               >{{$t('使用示例镜像')}}</div>
             </template>
           </bk-input>
-          <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP服务。') }}</span>
+          <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
         </bk-form-item>
         <bk-form-item
           error-display-type="normal"
@@ -281,7 +281,7 @@
               class="mr10"
               v-model="formData.imageCredentialName"
               clearable
-              :placeholder="$t('请输入名称')"
+              :placeholder="$t('请输入名称，如 default')"
             >
             </bk-input>
             <bk-input
@@ -299,6 +299,7 @@
             >
             </bk-input>
           </div>
+          <p slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</p>
         </bk-form-item>
       </bk-form>
     </section>

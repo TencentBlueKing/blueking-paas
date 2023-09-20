@@ -15,17 +15,25 @@
       class="app-container middle overview"
     >
       <section class="deploy-panel deploy-main mt5">
-        <bk-tab ext-cls="deploy-tab-cls" :active.sync="active" @tab-change="handleGoPage">
+        <bk-tab
+          ext-cls="deploy-tab-cls"
+          :active.sync="active"
+          @tab-change="handleGoPage"
+        >
           <template slot="setting">
-            <bk-button class="pr20" text @click="handleYamlView">
+            <bk-button
+              class="pr20"
+              text
+              @click="handleYamlView"
+            >
               {{ $t('查看YAML') }}
             </bk-button>
           </template>
           <bk-tab-panel
             v-for="(panel, index) in curTabPanels"
             v-bind="panel"
-            :key="index">
-          </bk-tab-panel>
+            :key="index"
+          ></bk-tab-panel>
         </bk-tab>
 
         <div class="deploy-content">
@@ -41,7 +49,10 @@
         </div>
       </section>
 
-      <div class="deploy-btn-wrapper" v-if="isPageEdit && isFooterActionBtn">
+      <!-- <div
+        class="deploy-btn-wrapper"
+        v-if="isPageEdit && isFooterActionBtn"
+      >
         <bk-button
           :loading="buttonLoading"
           class="pl20 pr20"
@@ -50,18 +61,23 @@
         >
           {{ $t('保存') }}
         </bk-button>
-        <bk-button class="pl20 pr20 ml20" @click="handleCancel">
+        <bk-button
+          class="pl20 pr20 ml20"
+          @click="handleCancel"
+        >
           {{ $t('取消') }}
         </bk-button>
-      </div>
+      </div> -->
 
       <bk-dialog
-        v-model="deployDialogConfig.visible" theme="primary"
+        v-model="deployDialogConfig.visible"
+        theme="primary"
         width="1200"
         ext-cls="deploy-dialog"
         title="YAML"
         header-position="left"
-        :show-footer="false">
+        :show-footer="false"
+      >
         <deployYaml :cloud-app-data="dialogCloudAppData"></deployYaml>
       </bk-dialog>
     </paas-content-loader>
@@ -94,11 +110,11 @@ export default {
       panels: [
         { name: 'cloudAppDeployForBuild', label: this.$t('构建配置'), ref: 'build' },
         { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
-        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook'  },
-        { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env'  },
-        { name: 'appServices', label: this.$t('增强服务'), ref: 'services'  },
-        { name: 'imageCredential', label: this.$t('镜像凭证-title'), ref: 'ticket'  },
-        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info'  },
+        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook' },
+        { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env' },
+        { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
+        { name: 'imageCredential', label: this.$t('镜像凭证-title'), ref: 'ticket' },
+        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,
@@ -111,14 +127,15 @@ export default {
     loaderPlaceholder() {
       if (this.routeName === 'appDeployForStag' || this.routeName === 'appDeployForProd') {
         return 'deploy-loading';
-      } if (this.routeName === 'appDeployForHistory') {
+      }
+      if (this.routeName === 'appDeployForHistory') {
         return 'deploy-history-loading';
       }
       return 'deploy-top-loading';
     },
 
     routerRefs() {
-      const curPenel = this.curTabPanels.find(e => e.name === this.active);
+      const curPenel = this.curTabPanels.find((e) => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -143,13 +160,13 @@ export default {
       if (this.curAppModule.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
-      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
+      return this.panels.filter((item) => item.name !== 'cloudAppDeployForBuild');
     },
 
     // 是否需要保存操作按钮
     isFooterActionBtn() {
       // 无需展示外部操作按钮组
-      const hideTabItems = ['cloudAppDeployForHook'];
+      const hideTabItems = ['cloudAppDeployForProcess', 'cloudAppDeployForHook', 'cloudAppDeployForEnv'];
       return !hideTabItems.includes(this.active);
     },
   },
@@ -157,13 +174,13 @@ export default {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+      this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
   created() {
-    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -243,7 +260,7 @@ export default {
         data.spec.processes = data.spec.processes.map((process) => {
           // 过滤空值容器端口
           const { targetPort, ...processValue } = process;
-          return (targetPort === '' || targetPort === null) ? processValue : process;
+          return targetPort === '' || targetPort === null ? processValue : process;
         });
         const params = { ...data };
         await this.$store.dispatch('deploy/saveCloudAppInfo', {
@@ -267,7 +284,6 @@ export default {
 
     // 查看yaml
     handleYamlView() {
-      console.log('dialogCloudAppData', this.dialogCloudAppData);
       this.deployDialogConfig.visible = true;
     },
   },
@@ -277,55 +293,55 @@ export default {
 <style lang="scss" scoped>
 @import '../../../../../assets/css/components/conf.scss';
 @import './index.scss';
-    .title{
-        font-size: 16px;
-        color: #313238;
-        height: 50px;
-        background: #fff;
-        line-height: 50px;
-        padding: 0 24px;
-    }
-    .deploy-btn-wrapper {
-        // position: absolute;
-        // top: 77vh;
-        margin-top: 20px;
-        height: 50px;
-        line-height: 50px;
-        padding: 0 20px;
-    }
-
-.deploy-dialog .stage-info {
-    width: 100%;
-    background-color: #f5f6fa;
-    overflow-y: auto;
-    border-left: 10px solid #ccc;
-    padding: 6px 0 30px 12px;
-    margin-top: 8px;
-
-    .info-title {
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-
-    .info-tips {
-        margin-bottom: 8px;
-    }
-
-    .info-label {
-        display: inline-block;
-        min-width: 65px;
-    }
+.title {
+  font-size: 16px;
+  color: #313238;
+  height: 50px;
+  background: #fff;
+  line-height: 50px;
+  padding: 0 24px;
+}
+.deploy-btn-wrapper {
+  // position: absolute;
+  // top: 77vh;
+  margin-top: 20px;
+  height: 50px;
+  line-height: 50px;
+  padding: 0 20px;
 }
 
-.deploy-tab-cls{
-      /deep/ .bk-tab-section{
-        padding: 10px !important;
-        border: none
-      }
-    }
+.deploy-dialog .stage-info {
+  width: 100%;
+  background-color: #f5f6fa;
+  overflow-y: auto;
+  border-left: 10px solid #ccc;
+  padding: 6px 0 30px 12px;
+  margin-top: 8px;
+
+  .info-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .info-tips {
+    margin-bottom: 8px;
+  }
+
+  .info-label {
+    display: inline-block;
+    min-width: 65px;
+  }
+}
+
+.deploy-tab-cls {
+  /deep/ .bk-tab-section {
+    padding: 10px !important;
+    border: none;
+  }
+}
 </style>
 <style lang="scss">
-.deploy-dropdown-menu .bk-dropdown-content{
-    display: none !important;
+.deploy-dropdown-menu .bk-dropdown-content {
+  display: none !important;
 }
 </style>

@@ -27,7 +27,6 @@ export default {
       active: 'url',
       routeIndex: 0,
       panels: [
-        { name: 'url', label: this.$t('访问地址'), routeName: 'appAccessPortal' },
         { name: 'market', label: this.$t('应用市场'), routeName: 'cloudAppMarket' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },

@@ -453,17 +453,9 @@ const router = new Router({
           component: appConfigs,
           name: 'appConfigs',
           redirect: {
-            name: 'appAccessPortal',
+            name: 'cloudAppMarket',
           },
           children: [
-            {
-              path: 'url',
-              component: appAccessPortal,
-              name: 'appAccessPortal',
-              meta: {
-                module: 'url',
-              },
-            },
             {
               path: 'market',
               component: appMarket,

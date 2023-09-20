@@ -146,6 +146,10 @@ const appEnvVars = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev
   window.showDeployTip(error);
 });
 
+const cloudAppAnalysis = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/analysis/clound-index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appWebAnalysis = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/analysis/web').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -493,6 +497,41 @@ const router = new Router({
               },
             },
           ],
+        },
+        // 云原生访问统计
+        {
+          path: ':id/cloud-analysis',
+          component: cloudAppAnalysis,
+          name: 'cloudAppAnalysis',
+          redirect: {
+            name: 'cloudAppWebAnalysis',
+          },
+          children: [
+            {
+              path: 'web-analysis',
+              component: appWebAnalysis,
+              name: 'cloudAppWebAnalysis',
+              meta: {
+                module: 'web',
+              },
+            },
+            {
+              path: 'log-analysis',
+              component: appLogAnalysis,
+              name: 'cloudAppLogAnalysis',
+              meta: {
+                module: 'log',
+              },
+            },
+            {
+              path: 'event-analysis',
+              component: appEventAnalysis,
+              name: 'cloudAppEventAnalysis',
+              meta: {
+                module: 'event',
+              },
+            },
+          ]
         },
         {
           path: ':id/roles',

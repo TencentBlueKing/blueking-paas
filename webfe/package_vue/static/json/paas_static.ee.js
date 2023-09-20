@@ -570,28 +570,6 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
-                "name": "cloudAppDeployForProcess",
-                "label": staticI18n.$t("应用编排"),
-                "matchRouters": [
-                    "cloudAppDeploy",
-                    "cloudAppDeployForBuild",
-                    "cloudAppDeployForProcess",
-                    "cloudAppDeployForEnv",
-                    "cloudAppDeployForYaml",
-                    "cloudAppDeployForHook",
-                    "cloudAppDeployForResource",
-                    'imageCredential',
-                    'moduleInfo',
-                    'appServices'
-                ],
-                "iconfontName": "squares",
-                "supportModule": false,
-                "destRoute": {
-                  "name": "cloudAppDeployForProcess"
-                },
-                "children": []
-            },
-            {
                 "name": "cloudAppDeployManageStag",
                 "label": staticI18n.$t("部署管理"),
                 "matchRouters": [
@@ -608,44 +586,35 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
-                "name": "appStatus",
-                "label": staticI18n.$t("部署状态"),
-                "matchRouters": ["appStatus"],
-                "iconfontName": "feature-conversion",
+                "name": "appObservability",
+                "label": staticI18n.$t("可观测性"),
+                "iconfontName": "cloudapi",
                 "supportModule": false,
-                "destRoute": {
-                  "name": "appStatus"
-                },
-                "children": []
-            },
-            {
-                "name": "appLog",
-                "label": staticI18n.$t("日志查询"),
-                "matchRouters": ["appLog"],
-                "iconfontName": "calendar",
-                "supportModule": false,
-                "destRoute": {
-                  "name": "appLog"
-                },
-                "children": []
-            },
-            {
-                "name": "appAccessPortal",
-                "label": staticI18n.$t("访问管理"),
-                "matchRouters": ["appAccessPortal"],
-                "iconfontName": "link",
-                "supportModule": true,
-                "destRoute": {
-                  "name": "appAccessPortal"
-                },
-                "children": []
-            },
-            {
-                "name": "appServices",
-                "label": staticI18n.$t("增强服务"),
-                "iconfontName": "diamond",
-                "supportModule": true,
-                "children": []
+                "children": [
+                    {
+                        "name": staticI18n.$t("日志查询"),
+                        "destRoute": {
+                            "name": "appLog"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("告警记录"),
+                        "destRoute": {
+                            "name": "monitorAlarm"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("访问统计"),
+                        "matchRouters": [
+                            "cloudAppWebAnalysis",
+                            "cloudAppLogAnalysis",
+                            "cloudAppEventAnalysis"
+                        ],
+                        "destRoute": {
+                            "name": "cloudAppAnalysis"
+                        }
+                    }
+                ]
             },
             {
                 "name": "appCloudAPI",
@@ -662,39 +631,45 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
             {
-                "name": "appMarketing",
-                "label": staticI18n.$t("应用推广"),
-                "iconfontName": "volumn",
-                "children": [
-                    {
-                        "name": staticI18n.$t("应用市场"),
-                        "destRoute": {
-                          "name": "appMarket"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("应用市场 (移动端)"),
-                        "destRoute": {
-                          "name": "appMobileMarket"
-                        }
-                    }
-                ]
-            },
-            {
                 "name": "appConfigs",
-                "label": staticI18n.$t("基本设置"),
+                "label": staticI18n.$t("应用配置"),
                 "iconfontName": "gear",
                 "children": [
                     {
-                        "name": staticI18n.$t("基本信息"),
+                        "name": staticI18n.$t("模块配置"),
+                        "matchRouters": [
+                            "cloudAppDeploy",
+                            "cloudAppDeployForBuild",
+                            "cloudAppDeployForProcess",
+                            "cloudAppDeployForEnv",
+                            "cloudAppDeployForYaml",
+                            "cloudAppDeployForHook",
+                            "cloudAppDeployForResource",
+                            'imageCredential',
+                            'moduleInfo',
+                            'appServices',
+                            'appServiceInnerShared',
+                            'appServiceInner'
+                        ],
+                        "iconfontName": "squares",
+                        "supportModule": false,
                         "destRoute": {
-                          "name": "appBaseInfo"
-                        }
+                          "name": "cloudAppDeployForProcess"
+                        },
+                        "children": []
                     },
                     {
-                        "name": staticI18n.$t("成员管理"),
+                        "name": staticI18n.$t("应用配置"),
+                        "matchRouters": [
+                            'appConfigs',
+                            'appAccessPortal',
+                            'cloudAppMarket',
+                            'appBasicInfo',
+                            'appMembers',
+                            'cloudAppMobileMarket'
+                        ],
                         "destRoute": {
-                          "name": "appRoles"
+                          "name": "appConfigs"
                         }
                     }
                 ]

@@ -627,6 +627,16 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "appAccessPortal",
+                "label": staticI18n.$t("访问管理"),
+                "iconfontName": "cloudapi",
+                "supportModule": false,
+                "destRoute": {
+                    "name": "appAccessPortal"
+                },
+                "children": []
+            },
+            {
                 "name": "appConfigs",
                 "label": staticI18n.$t("应用配置"),
                 "iconfontName": "gear",
@@ -658,11 +668,9 @@ export const PAAS_STATIC_CONFIG = {
                         "name": staticI18n.$t("应用配置"),
                         "matchRouters": [
                             'appConfigs',
-                            'appAccessPortal',
                             'cloudAppMarket',
                             'appBasicInfo',
                             'appMembers',
-                            'cloudAppMobileMarket'
                         ],
                         "destRoute": {
                           "name": "appConfigs"

@@ -967,6 +967,7 @@ export default {
           appCode: this.appCode,
           data: params,
         });
+
         const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,

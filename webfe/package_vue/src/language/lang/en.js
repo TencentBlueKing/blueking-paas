@@ -2295,4 +2295,5 @@ export default {
   私有镜像需要填写镜像凭证才能拉取镜像: 'Private images need to fill in the image credentials to pull the image',
   '镜像Tag：': 'Image Tag: ',
   返回上一页: 'Go back',
+  '请输入镜像Tag，如 latest': 'Please Enter the Image Tag, such as latest',
 };

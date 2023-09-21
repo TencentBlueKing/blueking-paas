@@ -1449,6 +1449,10 @@ export default {
     }
     .detail {
       color: #979BA5;
+
+      &:hover {
+        color: #63656E;
+      }
     }
     .more {
       transform: rotate(90deg);

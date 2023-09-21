@@ -96,7 +96,7 @@
               <div>{{$t('镜像Tag')}}</div>
             </div>
             <bk-select
-              v-model="tagValue"
+              v-model="tagData.tagValue"
               :placeholder="$t('请选择')"
               style="width: 470px; display: inline-block; vertical-align: middle;"
               :popover-min-width="420"
@@ -118,16 +118,17 @@
           </div>
         </div>
         <div v-else>
-          <bk-form ref="imageFormRef" form-type="vertical">
+          <bk-form :model="tagData" ref="imageFormRef" form-type="vertical">
             <bk-form-item
               label="镜像Tag"
               :rules="rules.tag"
               :required="true"
+              :property="'tagValue'"
               :error-display-type="'normal'"
             >
               <bk-input
-                v-model="tagValue"
-                :placeholder="$t('请输入镜像Tag')"
+                v-model="tagData.tagValue"
+                :placeholder="$t('请输入镜像Tag，如 latest')"
                 clearable
               />
             </bk-form-item>
@@ -219,7 +220,9 @@ export default {
       },
       imageTagList: [],
       isTagLoading: false,
-      tagValue: '',
+      tagData: {
+        tagValue: '',
+      },
       deploymentInfoBackUp: {},  // 模块信息备份
       imageTagListCount: 0,
       rules: {
@@ -283,7 +286,7 @@ export default {
       handler(value) {
         this.deployAppDialog.visiable = !!value;
         this.buttonActive = 'branch';
-        this.tagValue = '';
+        this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
@@ -465,7 +468,7 @@ export default {
           };
           // 如果是镜像则需要传构建产物ID, 镜像列表接口里的 `id` 字段
           if (this.buttonActive === 'image') {
-            advancedOptions.build_id = this.tagValue;
+            advancedOptions.build_id = this.tagData.tagValue;
           }
           console.log('this.curSelectData', this.curSelectData);
           params = {
@@ -484,9 +487,9 @@ export default {
           if (this.deploymentInfoBackUp.build_method === 'custom_image') {
             params = {
               version_type: 'image',
-              version_name: this.tagValue,
+              version_name: this.tagData.tagValue,
             };
-            this.deploymentInfoBackUp.version_info.version_name = this.tagValue;
+            this.deploymentInfoBackUp.version_info.version_name = this.tagData.tagValue;
           }
         } else {
           // v1alpha1部署
@@ -533,7 +536,7 @@ export default {
         this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
         this.imageTagListCount = res.count;
         // 默认选中第一个
-        this.tagValue = this.imageTagList[0]?.id || '';
+        this.tagData.tagValue = this.imageTagList[0]?.id || '';
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -555,9 +558,8 @@ export default {
 
     // 选择tag
     handleChangeTags(v) {
-      console.log('v', v, this.tagValue, this.imageTagList);
       this.curSelectData = this.imageTagList.find((e) => {
-        if (e.id === this.tagValue) {
+        if (e.id === this.tagData.tagValue) {
           e.revision = e.digest;
           e.type = 'image',
           e.name = e.tag;

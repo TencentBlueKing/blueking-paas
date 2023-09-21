@@ -453,31 +453,15 @@ const router = new Router({
           component: appConfigs,
           name: 'appConfigs',
           redirect: {
-            name: 'appAccessPortal',
+            name: 'cloudAppMarket',
           },
           children: [
-            {
-              path: 'url',
-              component: appAccessPortal,
-              name: 'appAccessPortal',
-              meta: {
-                module: 'url',
-              },
-            },
             {
               path: 'market',
               component: appMarket,
               name: 'cloudAppMarket',
               meta: {
                 module: 'market',
-              },
-            },
-            {
-              path: 'mobile-market',
-              component: appMobileMarket,
-              name: 'cloudAppMobileMarket',
-              meta: {
-                module: 'mobile-market',
               },
             },
             {
@@ -531,7 +515,7 @@ const router = new Router({
                 module: 'event',
               },
             },
-          ]
+          ],
         },
         {
           path: ':id/roles',

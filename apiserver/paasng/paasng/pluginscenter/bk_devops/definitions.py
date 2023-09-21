@@ -126,7 +126,6 @@ class PipelineElementModel(BaseModel):
     :param elementId: 任务ID
     :param elementEnable: 任务启用状态
     :param status: 任务状态
-    :param containerId
 
     :param errorType: 错误类型
     :param errorCode: 错误代码

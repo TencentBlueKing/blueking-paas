@@ -80,12 +80,6 @@ class BkDevopsClient(BaseBkDevopsClient):
 class PipelineController(BaseBkDevopsClient):
     """bk-devops pipeline 控制器"""
 
-    def retrieve_pipeline_detail(self, pipeline: definitions.Pipeline):
-        """查询流水线详情
-
-        :param pipeline: 流水线对象
-        """
-
     def start_build(self, pipeline: definitions.Pipeline, start_params: Dict[str, str]) -> definitions.PipelineBuild:
         """启动构建
 
@@ -188,14 +182,12 @@ class PipelineController(BaseBkDevopsClient):
     def retrieve_log(
         self,
         build: definitions.PipelineBuild,
-        element_id: str,
         start: int,
         num: int = 500,
     ) -> definitions.PipelineLogModel:
         """查询日志
 
         :param build: 流水线构建对象
-        :param element_id: 对应elementId (e-开头)
         :param start: 起始行号
         :param num: 日志行数
         """
@@ -203,7 +195,6 @@ class PipelineController(BaseBkDevopsClient):
         query_params = {
             "pipelineId": build.pipelineId,
             "buildId": build.buildId,
-            "tag": element_id,
             "start": start,
             "end": start + num,
             "num": num,
@@ -225,11 +216,10 @@ class PipelineController(BaseBkDevopsClient):
         data = resp["data"]
         return cattrs.structure(data, definitions.PipelineLogModel)
 
-    def retrieve_log_num(self, build: definitions.PipelineBuild, element_id: str):
+    def retrieve_log_num(self, build: definitions.PipelineBuild) -> int:
         """查询流水线步骤的日志总数"""
-        # TODO: 蓝盾文档没写清楚怎样调这接口
         path_params = {"projectId": build.projectId}
-        query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId, "tag": element_id}
+        query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
         try:
             resp = self.client.v4_app_log_line_num(path_params=path_params, params=query_params)
         except (APIGatewayResponseError, ResponseError) as e:
@@ -244,13 +234,13 @@ class PipelineController(BaseBkDevopsClient):
             logger.error("retrieve build(%(build)s) log num error, resp: %(resp)s", {"build": build, "resp": resp})
             raise BkDevopsApiError(resp['message'])
 
-        raise NotImplementedError
+        data = resp["data"]
+        return data["lastLineNum"]
 
-    def retrieve_full_log(self, build: definitions.PipelineBuild, element_id: str) -> definitions.PipelineLogModel:
+    def retrieve_full_log(self, build: definitions.PipelineBuild) -> definitions.PipelineLogModel:
         """查询全量日志
 
         :param build: 流水线构建对象
-        :param element_id: 对应elementId (e-开头)
         """
-        # TODO: 确认能不能拉到日志数量, 如果获取不到日志总数量, 就由后端把轮询接口给封装好.
-        raise NotImplementedError
+        log_num = self.retrieve_log_num(build)
+        return self.retrieve_log(build, start=0, num=log_num)

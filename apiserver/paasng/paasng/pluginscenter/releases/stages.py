@@ -18,9 +18,14 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Type, Union
 
+import cattrs
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.pluginscenter import constants
+from paasng.pluginscenter.bk_devops import definitions as devops_definitions
+from paasng.pluginscenter.bk_devops.client import PipelineController
+from paasng.pluginscenter.bk_devops.constants import PipelineBuildStatus
 from paasng.pluginscenter.definitions import find_stage_by_id
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
@@ -148,8 +153,45 @@ class ItsmStage(BaseStageController):
 class PipelineStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.PIPELINE
 
+    def __init__(self, stage: PluginReleaseStage):
+        super().__init__(stage)
+        self.ctl = PipelineController(bk_username="admin")
+        if stage.status == constants.PluginReleaseStatus.INITIAL or stage.pipeline_detail is None:
+            self.build = None
+        else:
+            self.build = cattrs.structure(stage.pipeline_detail, devops_definitions.PipelineBuild)
+
+    def render_to_view(self) -> Dict:
+        if self.build is None:
+            raise error_codes.STAGE_RENDER_ERROR.f(_("当前步骤状态异常"))
+        basic_info = super().render_to_view()
+        build_detail = self.ctl.retrieve_build_detail(self.build).dict()
+        logs = self.ctl.retrieve_full_log(build=self.build).dict()
+        return {**basic_info, "detail": build_detail, "logs": logs}
+
+    def async_check_status(self) -> bool:
+        if self.build is None:
+            return False
+        status = self.ctl.retrieve_build_status(build=self.build)
+        return status.status == PipelineBuildStatus.SUCCEED
+
     def execute(self, operator: str):
-        raise NotImplementedError
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        if stage_definition is None:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
+
+        pipeline = devops_definitions.Pipeline(
+            projectId=settings.PLUGIN_CENTER_PROJECT_ID, pipelineId=stage_definition.pipelineId
+        )
+        current_stage = self.stage
+        try:
+            build = self.ctl.start_build(pipeline=pipeline, start_params={})
+            current_stage.status = constants.PluginReleaseStatus.PENDING
+            current_stage.pipeline_detail = cattrs.unstructure(build)
+            current_stage.save(update_fields=["status", "pipeline_detail"])
+        except Exception as e:
+            current_stage.update_status(constants.PluginReleaseStatus.FAILED, fail_message=str(e))
+            raise
 
 
 class SubPageStage(BaseStageController):

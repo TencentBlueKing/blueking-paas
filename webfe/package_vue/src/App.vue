@@ -70,6 +70,7 @@ import paasFooter from '@/components/paas-footer';
             hideLoginModal () {
                 this.showLoginModal = false;
                 console.log(111);
+                console.log(2222);
             }
         }
 

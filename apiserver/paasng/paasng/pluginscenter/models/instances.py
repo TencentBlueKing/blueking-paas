@@ -245,6 +245,9 @@ class PluginReleaseStage(AuditedModel):
     fail_message = models.TextField(verbose_name="错误原因")
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     api_detail = models.JSONField(verbose_name="API 详情", null=True, help_text="该字段仅 invoke_method = api 时可用")
+    pipeline_detail = models.JSONField(
+        verbose_name="流水线构建详情", default=None, null=True, help_text="该字段仅 invoke_method = pipeline 时可用"
+    )
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
 

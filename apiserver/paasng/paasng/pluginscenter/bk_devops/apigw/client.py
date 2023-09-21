@@ -28,6 +28,46 @@ class Group(OperationGroup):
         path="/v4/apigw-app/metrics/projectId/{projectId}/summary",
     )
 
+    # 获取流水线编排
+    v4_app_pipeline_get = bind_property(
+        Operation,
+        name="v4_app_pipeline_get",
+        method="GET",
+        path="/v4/apigw-app/projects/{projectId}/pipelines/pipeline",
+    )
+
+    # 启动构建
+    v4_app_build_start = bind_property(
+        Operation, name="v4_app_build_start", method="POST", path="/v4/apigw-app/projects/{projectId}/build_start"
+    )
+
+    # 构建详情
+    v4_app_build_detail = bind_property(
+        Operation, name="v4_app_build_detail", method="GET", path="/v4/apigw-app/projects/{projectId}/build_detail"
+    )
+
+    v4_app_build_status = bind_property(
+        Operation, name="v4_app_build_status", method="GET", path="/v4/apigw-app/projects/{projectId}/build_status"
+    )
+
+    # 停止构建
+    v4_app_build_stop = bind_property(
+        Operation, name="v4_app_build_stop", method="POST", path="/v4/apigw-app/projects/{projectId}/build_stop"
+    )
+
+    # 获取更多日志
+    v4_app_log_more = bind_property(
+        Operation, name="v4_app_log_more", method="GET", path="/v4/apigw-app/projects/{projectId}/logs/more_logs"
+    )
+
+    # 获取当前构建的最大行号
+    v4_app_log_line_num = bind_property(
+        Operation,
+        name="v4_app_log_line_num",
+        method="GET",
+        path="/v4/apigw-app/projects/{projectId}/logs/last_line_num",
+    )
+
 
 class Client(APIGatewayClient):
     """devops

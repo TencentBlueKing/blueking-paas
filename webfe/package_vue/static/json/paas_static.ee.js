@@ -629,7 +629,7 @@ export const PAAS_STATIC_CONFIG = {
             {
                 "name": "appAccessPortal",
                 "label": staticI18n.$t("访问管理"),
-                "iconfontName": "cloudapi",
+                "iconfontName": "diamond",
                 "supportModule": false,
                 "destRoute": {
                     "name": "appAccessPortal"
@@ -655,7 +655,9 @@ export const PAAS_STATIC_CONFIG = {
                             'moduleInfo',
                             'appServices',
                             'appServiceInnerShared',
-                            'appServiceInner'
+                            'appServiceInner',
+                            'cloudAppServiceInnerShared',
+                            'cloudAppServiceInner'
                         ],
                         "iconfontName": "squares",
                         "supportModule": false,

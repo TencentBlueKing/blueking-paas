@@ -1,6 +1,7 @@
 <template lang="html">
   <div class="right-main">
     <app-top-bar
+      v-if="!isCloudNativeApp"
       :paths="servicePaths"
       :can-create="canCreateModule"
       :cur-module="curAppModule"

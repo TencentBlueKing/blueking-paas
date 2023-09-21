@@ -70,6 +70,7 @@
         methods: {
             hideLoginModal () {
                 this.showLoginModal = false;
+                console.log(111);
             }
         }
     };

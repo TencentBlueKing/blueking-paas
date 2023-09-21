@@ -560,6 +560,7 @@ export default {
     text-align: center;
     font-size: 12px;
     color: #979ba5;
+    line-height: 26px;
   }
 }
 .deploy-pending-text{

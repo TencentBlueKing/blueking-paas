@@ -181,6 +181,7 @@ class MixedServiceMgr:
         Callable[..., EngineAppInstanceRel], _proxied_svc_dispatcher('get_instance_rel_by_instance_id')
     )
     get_provisioned_queryset = _proxied_svc_dispatcher('get_provisioned_queryset')
+    get_provisioned_envs = _proxied_svc_dispatcher('get_provisioned_envs')
     module_is_bound_with = _proxied_svc_dispatcher('module_is_bound_with')
     update = _proxied_svc_dispatcher("update")
     destroy = _proxied_svc_dispatcher("destroy")

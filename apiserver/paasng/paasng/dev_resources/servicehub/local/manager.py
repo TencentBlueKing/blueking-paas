@@ -369,6 +369,16 @@ class LocalServiceMgr(BaseServiceMgr):
         """Check if a module is bound with a service"""
         return ServiceModuleAttachment.objects.filter(module=module, service_id=service.uuid).exists()
 
+    def get_provisioned_envs(self, service: ServiceObj, module: Module) -> List[str]:
+        """Get a list of bound envs"""
+        env_list = []
+        for env in module.get_envs():
+            if ServiceEngineAppAttachment.objects.filter(
+                engine_app=env.get_engine_app(), service=service, service_instance__isnull=True
+            ).exists():
+                env_list.append(env.environment)
+        return env_list
+
 
 class LocalPlanMgr(BasePlanMgr):
     """Local in-database plans manager"""

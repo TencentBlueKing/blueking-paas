@@ -106,10 +106,10 @@ class PipelineBuildStatus(BaseModel):
 
     buildId: str = Field(alias="id")
     startTime: int
-    endTime: int
+    endTime: Optional[int]
     status: str
     currentTimestamp: str
-    stageStatus: List[BuildStageStatus]
+    stageStatus: List[BuildStageStatus] = Field(default_factory=list)
     totalTime: int
     executeTime: int
 
@@ -212,7 +212,7 @@ class PipelineModel(BaseModel):
     name: str
     desc: str
     stages: List[PipelineStageModel]
-    timeCost: TimeCost
+    timeCost: Optional[TimeCost]
 
 
 @register(by_alias=False)
@@ -233,7 +233,7 @@ class PipelineBuildDetail(BaseModel):
     pipelineId: str
     pipelineName: str
     startTime: int
-    endTime: int
+    endTime: Optional[int]
     status: str
     currentTimestamp: str
     buildNum: int

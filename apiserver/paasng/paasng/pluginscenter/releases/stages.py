@@ -173,7 +173,19 @@ class PipelineStage(BaseStageController):
         if self.build is None:
             return False
         status = self.ctl.retrieve_build_status(build=self.build)
-        return status.status == PipelineBuildStatus.SUCCEED
+        if status.status == PipelineBuildStatus.SUCCEED:
+            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        elif status.status == PipelineBuildStatus.FAILED:
+            self.stage.update_status(
+                constants.PluginReleaseStatus.FAILED,
+                next((i.showMsg for i in status.stageStatus if i.showMsg), "构建失败"),
+            )
+        elif status.status == PipelineBuildStatus.CANCELED:
+            self.stage.update_status(
+                constants.PluginReleaseStatus.INTERRUPTED,
+                next((i.showMsg for i in status.stageStatus if i.showMsg), "构建失败"),
+            )
+        return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
     def execute(self, operator: str):
         stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)

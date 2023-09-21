@@ -80,6 +80,8 @@ export default {
         'cloudAppDeployHistory',
         'appObservability',
         'cloudAppAnalysis',
+        'cloudAppServiceInnerShared',
+        'cloudAppServiceInner',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -401,6 +403,8 @@ export default {
         'cloudAppDeployHistory',
         'appObservability',
         'cloudAppAnalysis',
+        'cloudAppServiceInnerShared',
+        'cloudAppServiceInner',
       ];
 
       this.navTree.forEach((nav) => {

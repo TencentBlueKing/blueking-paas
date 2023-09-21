@@ -19,9 +19,7 @@
             {{ deploymentInfoBackUp.build_method === 'dockerfile' ?
               $t('代码仓库') : $t('镜像仓库') }}
           </span>
-          <bk-button :theme="'default'" text>
-            {{ deploymentInfoBackUp.repo_url }}
-          </bk-button>
+          {{ deploymentInfoBackUp.repo_url }}
         </div>
         <!-- 仅镜像不需要选择镜像来源 -->
         <div v-if="deploymentInfoBackUp.build_method !== 'custom_image'">
@@ -112,7 +110,7 @@
                 :name="option.tag"
               />
               <div slot="extension" @click="handleNext" style="cursor: pointer;" v-if="isShowNext">
-                下一页
+                {{ $t('下一页') }}
               </div>
             </bk-select>
           </div>

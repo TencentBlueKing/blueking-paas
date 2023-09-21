@@ -27,6 +27,7 @@
           </bk-form-item>
           <bk-form-item
             :label="$t('操作人')"
+            class="ml20"
             style="vertical-align: top;"
           >
             <user

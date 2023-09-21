@@ -23,15 +23,14 @@
               <div class="module">
                 <i class="icon paasng-icon paasng-deploy-item-dot"></i>
                 <span class="name">{{deploymentInfo.module_name}}</span>
-                <bk-button
+                <div
                   v-if="deploymentInfo.exposed_url"
-                  :theme="'primary'"
-                  class="mr10"
-                  size="small"
-                  text
-                  @click="handleOpenUrl(deploymentInfo.exposed_url)">
-                  {{$t('点击访问')}}
-                </bk-button>
+                  class="access-entrance"
+                  @click="handleOpenUrl(deploymentInfo.exposed_url)"
+                >
+                  <div class="module-default">{{ $t('已部署') }}</div>
+                  <i class="paasng-icon paasng-jump-link"></i>
+                </div>
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
@@ -505,16 +504,26 @@ export default {
     border-radius: 2px 2px 0 0;
 
     .left-info {
+      height: 100%;
       flex: 1;
       display: flex;
       color: #63656E;
+      align-items: center;
 
       .module {
+        height: 100%;
+        display: flex;
+        align-items: center;
         margin-right: 30px;
 
         i {
           cursor: pointer;
           color: #C4C6CC;
+        }
+        .paasng-jump-link {
+          font-size: 16px;
+          color: #3A84FF;
+          transform: translateY(1px);
         }
 
         .name {
@@ -536,7 +545,27 @@ export default {
         background: #DCDEE5;
       }
 
-      .version {
+      .access-entrance {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        .module-default{
+          padding: 0px 5px;
+          border-radius: 30px;
+          font-size: 12px;
+          color: #3A84FF;
+          margin-right: 5px;
+          background: #ecf3ff;
+          border: 1px solid #3A84FF;
+        }
+        &:hover {
+          i,
+          .module-default {
+            color: #699df4;
+            border-color: #699df4;
+          }
+        }
       }
     }
   }

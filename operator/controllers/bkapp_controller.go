@@ -24,6 +24,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +36,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -61,8 +64,11 @@ type BkAppReconciler struct {
 //+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=core,resources=services/status,verbs=get
+//+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get
+//+kubebuilder:rbac:groups=autoscaling.tkex.tencent.com,resources=generalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=autoscaling.tkex.tencent.com,resources=generalpodautoscalers/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -139,20 +145,22 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return err
 	}
 
-	err = mgr.GetFieldIndexer().IndexField(
-		ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
-	)
-	if err != nil {
-		return err
-	}
-
-	return ctrl.NewControllerManagedBy(mgr).
+	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&paasv1alpha2.BkApp{}).
 		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Pod{}).
-		Owns(&autoscaling.GeneralPodAutoscaler{}).
-		Complete(r)
+		Owns(&corev1.Pod{})
+
+	if config.Global.IsAutoscalingEnabled() {
+		if err = mgr.GetFieldIndexer().IndexField(
+			ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
+		); err != nil {
+			return err
+		}
+		controllerBuilder = controllerBuilder.Owns(&autoscaling.GeneralPodAutoscaler{})
+	}
+
+	return controllerBuilder.Complete(r)
 }
 
 func getOwnerNames(rawObj client.Object) []string {
@@ -161,8 +169,12 @@ func getOwnerNames(rawObj client.Object) []string {
 	if owner == nil {
 		return nil
 	}
-	// 确保 Owner 类型为 BkApp
-	if owner.APIVersion == paasv1alpha2.GroupVersion.String() && owner.Kind == paasv1alpha2.KindBkApp {
+	// 确保 Owner 类型为 BkApp，但需要兼容多版本的情况
+	ownerApiVersions := []string{
+		paasv1alpha1.GroupVersion.String(),
+		paasv1alpha2.GroupVersion.String(),
+	}
+	if lo.Contains(ownerApiVersions, owner.APIVersion) && owner.Kind == paasv1alpha2.KindBkApp {
 		return []string{owner.Name}
 	}
 	return nil

@@ -16,25 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from functools import partial
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Dict, List, Literal, Optional, Union
 
-import cattr
 from pydantic import BaseModel, Field
 
-
-def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool = True, exclude_none: bool = False):
-    def register_core(pydantic_model: Type[BaseModel]):
-        cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-        cattr.register_unstructure_hook(
-            pydantic_model, partial(pydantic_model.dict, by_alias=by_alias, exclude_none=exclude_none)
-        )
-        return pydantic_model
-
-    if pydantic_model is not None:
-        return register_core(pydantic_model)
-    return register_core
+from paasng.utils.structure import register
 
 
 @register

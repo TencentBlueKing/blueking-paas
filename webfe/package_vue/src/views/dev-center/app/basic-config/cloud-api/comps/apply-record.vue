@@ -27,8 +27,10 @@
         <div class="member-wrapper">
           <user
             v-model="applicants"
+            :placeholder="$t('请输入用户')"
             style="width: 142px;"
             :multiple="false"
+            :empty-text="$t('无匹配人员')"
             @change="handleMemberSelect"
           />
         </div>
@@ -60,6 +62,7 @@
         <div class="date-wrapper">
           <bk-date-picker
             v-model="initDateTimeRange"
+            ext-cls="application-time"
             style="width: 195px;"
             :placeholder="$t('选择日期范围')"
             :type="'daterange'"
@@ -777,7 +780,7 @@
             line-height: 32px;
         }
         .select-wrapper {
-            width: 85px;
+            width: 98px;
         }
         .set-ml {
             margin-left: 18px;
@@ -867,5 +870,9 @@
             height: 42px !important;
             cursor: default !important;
         }
+    }
+
+    /deep/ .application-time .bk-date-picker-rel .bk-date-picker-editor {
+        padding: 0 40px 0 10px;
     }
 </style>

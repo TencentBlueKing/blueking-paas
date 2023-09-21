@@ -12,6 +12,7 @@
 
     <paas-content-loader
       class="app-container log-middle"
+      :class="{ 'log-container': tabActive === 'stream' }"
       :is-loading="isLoading"
       placeholder="log-loading"
       :offset-top="60"
@@ -24,7 +25,7 @@
         >
           <template slot="setting">
             <a
-              class="f12"
+              class="f12 pr20"
               :href="GLOBAL.DOC.LOG_QUERY_USER"
               target="_blank"
             > {{ $t('如何查询应用日志') }} </a>
@@ -87,7 +88,7 @@
             tabActive () {
                 this.$nextTick(() => {
                     if (this.tabActive === 'structured') {
-                        this.$refs.customLog.initTableBox();
+                      this.$refs.customLog?.initTableBox();
                     }
                     if (this.tabActive === 'access') {
                         this.$refs.accessLog.initTableBox();
@@ -99,7 +100,11 @@
             this.isLoading = true;
             if (this.$route.query.tab) {
                 const isExistTab = ['structured', 'stream', 'access'].includes(this.$route.query.tab);
-                this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
+                if(this.curAppInfo.application.type === 'cloud_native') {
+                  this.tabActive = 'stream'
+                } else {
+                  this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
+                }
             }
             setTimeout(() => {
                 this.isLoading = false;
@@ -121,3 +126,15 @@
         }
     };
 </script>
+
+<style scoped lang="scss">
+.log-middle{
+  background: #fff;
+  padding-top: 0px;
+  margin: 16px auto 30px;
+  width: calc(100% - 48px);
+  .log-container {
+      margin-bottom: 0;
+  }
+}
+</style>

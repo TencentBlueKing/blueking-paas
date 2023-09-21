@@ -51,21 +51,24 @@ def test_bind_image(bk_module, slugbuilder, slugrunner, slugbuilder_attrs, slugr
     slugbuilder.save()
     slugrunner.save()
 
-    binder = ModuleRuntimeBinder(bk_module, slugbuilder)
-    manager = ModuleRuntimeManager(bk_module)
-    assert bk_module.slugbuilders.count() == 0
-    assert bk_module.slugrunners.count() == 0
+    binder = ModuleRuntimeBinder(bk_module)
+    build_config = bk_module.build_config
+    assert build_config.buildpack_builder is None
+    assert build_config.buildpack_runner is None
     if ok:
-        binder.bind_image(slugrunner)
+        binder.bind_image(slugrunner, slugbuilder)
+        # 必须绑定后再构造 ModuleRuntimeManager, 否则会因为 django 的查询缓存导致无法查询到对象
+        manager = ModuleRuntimeManager(bk_module)
         assert manager.get_slug_builder(raise_exception=True) == slugbuilder
         assert manager.get_slug_runner(raise_exception=True) == slugrunner
         # 测试重复绑定
-        binder.bind_image(slugrunner)
-        assert bk_module.slugbuilders.count() == 1
-        assert bk_module.slugrunners.count() == 1
+        binder.bind_image(slugrunner, slugbuilder)
+        build_config.refresh_from_db()
+        assert build_config.buildpack_builder == slugbuilder
+        assert build_config.buildpack_runner == slugrunner
     else:
         with pytest.raises(BindError):
-            binder.bind_image(slugrunner)
+            binder.bind_image(slugrunner, slugbuilder)
 
 
 @pytest.mark.parametrize(
@@ -80,20 +83,23 @@ def test_bind_image(bk_module, slugbuilder, slugrunner, slugbuilder_attrs, slugr
         (dict(), dict(), True, True),
     ],
 )
-def test_bind_buildpack(bk_module, slugbuilder, buildpack, slugbuilder_attrs, buildpack_attrs, linked, ok):
+def test_bind_buildpack(bk_module, slugbuilder, slugrunner, buildpack, slugbuilder_attrs, buildpack_attrs, linked, ok):
     for k, v in slugbuilder_attrs.items():
         setattr(slugbuilder, k, v)
+        setattr(slugrunner, k, v)
+
     for k, v in buildpack_attrs.items():
         setattr(buildpack, k, v)
     slugbuilder.buildpacks.clear()
     slugbuilder.save()
+    slugrunner.save()
     buildpack.save()
 
-    binder = ModuleRuntimeBinder(bk_module, slugbuilder)
-    manager = ModuleRuntimeManager(bk_module)
+    binder = ModuleRuntimeBinder(bk_module)
+    build_config = bk_module.build_config
 
-    assert bk_module.slugbuilders.count() == 0
-    assert bk_module.buildpacks.count() == 0
+    assert build_config.buildpack_builder is None
+    assert build_config.buildpack_runner is None
     assert slugbuilder.buildpacks.count() == 0
 
     if linked:
@@ -101,15 +107,19 @@ def test_bind_buildpack(bk_module, slugbuilder, buildpack, slugbuilder_attrs, bu
         assert slugbuilder.buildpacks.count() == 1
 
     if ok:
+        binder.bind_image(slugrunner=slugrunner, slugbuilder=slugbuilder)
         binder.bind_buildpack(buildpack)
+        # 必须绑定后再构造 ModuleRuntimeManager, 否则会因为 django 的查询缓存导致无法查询到对象
+        manager = ModuleRuntimeManager(bk_module)
         assert manager.get_slug_builder(raise_exception=True) == slugbuilder
         assert manager.list_buildpacks() == [buildpack]
         # 测试重复绑定
         binder.bind_buildpack(buildpack)
-        assert bk_module.buildpacks.count() == 1
+        assert bk_module.build_config.buildpacks.count() == 1
 
     else:
         with pytest.raises(BindError):
+            binder.bind_image(slugrunner=slugrunner, slugbuilder=slugbuilder)
             binder.bind_buildpack(buildpack)
 
 

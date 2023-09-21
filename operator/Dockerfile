@@ -1,6 +1,8 @@
 # -------------- builder container --------------
 # Build the manager binary
-FROM golang:1.18 as builder
+FROM golang:1.20-alpine as builder
+
+LABEL maintainer="Tencent BlueKing"
 
 WORKDIR /workspace
 
@@ -22,9 +24,11 @@ COPY pkg/ pkg/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager ./main.go
 
 # -------------- runner container --------------
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:3.15 AS runner
+
+LABEL maintainer="Tencent BlueKing"
+
+RUN apk --update --no-cache add bash ca-certificates
 
 WORKDIR /
 

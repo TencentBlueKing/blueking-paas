@@ -17,8 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import time
-from typing import Optional
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
@@ -26,21 +24,24 @@ from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from drf_yasg.utils import swagger_auto_schema
-from kubernetes.dynamic.exceptions import UnprocessibleEntityError
+from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.addresses import get_exposed_url
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DeployStatus
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
+from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
-from paas_wl.cnative.specs.resource import deploy, get_mres_from_cluster
+from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
+from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
     CreateDeploySerializer,
@@ -49,16 +50,38 @@ from paas_wl.cnative.specs.serializers import (
     DeploySerializer,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    ResQuotaPlanSLZ,
 )
-from paas_wl.cnative.specs.tasks import AppModelDeployStatusPoller, DeployStatusHandler
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.utils.error_codes import error_codes
+from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.models import Application
+from paasng.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
+
+
+class ResQuotaPlanOptionsView(APIView):
+    """资源配额方案 选项视图"""
+
+    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
+    def get(self, request):
+        return Response(
+            data=ResQuotaPlanSLZ(
+                [
+                    {
+                        "name": ResQuotaPlan.get_choice_label(plan),
+                        "value": str(plan),
+                        "limit": PLAN_TO_LIMIT_QUOTA_MAP[plan],
+                        "request": PLAN_TO_REQUEST_QUOTA_MAP[plan],
+                    }
+                    for plan in ResQuotaPlan.get_values()
+                ],
+                many=True,
+            ).data
+        )
 
 
 class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):
@@ -67,18 +90,20 @@ class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: AppModelResourceSerializer})
-    def retrieve(self, request, code):
+    def retrieve(self, request, code, module_name):
         """查看应用模型资源的当前值"""
         application = self.get_application()
-        model_resource = get_object_or_404(AppModelResource, application_id=application.id)
+        module = self.get_module_via_path()
+        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
         return Response(AppModelResourceSerializer(model_resource).data)
 
     @swagger_auto_schema(responses={200: AppModelResourceSerializer})
-    def update(self, request, code):
+    def update(self, request, code, module_name):
         """完整更新应用模型资源，需提供所有字段"""
         application = self.get_application()
-        update_app_resource(application, request.data)
-        model_resource = AppModelResource.objects.get(application_id=application.id)
+        module = self.get_module_via_path()
+        update_app_resource(application, module, request.data)
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         return Response(AppModelResourceSerializer(model_resource).data)
 
 
@@ -140,46 +165,44 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # will be validated in `update_app_resource` function.
         # TODO: 当 manifest 提供时，检查 manifest 是否有变化
         if manifest := serializer.validated_data.get("manifest"):
-            update_app_resource(application, manifest)
+            update_app_resource(application, module, manifest)
 
         # Get current module resource object
-        model_resource = AppModelResource.objects.get(application_id=application.id)
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         # TODO: Allow use other revisions
         revision = model_resource.revision
 
-        # Try to get and validate the image credentials
+        # Try to get and validate the image credentials, will raise InvalidImageCredentials when any refs are invalid
         try:
             credential_refs = get_references(revision.json_value)
             validate_references(application, credential_refs)
-        except ValueError:
+        except InvalidImageCredentials:
             raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-
-        # TODO: read name from request data or generate by model resource payload
-        # Add current timestamp in name to avoid conflicts
-        default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
-
-        deployment = None
-        deployed_manifest = None
-        try:
-            # TODO: Integrity Check
-            deployment = AppModelDeploy.objects.create(
-                application_id=application.id,
-                module_id=module.id,
-                environment_name=env.environment,
-                name=default_name,
-                revision=revision,
-                status=DeployStatus.PENDING.value,
-                operator=request.user,
+        # flush credentials if needed
+        if credential_refs:
+            AppImageCredential.objects.flush_from_refs(
+                application=application, wl_app=env.wl_app, references=credential_refs
             )
-            deployed_manifest = deploy(env, deployment.build_manifest(env, credential_refs=credential_refs))
-        except Exception as e:
-            self._handle_deploy_failed(application, environment, deployment=deployment, exception=e)
 
-        assert deployment is not None
-        # TODO: 统计成功 metrics
-        # Poll status in background
-        AppModelDeployStatusPoller.start({'deploy_id': deployment.id}, DeployStatusHandler)
-        return Response(deployed_manifest)
+        try:
+            release_by_k8s_operator(env, revision, operator=request.user.pk)
+        except UnprocessibleEntityError as e:
+            # 格式错误类异常（422），允许将错误信息提供给用户
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(
+                f"{code}, module: {module_name}, env: {environment}, summary: {e.summary()}"
+            )
+        except ResourceNotFoundError:
+            # 集群内没有 BkApp 等 PaaS Operator 资源，可以暴露给用户
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(
+                f"{code}, module: {module_name}, env: {environment}, reason: bkpaas-app-operator not ready"
+            )
+        except Exception as e:
+            logger.exception(
+                "failed to deploy bkapp, code: %s, module: %s, env: %s, reason: %s", code, module_name, environment, e
+            )
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(f"{code}, module: {module_name}, env: {environment}")
+        revision.refresh_from_db()
+        return Response(revision.deployed_value)
 
     @swagger_auto_schema(request_body=CreateDeploySerializer, responses={"200": DeployPrepResultSLZ()})
     def prepare(self, request, code, module_name, environment):
@@ -208,32 +231,6 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             application_id=application.id, module_id=module.id, environment_name=self.kwargs["environment"]
         )
 
-    def _handle_deploy_failed(
-        self, application: Application, environment: str, deployment: Optional[AppModelDeploy], exception: Exception
-    ):
-        # TODO: 统计失败 metrics
-        # DEPLOYMENT_INFO_COUNTER.labels(
-        #     source_type=module.source_type, environment=self.kwargs["environment"], status="failed"
-        # ).inc()
-        if deployment is not None:
-            deployment.status = DeployStatus.ERROR
-            deployment.save(update_fields=["status", "updated"])
-
-        if isinstance(exception, UnprocessibleEntityError):
-            # 格式错误类异常（422）允许将错误信息提供给用户
-            raise error_codes.DEPLOY_BKAPP_FAILED.f(
-                f"app: {application.code}, env: {environment}, summary: {exception.summary()}"
-            )
-
-        logger.exception(
-            "failed to deploy bkapp, app: %s, code: %s, env: %s, reason: %s",
-            application.name,
-            application.code,
-            environment,
-            exception,
-        )
-        raise error_codes.DEPLOY_BKAPP_FAILED.f(f"app: {application.code}, env: {environment}")
-
 
 class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """应用模型资源状态相关视图"""
@@ -257,12 +254,13 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not mres:
             raise error_codes.GET_MRES_FAILED.f(f"App: {code}, env: {environment}")
         self.check_applied_deployment(mres, latest_dp)
+        url_obj = get_exposed_url(env)
 
         return Response(
             MresStatusSLZ(
                 {
                     "deployment": latest_dp,
-                    "ingress": {"url": get_exposed_url(env)},
+                    "ingress": {"url": url_obj.address if url_obj else None},
                     "conditions": mres.status.conditions,
                     "events": list_events(env, latest_dp.created),
                 }

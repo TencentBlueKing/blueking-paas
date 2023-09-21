@@ -21,6 +21,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.platform.applications.models import WlApp
@@ -32,6 +33,25 @@ from paas_wl.workloads.images import constants
 from paas_wl.workloads.images.models import AppImageCredential
 
 logger = logging.getLogger(__name__)
+
+
+def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
+    """transform credentials to docker config json format"""
+    return {
+        "auths": {
+            item.registry: {
+                "username": item.username,
+                "password": item.password,
+                "auth": b64encode(f"{item.username}:{item.password}"),
+            }
+            for item in obj.credentials
+        }
+    }
+
+
+def build_app_registry_auth(obj: 'ImageCredentials') -> Dict:
+    """transform credentials to CNB required format"""
+    return {item.registry: "Basic " + b64encode(f"{item.username}:{item.password}") for item in obj.credentials}
 
 
 class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
@@ -46,19 +66,7 @@ class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
                 'name': obj.name,
                 'namespace': obj.app.namespace,
             },
-            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(self._build_dockerconfig(obj)))},
-        }
-
-    def _build_dockerconfig(self, obj: 'ImageCredentials') -> Dict:
-        return {
-            "auths": {
-                item.registry: {
-                    "username": item.username,
-                    "password": item.password,
-                    "auth": b64encode(f"{item.username}:{item.password}"),
-                }
-                for item in obj.credentials
-            }
+            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(build_dockerconfig(obj)))},
         }
 
 
@@ -112,6 +120,15 @@ class ImageCredentials(AppEntity):
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
+        # inject builtin credential for APP_DOCKER_REGISTRY_HOST
+        if settings.APP_DOCKER_REGISTRY_HOST:
+            credentials.append(
+                ImageCredential(
+                    registry=settings.APP_DOCKER_REGISTRY_HOST,
+                    username=settings.APP_DOCKER_REGISTRY_USERNAME,
+                    password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+                )
+            )
         return ImageCredentials(
             app=app,
             name=constants.KUBE_RESOURCE_NAME,

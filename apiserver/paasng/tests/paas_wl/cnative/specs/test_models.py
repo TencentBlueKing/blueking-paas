@@ -19,11 +19,12 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
     create_app_resource,
-    default_bkapp_name,
+    generate_bkapp_name,
     update_app_resource,
 )
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
@@ -31,34 +32,58 @@ from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_create_app_resource():
-    obj = create_app_resource('foo-app', 'nginx:latest')
-    want = {
-        'apiVersion': 'paas.bk.tencent.com/v1alpha1',
-        'kind': 'BkApp',
-        'metadata': {'name': 'foo-app', 'annotations': {}, 'generation': 0},
-        'spec': {
-            'processes': [
-                {
-                    'name': 'web',
+class TestCreateAppResource:
+    @pytest.fixture
+    def bkapp_manifest(self):
+        return {
+            'apiVersion': 'paas.bk.tencent.com/v1alpha2',
+            'kind': 'BkApp',
+            'metadata': {'name': 'foo-app', 'annotations': {}, 'generation': 0},
+            'spec': {
+                'build': {
+                    'args': None,
+                    'buildTarget': None,
+                    'dockerfile': None,
                     'image': 'nginx:latest',
-                    'replicas': 1,
-                    'command': [],
-                    'args': [],
-                    'targetPort': None,
-                    'cpu': '500m',
-                    'memory': '256Mi',
+                    'imageCredentialsName': None,
                     'imagePullPolicy': 'IfNotPresent',
-                    'autoscaling': None,
-                }
-            ],
-            'hooks': None,
-            'envOverlay': None,
-            'configuration': {'env': []},
-        },
-        'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},
-    }
-    assert obj.dict() == want
+                },
+                'processes': [
+                    {
+                        'name': 'web',
+                        'replicas': 1,
+                        'command': [],
+                        'args': [],
+                        'targetPort': None,
+                        'resQuotaPlan': None,
+                        'autoscaling': None,
+                        'cpu': '500m',
+                        'memory': '256Mi',
+                        'image': None,
+                        'imagePullPolicy': 'IfNotPresent',
+                    }
+                ],
+                'hooks': None,
+                'addons': [],
+                'mounts': None,
+                'envOverlay': None,
+                'domainResolution': None,
+                'svcDiscovery': None,
+                'configuration': {'env': []},
+            },
+            'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},
+        }
+
+    def test_v1alpha2(self, bkapp_manifest):
+        obj = create_app_resource('foo-app', 'nginx:latest')
+        assert obj.dict() == bkapp_manifest
+
+    def test_v1alpha1(self, bkapp_manifest):
+        obj = create_app_resource('foo-app', 'nginx:latest', api_version=ApiVersion.V1ALPHA1)
+        bkapp_manifest['apiVersion'] = 'paas.bk.tencent.com/v1alpha1'
+        bkapp_manifest['spec']['build'] = None
+        bkapp_manifest['spec']['processes'][0]['image'] = 'nginx:latest'
+        assert obj.dict() == bkapp_manifest
 
 
 @pytest.fixture
@@ -100,37 +125,37 @@ def init_model_resource(bk_app, bk_module, resource_name):
 
 
 class TestUpdateAppResource:
-    def test_uninitialized(self, bk_app, spec_example, resource_name):
+    def test_uninitialized(self, bk_app, bk_module, spec_example, resource_name):
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
         with pytest.raises(ValueError):
-            update_app_resource(bk_app, payload)
+            update_app_resource(bk_app, bk_module, payload)
 
-    def test_change_envvars_wrong_format(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_envvars_wrong_format(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         spec_example['configuration']['env'] = [{'not_a_key': 'not_a_value'}]
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
         with pytest.raises(ValidationError):
-            update_app_resource(bk_app, payload)
+            update_app_resource(bk_app, bk_module, payload)
 
-    def test_change_kind(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_kind(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         payload = {'kind': 'NotAValidKind', 'metadata': {'name': resource_name}, 'spec': spec_example}
         with pytest.raises(ValidationError):
-            update_app_resource(bk_app, payload)
+            update_app_resource(bk_app, bk_module, payload)
 
-    def test_change_replicas(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_replicas(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         # Update "replicas" field of first process
         spec_example['processes'][0]['replicas'] = 2
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
-        update_app_resource(bk_app, payload)
-        assert AppModelResource.objects.get_json(bk_app)['spec']['processes'][0]['replicas'] == 2
+        update_app_resource(bk_app, bk_module, payload)
+        assert AppModelResource.objects.get_json(bk_app, bk_module)['spec']['processes'][0]['replicas'] == 2
 
-    def test_change_envvars_normal(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_envvars_normal(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         spec_example['configuration']['env'] = [
             {'name': 'foo', 'value': 'foo-value'},
             {'name': 'bar', 'value': 'bar-value'},
         ]
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
-        update_app_resource(bk_app, payload)
-        envs = AppModelResource.objects.get_json(bk_app)['spec']['configuration']['env']
+        update_app_resource(bk_app, bk_module, payload)
+        envs = AppModelResource.objects.get_json(bk_app, bk_module)['spec']['configuration']['env']
         assert len(envs) == 2
         assert envs[0]['name'] == 'foo'
 
@@ -148,5 +173,5 @@ class TestAppModelDeploy:
         assert AppModelDeploy.objects.any_successful(bk_stag_env) is True
 
 
-def test_default_bkapp_name(bk_app, bk_stag_env):
-    assert default_bkapp_name(bk_stag_env) == bk_app.code
+def test_bkapp_name_with_default_module(bk_app, bk_stag_env):
+    assert generate_bkapp_name(bk_stag_env) == bk_app.code

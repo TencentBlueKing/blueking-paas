@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import re
 from dataclasses import dataclass
 
+from blue_krill.models.fields import EncryptField
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -75,8 +76,8 @@ class AppDomain(AuditedModel):
 class BasicCert(AuditedModel):
     region = models.CharField(max_length=32)
     name = models.CharField(max_length=128, unique=True, validators=[RegexValidator(DNS_SAFE_PATTERN)])
-    cert_data = models.TextField()
-    key_data = models.TextField()
+    cert_data = EncryptField()
+    key_data = EncryptField()
 
     class Meta:
         abstract = True

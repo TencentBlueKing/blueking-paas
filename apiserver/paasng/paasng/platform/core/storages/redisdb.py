@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pickle
+
 import redis
 from blue_krill.redis_tools.sentinel import SentinelBackend
 from django.conf import settings
@@ -52,3 +54,21 @@ def get_default_redis(settings_prefix: str = "REDIS_") -> redis.Redis:
         _default_redisdb = redis.from_url(server_url, **connection_options)
 
     return _default_redisdb
+
+
+class DefaultRediStore:
+    """Store snapshot data, use redis as backend."""
+
+    def __init__(self, rkey: str, expires_in: int = 3600 * 24):
+        self.redis_db = get_default_redis()
+        self.rkey = rkey
+        self.expires_in = expires_in
+
+    def save(self, data):
+        self.redis_db.setex(self.rkey, value=pickle.dumps(data), time=self.expires_in)
+
+    def get(self):
+        val = self.redis_db.get(self.rkey)
+        if val is None:
+            return None
+        return pickle.loads(val)

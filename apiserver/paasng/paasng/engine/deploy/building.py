@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict
+from typing import Dict, Optional
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
@@ -26,18 +26,25 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
+from paas_wl.cnative.specs.models import AppModelResource, generate_bkapp_name, update_app_resource
 from paas_wl.platform.applications.models.build import BuildProcess
-from paas_wl.platform.applications.models.misc import OutputStream
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.dev_resources.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
+from paasng.dev_resources.sourcectl.utils import (
+    ExcludeChecker,
+    compress_directory_ext,
+    generate_temp_dir,
+    generate_temp_file,
+)
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.configurations.building import SlugbuilderInfo
+from paasng.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
 from paasng.engine.configurations.config_var import get_env_variables
-from paasng.engine.constants import BuildStatus, JobStatus
+from paasng.engine.configurations.image import RuntimeImageInfo, generate_image_repository
+from paasng.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.bg_build.bg_build import start_bg_build_process
-from paasng.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.release import start_release_step
+from paasng.engine.exceptions import DeployShouldAbortError
 from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.phases_steps.steps import update_step_by_line
@@ -47,6 +54,8 @@ from paasng.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
+    get_bkapp_manifest_for_module,
+    get_dockerignore,
     get_processes,
     get_source_package_path,
     tag_module_from_source_files,
@@ -54,66 +63,47 @@ from paasng.engine.utils.source import (
 from paasng.engine.workflow import DeploymentCoordinator, DeploymentStateMgr, DeployProcedure, DeployStep
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
-from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.modules.models.module import Module
 from paasng.utils.blobstore import make_blob_store
-
-if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import VersionInfo
-
+from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
 
 
-class ApplicationBuilder(DeployStep):
-    """The main controller for building an application"""
+@shared_task(base=I18nTask)
+def start_build(deployment_id, runtime_type: RuntimeType, *args, **kwargs):
+    """Start a deployment process
 
+    :param deployment_id: ID of deployment object
+    :param runtime_type: runtime type of Application
+    """
+    if runtime_type == RuntimeType.BUILDPACK:
+        deploy_controller = ApplicationBuilder.from_deployment_id(deployment_id)
+    elif runtime_type == RuntimeType.DOCKERFILE:
+        deploy_controller = DockerBuilder.from_deployment_id(deployment_id)
+    else:
+        raise NotImplementedError
+    deploy_controller.start()
+
+
+@shared_task(base=I18nTask)
+def start_build_error_callback(*args, **kwargs):
+    context = args[0]
+    exc: Exception = args[1]
+    # celery.worker.request.Request own property `args` after celery==4.4.0
+    deployment_id = context._payload[0][0]
+
+    state_mgr = DeploymentStateMgr.from_deployment_id(phase_type=DeployPhaseTypes.BUILD, deployment_id=deployment_id)
+    state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)
+
+
+class BaseBuilder(DeployStep):
     PHASE_TYPE = DeployPhaseTypes.BUILD
 
-    @DeployStep.procedures
-    def start(self):
-        # Trigger signal
-        pre_appenv_build.send(self.deployment.app_environment, deployment=self.deployment, step=self)
-        try:
-            self.handle_app_description()
-        except FileNotFoundError:
-            logger.debug("App description file not defined, do not process.")
-        except DescriptionValidationError as e:
-            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
-            logger.exception("Exception while parsing app description file, skip.")
-        except ControllerError as e:
-            self.stream.write_message(Style.Error(e.message))
-            logger.exception("Exception while processing app description file, skip.")
-        except Exception:
-            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
-            logger.exception("Exception while processing app description file, skip.")
-
-        # TODO: 改造提示信息&错误信息都需要入库
-        pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
-        preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
-        relative_source_dir = self.deployment.get_source_dir()
-        module = self.deployment.app_environment.module
-        with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
-            processes = get_processes(deployment=self.deployment, stream=self.stream)
-            self.deployment.update_fields(processes=processes)
-
-        with self.procedure_force_phase(_('上传仓库代码'), phase=preparation_phase):
-            source_destination_path = get_source_package_path(self.deployment)
-            self.compress_and_upload(relative_source_dir, source_destination_path)
-
-        with self.procedure_force_phase(_('配置资源实例'), phase=preparation_phase) as p:
-            self._provision_services(p, module)
-
-        # 由于准备阶段比较特殊，额外手动发送 phase end 消息
-        post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
-
-        pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
-        with self.procedure(_('启动应用构建任务')):
-            self.async_start_build_process(
-                source_destination_path, procfile={p.name: p.command for p in processes.values()}
-            )
-
-    def compress_and_upload(self, relative_source_dir: Path, source_destination_path: str):
+    def compress_and_upload(
+        self, relative_source_dir: Path, source_destination_path: str, should_ignore: Optional[ExcludeChecker] = None
+    ):
         """Download, compress and upload module source files
 
         :param Path relative_source_dir: 源码目录(相对路径), 当源码目录不为 Path(".") 时, 表示仅打包上传 relative_source_dir 下的源码文件.
@@ -139,14 +129,53 @@ class ApplicationBuilder(DeployStep):
 
             tag_module_from_source_files(module, source_dir)
             with generate_temp_file(suffix='.tar.gz') as package_path:
-                compress_directory(source_dir, package_path)
+                compress_directory_ext(source_dir, package_path, should_ignore=should_ignore)
                 check_source_package(self.engine_app, package_path, self.stream)
                 logger.info(f"Uploading source files to {source_destination_path}")
                 make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE).upload_file(
                     package_path, source_destination_path
                 )
 
-    def handle_app_description(self):
+    def must_handle_bkapp_manifest(self) -> int:
+        """Handle bkapp manifest for deployment"""
+        module = self.deployment.app_environment.module
+        application = module.application
+        operator = self.deployment.operator
+        version_info = self.deployment.version_info
+        relative_source_dir = self.deployment.get_source_dir()
+
+        manifest = get_bkapp_manifest_for_module(module, operator, version_info, relative_source_dir)
+        if not manifest:
+            self.stream.write_message(
+                Style.Error(
+                    _("bkapp.yaml 不存在该模块的信息, 请检查该文件内是否提供了 metadata.name = {} 的资源").format(generate_bkapp_name(module))
+                )
+            )
+            raise DeployShouldAbortError("bkapp.yaml not found")
+
+        update_app_resource(application, module, manifest)
+        # Get current module resource object
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
+        # 从源码部署总是使用最新创建的 revision
+        return model_resource.revision.id
+
+    def try_handle_app_description(self):
+        """A tiny wrapper for _handle_app_description, will ignore all exception raise from _handle_app_description"""
+        try:
+            self._handle_app_description()
+        except FileNotFoundError:
+            logger.debug("App description file not defined, do not process.")
+        except DescriptionValidationError as e:
+            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
+            logger.exception("Exception while parsing app description file, skip.")
+        except ControllerError as e:
+            self.stream.write_message(Style.Error(e.message))
+            logger.exception("Exception while processing app description file, skip.")
+        except Exception:
+            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
+            logger.exception("Exception while processing app description file, skip.")
+
+    def _handle_app_description(self):
         """Handle application description for deployment"""
         module = self.deployment.app_environment.module
         application = module.application
@@ -171,42 +200,13 @@ class ApplicationBuilder(DeployStep):
 
         handler.handle_deployment(self.deployment)
 
-    def async_start_build_process(self, source_tar_path: str, procfile: Dict[str, str]):
-        """Start a new build process and check the status periodically"""
-        env_vars = get_env_variables(self.module_environment, deployment=self.deployment)
-        build_process_id = start_build_process(
-            self.deployment, self.version_info, str(self.deployment.id), source_tar_path, procfile, env_vars
-        )
-
-        self.state_mgr.update(build_process_id=build_process_id)
-        params = {"build_process_id": build_process_id, "deployment_id": self.deployment.id}
-        BuildProcessPoller.start(params, BuildProcessResultHandler)
-
-    def callback_build_process(self, build_process_id: str, result: dict):
-        """Callback for a finished build process"""
-        try:
-            build_id = result['build_id']
-            build_status = result['build_status']
-        except KeyError:
-            self.state_mgr.finish(JobStatus.FAILED, "An unexpected error occurred while building application")
-            return
-
-        self.state_mgr.update(build_id=build_id, build_status=build_status, build_process_id=build_process_id)
-        if build_status == BuildStatus.FAILED:
-            self.state_mgr.finish(JobStatus.FAILED, "Building failed, please check logs for more details")
-        elif build_status == BuildStatus.INTERRUPTED:
-            self.state_mgr.finish(JobStatus.INTERRUPTED, "Building interrupted")
-        else:
-            post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.BUILD)
-            ApplicationPreReleaseExecutor.from_deployment_id(self.deployment.id).start()
-
-    def _provision_services(self, p: DeployProcedure, module: Module):
+    def provision_services(self, p: DeployProcedure, module: Module):
         """Provision all preset services
 
         :param p: DeployProcedure object for writing hint messages
         :param module: Module to evaluate provision
         """
-        self._notify_unexpected_missing_services(p, module)
+        self.notify_unexpected_missing_services(p, module)
 
         for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
             p.stream.write_message(
@@ -214,7 +214,7 @@ class ApplicationBuilder(DeployStep):
             )
             rel.provision()
 
-    def _notify_unexpected_missing_services(self, p: DeployProcedure, module: Module):
+    def notify_unexpected_missing_services(self, p: DeployProcedure, module: Module):
         """Find services which should be bound but not bound, display warning messages"""
         try:
             tmpl = Template.objects.get(name=module.source_init_template, type=TemplateType.NORMAL)
@@ -232,6 +232,220 @@ class ApplicationBuilder(DeployStep):
             ).format(unbound_service_names=unbound_service_names)
             self.stream.write_message(Style.Warning(message))
 
+    def async_start_build_process(
+        self,
+        source_tar_path: str,
+        procfile: Dict[str, str],
+        bkapp_revision_id: Optional[int] = None,
+    ):
+        """Start a new build process and check the status periodically"""
+        build_process_id = self.launch_build_processes(
+            source_tar_path,
+            procfile,
+            bkapp_revision_id,
+        )
+        self.state_mgr.update(build_process_id=build_process_id)
+        params = {"build_process_id": build_process_id, "deployment_id": self.deployment.id}
+        BuildProcessPoller.start(params, BuildProcessResultHandler)
+
+    def launch_build_processes(
+        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
+    ):
+        raise NotImplementedError
+
+
+class ApplicationBuilder(BaseBuilder):
+    """The main controller for building an application via Buildpack"""
+
+    @DeployStep.procedures
+    def start(self):
+        # Trigger signal
+        pre_appenv_build.send(self.deployment.app_environment, deployment=self.deployment, step=self)
+
+        bkapp_revision_id = None
+        if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE:
+            bkapp_revision_id = self.must_handle_bkapp_manifest()
+        else:
+            self.try_handle_app_description()
+
+        # TODO: 改造提示信息&错误信息都需要入库
+        pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
+        preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
+        relative_source_dir = self.deployment.get_source_dir()
+        module = self.deployment.app_environment.module
+        # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
+        processes = {}
+        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
+            with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+                processes = get_processes(deployment=self.deployment, stream=self.stream)
+                self.deployment.update_fields(processes=processes)
+
+        with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
+            source_destination_path = get_source_package_path(self.deployment)
+            self.compress_and_upload(relative_source_dir, source_destination_path)
+
+        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
+            self.provision_services(p, module)
+
+        # 由于准备阶段比较特殊，额外手动发送 phase end 消息
+        post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
+
+        pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
+        with self.procedure('启动应用构建任务'):
+            self.async_start_build_process(
+                source_tar_path=source_destination_path,
+                procfile={p.name: p.command for p in processes.values()},
+                bkapp_revision_id=bkapp_revision_id,
+            )
+
+    def launch_build_processes(
+        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
+    ):
+        """Start a new build process[using Buildpack], this will start a celery task in the background without
+        blocking current process.
+        """
+        env = self.deployment.app_environment
+        extra_envs = get_env_variables(env, deployment=self.deployment)
+
+        # get slugbuilder and buildpacks from engine_app
+        build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())
+        runtime_info = RuntimeImageInfo(env.get_engine_app())
+        # 注入构建环境所需环境变量
+        extra_envs = {**extra_envs, **build_info.environments}
+
+        # Use the default image when it's None, which means no images are bound to the app
+        builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
+
+        app_image_repository = generate_image_repository(env.module)
+        app_image = runtime_info.generate_image(
+            version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
+        )
+        # Create the Build object and start a background build task
+        build_process = BuildProcess.objects.new(
+            owner=self.deployment.operator,
+            env=env,
+            builder_image=builder_image,
+            source_tar_path=source_tar_path,
+            version_info=self.version_info,
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
+            buildpacks_info=build_info.buildpacks_info,
+        )
+
+        # Start the background build process
+        start_bg_build_process.delay(
+            self.deployment.id,
+            build_process.uuid,
+            stream_channel_id=str(self.deployment.id),
+            metadata={
+                'procfile': procfile,
+                'extra_envs': extra_envs,
+                # TODO: 不传递 image_repository
+                'image_repository': app_image_repository,
+                'image': app_image,
+                'buildpacks': build_process.buildpacks_as_build_env(),
+                "use_cnb": build_info.use_cnb,
+                'bkapp_revision_id': bkapp_revision_id,
+            },
+        )
+        return str(build_process.uuid)
+
+
+class DockerBuilder(BaseBuilder):
+    """The main controller for building an image via Dockerfile"""
+
+    @DeployStep.procedures
+    def start(self):
+        # Trigger signal
+        pre_appenv_build.send(self.deployment.app_environment, deployment=self.deployment, step=self)
+
+        bkapp_revision_id = None
+        if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE:
+            bkapp_revision_id = self.must_handle_bkapp_manifest()
+        else:
+            self.try_handle_app_description()
+
+        pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
+        preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
+        relative_source_dir = self.deployment.get_source_dir()
+        module = self.deployment.app_environment.module
+
+        # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
+        processes = {}
+        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
+            with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+                processes = get_processes(deployment=self.deployment, stream=self.stream)
+                self.deployment.update_fields(processes=processes)
+
+        with self.procedure_force_phase('解析 .dockerignore', phase=preparation_phase):
+            dockerignore = get_dockerignore(deployment=self.deployment)
+
+        with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
+            source_destination_path = get_source_package_path(self.deployment)
+            self.compress_and_upload(
+                relative_source_dir,
+                source_destination_path,
+                should_ignore=dockerignore.should_ignore if dockerignore else None,
+            )
+
+        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
+            self.provision_services(p, module)
+
+        # 由于准备阶段比较特殊，额外手动发送 phase end 消息
+        post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
+
+        pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
+        with self.procedure('启动应用构建任务'):
+            self.async_start_build_process(
+                source_tar_path=source_destination_path,
+                procfile={p.name: p.command for p in processes.values()},
+                bkapp_revision_id=bkapp_revision_id,
+            )
+
+    def launch_build_processes(
+        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
+    ):
+        """Start a new build process[using Dockerfile], this will start a celery task in the background without
+        blocking current process.
+        """
+        env = self.deployment.app_environment
+        builder_image = settings.KANIKO_IMAGE
+        app_image_repository = generate_image_repository(env.module)
+        app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
+            version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
+        )
+        # 注入构建环境所需环境变量
+        extra_envs = {
+            "DOCKERFILE_PATH": get_dockerfile_path(env.module),
+            "BUILD_ARG": get_build_args(env.module),
+        }
+
+        # Create the Build object and start a background build task
+        build_process = BuildProcess.objects.new(
+            owner=self.deployment.operator,
+            env=env,
+            builder_image=builder_image,
+            source_tar_path=source_tar_path,
+            version_info=self.version_info,
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
+        )
+
+        # Start the background build process
+        start_bg_build_process.delay(
+            self.deployment.id,
+            build_process.uuid,
+            stream_channel_id=str(self.deployment.id),
+            metadata={
+                'procfile': procfile,
+                'extra_envs': extra_envs or {},
+                # TODO: 不传递 image_repository
+                'image_repository': app_image_repository,
+                'image': app_image,
+                "use_dockerfile": True,
+                'bkapp_revision_id': bkapp_revision_id,
+            },
+        )
+        return str(build_process.uuid)
+
 
 class BuildProcessPoller(DeployPoller):
     """Poller for querying the status of build process
@@ -239,7 +453,7 @@ class BuildProcessPoller(DeployPoller):
     """
 
     max_retries_on_error = 10
-    overall_timeout_seconds = 60 * 15
+    overall_timeout_seconds = settings.BUILD_PROCESS_TIMEOUT
     default_retry_delay_seconds = 2
 
     def query(self) -> PollingResult:
@@ -292,6 +506,8 @@ class BuildProcessResultHandler(CallbackHandler):
     """Result handler for a finished build process"""
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
+        """Callback for a finished build process"""
+        build_process_id = poller.params['build_process_id']
         deployment_id = poller.params['deployment_id']
         state_mgr = DeploymentStateMgr.from_deployment_id(
             deployment_id=deployment_id, phase_type=DeployPhaseTypes.BUILD
@@ -299,75 +515,20 @@ class BuildProcessResultHandler(CallbackHandler):
 
         if result.is_exception:
             state_mgr.finish(JobStatus.FAILED, "build process failed")
+            return
+
+        try:
+            build_id = result.data['build_id']
+            build_status = result.data['build_status']
+        except KeyError:
+            state_mgr.finish(JobStatus.FAILED, "An unexpected error occurred while building application")
+            return
+
+        state_mgr.update(build_id=build_id, build_status=build_status, build_process_id=build_process_id)
+        if build_status == BuildStatus.FAILED:
+            state_mgr.finish(JobStatus.FAILED, "Building failed, please check logs for more details")
+        elif build_status == BuildStatus.INTERRUPTED:
+            state_mgr.finish(JobStatus.INTERRUPTED, "Building interrupted")
         else:
-            build_process_id = poller.params['build_process_id']
-            app_builder = ApplicationBuilder.from_deployment_id(deployment_id)
-            app_builder.callback_build_process(build_process_id, result.data)
-
-
-@shared_task
-def start_build(deployment_id, *args, **kwargs):
-    """Start a deployment process
-
-    :param deployment_id: ID of deployment object
-    """
-    deploy_controller = ApplicationBuilder.from_deployment_id(deployment_id)
-    deploy_controller.start()
-
-
-@shared_task
-def start_build_error_callback(*args, **kwargs):
-    context = args[0]
-    exc: Exception = args[1]
-    # celery.worker.request.Request own property `args` after celery==4.4.0
-    deployment_id = context._payload[0][0]
-
-    state_mgr = DeploymentStateMgr.from_deployment_id(phase_type=DeployPhaseTypes.BUILD, deployment_id=deployment_id)
-    state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)
-
-
-def start_build_process(
-    deploy: Deployment,
-    version: 'VersionInfo',
-    stream_channel_id: str,
-    source_tar_path: str,
-    procfile: Dict[str, str],
-    extra_envs: Dict[str, str],
-) -> str:
-    """Start a new build process, this will start a celery task in the background without
-    blocking current process.
-    """
-    env = deploy.app_environment
-
-    # get slugbuilder and buildpacks from engine_app
-    build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())
-    # 注入构建环境所需环境变量
-    extra_envs = {**extra_envs, **build_info.environments}
-
-    # Use the default image when it's None, which means no images are bound to the app
-    image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
-    # Create the Build object and start a background build task
-    build_process = BuildProcess.objects.create(
-        # TODO: Set the correct owner value
-        # owner='',
-        app=env.wl_app,
-        source_tar_path=source_tar_path,
-        revision=version.revision,
-        branch=version.version_name,
-        output_stream=OutputStream.objects.create(),
-        image=image,
-        buildpacks=build_info.buildpacks_info or [],
-    )
-    # Start the background build process
-    start_bg_build_process.delay(
-        deploy.id,
-        build_process.uuid,
-        stream_channel_id=stream_channel_id,
-        metadata={
-            'procfile': procfile,
-            'extra_envs': extra_envs or {},
-            'image': image,
-            'buildpacks': build_process.buildpacks_as_build_env(),
-        },
-    )
-    return str(build_process.uuid)
+            post_phase_end.send(state_mgr, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.BUILD)
+            start_release_step(deployment_id)

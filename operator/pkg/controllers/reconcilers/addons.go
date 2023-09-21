@@ -20,6 +20,7 @@ package reconcilers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -53,7 +54,18 @@ type AddonReconciler struct {
 
 // Reconcile ...
 func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
-	err := r.doReconcile(ctx, bkapp)
+	// 未启用增强服务, 清空 addon 的历史 status 并返回
+	if len(bkapp.Spec.Addons) == 0 {
+		if bkapp.Status.AddonStatuses != nil {
+			bkapp.Status.AddonStatuses = nil
+			if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
+				return r.Result.withError(updateErr)
+			}
+		}
+		return r.Result
+	}
+
+	addonStatuses, err := r.doReconcile(ctx, bkapp)
 	if err != nil {
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
@@ -72,44 +84,91 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkA
 		})
 	}
 
+	bkapp.Status.AddonStatuses = addonStatuses
+
 	if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
 		return r.Result.withError(updateErr)
 	}
-	return r.Result.withError(err)
+
+	// 增强服务分配失败, 直接终止 reconcile
+	if err != nil {
+		return r.Result.End()
+	}
+	return r.Result
 }
 
-func (r *AddonReconciler) doReconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) (err error) {
+func (r *AddonReconciler) doReconcile(
+	ctx context.Context,
+	bkapp *paasv1alpha2.BkApp,
+) ([]paasv1alpha2.AddonStatus, error) {
 	log := logf.FromContext(ctx)
 
-	var addons []string
 	var appInfo *applications.BluekingAppInfo
 
-	appInfo, err = applications.GetBkAppInfo(bkapp)
+	appInfo, err := applications.GetBkAppInfo(bkapp)
 	if err != nil {
 		log.Error(err, "failed to get bkapp info, skip addons reconcile")
-		return errors.Wrap(err, "InvalidAnnotations: missing bkapp info, Detail")
+		return nil, errors.Wrap(err, "InvalidAnnotations: missing bkapp info, detail")
 	}
 
-	if addons, err = bkapp.ExtractAddons(); err != nil {
-		log.Error(err, "failed to extract addons info from annotation, skip addons reconcile")
-		return errors.Wrapf(err, "InvalidAnnotations: invalid value for '%s', Detail", paasv1alpha2.AddonsAnnoKey)
-	}
-
-	for _, addon := range addons {
-		cancelCtx, cancel := context.WithTimeout(ctx, external.DefaultTimeout)
-		defer cancel()
-
-		err = r.ExternalClient.ProvisionAddonInstance(
-			cancelCtx,
-			appInfo.AppCode,
-			appInfo.ModuleName,
-			appInfo.Environment,
-			addon,
-		)
+	statuses := make([]paasv1alpha2.AddonStatus, 0)
+	for _, addon := range bkapp.Spec.Addons {
+		status, err := r.provisionAddon(ctx, appInfo, addon)
+		statuses = append(statuses, status)
 		if err != nil {
-			log.Error(err, "failed to provision addon instance", "appInfo", appInfo, "addon", addon)
-			return errors.Wrapf(err, "ProvisionFailed: failed to provision '%s' instance, Detail", addon)
+			log.Error(err, "failed to provision addon instance", "appInfo", appInfo, "addon", addon.Name)
+			return statuses, err
 		}
 	}
-	return nil
+
+	return statuses, nil
+}
+
+func (r *AddonReconciler) provisionAddon(
+	ctx context.Context,
+	appInfo *applications.BluekingAppInfo,
+	addon paasv1alpha2.Addon,
+) (paasv1alpha2.AddonStatus, error) {
+	specsMap := make(map[string]string)
+	for _, spec := range addon.Specs {
+		specsMap[spec.Name] = spec.Value
+	}
+
+	timeoutCtx, postCancel := context.WithTimeout(ctx, external.DefaultTimeout)
+	defer postCancel()
+
+	svcID, err := r.ExternalClient.ProvisionAddonInstance(
+		timeoutCtx,
+		appInfo.AppCode,
+		appInfo.ModuleName,
+		appInfo.Environment,
+		addon.Name,
+		external.AddonSpecs{Specs: specsMap},
+	)
+	if err != nil {
+		return paasv1alpha2.AddonStatus{
+			Name:    addon.Name,
+			State:   paasv1alpha2.AddonFailed,
+			Message: fmt.Sprintf("Provision failed: %s", err),
+		}, errors.Wrapf(err, "Addon '%s' provision failed, detail", addon.Name)
+	}
+
+	addonStatus := paasv1alpha2.AddonStatus{
+		Name:  addon.Name,
+		State: paasv1alpha2.AddonProvisioned,
+	}
+
+	timeoutCtx, getCancel := context.WithTimeout(ctx, external.DefaultTimeout)
+	defer getCancel()
+	// 将增强服务 Specs 添加到 .status.addonStatuses.specs
+	specResult, err := r.ExternalClient.QueryAddonSpecs(timeoutCtx, appInfo.AppCode, appInfo.ModuleName, svcID)
+	if err != nil {
+		return addonStatus, errors.Wrapf(err, "QueryAddonSpecs failed, detail")
+	}
+
+	for name, value := range specResult.Data {
+		addonStatus.Specs = append(addonStatus.Specs, paasv1alpha2.AddonSpec{Name: name, Value: value})
+	}
+
+	return addonStatus, nil
 }

@@ -17,8 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import shlex
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from attrs import define, field
 from django.conf import settings
@@ -36,26 +35,19 @@ logger = logging.getLogger(__name__)
 class RuntimeConfig:
     """App Runtime Configs, includes the image, type, ENTRYPOINT and so on."""
 
+    # [Deprecated] use Build.image instead
     image: Optional[str] = None
     type: RuntimeType = field(default=RuntimeType.BUILDPACK)
+    # [Deprecated] use entrypoint instead
     endpoint: List[str] = field(factory=list)
+    entrypoint: List[str] = field(factory=list)
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
-
-    def get_entrypoint(self) -> List[str]:
-        if self.type == RuntimeType.CUSTOM_IMAGE:
-            return ["env"]
-        return self.endpoint or ['bash', '/runner/init']
 
     def get_image_pull_policy(self) -> ImagePullPolicy:
         try:
             return ImagePullPolicy(self.image_pull_policy)
         except ValueError:
             return ImagePullPolicy.IF_NOT_PRESENT
-
-    def get_command(self, command_type: str, procfile: Dict[str, str]) -> List[str]:
-        if self.type == RuntimeType.BUILDPACK:
-            return ["start", command_type]
-        return shlex.split(procfile[command_type])
 
 
 RuntimeConfigField = make_json_field("RuntimeConfigField", py_model=RuntimeConfig)
@@ -84,7 +76,10 @@ class Config(UuidAuditedModel):
         unique_together = (('app', 'uuid'),)
 
     def get_image(self) -> str:
-        """Return settings.DEFAULT_SLUGRUNNER_IMAGE when self.image is not set"""
+        """Return settings.DEFAULT_SLUGRUNNER_IMAGE when self.image is not set
+
+        # deprecated: use Build.get_image instead
+        """
         if self.runtime.image:
             return self.runtime.image
         return self.image or settings.DEFAULT_SLUGRUNNER_IMAGE

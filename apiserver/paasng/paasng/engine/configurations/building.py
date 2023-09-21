@@ -16,12 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import base64
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.kube_res.base import Schedule
+from paasng.platform.modules.helpers import ModuleRuntimeManager
+from paasng.platform.modules.models import BuildConfig
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -34,9 +37,12 @@ class SlugbuilderInfo:
     """表示与模块相关的构建环境信息"""
 
     module: 'Module'
-    slugbuilder: 'AppSlugBuilder'
+    slugbuilder: Optional['AppSlugBuilder']
     buildpacks: List['AppBuildPack']
+    # builder + buildpacks 的环境变量
     environments: Dict
+    # cnb runtime will build application as Container Image
+    use_cnb: bool = False
 
     @property
     def build_image(self) -> Optional[str]:
@@ -59,20 +65,27 @@ class SlugbuilderInfo:
     @classmethod
     def from_module(cls, module: 'Module') -> 'SlugbuilderInfo':
         """根据模块获取支持的构建环境"""
-        from paasng.platform.modules.helpers import ModuleRuntimeManager
-
         manager = ModuleRuntimeManager(module)
         buildpacks = manager.list_buildpacks()  # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
         environments = {}
         slugbuilder = manager.get_slug_builder(raise_exception=False)
+        use_cnb = False
         if slugbuilder:
             environments.update(slugbuilder.environments)
+            if manager.is_cnb_runtime:
+                use_cnb = True
 
         buildpacks = buildpacks or []
         for buildpack in buildpacks:
             environments.update(buildpack.environments)
 
-        return cls(module=module, slugbuilder=slugbuilder, buildpacks=buildpacks, environments=environments)
+        return cls(
+            module=module,
+            slugbuilder=slugbuilder,
+            buildpacks=buildpacks,
+            environments=environments,
+            use_cnb=use_cnb,
+        )
 
     @classmethod
     def from_engine_app(cls, app: 'EngineApp') -> 'SlugbuilderInfo':
@@ -105,3 +118,17 @@ class SlugBuilderTemplate:
     namespace: str
     runtime: ContainerRuntimeSpec
     schedule: Schedule
+
+
+def get_dockerfile_path(module: "Module") -> str:
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    return cfg.dockerfile_path or "Dockerfile"
+
+
+def get_build_args(module: "Module") -> str:
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    build_args = cfg.docker_build_args
+    if build_args:
+        # 避免 value 有 "," 导致字符分割是异常, 将内容进行 base64 编码
+        return ",".join([base64.b64encode(f"{k}={v}".encode()).decode() for k, v in build_args.items()])
+    return ""

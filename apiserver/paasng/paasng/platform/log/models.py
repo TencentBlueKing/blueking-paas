@@ -16,26 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from functools import partial
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Dict, List, Literal, Optional, Union
 
-import cattr
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
+from paasng.utils.structure import register
 
 
-def registry(pydantic_model: Type[BaseModel]):
-    cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-    cattr.register_unstructure_hook(pydantic_model, partial(pydantic_model.dict, by_alias=True))
-    return pydantic_model
-
-
-@registry
+@register
 class ElasticSearchHost(BaseModel):
     """ES 配置, 字段命名保持 elasticsearch 的格式"""
 
@@ -46,7 +40,7 @@ class ElasticSearchHost(BaseModel):
     use_ssl: bool = Field(False)
 
 
-@registry
+@register
 class ElasticSearchParams(BaseModel):
     """ES 搜索相关配置"""
 
@@ -61,7 +55,7 @@ class ElasticSearchParams(BaseModel):
     filedMatcher: Optional[str] = Field(default=None, description="字段设置的白名单正则匹配表达式, 设置该字段可将某些字段从「字段设置」列表中隐藏")
 
 
-@registry
+@register
 class BKLogConfig(BaseModel):
     """日志平台的查询配置"""
 
@@ -70,7 +64,7 @@ class BKLogConfig(BaseModel):
     bkdataAuthenticationMethod: Optional[Literal["token", "user"]] = Field(description="数据平台认证方式")
 
 
-@registry
+@register
 class ContainerLogCollectorConfig(BaseModel):
     """容器日志采集配置"""
 
@@ -100,7 +94,6 @@ class ProcessStructureLogCollectorConfig(AuditedModel):
 class ElasticSearchConfig(UuidAuditedModel):
     """ES查询配置"""
 
-    # TODO: 支持云原生应用
     collector_config_id = models.CharField(_("采集配置ID"), unique=True, help_text="采集配置ID", max_length=64)
     backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ", max_length=16)
     elastic_search_host: Optional[ElasticSearchHost] = ElasticSearchHostField(
@@ -122,24 +115,12 @@ class ProcessLogQueryConfigManager(models.Manager):
                 raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
         return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
-    def get_by_process_type(self, process_type: Optional[str], env: Optional[ModuleEnvironment] = None):
-        # 兼容关联查询(RelatedManager)的接口
-        if env is None:
-            if hasattr(self, "instance"):
-                env = self.instance
-            else:
-                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
-        try:
-            self.filter(env=env, process_type=process_type).get()
-        except ProcessLogQueryConfig.DoesNotExist:
-            # get all process placeholder as fallback
-            return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
-
 
 class ProcessLogQueryConfig(UuidAuditedModel):
     """进程日志查询配置"""
 
     env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
+    # TODO: 云原生应用确定了需要统一镜像, process_type 字段可删除
     process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True)
 
     stdout = models.ForeignKey(
@@ -171,3 +152,19 @@ class ProcessLogQueryConfig(UuidAuditedModel):
 
     class Meta:
         unique_together = ("env", "process_type")
+
+
+class CustomCollectorConfig(UuidAuditedModel):
+    """日志平台自定义采集项配置"""
+
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False, db_index=True)
+
+    name_en = models.CharField(
+        _("自定义采集项名称"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, unique=True
+    )
+    collector_config_id = models.BigIntegerField(_("采集配置ID"), help_text="采集配置ID", unique=True)
+    index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用", null=True)
+    bk_data_id = models.BigIntegerField(_("数据管道ID"))
+
+    log_paths = models.JSONField(_("日志采集路径"))
+    log_type = models.CharField(_("日志类型"), max_length=32)

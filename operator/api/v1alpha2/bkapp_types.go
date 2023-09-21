@@ -19,41 +19,23 @@
 package v1alpha2
 
 import (
-	"encoding/json"
-
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // BkApp is the Schema for the bkapps API
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-//+kubebuilder:storageversion
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:storageversion
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              AppSpec   `json:"spec,omitempty"`
 	Status            AppStatus `json:"status,omitempty"`
-}
-
-// ExtractAddons will return the addon name list defined in the annotations, if not found, return nil and err
-func (bkapp *BkApp) ExtractAddons() ([]string, error) {
-	// 未声明增强服务, 返回空列表
-	val, ok := bkapp.Annotations[AddonsAnnoKey]
-	if !ok {
-		return nil, nil
-	}
-
-	var addons []string
-	if err := json.Unmarshal([]byte(val), &addons); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return addons, nil
 }
 
 // Hub marks this type as a conversion hub.
@@ -78,9 +60,25 @@ type AppSpec struct {
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`
 
+	// Addons is a list of add-on service
+	// +optional
+	Addons []Addon `json:"addons,omitempty"`
+
+	// Mounts is a list of mount volume
+	// +optional
+	Mounts []Mount `json:"mounts,omitempty"`
+
 	// Hook commands of current BkApp resource
 	// +optional
 	Hooks *AppHooks `json:"hooks,omitempty"`
+
+	// Domain name resolution config
+	// +optional
+	DomainResolution *DomainResConfig `json:"domainResolution,omitempty"`
+
+	// The application's service discovery config
+	// +optional
+	SvcDiscovery *SvcDiscConfig `json:"svcDiscovery,omitempty"`
 
 	// EnvOverlay holds environment specified configurations, includes replica
 	// count and environment variables.
@@ -161,6 +159,35 @@ type Process struct {
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
 
+// Addon is used to specify add-on service
+type Addon struct {
+	// Name of the add-on service, e.g. redis
+	Name string `json:"name"`
+
+	// Specifies of the add-on service, if not set, recommended specifies will be used
+	// +optional
+	Specs []AddonSpec `json:"specs,omitempty"`
+}
+
+// AddonSpec is used to specify add-on service, e.g. version: 6.0
+type AddonSpec struct {
+	// Name of the spec.
+	Name string `json:"name"`
+
+	// Value of the spec value
+	Value string `json:"value"`
+}
+
+// Mount is used to specify mount volume
+type Mount struct {
+	// Path of the mount
+	MountPath string `json:"mountPath"`
+	// Name of the mount
+	Name string `json:"name"`
+	// Source of the mount
+	Source *VolumeSource `json:"source"`
+}
+
 // ResQuotaPlan is used to specify process resource quota
 type ResQuotaPlan string
 
@@ -177,15 +204,18 @@ const (
 	// ResQuotaPlan2C2G means 2 cpu & 2Gi memory
 	ResQuotaPlan2C2G ResQuotaPlan = "2C2G"
 
+	// ResQuotaPlan4C1G means 4 cpu & 1Gi memory
+	ResQuotaPlan4C1G ResQuotaPlan = "4C1G"
+
 	// ResQuotaPlan4C2G means 4 cpu & 2Gi memory
 	ResQuotaPlan4C2G ResQuotaPlan = "4C2G"
+
+	// ResQuotaPlan4C4G means 4 cpu & 4Gi memory
+	ResQuotaPlan4C4G ResQuotaPlan = "4C4G"
 )
 
 // AutoscalingSpec is bkapp autoscaling config
 type AutoscalingSpec struct {
-	// Enabled indicates whether autoscaling is enabled
-	Enabled bool `json:"enabled"`
-
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
 	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
 	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
@@ -222,6 +252,44 @@ type Hook struct {
 	Args []string `json:"args,omitempty"`
 }
 
+// DomainResConfig defines the domain resolution config of the application
+type DomainResConfig struct {
+	// Nameservers specifies the IP addresses of the name servers
+	// +optional
+	Nameservers []string `json:"nameservers,omitempty"`
+
+	// HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
+	// file if specified. This is only valid for non-hostNetwork pods.
+	// NOTE: Copied from Kubernetes PodSpec API.
+	// +optional
+	HostAliases []HostAlias `json:"hostAliases,omitempty"`
+}
+
+// HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
+// pod's hosts file.
+type HostAlias struct {
+	// IP address of the host file entry.
+	IP string `json:"ip,omitempty"`
+	// Hostnames for the above IP address.
+	Hostnames []string `json:"hostnames,omitempty"`
+}
+
+// SvcDiscConfig stores the service discovery config
+type SvcDiscConfig struct {
+	// A list of entries that contain SaaS module info
+	BkSaaS []SvcDiscEntryBkSaaS `json:"bkSaaS,omitempty"`
+}
+
+// SvcDiscEntryBkSaaS is an entry that represents an application and an optional module.
+type SvcDiscEntryBkSaaS struct {
+	// BkAppCode is the code of the application.
+	BkAppCode string `json:"bkAppCode"`
+
+	// ModuleName is the name of the module, when absent, the "main" module will be used.
+	// +optional
+	ModuleName *string `json:"moduleName,omitempty"`
+}
+
 // AppConfig is bkapp related configuration, such as environment variables, etc.
 type AppConfig struct {
 	// List of environment variables to set in the container.
@@ -239,9 +307,13 @@ type AppEnvVar struct {
 
 // AppEnvOverlay defines environment specified configs.
 type AppEnvOverlay struct {
-	// Replicas overwrite processes's replicas count
+	// Replicas overwrite process's replicas count
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
+
+	// ResQuotas overwrite BkApp's process resource quota
+	// +optional
+	ResQuotas []ResQuotaOverlay `json:"resQuotas,omitempty"`
 
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
@@ -250,6 +322,10 @@ type AppEnvOverlay struct {
 	// Autoscaling overwrite process's autoscaling config
 	// +optional
 	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
+
+	// Mounts overwrite BkApp's mounts by environment
+	// +optional
+	Mounts []MountOverlay `json:"mounts,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
@@ -282,6 +358,16 @@ type ReplicasOverlay struct {
 	Count int32 `json:"count"`
 }
 
+// ResQuotaOverlay overwrite process's resQuota by environment.
+type ResQuotaOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Plan is used to specify process resource quota
+	Plan ResQuotaPlan `json:"plan"`
+}
+
 // EnvVarOverlay overwrite or add application's environment vars by environment.
 type EnvVarOverlay struct {
 	// EnvName is app environment name
@@ -298,8 +384,15 @@ type AutoscalingOverlay struct {
 	EnvName EnvName `json:"envName"`
 	// Process is the name of process
 	Process string `json:"process"`
-	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
-	Policy ScalingPolicy `json:"policy"`
+	// Spec is bkapp autoscaling config
+	Spec AutoscalingSpec `json:",inline"`
+}
+
+// MountOverlay overwrite or add application's mounts by environment
+type MountOverlay struct {
+	Mount Mount `json:",inline"`
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
 }
 
 // AppStatus defines the observed state of BkApp
@@ -331,7 +424,31 @@ type AppStatus struct {
 	// .metadata.generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// AddonStatuses is the status of add-on service include specifications
+	// +optional
+	AddonStatuses []AddonStatus `json:"addonStatuses,omitempty"`
 }
+
+// AddonStatus is the status of add-on service
+type AddonStatus struct {
+	Name  string      `json:"name"`
+	State AddonState  `json:"state"`
+	Specs []AddonSpec `json:"specs,omitempty"`
+	// if add-on service state is failed, message will be the fail message
+	Message string `json:"message,omitempty"`
+}
+
+// AddonState is the state of add-on with app
+// +kubebuilder:validation:Enum=provisioned;failed
+type AddonState string
+
+const (
+	// AddonProvisioned means add-on is provisioned successfully
+	AddonProvisioned AddonState = "provisioned"
+	// AddonFailed means add-on failed to provision, maybe no available resources can be provided
+	AddonFailed AddonState = "failed"
+)
 
 // Addressable includes URL and other related properties
 type Addressable struct {
@@ -438,8 +555,9 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 
 // HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+//
+//	unhealthy is meaning that the Pod is restarting or is Failed
+//	progressing is meaning that the Pod is still running and condition `PodReady` is False.
 type HealthPhase string
 
 const (

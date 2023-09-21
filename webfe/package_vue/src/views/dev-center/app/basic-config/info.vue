@@ -4,7 +4,7 @@
       <h2> {{ $t('基本信息') }} </h2>
     </div>
     <paas-content-loader
-      class="app-container middle"
+      class="app-container middle base-info-container"
       :is-loading="isLoading"
       placeholder="base-info-loading"
     >
@@ -241,23 +241,6 @@
                 <label class="title-label"> {{ $t('联系人员') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <!-- <bk-member-selector
-                  v-if="GLOBAL.APP_VERSION === 'te'"
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                />
-                <blueking-user-selector
-                  v-else
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  display-list-tips
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                /> -->
                 <user
                   ref="member_selector"
                   v-model="localeAppInfo.contact"
@@ -435,7 +418,7 @@
           </div>
         </div>
         <!-- 鉴权信息 -->
-        <authentication-info />
+        <authentication-info ref="authenticationRef" />
         <!-- <div
           v-if="canViewSecret"
           class="basic-info-item"
@@ -556,7 +539,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`确认删除应用【${curAppInfo.application.name}】？`"
+      :title="$t(`确认删除应用【{name}】？`, { name: curAppInfo.application.name })"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -587,6 +570,7 @@
           {{ $t('确定') }}
         </bk-button>
         <bk-button
+          class="ml10"
           theme="default"
           @click="delAppDialog.visiable = false"
         >
@@ -727,6 +711,7 @@
                 if (value.application.type === 'bk_plugin') {
                     this.getProfile();
                 }
+                this.$refs.authenticationRef?.resetAppSecret();
                 setTimeout(() => {
                     this.isLoading = false;
                 }, 300);
@@ -1245,6 +1230,11 @@
 </script>
 
 <style lang="scss" scoped>
+    .base-info-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 2px 24px;
+    }
     .desc-flex{
         display: flex;
         justify-content: flex-start;

@@ -1,8 +1,30 @@
 - model: templates.template
   pk: 1
   fields:
-    created: !!timestamp '2022-09-08 12:00:00.000000+00:00'
-    updated: !!timestamp '2022-09-08 12:00:00.000000+00:00'
+    created: !!timestamp '2022-09-02 12:00:00.000000+00:00'
+    updated: !!timestamp '2022-09-02 12:00:00.000000+00:00'
+    name: dj2_hello_world
+    type: 'normal'
+    display_name_zh_cn: Django3.x 框架
+    display_name_en: Django3.x framework
+    description_zh_cn: Python + Django3.x
+    description_en: Python + Django3.x
+    language: Python
+    market_ready: false
+    preset_services_config: {}
+    blob_url:
+      default: bkrepo://bkpaas3-apps-tmpls/open/dj_with_hello_world_dj2.tar.gz
+    enabled_regions:
+      - default
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: ''
+- model: templates.template
+  pk: 2
+  fields:
+    created: !!timestamp '2022-09-01 12:00:00.000000+00:00'
+    updated: !!timestamp '2022-09-01 12:00:00.000000+00:00'
     name: dj2_with_auth
     type: 'normal'
     display_name_zh_cn: 蓝鲸应用开发框架（Django3.x）
@@ -22,28 +44,6 @@
     tags: []
     repo_url: ''
 - model: templates.template
-  pk: 2
-  fields:
-    created: !!timestamp '2022-09-08 12:00:00.000000+00:00'
-    updated: !!timestamp '2022-09-08 12:00:00.000000+00:00'
-    name: dj2_hello_world
-    type: 'normal'
-    display_name_zh_cn: Django3.x 框架
-    display_name_en: Django3.x framework
-    description_zh_cn: Python + Django3.x
-    description_en: Python + Django3.x
-    language: Python
-    market_ready: false
-    preset_services_config: {}
-    blob_url:
-      default: bkrepo://bkpaas3-apps-tmpls/open/dj_with_hello_world_dj2.tar.gz
-    enabled_regions:
-      - default
-    required_buildpacks: []
-    processes: {}
-    tags: []
-    repo_url: ''
-- model: templates.template
   pk: 3
   fields:
     created: !!timestamp '2022-09-08 12:00:00.000000+00:00'
@@ -53,7 +53,7 @@
     display_name_zh_cn: 蓝鲸应用前端开发框架
     display_name_en: BlueKing Front-end framework
     description_zh_cn: Node10.x + Express4.x + Vue2.0，集成蓝鲸Vue组件库、Mock服务、统一登录
-    description_en: Node10.x + Express4.x + Vue2.0, integrated Blue Whale Vue component library, Mock service, login service, etc.
+    description_en: Node10.x + Express4.x + Vue2.0, integrated BlueKing Vue component library, Mock service, login service, etc.
     language: NodeJS
     market_ready: true
     preset_services_config: {}

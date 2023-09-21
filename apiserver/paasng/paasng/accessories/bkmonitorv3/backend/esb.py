@@ -51,7 +51,7 @@ class MonitorV3Group(OperationGroup):
     # 查询空间实例详情
     metadata_get_space_detail = bind_property(
         Operation,
-        name="metadata_create_space",
+        name="metadata_get_space_detail",
         method="GET",
         path="/api/c/compapi/v2/monitor_v3/metadata_get_space_detail/",
     )
@@ -61,6 +61,13 @@ class MonitorV3Group(OperationGroup):
         name="search_alert",
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/search_alert/",
+    )
+    # 统一查询时序数据
+    promql_query = bind_property(
+        Operation,
+        name='promql_query',
+        method='POST',
+        path='/api/c/compapi/v2/monitor_v3/graph_promql_query/',
     )
 
 

@@ -28,6 +28,7 @@ from .views.engine import (
     config_vars,
     custom_domain,
     deployments,
+    egress,
     operator,
     package,
     proc_spec,
@@ -198,6 +199,12 @@ urlpatterns = [
     ),
     # 平台管理-集群管理页
     url(r'^platform/clusters/manage/$', clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),
+    # 平台管理-集群组件页
+    url(
+        r'^platform/clusters/components/manage/$',
+        clusters.ClusterComponentManageView.as_view(),
+        name="admin.cluster_components.manage",
+    ),
     # 平台管理-集群 Operator 管理页
     url(r'^platform/operators/manage/$', operator.OperatorManageView.as_view(), name="admin.operators.manage"),
     # 平台管理-共享证书管理
@@ -254,6 +261,23 @@ urlpatterns = [
         f'^applications/(?P<code>[^/]+)/{PART_MODULE}/engine/source_packages/(?P<pk>[^/]+)/$',
         package.SourcePackageManageViewSet.as_view(dict(get="download")),
         name="admin.applications.engine.source_packages.detail",
+    ),
+    # 应用详情 - Egress 管理
+    url(
+        r'^applications/(?P<code>[^/]+)/engine/egress/manage/$',
+        egress.EgressManageView.as_view(),
+        name="admin.applications.engine.egress.manage",
+    ),
+    # 应用详情 - Egress 管理 API
+    url(
+        f'^applications/(?P<code>[^/]+)/{PART_MODULE_WITH_ENV}/engine/egress/$',
+        egress.EgressManageViewSet.as_view(dict(get="get", post="create", delete="destroy")),
+        name="admin.applications.engine.egress.detail",
+    ),
+    url(
+        f'^applications/(?P<code>[^/]+)/{PART_MODULE_WITH_ENV}/engine/egress/ips/$',
+        egress.EgressManageViewSet.as_view(dict(get="get_egress_ips")),
+        name="admin.applications.engine.egress.ips",
     ),
     # 应用详情-环境变量管理
     url(

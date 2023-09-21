@@ -128,7 +128,7 @@
               />
             </bk-form-item>
             <bk-form-item
-              :label="$t('版本日志')"
+              :label="$t('版本日志-label')"
               :required="true"
               :property="'comment'"
             >

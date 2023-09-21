@@ -33,6 +33,7 @@ from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.utils import ForceAllowAuthedApp
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
@@ -80,6 +81,7 @@ class FilterPluginsMixin:
         return plugins, paginator
 
 
+@ForceAllowAuthedApp.mark_view_set
 class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for bk_plugin type applications"""
 
@@ -96,6 +98,7 @@ class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
         return Response(serializers.BkPluginDetailedSLZ(plugin_to_detailed(plugin)).data)
 
 
+@ForceAllowAuthedApp.mark_view_set
 class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for batch operations on bk_plugin type applications"""
 
@@ -124,7 +127,11 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
-        serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
+        if request.method == "GET":
+            # 该接口首次注册到网关时是 GET 协议, 因此需要保留对 GET 的兼容
+            serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
+        else:
+            serializer = serializers.ListBkPluginLogsSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 

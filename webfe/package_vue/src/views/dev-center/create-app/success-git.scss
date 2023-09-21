@@ -101,10 +101,10 @@
         &:first-child {
             margin-bottom: 16px;
             .copy-icon {
-                left: 165px;
+                right: 20px;
             }
             .copy-icon-en {
-                left: 390px;
+                right: 20px;
             }
         }
         code {
@@ -127,7 +127,7 @@
         .copy-icon,
         .copy-icon-en {
             position: absolute;
-            left: 175px;
+            right: 20px;
             cursor: pointer;
             font-size: 20px;
             top: 1px;
@@ -136,7 +136,7 @@
             }
         }
         .copy-icon-two {
-            left: 360px !important;
+            right: 20px;
         }
     }
     .tips-plugin {

@@ -36,38 +36,115 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# 平台保留的日志字段与不同日志采集方案的映射关系
+# ELK 方案与 k8s 相关的字段收集到 kubernetes
+# bklog 方案与 k8s 相关的字段收集到 __ext
+# 由于 ELK 方案是所有应用共用一个 ES index, 存在 mappings 互相干扰的问题
+# 因此需要将保留字段同名的字段优先级提高, 避免在 ELK 方案中无法正常过滤(ELK 方案在 logstash 中有清洗保留字段的逻辑)
+RESERVED_FIELDS = {
+    # TODO: 移除 region 字段
+    # 理由: region 字段并未使用
+    "region": [
+        "region",
+        "kubernetes.labels.region",
+        "kubernetes.labels.bkapp_paas_bk_tencent_com_region",
+        "__ext.labels.region",
+        "__ext.labels.bkapp_paas_bk_tencent_com_region",
+    ],
+    "app_code": [
+        "app_code",
+        "kubernetes.labels.bkapp_paas_bk_tencent_com_code",
+        "__ext.labels.bkapp_paas_bk_tencent_com_code",
+    ],
+    "module_name": [
+        "module_name",
+        "kubernetes.labels.bkapp_paas_bk_tencent_com_module_name",
+        "__ext.labels.bkapp_paas_bk_tencent_com_module_name",
+    ],
+    "environment": [
+        "environment",
+        "kubernetes.labels.bkapp_paas_bk_tencent_com_environment",
+        "__ext.labels.bkapp_paas_bk_tencent_com_environment",
+    ],
+    "process_id": [
+        # 普通应用记录进程名的 label 是 process_id
+        # 云原生应用新增的记录进程名的 label 是 bkapp.paas.bk.tencent.com/process-name
+        "process_id",
+        "kubernetes.labels.process_id",
+        "kubernetes.labels.bkapp_paas_bk_tencent_com_process_name",
+        "__ext.labels.process_id",
+        "__ext.labels.bkapp_paas_bk_tencent_com_process_name",
+        "process_type",
+    ],
+    "pod_name": ["kubernetes.pod.name", "__ext.io_kubernetes_pod", "pod_name"],
+    # TODO: 移除 stream 字段
+    # 理由: bklog 无法从文件路径清洗出 stream
+    "stream": ["stream"],
+}
+
+
 def parse_request_to_es_dsl(dsl: 'SearchRequestSchema', mappings: dict) -> Query:
     # use `MatchAll` as fallback
     query_string = (
         Q("query_string", query=dsl.query.query_string, analyze_wildcard=True) if dsl.query.query_string else Q()
     )
     # 空数组不进行过滤
-    terms = [Q("terms", **{get_es_term(k, mappings): v}) for k, v in dsl.query.terms.items() if len(v) != 0]
-    excludes = [~Q("terms", **{get_es_term(k, mappings): v}) for k, v in dsl.query.exclude.items() if len(v) != 0]
+    # 当 _expand__to_dot=True 时, 会将 bklog 的保留字段 __ext 转成 .ext, 导致查询异常
+    terms = [
+        Q("terms", **{get_es_term(k, mappings): v}, _expand__to_dot=False)
+        for k, v in dsl.query.terms.items()
+        if len(v) != 0
+    ]
+    excludes = [
+        ~Q("terms", **{get_es_term(k, mappings): v}, _expand__to_dot=False)
+        for k, v in dsl.query.exclude.items()
+        if len(v) != 0
+    ]
     return reduce(and_, [query_string, *terms, *excludes])
 
 
 def get_es_term(query_term: str, mappings: dict) -> str:
     """根据 ES 中的字段类型，返回查询 term
+
     :param query_term: 前端查询关键字
     :param mappings: 从 ES 中获取的 properties mapping
+    """
+    if query_term in RESERVED_FIELDS:
+        for possible_field in RESERVED_FIELDS[query_term]:
+            try:
+                return try_get_es_term(possible_field, mappings)
+            except KeyError:
+                continue
+
+    try:
+        return try_get_es_term(query_term, mappings)
+    except KeyError:
+        return query_term
+
+
+def try_get_es_term(query_term: str, mappings: dict) -> str:
+    """根据 ES 中的字段类型，返回查询 term
+
+    :param query_term: 前端查询关键字
+    :param mappings: 从 ES 中获取的 properties mapping
+    :raise KeyError: 当无法从 mappings 中解析出 term 时, 抛异常 KeyError
     """
     try:
         target = mappings[query_term]
     except KeyError:
         parts = query_term.split(".")
         if len(parts) == 1:
-            # ES mapping 中不存在该字段信息，直接返回
-            return query_term
-
-        # 去掉最后一个 "properties"
+            # ES mapping 中不存在该字段信息，抛出 KeyError 异常
+            raise KeyError(query_term)
+        # 补充 "properties"
         # ["json", "levelname"] -> ["json", "properties", "levelname"]
+        # [:-1] 的含义是去掉最后一个 "properties"
         parts = list(chain.from_iterable(zip(parts, ["properties"] * len(parts))))[:-1]
         try:
             target = reduce(operator.getitem, parts, mappings)
         except KeyError:
             logger.warning("can't parse %s from mappings, return what it is", query_term)
-            return query_term
+            raise KeyError(query_term)
 
     if target["type"] == "text":
         return f"{query_term}.keyword"
@@ -76,33 +153,12 @@ def get_es_term(query_term: str, mappings: dict) -> str:
 
 
 def rename_log_fields(raw_log: Dict[str, Any]):
-    """调整 log 字段名称"""
-    # [deprecated] 如果 region 不存在, 将 kubernetes.labels.region 重命名为 region
-    # TODO: 去掉 region 字段
-    raw_log["region"] = raw_log.get("region") or raw_log.get("kubernetes.labels.region") or NOT_SET
-
-    # [deprecated] 如果 app_code 不存在, 将 kubernetes.labels.app_code 重命名为 app_code
-    # TODO: 去掉 app_code 字段
-    raw_log["app_code"] = raw_log.get("app_code") or raw_log.get("kubernetes.labels.app_code") or NOT_SET
-
-    # [deprecated] 如果 module_name 不存在, 将 kubernetes.labels.module_name 重命名为 app_code
-    # TODO: 去掉 module_name 字段
-    raw_log["module_name"] = raw_log.get("module_name") or raw_log.get("kubernetes.labels.module_name") or NOT_SET
-
-    # [deprecated] 如果 environment 不存在, 将 kubernetes.labels.env 重命名为 app_code
-    # TODO: 去掉 environment 字段
-    raw_log["environment"] = raw_log.get("environment") or raw_log.get("kubernetes.labels.env") or NOT_SET
-
-    # 如果 process_id 不存在, 将 process_type 或 kubernetes.labels.process_id 重命名为 process_id
-    raw_log["process_id"] = (
-        raw_log.get("process_id")
-        or raw_log.get("process_type")
-        or raw_log.get("kubernetes.labels.process_id")
-        or NOT_SET
-    )
-
-    # 如果 pod_name 不存在, 将 kubernetes.pod.name 重命名为 pod_name
-    raw_log["pod_name"] = raw_log.get("pod_name") or raw_log.get("kubernetes.pod.name") or NOT_SET
+    """将 RESERVED_FIELDS 中记录的字段映射到 log"""
+    for field, possible_fields in RESERVED_FIELDS.items():
+        value = NOT_SET
+        for pfield in possible_fields:
+            value = raw_log.get(pfield, value)
+        raw_log[field] = value
 
     return raw_log
 

@@ -30,7 +30,7 @@ from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
 from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
-from paasng.accessories.iam.helpers import delete_builtin_user_groups
+from paasng.accessories.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.handlers import application_logo_updated
@@ -162,8 +162,9 @@ class Command(BaseCommand):
                 before_finishing_application_creation.send("FakeSender", application=application)
             except IntegrityError as e:
                 logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create")
-                # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容
+                # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容，权限中心先删除用户组，再删除分级管理员
                 delete_builtin_user_groups(application.code)
+                delete_grade_manager(application.code)
                 Application.objects.filter(code=app_desc.code).delete()
                 return
 

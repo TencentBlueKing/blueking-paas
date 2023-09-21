@@ -20,7 +20,7 @@ package controllers
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -82,9 +82,10 @@ var _ = Describe("", func() {
 					},
 				},
 				Configuration: paasv1alpha2.AppConfig{},
+				Addons:        []paasv1alpha2.Addon{{Name: "fake-addon"}},
 			},
 		}
-		bkapp = testing.WithAppInfoAnnotations(testing.WithAddons(bkapp, "fake-addon"))
+		bkapp = testing.WithAppInfoAnnotations(bkapp)
 
 		podCounter = func() int {
 			pods := &corev1.PodList{}
@@ -109,20 +110,20 @@ var _ = Describe("", func() {
 					// 查询增强服务环境变量
 					return &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
+						Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
 						Header:     make(http.Header),
 					}
 				case "POST":
 					// 分配增强服务
 					return &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+						Body:       io.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
 						Header:     make(http.Header),
 					}
 				}
 				return &http.Response{
 					StatusCode: 400,
-					Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+					Body:       io.NopCloser(bytes.NewBufferString(``)),
 					Header:     make(http.Header),
 				}
 			})),
@@ -148,7 +149,7 @@ var _ = Describe("", func() {
 		Expect(controllerutil.ContainsFinalizer(createdBkApp, paasv1alpha2.BkAppFinalizerName)).To(BeTrue())
 
 		By("By checking the pre-release-hook pod is dispatched")
-		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-release-hook-1"}
+		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-rel-fake-app-1"}
 		preReleaseHookPod := &corev1.Pod{}
 
 		// We'll need to retry getting this newly created Pod, given that creation may not immediately happen.
@@ -282,7 +283,7 @@ var _ = Describe("", func() {
 		Expect(podCounter()).To(Equal(2))
 
 		By("By update the pre-release-hook pod Status.Phase to Running to block the BkApp finalizer", func() {
-			preReleaseHook1LookupKey.Name = "pre-release-hook-2"
+			preReleaseHook1LookupKey.Name = "pre-rel-fake-app-2"
 			Expect(k8sClient.Get(ctx, preReleaseHook1LookupKey, preReleaseHookPod)).NotTo(HaveOccurred())
 			preReleaseHookPod.Status.Phase = corev1.PodRunning
 			Expect(k8sClient.Status().Update(ctx, preReleaseHookPod)).NotTo(HaveOccurred())

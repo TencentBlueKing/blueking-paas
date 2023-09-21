@@ -19,16 +19,17 @@ to the current version of the project delivered to anyone in the future.
 from typing import Type
 
 from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
 class ApplicationType(str, StructuredEnum):
-    DEFAULT = EnumField('default')  # 默认类型：无任何定制逻辑
-    ENGINELESS_APP = EnumField('engineless_app')  # 无引擎应用：不部署，但可通过设置第三方地址上线到市场，也支持申请云 API
-    BK_PLUGIN = EnumField('bk_plugin')  # 蓝鲸插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑
+    DEFAULT = EnumField('default', label="普通应用")  # 默认类型：无任何定制逻辑
+    ENGINELESS_APP = EnumField('engineless_app', label="外链应用")  # 无引擎应用：不部署，但可通过设置第三方地址上线到市场，也支持申请云 API
+    BK_PLUGIN = EnumField('bk_plugin', label="蓝鲸应用插件")  # 蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑
 
     # 云原生架构应用：完全基于 YAML 模型的应用，当前作为一个独立应用类型存在，但未来它也许会成为所有应用
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
-    CLOUD_NATIVE = EnumField('cloud_native')
+    CLOUD_NATIVE = EnumField('cloud_native', label="云原生应用")
 
     @classmethod
     def normal_app_type(cls):
@@ -98,8 +99,10 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     PA_CUSTOM_EVENT_ANALYTICS = FeatureFlagField(label="自定义事件统计功能")
     PA_INGRESS_ANALYTICS = FeatureFlagField(label="访问日志统计功能")
     PA_USER_DIMENSION_SHOW_DEPT = FeatureFlagField(label="按用户维度拆分展示部门字段")
+
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
     MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
+    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
 
 
 class LightApplicationViewSetErrorCode(str, StructuredEnum):

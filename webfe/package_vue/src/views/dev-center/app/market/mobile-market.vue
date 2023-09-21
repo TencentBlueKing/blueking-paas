@@ -4,13 +4,13 @@
       <h2> {{ $t('应用市场 (移动端)') }} </h2>
     </div>
     <paas-content-loader
-      class="app-container middle"
+      class="app-container middle mobile-market-container"
       :is-loading="isDataLoading"
       placeholder="market-mobile-loading"
     >
       <section
         v-show="!isDataLoading"
-        class="mobile-config mt25"
+        class="mobile-config"
       >
         <div class="ps-top-card">
           <p class="main-title">
@@ -474,6 +474,11 @@
 </script>
 
 <style lang="scss" scoped>
+    .mobile-market-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 16px 24px;
+    }
     .mobile-config {
         > .content {
             display: flex;

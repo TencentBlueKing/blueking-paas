@@ -113,6 +113,7 @@
 <script>
     import { formatDate } from '@/common/tools';
     import PaasngAlert from './paasng-alert';
+    import i18n from '@/language/i18n';
     export default {
         name: '',
         components: {
@@ -125,7 +126,7 @@
             },
             title: {
                 type: String,
-                default: '批量续期权限'
+                default: i18n.t('批量续期权限')
             },
             rows: {
                 type: Array,

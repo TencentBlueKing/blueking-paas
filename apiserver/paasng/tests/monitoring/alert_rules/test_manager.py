@@ -18,7 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
+from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
+from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager, get_supported_alert_codes
 from paasng.monitoring.monitor.models import AppAlertRule
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
@@ -34,14 +35,35 @@ class TestAlertRuleManager:
         manager = AlertRuleManager(bk_app)
         manager.init_rules()
         mock_import_configs.assert_called_with(bk_app_init_rule_configs)
-        assert AppAlertRule.objects.filter(alert_code='high_cpu_usage').count() == 2
+        assert AppAlertRule.objects.filter(application=bk_app, alert_code='high_cpu_usage').count() == 2
 
-    def test_create_module_rules(self, bk_app, create_module_for_alert):
+    def test_refresh_rules_by_module(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
-        manager.create_module_rules(create_module_for_alert.name)
-        assert AppAlertRule.objects.filter(module=create_module_for_alert, alert_code='high_cpu_usage').count() == 2
+        manager.refresh_rules_by_module(bk_app.get_default_module().name, 'stag')
+        assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
+            get_supported_alert_codes(bk_app.type).app_scoped_codes
+        )
+        assert AppAlertRule.objects.filter_module_scoped(bk_app).count() == len(
+            get_supported_alert_codes(bk_app.type).module_scoped_codes
+        )
+        assert (
+            AppAlertRule.objects.get(application=bk_app, alert_code='high_cpu_usage').threshold_expr
+            == DEFAULT_RULE_CONFIGS['high_cpu_usage']['threshold_expr']
+        )
 
-    def test_update(self, bk_app, cpu_usage_alert_rule_obj):
+    def test_refresh_rules_by_module_with_rule_obj(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
+        manager = AlertRuleManager(bk_app)
+        manager.refresh_rules_by_module(bk_app.get_default_module().name, 'stag')
+        assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
+            get_supported_alert_codes(bk_app.type).app_scoped_codes
+        )
+        assert AppAlertRule.objects.filter_module_scoped(bk_app).count() == len(
+            get_supported_alert_codes(bk_app.type).module_scoped_codes
+        )
+        # 与 test_refresh_rules_by_module 不同, 这里测试 AlertRuleManager.refresh_rules_by_module 能够保留原 DB 中的配置值
+        assert AppAlertRule.objects.get(id=cpu_usage_alert_rule_obj.id).threshold_expr == 'N/A'
+
+    def test_update_rule(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
         from tests.utils.helpers import generate_random_string
 
         receivers = [generate_random_string(6)]
@@ -51,3 +73,10 @@ class TestAlertRuleManager:
         rule_obj = AppAlertRule.objects.get(id=cpu_usage_alert_rule_obj.id)
         assert rule_obj.enabled is False
         assert rule_obj.receivers == receivers
+
+    def test_delete_rules(self, bk_app, cpu_usage_alert_rule_obj):
+        module_name = bk_app.get_default_module().name
+        assert AppAlertRule.objects.filter(application=bk_app, module__name=module_name).exists() is True
+        manager = AlertRuleManager(bk_app)
+        manager.delete_rules(module_name, 'stag')
+        assert AppAlertRule.objects.filter(application=bk_app, module__name=module_name).exists() is False

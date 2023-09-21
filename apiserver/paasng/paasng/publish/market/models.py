@@ -258,16 +258,11 @@ class MarketConfig(TimestampedModel):
     source_module = models.ForeignKey(Module, on_delete=models.CASCADE, null=True, verbose_name='访问目标模块')
     source_tp_url = models.URLField(verbose_name='第三方访问地址', blank=True, null=True)
     custom_domain_url = models.URLField(verbose_name='绑定的独立域名访问地址', blank=True, null=True)
-    prefer_https = models.BooleanField(null=True, verbose_name="当平台提供 https 协议时，是否优先使用")
+    prefer_https = models.BooleanField(
+        null=True, verbose_name="[deprecated] 仅为 False 时强制使用 http, 否则保持与集群 https_enabled 状态一致"
+    )
 
     objects = MarketConfigManager()
-
-    @property
-    def market_address(self):
-        """获取应用在市场里的唯一访问地址"""
-        from paasng.publish.entrance.exposer import get_market_address
-
-        return get_market_address(self.application)
 
     def on_release(self):
         """应用主模块正式环境上线 handler (尝试开启应用市场)

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.cnative.specs.models import create_app_resource, default_bkapp_name
+from paas_wl.cnative.specs.models import create_app_resource, generate_bkapp_name
 from paas_wl.cnative.specs.procs.exceptions import ProcNotDeployed, ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.cnative.specs.resource import deploy
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.fixture
 def deploy_stag_env(bk_stag_env, bk_stag_wl_app, mock_knamespace):
     """Deploy a default payload to cluster for stag environment"""
-    resource = create_app_resource(default_bkapp_name(bk_stag_env), 'nginx:latest')
+    resource = create_app_resource(generate_bkapp_name(bk_stag_env), 'nginx:latest')
     deploy(bk_stag_env, resource.to_deployable())
     yield
 

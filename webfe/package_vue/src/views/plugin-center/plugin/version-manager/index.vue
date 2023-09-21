@@ -218,7 +218,7 @@
           </li>
           <li class="item-info h-auto">
             <div class="describe">
-              {{ $t('版本日志') }}
+              {{ $t('版本日志-label') }}
             </div>
             <div class="content version-log">
               <p>{{ versionDetail.comment }}</p>

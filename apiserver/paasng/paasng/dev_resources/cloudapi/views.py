@@ -28,7 +28,7 @@ from rest_framework.response import Response
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.cloudapi import serializers
-from paasng.dev_resources.cloudapi.components.apigw_dashboard import apigw_dashboard_component
+from paasng.dev_resources.cloudapi.components.bk_apigateway_inner import bk_apigateway_inner_component
 from paasng.dev_resources.cloudapi.utils import get_user_auth_type
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.operations.constant import OperationType
@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 
 class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
 
     @swagger_auto_schema(
@@ -166,7 +165,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self._get(request, app_code, *args, **kwargs)
 
     def _get(self, request, app_code: str, *args, **kwargs):
-        logger.debug("[cloudapi] getting %s", self._get_apigw_dashboard_path(request.path, app_code))
+        logger.debug("[cloudapi] getting %s", self._get_bk_apigateway_inner_api_path(request.path, app_code))
         params = copy.copy(request.query_params)
         params.update(
             {
@@ -175,15 +174,15 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
 
-        result = apigw_dashboard_component.get(
-            self._get_apigw_dashboard_path(request.path, app_code),
+        result = bk_apigateway_inner_component.get(
+            self._get_bk_apigateway_inner_api_path(request.path, app_code),
             params=params,
             bk_username=request.user.username,
         )
         return Response(result)
 
     def _post(self, request, operation_type: int, app_code: str, *args, **kwargs):
-        logger.debug("[cloudapi] posting %s", self._get_apigw_dashboard_path(request.path, app_code))
+        logger.debug("[cloudapi] posting %s", self._get_bk_apigateway_inner_api_path(request.path, app_code))
         data = copy.copy(request.data)
         data.update(
             {
@@ -192,30 +191,33 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
 
-        result = apigw_dashboard_component.post(
-            self._get_apigw_dashboard_path(request.path, app_code),
+        result = bk_apigateway_inner_component.post(
+            self._get_bk_apigateway_inner_api_path(request.path, app_code),
             json=data,
             bk_username=request.user.username,
         )
 
         # 记录操作记录
         try:
-            application = self.get_application()
-            Operation.objects.create(
-                region=application.region,
-                application=application,
-                type=operation_type,
-                user=request.user,
-                extra_values={"gateway_name": data['gateway_name']},
-            )
+            # 部分 API 没有带上网关名，则不记录到操作记录中
+            gateway_name = data.get('gateway_name')
+            if gateway_name:
+                application = self.get_application()
+                Operation.objects.create(
+                    region=application.region,
+                    application=application,
+                    type=operation_type,
+                    user=request.user,
+                    extra_values={"gateway_name": gateway_name},
+                )
         except Exception:
             logger.exception("An exception occurred in the operation record of adding cloud API permissions")
 
         return Response(result)
 
-    def _get_apigw_dashboard_path(self, path: str, app_code: str) -> str:
-        # 请求 apigw-dashboard 接口时，约定 `/api/cloudapi/apps/{app_code}/` 为 bk-paas-ng 的 url 前缀，
-        # `/api/v1/` + `其他部分` 即为 apigw-dashboard 接口地址
+    def _get_bk_apigateway_inner_api_path(self, path: str, app_code: str) -> str:
+        # 请求 bk-apigateway-inner 接口时，约定 `/api/cloudapi/apps/{app_code}/` 为 bk-paas-ng 的 url 前缀，
+        # `/api/v1/` + `其他部分` 即为 bk-apigateway-inner 接口地址
         prefix = self._get_request_path_prefix(path, app_code)
         if path.startswith(prefix):
             return f'/api/v1/{path[len(prefix):]}'

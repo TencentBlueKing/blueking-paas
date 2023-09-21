@@ -21,8 +21,8 @@ import logging
 from typing import Dict, List, Tuple
 
 from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.cnative.specs.models import default_bkapp_name
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, ReplicasOverlay
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource, ReplicasOverlay
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.base import EnhancedApiClient
 from paas_wl.resources.base.exceptions import ResourceMissing
@@ -46,7 +46,7 @@ class ProcReplicas:
         self.env = env
         self.wl_app = env.wl_app
         self.ns = self.wl_app.namespace
-        self.res_name = default_bkapp_name(self.env)
+        self.res_name = generate_bkapp_name(self.env)
 
     def get(self, proc_type: str) -> int:
         """Get the replicas count by process type"""
@@ -97,8 +97,7 @@ class ProcReplicas:
     def _get_bkapp_res(self, client: EnhancedApiClient) -> BkAppResource:
         """Get app model resource from cluster"""
         try:
-            # TODO 确定多版本交互后解除版本锁定
-            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).get(self.res_name, namespace=self.ns)
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(self.res_name, namespace=self.ns)
         except ResourceMissing:
             raise ProcNotDeployed(f'{self.env} not deployed')
         return BkAppResource(**data)

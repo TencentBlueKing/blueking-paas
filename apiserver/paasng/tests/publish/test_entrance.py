@@ -24,11 +24,11 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
+from paas_wl.networking.entrance.addrs import Address, AddressType
 from paasng.engine.constants import JobStatus
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import (
-    ModuleLiveAddrs,
     get_exposed_url,
     get_module_exposed_links,
     update_exposed_url_type_to_subdomain,
@@ -65,63 +65,32 @@ def bk_app(bk_app):
 
 
 class TestIntegratedNotDeployed:
-    def test_normal(self, bk_stag_env, bk_prod_env, bk_module):
-        with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-            mocker.return_value = ModuleLiveAddrs(
-                [
-                    {"env": "stag", "is_running": False, "addresses": []},
-                    {"env": "prod", "is_running": False, "addresses": []},
-                ]
-            )
-
-            assert get_exposed_url(bk_stag_env) is None
-            assert get_exposed_url(bk_prod_env) is None
-
-            urls = get_module_exposed_links(bk_module)
-            assert urls == {
-                'stag': {'deployed': False, 'url': None},
-                'prod': {'deployed': False, 'url': None},
-            }
-
-
-def test_get_module_exposed_links(bk_module, bk_stag_env):
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {
-                    "env": "stag",
-                    "is_running": True,
-                    "addresses": [
-                        {"type": "subdomain", "url": "http://foo-stag.example.com"},
-                    ],
-                },
-                {
-                    "env": "prod",
-                    "is_running": True,
-                    "addresses": [
-                        {"type": "subdomain", "url": "http://foo-prod.example.com"},
-                    ],
-                },
-            ]
-        )
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.save()
-
-        urls = get_module_exposed_links(bk_module)
-        assert urls == {
-            'stag': {'deployed': True, 'url': 'http://foo-stag.example.com'},
-            'prod': {'deployed': True, 'url': 'http://foo-prod.example.com'},
-        }
-
-        # Simulate case when stag environment was offline
-        bk_stag_env.is_offlined = True
-        bk_stag_env.save(update_fields=['is_offlined'])
+    def test_normal(self, bk_stag_env, bk_prod_env, bk_module, mock_env_is_running, mock_get_builtin_addresses):
+        assert get_exposed_url(bk_stag_env) is None
+        assert get_exposed_url(bk_prod_env) is None
 
         urls = get_module_exposed_links(bk_module)
         assert urls == {
             'stag': {'deployed': False, 'url': None},
-            'prod': {'deployed': True, 'url': 'http://foo-prod.example.com'},
+            'prod': {'deployed': False, 'url': None},
         }
+
+
+def test_get_module_exposed_links(
+    bk_module, bk_stag_env, bk_prod_env, mock_env_is_running, mock_get_builtin_addresses
+):
+    mock_env_is_running[bk_stag_env] = True
+    mock_env_is_running[bk_prod_env] = True
+    mock_get_builtin_addresses[bk_stag_env] = [Address(type=AddressType.SUBDOMAIN, url="http://foo-stag.example.com")]
+    mock_get_builtin_addresses[bk_prod_env] = [Address(type=AddressType.SUBDOMAIN, url="http://foo-prod.example.com")]
+    bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
+    bk_module.save()
+
+    urls = get_module_exposed_links(bk_module)
+    assert urls == {
+        'stag': {'deployed': True, 'url': 'http://foo-stag.example.com'},
+        'prod': {'deployed': True, 'url': 'http://foo-prod.example.com'},
+    }
 
 
 class TestUpdateExposedURLType:

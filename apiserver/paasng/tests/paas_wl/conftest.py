@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import atexit
 import copy
 import logging
 import tempfile
@@ -36,6 +37,7 @@ from paas_wl.resources.base.base import get_client_by_cluster_name, get_global_c
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
+from paasng.platform.applications.models import ModuleEnvironment
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
@@ -268,11 +270,11 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
     return _wrapped
 
 
-@pytest.fixture(autouse=True)
+@atexit.register
 def clear_kubernetes_dynamic_discoverer_cache():
-    # delete all discoverer cache files to ensure tests successful of the multiple kubernetes clusters
+    # Delete all discoverer caches to ensure that the next test run is not affected after switching kubernetes clusters
     for f in Path(tempfile.gettempdir()).glob("osrcp-*.json"):
-        f.unlink()
+        f.unlink(missing_ok=True)
 
 
 @pytest.fixture
@@ -319,7 +321,8 @@ def wl_release(wl_app):
 @pytest.fixture
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
-    return create_build_proc(wl_app)
+    env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)
+    return create_build_proc(env)
 
 
 @pytest.fixture

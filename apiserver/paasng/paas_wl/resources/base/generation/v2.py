@@ -16,6 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.cnative.specs.constants import (
+    BKAPP_CODE_ANNO_KEY,
+    ENVIRONMENT_ANNO_KEY,
+    MODULE_NAME_ANNO_KEY,
+    RESOURCE_TYPE_KEY,
+    WLAPP_NAME_ANNO_KEY,
+)
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base.kres import KDeployment, KPod, KReplicaSet
 from paas_wl.utils.basic import digest_if_length_exceeded
@@ -37,17 +44,23 @@ class PodMapper(CallThroughKresMapper[KPod]):
     @property
     def labels(self) -> dict:
         mdata = get_metadata(self.process.app)
-        return dict(
-            pod_selector=self.pod_selector,
-            release_version=str(self.process.version),
-            app_code=mdata.get_paas_app_code(),
-            region=self.process.app.region,
-            env=mdata.environment,
-            module_name=mdata.module_name,
-            process_id=self.process.type,
-            category="bkapp",
-            mapper_version="v2",
-        )
+        return {
+            "pod_selector": self.pod_selector,
+            "release_version": str(self.process.version),
+            "region": self.process.app.region,
+            "app_code": mdata.get_paas_app_code(),
+            "module_name": mdata.module_name,
+            "env": mdata.environment,
+            "process_id": self.process.type,
+            "category": "bkapp",
+            "mapper_version": "v2",
+            # 新 labels
+            BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
+            MODULE_NAME_ANNO_KEY: mdata.module_name,
+            ENVIRONMENT_ANNO_KEY: mdata.environment,
+            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            RESOURCE_TYPE_KEY: "process",
+        }
 
     @property
     def match_labels(self) -> dict:
@@ -65,10 +78,24 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def labels(self) -> dict:
-        return dict(
-            pod_selector=self.pod_selector,
-            release_version=str(self.process.version),
-        )
+        mdata = get_metadata(self.process.app)
+        return {
+            "pod_selector": self.pod_selector,
+            "release_version": str(self.process.version),
+            "region": self.process.app.region,
+            "app_code": mdata.get_paas_app_code(),
+            "module_name": mdata.module_name,
+            "env": mdata.environment,
+            "process_id": self.process.type,
+            "category": "bkapp",
+            "mapper_version": "v2",
+            # 云原生应用新增的 labels
+            BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
+            MODULE_NAME_ANNO_KEY: mdata.module_name,
+            ENVIRONMENT_ANNO_KEY: mdata.environment,
+            WLAPP_NAME_ANNO_KEY: self.process.app.name,
+            RESOURCE_TYPE_KEY: "process",
+        }
 
     @property
     def match_labels(self) -> dict:

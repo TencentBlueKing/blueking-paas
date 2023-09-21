@@ -113,7 +113,7 @@
       <div :class="['log-search-input-wrapper', { 'mr10': isShowExample }]">
         <bk-input
           v-model="keyword"
-          :placeholder="$t('请输入过滤关键字33，按 Enter 键搜索')"
+          :placeholder="$t('请输入过滤关键字，按 Enter 键搜索')"
           :clearable="true"
           :right-icon="'paasng-icon paasng-search'"
           @focus="handleFocus"

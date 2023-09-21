@@ -20,10 +20,12 @@ from typing import NamedTuple
 
 import pytest
 from django.test import TestCase
+from rest_framework import viewsets
 from rest_framework.test import APIRequestFactory
 
 from paasng.accounts.middlewares import AuthenticatedAppAsUserMiddleware, PrivateTokenAuthenticationMiddleware
 from paasng.accounts.models import AuthenticatedAppAsUser, User, UserPrivateToken
+from paasng.accounts.utils import ForceAllowAuthedApp
 
 pytestmark = pytest.mark.django_db
 
@@ -86,17 +88,29 @@ class SimpleApp(NamedTuple):
     verified: bool
 
 
+@ForceAllowAuthedApp.mark_view_set
+class ForTestMarkedAuthViewSet(viewsets.ViewSet):
+    pass
+
+
+class ForTestNotMarkedAuthViewSet(viewsets.ViewSet):
+    pass
+
+
 class TestAuthenticatedAppAsUserMiddleware:
     @pytest.mark.parametrize(
-        'app,expected_username',
+        'app,marked_as_force_allow,expected_username',
         [
-            (SimpleApp(bk_app_code='foo', verified=True), 'foo-user'),
-            (SimpleApp(bk_app_code='foo', verified=False), ''),
-            (SimpleApp(bk_app_code='bar', verified=True), ''),
-            (None, ''),
+            (SimpleApp(bk_app_code='foo', verified=True), False, 'foo-user'),
+            (SimpleApp(bk_app_code='foo', verified=False), False, ''),
+            (SimpleApp(bk_app_code='bar', verified=True), False, ''),
+            # When view set has been marked as "force allow authed app", an user will be created
+            (SimpleApp(bk_app_code='bar', verified=True), True, 'authed-app-bar'),
+            (SimpleApp(bk_app_code='bar', verified=False), True, ''),
+            (None, False, ''),
         ],
     )
-    def test_verified_app_provided(self, app, expected_username):
+    def test_verified_app_provided(self, app, marked_as_force_allow, expected_username):
         # Set up data fixtures
         user = User.objects.create(username='foo-user')
         AuthenticatedAppAsUser.objects.create(user=user, bk_app_code='foo')
@@ -105,7 +119,12 @@ class TestAuthenticatedAppAsUserMiddleware:
         if app:
             request.app = app
 
-        AuthenticatedAppAsUserMiddleware(get_response)(request)
+        view_func = (
+            ForTestMarkedAuthViewSet.as_view({'get': 'retrieve'})
+            if marked_as_force_allow
+            else ForTestNotMarkedAuthViewSet.as_view({'get': 'retrieve'})
+        )
+        AuthenticatedAppAsUserMiddleware(get_response).process_view(request, view_func, None, None)
         if expected_username:
             assert request.user.username == expected_username
             assert request.user.is_authenticated

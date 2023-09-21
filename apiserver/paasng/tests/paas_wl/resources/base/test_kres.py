@@ -196,29 +196,14 @@ class TestLabelBasedOps:
 
 
 class TestKNamespace:
-    @pytest.mark.parametrize(
-        'with_secrets, ret',
-        [
-            (True, True),
-            # NOTE: 待确认: 在创建命名空间时, 会自动创建 SA, 需确认这个测试用例的场景.
-            # (False, False),
-        ],
-    )
-    def test_has_default_sa_with_or_without_secrets(self, k8s_client, with_secrets, ret, resource_name):
+    def test_has_default_sa_with_or_without_secrets(self, k8s_client, resource_name):
         namespace = resource_name
-        assert KNamespace(k8s_client).default_sa_exists(namespace) is False
         KNamespace(k8s_client).get_or_create(namespace)
 
         # Create default SA
-        sa_body: Dict[str, Any] = {
-            'kind': 'ServiceAccount',
-            'metadata': {'name': 'default'},
-        }
-        if with_secrets:
-            sa_body['secrets'] = [{"name": "default-token-" + namespace}]
-
+        sa_body: Dict[str, Any] = {'kind': 'ServiceAccount', 'metadata': {'name': 'default'}}
         KServiceAccount(k8s_client).create_or_update("default", body=sa_body, namespace=namespace)
-        assert KNamespace(k8s_client).default_sa_exists(namespace) is ret
+        assert KNamespace(k8s_client).default_sa_exists(namespace) is True
 
         KNamespace(k8s_client).delete(namespace)
 
@@ -241,11 +226,7 @@ class TestKNamespace:
         assert created is True
 
         # Create default SA
-        sa_body = {
-            'kind': 'ServiceAccount',
-            'metadata': {'name': 'default'},
-            'secrets': [{"name": "default-token-" + namespace}],
-        }
+        sa_body: Dict[str, Any] = {'kind': 'ServiceAccount', 'metadata': {'name': 'default'}}
         KServiceAccount(k8s_client).create_or_update("default", body=sa_body, namespace=namespace)
         assert KNamespace(k8s_client).wait_for_default_sa(namespace, timeout=1) is None
 
@@ -319,6 +300,7 @@ def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1")
                     labels:
                         deployment-name: {name}
                 spec:
+                    automountServiceAccountToken: false
                     containers:
                     - name: main
                       image: busybox
@@ -339,7 +321,8 @@ def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: 
             # Set "schedulerName", so the pod won't be processed by the default
             # scheduler.
             'schedulerName': 'no-running-scheduler',
-            'containers': [{'name': "main", 'image': "busybox", "imagePullPolicy": "IfNotPresent"}],
+            'containers': [{'name': "main", 'image': "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
             "restartPolicy": restart_policy,
+            "automountServiceAccountToken": False,
         },
     }

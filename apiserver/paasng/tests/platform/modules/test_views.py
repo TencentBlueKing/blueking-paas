@@ -70,7 +70,7 @@ class TestModuleRuntimeViewSetV2:
                 "module_name": bk_module.name,
             },
         )
-        binder = ModuleRuntimeBinder(bk_module, slugbuilder)
+        binder = ModuleRuntimeBinder(bk_module)
         binder.bind_image(slugrunner, slugbuilder)
         binder.bind_buildpack(buildpack)
 

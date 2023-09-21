@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Optional
 
+from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
@@ -32,7 +33,6 @@ from paasng.publish.market import serializers
 from paasng.publish.market.models import MarketConfig, Product, Tag, get_all_corp_products
 from paasng.publish.market.protections import AppPublishPreparer
 from paasng.publish.market.signals import offline_market, release_to_market
-from paasng.publish.market.utils import MarketAvailableAddressHelper
 from paasng.utils.error_codes import error_codes
 
 
@@ -175,6 +175,18 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         signal.send(sender=application, application=application, operator=self.request.user.pk)
         return Response(self.get_serializer(application.market_config).data)
 
+    @atomic
+    @swagger_auto_schema(request_body=serializers.MarketEntranceSLZ, tags=["访问入口"])
+    def set_entrance(self, request, code):
+        """设置市场访问地址"""
+        application = self.get_application()
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+        slz = serializers.MarketEntranceSLZ(instance=market_config, data=request.data)
+        slz.is_valid(raise_exception=True)
+        market_config = slz.save()
+        serializer = self.serializer_class(market_config)
+        return Response(serializer.data)
+
 
 class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与发布应用到市场相关 ViewSet"""
@@ -192,19 +204,3 @@ class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 {'all_conditions_matched': not status.activated, 'failed_conditions': status.failed_conditions}
             ).data
         )
-
-
-class MarketAvailableAddressViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_APP_MARKET)]
-
-    @swagger_auto_schema(responses={200: serializers.AvailableAddressSLZ(many=True)}, tags=["应用市场"])
-    def list(self, request, code):
-        """获取当前应用支持的访问地址列表"""
-        application = self.get_application()
-        if not application.engine_enabled:
-            raise error_codes.ENGINE_DISABLED.f("无法获取应用访问地址列表")
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-
-        helper = MarketAvailableAddressHelper(market_config)
-        serializer = serializers.AvailableAddressSLZ(helper.addresses, many=True)
-        return Response(serializer.data)

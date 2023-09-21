@@ -101,8 +101,8 @@ class ApplicationWithLogoSLZ(serializers.Serializer):
     logo_url = serializers.CharField(help_text='Logo 图片', read_only=True, source='get_logo_url')
 
 
-class ModuleServiceAttachmentSLZ(serializers.Serializer):
-    """模块增强服务附件配置状态"""
+class EnvServiceAttachmentSLZ(serializers.Serializer):
+    """部署环境增强服务附件配置状态"""
 
     service = ServiceMinimalSLZ(source="get_service")
     is_provisioned = serializers.BooleanField(help_text="是否已配置实例")
@@ -207,9 +207,30 @@ class CreateSharedAttachmentsSLZ(serializers.Serializer):
     ref_module_name = serializers.CharField(help_text='被共享的模块名称')
 
 
-class SharedServiceInfo(serializers.Serializer):
+class ProvisionInfoSLZ(serializers.Serializer):
+    stag = serializers.BooleanField(help_text="是否已配置实例(预发布环境)", default=False)
+    prod = serializers.BooleanField(help_text="是否已配置实例(生产环境)", default=False)
+
+
+class BoundServiceInfoSLZ(serializers.Serializer):
+    """Serializer for representing bound service info"""
+
+    service = ServiceMinimalSLZ(help_text='增强服务信息')
+    provision_infos = ProvisionInfoSLZ(help_text='增强服务实例分配信息')
+    specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())
+    ref_modules = serializers.ListField(help_text='共享当前增强服务的模块', allow_null=True, child=MinimalModuleSLZ())
+
+
+class SharedServiceInfoSLZ(serializers.Serializer):
     """Serializer for representing shared service info"""
 
     module = MinimalModuleSLZ(help_text='发起共享的模块')
     ref_module = MinimalModuleSLZ(help_text='被共享的模块')
     service = ServiceMinimalSLZ(help_text='共享服务信息')
+
+
+class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
+    """携带分配 & 配置信息的共享服务信息"""
+
+    provision_infos = ProvisionInfoSLZ(help_text='共享服务实例分配信息')
+    specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())

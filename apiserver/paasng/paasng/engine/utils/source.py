@@ -25,20 +25,22 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.dev_resources.sourcectl.controllers.package import PackageController
-from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetProcfileError
+from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetDockerIgnoreError, GetProcfileError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.repo_controller import get_repo_controller
+from paasng.dev_resources.sourcectl.utils import DockerIgnore
 from paasng.engine.configurations.source_file import get_metadata_reader
-from paasng.engine.exceptions import DeployShouldAbortError
+from paasng.engine.exceptions import DeployShouldAbortError, SkipPatchCode
 from paasng.engine.models import Deployment, EngineApp
 from paasng.engine.utils.output import DeployStream, Style
+from paasng.engine.utils.patcher import SourceCodePatcherWithDBDriver
 from paasng.extensions.declarative.handlers import DescriptionHandler, get_desc_handler
 from paasng.extensions.declarative.models import DeploymentDescription
-from paasng.extensions.smart_app.patcher import SourceCodePatcherWithDBDriver
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
@@ -55,6 +57,13 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
     :return: validated processes, which all key is lower case.
     :raise: django.core.exceptions.ValidationError
     """
+
+    if len(processes) > settings.MAX_PROCESSES_PER_MODULE:
+        raise ValidationError(
+            f'The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, '
+            f'but got {len(processes)}'
+        )
+
     for proc_type in processes.keys():
         if not PROC_TYPE_PATTERN.match(proc_type):
             raise ValidationError(f'Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}')
@@ -72,6 +81,25 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
         raise ValidationError(f'Invalid process data, missing: {e}')
     except ValueError as e:
         raise ValidationError(f"Invalid process data, {e}")
+
+
+def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
+    """Get the DockerIgnore from SourceCode"""
+    module: Module = deployment.app_environment.module
+    operator = deployment.operator
+    version_info = deployment.version_info
+    relative_source_dir = deployment.get_source_dir()
+
+    try:
+        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
+        content = metadata_reader.get_dockerignore(version_info)
+    except GetDockerIgnoreError:
+        # 源码中无 dockerignore 文件, 忽略异常
+        return None
+    except NotImplementedError:
+        # 对于不支持从源码读取 .dockerignore 的应用, 忽略异常
+        return None
+    return DockerIgnore(content)
 
 
 def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901
@@ -140,7 +168,10 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
     """
     # Note: 对于非源码包类型的应用, 只有产品上配置的部署目录会生效
     if not ModuleSpecs(module).deploy_via_package:
-        return module.get_source_obj().get_source_dir()
+        if source_obj := module.get_source_obj():
+            return source_obj.get_source_dir()
+        # 模块未绑定 source_obj, 可能是仅托管镜像的云原生应用
+        return ""
 
     # Note: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
     handler = get_app_description_handler(module, operator, version_info)
@@ -168,6 +199,22 @@ def get_app_description_handler(
     return get_desc_handler(app_desc)
 
 
+def get_bkapp_manifest_for_module(
+    module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
+) -> Optional[Dict]:
+    """Get app manifest from bkapp.yaml"""
+    try:
+        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=source_dir)
+    except NotImplementedError:
+        return None
+    try:
+        manifests = metadata_reader.get_bkapp_manifests(version_info)
+    except GetAppYamlError:
+        return None
+    name = generate_bkapp_name(module)
+    return manifests.get(name, None)
+
+
 def get_source_package_path(deployment: Deployment) -> str:
     """Return the blobstore path for storing source files package"""
     engine_app = deployment.get_engine_app()
@@ -193,8 +240,8 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
 
     try:
         SourceCodePatcherWithDBDriver(module, working_path, deployment).add_procfile()
-    except Exception:
-        logger.exception("Unexpected exception occurred when injecting Procfile.")
+    except SkipPatchCode as e:
+        logger.warning("skip the injection process: %s", e.reason)
         return
 
 

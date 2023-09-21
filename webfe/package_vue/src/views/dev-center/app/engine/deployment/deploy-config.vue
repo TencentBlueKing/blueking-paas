@@ -1,4 +1,4 @@
-s<template>
+<template>
   <paas-content-loader
     :is-loading="isLoading"
     placeholder="deploy-config-loading"
@@ -49,7 +49,9 @@ s<template>
                     @click.stop.prevent="handlerCommand">
                     {{configInfo.enabled ? '确认禁用' : '确认启用'}}
                 </bk-button> -->
-        <span class="info">{{ $t('复杂命令可封装在一个脚本中，放在代码仓库的 bin 目录下(bin/pre-task.sh)，并将部署前置命令配置为:') }} "bash ./bin/pre-task.sh"</span>
+        <span class="info">
+          {{ $t('复杂命令可封装在一个脚本中，放在代码仓库的 bin 目录下(bin/pre-task.sh)，并将部署前置命令配置为:') }}
+          "bash ./bin/pre-task.sh"</span>
 
         <div class="action-box">
           <template v-if="!isEdited">
@@ -69,7 +71,7 @@ s<template>
               text
               @click.stop.prevent="saveCommand"
             >
-              {{ $t('确认启用') }}
+              {{ $t('确认启用-button') }}
             </bk-button>
             <bk-button
               v-if="configInfo.loaclEnabled"
@@ -223,7 +225,7 @@ s<template>
                 >
                   <bk-input
                     v-model="newVarConfig.command"
-                    placeholder="$t('启动命令。包含参数，例如：gunicorn wsgi -w 4 -b :$PORT')"
+                    :placeholder="$t('启动命令。包含参数，例如：gunicorn wsgi -w 4 -b :$PORT')"
                     :clearable="false"
                   />
                 </bk-form-item>
@@ -243,7 +245,7 @@ s<template>
             <td>
               <bk-form-item>
                 <p class="mt-minus">
-                  在<span @click="skip"> {{ $t('访问入口-进程服务管理') }} </span> {{ $t('中可设置将应用进程暴露给应用内部与外部用户') }}
+                  {{ $t('在') }}<span @click="skip"> {{ $t('访问入口-进程服务管理') }} </span> {{ $t('中可设置将应用进程暴露给应用内部与外部用户') }}
                 </p>
               </bk-form-item>
             </td>
@@ -253,295 +255,292 @@ s<template>
     </bk-form>
   </paas-content-loader>
 </template>
-<script>
-    import _ from 'lodash';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import tooltipConfirm from '@/components/ui/TooltipConfirm';
-    export default {
-        components: {
-            tooltipConfirm
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: false,
-                isEdited: false,
-                configInfo: { enabled: false, command: '', type: '', loaclEnabled: '' },
-                configDirTip: {
-                    theme: 'light',
-                    allowHtml: true,
-                    content: this.$t('提示信息'),
-                    html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_ORDER}" style="color: #3a84ff">${this.$t('部署前置命令')}</a>`,
-                    placements: ['right']
-                },
-                editRowList: [],
-                newVarConfig: {
-                    name: '',
-                    command: ''
-                },
-                varRules: {
-                    name: [
-                        {
-                            required: true,
-                            message: this.$t('必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            regex: /^[a-zA-Z0-9]([-a-zA-Z0-9]){0,11}$/,
-                            message: this.$t('只能包含字母、数字、连接符(-)'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    command: [
-                        {
-                            required: true,
-                            message: this.$t('必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            regex: /^(?!start).*/,
-                            message: this.$t('不能以 start 开头'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                commandList: [],
-                editIcon: true
-            };
-        },
-        computed: {
-            curAppModule () {
-                return this.$store.state.curAppModule;
-            },
-            isDockerApp () {
-                return this.curAppModule.source_origin === 4;
-            }
-        },
-        watch: {
-            '$route' (newVal, oldVal) {
-                console.log(newVal, oldVal);
-                this.isLoading = true;
-                this.init();
-            }
-        },
-        mounted () {
-            this.isLoading = true;
-            this.init();
-            this.inputFocusFun();
-        },
-        methods: {
-            async init () {
-                try {
-                    const res = await this.$store.dispatch('deploy/getDeployConfig', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId
-                    });
-                    this.commandList = res.procfile;
-                    this.configInfo.command = res.hooks.length ? res.hooks[0].command : '';
-                    this.configInfo.type = res.hooks.length ? res.hooks[0].type : 'pre-release-hook';
-                    this.configInfo.enabled = res.hooks.length ? res.hooks[0].enabled : false;
-                    this.configInfo.loaclEnabled = this.configInfo.enabled;
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                } finally {
-                    this.isLoading = false;
-                }
-            },
-            handlerCommand () {
-                if (this.configInfo.enabled) {
-                    this.$bkInfo({
-                        title: this.$t('确认禁用?'),
-                        maskClose: true,
-                        confirmFn: () => {
-                            this.closeCommand();
-                        }
-                    });
-                } else {
-                    this.$bkInfo({
-                        title: this.$t('确认启用?'),
-                        maskClose: true,
-                        confirmFn: () => {
-                            this.submitCommand();
-                        }
-                    });
-                }
-            },
-            showEdit () {
-                this.isEdited = true;
-                this.localeConfigCommandTemp = this.configInfo.command;
-                this.$refs.nameInput.focus();
-            },
-            saveCommand () {
-                this.isEdited = false;
-                // this.submitCommand()
-                this.$bkInfo({
-                    width: 500,
-                    title: `${this.$t('确认启用模块')}${this.curAppModule.name}${this.$t('部署前置命令?')}`,
-                    subTitle: this.$t('启用后，部署预发布环境、生产环境时都将执行该命令'),
-                    maskClose: true,
-                    confirmFn: () => {
-                        this.submitCommand();
-                    }
-                });
-            },
-            cancelCommand () {
-                this.isEdited = false;
-                this.configInfo.command = this.localeConfigCommandTemp;
-                this.init();
-            },
-            async submitCommand () {
-                const params = {
-                    type: this.configInfo.type,
-                    command: this.configInfo.command
-                };
-                try {
-                    const res = await this.$store.dispatch('deploy/updateDeployConfig', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        params
-                    });
-                    console.log('res', res);
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'success',
-                        message: this.$t('已启用')
-                    });
-                    this.init();
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
-            async closeCommand () {
-                try {
-                    const res = await this.$store.dispatch('deploy/closeDeployConfig', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        type: this.configInfo.type
-                    });
-                    console.log('res', res);
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'success',
-                        message: this.$t('已禁用')
-                    });
-                    this.init();
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
-
-            togglePermission () {
-                if (!this.configInfo.enabled) {
-                    this.configInfo.loaclEnabled = !this.configInfo.loaclEnabled;
-                    this.$nextTick(() => {
-                        if (this.configInfo.loaclEnabled) this.showEdit();
-                    });
-                } else {
-                    this.$bkInfo({
-                        width: 500,
-                        title: `${this.$t('确认禁用模块')}${this.curAppModule.name}${this.$t('部署前置命令?')}`,
-                        subTitle: this.$t('禁用后，部署预发布环境、生产环境时都不会再执行该命令'),
-                        maskClose: true,
-                        confirmFn: () => {
-                            this.closeCommand();
-                        }
-                    });
-                }
-            },
-            isReadOnlyRow (rowIndex) {
-                return !_.includes(this.editRowList, rowIndex);
-            },
-            editingRowToggle (rowIndex) {
-                // 点击切换状态(x)
-                if (_.includes(this.editRowList, rowIndex)) {
-                    this.editRowList.pop(rowIndex);
-                } else {
-                    this.editRowList.push(rowIndex);
-                    this.$refs['varItem' + rowIndex][0].focus();
-                }
-            },
-            updateConfigVar (index) {
-                const params = {
-                    'procfile': [
-                        ...this.commandList
-                    ]
-                };
-                this.requestCommand(this.$t('修改'), params, '');
-                this.editRowList.pop(index);
-            },
-            deleteConfigVar (itemName) {
-                this.commandList.splice(this.commandList.findIndex(v => v.name === itemName), 1);
-                const params = {
-                    'procfile': [...this.commandList]
-                };
-                this.requestCommand(this.$t('删除'), params, '');
-            },
-            // 添加启动命令
-            createConfigVar (type = 'add') {
-                const { name, command } = this.newVarConfig;
-                const params = {
-                    'procfile': [
-                        ...this.commandList
-                    ]
-                };
-                const valueOf = this.commandList.findIndex(v => {
-                    return v.name === name;
-                });
-                if (valueOf === -1) {
-                    params.procfile.unshift({ name, command });
-                    this.$refs.validate2.validate().then(validator => {
-                        this.requestCommand(this.$t('添加'), params);
-                    });
-                } else {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('重复命令')
-                    });
-                }
-            },
-            requestCommand (key, params, type = 'add') {
-                this.$http.post(BACKEND_URL + `/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/deploy_config/procfile/`, params).then((res) => {
-                    // 请求成功，返回当前添加的数据(根据添加数据决定)
-                    if (res.procfile) {
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t(`命令{key}成功`, { key: key })
-                        });
-                        if (type === 'add') this.commandList.push(params['procfile'][0]);
-                        this.newVarConfig.name = '';
-                        this.newVarConfig.command = '';
-                    } else {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t(`{key}失败`, { key: key })
-                        });
-                    }
-                });
-            },
-            skip () {
-                this.$router.push({
-                    name: 'appEntryConfig'
-                });
-            },
-            inputFocusFun () {
-                if (this.$route.query.from) {
-                    this.$refs.serverInput.focus();
-                }
-            }
-        }
+<script>import _ from 'lodash';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import tooltipConfirm from '@/components/ui/TooltipConfirm';
+export default {
+  components: {
+    tooltipConfirm,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: false,
+      isEdited: false,
+      configInfo: { enabled: false, command: '', type: '', loaclEnabled: '' },
+      configDirTip: {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_ORDER}" style="color: #3a84ff">${this.$t('部署前置命令')}</a>`,
+        placements: ['right'],
+      },
+      editRowList: [],
+      newVarConfig: {
+        name: '',
+        command: '',
+      },
+      varRules: {
+        name: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^[a-zA-Z0-9]([-a-zA-Z0-9]){0,11}$/,
+            message: this.$t('只能包含字母、数字、连接符(-)'),
+            trigger: 'blur',
+          },
+        ],
+        command: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+          {
+            regex: /^(?!start).*/,
+            message: this.$t('不能以 start 开头'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      commandList: [],
+      editIcon: true,
     };
+  },
+  computed: {
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+    isDockerApp() {
+      return this.curAppModule.source_origin === 4;
+    },
+  },
+  watch: {
+    '$route'(newVal, oldVal) {
+      console.log(newVal, oldVal);
+      this.isLoading = true;
+      this.init();
+    },
+  },
+  mounted() {
+    this.isLoading = true;
+    this.init();
+    this.inputFocusFun();
+  },
+  methods: {
+    async init() {
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployConfig', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.commandList = res.procfile;
+        this.configInfo.command = res.hooks.length ? res.hooks[0].command : '';
+        this.configInfo.type = res.hooks.length ? res.hooks[0].type : 'pre-release-hook';
+        this.configInfo.enabled = res.hooks.length ? res.hooks[0].enabled : false;
+        this.configInfo.loaclEnabled = this.configInfo.enabled;
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    handlerCommand() {
+      if (this.configInfo.enabled) {
+        this.$bkInfo({
+          title: this.$t('确认禁用?'),
+          maskClose: true,
+          confirmFn: () => {
+            this.closeCommand();
+          },
+        });
+      } else {
+        this.$bkInfo({
+          title: this.$t('确认启用?'),
+          maskClose: true,
+          confirmFn: () => {
+            this.submitCommand();
+          },
+        });
+      }
+    },
+    showEdit() {
+      this.isEdited = true;
+      this.localeConfigCommandTemp = this.configInfo.command;
+      this.$refs.nameInput.focus();
+    },
+    saveCommand() {
+      this.isEdited = false;
+      // this.submitCommand()
+      this.$bkInfo({
+        width: 500,
+        title: `${this.$t('确认启用模块')}${this.curAppModule.name}${this.$t('部署前置命令?')}`,
+        subTitle: this.$t('启用后，部署预发布环境、生产环境时都将执行该命令'),
+        maskClose: true,
+        confirmFn: () => {
+          this.submitCommand();
+        },
+      });
+    },
+    cancelCommand() {
+      this.isEdited = false;
+      this.configInfo.command = this.localeConfigCommandTemp;
+      this.init();
+    },
+    async submitCommand() {
+      const params = {
+        type: this.configInfo.type,
+        command: this.configInfo.command,
+      };
+      try {
+        const res = await this.$store.dispatch('deploy/updateDeployConfig', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          params,
+        });
+        console.log('res', res);
+        this.$paasMessage({
+          limit: 1,
+          theme: 'success',
+          message: this.$t('已启用'),
+        });
+        this.init();
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
+    async closeCommand() {
+      try {
+        const res = await this.$store.dispatch('deploy/closeDeployConfig', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          type: this.configInfo.type,
+        });
+        console.log('res', res);
+        this.$paasMessage({
+          limit: 1,
+          theme: 'success',
+          message: this.$t('已禁用'),
+        });
+        this.init();
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
+
+    togglePermission() {
+      if (!this.configInfo.enabled) {
+        this.configInfo.loaclEnabled = !this.configInfo.loaclEnabled;
+        this.$nextTick(() => {
+          if (this.configInfo.loaclEnabled) this.showEdit();
+        });
+      } else {
+        this.$bkInfo({
+          width: 500,
+          title: `${this.$t('确认禁用模块')}${this.curAppModule.name}${this.$t('部署前置命令?')}`,
+          subTitle: this.$t('禁用后，部署预发布环境、生产环境时都不会再执行该命令'),
+          maskClose: true,
+          confirmFn: () => {
+            this.closeCommand();
+          },
+        });
+      }
+    },
+    isReadOnlyRow(rowIndex) {
+      return !_.includes(this.editRowList, rowIndex);
+    },
+    editingRowToggle(rowIndex) {
+      // 点击切换状态(x)
+      if (_.includes(this.editRowList, rowIndex)) {
+        this.editRowList.pop(rowIndex);
+      } else {
+        this.editRowList.push(rowIndex);
+        this.$refs[`varItem${rowIndex}`][0].focus();
+      }
+    },
+    updateConfigVar(index) {
+      const params = {
+        procfile: [
+          ...this.commandList,
+        ],
+      };
+      this.requestCommand(this.$t('修改'), params, '');
+      this.editRowList.pop(index);
+    },
+    deleteConfigVar(itemName) {
+      this.commandList.splice(this.commandList.findIndex(v => v.name === itemName), 1);
+      const params = {
+        procfile: [...this.commandList],
+      };
+      this.requestCommand(this.$t('删除'), params, '');
+    },
+    // 添加启动命令
+    createConfigVar() {
+      const { name, command } = this.newVarConfig;
+      const params = {
+        procfile: [
+          ...this.commandList,
+        ],
+      };
+      const valueOf = this.commandList.findIndex(v => v.name === name);
+      if (valueOf === -1) {
+        params.procfile.unshift({ name, command });
+        this.$refs.validate2.validate().then(() => {
+          this.requestCommand(this.$t('添加'), params);
+        });
+      } else {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('重复命令'),
+        });
+      }
+    },
+    requestCommand(key, params, type = 'add') {
+      this.$http.post(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/deploy_config/procfile/`, params).then((res) => {
+        // 请求成功，返回当前添加的数据(根据添加数据决定)
+        if (res.procfile) {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('命令{key}成功', { key }),
+          });
+          if (type === 'add') this.commandList.push(params.procfile[0]);
+          this.newVarConfig.name = '';
+          this.newVarConfig.command = '';
+        } else {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('{key}失败', { key }),
+          });
+        }
+      });
+    },
+    skip() {
+      this.$router.push({
+        name: 'appEntryConfig',
+      });
+    },
+    inputFocusFun() {
+      if (this.$route.query.from) {
+        this.$refs.serverInput.focus();
+      }
+    },
+  },
+};
 </script>
 <style lang="scss">
     .config-warp {
@@ -568,7 +567,8 @@ s<template>
             border: none;
         }
     }
-    .ps-table-width-overflowed /deep/ .info-special-form.bk-form.bk-inline-form .bk-form-input[readonly]:nth-of-type(1) {
+    .ps-table-width-overflowed
+    /deep/ .info-special-form.bk-form.bk-inline-form .bk-form-input[readonly]:nth-of-type(1) {
         background-color: #dcdee5 !important;
     }
     .mt-minus {
@@ -580,5 +580,8 @@ s<template>
                 cursor: pointer;
             }
         }
+    }
+    .paas-info-app-name-cls input {
+        padding-right: 130px !important;
     }
 </style>

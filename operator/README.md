@@ -27,22 +27,22 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
 安装 ginkgo 命令行工具：
 
-    $ go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@latest
-
-执行单元测试：
-
-    $ make test
+    $ make ginkgo
 
 安装格式化 & lint 工具：
 
-    $ go install github.com/segmentio/golines@latest 
-    $ go install mvdan.cc/gofumpt@latest
-    $ brew install golangci-lint
+    $ make golines 
+    $ make gofumpt
+    $ make golangci-lint
 
 执行 fmt & lint
 
     $ make fmt
     $ make lint
+
+执行单元测试：
+
+    $ make test
 
 更新 helm-chart
 
@@ -178,3 +178,19 @@ operator 服务部署到集群中，进行任何功能测试。
         └── quota // 资源配额类工具
             └── ...
 ```
+
+## 更多开发指南
+
+### 选择日志级别
+
+在打印 Info 日志时，调用 `.V(...)` 方法可设置日志可视级别：
+
+```go
+log.V(4).Info("handling revision reconciliation")
+```
+
+推荐使用的日志级别如下：
+
+- `0`：普通日志，不指定 `V()` 时的默认可视级别
+- `2`：相对不那么重要的日志，对排查问题有帮助
+- `4`：调试类日志，可能会大量频繁出现

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 import os
 import urllib.parse
@@ -29,7 +30,9 @@ from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
+from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
+from paas_wl.workloads.images.entities import ImageCredentials, build_app_registry_auth, build_dockerconfig
 from paasng.engine.configurations.building import SlugBuilderTemplate
 from paasng.utils.blobstore import make_blob_store
 
@@ -46,43 +49,74 @@ def generate_builder_name(app: 'WlApp') -> str:
     return "slug-builder"
 
 
-def generate_slug_path(bp: BuildProcess):
-    """Get the slug path for store builded slug"""
+def generate_slug_path(bp: BuildProcess) -> str:
+    """Get the slug path for storing slug"""
     app: 'WlApp' = bp.app
     slug_name = f'{app.name}:{bp.branch}:{bp.revision}'
     return f'{app.region}/home/{slug_name}/push'
 
 
-def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
+def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
     """generate all env vars needed for building"""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'WlApp' = bp.app
-    cache_path = '%s/home/%s/cache' % (app.region, app.name)
-
     env_vars: Dict[str, str] = {}
-    env_vars.update(
-        # Path of source tarball
-        TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
-        # Path to store compiled slug package
-        PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
-        # Path to store cache to speed up build process
-        CACHE_PATH='%s/%s' % (bucket, cache_path),
-        # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
-        # TODO: 将 slug.tgz 抽成常量
-        SLUG_SET_URL=store.generate_presigned_url(
-            key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
-        ),
-        SOURCE_GET_URL=store.generate_presigned_url(
-            key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        ),
-        CACHE_GET_URL=store.generate_presigned_url(
-            key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        ),
-        CACHE_SET_URL=store.generate_presigned_url(
-            key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
-        ),
-    )
+
+    # TODO: 支持构建镜像到私有仓库
+    # Note: 从 ImageCredentials 加载凭证理论上会读取到用户配置的用户/密码, 只需要让 output_image 可以自定义即可支持构建镜像到私有仓库
+    if metadata.get("use_dockerfile"):
+        # build application form Dockerfile
+        image_repository = metadata['image_repository']
+        output_image = metadata['image']
+        env_vars.update(
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            OUTPUT_IMAGE=output_image,
+            CACHE_REPO=f"{image_repository}/dockerbuild-cache",
+            DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
+        )
+    elif metadata.get("use_cnb"):
+        # build application as image
+        image_repository = metadata['image_repository']
+        output_image = metadata['image']
+        env_vars.update(
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            OUTPUT_IMAGE=output_image,
+            CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
+            CNB_REGISTRY_AUTH=json.dumps(build_app_registry_auth(ImageCredentials.load_from_app(app))),
+        )
+    else:
+        # build application as slug
+        cache_path = '%s/home/%s/cache' % (app.region, app.name)
+        env_vars.update(
+            # Path of source tarball
+            TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
+            # Path to store compiled slug package
+            PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
+            # Path to store cache to speed up build process
+            CACHE_PATH='%s/%s' % (bucket, cache_path),
+            # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
+            # TODO: 将 slug.tgz 抽成常量
+            SLUG_SET_URL=store.generate_presigned_url(
+                key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            ),
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            CACHE_GET_URL=store.generate_presigned_url(
+                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            CACHE_SET_URL=store.generate_presigned_url(
+                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            ),
+            # 设置 slug-pilot 中 build 过程的超时时间(精确到分钟)
+            PILOT_BUILDER_TIMEOUT=f'{settings.BUILD_PROCESS_TIMEOUT // 60}m',
+        )
+
     env_vars.update(AppConfigVarManager(app=app).get_envs())
 
     # Inject extra env vars in settings for development purpose
@@ -129,16 +163,18 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
         env_vars["REQUIRED_BUILDPACKS"] = buildpacks
 
 
-def prepare_slugbuilder_template(app: 'WlApp', env_vars: Dict, metadata: Optional[Dict]) -> SlugBuilderTemplate:
+def prepare_slugbuilder_template(
+    app: 'WlApp', env_vars: Dict, builder_image: Optional[str] = None
+) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
     :param app: WlApp to build, provide info about namespace, region and etc.
     :param env_vars: Extra environment vars
-    :param metadata: metadata about slugbuilder
+    :param builder_image: image of slugbuilder
     :returns: args for start slugbuilder
     """
     # Builder image name
-    image = (metadata or {}).get("image", settings.DEFAULT_SLUGBUILDER_IMAGE)
+    image = builder_image or settings.DEFAULT_SLUGBUILDER_IMAGE
     logger.info(f"build wl_app<{app.name}> with slugbuilder<{image}>")
 
     return SlugBuilderTemplate(

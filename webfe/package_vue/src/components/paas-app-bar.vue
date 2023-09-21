@@ -51,7 +51,10 @@
             position: 'bottom left'
           }"
         >
-          <div slot="trigger">
+          <div
+            slot="trigger"
+            class="module-wrapper"
+          >
             <a
               href="javascript: void(0);"
               class="module-name"
@@ -116,7 +119,10 @@
             position: 'bottom left'
           }"
         >
-          <div slot="trigger">
+        <div
+          slot="trigger"
+          class="module-wrapper"
+        >
             <a
               href="javascript: void(0);"
               class="module-name time-text"
@@ -306,13 +312,14 @@
         z-index: 1;
         height: 50px;
         .bar-container {
-            max-width: 1180px;
+            // max-width: 1180px;
             /*padding: 0 30px;*/
             margin: auto;
             /*box-shadow: 0px 1px 2px 0px rgba(0,0,0,0.1); */
             border-bottom: 1px solid #e6e9ea;
             height: 50px;
             line-height: 50px;
+            padding: 0 24px;
         }
 
         .title {
@@ -359,6 +366,10 @@
             &.time-text {
                 font-size: 12px
             }
+        }
+
+        .module-wrapper .module-name {
+            line-height: 42px;
         }
 
         .icon-time-cls {
@@ -507,7 +518,7 @@
     @media screen and (max-width: 1920px) {
         .app-top-bar {
             .bar-container {
-                max-width: 1180px;
+                // max-width: 1180px;
             }
         }
     }
@@ -515,7 +526,7 @@
     @media screen and (max-width: 1680px) {
         .app-top-bar {
             .bar-container {
-                max-width: 1080px;
+                // max-width: 1080px;
             }
         }
     }
@@ -523,7 +534,7 @@
     @media screen and (max-width: 1440px) {
         .app-top-bar {
             .bar-container {
-                max-width: 980px;
+                // max-width: 980px;
             }
         }
     }

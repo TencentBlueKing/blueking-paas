@@ -24,41 +24,33 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.networking.ingress.domains.manager import CNativeCustomDomainManager, check_domain_used_by_market
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.utils.error_codes import APIError
-from paasng.platform.modules.constants import ExposedURLType
-from paasng.publish.entrance.exposer import ModuleLiveAddrs
+from paasng.publish.market.models import MarketConfig
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
-    'url_type, hostname, address_data, expected',
+    "domain_cfg, domain_url, expected",
     [
-        (ExposedURLType.SUBPATH, "foo.com", {"type": "subdomain", "url": "https://bar.foo.com"}, False),
-        (ExposedURLType.SUBPATH, "bar.foo.com", {"type": "subdomain", "url": "https://bar.foo.com"}, False),
-        (ExposedURLType.SUBPATH, "foo.com", {"type": "subpath", "url": "https://foo.com/bar"}, True),
-        (ExposedURLType.SUBDOMAIN, "foo.com", {"type": "subdomain", "url": "https://bar.foo.com"}, False),
-        (ExposedURLType.SUBDOMAIN, "bar.foo.com", {"type": "subdomain", "url": "https://bar.foo.com"}, True),
-        (ExposedURLType.SUBDOMAIN, "foo.com", {"type": "subpath", "url": "https://foo.com/bar"}, False),
+        ({"name": "foo.com", "path_prefix": "/"}, "https://bar.foo.com", False),
+        ({"name": "bar.foo.com", "path_prefix": "/"}, "https://bar.foo.com", True),
+        ({"name": "bar.foo.com", "path_prefix": "/"}, "https://bar.foo.com/", True),
+        ({"name": "baz.bar.foo.com", "path_prefix": "/"}, "https://bar.foo.com", False),
+        ({"name": "bar.foo.com", "path_prefix": "/baz"}, "https://bar.foo.com/baz", True),
+        ({"name": "bar.foo.com", "path_prefix": "/baz/"}, "https://bar.foo.com/baz", True),
+        ({"name": "bar.foo.com", "path_prefix": "/baz"}, "https://bar.foo.com/baz/", True),
+        ({"name": "bar.foo.com", "path_prefix": "/baz/"}, "https://bar.foo.com/baz/", True),
+        ({"name": "bar.foo.com", "path_prefix": "/baz/x"}, "https://bar.foo.com/baz/", False),
     ],
 )
-def test_check_domain_used_by_market(bk_app, bk_module, url_type, hostname, address_data, expected):
-    bk_module.exposed_url_type = url_type
-    bk_module.save()
-    bk_app.refresh_from_db()
+def test_check_domain_used_by_market(bk_app, bk_module, domain_cfg, domain_url, expected):
+    market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
+    market_config.custom_domain_url = domain_url
+    market_config.save()
 
-    # TODO: 重构 ControllerClient 时修改后移除这个 mock
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {
-                    "env": "prod",
-                    "is_running": True,
-                    "addresses": [address_data],
-                },
-            ]
-        )
-        assert check_domain_used_by_market(bk_app, hostname) == expected
+    domain = Domain(**domain_cfg)
+    assert check_domain_used_by_market(bk_app, domain) == expected
 
 
 class TestCNativeDftCustomDomainManager:

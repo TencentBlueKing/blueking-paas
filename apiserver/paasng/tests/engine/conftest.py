@@ -20,6 +20,7 @@ import pytest
 from django.test.utils import override_settings
 
 from paas_wl.platform.applications.models import BuildProcess, WlApp
+from paasng.platform.applications.models import ModuleEnvironment
 from tests.paas_wl.utils.build import create_build_proc
 
 
@@ -38,4 +39,5 @@ def wl_app(bk_stag_env, with_wl_apps) -> WlApp:
 @pytest.fixture
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
-    return create_build_proc(wl_app)
+    env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)
+    return create_build_proc(env)

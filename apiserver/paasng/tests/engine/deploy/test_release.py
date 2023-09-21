@@ -24,7 +24,7 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
 from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.engine.constants import JobStatus, ReleaseStatus
-from paasng.engine.deploy.release import ApplicationReleaseMgr, ReleaseResultHandler
+from paasng.engine.deploy.release.legacy import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
@@ -52,15 +52,15 @@ class TestApplicationReleaseMgr:
 
     def test_failed_when_create_release(self, bk_deployment, auto_binding_phases):
         with mock.patch('paasng.engine.utils.output.RedisChannelStream') as mocked_stream, mock.patch(
-            'paasng.engine.deploy.release.update_image_runtime_config'
+            'paasng.engine.deploy.release.legacy.update_image_runtime_config'
         ) as mocked_update_image, mock.patch(
-            'paasng.engine.deploy.release.EngineDeployClient'
-        ) as mocked_client_r, mock.patch(
+            'paasng.engine.deploy.release.legacy.release_to_k8s'
+        ) as mocked_create_release, mock.patch(
             'paasng.engine.workflow.flow.EngineDeployClient'
         ), mock.patch(
-            'paasng.engine.deploy.release.ProcessManager'
+            'paasng.engine.deploy.release.legacy.ProcessManager'
         ):
-            mocked_client_r().create_release.side_effect = RuntimeError('can not create release')
+            mocked_create_release.side_effect = RuntimeError('can not create release')
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
 
@@ -84,18 +84,20 @@ class TestApplicationReleaseMgr:
         bk_deployment.save()
         bk_deployment.refresh_from_db()
         with mock.patch('paasng.engine.utils.output.RedisChannelStream'), mock.patch(
-            'paasng.engine.deploy.release.EngineDeployClient'
-        ) as mocked_client_r, mock.patch('paasng.engine.deploy.release.update_image_runtime_config'), mock.patch(
+            'paasng.engine.deploy.release.legacy.release_to_k8s'
+        ) as mocked_create_release, mock.patch(
+            'paasng.engine.deploy.release.legacy.update_image_runtime_config'
+        ), mock.patch(
             'paasng.engine.workflow.flow.EngineDeployClient'
         ), mock.patch(
             'paasng.engine.configurations.ingress.AppDefaultDomains.sync'
         ), mock.patch(
             'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
         ), mock.patch(
-            'paasng.engine.deploy.release.ProcessManager'
+            'paasng.engine.deploy.release.legacy.ProcessManager'
         ) as fake_process_manager:
             faked_release_id = uuid.uuid4().hex
-            mocked_client_r().create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
+            mocked_create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
 
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
@@ -119,18 +121,20 @@ class TestApplicationReleaseMgr:
         bk_deployment.save()
         bk_deployment.refresh_from_db()
         with mock.patch('paasng.engine.utils.output.RedisChannelStream'), mock.patch(
-            'paasng.engine.deploy.release.EngineDeployClient'
-        ) as mocked_client_r, mock.patch('paasng.engine.deploy.release.update_image_runtime_config'), mock.patch(
+            'paasng.engine.deploy.release.legacy.release_to_k8s'
+        ) as mocked_create_release, mock.patch(
+            'paasng.engine.deploy.release.legacy.update_image_runtime_config'
+        ), mock.patch(
             'paasng.engine.workflow.flow.EngineDeployClient'
         ), mock.patch(
             'paasng.engine.configurations.ingress.AppDefaultDomains.sync'
         ), mock.patch(
             'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
         ), mock.patch(
-            'paasng.engine.deploy.release.ProcessManager'
+            'paasng.engine.deploy.release.legacy.ProcessManager'
         ) as fake_process_manager:
             faked_release_id = uuid.uuid4().hex
-            mocked_client_r().create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
+            mocked_create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
 
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
@@ -196,7 +200,7 @@ class TestReleaseResultHandler:
         ],
     )
     def test_failed(self, result, status, error_detail, deployment_id):
-        with mock.patch("paasng.engine.deploy.release.ReleaseResultHandler.finish_release") as mocked:
+        with mock.patch("paasng.engine.deploy.release.legacy.ReleaseResultHandler.finish_release") as mocked:
             ReleaseResultHandler().handle(
                 result, FakeTaskPoller.create({'extra_params': {'deployment_id': deployment_id}})
             )

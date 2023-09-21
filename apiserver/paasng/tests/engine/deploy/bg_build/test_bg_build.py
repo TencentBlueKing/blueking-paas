@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
-from django.conf import settings
 
 from paasng.engine.constants import BuildStatus
 from paasng.engine.deploy.bg_build.bg_build import BuildProcessExecutor
@@ -34,9 +33,9 @@ class TestBuildProcessExecutor:
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
         bpe = BuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
-        build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"]))
+        build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"], image=""))
         assert str(build_proc.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
-        assert build_instance.owner == settings.BUILDER_USERNAME, "build instance 绑定 owner 异常"
+        assert build_instance.owner == bk_deployment_full.operator, "build instance 绑定 owner 异常"
         assert build_instance.procfile == ["sth"], "build instance 绑定 procfile 异常"
         assert build_proc.status == BuildStatus.SUCCESSFUL.value, "build_process status 未设置为 SUCCESSFUL"
 
@@ -48,5 +47,5 @@ class TestBuildProcessExecutor:
         with mock.patch("paasng.engine.deploy.bg_build.bg_build.BuildProcessExecutor.start_slugbuilder"), mock.patch(
             "paasng.engine.deploy.bg_build.bg_build.get_scheduler_client_by_app"
         ), mock.patch('paasng.engine.deploy.bg_build.utils.get_schedule_config'):
-            bpe.execute()
+            bpe.execute({"image": ""})
         assert build_proc.status == BuildStatus.SUCCESSFUL.value, "部署失败"

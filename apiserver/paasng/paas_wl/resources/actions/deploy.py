@@ -17,52 +17,50 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
-from paas_wl.monitoring.app_monitor.managers import make_bk_monitor_controller
-from paas_wl.resources.actions.exceptions import BuildMissingError, ReleaseMissingError
+from paas_wl.monitoring.app_monitor.shim import make_bk_monitor_controller
+from paas_wl.monitoring.bklog.shim import make_bk_log_controller
+from paas_wl.resources.actions.exceptions import BuildMissingError
 from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.utils import get_command_name
+from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models import Release, WlApp
+    from paas_wl.platform.applications.models import Release
     from paas_wl.resources.base.client import K8sScheduler
-    from paas_wl.workloads.processes.models import Process
+    from paas_wl.workloads.processes.entities import Process
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class AppDeploy:
-    app: 'WlApp'
-    release: 'Release'
-    extra_envs: Dict = field(default_factory=lambda: {}, metadata={"annotation": "envs from paasng"})
-
-    def __post_init__(self):
-        if not self.release:
-            raise ReleaseMissingError(f"perform deploy action need to pass release, app_name={self.app.name}")
+class DeployAction:
+    def __init__(self, env: ModuleEnvironment, release: 'Release', extra_envs: Dict):
+        self.env = env
+        self.wl_app = env.wl_app
+        self.release = release
+        self.extra_envs = extra_envs
 
         if not self.release.build:
-            raise BuildMissingError(f"no build related to release, app_name={self.app.name}")
+            raise BuildMissingError(f"no build related to release, app_name={self.wl_app.name}")
 
-        self.scheduler_client = get_scheduler_client_by_app(self.app)
+        self.scheduler_client = get_scheduler_client_by_app(self.wl_app)
 
     def perform(self):
         # update ProcessSpec.target_status to resume the process for those archived app
-        self.app.process_specs.update(target_status=ProcessTargetStatus.START.value)
+        self.wl_app.process_specs.update(target_status=ProcessTargetStatus.START.value)
 
         # create namespace and image credentials secret before deploy for image app.
-        self.scheduler_client.ensure_namespace(self.app.namespace)
-        self.scheduler_client.ensure_image_credentials_secret(self.app)
+        self.scheduler_client.ensure_namespace(self.wl_app.namespace)
+        self.scheduler_client.ensure_image_credentials_secret(self.wl_app)
         # update deploy info in scheduler module
-        processes = AppProcessManager(app=self.app).assemble_processes(extra_envs=self.extra_envs)
+        processes = AppProcessManager(app=self.wl_app).assemble_processes(extra_envs=self.extra_envs)
         try:
             self.scheduler_client.deploy_processes(list(processes))
         except KubeException as e:
@@ -70,6 +68,7 @@ class AppDeploy:
             raise
         finally:
             self.recycle_resource()
+        self.ensure_bk_log_if_need()
         self.ensure_bk_minitor_if_need()
 
     def recycle_resource(self):
@@ -93,12 +92,19 @@ class AppDeploy:
         """如果集群支持且应用声明需要接入蓝鲸监控, 则尝试下发监控配置"""
         try:
             # 下发 ServiceMonitor 配置
-            make_bk_monitor_controller(self.app).create_or_patch()
+            make_bk_monitor_controller(self.wl_app).create_or_patch()
         except (KubeException, ResourceNotFoundError):
             logger.exception("An error occur when creating ServiceMonitor")
 
+    def ensure_bk_log_if_need(self):
+        """如果集群支持且应用声明了 BkLogConfig, 则尝试下发日志采集配置"""
+        try:
+            # 下发 BkLogConfig
+            make_bk_log_controller(self.env).create_or_patch()
+        except (KubeException, ResourceNotFoundError):
+            logger.exception("An error occur when creating BkLogConfig")
 
-@dataclass
+
 class ZombieProcessesKiller:
     """
     僵尸进程清理者
@@ -108,8 +114,9 @@ class ZombieProcessesKiller:
     :return: processes which should be undead
     """
 
-    release: 'Release'
-    last_release: 'Release'
+    def __init__(self, release: 'Release', last_release: 'Release'):
+        self.release = release
+        self.last_release = last_release
 
     def search(self) -> Tuple[List['Process'], List['Process']]:
         """

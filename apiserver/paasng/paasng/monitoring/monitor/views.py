@@ -38,7 +38,7 @@ from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
-from .exceptions import BKMonitorGatewayServiceError
+from .exceptions import BKMonitorGatewayServiceError, BKMonitorNotSupportedError
 from .models import AppAlertRule
 from .phalanx import Client
 from .serializer import (
@@ -213,11 +213,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         """列举支持的告警规则"""
         supported_alerts = []
 
-        for _, alert_config in DEFAULT_RULE_CONFIGS.items():
-            for alert_code in alert_config:
-                supported_alerts.append(
-                    {'alert_code': alert_code, 'display_name': alert_config[alert_code]['display_name']}
-                )
+        for alert_code, alert_config in DEFAULT_RULE_CONFIGS.items():
+            supported_alerts.append({'alert_code': alert_code, 'display_name': alert_config['display_name']})
 
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
         return Response(serializer.data)
@@ -229,6 +226,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 
         try:
             AlertRuleManager(application).init_rules()
+        except BKMonitorNotSupportedError as e:
+            raise error_codes.INIT_ALERT_RULES_FAILED.f(str(e))
         except AsCodeAPIError:
             raise error_codes.INIT_ALERT_RULES_FAILED
 

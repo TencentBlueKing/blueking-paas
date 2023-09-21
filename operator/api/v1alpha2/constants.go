@@ -32,6 +32,9 @@ const (
 
 	// WebProcName 表示 web 进程名称
 	WebProcName = "web"
+
+	// 默认模块名
+	DefaultModuleName = "default"
 )
 
 // ReplicasOne 副本数 1, 用于替换测试程序内的魔数
@@ -52,8 +55,8 @@ const (
 	ModuleNameKey = "bkapp.paas.bk.tencent.com/module-name"
 	// EnvironmentKey 注解中存储当前部署环境的键名
 	EnvironmentKey = "bkapp.paas.bk.tencent.com/environment"
-	// EngineAppNameKey 注解中存储当前 EngineApp 名称的键名
-	EngineAppNameKey = "bkapp.paas.bk.tencent.com/engine-app-name"
+	// WlAppNameKey 注解中存储当前 EngineApp 名称的键名
+	WlAppNameKey = "bkapp.paas.bk.tencent.com/wl-app-name"
 
 	// LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.
 	// This behaviour was changed in "v1alpha2", but we still need to save the legacy images configs
@@ -72,8 +75,6 @@ const (
 	HookTypeKey = "bkapp.paas.bk.tencent.com/hook-type"
 	// ProcessNameKey 注解或标签中存储进程名称的键名
 	ProcessNameKey = "bkapp.paas.bk.tencent.com/process-name"
-	// AddonsAnnoKey 注解中存储当前应用依赖的增强服务列表
-	AddonsAnnoKey = "bkapp.paas.bk.tencent.com/addons"
 	// AccessControlAnnoKey 注解中存储当前应用是否启用白名单功能的键名
 	AccessControlAnnoKey = "bkapp.paas.bk.tencent.com/access-control"
 	// ImageCredentialsRefAnnoKey 注解中存储镜像凭证引用的键名
@@ -89,6 +90,8 @@ const (
 	RevisionAnnoKey = "bkapp.paas.bk.tencent.com/revision"
 	// ResourceTypeKey 注解中存储资源类型的键名
 	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
+	// UseCNBAnnoKey 注解中声明镜像类型是否 cnb 的键名
+	UseCNBAnnoKey = "bkapp.paas.bk.tencent.com/use-cnb"
 	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"
 )
@@ -122,8 +125,13 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 	ResQuotaPlan1C512M,
 	ResQuotaPlan2C1G,
 	ResQuotaPlan2C2G,
+	ResQuotaPlan4C1G,
 	ResQuotaPlan4C2G,
+	ResQuotaPlan4C4G,
 }
 
 // AllowedImagePullPolicies 允许使用的镜像拉取策略
 var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, corev1.PullAlways, corev1.PullNever}
+
+// FilePathPattern 文件路径正则
+const FilePathPattern = `^(/[\w-_.]+/?)+$`

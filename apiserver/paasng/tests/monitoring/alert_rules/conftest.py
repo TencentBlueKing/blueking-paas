@@ -26,11 +26,12 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.monitoring.monitor.alert_rules.ascode.client import AsCodeClient
-from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
+from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS, AlertCode
 from paasng.monitoring.monitor.models import AppAlertRule
 from tests.utils.helpers import generate_random_string
 
 random_vhost = generate_random_string()
+random_cluster_id = generate_random_string()
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -40,10 +41,13 @@ def mock_import_configs():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def mock_get_vhost():
+def mock_metric_label():
     with mock.patch.dict(
         'paasng.monitoring.monitor.alert_rules.config.metric_label.LABEL_VALUE_QUERY_FUNCS',
-        {'vhost': lambda app_code, run_env, module_name: random_vhost},
+        {
+            'vhost': lambda app_code, run_env, module_name: random_vhost,
+            'bcs_cluster_id': lambda app_code, run_env, module_name: random_cluster_id,
+        },
     ):
         yield
 
@@ -66,30 +70,30 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
     j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
     app_code = bk_app.code
-    module_scoped_configs = DEFAULT_RULE_CONFIGS['module_scoped']
+    rule_configs = DEFAULT_RULE_CONFIGS
     notice_group_name = f"[{app_code}] {_('通知组')}"
 
     default_rules = {
-        'high_cpu_usage': {
+        AlertCode.HIGH_CPU_USAGE.value: {
             'alert_rule_name_format': f'{app_code}-default-{{env}}-high_cpu_usage',
             'template_name': 'high_cpu_usage.yaml.j2',
         },
-        'high_mem_usage': {
+        AlertCode.HIGH_MEM_USAGE.value: {
             'alert_rule_name_format': f'{app_code}-default-{{env}}-high_mem_usage',
             'template_name': 'high_mem_usage.yaml.j2',
         },
-        'pod_restart': {
+        AlertCode.POD_RESTART.value: {
             'alert_rule_name_format': f'{app_code}-default-{{env}}-pod_restart',
             'template_name': 'pod_restart.yaml.j2',
         },
-        'oom_killed': {
+        AlertCode.OOM_KILLED.value: {
             'alert_rule_name_format': f'{app_code}-default-{{env}}-oom_killed',
             'template_name': 'oom_killed.yaml.j2',
         },
     }
 
     if settings.RABBITMQ_MONITOR_CONF.get('enabled', False):
-        default_rules['high_rabbitmq_queue_messages'] = {
+        default_rules[AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value] = {
             'alert_rule_name_format': f'{app_code}-default-{{env}}-high_rabbitmq_queue_messages',
             'template_name': 'high_rabbitmq_queue_messages.yaml.j2',
         }
@@ -99,15 +103,17 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
         for env in ['stag', 'prod']:
             alert_rule_name = c['alert_rule_name_format'].format(env=env)
             init_rule_configs[f"rule/{alert_rule_name}.yaml"] = j2_env.get_template(c['template_name']).render(
-                alert_rule_display_name=f"[{app_code}:default:{env}] "
-                f"{module_scoped_configs[alert_code]['display_name']}",
+                alert_rule_display_name=f"[{app_code}:default:{env}] " f"{rule_configs[alert_code]['display_name']}",
                 app_code=app_code,
                 run_env=env,
                 alert_code=alert_code,
                 enabled=True,
-                metric_labels={'namespace': f'bkapp-{app_code}-{env}', 'vhost': random_vhost},
-                namespace=wl_namespaces[env],
-                threshold_expr=module_scoped_configs[alert_code]['threshold_expr'],
+                metric_labels={
+                    'namespace': wl_namespaces[env],
+                    'vhost': random_vhost,
+                    'bcs_cluster_id': random_cluster_id,
+                },
+                threshold_expr=rule_configs[alert_code]['threshold_expr'],
                 notice_group_name=notice_group_name,
             )
 
@@ -120,10 +126,10 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
 @pytest.fixture
 def cpu_usage_alert_rule_obj(bk_app):
     return AppAlertRule.objects.create(
-        alert_code='high_cpu_usage',
+        alert_code=AlertCode.HIGH_CPU_USAGE.value,
         display_name='high_cpu_usage',
         enabled=True,
-        threshold_expr='>= 0.8',
+        threshold_expr='N/A',
         receivers=bk_app.get_developers(),
         application=bk_app,
         environment='stag',

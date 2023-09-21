@@ -18,7 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf.urls import url
 
-from paasng.plat_admin.system.views import LessCodeSystemAPIViewSet, SysAddonsAPIViewSet, SysUniApplicationViewSet
+from paasng.plat_admin.system.views import (
+    ClusterNamespaceInfoView,
+    LessCodeSystemAPIViewSet,
+    SysAddonsAPIViewSet,
+    SysUniApplicationViewSet,
+)
 from paasng.utils.basic import make_app_pattern, re_path
 
 urlpatterns = [
@@ -38,6 +43,11 @@ urlpatterns = [
         'sys/api/uni_applications/list/minimal/$',
         SysUniApplicationViewSet.as_view({'get': 'list_minimal_app'}),
         name='sys.api.uni_applications.list_minimal_app',
+    ),
+    url(
+        'sys/api/bkapps/applications/(?P<code>[^/]+)/cluster_namespaces/$',
+        ClusterNamespaceInfoView.as_view({'get': 'list_by_app_code'}),
+        name='sys.api.applications.cluster_namespace.list_by_app_code',
     ),
     re_path(
         make_app_pattern(suffix="/lesscode/query_db_credentials", prefix='sys/api/bkapps/applications/'),
@@ -60,5 +70,14 @@ urlpatterns = [
         make_app_pattern(suffix="/addons/", prefix="sys/api/bkapps/applications/"),
         SysAddonsAPIViewSet.as_view({"get": "list_services"}),
         name="sys.api.applications.list_addons",
+    ),
+    re_path(
+        make_app_pattern(
+            suffix="/services/(?P<service_id>[0-9a-f-]{32,36})/specs/",
+            include_envs=False,
+            prefix="sys/api/bkapps/applications/",
+        ),
+        SysAddonsAPIViewSet.as_view({"get": "retrieve_specs"}),
+        name="sys.api.applications.retrieve_specs",
     ),
 ]

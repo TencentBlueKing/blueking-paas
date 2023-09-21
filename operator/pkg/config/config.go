@@ -22,17 +22,23 @@ package config
 // avoid import "paasv1alpha1" package from here so that import cycle will not happen.
 type ProjectConfigReader interface {
 	// Process related methods
+	GetMaxProcesses() int32
 	GetProcMaxReplicas() int32
 	GetProcDefaultCpuLimits() string
 	GetProcDefaultMemLimits() string
 
 	// Platform related methods
 	GetIngressClassName() string
+	IsAutoscalingEnabled() bool
 }
 
 // defaultConfig is a default implementation of ProjectConfigReader, it will be used
 // as the default config if no other configs is set.
 type defaultConfig struct{}
+
+func (d defaultConfig) GetMaxProcesses() int32 {
+	return 8
+}
 
 func (d defaultConfig) GetProcMaxReplicas() int32 {
 	return 5
@@ -48,6 +54,10 @@ func (d defaultConfig) GetProcDefaultMemLimits() string {
 
 func (d defaultConfig) GetIngressClassName() string {
 	return "nginx"
+}
+
+func (d defaultConfig) IsAutoscalingEnabled() bool {
+	return false
 }
 
 // Global global config instance

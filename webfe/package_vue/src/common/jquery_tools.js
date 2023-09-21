@@ -17,6 +17,8 @@
  */
 
 // JQuery Utils
+import $ from 'jquery';
+
 $.fn.serializeObject = function () {
   const o = {};
   const a = this.serializeArray();

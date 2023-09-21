@@ -89,11 +89,15 @@ BKKRILL_ENCRYPT_SECRET_KEY = force_bytes(settings.get('BKKRILL_ENCRYPT_SECRET_KE
 # Django 项目使用的 SECRET_KEY，如未配置，使用 BKKRILL 的 secret key 替代
 SECRET_KEY = settings.get("SECRET_KEY") or force_str(BKKRILL_ENCRYPT_SECRET_KEY)
 
+# 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
+BK_CRYPTO_TYPE = settings.get('BK_CRYPTO_TYPE', 'CLASSIC')
+ENCRYPT_CIPHER_TYPE = 'SM4CTR' if BK_CRYPTO_TYPE == 'SHANGMI' else 'FernetCipher'
+
 DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
 
-RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0]
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ
 
 INSTALLED_APPS = [
     # WARNING: never enable django.contrib.admin here
@@ -123,7 +127,6 @@ INSTALLED_APPS = [
     'paasng.engine.streaming',
     'paasng.publish.market',
     'paasng.publish.sync_market',
-    'paasng.publish.entrance',
     'paasng.dev_resources.sourcectl',
     'paasng.dev_resources.servicehub',
     'paasng.dev_resources.services',
@@ -157,6 +160,7 @@ INSTALLED_APPS = [
     'paas_wl.monitoring.metrics',
     'paas_wl.networking.egress',
     'paas_wl.networking.ingress',
+    'paas_wl.networking.entrance',
     'paas_wl.workloads.resource_templates',
     'paas_wl.release_controller.hooks',
     'paas_wl.workloads.processes',
@@ -536,6 +540,9 @@ IAM_APP_SECRET = settings.get('IAM_APP_SECRET', default=BK_APP_SECRET)
 # https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#21-django-migration
 BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 
+# 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
+BK_IAM_SKIP = settings.get('BK_IAM_SKIP', False)
+
 BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get('BKAUTH_DEFAULT_PROVIDER_TYPE', 'BK')
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
@@ -544,8 +551,6 @@ BK_COMPONENT_API_URL = settings.get('BK_COMPONENT_API_URL', '')
 COMPONENT_SYSTEM_HOST = settings.get('COMPONENT_SYSTEM_HOST', BK_COMPONENT_API_URL)
 # 蓝鲸的组件 API 测试环境地址
 COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'http://localhost:8080')
-# APIGW-Dashboard 接口地址
-APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 # 网关运行环境
@@ -553,6 +558,8 @@ BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
 APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
+# 网关 API 默认网关环境
+BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系
 REGION_TO_USER_AUTH_TYPE_MAP = settings.get('REGION_TO_USER_AUTH_TYPE_MAP', {'default': 'default'})
@@ -569,6 +576,17 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get('IS_ALLOW_CREATE_CLOU
 # 云原生应用的默认集群名称
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
+# 开发者中心使用的 k8s 集群组件（helm chart 名称）
+BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
+    "BKPAAS_K8S_CLUSTER_COMPONENTS",
+    [
+        'bk-ingress-nginx',
+        'bkapp-log-collection',
+        'bkpaas-app-operator',
+        'bcs-general-pod-autoscaler',
+    ],
+)
+
 # ---------------
 # HealthZ 配置
 # ---------------
@@ -582,6 +600,7 @@ HEALTHZ_PROBES = settings.get(
     'HEALTHZ_PROBES',
     [
         'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
+        'paasng.monitoring.healthz.probes.WorkloadsMysqlProbe',
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
@@ -602,7 +621,9 @@ APIGW_HEALTHZ_URL = settings.get('APIGW_HEALTHZ_URL', 'http://localhost:8080')
 AUTO_CREATE_REGULAR_USER = settings.get('AUTO_CREATE_REGULAR_USER', True)
 
 # 每个应用下最多创建的模块数量
-MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', 10)
+MAX_MODULES_COUNT_PER_APPLICATION = settings.get('MAX_MODULES_COUNT_PER_APPLICATION', default=10, cast='@int')
+# 应用单个模块允许创建的最大 process 数量
+MAX_PROCESSES_PER_MODULE = settings.get('MAX_PROCESSES_PER_MODULE', default=16, cast='@int')
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var='PAAS_LEGACY_DATABASE_URL', env_var_prefix='PAAS_LEGACY_', for_tests=RUNNING_TESTS
@@ -679,12 +700,15 @@ BK_IAM_APIGATEWAY_URL = settings.get(
 )
 
 # 权限中心回调地址（provider api）
+# 会存在开发者中心访问地址是 https 协议，但是 API 只能用 http 协议的情况，所以不能直接用 BKPAAS_URL
+# ITSM 回调地址也复用了这个变量，修改变量名会涉及到 helm values 等多个地方同时修改，暂时先保留这个变量名
 BK_IAM_RESOURCE_API_HOST = settings.get('BK_IAM_RESOURCE_API_HOST', BKPAAS_URL)
 
 # 权限中心应用ID，用于拼接权限中心的在桌面的访问地址
 BK_IAM_V3_APP_CODE = "bk_iam"
 
-
+# 蓝鲸根域名
+BK_DOMAIN = settings.get('BK_DOMAIN', '')
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get('BK_CC_URL', '')
 BK_JOB_URL = settings.get('BK_JOB_URL', '')
@@ -979,6 +1003,12 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
 # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
 LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
+# 蓝鲸日志平台的API是否已经注册在 APIGW
+ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
+# 蓝鲸日志平台网关的环境
+BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
+# 蓝鲸日志平台相关的配置项
+BKLOG_CONFIG = settings.get("BKLOG_CONFIG", {})
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get('ELASTICSEARCH_HOSTS', [{'host': 'localhost', 'port': "9200"}])
@@ -1107,6 +1137,22 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get('SMART_DOCKER_PASSWORD', 'blueking
 # S-Mart 基础镜像信息
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
+
+# slugbuilder build 的超时时间, 单位秒
+BUILD_PROCESS_TIMEOUT = int(settings.get('BUILD_PROCESS_TIMEOUT', 60 * 15))
+
+# ------------------
+# App 应用镜像仓库配置
+# ------------------
+# App 镜像仓库的 Registry 的域名
+APP_DOCKER_REGISTRY_HOST = settings.get('APP_DOCKER_REGISTRY_ADDR', 'registry.hub.docker.com')
+# App 镜像仓库的命名空间, 即在 Registry 中的项目名
+APP_DOCKER_REGISTRY_NAMESPACE = settings.get('APP_DOCKER_NAMESPACE', 'bkpaas/docker')
+# 用于访问 Registry 的账号
+APP_DOCKER_REGISTRY_USERNAME = settings.get('APP_DOCKER_USERNAME', 'bkpaas')
+# 用于访问 Registry 的密码
+APP_DOCKER_REGISTRY_PASSWORD = settings.get('APP_DOCKER_PASSWORD', 'blueking')
+
 
 # ------------------
 # bk-lesscode 相关配置

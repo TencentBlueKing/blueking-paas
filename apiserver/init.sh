@@ -53,11 +53,6 @@ ensure-apigw() {
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml
     
-    # 同步网关策略
-    python manage.py sync_apigw_strategies \
-    --api-name "${api_name}" \
-    -f support-files/apigw/definition.yaml
-    
     # 为应用主动授权
     python manage.py grant_apigw_permissions \
     --api-name "${api_name}" \
@@ -65,6 +60,7 @@ ensure-apigw() {
     
     # 同步网关资源
     python manage.py sync_apigw_resources \
+    --delete \
     --api-name "${api_name}" \
     -f support-files/apigw/resources.yaml
     
@@ -132,7 +128,8 @@ ensure-python-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${python_buildpack_version}.tar" \
     --environment \
-    "BUILDPACK_VENDOR_URL=${vendor_url}/python" \
+    "BUILDPACK_S3_BASE_URL=${vendor_url}/runtimes/python" \
+    "BUILDPACK_VENDOR_URL=${vendor_url}/runtimes/python" \
     "PIP_INDEX_URL=${pip_index_url}" \
     "PIP_EXTRA_INDEX_URL=${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/" \
     "PIP_INDEX_HOST=${pip_index_host}"
@@ -162,8 +159,8 @@ ensure-nodejs-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${nodejs_buildpack_version}.tar" \
     --environment \
-    "STDLIB_FILE_URL=${vendor_url}/common/v7/stdlib.sh" \
-    "S3_DOMAIN=${vendor_url}/nodejs" \
+    "STDLIB_FILE_URL=${vendor_url}/common/buildpack-stdlib/v7/stdlib.sh" \
+    "S3_DOMAIN=${vendor_url}/runtimes/nodejs/node/release/linux-x64" \
     "NPM_REGISTRY=${npm_registry}"
 }
 
@@ -176,20 +173,20 @@ ensure-golang-buildpack() {
     buildpack_name="$6"
     
     # golang
-    go_buildpack_version=v153
+    go_buildpack_version=v168
     python manage.py manage_buildpack \
     --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Golang" \
     --display_name_en "Golang" \
-    --description_zh_cn "默认 Go 版本为1.12，支持 GoModules/Vendor 环境" \
-    --description_en "Default Go version is 1.12 and supports GoModules/Vendor environment" \
+    --description_zh_cn "默认 Go 版本为1.12.17，最大支持版本1.19.1" \
+    --description_en "Default Go Version: 1.12.17, Highest supported version: 1.19.1" \
     --tag "${go_buildpack_version}" \
     --language Go \
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${go_buildpack_version}.tar" \
     --environment \
-    "GO_BUCKET_URL=${vendor_url}/golang" \
+    "GO_BUCKET_URL=${vendor_url}/runtimes/golang" \
     "GOPROXY=${PAAS_BUILDPACK_GOLANG_GOPROXY}"
 }
 
@@ -240,7 +237,7 @@ ensure-legacy-image() {
 }
 
 ensure-smart-image() {
-    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}"
+    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
 }
 
 ensure-runtimes() {
@@ -250,8 +247,8 @@ ensure-runtimes() {
     bkrepo_project="${PAAS_BLOBSTORE_BKREPO_PROJECT:-bkpaas}"
     runtimes_url="${PAAS_RUNTIMES_URL:-${bkrepo_endpoint}/generic/${bkrepo_project}/bkpaas3-platform-assets}"
     # 此处需和 paas-stack chart 中 extraInitial.devops 参数中路径一致，否则会导致部署失败
-    buildpack_url="${runtimes_url}/runtimes/${stack}/buildpacks"
-    vendor_url="${runtimes_url}/runtimes/${stack}/vendor"
+    buildpack_url="${runtimes_url}/buildpacks"
+    vendor_url="${runtimes_url}"
     
     # apt
     apt_buildpack_name=bk-buildpack-apt

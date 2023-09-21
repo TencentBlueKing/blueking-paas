@@ -114,7 +114,7 @@ def generate_env_vars_for_app(app: 'Application', config_vars_prefix: str) -> Di
     return add_prefix_to_key(app_info_envs, config_vars_prefix)
 
 
-def generate_runtime_env_vars_for_app(engine_app: 'Application', config_vars_prefix: str) -> Dict[str, str]:
+def generate_runtime_env_vars_for_app(engine_app: 'EngineApp', config_vars_prefix: str) -> Dict[str, str]:
     """Generate built-in  runtime envs for app"""
     runtime_envs = {
         AppRunTimeBuiltinEnv.APP_MODULE_NAME.value: engine_app.env.module.name,
@@ -160,6 +160,8 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, str]
     """Generate the platform address in the bk system"""
 
     system_envs = {
+        'BK_CRYPTO_TYPE': settings.BK_CRYPTO_TYPE,
+        'BK_DOMAIN': settings.BK_DOMAIN,
         'URL': settings.BKPAAS_URL,
         # 蓝鲸桌面地址
         'CONSOLE_URL': settings.BK_CONSOLE_URL,

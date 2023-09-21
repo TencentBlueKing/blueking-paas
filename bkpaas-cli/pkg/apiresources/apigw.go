@@ -25,7 +25,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
+
+// CheckTokenApiUnavailable CheckToken API 不可用
+var CheckTokenApiUnavailable = errors.New("Check token api unavailable")
 
 // DefaultRequester 默认 API 调用入口
 var DefaultRequester Requester = &apigwRequester{}
@@ -35,10 +39,19 @@ type apigwRequester struct{}
 
 // CheckToken 调用 Auth API 检查 accessToken 合法性
 func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
+	// 如果 CheckTokenUrl 未配置，则认为该环境不支持通过 accessToken 获取用户身份
+	// 会默认跳过身份检查，直接用 accessToken 请求对应的 API，若无效或过期则 API 返回错误
+	if config.G.CheckTokenUrl == "" {
+		return nil, CheckTokenApiUnavailable
+	}
+
 	ro := grequests.RequestOptions{
 		Params: map[string]string{"access_token": accessToken},
 	}
+	console.Debug("Request Url: %s, Params: %v", config.G.CheckTokenUrl, ro.Params)
+
 	resp, err := grequests.Get(config.G.CheckTokenUrl, &ro)
+	console.Debug("Response %d -> %s", resp.StatusCode, resp.String())
 
 	if !resp.Ok || err != nil {
 		return nil, AuthApiErr
@@ -128,10 +141,14 @@ type gReqFunc func(string, *grequests.RequestOptions) (*grequests.Response, erro
 func (r apigwRequester) handlePaaSApiRequest(
 	reqFunc gReqFunc, url string, opts grequests.RequestOptions,
 ) (map[string]any, error) {
+	console.Debug("Request Url: %s, Headers: %v, Params: %v, Body: %v", url, opts.Headers, opts.Params, opts.JSON)
+
 	resp, err := reqFunc(url, &opts)
 	if err != nil {
 		return nil, PaaSApiErr
 	}
+
+	console.Debug("Response %d -> %s", resp.StatusCode, resp.String())
 
 	if !resp.Ok {
 		return nil, errors.Errorf("%d -> %s", resp.StatusCode, resp.String())

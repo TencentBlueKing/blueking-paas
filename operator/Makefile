@@ -65,15 +65,17 @@ help: ## 展示可用 make 命令及说明
 
 .PHONY: manifests
 manifests: controller-gen ## 生成 WebhookConfiguration，ClusterRole，CustomResourceDefinition 等配置（YAML）
-	# 备注：output:none 将会丢弃其他的输出，适用于仅特定配置如 crd，webhook 需要更新的情况：https://book.kubebuilder.io/reference/controller-gen.html#output-rules
-	$(CONTROLLER_GEN) crd webhook paths="./..." rbac:roleName=manager-role "crd:crdVersions=v1" output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:none
+	# 备注：output:none 将会丢弃其他的输出，适用于仅特定配置如 crd，webhook 需要更新的情况。
+	# 如果需要增加更新其他部分的 manifests 文件，请在 output:none 前追加对应参数。
+	# 参考： https://book.kubebuilder.io/reference/controller-gen.html#output-rules
+	$(CONTROLLER_GEN) crd webhook paths="./..." rbac:roleName=manager-role "crd:crdVersions=v1" output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:rbac:artifacts:config=config/rbac output:none
 
 .PHONY: generate
 generate: controller-gen ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代码实现（Go）
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: fmt
-fmt: ## 执行 golines，gofumpt ...
+fmt: golines gofumpt ## 执行 golines，gofumpt ...
 	$(GOLINES) ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
 	$(GOFUMPT) -l -w .
 
@@ -91,11 +93,11 @@ test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输�
 	$(GINKGO) --cover --coverprofile cover.out ./...
 
 .PHONY: lint
-lint: ## 执行 golangci-lint run
+lint: golangci-lint ## 执行 golangci-lint run
 	$(GOCILINT) run
 
 .PHONY: update-helm-chart
-update-helm-chart: manifests  ## 根据 kustomize 渲染出的 manifest，更新 helm-charts
+update-helm-chart: manifests ## 根据 kustomize 渲染出的 manifest，更新 helm-charts
 	rm -rf ./bkpaas-app-operator
 	$(KUSTOMIZE) build config/default | $(HELMIFY) bkpaas-app-operator
 	python3 ./scripts/update_helm_chart.py -d ${HELM_CHART_TARGET_DIR}
@@ -169,44 +171,46 @@ HELMIFY ?= $(LOCALBIN)/helmify
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.0
+GOCILINT_VERSION ?= v1.53.3
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+kustomize: $(KUSTOMIZE) ## 安装 kustomize 二进制
 $(KUSTOMIZE): $(LOCALBIN)
 	curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN)
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+controller-gen: $(CONTROLLER_GEN) ## 安装 controller-gen 二进制
 $(CONTROLLER_GEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+envtest: $(ENVTEST) ## 安装 envtest-setup 二进制
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: ginkgo
-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
+ginkgo: $(GINKGO) ## 安装 ginkgo 二进制
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 
 .PHONY: golines
-golines: $(GOLINES) ## Download golines locally if necessary
+golines: $(GOLINES) ## 安装 golines 二进制
 $(GOLINES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
 .PHONY: gofumpt
-gofumpt: $(GOFUMPT) ## Download gofumpt locally if necessary
+gofumpt: $(GOFUMPT) ## 安装 gofumpt 二进制
 $(GOFUMPT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
 .PHONY: golangci-lint
-golangci-lint: $(GOCILINT) ## Download golangci-lint locally if necessary
+golangci-lint: $(GOCILINT) ## 安装 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
+	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOCILINT_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOCILINT_VERSION)
 
 .PHONY: helmify
-helmify: $(HELMIFY) ## Download helmify locally if necessary
+helmify: $(HELMIFY) ## 安装 helmify 二进制
 $(HELMIFY): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@v0.3.18

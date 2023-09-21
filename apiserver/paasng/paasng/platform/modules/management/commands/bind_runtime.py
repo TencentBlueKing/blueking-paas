@@ -74,14 +74,14 @@ class Command(BaseCommand):
         buildpacks = list(self.get_buildpacks(buildpack_ids, buildpack_names))
 
         for module in modules:
-            binder = ModuleRuntimeBinder(module, slugbuilder)
+            binder = ModuleRuntimeBinder(module)
             print(
                 f"binding slugbuilder {slugbuilder.name}[{slugbuilder.pk}] "
                 f"and slugrunner {slugrunner.name}[{slugrunner.pk}] "
                 f"to module {module.application.code}[{module.name}]"
             )
             if not dry_run:
-                binder.bind_image(slugrunner)
+                binder.bind_image(slugrunner, slugbuilder)
 
             for buildpack in [bp for bp in buildpacks if bp.region == module.region]:
                 print(

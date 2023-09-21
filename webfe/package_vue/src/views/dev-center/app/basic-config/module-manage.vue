@@ -13,7 +13,7 @@
       :is-loading="isLoading"
       placeholder="module-manage-loading"
       :offset-top="25"
-      class="app-container middle"
+      class="app-container middle module-container"
     >
       <section v-if="!isLoading">
         <div class="module-info-item mt15">
@@ -313,11 +313,11 @@
                 clearable
               >
                 <template
-                  v-if="GLOBAL.APP_VERSION === 'te'"
+                  v-if="GLOBAL.CONFIG.MIRROR_PREFIX"
                   slot="prepend"
                 >
                   <div class="group-text">
-                    mirrors.tencent.com/
+                    {{ GLOBAL.CONFIG.MIRROR_PREFIX }}
                   </div>
                 </template>
               </bk-input>
@@ -462,7 +462,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('点击开关获取列表') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -514,7 +514,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('点击开关获取列表') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -949,10 +949,12 @@
                 return !this.displaySwitchDisabled;
             },
             curStagDisabled () {
-                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+                // 测试环境，没有启用 egress 的，也不再允许用户自己启用
+                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.stag.node_ip_addresses.length || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
             },
             curProdDisabled () {
-                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+                // 证书环境，没有启用 egress 的，也不再允许用户自己启用
+                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.prod.node_ip_addresses.length || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
             },
             entranceConfig () {
                 return this.$store.state.region.entrance_config;
@@ -1207,7 +1209,6 @@
                         }
                     };
 
-                    console.log('config', config);
                     if (config && config.authInfo) {
                         params.data.source_repo_auth_info = {
                             username: config.authInfo.account,
@@ -1217,7 +1218,7 @@
 
                     if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
                         params.data.source_control_type = 'tc_docker';
-                        params.data.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                        params.data.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                         params.data.source_repo_auth_info = {
                             username: '',
                             password: ''
@@ -1695,7 +1696,7 @@
             // 编辑镜像地址
             editDockerUrl () {
                 this.isText = false;
-                this.mirrorData.url = this.GLOBAL.APP_VERSION === 'te' ? this.curAppModule.repo.repo_url.split('.com/')[1] : this.curAppModule.repo.repo_url;
+                this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_PREFIX ? this.curAppModule.repo.repo_url.split('.com/')[1] : this.curAppModule.repo.repo_url;
             },
 
             async getLessCode () {
@@ -1739,6 +1740,11 @@
 
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/border-active-logo.scss';
+    .module-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 16px 24px;
+    }
     .module-info-item {
         margin-bottom: 35px;
         .title {

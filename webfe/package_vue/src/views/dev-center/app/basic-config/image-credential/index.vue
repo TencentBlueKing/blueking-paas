@@ -1,5 +1,5 @@
 <template lang="html">
-  <div class="container biz-create-success">
+  <div class="image-container">
     <div class="ps-top-bar">
       <div class="header-title">
         <span class="app-code">{{ curAppCode }}</span>
@@ -8,11 +8,11 @@
       </div>
     </div>
     <paas-content-loader
-      class="app-container"
+      class="app-container image-content"
       :is-loading="isLoading"
       placeholder="roles-loading"
     >
-      <div class="app-container middle ps-main">
+      <div class="middle ps-main">
         <bk-button
           theme="primary"
           class="mb15"
@@ -88,198 +88,204 @@
 </template>
 
 <script>
-    import i18n from '@/language/i18n.js';
-    import _ from 'lodash';
-    import CreateCredential from './create.vue';
-    export default {
-        components: {
-            CreateCredential
-        },
-        data () {
-            return {
-                credentialList: [],
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
-                visiableDialogConfig: {
-                    visiable: false,
-                    loading: false,
-                    title: i18n.t('新增凭证')
-                },
-                isLoading: true,
-                visiableDialog: false,
-                tableLoading: false,
-                type: 'new',
-                credentialDetail: {}
-            };
-        },
-        computed: {
-            appCode () {
-                return this.$route.params.id;
-            },
-            curAppCode () {
-                return this.$store.state.curAppCode;
-            }
-        },
-        watch: {
-            curAppCode () {
-                this.getCredentialList();
-                this.isLoading = true;
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.getCredentialList();
-            },
-
-            // 获取凭证列表
-            async getCredentialList () {
-                this.tableLoading = true;
-                try {
-                    const appCode = this.appCode;
-                    const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
-                    this.credentialList = res;
-                    this.credentialList.forEach(item => {
-                        item.password = '';
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.tableLoading = false;
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 500);
-                }
-            },
-
-            async addCredential (formData) {
-                this.visiableDialogConfig.loading = true;
-                const appCode = this.appCode;
-                const data = formData;
-                try {
-                    await this.$store.dispatch('credential/addImageCredential', { appCode, data });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('添加成功')
-                    });
-                    this.$refs.credentialDialog.handleCancel();
-                    this.getCredentialList();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.visiableDialogConfig.loading = false;
-                }
-            },
-
-            async updateCredential (formData) {
-                const appCode = this.appCode;
-                const crdlName = formData.name;
-                const data = formData;
-                try {
-                    await this.$store.dispatch('credential/updateImageCredential', { appCode, crdlName, data });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('更新成功')
-                    });
-                    this.$refs.credentialDialog.handleCancel();
-                    this.getCredentialList();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-
-            async deleteImageCredential (name) {
-                const appCode = this.appCode;
-                const crdlName = name;
-                try {
-                    await this.$store.dispatch('credential/deleteImageCredential', { appCode, crdlName });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('删除成功')
-                    });
-                    this.visiableDialogConfig.visiable = false;
-                    this.getCredentialList();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-
-            // 新增凭证
-            handleCreate () {
-                this.visiableDialogConfig.visiable = true;
-                this.visiableDialogConfig.title = this.$t('新增凭证');
-                this.type = 'new';
-                this.credentialDetail = {};
-            },
-
-            // 编辑凭证
-            handleEdit (data) {
-                this.visiableDialogConfig.visiable = true;
-                this.visiableDialogConfig.title = this.$t('编辑凭证');
-                this.type = 'edit';
-                this.credentialDetail = _.cloneDeep(data);
-            },
-
-            pageChange (page) {
-                if (this.currentBackup === page) {
-                    return;
-                }
-                this.pagination.current = page;
-            },
-
-            limitChange (currentLimit, prevLimit) {
-                this.pagination.limit = currentLimit;
-                this.pagination.current = 1;
-            },
-
-            handleDelete (data) {
-                this.$bkInfo({
-                    extCls: 'delete-image-credential',
-                    title: this.$t('确认删除镜像凭证：') + data.name,
-                    subTitle: this.$t('删除凭证后，使用该凭证的镜像将无法部署'),
-                    confirmFn: () => {
-                        this.deleteImageCredential(data.name);
-                    }
-                });
-                this.$nextTick(() => {
-                    this.addTitle(data.name);
-                });
-            },
-
-            isCreateCredential (data) {
-                this.visiableDialogConfig.visiable = false;
-                this.visiableDialog = false;
-            },
-
-            addTitle (name) {
-                document.querySelector('.delete-image-credential .bk-dialog-header-inner').setAttribute('title', name);
-            }
-        }
+import i18n from '@/language/i18n.js';
+import _ from 'lodash';
+import CreateCredential from './create.vue';
+export default {
+  components: {
+    CreateCredential,
+  },
+  data() {
+    return {
+      credentialList: [],
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      visiableDialogConfig: {
+        visiable: false,
+        loading: false,
+        title: i18n.t('新增凭证'),
+      },
+      isLoading: true,
+      visiableDialog: false,
+      tableLoading: false,
+      type: 'new',
+      credentialDetail: {},
     };
+  },
+  computed: {
+    appCode() {
+      return this.$route.params.id;
+    },
+    curAppCode() {
+      return this.$store.state.curAppCode;
+    },
+  },
+  watch: {
+    curAppCode() {
+      this.getCredentialList();
+      this.isLoading = true;
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.getCredentialList();
+    },
+
+    // 获取凭证列表
+    async getCredentialList() {
+      this.tableLoading = true;
+      try {
+        const { appCode } = this;
+        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+        this.credentialList = res;
+        this.credentialList.forEach((item) => {
+          item.password = '';
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.tableLoading = false;
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 500);
+      }
+    },
+
+    async addCredential(formData) {
+      this.visiableDialogConfig.loading = true;
+      const { appCode } = this;
+      const data = formData;
+      try {
+        await this.$store.dispatch('credential/addImageCredential', { appCode, data });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('添加成功'),
+        });
+        this.$refs.credentialDialog.handleCancel();
+        this.getCredentialList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.visiableDialogConfig.loading = false;
+      }
+    },
+
+    async updateCredential(formData) {
+      const { appCode } = this;
+      const crdlName = formData.name;
+      const data = formData;
+      try {
+        await this.$store.dispatch('credential/updateImageCredential', { appCode, crdlName, data });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('更新成功'),
+        });
+        this.$refs.credentialDialog.handleCancel();
+        this.getCredentialList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    async deleteImageCredential(name) {
+      const { appCode } = this;
+      const crdlName = name;
+      try {
+        await this.$store.dispatch('credential/deleteImageCredential', { appCode, crdlName });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除成功'),
+        });
+        this.visiableDialogConfig.visiable = false;
+        this.getCredentialList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 新增凭证
+    handleCreate() {
+      this.visiableDialogConfig.visiable = true;
+      this.visiableDialogConfig.title = this.$t('新增凭证');
+      this.type = 'new';
+      this.credentialDetail = {};
+    },
+
+    // 编辑凭证
+    handleEdit(data) {
+      this.visiableDialogConfig.visiable = true;
+      this.visiableDialogConfig.title = this.$t('编辑凭证');
+      this.type = 'edit';
+      this.credentialDetail = _.cloneDeep(data);
+    },
+
+    pageChange(page) {
+      if (this.currentBackup === page) {
+        return;
+      }
+      this.pagination.current = page;
+    },
+
+    limitChange(currentLimit) {
+      this.pagination.limit = currentLimit;
+      this.pagination.current = 1;
+    },
+
+    handleDelete(data) {
+      this.$bkInfo({
+        extCls: 'delete-image-credential',
+        title: this.$t('确认删除镜像凭证：') + data.name,
+        subTitle: this.$t('删除凭证后，使用该凭证的镜像将无法部署'),
+        confirmFn: () => {
+          this.deleteImageCredential(data.name);
+        },
+      });
+      this.$nextTick(() => {
+        this.addTitle(data.name);
+      });
+    },
+
+    isCreateCredential(data) {
+      this.visiableDialogConfig.visiable = false;
+      this.visiableDialog = false;
+    },
+
+    addTitle(name) {
+      document.querySelector('.delete-image-credential .bk-dialog-header-inner').setAttribute('title', name);
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
-
-    .ps-main {
-        margin-top: 15px;
+  .image-container{
+    .ps-top-bar{
+      padding: 0 20px;
     }
+    .image-content{
+      background: #fff;
+      margin-top: 20px;
+      padding: 20px;
+    }
+  }
     .header-title {
         display: flex;
         align-items: center;

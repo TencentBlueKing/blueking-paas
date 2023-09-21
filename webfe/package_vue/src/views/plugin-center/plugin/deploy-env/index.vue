@@ -101,7 +101,7 @@
                     <tooltip-confirm
                       ref="deleteTooltip"
                       :ok-text="$t('确定')"
-                      :cancel-text="'取消'"
+                      :cancel-text="$t('取消')"
                       :theme="'ps-tooltip'"
                       @ok="deleteConfigVar(varItem.__id__)"
                     >
@@ -164,7 +164,7 @@
                 >
                   <bk-input
                     v-model="newVarConfig.description"
-                    placeholder="描述"
+                    :placeholder="$t('描述')"
                     :clearable="false"
                   />
                 </bk-form-item>

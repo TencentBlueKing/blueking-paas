@@ -21,8 +21,9 @@ package cmd
 import (
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // DefaultSubCmdRun prints a command's help string to the specified output if no
@@ -37,6 +38,6 @@ func DefaultSubCmdRun() func(c *cobra.Command, args []string) {
 // RequireNoArgs exits with a usage error if extra arguments are provided.
 func RequireNoArgs(args []string) {
 	if len(args) > 0 {
-		color.Red("Unknown command: %q", strings.Join(args, " "))
+		console.Error("Unknown command: %q", strings.Join(args, " "))
 	}
 }

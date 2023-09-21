@@ -20,6 +20,7 @@ from typing import Dict, Optional
 
 from django.conf import settings
 from elasticsearch_dsl import Search
+from elasticsearch_dsl.aggs import Agg
 from elasticsearch_dsl.query import Q, Query
 
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -41,12 +42,14 @@ class SmartSearch:
 
     def filter(self, *args, **kwargs):
         """add filter to search dsl"""
-        self.search = self.search.filter(*args, **kwargs)
+        # 当 _expand__to_dot=True 时, 会将 bklog 的保留字段 __ext 转成 .ext, 导致查询异常
+        self.search = self.search.filter(*args, **kwargs, _expand__to_dot=False)
         return self
 
     def exclude(self, *args, **kwargs):
         """add ~filter to search dsl"""
-        self.search = self.search.exclude(*args, **kwargs)
+        # 当 _expand__to_dot=True 时, 会将 bklog 的保留字段 __ext 转成 .ext, 导致查询异常
+        self.search = self.search.exclude(*args, **kwargs, _expand__to_dot=False)
         return self
 
     def limit_offset(self, limit: int = 100, offset: int = 0):
@@ -61,6 +64,10 @@ class SmartSearch:
 
     def sort(self, keys: Dict):
         self.search = self.search.sort(keys)
+        return self
+
+    def agg(self, field_name: str, agg: Agg):
+        self.search.aggs[field_name] = agg
         return self
 
     def highlight(self, *fields: str, highlight_query: Optional[Dict]):

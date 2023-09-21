@@ -16,11 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import atexit
 import logging
-import os
 import urllib.parse
 from contextlib import suppress
 from dataclasses import asdict
+from pathlib import Path
+from typing import Dict, List, Union
 
 import pymysql
 import pytest
@@ -31,9 +33,11 @@ from django.core.management import call_command
 from django.test.utils import override_settings
 from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
+from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from paas_wl.networking.entrance.addrs import Address, AddressType
 from paasng.accounts.constants import SiteRole
 from paasng.accounts.models import UserProfile
 from paasng.dev_resources.sourcectl.models import SourceTypeSpecConfig
@@ -49,23 +53,41 @@ from paasng.platform.core.storages.utils import SADBManager
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
-from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
 from paasng.publish.sync_market.managers import AppManger
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, create_pending_wl_apps, generate_random_string
-
-from .utils.auth import create_user
-from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
+from tests.utils.auth import create_user
+from tests.utils.helpers import (
+    _mock_wl_services_in_creation,
+    configure_regions,
+    create_app,
+    create_cnative_app,
+    create_pending_wl_apps,
+    generate_random_string,
+    initialize_module,
+)
 
 logger = logging.getLogger(__file__)
 
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+svn_lock_fn = Path(__file__).parent / ".svn"
 # A random cluster name for running unittests
-CLUSTER_NAME_FOR_TESTING = get_random_string(6)
+cluster_name_fn = Path(__file__).parent / ".random"
+with FileLock(str(cluster_name_fn.absolute()) + ".lock"):
+    if cluster_name_fn.is_file():
+        CLUSTER_NAME_FOR_TESTING = cluster_name_fn.read_text().strip()
+    else:
+        CLUSTER_NAME_FOR_TESTING = get_random_string(6)
+        cluster_name_fn.write_text(CLUSTER_NAME_FOR_TESTING)
+
+
+@atexit.register
+def clear_filelock():
+    cluster_name_fn.unlink(missing_ok=True)
+    svn_lock_fn.unlink(missing_ok=True)
 
 
 def pytest_addoption(parser):
@@ -238,6 +260,13 @@ def init_test_app_repo(request):
         repo_config = settings.FOR_TESTS_SVN_SERVER_CONF
     except Exception:
         return
+
+    # use filelock to ensure svn initial will only run once
+    with FileLock(str(svn_lock_fn) + ".lock"):
+        if svn_lock_fn.exists():
+            return
+        svn_lock_fn.write_text("")
+
     provider = RepoProvider(
         base_url=repo_config["base_url"], username=repo_config["su_name"], password=repo_config["su_pass"]
     )
@@ -249,13 +278,16 @@ def init_test_app_repo(request):
     )
     with generate_temp_dir() as working_dir:
         # step 1. checkout
-        rclient.checkout(working_dir, depth='empty')
+        rclient.checkout(working_dir)
+        procfile_path = working_dir / "Procfile"
         # step 2. 创建 Procfile
-        lclient = LocalClient(working_dir, username=repo_config["su_name"], password=repo_config["su_pass"])
-        with open(os.path.join(working_dir, "Procfile"), "w") as fh:
-            fh.write("web: echo 'test'")
+        procfile_path.write_text("web: echo 'test'")
         # ste[ 3. 推送 Procfile 至服务器
-        lclient.add(os.path.join(working_dir, "Procfile"))
+        lclient = LocalClient(working_dir, username=repo_config["su_name"], password=repo_config["su_pass"])
+        if not procfile_path.exists():
+            lclient.add(str(procfile_path))
+        else:
+            lclient.update(str(procfile_path))
         lclient.commit("for test", rel_filepaths=[working_dir])
 
 
@@ -319,10 +351,7 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch(
-        'paasng.platform.applications.helpers.BKIAMClient',
-        new=StubBKIAMClient,
-    ), mock.patch(
+    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(
@@ -388,9 +417,13 @@ def bk_module(request) -> Module:
 
 
 @pytest.fixture
-def bk_module_full(bk_app_full) -> Module:
+def bk_module_full(request) -> Module:
     """Return the *fully featured* default module"""
-    return bk_app_full.get_default_module()
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app_full")
+    return bk_app.get_default_module()
 
 
 @pytest.fixture
@@ -709,43 +742,58 @@ def mark_skip_if_console_not_configured():
 
 
 @pytest.fixture
-def with_empty_live_addrs():
-    """Always return empty addresses by patching `get_addresses` function"""
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {"env": "stag", "is_running": False, "addresses": []},
-                {"env": "prod", "is_running": False, "addresses": []},
-            ]
-        )
-        yield
+def mock_env_is_running():
+    status: Dict[Union[str, ModuleEnvironment], bool] = {}
+
+    def side_effect(env: ModuleEnvironment) -> bool:
+        if env in status:
+            return status[env]
+        return status.get(env.environment, False)
+
+    status["side_effect"] = side_effect  # type: ignore
+    with mock.patch("paasng.publish.entrance.exposer.env_is_running") as m1, mock.patch(
+        "paas_wl.networking.entrance.shim.env_is_running"
+    ) as m2:
+        m1.side_effect = side_effect
+        m2.side_effect = side_effect
+        yield status
 
 
 @pytest.fixture
-def with_live_addrs():
-    """Always return valid addresses by patching `get_live_addresses` function"""
-    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
-        mocker.return_value = ModuleLiveAddrs(
-            [
-                {
-                    "env": "stag",
-                    "is_running": True,
-                    "addresses": [
-                        {"type": "subpath", "url": "http://example.com/foo-stag/"},
-                        {"type": "subdomain", "url": "http://foo-stag.example.com"},
-                    ],
-                },
-                {
-                    "env": "prod",
-                    "is_running": True,
-                    "addresses": [
-                        {"type": "subpath", "url": "http://example.com/foo-prod/"},
-                        {"type": "subdomain", "url": "http://foo-prod.example.com"},
-                    ],
-                },
-            ]
-        )
-        yield
+def mock_get_builtin_addresses(mock_env_is_running):
+    addresses: Dict[str, List] = {}
+
+    def side_effect(env: ModuleEnvironment) -> tuple:
+        env_is_running = mock_env_is_running["side_effect"](env)
+        if env in addresses:
+            return env_is_running, addresses[env]
+        return env_is_running, addresses.get(env.environment, [])
+
+    with mock.patch("paas_wl.networking.entrance.shim.get_builtin_addrs") as m:
+        m.side_effect = side_effect
+        yield addresses
+
+
+@pytest.fixture
+def with_empty_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
+    """Always return empty addresses by patching `get_builtin_addresses` function"""
+    yield
+
+
+@pytest.fixture
+def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
+    """Always return valid addresses by patching `get_builtin_addresses` function"""
+    mock_env_is_running["stag"] = True
+    mock_env_is_running["prod"] = True
+    mock_get_builtin_addresses["stag"] = [
+        Address(type=AddressType.SUBPATH, url="http://example.com/foo-stag/"),
+        Address(type=AddressType.SUBDOMAIN, url="http://foo-stag.example.com"),
+    ]
+    mock_get_builtin_addresses["prod"] = [
+        Address(type=AddressType.SUBPATH, url="http://example.com/foo-prod/"),
+        Address(type=AddressType.SUBDOMAIN, url="http://foo-prod.example.com"),
+    ]
+    yield
 
 
 @pytest.fixture
@@ -758,3 +806,12 @@ def with_wl_apps(request):
     else:
         bk_app = request.getfixturevalue("bk_app")
     create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_sync_developers_to_sentry():
+    # 避免单元测试时会往 celery 推送任务
+    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
+        "paasng.extensions.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
+    ):
+        yield

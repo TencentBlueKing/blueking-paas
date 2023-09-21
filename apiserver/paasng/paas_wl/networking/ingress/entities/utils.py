@@ -137,13 +137,16 @@ class NginxRegexRewrittenProvider:
         # - path = "/sub-path", request path = "/sub-path/foo"
         # $1 = "sub-path", $2 = "foo", $3 = nil, "/$1$3" = "/sub-path"
         # - path = "/sub-path", request path ="/sub-path"
-        # $1 = nil, $2 = nil, $3 = "sub-path, "/$1$3" = "/sub-path"
+        # $1 = nil, $2 = nil, $3 = "sub-path", "/$1$3" = "/sub-path"
         # - path = "/a/b/c/d/", request path = "/a/b/c/d/e/f"
-        # $1 = "/a/b/c/d", $2 = "e/f", $3 = "", "/$1$3" = "/a/b/c/d
-        if trim_path.endswith("/"):
+        # $1 = "/a/b/c/d", $2 = "e/f", $3 = "", "/$1$3" = "/a/b/c/d"
+        if trim_path.endswith("/") and settings.APP_INGRESS_V1_PATH_TRAILING_SLASH:
             # for the case trimPath ends with "/"
             return "/({})/(.*)()".format(remove_suffix(trim_path, "/"))
+
         # adapter the trimPath that ends without slash
+        # if trim_path ends with "/", remove it
+        trim_path = remove_suffix(trim_path, "/")
         return "/({})/(.*)|/({}$)".format(trim_path, trim_path)
 
     @staticmethod

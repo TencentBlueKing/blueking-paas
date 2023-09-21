@@ -22,6 +22,7 @@ from typing import Dict, Iterable
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.dispatch.dispatcher import receiver
 
+from paasng.engine.deploy.bg_wait.wait_deployment import processes_updated
 from paasng.engine.processes.events import (
     ProcessBaseEvent,
     ProcessEvent,
@@ -29,7 +30,6 @@ from paasng.engine.processes.events import (
     ProcInstEvent,
     ProcInstEventType,
 )
-from paasng.engine.processes.wait import processes_updated
 from paasng.engine.utils.output import ConsoleStream, DeployStream, RedisChannelStream
 from paasng.platform.core.storages.redisdb import get_default_redis
 

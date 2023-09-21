@@ -66,10 +66,16 @@ urlpatterns = [
         name='api.services.list_service_with_application',
     ),
     # List attachments (from app side)
+    # [Deprecated] use api.services.list_by_module instead
     re_path(
         make_app_pattern(f'/services/categories/{CATEGORY_ID}/$', include_envs=False),
         views.ServiceViewSet.as_view({'get': 'list_by_category'}),
         name='api.services.list_by_application',
+    ),
+    re_path(
+        make_app_pattern('/services/$', include_envs=False),
+        views.ServiceViewSet.as_view({'get': 'list_by_module'}),
+        name='api.services.list_by_module',
     ),
     re_path(
         make_app_pattern('/services/attachments/'),

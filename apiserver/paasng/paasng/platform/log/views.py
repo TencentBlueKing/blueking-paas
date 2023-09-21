@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 import re
+from functools import wraps
 from typing import TYPE_CHECKING, ClassVar, List, Optional, Tuple, Type
 
 import cattr
@@ -43,6 +44,7 @@ from paasng.platform.log import serializers
 from paasng.platform.log.client import instantiate_log_client
 from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
 from paasng.platform.log.dsl import SearchRequestSchema
+from paasng.platform.log.exceptions import NoIndexError
 from paasng.platform.log.filters import EnvFilter, ModuleFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
@@ -57,6 +59,17 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 logger = logging.getLogger(__name__)
 
 
+def transform_noindex_error(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except NoIndexError:
+            raise error_codes.QUERY_LOG_FAILED.f(_("无可用日志索引, 请稍后重试"))
+
+    return wrapped
+
+
 class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
     log_type: LogType
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
@@ -67,7 +80,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         # LOG_SEARCH_COUNTER.labels(
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
-        log_config = self._get_log_query_config(process_type=self.request.query_params.get("process_type"))
+        log_config = self._get_log_query_config()
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
     def parse_time_range(self) -> SmartTimeRange:
@@ -95,7 +108,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
-        query_config = self._get_log_query_config(process_type=params.get("process_type"))
+        query_config = self._get_log_query_config()
         search = self._make_base_search(
             search_params=query_config.search_params,
             time_range=smart_time_range,
@@ -144,7 +157,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         search = es_filter.filter_by_builtin_excludes(search)
         return search.limit_offset(limit=limit, offset=offset)
 
-    def _get_log_query_config(self, process_type: Optional[str] = None):
+    def _get_log_query_config(self):
         """获取日志查询配置"""
         env = self.get_env_via_path()
         log_type = self.log_type
@@ -154,7 +167,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
         else:
             try:
-                log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
+                log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
             except ProcessLogQueryConfig.DoesNotExist:
                 raise ValueError("structured log must provide `process_type` field")
         return log_config
@@ -168,6 +181,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def query_logs(self, request, code, module_name, environment):
         """查询日志"""
         log_client, log_config = self.instantiate_log_client()
@@ -207,6 +221,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def query_logs_scroll(self, request, code, module_name, environment):
         """查询标准输出日志"""
         log_client, log_config = self.instantiate_log_client()
@@ -252,6 +267,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def aggregate_date_histogram(self, request, code, module_name, environment):
         """统计日志的日志数-事件直方图"""
         log_client, log_config = self.instantiate_log_client()
@@ -280,29 +296,33 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def aggregate_fields_filters(self, request, code, module_name, environment):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()
+        mappings = log_client.get_mappings(
+            log_config.search_params.indexPattern,
+            time_range=self.parse_time_range(),
+            timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+        )
         search = self.make_search(
-            mappings=log_client.get_mappings(
-                log_config.search_params.indexPattern,
-                time_range=self.parse_time_range(),
-                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
-            ),
+            mappings=mappings,
             time_field=log_config.search_params.timeField,
         )
-
         fields_filters = log_client.aggregate_fields_filters(
-            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            index=log_config.search_params.indexPattern,
+            search=search,
+            mappings=mappings,
+            timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
         )
         if log_config.search_params.filedMatcher:
             matcher = re.compile(log_config.search_params.filedMatcher)
             fields_filters = [f for f in fields_filters if matcher.fullmatch(f.name)]
+
         return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 
 class StdoutLogAPIView(LogAPIView):
-    # TODO: 支持根据 scroll id 查询
     line_model = StandardOutputLogLine
     log_type = LogType.STANDARD_OUTPUT
     logs_serializer_class = serializers.StandardOutputLogsSLZ
@@ -342,7 +362,7 @@ class ModuleLogAPIMixin(_MixinBase):
     def aggregate_fields_filters(self, request, code, module_name, environment=None):
         return super().aggregate_fields_filters(request, code, module_name, environment)
 
-    def _get_log_query_config_by_env(self, env: ModuleEnvironment, process_type: Optional[str] = None):
+    def _get_log_query_config_by_env(self, env: ModuleEnvironment):
         log_type = self.log_type
         if log_type == LogType.INGRESS:
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
@@ -350,20 +370,20 @@ class ModuleLogAPIMixin(_MixinBase):
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
         else:
             try:
-                log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
+                log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
             except ProcessLogQueryConfig.DoesNotExist:
                 raise ValueError("structured log must provide `process_type` field")
         return log_config
 
-    def _get_log_query_config(self, process_type: Optional[str] = None):
+    def _get_log_query_config(self):
         module = self.get_module_via_path()
         stag = module.get_envs("stag")
         prod = module.get_envs("prod")
         # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
         setup_env_log_model(stag)
         setup_env_log_model(prod)
-        stag_config = self._get_log_query_config_by_env(stag, process_type=process_type)
-        prod_config = self._get_log_query_config_by_env(prod, process_type=process_type)
+        stag_config = self._get_log_query_config_by_env(stag)
+        prod_config = self._get_log_query_config_by_env(prod)
         if stag_config != prod_config:
             raise ValueError("`env` field must be specified for this module")
         return prod_config

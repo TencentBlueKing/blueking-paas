@@ -36,7 +36,7 @@ from paasng.dev_resources.services.models import Plan, Service, ServiceCategory,
 from tests.dev_resources.servicehub import data_mocks
 from tests.utils.helpers import BaseTestCaseWithApp
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
 class TestMixedMgr:
@@ -192,6 +192,7 @@ class TestLocalMgr(BaseTestCaseWithApp):
             instance = rel.get_instance()
             assert isinstance(instance.create_time, datetime.datetime)
 
+    @mock.patch('paasng.dev_resources.servicehub.constants.SERVICE_SENSITIVE_FIELDS', {'mysql': ['MYSQL_PASSWORD']})
     @mock.patch('paasng.dev_resources.services.models.Service.create_service_instance_by_plan')
     def test_get_instance(self, mocked_method):
         mocked_method.side_effect = [self._create_instance(), self._create_instance()]

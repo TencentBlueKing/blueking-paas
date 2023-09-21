@@ -18,17 +18,48 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+import arrow
+from django.conf import settings
+
+from paas_wl.platform.applications.models import Build
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder
-from paasng.engine.constants import ImagePullPolicy, RuntimeType
+from paasng.engine.constants import RuntimeType
+from paasng.engine.models import Deployment
 from paasng.extensions.smart_app.conf import bksmart_settings
 from paasng.extensions.smart_app.utils import SMartImageManager
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.module import Module
+from paasng.platform.modules.helpers import ModuleRuntimeManager
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 
 if TYPE_CHECKING:
     from paasng.dev_resources.sourcectl.models import VersionInfo
     from paasng.engine.models import EngineApp
+
+
+def generate_image_repository(module: Module) -> str:
+    """Get the image repository for storing container image"""
+    application = module.application
+    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
+    app_part = f"{application.code}/{module.name}"
+    return f"{system_prefix}/{app_part}"
+
+
+def generate_image_tag(module: Module, version: "VersionInfo") -> str:
+    """Get the Image Tag for version"""
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    options = cfg.tag_options
+    parts: List[str] = []
+    if options.prefix:
+        parts.append(options.prefix)
+    if options.with_version:
+        parts.append(version.version_name)
+    if options.with_build_time:
+        parts.append(arrow.now().format("YYMMDDHHmm"))
+    if options.with_commit_id:
+        parts.append(version.revision)
+    return "-".join(parts)
 
 
 @dataclass
@@ -68,10 +99,10 @@ class ImageCredentialManager:
 class RuntimeImageInfo:
     """提供与当前应用匹配的运行时环境信息的工具"""
 
-    def __init__(self, engine_app: 'EngineApp', version_info: 'VersionInfo'):
+    def __init__(self, engine_app: 'EngineApp'):
         self.engine_app = engine_app
         self.module = engine_app.env.module
-        self.version_info: 'VersionInfo' = version_info
+        self.application = self.module.application
         self.module_spec = ModuleSpecs(self.module)
 
     @property
@@ -79,52 +110,65 @@ class RuntimeImageInfo:
         """返回当前 engine_app 的运行时的类型, buildpack 或者 custom_image"""
         return self.module_spec.runtime_type
 
-    @property
-    def image(self) -> Optional[str]:
-        """返回当前 engine_app 启动的镜像"""
+    def generate_image(self, version_info: 'VersionInfo', special_tag: Optional[str] = None) -> str:
+        """generate the runtime image of the application at a given version
+
+        :param version_info: 版本信息
+        :param special_tag: 指定镜像 Tag
+        :return: 返回运行构建产物(Build)的镜像
+                 如果构建产物是 Image, 则返回的是镜像
+                 如果构建产物是 Slug, 则返回 SlugRunner 的镜像
+        """
         if self.type == RuntimeType.CUSTOM_IMAGE:
+            if self.application.type == ApplicationType.CLOUD_NATIVE:
+                # 仅托管镜像类型的云原生应用的镜像由 Yaml 定义, 因此返回空字符串
+                # Q: 为什么不尝试从 Yaml 解析？
+                # A: 因为 v1alpha1 版本的云原生应用并不能保证只有一个 image...
+                #    从 Yaml 解析在兼容 v1alpha1 需要写很复杂或依赖约定(例如用 web 的 image)的逻辑, 这反而更难维护。
+                return ""
             repo_url = self.module.get_source_obj().get_repo_url()
-            reference = self.version_info.revision
+            reference = version_info.revision
             return f"{repo_url}:{reference}"
-        elif self.module.get_source_origin() == SourceOrigin.S_MART and self.version_info.version_type == "image":
+        elif self.type == RuntimeType.DOCKERFILE:
+            app_image_repository = generate_image_repository(self.module)
+            app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
+            return f"{app_image_repository}:{app_image_tag}"
+        elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
             from paasng.extensions.smart_app.utils import SMartImageManager
 
-            named = SMartImageManager(self.module).get_image_info(self.version_info.revision)
+            named = SMartImageManager(self.module).get_image_info(version_info.revision)
             return f"{named.domain}/{named.name}:{named.tag}"
-
-        slugrunner = self.module.slugrunners.last()
-        return getattr(slugrunner, "full_image", '')
-
-    @property
-    def endpoint(self) -> List:
-        """返回当前 engine_app 镜像启动的 endpoint"""
-        if self.type == RuntimeType.CUSTOM_IMAGE:
-            return ["env"]
-        # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
-        slugrunner = self.module.slugrunners.last()
-        metadata: Dict = getattr(slugrunner, "metadata", {})
-        return metadata.get("endpoint", ['bash', '/runner/init'])
+        mgr = ModuleRuntimeManager(self.module)
+        slug_runner = mgr.get_slug_runner(raise_exception=False)
+        if mgr.is_cnb_runtime:
+            app_image_repository = generate_image_repository(self.module)
+            app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
+            return f"{app_image_repository}:{app_image_tag}"
+        return getattr(slug_runner, "full_image", '')
 
 
-def update_image_runtime_config(
-    engine_app: 'EngineApp',
-    version_info: 'VersionInfo',
-    image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT,
-):
+def update_image_runtime_config(deployment: Deployment):
     """Update the image runtime config of the given engine app"""
-    runtime = RuntimeImageInfo(engine_app=engine_app, version_info=version_info)
+    engine_app = deployment.get_engine_app()
+    build_obj = Build.objects.get(pk=deployment.build_id)
+    image_pull_policy = deployment.advanced_options.image_pull_policy
+    runtime = RuntimeImageInfo(engine_app=engine_app)
     runtime_dict = {
-        "image": runtime.image,
         "type": runtime.type,
-        "endpoint": runtime.endpoint,
-        "image_pull_policy": image_pull_policy.value,
+        "image_pull_policy": image_pull_policy,
     }
+    # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
+    mgr = ModuleRuntimeManager(deployment.app_environment.module)
+    slug_runner = mgr.get_slug_runner(raise_exception=False)
+    metadata: Dict = getattr(slug_runner, "metadata", {})
+    if entrypoint := metadata.get("entrypoint"):
+        build_obj.artifact_metadata.update(entrypoint=entrypoint)
+        build_obj.save(update_fields=["artifact_metadata", "updated"])
 
     # Update the config property of WlApp object
     wl_app = engine_app.to_wl_obj()
     config = wl_app.latest_config
     config.runtime = runtime_dict
-    config.save(update_fields=['runtime'])
-
+    config.save(update_fields=['runtime', 'updated'])
     # Refresh resource requirements
     config.refresh_res_reqs()

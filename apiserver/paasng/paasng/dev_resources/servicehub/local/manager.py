@@ -29,7 +29,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.dev_resources.servicehub import constants
 from paasng.dev_resources.servicehub.exceptions import (
@@ -231,10 +231,14 @@ class LocalServiceMgr(BaseServiceMgr):
         for svc in services:
             yield LocalServiceObj.from_db_object(svc)
 
-    def list_by_region(self, region: str) -> Generator[ServiceObj, None, None]:
+    def list_by_region(self, region: str, include_hidden=False) -> Generator[ServiceObj, None, None]:
         """query a list of services by region"""
         services = Service.objects.filter(region=region, is_active=True, is_visible=True)
         for svc in services:
+            # Ignore services which is_visible field is False
+            if not include_hidden and not svc.is_visible:
+                continue
+
             yield LocalServiceObj.from_db_object(svc)
 
     def list(self) -> Generator[ServiceObj, None, None]:

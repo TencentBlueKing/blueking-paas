@@ -12,11 +12,12 @@ easily and efficiently. It includes the following core services: Developer Cente
 Console, Low Code Development Service, etc. The platform's goal is to help developers build operation-free tools and
 systems quickly and cost-effectively.
 
-This project is "PaaS Platform - Developer Center".
+This project is `PaaS Platform - Developer Center`.
 
-> **PaaS core services open source project**
+**PaaS core services open source project**
 
 - PaaS Platform - [Developer Center](https://github.com/TencentBlueKing/blueking-paas)
+- PaaS Platform - [API Gateway](https://github.com/TencentBlueKing/blueking-apigateway)
 - PaaS Platform - [Unified Login](https://github.com/TencentBlueKing/bk-user)
 - PaaS Platform - [Console](https://github.com/TencentBlueKing/blueking-console)
 - PaaS Platform Low Code Development Services - [LessCode](https://github.com/TencentBlueKing/bk-lesscode)
@@ -33,9 +34,9 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 - The development model of the front-end and back-end separation makes the R&D collaboration of SaaS more efficient
 - Support custom background process and start command, more flexible developer perspective
 - Provides enhanced services such as MySQL, RabbitMQ, object storage (bk-repo)
-- Through container image deployment, it becomes easier to develop Blue Whale SaaS
+- Through container image deployment, it becomes easier to develop BlueKing SaaS
 - Fully upgrade the Python development framework to keep up with the latest Django official technical solutions
-- Added Node.js development framework, immediately enjoy the low-code R&D mode of Blue Whale visualization platform
+- Added Node.js development framework, immediately enjoy the low-code R&D mode of BlueKing visualization platform
 
 ## Code Directory Description
 
@@ -79,7 +80,7 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 
 ## Contributing
 
-If you have good ideas or suggestions, please let us know by Issues or Pull Requests and contribute to the Blue Whale
+If you have good ideas or suggestions, please let us know by Issues or Pull Requests and contribute to the BlueKing
 Open Source Community. For bk-PaaS branch management, issues, and pr specifications, read
 the [CONTRIBUTING(In Chinese)](docs/CONTRIBUTING.md)
 

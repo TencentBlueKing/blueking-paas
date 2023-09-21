@@ -29,9 +29,10 @@ if TYPE_CHECKING:
 
 ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
+CONFIG_VAR_INPUT_FIELDS = ['is_global', 'environment_id', 'key', 'value', 'description']
 
 
-def get_config_vars(module, env_name):
+def get_config_vars(module: 'Module', env_name: str) -> Dict[str, str]:
     """Get ConfigVars of module as dict, config vars priority: builtin/not global/global
 
     :param str env_name: environment name, such as 'prod'

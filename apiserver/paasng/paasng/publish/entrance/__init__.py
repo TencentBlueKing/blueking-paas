@@ -16,5 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Application entrance management"""
-default_app_config = 'paasng.publish.entrance.apps.EntranceConfig'

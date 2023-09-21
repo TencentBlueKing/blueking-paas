@@ -26,6 +26,9 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
+// AnonymousUsername 匿名用户名
+const AnonymousUsername = "anonymous"
+
 // TokenExpiredOrInvalid Token 过期或无效
 var TokenExpiredOrInvalid = errors.New("AccessToken expired or invalid")
 
@@ -35,6 +38,12 @@ var FetchUsernameFailedErr = errors.New("Unable to fetch username")
 // FetchUserNameByAccessToken 通过 AccessToken 获取用户名信息
 func FetchUserNameByAccessToken(accessToken string) (string, error) {
 	authResp, err := apiresources.DefaultRequester.CheckToken(accessToken)
+
+	// 当检查 Token API 不可用时不提前做检查，API 收到无效的 Token 会报错的
+	if errors.Is(err, apiresources.CheckTokenApiUnavailable) {
+		return AnonymousUsername, nil
+	}
+
 	if err != nil {
 		return "", err
 	}

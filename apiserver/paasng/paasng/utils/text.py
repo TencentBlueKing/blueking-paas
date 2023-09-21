@@ -116,7 +116,7 @@ def calculate_percentage(x: float, y: float, decimal_places: int = 2) -> str:
         raise ValueError("decimal cannot be negative")
     result = x / y
     # 最小精度
-    min_precision = 1 / 100 / 10**decimal_places
+    min_precision = 1 / 100 / 10 ** decimal_places
     # 如果结果小于最小精度，则返回 "<最小精度%"
     if result < min_precision:
         return "<{:.{decimal_places}%}".format(min_precision, decimal_places=decimal_places)

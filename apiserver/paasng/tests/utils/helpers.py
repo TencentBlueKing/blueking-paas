@@ -40,6 +40,7 @@ from paasng.platform.core.region import load_regions_from_settings
 from paasng.platform.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.oauth2.utils import create_oauth2_client
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
@@ -186,6 +187,8 @@ def create_app(
         application, repo_type=sourcectl_name, repo_url=default_repo_url, additional_modules=additional_modules
     )
     module = application.get_default_module()
+    # bind build_config
+    BuildConfig.objects.get_or_create_by_module(module)
 
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)
@@ -380,12 +383,17 @@ def _mock_wl_services_in_creation():
 
     def fake_update_metadata_by_env(env, metadata_part):
         # Store params in global, so we can manually update the metadata later.
-        _faked_env_metadata[env.id] = metadata_part
+        if env.id not in _faked_env_metadata:
+            _faked_env_metadata[env.id] = metadata_part
+        else:
+            _faked_env_metadata[env.id].update(metadata_part)
 
     with mock.patch(
         'paasng.platform.modules.manager.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
     ), mock.patch(
         'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
+    ), mock.patch(
+        'paasng.cnative.services.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
         "paasng.platform.modules.manager.EnvClusterService"
     ), mock.patch(
@@ -417,6 +425,8 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
                 region, name, type_ = args
+                if WlApp.objects.filter(name=name).exists():
+                    continue
                 wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
                 latest_config = wl_app.latest_config
                 latest_config.cluster = cluster_name
@@ -496,6 +506,7 @@ def create_scene_tmpls():
 
 def create_cnative_app(
     owner_username: Optional[str] = None,
+    repo_type: str = '',
     region: Optional[str] = None,
     force_info: Optional[dict] = None,
     cluster_name: Optional[str] = None,
@@ -525,10 +536,36 @@ def create_cnative_app(
         name=name,
         name_en=name,
     )
+    create_oauth2_client(application.code, application.region)
+
+    # First try Svn, then GitLab, then Default
+    if not repo_type:
+        try:
+            try:
+                sourcectl_name = get_sourcectl_types().names.bk_svn
+            except KeyError:
+                sourcectl_name = get_sourcectl_types().names.git_lab
+        except KeyError:
+            sourcectl_name = get_sourcectl_types().names.get_default()
+    else:
+        sourcectl_name = get_sourcectl_types().names.get(repo_type)
+
+    basic_type = get_sourcectl_types().get(sourcectl_name).basic_type
+    default_repo_url = f'{basic_type}://127.0.0.1:8080/app'
 
     create_default_module(application)
+    # TODO: 使用新的创建模块逻辑
     with contextmanager(_mock_wl_services_in_creation)():
-        initialize_simple(application.get_default_module(), '', cluster_name=cluster_name)
+        module = application.get_default_module()
+        initialize_simple(module, '', cluster_name=cluster_name)
+        module_initializer = ModuleInitializer(module)
+        # Set-up the repository data
+        module.source_origin = SourceOrigin.AUTHORIZED_VCS
+        module.source_init_template = settings.DUMMY_TEMPLATE_NAME
+        module.save()
+        module_initializer.initialize_with_template(sourcectl_name, default_repo_url)
+        module_initializer.initialize_log_config()
+
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)
     return application

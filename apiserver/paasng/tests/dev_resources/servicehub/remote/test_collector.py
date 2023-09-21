@@ -26,6 +26,8 @@ from paasng.dev_resources.servicehub.remote.collector import initialize_remote_s
 from tests.dev_resources.servicehub import data_mocks
 from tests.utils.api import mock_json_response
 
+pytestmark = [pytest.mark.xdist_group(name="remote-services")]
+
 
 class TestInitialize:
     @override_settings(SERVICE_REMOTE_ENDPOINTS=None)

@@ -256,8 +256,87 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     min-width: 64px;
 }
 
-.drop-element.drop-open {
+.bk-searcher-wrapper .placeholder {
+    top: 0 !important;
+}
+
+.bk-date-picker-rel {
+    .clear-action {
+        display: none;
+    }
+    .icon-wrapper {
+        left: auto !important;
+        right: 0;
+    }
+}
+
+.bk-selector-list .bk-selector-list-item .text {
+    display: block;
+    text-align: left;
+}
+
+.bk-selector-list {
+    min-width: 250px;
+}
+
+.bk-options .bk-option {
+    .icon-check-1 {
+        display: none;
+    }
+}
+
+.bk-options .bk-option.is-selected {
+    .icon-check-1 {
+        display: inline-block;
+    }
+}
+
+.bk-form-control .group-box {
+    font-size: 0;
+}
+
+.bk-form-checkbox.is-checked .bk-checkbox:after {
+    top: 2px;
+    left: 5px;
+}
+
+.bk-transfer .source-list .header, .bk-transfer .target-list .header {
+    height: 38px;
+    line-height: 38px;
+    font-size: 12px;
+}
+
+.bk-transfer .source-list, .bk-transfer .target-list {
+    height: 280px !important;
+}
+
+.bk-dialog-wrapper .bk-dialog {
+    top: 150px;
+}
+
+.bk-transfer .source-list .content li, .bk-transfer .target-list .content li > span:first-child {
+    white-space: nowrap;
+    display: inline-block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    width: 100%;
+    padding-right: 40px;
+}
+
+.bk-tab-label-wrapper .bk-tab-label-list .bk-tab-label-item {
+    padding: 0 3px;
+    // margin-right: 20px;
+}
+
+.drop.drop-element {
     z-index: 10000;
+}
+
+.drop.drop-element.drop-open:not(.exclude-drop) {
+    display: block;
+}
+.drop.drop-element:not(.exclude-drop) {
+    display: none;
 }
 
 .bk-searcher-wrapper .placeholder {
@@ -311,7 +390,7 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 }
 
 .bk-transfer .source-list, .bk-transfer .target-list {
-    height: 280px;
+    height: 280px !important;
 }
 
 .bk-dialog-wrapper .bk-dialog {
@@ -329,83 +408,6 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 
 .bk-tab-label-wrapper .bk-tab-label-list .bk-tab-label-item {
     padding: 0 3px;
-    margin-right: 20px;
-}
-
-.drop-element.drop-open {
-    z-index: 10000;
-}
-
-.bk-searcher-wrapper .placeholder {
-    top: 0 !important;
-}
-
-.bk-date-picker-rel {
-    .clear-action {
-        display: none;
-    }
-    .icon-wrapper {
-        left: auto !important;
-        right: 0;
-    }
-}
-
-.bk-selector-list .bk-selector-list-item .text {
-    display: block;
-    text-align: left;
-}
-
-.bk-selector-list {
-    min-width: 250px;
-}
-
-.bk-options .bk-option {
-    .icon-check-1 {
-        display: none;
-    }
-}
-
-.bk-options .bk-option.is-selected {
-    .icon-check-1 {
-        display: inline-block;
-    }
-}
-
-.bk-form-control .group-box {
-    font-size: 0;
-}
-
-.bk-form-checkbox.is-checked .bk-checkbox:after {
-    top: 2px;
-    left: 5px;
-}
-
-.bk-transfer .source-list .header, .bk-transfer .target-list .header {
-    height: 38px;
-    line-height: 38px;
-    font-size: 12px;
-}
-
-.bk-transfer .source-list, .bk-transfer .target-list {
-    height: 280px;
-}
-
-.bk-dialog-wrapper .bk-dialog {
-    top: 150px;
-}
-
-.bk-transfer .source-list .content li, .bk-transfer .target-list .content li > span:first-child {
-    white-space: nowrap;
-    display: inline-block;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    width: 100%;
-    padding-right: 40px;
-}
-
-.bk-tab-label-wrapper .bk-tab-label-list .bk-tab-label-item {
-    padding: 0 3px;
-    margin-right: 20px;
 }
 
 .bk-picker-confirm a:nth-child(2) {
@@ -472,12 +474,14 @@ th.bk-table-column-selection .cell .bk-table-header-label {
         &:after {
             width: 12px;
             height: 12px;
+            top: 0;
+            left: 0;
         }
         &.is-checked {
             &:after {
                 left: 100%;
-                top: 2px;
-                margin-left: -14px;
+                top: 0;
+                margin-left: -16px !important;
             }
         }
     }
@@ -617,6 +621,7 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 
 .bk-select-dropdown-theme {
     .tippy-content {
+        padding: 0;
         max-width: 100%;
     }
 }
@@ -626,8 +631,8 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 }
 
 .bk-sideslider-content {
-    height: calc(100vh - 50px);
-    max-height: calc(100vh - 50px) !important;
+    height: calc(100vh - 60px);
+    max-height: calc(100vh - 60px) !important;
 }
 
 .bk-options .bk-option-content .bk-option-content-default {

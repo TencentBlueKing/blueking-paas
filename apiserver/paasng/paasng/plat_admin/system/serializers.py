@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.dev_resources.servicehub.services import ServiceSpecificationHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.serializers import UserNameField
@@ -48,6 +49,7 @@ class UniversalAppSLZ(serializers.Serializer):
 
     source = serializers.IntegerField(source='get_source', help_text='应用来源平台。1 - 默认, 2 - 旧版本')
     name = serializers.CharField(help_text="应用名称")
+    name_en = serializers.CharField(help_text="应用英文名称")
     code = serializers.CharField(help_text="应用 ID（Code）")
     region = serializers.CharField(help_text="应用版本信息")
     logo_url = serializers.CharField(help_text="应用 logo 图片地址")
@@ -126,3 +128,30 @@ class SearchApplicationSLZ(serializers.Serializer):
 class MinimalAppSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用ID")
     name = serializers.CharField(help_text="应用名称")
+
+
+class AddonSpecsSLZ(serializers.Serializer):
+    specs = serializers.DictField(default=dict)
+
+    def validate_specs(self, specs):
+        if not specs:
+            return specs
+
+        svc = self.context['svc']
+        if not svc.public_specifications:
+            raise ValidationError(f'addon service {svc.name} does not support custom specs')
+
+        # filter_plans 无法识别出 invalid spec name, 因此保留下面的逻辑
+        public_spec_names = [spec.name for spec in svc.public_specifications]
+        if invalid_spec_name := set(specs.keys()) - set(public_spec_names):
+            raise ValidationError(f'spec name {invalid_spec_name} is invalid for addon service {svc.name}')
+
+        if not ServiceSpecificationHelper.from_service_public_specifications(svc).filter_plans(specs):
+            raise ValidationError(f'{specs} is invalid for addon service {svc.name}')
+
+        return specs
+
+
+class ClusterNamespaceSLZ(serializers.Serializer):
+    bcs_cluster_id = serializers.CharField(help_text="BCS 集群 ID")
+    namespace = serializers.CharField(help_text="命名空间名称")

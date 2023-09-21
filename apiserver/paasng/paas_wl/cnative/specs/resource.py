@@ -22,22 +22,14 @@ from typing import Dict, Optional
 from attrs import define
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
-from paas_wl.cnative.specs import credentials
 from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
-from paas_wl.cnative.specs.constants import (
-    IMAGE_CREDENTIALS_REF_ANNO_KEY,
-    ApiVersion,
-    ConditionStatus,
-    DeployStatus,
-    MResConditionType,
-    MResPhaseType,
-)
-from paas_wl.cnative.specs.models import default_bkapp_name
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, MetaV1Condition
+from paas_wl.cnative.specs.constants import ApiVersion, ConditionStatus, DeployStatus, MResConditionType, MResPhaseType
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
+from paas_wl.cnative.specs.credentials import ImageCredentialsManager
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.exceptions import ResourceMissing
-from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.entities import ImageCredentials
 from paasng.platform.applications.models import ModuleEnvironment
@@ -51,12 +43,9 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     """
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
-        # TODO: Provide apiVersion or using AppEntity(after some adapting works) to make
-        # code more robust.
         try:
-            # TODO 确定多版本交互后解除版本锁定
-            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).get(
-                default_bkapp_name(env), namespace=wl_app.namespace
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(
+                generate_bkapp_name(env), namespace=wl_app.namespace
             )
         except ResourceNotFoundError:
             logger.info('Resource BkApp not found in cluster')
@@ -75,23 +64,15 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
     :param manifest: Application manifest data.
     :raise: CreateServiceAccountTimeout 当创建 SA 超时（含无默认 token 的情况）时抛出异常
     """
-    wl_app = WlApp.objects.get(pk=env.engine_app_id)
+    wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
-        # 若命名空间不存在，则提前创建（若为新建命名空间，需要等待 ServiceAccount 就绪）
-        namespace_client = KNamespace(client)
-        _, created = namespace_client.get_or_create(name=wl_app.namespace)
-        if created:
-            namespace_client.wait_for_default_sa(namespace=wl_app.namespace)
-
-        if manifest["metadata"]["annotations"].get(IMAGE_CREDENTIALS_REF_ANNO_KEY) == "true":
-            # 下发镜像访问凭证(secret)
-            image_credentials = ImageCredentials.load_from_app(wl_app)
-            credentials.ImageCredentialsManager(client).upsert(image_credentials)
+        # 下发镜像访问凭证(secret)
+        image_credentials = ImageCredentials.load_from_app(wl_app)
+        ImageCredentialsManager(client).upsert(image_credentials)
 
         # 创建或更新 BkApp
-        # TODO 确定多版本交互后解除版本锁定
-        bkapp, _ = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
-            default_bkapp_name(env),
+        bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
+            generate_bkapp_name(env),
             namespace=wl_app.namespace,
             body=manifest,
             update_method='patch',
@@ -104,7 +85,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
 
 
 def deploy_networking(env: ModuleEnvironment) -> None:
-    """Deploy the networking related resources for env, such as Ingress and etc."""
+    """Deploy the networking related resources for env, such as Ingress etc."""
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)

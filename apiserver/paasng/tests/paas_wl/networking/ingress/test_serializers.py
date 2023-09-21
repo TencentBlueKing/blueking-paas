@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.networking.ingress.serializers import DomainEditableMixin
+from paas_wl.networking.entrance.serializers import DomainEditableMixin
 
 
 class TestDomainEditableMixin:

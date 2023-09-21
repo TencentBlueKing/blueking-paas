@@ -26,7 +26,6 @@ from paasng.pluginscenter.releases.stages import init_stage_controller
 
 class ReleaseStatusPoller(TaskPoller):
     def query(self) -> PollingResult:
-        return PollingResult.done()
         plugin = PluginInstance.objects.get(pd__identifier=self.params["pd_id"], id=self.params["plugin_id"])
         release = PluginRelease.objects.get(plugin=plugin, id=self.params["release_id"])
         if release.current_stage_id != self.params["stage_id"]:

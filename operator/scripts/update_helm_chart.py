@@ -38,12 +38,10 @@ def wrap_multiline_str(space_num: int, m_string: str) -> str:
 # 目标文件 与 原始文件集合的映射关系，如果存在多个原始文件，则进行合并
 filepath_conf = {
     '_helpers.tpl': ['_helpers.tpl'],
-
     # crd
     'crds/paas.bk.tencent.com_bkapps.tpl': ['bkapp-crd.yaml'],
     'crds/paas.bk.tencent.com_domaingroupmappings.yaml': ['domaingroupmapping-crd.yaml'],
     'crds/paas.bk.tencent.com_projectconfigs.yaml': ['projectconfig-crd.yaml'],
-
     # controller
     'controller/deployment.yaml': ['deployment.yaml'],
     'controller/config.yaml': ['manager-config.yaml'],
@@ -52,13 +50,11 @@ filepath_conf = {
     'controller/manager-rbac.yaml': ['manager-rbac.yaml'],
     'controller/metrics-reader-rbac.yaml': ['metrics-reader-rbac.yaml'],
     'controller/proxy-rbac.yaml': ['proxy-rbac.yaml'],
-
     # webhooks
     'webhooks/mutating-webhook.tpl': ['mutating-webhook-configuration.yaml'],
     'webhooks/validating-webhook.tpl': ['validating-webhook-configuration.yaml'],
     'webhooks/webhook-cert-secret.tpl': ["webhook-cert-secret.yaml"],
     'webhooks/webhook-service.yaml': ['webhook-service.yaml'],
-
     # certificate
     'certificate/selfsigned-issuer.yaml': ['selfsigned-issuer.yaml'],
     'certificate/serving-cert.yaml': ['serving-cert.yaml'],
@@ -174,33 +170,46 @@ content_patch_conf = {
         ),
     ],
     'manager-config.yaml': [
-        ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controllerConfig'),
+        ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controller'),
         (
             # 白名单控制支持 enabled & 挪到 values 顶层
             wrap_multiline_str(
                 4,
                 '''
-                ingressPluginConfig:
-                  accessControlConfig:
-                    redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
+                ingressPlugin:
+                  accessControl:
+                    redisConfigKey: {{ .Values.controller.ingressPlugin.accessControl.redisConfigKey | quote }}
+                  paasAnalysis:
+                    enabled: {{ .Values.controller.ingressPlugin.paasAnalysis.enabled }}
                 ''',  # noqa: E501
             ),
             wrap_multiline_str(
                 4,
                 '''
-                {{ if .Values.accessControl.enabled -}}
-                ingressPluginConfig:
-                  accessControlConfig:
+                {{- if or .Values.accessControl.enabled .Values.paasAnalysis.enabled }}
+                ingressPlugin:
+                  {{- if .Values.accessControl.enabled }}
+                  accessControl:
                     redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
-                {{- else -}}
-                ingressPluginConfig: {}
+                  {{- end }}
+                  {{- if .Values.paasAnalysis.enabled }}
+                  paasAnalysis:
+                    enabled: {{ .Values.paasAnalysis.enabled }}
+                  {{- end }}
+                {{- else }}
+                ingressPlugin: {}
                 {{- end }}
                 ''',
             ),
         ),
         (
-            # 平台配置挪到 values 顶层
-            '.Values.controllerConfig.platformConfig',
+            # 自动扩缩容配置挪到 values 顶层
+            '.Values.controller.autoscaling',
+            '.Values.autoscaling',
+        ),
+        (
+            # 平台配置挪到 values 顶层，依旧保留 Config 后缀以兼容存量 values
+            '.Values.controller.platform',
             '.Values.platformConfig',
         ),
     ],
@@ -431,10 +440,12 @@ data:
 '''.lstrip(),  # noqa: E501
     ),
     'mutating-webhook-configuration.yaml': WrapContent(
-        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n', '{{- end -}}',
+        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n',
+        '{{- end -}}\n',
     ),
     'validating-webhook-configuration.yaml': WrapContent(
-        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n', '{{- end -}}',
+        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n',
+        '{{- end -}}\n',
     ),
 }
 
@@ -595,16 +606,21 @@ class HelmChartUpdater:
         values['fullnameOverride'] = ''
 
         # manager 配置相关
-        values['controllerConfig'] = values['managerConfig']['controllerManagerConfigYaml']
+        values['controller'] = values['managerConfig']['controllerManagerConfigYaml']
         del values['managerConfig']
 
         # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
-        del values['controllerConfig']['ingressPluginConfig']
+        # PA 访问日志统计挪到顶层
+        values['paasAnalysis'] = {'enabled': False}
+        del values['controller']['ingressPlugin']
 
-        # 平台配置挪到顶层
-        values['platformConfig'] = values['controllerConfig']['platformConfig']
-        del values['controllerConfig']['platformConfig']
+        values['autoscaling'] = {'enabled': False}
+        del values['controller']['autoscaling']
+
+        # 平台配置挪到顶层，依旧保留 Config 后缀以兼容存量 values
+        values['platformConfig'] = values['controller']['platform']
+        del values['controller']['platform']
 
         # 证书管理相关
         values['cert'] = {

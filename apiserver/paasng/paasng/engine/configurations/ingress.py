@@ -3,14 +3,12 @@ from typing import Dict, List
 
 from django.conf import settings
 
-from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
-from paas_wl.networking.ingress.models import AutoGenDomain
-from paas_wl.networking.ingress.utils import guess_default_service_name
+from paas_wl.networking.entrance.allocator.domains import Domain, ModuleEnvDomains
+from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, Subpath
+from paas_wl.networking.ingress.shim import sync_subdomains, sync_subpaths
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
-from paasng.publish.entrance.domains import Domain, ModuleEnvDomains
-from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, Subpath
 
 
 class AppDefaultDomains:
@@ -33,13 +31,7 @@ class AppDefaultDomains:
 
     def sync(self):
         """Sync app's default subdomains to engine"""
-        domains = [d.as_dict() for d in self.domains]
-
-        wl_app = self.engine_app.to_wl_obj()
-        default_service_name = guess_default_service_name(wl_app)
-        # Assign domains to app
-        domain_objs = [AutoGenDomain(**d) for d in domains]
-        assign_custom_hosts(wl_app, domains=domain_objs, default_service_name=default_service_name)
+        sync_subdomains(self.env)
 
     def as_env_vars(self) -> Dict:
         """Return current subdomains as env vars"""
@@ -62,13 +54,7 @@ class AppDefaultSubpaths:
 
     def sync(self):
         """Sync app's default subpaths to engine"""
-        subpaths = [d.as_dict() for d in self.subpaths]
-        if subpaths:
-            wl_app = self.env.wl_app
-            default_service_name = guess_default_service_name(wl_app)
-            # Assign subpaths to app
-            subpath_vals = [d['subpath'] for d in subpaths]
-            assign_subpaths(wl_app, subpath_vals, default_service_name=default_service_name)
+        sync_subpaths(self.env)
 
     def as_env_vars(self) -> Dict:
         """Return current subpath as env vars"""

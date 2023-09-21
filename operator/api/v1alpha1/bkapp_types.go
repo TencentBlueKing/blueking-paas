@@ -30,11 +30,11 @@ import (
 )
 
 // BkApp is the Schema for the bkapps API
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -72,6 +72,10 @@ type AppSpec struct {
 	Build         BuildConfig `json:"build"`
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`
+
+	// Addons is a list of add-on service
+	// +optional
+	Addons []paasv1alpha2.Addon `json:"addons,omitempty"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -163,7 +167,34 @@ type Process struct {
 
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
+
+	// Autoscaling specifies the autoscaling configuration
+	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
+
+// AutoscalingSpec is bkapp autoscaling config
+type AutoscalingSpec struct {
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
+	// at least one metric value is available
+	MinReplicas int32 `json:"minReplicas"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	MaxReplicas int32 `json:"maxReplicas"`
+
+	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
+	Policy ScalingPolicy `json:"policy"`
+}
+
+// ScalingPolicy is used to specify which policy should be used while scaling
+type ScalingPolicy string
+
+const (
+	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
+	ScalingPolicyDefault ScalingPolicy = "default"
+)
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {
@@ -200,9 +231,17 @@ type AppEnvOverlay struct {
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
 
+	// ResQuotas overwrite BkApp's process resource quota
+	// +optional
+	ResQuotas []ResQuotaOverlay `json:"resQuotas,omitempty"`
+
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
 	EnvVariables []EnvVarOverlay `json:"envVariables,omitempty"`
+
+	// Autoscaling overwrite process's autoscaling config
+	// +optional
+	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
@@ -235,6 +274,16 @@ type ReplicasOverlay struct {
 	Count int32 `json:"count"`
 }
 
+// ResQuotaOverlay overwrite process's resQuota by environment.
+type ResQuotaOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Plan is used to specify process resource quota
+	Plan paasv1alpha2.ResQuotaPlan `json:"plan"`
+}
+
 // EnvVarOverlay overwrite or add application's environment vars by environment.
 type EnvVarOverlay struct {
 	// EnvName is app environment name
@@ -243,6 +292,16 @@ type EnvVarOverlay struct {
 	Name string `json:"name"`
 	// Value of the environment variable
 	Value string `json:"value"`
+}
+
+// AutoscalingOverlay overwrite or add application's autoscaling config by environment.
+type AutoscalingOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Spec is bkapp autoscaling config
+	Spec AutoscalingSpec `json:",inline"`
 }
 
 // AppStatus defines the observed state of BkApp
@@ -274,6 +333,10 @@ type AppStatus struct {
 	// .metadata.generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// AddonStatuses is the status of add-on service include specifications
+	// +optional
+	AddonStatuses []paasv1alpha2.AddonStatus `json:"addonStatuses,omitempty"`
 }
 
 // Addressable includes URL and other related properties
@@ -377,8 +440,9 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 
 // HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+//
+//	unhealthy is meaning that the Pod is restarting or is Failed
+//	progressing is meaning that the Pod is still running and condition `PodReady` is False.
 type HealthPhase string
 
 const (

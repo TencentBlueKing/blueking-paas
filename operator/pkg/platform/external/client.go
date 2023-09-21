@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -109,7 +108,7 @@ func (c *Client) NewRequest(ctx context.Context, method, endpoint string, body i
 // Do formats and executes the request. Returns a Result object for easy response processing.
 //
 // Error type:
-//  * http.Client.Do errors are returned directly.
+//   - http.Client.Do errors are returned directly.
 func (c *Client) Do(req *http.Request) Result {
 	// 设置蓝鲸网关的认证信息
 	req.Header.Set(
@@ -130,7 +129,7 @@ func (c *Client) transformResponse(resp *http.Response, req *http.Request) Resul
 	if resp.Body != nil {
 		defer resp.Body.Close()
 
-		data, err := ioutil.ReadAll(resp.Body)
+		data, err := io.ReadAll(resp.Body)
 		switch err.(type) {
 		case nil:
 			body = data

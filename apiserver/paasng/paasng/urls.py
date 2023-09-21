@@ -73,9 +73,13 @@ urlpatterns = [
     url(r'^', include('paasng.plat_admin.system.urls')),
     url(r'^', include('paasng.accessories.bk_lesscode.urls')),
     url(r"^", include('paasng.pluginscenter.urls')),
+    url(r"^", include('paasng.pluginscenter.itsm_adaptor.open_apis.urls')),
     # A universal reverse proxy for other services
     url(r'^', include('paasng.service_proxy.urls')),
     # switch language
     url(r'^i18n/setlang/$', django_i18n_views.set_language, name="set_language"),
     path('', include('paasng.accessories.changelog.urls')),
+    path('', include('paas_wl.networking.entrance.urls')),
+    path('', include('paas_wl.workloads.processes.urls')),
+    path('', include('paas_wl.cnative.specs.urls')),
 ]

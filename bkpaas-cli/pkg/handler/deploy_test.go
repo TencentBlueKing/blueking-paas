@@ -44,8 +44,7 @@ var _ = Describe("TestDefaultAppDeployer", func() {
 	})
 
 	It("TestDeploy", func() {
-		_, err := deployer.Deploy(deployOpts)
-		Expect(err).To(BeNil())
+		Expect(deployer.Deploy(deployOpts)).To(BeNil())
 	})
 
 	It("TestGetResult", func() {
@@ -97,8 +96,7 @@ var _ = Describe("TestCNativeAppDeployer", func() {
 	})
 
 	It("TestExec", func() {
-		_, err := deployer.Deploy(deployOpts)
-		Expect(err).To(BeNil())
+		Expect(deployer.Deploy(deployOpts)).To(BeNil())
 	})
 
 	It("TestGetResult", func() {

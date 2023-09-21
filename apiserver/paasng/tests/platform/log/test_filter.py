@@ -16,14 +16,102 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict
+
 import pytest
 from elasticsearch_dsl import Search
 
-from paasng.platform.log.filters import EnvFilter, ESFilter, ModuleFilter
+from paasng.platform.log.filters import (
+    EnvFilter,
+    ESFilter,
+    ModuleFilter,
+    _clean_property,
+    count_filters_options_from_agg,
+    count_filters_options_from_logs,
+)
 from paasng.platform.log.models import ElasticSearchParams
+from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def all_filters() -> Dict[str, FieldFilter]:
+    return {
+        "foo": FieldFilter(name="foo", key="foo.keyword"),
+        "bar": FieldFilter(name="bar", key="bar"),
+        "b.a.z": FieldFilter(name="b.a.z", key="b.a.z"),
+    }
+
+
+@pytest.mark.parametrize(
+    "aggregations, expected",
+    [
+        (
+            {"foo": {"buckets": [{"key": "example"}, {"key": "another example"}]}},
+            {
+                "foo": FieldFilter(
+                    name="foo", key="foo.keyword", options=[("example", "50.00%"), ("another example", "50.00%")]
+                ),
+                "bar": FieldFilter(name="bar", key="bar"),
+                "b.a.z": FieldFilter(name="b.a.z", key="b.a.z"),
+            },
+        ),
+        (
+            # 测试不存在的 key 会被忽略
+            {
+                "foo": {"buckets": [{"key": "example"}, {"key": "another example"}]},
+                "b.a.r": {"buckets": [{"key": "example"}, {"key": "another example"}]},
+            },
+            {
+                "foo": FieldFilter(
+                    name="foo", key="foo.keyword", options=[("example", "50.00%"), ("another example", "50.00%")]
+                ),
+                "bar": FieldFilter(name="bar", key="bar"),
+                "b.a.z": FieldFilter(name="b.a.z", key="b.a.z"),
+            },
+        ),
+    ],
+)
+def test_count_filters_options_from_agg(all_filters, aggregations, expected):
+    assert count_filters_options_from_agg(aggregations, all_filters) == expected
+
+
+@pytest.mark.parametrize(
+    "logs, expected",
+    [
+        ([], {}),
+        (
+            [{"foo": "1", "bar": "1", "b": {"a": {"z": "1"}}}],
+            {
+                'foo': FieldFilter(name='foo', key='foo.keyword', options=[('1', '100.00%')], total=1),
+                'bar': FieldFilter(name='bar', key='bar', options=[('1', '100.00%')], total=1),
+                'b.a.z': FieldFilter(name='b.a.z', key='b.a.z', options=[('1', '100.00%')], total=1),
+            },
+        ),
+        (
+            [{"foo": "1", "bar": "1", "b": {"a": {"z": "1"}}}, {"foo": "1", "bar": "2"}],
+            {
+                'foo': FieldFilter(name='foo', key='foo.keyword', options=[('1', '100.00%')], total=2),
+                'bar': FieldFilter(name='bar', key='bar', options=[('1', '50.00%'), ('2', '50.00%')], total=2),
+                'b.a.z': FieldFilter(name='b.a.z', key='b.a.z', options=[('1', '100.00%')], total=1),
+            },
+        ),
+    ],
+)
+def test_count_filters_options_from_logs(all_filters, logs, expected):
+    assert count_filters_options_from_logs(logs, all_filters) == expected
+
+
+def test_count_filters_options_from_logs_when_options_has_been_set(all_filters):
+    all_filters["foo"].options = [("stag", "100.00%")]
+    logs = [{"foo": "stag"}, {"foo": "prod"}]
+    # 理论上不可能出现这个场景(因为 Agg 统计会被日志采样要精准)
+    # 单测只是把代码的边界行为写清楚
+    assert count_filters_options_from_logs(logs, all_filters) == {
+        "foo": FieldFilter(name="foo", key="foo.keyword", options=[("stag", "100.00%"), ("prod", "50.00%")], total=2)
+    }
 
 
 # 设置 app code, module name, engine app name 以简化单测样例复杂度
@@ -283,3 +371,32 @@ class TestModuleFilter:
         params = ElasticSearchParams(indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_name }}"})
         with pytest.raises(ValueError):
             ModuleFilter(bk_module, params).filter_by_module(search)
+
+
+@pytest.mark.parametrize(
+    "nested_name, mapping, expected",
+    [
+        (
+            ["a"],
+            {"properties": {"a": {"type": "text"}, "b": {"type": "int"}}},
+            [FieldFilter(name="a.a", key="a.a.keyword"), FieldFilter(name="a.b", key="a.b")],
+        ),
+        (
+            ["a", "b", "c"],
+            {
+                "properties": {
+                    "d": {"properties": {"e": {"properties": {"f": {"properties": {"g": {"type": "text"}}}}}}}
+                }
+            },
+            [FieldFilter(name="a.b.c.d.e.f.g", key="a.b.c.d.e.f.g.keyword")],
+        ),
+        # invalid
+        (
+            ["a"],
+            {"a": {"type": "text"}, "b": {"type": "int"}},
+            [],
+        ),
+    ],
+)
+def test_clean_property(nested_name, mapping, expected):
+    assert _clean_property(nested_name, mapping) == expected

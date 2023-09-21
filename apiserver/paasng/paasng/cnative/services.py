@@ -21,18 +21,23 @@ from typing import Dict, List, Optional
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
-from paas_wl.platform.api import create_app_ignore_duplicated, create_cnative_app_model_resource
+from paas_wl.cnative.specs.constants import ApiVersion
+from paas_wl.platform.api import (
+    create_app_ignore_duplicated,
+    create_cnative_app_model_resource,
+    update_metadata_by_env,
+)
 from paas_wl.platform.applications.constants import WlAppType
 from paasng.engine.constants import AppEnvName
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.log.shim import setup_env_log_model
+from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
 from paasng.platform.modules.models import Module
 from paasng.utils.configs import get_region_aware
 from paasng.utils.error_codes import error_codes
 
 # Model-Resource
-default_engine_app_prefix = 'bkapp'
 default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
 
 
@@ -40,6 +45,7 @@ def initialize_simple(
     module: Module,
     image: str,
     cluster_name: Optional[str] = None,
+    api_version: Optional[str] = ApiVersion.V1ALPHA2,
     command: Optional[List[str]] = None,
     args: Optional[List[str]] = None,
     target_port: Optional[int] = None,
@@ -56,7 +62,7 @@ def initialize_simple(
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
 
-    model_res = create_cnative_app_model_resource(module, image, command, args, target_port)
+    model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
     create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
 
@@ -70,7 +76,7 @@ def create_engine_apps(
     """Create engine app instances for application"""
     environments = environments or default_environments
     for environment in environments:
-        engine_app_name = f'{default_engine_app_prefix}-{application.code}-{environment}'
+        engine_app_name = make_engine_app_name(module, application.code, environment)
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
         engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
         env = ModuleEnvironment.objects.create(
@@ -78,6 +84,10 @@ def create_engine_apps(
         )
         EnvClusterService(env).bind_cluster(cluster_name)
         setup_env_log_model(env)
+
+        # Update metadata
+        engine_app_meta_info = ModuleInitializer(module).make_engine_meta_info(env)
+        update_metadata_by_env(env, engine_app_meta_info)
 
 
 def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:

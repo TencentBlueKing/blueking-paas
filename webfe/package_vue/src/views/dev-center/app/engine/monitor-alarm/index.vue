@@ -34,38 +34,42 @@
   </div>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
-    import AlarmRecord from './alarm-record';
-    export default {
-        name: '',
-        components: {
-            appTopBar,
-            AlarmRecord
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: true
-            };
-        },
-        watch: {
-            '$route' () {
-                this.isLoading = true;
-            }
-        },
-        methods: {
-            handleHelp () {
-                window.open(this.GLOBAL.DOC.MONITOR_INTRO);
-            },
-            handleDataReady () {
-                this.isLoading = false;
-            }
-        }
+import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
+import AlarmRecord from './alarm-record';
+export default {
+  // eslint-disable-next-line vue/multi-word-component-names
+  name: '',
+  components: {
+    appTopBar,
+    AlarmRecord,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: true,
     };
+  },
+  watch: {
+    '$route'() {
+      this.isLoading = true;
+    },
+  },
+  methods: {
+    handleHelp() {
+      window.open(this.GLOBAL.DOC.MONITOR_INTRO);
+    },
+    handleDataReady() {
+      this.isLoading = false;
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .alarm-middle {
-        margin-top: 20px;
+        margin: 16px auto 30px;
+        width: calc(100% - 48px);
+        background: #fff;
+        padding: 16px 24px
     }
 </style>

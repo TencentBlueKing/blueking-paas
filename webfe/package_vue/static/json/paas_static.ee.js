@@ -121,7 +121,7 @@ export const PLATFORM_CONFIG = {
         BK_DESKTOP: '',
 
         // BK插件
-        BK_PLUGIN: '',
+        BK_PLUGIN: 'https://github.com/TencentBlueKing/bk-plugin-framework-python',
 
         //BKtemplate
         BK_PLUGIN_TEMPLATE: 'https://github.com/TencentBlueKing/bk-plugin-framework-python/tree/master/template',
@@ -130,7 +130,16 @@ export const PLATFORM_CONFIG = {
         BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',
 
         // 开源社区
-        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas'
+        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas',
+
+        // 技术支持
+        BK_TECHNICAL_SUPPORT: 'https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true',
+
+        // 社区论坛
+        BK_COMMUNITY: 'https://bk.tencent.com/s-mart/community/',
+
+        // 产品官网
+        BK_OFFICIAL_WEBSITE: 'https://bk.tencent.com/'
     },
 
     // 文档
@@ -264,6 +273,24 @@ export const PLATFORM_CONFIG = {
         BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置'
+    },
+
+    CONFIG: {
+        IFRAME_CLASS: 'small',
+        // 版本日志
+        RELEASE_LOG: 'TRUE',
+        // 镜像地址
+        MIRROR_PREFIX: '',
+        // 镜像示例
+        MIRROR_EXAMPLE: 'nginx:latest',
+        // region
+        REGION_CHOOSE: 'default',
+        // 市场信息
+        MARKET_INFO: '',
+        // 应用提示
+        MARKET_TIPS: staticI18n.$t('蓝鲸桌面'),
+        // 框架
+        GO_FRAME: ''
     }
 }
 
@@ -311,7 +338,7 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": staticI18n.$t("代码库管理"),
                             "url": "code",
-                            "explain": staticI18n.$t("蓝鲸代码托管服务")
+                            "explain": staticI18n.$t("支持代码仓库 OAuth 授权")
                         },
                         {
                             "text": staticI18n.$t("API 网关"),
@@ -365,7 +392,7 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": "Bamboo",
                             "url": "bamboo",
-                            "explain": staticI18n.$t(" 标准运维V3使用的分布式的流程定义、管理、调度引擎")
+                            "explain": staticI18n.$t("标准运维V3使用的分布式的流程定义、管理、调度引擎")
                         }
                     ]
                 },
@@ -550,7 +577,10 @@ export const PAAS_STATIC_CONFIG = {
                     "cloudAppDeployForEnv",
                     "cloudAppDeployForYaml",
                     "cloudAppDeployForHook",
-                    "cloudAppDeployForResource"
+                    "cloudAppDeployForResource",
+                    'imageCredential',
+                    'moduleInfo',
+                    'appServices'
                 ],
                 "iconfontName": "squares",
                 "supportModule": false,
@@ -583,7 +613,7 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appAccessPortal",
-                "label": staticI18n.$t("访问入口"),
+                "label": staticI18n.$t("访问管理"),
                 "matchRouters": ["appAccessPortal"],
                 "iconfontName": "link",
                 "supportModule": true,
@@ -612,17 +642,6 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     }
                 ]
-            },
-            {
-                "name": "imageCredential",
-                "label": staticI18n.$t("镜像凭证"),
-                "matchRouters": ["imageCredential"],
-                "iconfontName": "key-2",
-                "supportModule": false,
-                "destRoute": {
-                  "name": "imageCredential"
-                },
-                "children": []
             },
             {
                 "name": "appMarketing",
@@ -837,6 +856,13 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
             {
+                "name": "appEngineOperator",
+                "label": staticI18n.$t("应用引擎"),     //运营者视角应用引擎
+                "iconfontName": "squares",
+                "supportModule": true,
+                "children": []
+            },
+            {
                 "name": "appServices",
                 "label": staticI18n.$t("增强服务"),
                 "iconfontName": "diamond",
@@ -854,12 +880,6 @@ export const PAAS_STATIC_CONFIG = {
                 "destRoute": {
                     "name": "moduleManage"
                 },
-                "children": []
-            },
-            {
-                "name": "appPermissions",
-                "label": staticI18n.$t("权限管理"),
-                "iconfontName": "security",
                 "children": []
             },
             {

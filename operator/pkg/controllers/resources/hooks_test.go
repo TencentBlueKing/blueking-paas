@@ -93,7 +93,7 @@ var _ = Describe("HookUtils", func() {
 		It("normal case", func() {
 			hook := BuildPreReleaseHook(bkapp, nil)
 
-			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-1"))
+			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-rel-fake-app-1"))
 			Expect(hook.Pod.ObjectMeta.Labels[paasv1alpha2.HookTypeKey]).To(Equal(string(paasv1alpha2.HookPreRelease)))
 			Expect(len(hook.Pod.Spec.Containers)).To(Equal(1))
 			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.Build.Image))
@@ -117,7 +117,7 @@ var _ = Describe("HookUtils", func() {
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
 			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
-			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-100"))
+			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-rel-fake-app-100"))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthPhase("")))
 		})
 
@@ -126,6 +126,17 @@ var _ = Describe("HookUtils", func() {
 
 			hook := BuildPreReleaseHook(bkapp, nil)
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(1))
+		})
+
+		It("test build pre-release hook for cnb runtime image", func() {
+			bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
+			hook := BuildPreReleaseHook(bkapp, nil)
+			c := hook.Pod.Spec.Containers[0]
+			By("test prepend 'launcher' to Command")
+			Expect(len(c.Command)).To(Equal(1 + len(bkapp.Spec.Hooks.PreRelease.Command)))
+			Expect(c.Command).To(Equal([]string{"launcher", "/bin/bash"}))
+			By("test Args is unchanged")
+			Expect(c.Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
 		})
 	})
 })

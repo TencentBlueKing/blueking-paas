@@ -98,18 +98,6 @@ export function randomColor (baseColor, count) {
 }
 
 /**
- * min max 之间的随机整数
- *
- * @param {number} min 最小值
- * @param {number} max 最大值
- *
- * @return {number} 随机数
- */
-export function randomInt (min, max) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
-}
-
-/**
  * 异常处理
  *
  * @param {Object} err 错误对象

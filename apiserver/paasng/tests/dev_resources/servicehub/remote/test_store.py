@@ -29,6 +29,7 @@ from tests.dev_resources.servicehub import data_mocks
 from tests.utils.api import mock_json_response
 
 logger = logging.getLogger(__name__)
+pytestmark = [pytest.mark.xdist_group(name="remote-services")]
 
 
 class TestRemoteStore:

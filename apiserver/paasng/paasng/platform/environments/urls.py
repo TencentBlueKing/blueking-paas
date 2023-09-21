@@ -27,4 +27,9 @@ urlpatterns = [
         views.ModuleEnvRoleProtectionViewSet.as_view({'get': 'list', 'post': 'toggle'}),
         name='api.environments.role_restricts',
     ),
+    re_path(
+        make_app_pattern('/env_protection/batch$', include_envs=False),
+        views.ModuleEnvRoleProtectionViewSet.as_view({'post': 'batch_save'}),
+        name='api.environments.role_restricts_batch',
+    ),
 ]

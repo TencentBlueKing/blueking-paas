@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Optional
 
 
 class BkMonitorGatewayServiceError(Exception):
@@ -32,6 +33,10 @@ class BkMonitorApiError(BkMonitorGatewayServiceError):
     """When calling the bk_monitor api, bk_monitor returns an error message,
     which needs to be captured and displayed to the user on the page
     """
+
+    def __init__(self, message: str, code: Optional[int] = None):
+        super().__init__(message)
+        self.code = code
 
 
 class BkMonitorSpaceDoesNotExist(BkMonitorApiError):

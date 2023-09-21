@@ -20,7 +20,6 @@ from unittest import mock
 
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
-from django.conf import settings
 from django.test.utils import override_settings
 
 from paasng.platform.oauth2.exceptions import BkOauthApiException
@@ -37,7 +36,6 @@ class TestBkOauthClient:
     )
     def test_create_client(self, BkOauthClient, bk_oauth_client_id, bk_oauth_client_key, enable_bk_oauth, ctx):
         BkOauthClient().get_client_secret.return_value = bk_oauth_client_key
-        settings.ENABLE_BK_OAUTH = enable_bk_oauth
 
         with override_settings(ENABLE_BK_OAUTH=enable_bk_oauth):
             region = "default"

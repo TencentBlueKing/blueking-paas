@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from copy import deepcopy
 
 from paasng.engine.models import Deployment
+from paasng.engine.models.deployment import AdvancedOptions
 
 
 def create_fake_deployment(module, app_environment='prod', operator=None, **kwargs):
@@ -41,7 +42,7 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
         source_revision='1000',
         source_version_type='trunk',
         source_version_name='trunk',
-        advanced_options={},
+        advanced_options=AdvancedOptions(),
         procfile=deploy_config.procfile.copy(),
         processes={k: {"name": k, "command": v} for k, v in deploy_config.procfile.items()},
         hooks=deepcopy(deploy_config.hooks),

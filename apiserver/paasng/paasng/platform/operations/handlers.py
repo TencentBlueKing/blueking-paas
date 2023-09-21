@@ -208,3 +208,9 @@ def on_operation_created(sender, instance, created, raw, using, update_fields, *
             'latest_operated_at': instance.created,
         },
     )
+
+
+try:
+    from .handlers_ext import *  # noqa
+except ImportError:
+    pass

@@ -18,19 +18,19 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List
 
-import cattr
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
-from paas_wl.admin.serializers.processes import ProcessSpecPlanSLZ
+from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecPlanSLZ
 from paas_wl.workloads.processes.models import ProcessSpecPlan
+from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import AppEnvName
-from paasng.engine.models.processes import ProcessManager
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.region.models import get_all_regions
 from paasng.utils.text import remove_prefix
@@ -85,7 +85,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
         processes: List[Dict] = []
 
         for env in envs:
-            process_manager = ProcessManager(env.engine_app)
+            process_manager = ProcessManager(env)
             process_spec_map = {}
             for process_spec in process_manager.list_processes_specs():
                 process_spec_map[process_spec["name"]] = process_spec
@@ -100,11 +100,13 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
                         "module": env.module.name,
                         "env": env.environment,
                     },
-                    "desired_replicas": process.desired_replicas,
-                    "command": process.command,
+                    "desired_replicas": process.replicas,
+                    "command": process.runtime.proc_command,
                     "available_instance_count": process.available_instance_count,
-                    "instances": cattr.unstructure(process.instances),
-                    "process_spec": {
+                    "instances": InstanceSerializer(process.instances, many=True).data,
+                }
+                if application.type != ApplicationType.CLOUD_NATIVE:
+                    process_map[process.type]["process_spec"] = {
                         "plan": {
                             "id": process_spec["plan_id"],
                             "name": process_spec["plan_name"],
@@ -112,8 +114,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
                             "requests": process_spec["resource_requests"],
                             "max_replicas": process_spec["max_replicas"],
                         }
-                    },
-                }
+                    }
             processes.extend(process_map.values())
 
         kwargs["processes"] = processes

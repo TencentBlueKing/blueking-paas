@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.networking.entrance.views_enduser import AppDomainsViewSet
 from paasng.utils.basic import make_app_pattern, make_app_pattern_with_global_envs, re_path
 
 from . import views
@@ -63,6 +64,11 @@ urlpatterns = [
         make_app_pattern(r'/config_vars/clone_from/(?P<source_module_name>[^/]+)$', include_envs=False),
         views.ConfigVarViewSet.as_view({'post': 'clone'}),
         name='api.config_vars.clone',
+    ),
+    re_path(
+        make_app_pattern(r'/config_vars/batch/$', include_envs=False),
+        views.ConfigVarViewSet.as_view({'post': 'batch'}),
+        name='api.config_vars.batch',
     ),
     re_path(
         make_app_pattern(r'/config_vars/import/$', include_envs=False),
@@ -136,10 +142,28 @@ urlpatterns = [
         views.OperationsViewset.as_view({'get': 'list'}),
         name='api.deploy_operation.lists',
     ),
+    # Deprecated: use `api.app_domains.configs` instead
     re_path(
         '^api/bkapps/applications/(?P<code>[^/]+)/custom_domains/config/$',
-        views.CustomDomainsConfigViewset.as_view({'get': 'retrieve'}),
+        AppDomainsViewSet.as_view({'get': 'list_configs'}),
         name='api.custom_domains_config',
+    ),
+    # build artifact
+    re_path(
+        make_app_pattern(r"/build/artifact/image/$", include_envs=False),
+        views.ImageArtifactViewSet.as_view({"get": "list_image"}),
+        name="api.build.image.list",
+    ),
+    re_path(
+        make_app_pattern(r"/build/artifact/image/(?P<build_id>[^/]+)$", include_envs=False),
+        views.ImageArtifactViewSet.as_view({"get": "retrieve_image_detail"}),
+        name="api.build.image.detail",
+    ),
+    # build process
+    re_path(
+        make_app_pattern(r"/build_process/$", include_envs=False),
+        views.BuildProcessViewSet.as_view({"get": "list"}),
+        name="api.build_process.list",
     ),
 ]
 

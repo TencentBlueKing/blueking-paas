@@ -28,7 +28,7 @@ import pytest
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingStatus
 from django.dispatch import receiver
 
-from paasng.engine.processes.wait import (
+from paasng.engine.deploy.bg_wait.wait_deployment import (
     AbortedDetails,
     AbortedDetailsPolicy,
     DynamicReadyTimeoutPolicy,
@@ -40,7 +40,7 @@ from paasng.engine.processes.wait import (
 )
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.processes.models import Process
+    from paas_wl.workloads.processes.entities import Process
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

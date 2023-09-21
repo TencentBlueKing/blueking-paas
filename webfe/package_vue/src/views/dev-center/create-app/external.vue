@@ -162,117 +162,121 @@
   </div>
 </template>
 <script>
-    import _ from 'lodash';
-    export default {
-        data () {
-            return {
-                formLoading: false,
-                regionChoices: [],
-                regionDescription: '',
-                regionChoose: 'default'
-            };
-        },
-        computed: {
-            platformFeature () {
-                return this.$store.state.platformFeature;
-            }
-        },
-        mounted () {
-            this.form = $('#form-create-app').parsley();
-            this.$form = this.form.$element;
-
-            // Auto clearn ServerError message for field
-            this.form.on('form:validated', (target) => {
-                _.each(target.fields, (field) => {
-                    field.removeError('serverError');
-                });
-            });
-            window.Parsley.on('field:error', function () {
-                // 防止出现多条错误提示
-                this.$element.parsley().removeError('serverError');
-            });
-        },
-        created () {
-            this.fetchSpecsByRegion();
-        },
-        methods: {
-            submitCreateForm () {
-                if (!this.form.isValid()) {
-                    return;
-                }
-                const formData = this.$form.serializeObject();
-
-                const params = {
-                    region: this.regionChoose || formData.region,
-                    code: formData.code,
-                    name: formData.name,
-                    market_params: {
-                        source_tp_url: formData.source_tp_url
-                    }
-                };
-
-                this.$http.post(BACKEND_URL + '/api/bkapps/third-party/', params).then((resp) => {
-                    const objectKey = `SourceInitResult${Math.random().toString(36)}`;
-                    if (resp.source_init_result) {
-                        localStorage.setItem(objectKey, JSON.stringify(resp.source_init_result.extra_info));
-                    }
-                    const path = `/developer-center/apps/${resp.application.code}/create/success`;
-                    this.$router.push({
-                        path: path,
-                        query: { objectKey: objectKey }
-                    });
-                }, (resp) => {
-                    const body = resp;
-                    let fieldFocused = false;
-                    // Error message for individual fields
-                    if (body.fields_detail !== undefined) {
-                        _.forEach(body.fields_detail || [], (detail, key) => {
-                            if (key === 'non_field_errors') {
-                                this.globalErrorMessage = detail[0];
-                                window.scrollTo(0, 0);
-                            } else {
-                                const field = this.$form.find(`input[name="${key}"]`).parsley();
-                                if (field) {
-                                    field.addError('serverError', { message: detail[0] });
-                                    if (!fieldFocused) {
-                                        field.$element.focus();
-                                        fieldFocused = true;
-                                    }
-                                    setTimeout(() => {
-                                        field.removeError('serverError', { updateClass: true });
-                                    }, 3000);
-                                } else {
-                                    this.globalErrorMessage = detail[0];
-                                    window.scrollTo(0, 0);
-                                }
-                            }
-                        });
-                    } else {
-                        this.globalErrorMessage = body.detail;
-                        window.scrollTo(0, 0);
-                    }
-                }).then(
-                    () => {
-                        this.formLoading = false;
-                    }
-                );
-            },
-            fetchSpecsByRegion () {
-                this.$http.get(BACKEND_URL + '/api/bkapps/regions/specs').then((resp) => {
-                    this.allRegionsSpecs = resp;
-                    _.forEachRight(this.allRegionsSpecs, (value, key) => {
-                        this.regionChoices.push({
-                            key: key,
-                            value: value.display_name,
-                            description: value.description
-                        });
-                    });
-                    this.regionChoose = this.regionChoices[0].key;
-                    this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
-                });
-            }
-        }
+import _ from 'lodash';
+export default {
+  data() {
+    return {
+      formLoading: false,
+      regionChoices: [],
+      regionDescription: '',
+      regionChoose: 'default',
     };
+  },
+  computed: {
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
+  },
+  mounted() {
+    this.form = $('#form-create-app').parsley();
+    this.$form = this.form.$element;
+
+    // Auto clearn ServerError message for field
+    this.form.on('form:validated', (target) => {
+      _.each(target.fields, (field) => {
+        field.removeError('serverError');
+      });
+    });
+    window.Parsley.on('field:error', function () {
+      // 防止出现多条错误提示
+      this.$element.parsley().removeError('serverError');
+    });
+  },
+  created() {
+    this.fetchSpecsByRegion();
+  },
+  methods: {
+    submitCreateForm() {
+      if (!this.form.isValid()) {
+        return;
+      }
+      const formData = this.$form.serializeObject();
+
+      const params = {
+        region: this.regionChoose || formData.region,
+        code: formData.code,
+        name: formData.name,
+        market_params: {
+          source_tp_url: formData.source_tp_url,
+        },
+      };
+
+      this.$http.post(`${BACKEND_URL}/api/bkapps/third-party/`, params).then((resp) => {
+        const objectKey = `SourceInitResult${Math.random().toString(36)}`;
+        if (resp.source_init_result) {
+          localStorage.setItem(objectKey, JSON.stringify(resp.source_init_result.extra_info));
+        }
+        const path = `/developer-center/apps/${resp.application.code}/create/success`;
+        this.$router.push({
+          path,
+          query: { objectKey },
+        });
+      }, (resp) => {
+        const body = resp;
+        let fieldFocused = false;
+        // Error message for individual fields
+        if (body.fields_detail !== undefined) {
+          _.forEach(body.fields_detail || [], (detail, key) => {
+            if (key === 'non_field_errors') {
+              this.globalErrorMessage = detail[0];
+              window.scrollTo(0, 0);
+            } else {
+              const field = this.$form.find(`input[name="${key}"]`).parsley();
+              if (field) {
+                field.addError('serverError', { message: detail[0] });
+                if (!fieldFocused) {
+                  field.$element.focus();
+                  fieldFocused = true;
+                }
+                setTimeout(() => {
+                  field.removeError('serverError', { updateClass: true });
+                }, 3000);
+              } else {
+                this.globalErrorMessage = detail[0];
+                window.scrollTo(0, 0);
+              }
+            }
+          });
+        } else {
+          this.globalErrorMessage = body.detail;
+          window.scrollTo(0, 0);
+        }
+      })
+        .then(() => {
+          this.formLoading = false;
+        });
+    },
+    fetchSpecsByRegion() {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/regions/specs`).then((resp) => {
+        this.allRegionsSpecs = resp;
+        _.forEachRight(this.allRegionsSpecs, (value, key) => {
+          this.regionChoices.push({
+            key,
+            value: value.display_name,
+            description: value.description,
+          });
+        });
+        this.regionChoose = this.regionChoices[0].key;
+        this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
+      });
+    },
+    back () {
+      this.$router.push({
+        name: 'myApplications'
+      });
+    }
+  },
+};
 </script>
 <style lang="scss" scoped>
     @import './default.scss';

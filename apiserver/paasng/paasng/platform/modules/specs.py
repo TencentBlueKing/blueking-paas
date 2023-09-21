@@ -23,10 +23,12 @@ to the current version of the project delivered to anyone in the future.
 from abc import ABC
 from typing import Any, Dict, Type
 
+from paas_wl.platform.applications.constants import ArtifactType
+from paasng.engine.configurations.building import SlugbuilderInfo
 from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
+from paasng.platform.modules.models import BuildConfig, Module
 
 
 def source_origin_property(name: str):
@@ -49,7 +51,6 @@ class ModuleSpecs:
         self.app_specs = AppSpecs(module.application)
         self.source_origin_specs = SourceOriginSpecs.get(SourceOrigin(module.get_source_origin()))
 
-    runtime_type = source_origin_property('runtime_type')
     has_template_code = source_origin_property('has_template_code')
     deploy_via_package = source_origin_property('deploy_via_package')
 
@@ -59,10 +60,33 @@ class ModuleSpecs:
         # TODO: Do not read value from application, store metadata in module object itself
         return self.app_specs.require_templated_source and self.has_template_code
 
+    @property
+    def runtime_type(self) -> RuntimeType:
+        """运行时类型/构建方式"""
+        if runtime_type := getattr(self.source_origin_specs, "runtime_type", None):
+            return runtime_type
+        return RuntimeType(BuildConfig.objects.get_or_create_by_module(self.module).build_method)
+
+    @property
+    def artifact_type(self) -> ArtifactType:
+        """构件类型"""
+        if self.runtime_type == RuntimeType.CUSTOM_IMAGE:
+            return ArtifactType.NONE
+        elif self.runtime_type == RuntimeType.DOCKERFILE:
+            return ArtifactType.IMAGE
+        if SlugbuilderInfo.from_module(self.module).use_cnb:
+            return ArtifactType.IMAGE
+        return ArtifactType.SLUG
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'templated_source_enabled': self.templated_source_enabled,
-            "runtime_type": self.runtime_type.value,
+            # 运行时类型
+            "runtime_type": self.runtime_type,
+            # 构建方式
+            "build_method": self.runtime_type,
+            # 构件类型
+            "artifact_type": self.artifact_type,
         }
 
 
@@ -72,7 +96,7 @@ class SourceOriginSpecs(ABC):
     source_origin: SourceOrigin
 
     # Describe the type of runtime system
-    runtime_type: RuntimeType = RuntimeType.BUILDPACK
+    runtime_type: RuntimeType
 
     # Whether current module has template code, the code was usually initialized during module creation
     has_template_code: bool = True
@@ -101,7 +125,6 @@ class AuthorizedVcsSpecs(SourceOriginSpecs):
     """Specs for source_origin: AUTHORIZED_VCS"""
 
     source_origin = SourceOrigin.AUTHORIZED_VCS
-    runtime_type = RuntimeType.BUILDPACK
     has_template_code = True
     deploy_via_package = False
 

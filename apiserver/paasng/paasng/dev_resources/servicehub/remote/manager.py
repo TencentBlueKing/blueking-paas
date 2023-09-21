@@ -28,7 +28,7 @@ import arrow
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cluster.shim import EnvClusterService, get_cluster_egress_info
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
@@ -185,7 +185,7 @@ class EnvClusterInfo:
 
 
 class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
-    """A relationship between EngineApp and Provinsioned instance"""
+    """A relationship between EngineApp and Provisioned instance"""
 
     def __init__(self, db_obj: RemoteServiceEngineAppAttachment, mgr: 'RemoteServiceMgr', store: RemoteServiceStore):
         self.store = store
@@ -499,15 +499,19 @@ class RemoteServiceMgr(BaseServiceMgr):
         items = self.store.filter(region, conditions={"category": category_id})
         for svc in items:
             obj = RemoteServiceObj.from_data(svc, region=region)
-            # Ignore services which's is_visible field is False
+            # Ignore services which is_visible field is False
             if not include_hidden and not svc['is_visible']:
                 continue
             yield obj
 
-    def list_by_region(self, region: str) -> Generator[ServiceObj, None, None]:
+    def list_by_region(self, region: str, include_hidden=False) -> Generator[ServiceObj, None, None]:
         """query a list of services by region"""
         items = self.store.filter(region)
         for svc in items:
+            # Ignore services which is_visible field is False
+            if not include_hidden and not svc['is_visible']:
+                continue
+
             yield RemoteServiceObj.from_data(svc, region=region)
 
     def list(self) -> Generator[ServiceObj, None, None]:

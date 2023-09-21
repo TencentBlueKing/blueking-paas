@@ -55,7 +55,6 @@
       :outer-border="false"
       :size="'small'"
       :pagination="pagination"
-      :height="historyList.length ? '' : '520px'"
       @row-click="handleShowLog"
       @page-limit-change="handlePageLimitChange"
       @page-change="handlePageChange"
@@ -500,7 +499,7 @@
 
                         stageItem.steps.forEach(stepItem => {
                             timeLineList.push({
-                                tag: stepItem.name,
+                                tag: stepItem.display_name,
                                 content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
                                 status: stepItem.status || 'default',
                                 parentStage: stageItem.type

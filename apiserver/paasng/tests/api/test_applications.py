@@ -39,7 +39,7 @@ from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 logger = logging.getLogger(__name__)
@@ -50,12 +50,6 @@ def another_user(request):
     """Generate a random user"""
     user = create_user()
     return user
-
-
-@pytest.fixture(autouse=True, scope="session")
-def mock_sync_developers_to_sentry():
-    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"):
-        yield
 
 
 class TestMembershipViewset:
@@ -247,7 +241,7 @@ class TestApplicationCreateWithEngine:
                 assert response.json()['application']['type'] == desired_type
             else:
                 assert response.status_code == 400
-                assert response.json()["detail"] == '已开启引擎，类型不能为 "enginess_app"'
+                assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
 
     @pytest.mark.parametrize(
         'source_origin, source_repo_url, source_control_type, with_feature_flag, is_success',
@@ -467,9 +461,13 @@ class TestCreateBkPlugin:
 class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
-    def test_normal(self, bk_user, api_client, mock_wl_services_in_creation, settings):
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_wl_services_in_creation, mock_initialize_with_template, init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
+
+    def test_legacy(self, api_client):
+        """现存的云原生应用创建（cloud_native_params）"""
 
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -485,3 +483,108 @@ class TestCreateCloudNativeApp:
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         assert response.json()['application']['type'] == 'cloud_native'
+
+    def test_create_with_manifest(self, api_client):
+        """托管方式：仅镜像（提供 manifest）"""
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f'uta-{random_suffix}',
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.IMAGE_REGISTRY,
+                    "source_repo_url": "strm/helloworld-http",
+                },
+                "build_config": {"build_method": "custom_image"},
+                "manifest": {
+                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
+                    "kind": "BkApp",
+                    "metadata": {"name": "csu230202", "generation": 0, "annotations": {}},
+                    "spec": {
+                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
+                        "processes": [{"name": "web", "replicas": 1}],
+                        "configuration": {"env": []},
+                    },
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()['application']
+        assert app_data['type'] == 'cloud_native'
+        assert app_data['modules'][0]['web_config']['build_method'] == 'custom_image'
+        assert app_data['modules'][0]['web_config']['artifact_type'] == 'none'
+
+    @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
+    @mock.patch('paasng.engine.configurations.building.ModuleRuntimeManager')
+    def test_create_with_buildpack(self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client):
+        """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
+        MockedModuleRuntimeBinder.bind_bp_stack.return_value = None
+        MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
+            is_cnb_runtime=True, environments={}
+        )
+
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f'uta-{random_suffix}',
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+                "build_config": {
+                    "build_method": "buildpack",
+                    "tag_options": {
+                        "prefix": "bkapp",
+                        "with_version": True,
+                        "with_build_time": True,
+                        "with_commit_id": True,
+                    },
+                    "bp_stack_name": "heroku-1.18",
+                    "buildpacks": [{"id": 1}],
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()['application']
+        assert app_data['type'] == 'cloud_native'
+        assert app_data['modules'][0]['web_config']['build_method'] == 'buildpack'
+        assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'
+
+    def test_create_with_dockerfile(self, api_client):
+        """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f'uta-{random_suffix}',
+                "name": f'uta-{random_suffix}',
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+                "build_config": {
+                    "build_method": "dockerfile",
+                    "tag_options": {
+                        "prefix": "bkapp",
+                        "with_version": False,
+                        "with_build_time": False,
+                        "with_commit_id": False,
+                    },
+                    "dockerfile_path": "./Dockerfile",
+                    "docker_build_args": {"version": "v1.1.0"},
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()['application']
+        assert app_data['type'] == 'cloud_native'
+        assert app_data['modules'][0]['web_config']['build_method'] == 'dockerfile'
+        assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'

@@ -609,7 +609,7 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appCloudAPI",
-                "label": staticI18n.$t("云 API 管理"),
+                "label": staticI18n.$t("云 API 权限"),
                 "iconfontName": "cloudapi",
                 "supportModule": false,
                 "destRoute": {

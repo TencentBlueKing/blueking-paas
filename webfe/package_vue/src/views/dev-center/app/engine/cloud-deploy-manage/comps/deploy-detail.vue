@@ -1416,6 +1416,12 @@ export default {
     justify-content: center;
     border-right: 1px solid #EAEBF0;
     margin: 12px 0;
+    .label {
+      color: #63656E;
+    }
+    .value {
+      color: #313238;
+    }
     span {
       line-height: 20px;
     }

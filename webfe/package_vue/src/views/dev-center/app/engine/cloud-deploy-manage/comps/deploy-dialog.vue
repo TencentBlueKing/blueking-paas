@@ -145,10 +145,10 @@
                 :loading="isTagLoading"
               >
                 <bk-option
-                  v-for="option in imageTagList"
-                  :id="option.id"
-                  :key="option.id"
-                  :name="option.tag"
+                  v-for="option in customImageTagList"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.name"
                 />
               </bk-select>
             </bk-form-item>
@@ -255,6 +255,7 @@ export default {
         ],
       },
       tagUrl: '',
+      customImageTagList: [],
     };
   },
   computed: {
@@ -571,7 +572,7 @@ export default {
       }
     },
 
-    // 获取镜像tag列表
+    // 获取仅镜像镜像tag列表
     async getCustomImageTagList() {
       try {
         this.isTagLoading = true;
@@ -579,11 +580,9 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        console.log('res', res);
-        // this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
-        // this.imageTagListCount = res.count;
+        this.customImageTagList.splice(0, this.customImageTagList.length, ...(res.results || []));
         // 默认选中第一个
-        // this.tagData.tagValue = this.imageTagList[0]?.id || '';
+        this.tagData.tagValue = this.customImageTagList[0]?.name || '';
       } catch (e) {
         this.tagUrl = e?.data?.url;
       } finally {

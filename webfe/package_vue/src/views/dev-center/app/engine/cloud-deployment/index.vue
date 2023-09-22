@@ -14,8 +14,20 @@
       :offset-top="30"
       class="app-container middle overview"
     >
+      <div
+        v-if="!isTab"
+        class="top-return-bar flex-row align-items-center"
+        @click="handleGoBack"
+      >
+        <i
+          class="paasng-icon paasng-arrows-left icon-cls-back mr5"
+        />
+        <h4>{{ $t('返回上一页') }}</h4>
+      </div>
       <section class="deploy-panel deploy-main mt5">
+        <!-- 增强服务实例详情隐藏tab -->
         <bk-tab
+          v-show="isTab"
           ext-cls="deploy-tab-cls"
           :active.sync="active"
           @tab-change="handleGoPage"
@@ -45,6 +57,7 @@
             :is-component-btn="!isFooterActionBtn"
             @save="handleSave"
             @cancel="handleCancel"
+            @hide-tab="isTab = false"
           />
         </div>
       </section>
@@ -118,6 +131,7 @@ export default {
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,
+      isTab: true,
     };
   },
   computed: {
@@ -286,6 +300,11 @@ export default {
     handleYamlView() {
       this.deployDialogConfig.visible = true;
     },
+
+    handleGoBack() {
+      this.handleGoPage('appServices');
+      this.isTab = true;
+    },
   },
 };
 </script>
@@ -337,6 +356,26 @@ export default {
   /deep/ .bk-tab-section {
     padding: 10px !important;
     border: none;
+  }
+}
+
+.deploy-panel.deploy-main {
+  box-shadow: 0 2px 4px 0 #1919290d;
+}
+
+.top-return-bar {
+  background: #F5F7FA;
+  cursor: pointer;
+  h4 {
+    font-size: 14px;
+    color: #313238;
+    font-weight: 400;
+    padding: 0;
+  }
+  .icon-cls-back{
+    color: #3A84FF;
+    font-size: 14px;
+    font-weight: bold;
   }
 }
 </style>

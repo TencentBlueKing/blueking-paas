@@ -641,12 +641,27 @@ export default {
     // 处理跳转逻辑
     handleToPage(payload) {
       if (payload.isStartUp) {
+        this.isCloudNativeApp && this.$emit('hide-tab');
         if (payload.type === 'shared') {    // 共享
+          if (this.isCloudNativeApp) {
+            this.$router.push({
+              name: 'cloudAppServiceInnerShared',
+              params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+            });
+            return;
+          }
           this.$router.push({
             name: 'appServiceInnerShared',
             params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
           });
         } else {    // 直接启动
+          if (this.isCloudNativeApp) {
+            this.$router.push({
+              name: 'cloudAppServiceInner',
+              params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
+            });
+            return;
+          }
           this.$router.push({
             name: 'appServiceInner',
             params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },

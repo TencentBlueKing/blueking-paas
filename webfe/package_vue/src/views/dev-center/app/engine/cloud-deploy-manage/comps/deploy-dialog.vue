@@ -124,11 +124,33 @@
               :property="'tagValue'"
               :error-display-type="'normal'"
             >
+              <div
+                class="image-list version-code" v-if="tagUrl"
+                @click="handleOpenUrl(tagUrl)">{{$t('查看镜像Tag列表')}}</div>
               <bk-input
+                v-if="tagUrl"
                 v-model="tagData.tagValue"
                 :placeholder="$t('请输入镜像Tag，如 latest')"
                 clearable
               />
+              <bk-select
+                v-else
+                v-model="tagData.tagValue"
+                :placeholder="$t('请选择')"
+                style="width: 470px; display: inline-block; vertical-align: middle;"
+                :popover-min-width="420"
+                :clearable="false"
+                :searchable="true"
+                @change="handleChangeTags"
+                :loading="isTagLoading"
+              >
+                <bk-option
+                  v-for="option in imageTagList"
+                  :id="option.id"
+                  :key="option.id"
+                  :name="option.tag"
+                />
+              </bk-select>
             </bk-form-item>
           </bk-form>
         </div>
@@ -227,11 +249,12 @@ export default {
         tag: [
           {
             required: true,
-            message: this.$t('必填项'),
+            message: this.$t('请输入镜像Tag'),
             trigger: 'blur',
           },
-        ]
-      }
+        ],
+      },
+      tagUrl: '',
     };
   },
   computed: {
@@ -282,6 +305,7 @@ export default {
   watch: {
     show: {
       handler(value) {
+        if (!value) return;
         this.deployAppDialog.visiable = !!value;
         this.buttonActive = 'branch';
         this.tagData.tagValue = '';
@@ -289,8 +313,10 @@ export default {
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
         // 仅镜像部署不需要获取分支数据
-        if (this.deployAppDialog.visiable && this.deploymentInfoBackUp.build_method !== 'custom_image') {
+        if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches();   // 获取分支数据
+        } else {
+          this.getCustomImageTagList();   // 获取仅镜像下镜像tag
         }
       },
       immediate: true,
@@ -444,7 +470,7 @@ export default {
       win.location.href = res.result;
     },
 
-    async handleConfirmValidate () {
+    async handleConfirmValidate() {
       try {
         if (this.$refs?.imageFormRef) {
           await this.$refs.imageFormRef?.validate();
@@ -545,6 +571,26 @@ export default {
       }
     },
 
+    // 获取镜像tag列表
+    async getCustomImageTagList() {
+      try {
+        this.isTagLoading = true;
+        const res =  await this.$store.dispatch('deploy/getCustomImageTagData', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        console.log('res', res);
+        // this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
+        // this.imageTagListCount = res.count;
+        // 默认选中第一个
+        // this.tagData.tagValue = this.imageTagList[0]?.id || '';
+      } catch (e) {
+        this.tagUrl = e?.data?.url;
+      } finally {
+        this.isTagLoading = false;
+      }
+    },
+
     // 选择分支
     handleChangeBranch() {
       this.curSelectData = this.branchesData.find((e) => {
@@ -555,7 +601,7 @@ export default {
     },
 
     // 选择tag
-    handleChangeTags(v) {
+    handleChangeTags() {
       this.curSelectData = this.imageTagList.find((e) => {
         if (e.id === this.tagData.tagValue) {
           e.revision = e.digest;
@@ -597,6 +643,10 @@ export default {
       this.pagination.limit += 10;
       this.getImageTagList();
     },
+
+    handleOpenUrl(url) {
+      window.open(url, '_blank');
+    },
   },
 };
 </script>
@@ -627,5 +677,10 @@ export default {
   .value{
     color: #313238;
   }
+}
+.image-list{
+  position: absolute;
+  bottom: 35px;
+  right: 0;
 }
 </style>

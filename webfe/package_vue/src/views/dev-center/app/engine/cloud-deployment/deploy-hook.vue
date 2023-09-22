@@ -13,58 +13,43 @@
           <div class="item-title">
             {{ $t('部署前置命令') }}
           </div>
-          <bk-switcher
-            v-if="isPageEdit"
-            class="ml20 mr10"
-            v-model="preFormData.loaclEnabled"
-            theme="primary"
-            @change="switcherChange"
-          />
-          <div
-            v-else
-            class="ml20"
-          >
-            <bk-tag
-              :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用')"
-              :theme="preFormData.loaclEnabled ? 'info' : ''"
-            >
-              {{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}
-            </bk-tag>
-          </div>
         </div>
-        <!-- <bk-button
-          v-if="!isPageEdit"
-          class="fr"
-          theme="primary"
-          title="编辑"
-          :outline="true"
-          @click="handleEditClick">
-          {{ $t('编辑') }}
-        </bk-button> -->
 
         <div
           class="edit-container"
           @click="handleEditClick"
           v-if="!isPageEdit"
         >
-          <i class="paasng-icon paasng-edit-2 pl10" />
+          <i class="paasng-icon paasng-edit-2" />
           {{ $t('编辑') }}
         </div>
       </div>
       <!-- 不启用时隐藏 -->
       <bk-form
-        v-if="isPageEdit && preFormData.loaclEnabled"
+        v-if="isPageEdit"
         ref="commandRef"
         :model="preFormData"
         :label-width="100"
         class="info-special-form form-pre-command"
       >
         <bk-form-item
+          :label="$t('是否启用')"
+          class="pt20"
+          style="position: relative; margin-left: 5px"
+        >
+          <bk-switcher
+            v-if="isPageEdit"
+            v-model="preFormData.loaclEnabled"
+            theme="primary"
+            @change="switcherChange"
+          />
+        </bk-form-item>
+        <bk-form-item
+          v-if="preFormData.loaclEnabled"
           :label="$t('启动命令')"
           :required="true"
           :rules="rules.command"
           :error-display-type="'normal'"
-          class="pt20"
           style="position: relative; margin-left: 5px"
         >
           <bk-tag-input
@@ -84,6 +69,7 @@
           </span>
         </bk-form-item>
         <bk-form-item
+          v-if="preFormData.loaclEnabled"
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
           style="width: 510px; position: relative; margin-left: 5px"
@@ -102,14 +88,26 @@
         </bk-form-item>
       </bk-form>
       <bk-form
-        v-if="!isPageEdit && preFormData.loaclEnabled"
+        v-if="!isPageEdit"
         :model="preFormData"
         :label-width="100"
         class="info-special-form form-pre-command"
       >
         <bk-form-item
-          :label="$t('启动命令')"
+          :label="$t('是否启用')"
           class="pt20"
+          style="position: relative; margin-left: 5px"
+        >
+          <bk-tag
+            :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用')"
+            :theme="preFormData.loaclEnabled ? 'info' : ''"
+          >
+            {{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}
+          </bk-tag>
+        </bk-form-item>
+        <bk-form-item
+          v-if="preFormData.loaclEnabled"
+          :label="$t('启动命令')"
           style="position: relative; margin-left: 5px"
         >
           <div v-if="preFormData.command.length">
@@ -128,6 +126,7 @@
           </div>
         </bk-form-item>
         <bk-form-item
+          v-if="preFormData.loaclEnabled"
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
           style="position: relative; margin-left: 5px"
@@ -440,5 +439,8 @@ export default {
   font-size: 12px;
   cursor: pointer;
   padding-left: 10px;
+  i {
+    padding-left: 16px;
+  }
 }
 </style>

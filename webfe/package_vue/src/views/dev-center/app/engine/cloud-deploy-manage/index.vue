@@ -61,6 +61,8 @@ export default {
     setTimeout(() => {
       this.isLoading = false;
     }, 500);
+    // 判断当前来的环境
+    this.active = this.$route.name === 'cloudAppDeployManageProd' ? 'prod' : 'stag';
   },
   methods: {
     handleTabChange(name) {

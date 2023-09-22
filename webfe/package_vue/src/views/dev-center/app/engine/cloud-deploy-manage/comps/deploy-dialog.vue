@@ -125,8 +125,12 @@
               :error-display-type="'normal'"
             >
               <div
-                class="image-list version-code" v-if="tagUrl"
-                @click="handleOpenUrl(tagUrl)">{{$t('查看镜像Tag列表')}}</div>
+                v-if="tagUrl"
+                class="image-list version-code"
+                @click="handleOpenUrl(tagUrl)"
+              >
+                {{$t('查看镜像Tag列表')}}
+              </div>
               <bk-input
                 v-if="tagUrl"
                 v-model="tagData.tagValue"
@@ -612,7 +616,7 @@ export default {
       });
     },
     handleCancel() {
-      this.$refs.imageFormRef.clearError();
+      this.$refs.imageFormRef?.clearError();
     },
     // 点击镜像来源
     handleSelected(item) {
@@ -679,7 +683,7 @@ export default {
 }
 .image-list{
   position: absolute;
-  bottom: 35px;
+  top: -30px;
   right: 0;
 }
 </style>

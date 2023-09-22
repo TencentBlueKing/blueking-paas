@@ -164,7 +164,7 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('进程操作')"
-          width="200"
+          width="170"
           class-name="table-colum-operation-cls default-background"
         >
           <template slot-scope="{ row }">

@@ -421,7 +421,7 @@ export default {
       if (this.curAppModule.web_config.artifact_type === 'slug') {
         return this.$t('仅源码');
       }
-      return this.$t('源码&镜像');
+      return this.$t('源代码');
     },
 
     curStagDisabled() {

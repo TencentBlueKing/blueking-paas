@@ -85,13 +85,17 @@
       <bk-dialog
         v-model="deployDialogConfig.visible"
         theme="primary"
-        width="1200"
+        :width="deployDialogConfig.dialogWidth"
         ext-cls="deploy-dialog"
         title="YAML"
         header-position="left"
+        :position="{ top: deployDialogConfig.top }"
         :show-footer="false"
       >
-        <deployYaml :cloud-app-data="dialogCloudAppData"></deployYaml>
+        <deployYaml
+          :height="deployDialogConfig.height"
+          :cloud-app-data="dialogCloudAppData"
+        />
       </bk-dialog>
     </paas-content-loader>
   </div>
@@ -102,7 +106,7 @@ import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
 import { mergeObjects } from '@/common/utils';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, throttle } from 'lodash';
 
 export default {
   components: {
@@ -118,6 +122,9 @@ export default {
       buttonLoading: false,
       deployDialogConfig: {
         visible: false,
+        dialogWidth: 1200,
+        top: 120,
+        height: 600
       },
       manifestExt: {},
       panels: [
@@ -203,6 +210,9 @@ export default {
       });
     }
     this.init();
+  },
+  mounted() {
+    this.handleWindowResize();
   },
   methods: {
     async init() {
@@ -305,6 +315,16 @@ export default {
       this.handleGoPage('appServices');
       this.isTab = true;
     },
+
+    handleWindowResize() {
+      window.addEventListener('resize', throttle(this.handleResizeFun, 100));
+    },
+
+    handleResizeFun () {
+      this.deployDialogConfig.dialogWidth = window.innerWidth < 1440 ? 800 : 1200;
+      this.deployDialogConfig.top = window.innerHeight < 900 ? 80 : 120;
+      this.deployDialogConfig.height = window.innerHeight < 900 ? 400 : 600;
+    }
   },
 };
 </script>

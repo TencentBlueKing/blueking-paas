@@ -38,12 +38,15 @@ export default {
       type: Object,
       default: {},
     },
+    height: {
+      type: Number,
+      default: 600
+    }
   },
   data() {
     return {
       fullScreen: false,
       clientHeight: document.body.clientHeight,
-      height: 600,
       isLoading: false,
       editorErr: {
         type: '',

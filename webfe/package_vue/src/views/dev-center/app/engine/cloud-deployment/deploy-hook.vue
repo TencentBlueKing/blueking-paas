@@ -372,7 +372,7 @@ export default {
           },
           (err) => {
             console.error(err);
-          }
+          },
         );
       } else {
         this.$emit('save');
@@ -400,6 +400,7 @@ export default {
 
   .item-title {
     font-size: 14px;
+    font-weight: bold;
   }
 
   .item-info {

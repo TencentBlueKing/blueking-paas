@@ -171,7 +171,8 @@
                 v-bk-tooltips="$t('进程详情')"
                 class="paasng-icon paasng-log-2 detail mr10"
                 @click="showProcessDetailDialog(row)"></i>
-              <bk-popover
+              <!-- 暂时不展示 -->
+              <!-- <bk-popover
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom">
@@ -179,7 +180,7 @@
                 <div slot="content" style="white-space: normal;">
                   <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
                 </div>
-              </bk-popover>
+              </bk-popover> -->
             </div>
           </template>
         </bk-table-column>
@@ -403,9 +404,11 @@
     <!-- 无法使用控制台 end -->
 
     <!-- 扩缩容 -->
-    <scale-dialog
+    <!-- <scale-dialog
       :key="moduleName" :ref="`${moduleName}ScaleDialog`"
-      @updateStatus="handleProcessStatus"></scale-dialog>
+      @updateStatus="handleProcessStatus"
+    >
+    </scale-dialog> -->
   </div>
 </template>
 
@@ -415,7 +418,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
-import scaleDialog from './scale-dialog';
+// import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
@@ -429,10 +432,8 @@ let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
   components: {
-    // dropdown,
-    // numInput,
     chart: ECharts,
-    scaleDialog,
+    // scaleDialog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {

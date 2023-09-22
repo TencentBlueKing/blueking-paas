@@ -145,7 +145,6 @@
                 :popover-min-width="420"
                 :clearable="false"
                 :searchable="true"
-                @change="handleChangeTags"
                 :loading="isTagLoading"
               >
                 <bk-option
@@ -580,11 +579,13 @@ export default {
     async getCustomImageTagList() {
       try {
         this.isTagLoading = true;
+        this.tagUrl = '';
         const res =  await this.$store.dispatch('deploy/getCustomImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        this.customImageTagList.splice(0, this.customImageTagList.length, ...(res.results || []));
+        console.log('res', res);
+        this.customImageTagList.splice(0, this.customImageTagList.length, ...(res || []));
         // 默认选中第一个
         this.tagData.tagValue = this.customImageTagList[0]?.name || '';
       } catch (e) {

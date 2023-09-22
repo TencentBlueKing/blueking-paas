@@ -1604,7 +1604,7 @@ export default {
         padding: 0;
       }
       .bk-table-header-label {
-        padding: 0 15px;
+        padding: 0 10px;
       }
       &.default-background {
         background: #FAFBFD;

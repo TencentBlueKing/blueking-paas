@@ -2290,4 +2290,5 @@ export default {
   '镜像Tag：': '镜像Tag：',
   返回上一页: '返回上一页',
   '请输入镜像Tag，如 latest': '请输入镜像Tag，如 latest',
+  源代码: '源代码',
 };

@@ -2296,4 +2296,5 @@ export default {
   '镜像Tag：': 'Image Tag: ',
   返回上一页: 'Go back',
   '请输入镜像Tag，如 latest': 'Please Enter the Image Tag, such as latest',
+  源代码: 'Source Code',
 };

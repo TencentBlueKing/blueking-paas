@@ -28,11 +28,10 @@
                   class="access-entrance"
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                 >
-                  <div class="module-default">{{ $t('已部署') }}</div>
-                  <!-- <img
-                    class="image-icon"
-                    src="/static/images/deployed.svg"
-                  > -->
+                  <img
+                    class="deploy-icon"
+                    src="/static/images/deployed.png"
+                  >
                   <i class="paasng-icon paasng-jump-link"></i>
                 </div>
               </div>
@@ -525,7 +524,7 @@ export default {
           color: #C4C6CC;
         }
         .paasng-jump-link {
-          font-size: 16px;
+          font-size: 14px;
           color: #3A84FF;
           transform: translateY(1px);
         }
@@ -570,6 +569,11 @@ export default {
             border-color: #699df4;
           }
         }
+      }
+      .deploy-icon{
+        width: 38px;
+        height: 22px;
+        margin-right: 5px;
       }
     }
   }

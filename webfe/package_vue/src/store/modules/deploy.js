@@ -516,6 +516,15 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build/artifact/image/?${json2Query(data)}`;
     return http.get(url, {}, config);
   },
+
+  /**
+   * 仅镜像下获取镜像tag列表
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getCustomImageTagData({}, { appCode, moduleId }, config = { globalError: false }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/image_tags/`;
+    return http.get(url, {}, config);
+  },
 };
 
 export default {

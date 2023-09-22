@@ -190,8 +190,7 @@ function handleReject(error, config) {
   }
 
   http.queue.delete(config.requestId);
-
-  if (config.globalError && error.response) {
+  if (error.response) {
     // status 是 httpStatus
     const { status, data } = error.response;
     const nextError = {
@@ -229,7 +228,7 @@ function handleReject(error, config) {
   }
 
   const { code } = error;
-  if (config.globalError && code) {
+  if (code) {
     if (code !== 0 && code !== '0000' && code !== '00') {
       if (code === 4003) {
         bus.$emit('show-apply-perm', error.data);

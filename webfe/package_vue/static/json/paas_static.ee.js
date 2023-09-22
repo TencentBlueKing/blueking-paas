@@ -588,7 +588,7 @@ export const PAAS_STATIC_CONFIG = {
             {
                 "name": "appObservability",
                 "label": staticI18n.$t("可观测性"),
-                "iconfontName": "cloudapi",
+                "iconfontName": "keguance",
                 "supportModule": false,
                 "children": [
                     {

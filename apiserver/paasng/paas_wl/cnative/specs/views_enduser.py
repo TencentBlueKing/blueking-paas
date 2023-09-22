@@ -325,19 +325,14 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag
                 # TODO: 当镜像源迁移完成后移除该代码
                 project_name, slash, repo_name = repo.partition("/")
-                return Response(
-                    data={
-                        "code": error_codes.LIST_TAGS_FAILED.code,
-                        "detail": error_codes.LIST_TAGS_FAILED.message,
-                        "extra_data": {
-                            "tips": _("查看可用镜像"),
-                            "url": "https://mirrors.tencent.com/#/private/docker/detail"
-                            "?project_name={project_name}&repo_name={repo_name}".format(
-                                project_name=quote(project_name, safe=""), repo_name=quote(repo_name, safe="")
-                            ),
-                        },
-                    },
-                    status=error_codes.LIST_TAGS_FAILED.status_code,
+                raise error_codes.LIST_TAGS_FAILED.set_data(
+                    {
+                        "tips": _("查看可用镜像"),
+                        "url": "https://mirrors.tencent.com/#/private/docker/detail"
+                        "?project_name={project_name}&repo_name={repo_name}".format(
+                            project_name=quote(project_name, safe=""), repo_name=quote(repo_name, safe="")
+                        ),
+                    }
                 )
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
             raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)

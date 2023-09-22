@@ -4,7 +4,11 @@
       v-en-class="'en-label'"
       class="wrap"
     >
-      <div class="paas-application-tit establish-title">
+      <div
+        class="paas-application-tit establish-title"
+        @click="goBack"
+      >
+        <i class="paasng-icon paasng-back"></i>
         <span> {{ $t('创建模块') }} </span>
       </div>
       <div
@@ -92,7 +96,7 @@
                     class="construction-manner"
                   >
                     <bk-radio :value="'soundCode'">
-                      {{ $t('源码&镜像') }}
+                      {{ $t('源代码') }}
                     </bk-radio>
                     <bk-radio :value="'mirror'">
                       {{ $t('仅镜像') }}
@@ -1134,6 +1138,10 @@ export default {
     handlerCreateImageCredential() {
       this.$router.push({ name: 'imageCredential' });
     },
+
+    goBack () {
+      this.$router.go(-1);
+    }
   },
 };
 </script>
@@ -1147,6 +1155,16 @@ export default {
             line-height: 30px;
             cursor: pointer;
         }
+    }
+    .wrap .establish-title {
+      text-align: left;
+      padding-left: 24px;
+      cursor: pointer;
+      i {
+        color: #3a84ff;
+        font-size: 18px;
+        transform: translateY(0px);
+      }
     }
 </style>
 <style lang="scss">

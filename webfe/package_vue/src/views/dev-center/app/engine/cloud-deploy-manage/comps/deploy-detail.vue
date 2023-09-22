@@ -22,7 +22,11 @@
         class="process-detail-table"
         border
       >
-        <bk-table-column :label="$t('进程名称')" :width="190" class-name="table-colum-process-cls">
+        <bk-table-column
+          :label="$t('进程名称')"
+          :width="180"
+          class-name="table-colum-process-cls default-background"
+        >
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
@@ -43,7 +47,10 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('实例名称')" class-name="table-colum-instance-cls">
+        <bk-table-column
+          :label="$t('实例名称')"
+          class-name="table-colum-instance-cls"
+        >
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
               <div
@@ -52,7 +59,14 @@
                 v-for="instance in row.instances"
                 :key="instance.process_name"
               >
-                {{ instance.display_name }}
+                <div
+                  class="content"
+                  :class="{ hoverBackground: rowDisplayName === instance.display_name }"
+                  @mouseenter="handleMouseEnter(instance.display_name)"
+                  @mouseleave="rowDisplayName = ''"
+                >
+                  {{ instance.display_name }}
+                </div>
               </div>
             </div>
             <div v-else class="instance-item-cls cell-container">--</div>
@@ -68,11 +82,18 @@
                 :key="instance.process_name"
               >
                 <div
-                  class="dot"
-                  :class="instance.state"
+                  class="content"
+                  :class="{ hoverBackground: rowDisplayName === instance.display_name }"
+                  @mouseenter="handleMouseEnter(instance.display_name)"
+                  @mouseleave="rowDisplayName = ''"
                 >
+                  <div
+                    class="dot"
+                    :class="instance.state"
+                  >
+                  </div>
+                  {{ instance.state || '--' }}
                 </div>
-                {{ instance.state || '--' }}
               </div>
             </div>
             <div v-else class="instance-item-cls cell-container">--</div>
@@ -88,7 +109,14 @@
                 :key="instance.process_name"
               >
                 <template v-if="instance.date_time !== 'Invalid date'">
-                  {{ $t('创建于') }} {{ instance.date_time }}
+                  <div
+                    class="content"
+                    :class="{ hoverBackground: rowDisplayName === instance.display_name }"
+                    @mouseenter="handleMouseEnter(instance.display_name)"
+                    @mouseleave="rowDisplayName = ''"
+                  >
+                    {{ $t('创建于') }} {{ instance.date_time }}
+                  </div>
                 </template>
                 <template v-else>
                   --
@@ -106,27 +134,36 @@
               v-for="instance in row.instances"
               :key="instance.process_name"
             >
-              <bk-button
-                class="mr10"
-                :text="true"
-                title="primary"
-                @click="showInstanceLog(instance)">
-                {{$t('查看日志')}}
-              </bk-button>
-              <bk-button
-                :text="true"
-                title="primary"
-                v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
-                @click="showInstanceConsole(instance, row)">
-                {{$t('访问控制台')}}
-              </bk-button>
+              <div
+                class="content"
+                :class="{ hoverBackground: rowDisplayName === instance.display_name }"
+                @mouseenter="handleMouseEnter(instance.display_name)"
+                @mouseleave="rowDisplayName = ''"
+              >
+                <div v-show="rowDisplayName === instance.display_name">
+                  <bk-button
+                    class="mr10"
+                    :text="true"
+                    title="primary"
+                    @click="showInstanceLog(instance)">
+                    {{$t('查看日志')}}
+                  </bk-button>
+                  <bk-button
+                    :text="true"
+                    title="primary"
+                    v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
+                    @click="showInstanceConsole(instance, row)">
+                    {{$t('访问控制台')}}
+                  </bk-button>
+                </div>
+              </div>
             </div>
           </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('进程操作')"
           width="200"
-          class-name="table-colum-operation-cls"
+          class-name="table-colum-operation-cls default-background"
         >
           <template slot-scope="{ row }">
             <div class="operation">
@@ -171,7 +208,8 @@
                 v-bk-tooltips="$t('进程详情')"
                 class="paasng-icon paasng-log-2 detail mr10"
                 @click="showProcessDetailDialog(row)"></i>
-              <bk-popover
+              <!-- 暂时不展示 -->
+              <!-- <bk-popover
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom">
@@ -179,7 +217,7 @@
                 <div slot="content" style="white-space: normal;">
                   <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
                 </div>
-              </bk-popover>
+              </bk-popover> -->
             </div>
           </template>
         </bk-table-column>
@@ -403,9 +441,11 @@
     <!-- 无法使用控制台 end -->
 
     <!-- 扩缩容 -->
-    <scale-dialog
+    <!-- <scale-dialog
       :key="moduleName" :ref="`${moduleName}ScaleDialog`"
-      @updateStatus="handleProcessStatus"></scale-dialog>
+      @updateStatus="handleProcessStatus"
+    >
+    </scale-dialog> -->
   </div>
 </template>
 
@@ -415,7 +455,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
-import scaleDialog from './scale-dialog';
+// import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
@@ -429,10 +469,8 @@ let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
   components: {
-    // dropdown,
-    // numInput,
     chart: ECharts,
-    scaleDialog,
+    // scaleDialog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -599,6 +637,7 @@ export default {
         title: '',
         link: '',
       },
+      rowDisplayName: ''
     };
   },
   computed: {
@@ -745,6 +784,11 @@ export default {
             .fromNow();
         });
         allProcesses.push(process);
+      });
+      allProcesses.forEach(processe => {
+        processe.instances.forEach(instance => {
+          instance.isOperate = false;
+        });
       });
       this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
       console.log('this.allProcesses', this.allProcesses);
@@ -1399,6 +1443,10 @@ export default {
       // 进程之后请求列表数据
       // bus.$emit('get-release-info');
     },
+
+    handleMouseEnter (name) {
+      this.rowDisplayName = name;
+    }
   },
 };
 </script>
@@ -1444,7 +1492,7 @@ export default {
     height: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
+    padding: 0 10px;
     i {
       font-size: 20px;
       cursor: pointer;
@@ -1508,8 +1556,18 @@ export default {
 
         .instance-item-cls  {
           border-bottom: 1px solid #dfe0e5;
-          display: flex;
-          justify-content: center;
+          transition: .25s ease;
+
+          .content {
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: .25s ease;
+          }
+
+          .hoverBackground {
+            background-color: #FAFBFD;
+          }
 
           &:last-child {
             border-bottom: none;
@@ -1548,6 +1606,9 @@ export default {
       .bk-table-header-label {
         padding: 0 15px;
       }
+      &.default-background {
+        background: #FAFBFD;
+      }
     }
     .table-colum-process-cls  {
       .cell {
@@ -1555,6 +1616,9 @@ export default {
         height: 100%;
         display: flex;
         align-items: center;
+      }
+      &.default-background {
+        background: #FAFBFD;
       }
     }
   }
@@ -1730,6 +1794,15 @@ export default {
     position: absolute;
     top: 12px;
     right: 10px;
+  }
+}
+
+.process-detail-table {
+  /deep/ .bk-table-body-wrapper .hover-row>td {
+    background: #FFFFFF !important;
+  }
+  /deep/ .bk-table-body-wrapper .hover-row>.default-background {
+    background: #FAFBFD !important;
   }
 }
 </style>

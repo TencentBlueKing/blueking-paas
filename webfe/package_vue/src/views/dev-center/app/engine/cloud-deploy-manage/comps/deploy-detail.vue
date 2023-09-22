@@ -71,7 +71,7 @@
                 </div>
               </div>
             </div>
-            <div v-else class="instance-item-cls cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
@@ -98,7 +98,7 @@
                 </div>
               </div>
             </div>
-            <div v-else class="instance-item-cls cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('创建时间')" class-name="table-colum-instance-cls">
@@ -125,7 +125,7 @@
                 </template>
               </div>
             </div>
-            <div v-else class="instance-item-cls cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container">--</div>
           </template>
         </bk-table-column>
         <bk-table-column label="" class-name="table-colum-instance-cls">
@@ -137,7 +137,6 @@
               :key="instance.process_name"
             >
               <div
-                class="content"
                 :class="{ hoverBackground: rowDisplayName === instance.display_name }"
                 @mouseenter="handleMouseEnter(instance.display_name)"
                 @mouseleave="rowDisplayName = ''"
@@ -1556,20 +1555,36 @@ export default {
         height: 100%;
         padding: 0;
 
+        .instance-item-cls-empty{
+          position: absolute;
+          width: 50%;
+          left: 65%;
+          top: 50%;
+          text-align: left;
+          padding-left: 5px;
+          transform: translate(-50%, -50%);
+        }
+
         .instance-item-cls  {
           border-bottom: 1px solid #dfe0e5;
           transition: .25s ease;
 
           .content {
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: .25s ease;
+            // width: 100%;
+            // height: 100%;
+            // text-align: center;
+            // transition: .25s ease;
+            position: absolute;
+            width: 50%;
+            left: 65%;
+            top: 50%;
+            padding-left: 5px;
+            transform: translate(-50%, -50%);
           }
 
-          .hoverBackground {
-            background-color: #FAFBFD;
-          }
+          // .hoverBackground {
+          //   background-color: #FAFBFD;
+          // }
 
           &:last-child {
             border-bottom: none;
@@ -1593,8 +1608,14 @@ export default {
         }
       }
       .bk-table-header-label {
-        display: flex;
-        justify-content: center;
+        // display: flex;
+        // justify-content: center;
+        position: absolute;
+        width: 50%;
+        left: 65%;
+        top: 50%;
+        padding-left: 5px;
+        transform: translate(-50%, -50%);
       }
     }
     .table-colum-operation-cls {

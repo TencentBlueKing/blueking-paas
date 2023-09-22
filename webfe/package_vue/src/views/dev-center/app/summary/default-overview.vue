@@ -118,7 +118,7 @@
                         </bk-button>
                       </div>
                       <!-- FeatureFlag 控制 -->
-                      <template v-if="userFeature.ANALYTICS && !isCloudApp">
+                      <template v-if="userFeature.ANALYTICS">
                         <!-- 折线图内容 部署了才展示内容-->
                         <div
                           v-if="data.is_deployed"
@@ -1174,7 +1174,7 @@ export default {
       } else {
         if (this.isCloudApp) {
           // 应用编排
-          this.toAppOrchestration();
+          this.toAppOrchestration(env);
         } else {
           const toModule = this.curAppModuleList.find(module => module.name === moduleName);
           if (toModule) {
@@ -1186,10 +1186,11 @@ export default {
       }
     },
 
-    // 应用编排
-    toAppOrchestration() {
+    // 部署管理
+    toAppOrchestration(env) {
+      const routeName = env === 'stag' ? 'cloudAppDeployManageStag' : 'cloudAppDeployManageProd';
       this.$router.push({
-        name: 'cloudAppDeployForProcess',
+        name: routeName,
         params: {
           id: this.appCode,
         },

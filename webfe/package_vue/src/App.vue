@@ -19,16 +19,17 @@
         border="0"
         width="500"
         height="400"
-        :class="GLOBAL.CONFIG.IFRAME_CLASS"
+        :class="GLOBAL.APP_VERSION !== 'te' ? 'small' : ''"
       />
     </div>
   </div>
 </template>
 
 <script>
-import { bus } from '@/common/bus';
-import paasHeader from '@/components/paas-header';
-import paasFooter from '@/components/paas-footer';
+    import { bus } from '@/common/bus';
+    import paasHeader from '@/components/paas-header';
+    import paasFooter from '@/components/paas-footer';
+
     export default {
         components: {
             paasHeader,
@@ -69,41 +70,9 @@ import paasFooter from '@/components/paas-footer';
         methods: {
             hideLoginModal () {
                 this.showLoginModal = false;
-                console.log(111);
-                console.log(2222);
             }
         }
-
     };
-  },
-  computed: {
-    isGray() {
-      return ['myApplications', 'appLegacyMigration'].includes(this.$route.name);
-    },
-  },
-  watch: {
-    $route: {
-      handler(value) {
-        this.isPlugin = value.path.includes('/plugin-center');
-      },
-      immediate: true,
-    },
-  },
-  created() {
-    bus.$on('show-login-modal', () => {
-      this.showLoginModal = true;
-    });
-    bus.$on('close-login-modal', () => {
-      this.showLoginModal = false;
-      window.location.reload();
-    });
-  },
-  methods: {
-    hideLoginModal() {
-      this.showLoginModal = false;
-    },
-  },
-};
 </script>
 
 <style lang="scss">
@@ -207,11 +176,5 @@ import paasFooter from '@/components/paas-footer';
         .v-text-toolips-dashed#{$i} {
             @include dashed($i + px);
         }
-    }
-
-    .success-dividing-line {
-        position: relative;
-        top: -1px;
-        margin: 0 5px;
     }
 </style>

@@ -94,7 +94,7 @@
         class="info-special-form form-pre-command"
       >
         <bk-form-item
-          :label="$t('是否启用')"
+          :label="`${$t('是否启用')}：`"
           class="pt20"
           style="position: relative; margin-left: 5px"
         >
@@ -107,7 +107,7 @@
         </bk-form-item>
         <bk-form-item
           v-if="preFormData.loaclEnabled"
-          :label="$t('启动命令')"
+          :label="`${$t('启动命令')}：`"
           style="position: relative; margin-left: 5px"
         >
           <div v-if="preFormData.command.length">
@@ -127,7 +127,7 @@
         </bk-form-item>
         <bk-form-item
           v-if="preFormData.loaclEnabled"
-          :label="$t('命令参数')"
+          :label="`${$t('命令参数')}：`"
           class="pt20 hook-form-cls"
           style="position: relative; margin-left: 5px"
         >

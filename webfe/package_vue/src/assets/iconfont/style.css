@@ -35,6 +35,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-info-line:before {
 	content: "\e219";
 }
+.paasng-info-fill:before {
+	content: "\e268";
+}
 .paasng-return-small:before {
 	content: "\e222";
 }

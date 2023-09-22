@@ -60,12 +60,12 @@
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
+                @mouseenter="handleMouseEnter(instance.display_name)"
+                @mouseleave="rowDisplayName = ''"
               >
                 <div
                   class="content"
                   :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                  @mouseenter="handleMouseEnter(instance.display_name)"
-                  @mouseleave="rowDisplayName = ''"
                 >
                   {{ instance.display_name }}
                 </div>
@@ -82,12 +82,12 @@
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
+                @mouseenter="handleMouseEnter(instance.display_name)"
+                @mouseleave="rowDisplayName = ''"
               >
                 <div
                   class="content"
                   :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                  @mouseenter="handleMouseEnter(instance.display_name)"
-                  @mouseleave="rowDisplayName = ''"
                 >
                   <div
                     class="dot"
@@ -109,13 +109,13 @@
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
+                @mouseenter="handleMouseEnter(instance.display_name)"
+                @mouseleave="rowDisplayName = ''"
               >
                 <template v-if="instance.date_time !== 'Invalid date'">
                   <div
                     class="content"
                     :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                    @mouseenter="handleMouseEnter(instance.display_name)"
-                    @mouseleave="rowDisplayName = ''"
                   >
                     {{ $t('创建于') }} {{ instance.date_time }}
                   </div>
@@ -135,11 +135,10 @@
               :class="row.isExpand ? 'expand' : 'close'"
               v-for="instance in row.instances"
               :key="instance.process_name"
+              @mouseenter="handleMouseEnter(instance.display_name)"
+              @mouseleave="rowDisplayName = ''"
             >
               <div
-                :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
               >
                 <div v-show="rowDisplayName === instance.display_name">
                   <bk-button

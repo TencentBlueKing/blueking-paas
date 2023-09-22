@@ -327,7 +327,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
                 project_name, slash, repo_name = repo.partition("/")
                 raise error_codes.LIST_TAGS_FAILED.set_data(
                     {
-                        "tips": _("查看可用镜像"),
+                        "tips": _("查看镜像 Tag"),
                         "url": "https://mirrors.tencent.com/#/private/docker/detail"
                         "?project_name={project_name}&repo_name={repo_name}".format(
                             project_name=quote(project_name, safe=""), repo_name=quote(repo_name, safe="")

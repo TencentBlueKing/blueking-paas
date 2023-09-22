@@ -33,16 +33,18 @@
               <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
               <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div>
               <div class="icon-expand" v-if="row.instances.length > 1">
-                <i
+                <img
                   v-if="row.isExpand"
-                  class="paasng-icon paasng-plus-circle"
-                  @click="handleExpand(row)">
-                </i>
-                <i
+                  class="image-icon"
+                  @click="handleExpand(row)"
+                  src="/static/images/tableplus.svg"
+                >
+                <img
                   v-else
-                  class="paasng-icon paasng-minus-circle"
-                  @click="handleExpand(row)">
-                </i>
+                  class="image-icon"
+                  @click="handleExpand(row)"
+                  src="/static/images/tableminus.svg"
+                >
               </div>
             </div>
           </template>
@@ -637,7 +639,7 @@ export default {
         title: '',
         link: '',
       },
-      rowDisplayName: ''
+      rowDisplayName: '',
     };
   },
   computed: {
@@ -648,9 +650,9 @@ export default {
     isWatchProcess() {
       return this.$route.params.id;
     },
-    localLanguage () {
+    localLanguage() {
       return this.$store.state.localLanguage;
-    }
+    },
   },
 
   watch: {
@@ -785,8 +787,8 @@ export default {
         });
         allProcesses.push(process);
       });
-      allProcesses.forEach(processe => {
-        processe.instances.forEach(instance => {
+      allProcesses.forEach((processe) => {
+        processe.instances.forEach((instance) => {
           instance.isOperate = false;
         });
       });
@@ -1444,9 +1446,9 @@ export default {
       // bus.$emit('get-release-info');
     },
 
-    handleMouseEnter (name) {
+    handleMouseEnter(name) {
       this.rowDisplayName = name;
-    }
+    },
   },
 };
 </script>
@@ -1641,16 +1643,9 @@ export default {
     transform: translateY(-50%) translateX(50%);
     z-index: 99;
     cursor: pointer;
-    i {
-      &.paasng-plus-circle {
-        margin-top: 1px;
-        font-size: 14px;
-        color: #2DCB56;
-      }
-      &.paasng-minus-circle {
-        font-size: 12px;
-        color: #FF9C01;
-      }
+    .image-icon{
+      width: 14px;
+      height: 14px;
     }
   }
 

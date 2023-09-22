@@ -1013,3 +1013,12 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-zhankai:before {
 	content: "\e263";
 }
+.paasng-tableminus:before {
+	content: "\e264";
+}
+.paasng-tableplus:before {
+	content: "\e265";
+}
+.paasng-gitlab-3:before {
+	content: "\e266";
+}

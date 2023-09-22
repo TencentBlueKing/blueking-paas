@@ -213,6 +213,7 @@ export default {
   },
   mounted() {
     this.handleWindowResize();
+    this.handleResizeFun();
   },
   methods: {
     async init() {
@@ -321,9 +322,15 @@ export default {
     },
 
     handleResizeFun () {
-      this.deployDialogConfig.dialogWidth = window.innerWidth < 1440 ? 800 : 1200;
-      this.deployDialogConfig.top = window.innerHeight < 900 ? 80 : 120;
-      this.deployDialogConfig.height = window.innerHeight < 900 ? 400 : 600;
+      if (window.innerWidth < 1366) {
+        this.deployDialogConfig.dialogWidth = 800;
+        this.deployDialogConfig.top = 80;
+        this.deployDialogConfig.height = 400;
+      } else {
+        this.deployDialogConfig.dialogWidth = 1200;
+        this.deployDialogConfig.top = 120;
+        this.deployDialogConfig.height = 600;
+      }
     }
   },
 };

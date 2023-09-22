@@ -29,13 +29,13 @@
         v-if="isPageEdit"
         ref="commandRef"
         :model="preFormData"
-        :label-width="100"
+        :label-width="158"
         class="info-special-form form-pre-command"
       >
         <bk-form-item
           :label="$t('是否启用')"
           class="pt20"
-          style="position: relative; margin-left: 5px"
+          style="position: relative;"
         >
           <bk-switcher
             v-if="isPageEdit"
@@ -50,7 +50,7 @@
           :required="true"
           :rules="rules.command"
           :error-display-type="'normal'"
-          style="position: relative; margin-left: 5px"
+          style="position: relative;"
         >
           <bk-tag-input
             v-model="preFormData.command"
@@ -72,7 +72,7 @@
           v-if="preFormData.loaclEnabled"
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
-          style="width: 510px; position: relative; margin-left: 5px"
+          style="width: 510px; position: relative;"
         >
           <bk-tag-input
             v-model="preFormData.args"
@@ -90,13 +90,13 @@
       <bk-form
         v-if="!isPageEdit"
         :model="preFormData"
-        :label-width="100"
-        class="info-special-form form-pre-command"
+        :label-width="158"
+        class="info-special-form form-pre-command pl40"
       >
         <bk-form-item
           :label="`${$t('是否启用')}：`"
           class="pt20"
-          style="position: relative; margin-left: 5px"
+          style="position: relative;"
         >
           <bk-tag
             :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用')"
@@ -108,7 +108,7 @@
         <bk-form-item
           v-if="preFormData.loaclEnabled"
           :label="`${$t('启动命令')}：`"
-          style="position: relative; margin-left: 5px"
+          style="position: relative;"
         >
           <div v-if="preFormData.command.length">
             <bk-tag
@@ -129,7 +129,7 @@
           v-if="preFormData.loaclEnabled"
           :label="`${$t('命令参数')}：`"
           class="pt20 hook-form-cls"
-          style="position: relative; margin-left: 5px"
+          style="position: relative;"
         >
           <div v-if="preFormData.args.length">
             <bk-tag
@@ -441,7 +441,7 @@ export default {
   cursor: pointer;
   padding-left: 10px;
   i {
-    padding-left: 16px;
+    padding-left: 10px;
   }
 }
 </style>

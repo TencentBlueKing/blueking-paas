@@ -26,7 +26,7 @@
     <!-- 根据模块渲染 -->
     <deploy-module-list
       :model-name="moduleValue"
-      ref="moduleListRef"
+      ref="prodModuleListRef"
       :environment="environment"
       v-bind="$attrs"
     />

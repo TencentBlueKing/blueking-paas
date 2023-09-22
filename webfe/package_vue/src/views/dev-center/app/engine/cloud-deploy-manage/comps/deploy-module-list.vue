@@ -29,6 +29,10 @@
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                 >
                   <div class="module-default">{{ $t('已部署') }}</div>
+                  <!-- <img
+                    class="image-icon"
+                    src="/static/images/deployed.svg"
+                  > -->
                   <i class="paasng-icon paasng-jump-link"></i>
                 </div>
               </div>

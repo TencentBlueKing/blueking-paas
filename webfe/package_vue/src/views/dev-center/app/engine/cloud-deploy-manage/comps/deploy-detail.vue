@@ -1569,16 +1569,15 @@ export default {
           transition: .25s ease;
 
           .content {
-            // width: 100%;
-            // height: 100%;
-            // text-align: center;
-            // transition: .25s ease;
             position: absolute;
             width: 50%;
             left: 65%;
             top: 50%;
             padding-left: 5px;
             transform: translate(-50%, -50%);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           // .hoverBackground {

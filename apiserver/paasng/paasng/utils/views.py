@@ -85,6 +85,8 @@ def custom_exception_handler(exc, context):
             'code': exc.code,
             'detail': exc.message,
         }
+        if exc.data:
+            data["data"] = exc.data
         set_rollback()
         return Response(
             data,

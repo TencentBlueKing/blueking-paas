@@ -32,7 +32,8 @@ export const PLATFORM_CONFIG = {
         LESSCODE_APP: 2,
         SMART_APP: 3,
         IMAGE: 4,
-        SCENE_APP: 5
+        SCENE_APP: 5,
+        CNATIVE_IMAGE: 6        //仅镜像的云原生
     },
 
     // 默认使用的代码库类型
@@ -569,122 +570,112 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
-                "name": "cloudAppDeployForProcess",
-                "label": staticI18n.$t("应用编排"),
+                "name": "cloudAppDeployManageStag",
+                "label": staticI18n.$t("部署管理"),
                 "matchRouters": [
-                    "cloudAppDeploy",
-                    "cloudAppDeployForProcess",
-                    "cloudAppDeployForEnv",
-                    "cloudAppDeployForYaml",
-                    "cloudAppDeployForHook",
-                    "cloudAppDeployForResource"
+                    "cloudAppDeployManage",
+                    "cloudAppDeployManageStag",
+                    "cloudAppDeployManageProd",
+                    "cloudAppDeployHistory"
                 ],
-                "iconfontName": "squares",
+                "iconfontName": "bushu",
                 "supportModule": false,
                 "destRoute": {
-                  "name": "cloudAppDeployForProcess"
+                  "name": "cloudAppDeployManageStag"
                 },
                 "children": []
             },
             {
-                "name": "appStatus",
-                "label": staticI18n.$t("部署状态"),
-                "matchRouters": ["appStatus"],
-                "iconfontName": "feature-conversion",
+                "name": "appObservability",
+                "label": staticI18n.$t("可观测性"),
+                "iconfontName": "keguance",
                 "supportModule": false,
-                "destRoute": {
-                  "name": "appStatus"
-                },
-                "children": []
+                "children": [
+                    {
+                        "name": staticI18n.$t("日志查询"),
+                        "destRoute": {
+                            "name": "appLog"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("告警记录"),
+                        "destRoute": {
+                            "name": "monitorAlarm"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("访问统计"),
+                        "matchRouters": [
+                            "cloudAppWebAnalysis",
+                            "cloudAppLogAnalysis",
+                            "cloudAppEventAnalysis"
+                        ],
+                        "destRoute": {
+                            "name": "cloudAppAnalysis"
+                        }
+                    }
+                ]
             },
             {
-                "name": "appLog",
-                "label": staticI18n.$t("日志查询"),
-                "matchRouters": ["appLog"],
-                "iconfontName": "calendar",
+                "name": "appCloudAPI",
+                "label": staticI18n.$t("云 API 权限"),
+                "iconfontName": "cloudapi",
                 "supportModule": false,
                 "destRoute": {
-                  "name": "appLog"
+                    "name": "appCloudAPI"
                 },
                 "children": []
             },
             {
                 "name": "appAccessPortal",
                 "label": staticI18n.$t("访问管理"),
-                "matchRouters": ["appAccessPortal"],
-                "iconfontName": "link",
-                "supportModule": true,
-                "destRoute": {
-                  "name": "appAccessPortal"
-                },
-                "children": []
-            },
-            {
-                "name": "appServices",
-                "label": staticI18n.$t("增强服务"),
                 "iconfontName": "diamond",
-                "supportModule": true,
-                "children": []
-            },
-            {
-                "name": "appCloudAPI",
-                "label": staticI18n.$t("云 API 管理"),
-                "iconfontName": "cloudapi",
-                "supportModule": false,
-                "children": [
-                    {
-                        "name": staticI18n.$t("云 API 权限"),
-                        "destRoute": {
-                            "name": "appCloudAPI"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "imageCredential",
-                "label": staticI18n.$t("镜像凭证"),
-                "matchRouters": ["imageCredential"],
-                "iconfontName": "key-2",
                 "supportModule": false,
                 "destRoute": {
-                  "name": "imageCredential"
+                    "name": "appAccessPortal"
                 },
                 "children": []
-            },
-            {
-                "name": "appMarketing",
-                "label": staticI18n.$t("应用推广"),
-                "iconfontName": "volumn",
-                "children": [
-                    {
-                        "name": staticI18n.$t("应用市场"),
-                        "destRoute": {
-                          "name": "appMarket"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("应用市场 (移动端)"),
-                        "destRoute": {
-                          "name": "appMobileMarket"
-                        }
-                    }
-                ]
             },
             {
                 "name": "appConfigs",
-                "label": staticI18n.$t("基本设置"),
+                "label": staticI18n.$t("应用配置"),
                 "iconfontName": "gear",
                 "children": [
                     {
-                        "name": staticI18n.$t("基本信息"),
+                        "name": staticI18n.$t("模块配置"),
+                        "matchRouters": [
+                            "cloudAppDeploy",
+                            "cloudAppDeployForBuild",
+                            "cloudAppDeployForProcess",
+                            "cloudAppDeployForEnv",
+                            "cloudAppDeployForYaml",
+                            "cloudAppDeployForHook",
+                            "cloudAppDeployForResource",
+                            'imageCredential',
+                            'moduleInfo',
+                            'appServices',
+                            'appServiceInnerShared',
+                            'appServiceInner',
+                            'cloudAppServiceInnerShared',
+                            'cloudAppServiceInner'
+                        ],
+                        "iconfontName": "squares",
+                        "supportModule": false,
                         "destRoute": {
-                          "name": "appBaseInfo"
-                        }
+                          "name": "cloudAppDeployForProcess"
+                        },
+                        "children": []
                     },
                     {
-                        "name": staticI18n.$t("成员管理"),
+                        "name": staticI18n.$t("应用配置"),
+                        "matchRouters": [
+                            'appConfigs',
+                            'cloudAppMarket',
+                            'appBasicInfo',
+                            'appMembers',
+                        ],
                         "destRoute": {
-                          "name": "appRoles"
+                          "name": "appConfigs"
                         }
                     }
                 ]

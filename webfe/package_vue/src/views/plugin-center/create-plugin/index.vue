@@ -516,9 +516,7 @@ export default {
     async request(url) {
       url = `${window.BACKEND_URL}/api/bk_plugin_distributors/`;
       try {
-        console.log();
         const data = await http.get(url);
-        console.log('data', data);
         return data.map(e => ({ label: e.name, value: e.code_name }));
       } catch (error) {
         console.log('error', error);

@@ -12,6 +12,7 @@
     />
     <bk-member-selector
       v-else
+      v-bind="props"
       ref="member_selector"
       v-model="localValue"
       :max-data="curMaxData"

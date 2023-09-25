@@ -84,7 +84,7 @@
                   </a>
                 </li>
               </ul>
-              <div class="bk-select-extension">
+              <div class="bk-select-extension" v-if="!isCloudNativeApp">
                 <span
                   v-if="canCreate"
                   style="cursor: pointer;"
@@ -93,7 +93,8 @@
                   <i class="paasng-icon paasng-plus-circle" /> {{ $t('新增模块') }} </span>
                 <span
                   v-else
-                  v-bk-tooltips="{ content: isSmartApp ? `S-mart ${$t('应用目前不允许创建其它模块')}` : $t('当前应用不允许新增模块'), zIndex: 11000 }"
+                  v-bk-tooltips="{ content: isSmartApp ?
+                    `S-mart ${$t('应用目前不允许创建其它模块')}` : $t('当前应用不允许新增模块'), zIndex: 11000 }"
                   style="color: #c4c6cc; cursor: not-allowed;"
                 >
                   <i class="paasng-icon paasng-plus-circle" /> {{ $t('新增模块') }}
@@ -119,10 +120,10 @@
             position: 'bottom left'
           }"
         >
-        <div
-          slot="trigger"
-          class="module-wrapper"
-        >
+          <div
+            slot="trigger"
+            class="module-wrapper"
+          >
             <a
               href="javascript: void(0);"
               class="module-name time-text"
@@ -167,131 +168,133 @@
 </template>
 
 <script>
-    import dropdown from '@/components/ui/Dropdown';
-    import { formatDate } from '@/common/tools';
+import dropdown from '@/components/ui/Dropdown';
+import appBaseMixin from '@/mixins/app-base-mixin.js';
+import { formatDate } from '@/common/tools';
 
-    export default {
-        components: {
-            dropdown
-        },
-        props: {
-            title: {
-                type: String,
-                default: ''
-            },
-            paths: {
-                type: Array,
-                default () {
-                    return [];
-                }
-            },
-            curModule: {
-                type: Object,
-                default () {
-                    return {
-                        name: ''
-                    };
-                }
-            },
-            canCreate: {
-                type: Boolean,
-                default: true
-            },
-            moduleList: {
-                type: Array,
-                default () {
-                    return [];
-                }
-            },
-            disabled: {
-                type: Boolean,
-                default: false
-            },
-            hideTitle: {
-                type: Boolean,
-                default: false
-            },
-            isOverview: {
-                type: Boolean,
-                default: false
-            },
-            shortcuts: {
-                type: Array,
-                default: () => []
-            },
-            curTime: {
-                type: Object
-            }
-        },
-        data () {
-            return {};
-        },
-        computed: {
-            isDataReady () {
-                return this.title || this.paths.length;
-            },
-            appCode () {
-                return this.$route.params.id;
-            },
-            moduleId () {
-                return this.$route.params.moduleId;
-            },
-            routeName () {
-                return this.$route.name;
-            },
-            curAppModule () {
-                return this.$store.state.curAppModule;
-            },
-            isSmartApp () {
-                return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
-            }
-        },
-        methods: {
-            handleModuleSelect (module) {
-                this.$refs.dropdown.close();
-                this.$emit('change-module', module);
-                this.$store.commit('updateCurAppModule', module);
+export default {
+  components: {
+    dropdown,
+  },
+  mixins: [appBaseMixin],
+  props: {
+    title: {
+      type: String,
+      default: '',
+    },
+    paths: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
+    curModule: {
+      type: Object,
+      default() {
+        return {
+          name: '',
+        };
+      },
+    },
+    canCreate: {
+      type: Boolean,
+      default: true,
+    },
+    moduleList: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+    hideTitle: {
+      type: Boolean,
+      default: false,
+    },
+    isOverview: {
+      type: Boolean,
+      default: false,
+    },
+    shortcuts: {
+      type: Array,
+      default: () => [],
+    },
+    curTime: {
+      type: Object,
+    },
+  },
+  data() {
+    return {};
+  },
+  computed: {
+    isDataReady() {
+      return this.title || this.paths.length;
+    },
+    appCode() {
+      return this.$route.params.id;
+    },
+    moduleId() {
+      return this.$route.params.moduleId;
+    },
+    routeName() {
+      return this.$route.name;
+    },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+    isSmartApp() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+    },
+  },
+  methods: {
+    handleModuleSelect(module) {
+      this.$refs.dropdown.close();
+      this.$emit('change-module', module);
+      this.$store.commit('updateCurAppModule', module);
 
-                const routeName = this.$route.name;
-                let query = this.$route.query;
-                if (routeName === 'appLog') {
-                    query = {
-                        tab: this.$route.query.tab || ''
-                    };
-                }
+      const routeName = this.$route.name;
+      let { query } = this.$route;
+      if (routeName === 'appLog') {
+        query = {
+          tab: this.$route.query.tab || '',
+        };
+      }
 
-                this.$router.push({
-                    name: routeName,
-                    params: {
-                        id: this.appCode,
-                        moduleId: module.name
-                    },
-                    query: query
-                });
-            },
-            setCurModule (payload) {
-                this.$emit('change-module', payload);
-                this.$store.commit('updateCurAppModule', payload);
-            },
-            createAppModule () {
-                this.$router.push({
-                    name: 'appCreateModule',
-                    params: {
-                        id: this.appCode
-                    }
-                });
-            },
-            toHelpDocu () {
-                window.open(this.GLOBAL.DOC.MODULE_INTRO);
-            },
-            handleChangeTime (time, id) {
-                const date = time.value();
-                const startTime = formatDate(date[0], 'YYYY-MM-DD');
-                const endTime = formatDate(date[1], 'YYYY-MM-DD');
-                this.$emit('change-date', [startTime, endTime], id);
-            }
-        }
-    };
+      this.$router.push({
+        name: routeName,
+        params: {
+          id: this.appCode,
+          moduleId: module.name,
+        },
+        query,
+      });
+    },
+    setCurModule(payload) {
+      this.$emit('change-module', payload);
+      this.$store.commit('updateCurAppModule', payload);
+    },
+    createAppModule() {
+      this.$router.push({
+        name: 'appCreateModule',
+        params: {
+          id: this.appCode,
+        },
+      });
+    },
+    toHelpDocu() {
+      window.open(this.GLOBAL.DOC.MODULE_INTRO);
+    },
+    handleChangeTime(time, id) {
+      const date = time.value();
+      const startTime = formatDate(date[0], 'YYYY-MM-DD');
+      const endTime = formatDate(date[1], 'YYYY-MM-DD');
+      this.$emit('change-date', [startTime, endTime], id);
+    },
+  },
+};
 </script>
 
 <style type="text/css">

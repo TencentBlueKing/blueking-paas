@@ -152,6 +152,15 @@ const actions = {
   },
 
   /**
+   * 获取部署管理列表信息
+   * @param {Object} params 请求参数：appCode, env
+   */
+  getModuleReleaseList({ }, { appCode, env },  config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list/`;
+    return http.get(url, config);
+  },
+
+  /**
      * 获取模块部署分支
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
@@ -426,7 +435,6 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId
      */
   getManifestExt({}, { appCode, moduleId, env }, config = {}) {
-    console.log('BACKEND_URL', moduleId, env);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/manifest_ext/`;
     return http.get(url, config);
   },
@@ -438,6 +446,84 @@ const actions = {
   getAutoScalFlagWithEnv({}, { appCode, moduleId, env }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/modules/${moduleId}/env/${env}/`;
     return http.get(url, config);
+  },
+
+  /**
+   * 保存信息
+   *
+   * @param {Object} params 请求参数：appCode, moduleId, env
+   */
+  saveCloudAppInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
+    return http.put(url, params, config);
+  },
+
+  /**
+   * 获取进程资源配额方案
+   * @param {Object} params 请求参数：appCode, moduleId, env
+   */
+  fetchQuotaPlans({}, {}, config = {}) {
+    const url = `${BACKEND_URL}/api/mres/quota_plans/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 获取镜像信息
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getMirrorInfo({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 获取基础镜像列表
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getBaseImageList({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bp_runtimes/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 获取代码检查详情
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getCodeInspection({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/detail/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 保存镜像信息
+   * @param {Object} params 请求参数：appCode, moduleId, data
+   */
+  saveMirrorInfo({}, { appCode, moduleId, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.post(url, data, config);
+  },
+
+  cloudDeployments({}, { appCode, moduleId, env, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/`;
+    return http.post(url, data, config);
+  },
+
+  /**
+   * 获取镜像tag列表
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getImageTagData({}, { appCode, moduleId, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build/artifact/image/?${json2Query(data)}`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 仅镜像下获取镜像tag列表
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  getCustomImageTagData({}, { appCode, moduleId }, config = { globalError: false }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/image_tags/`;
+    return http.get(url, {}, config);
   },
 };
 

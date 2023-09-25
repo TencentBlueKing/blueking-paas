@@ -1,6 +1,6 @@
 <template>
   <div class="right-main">
-    <div class="ps-top-bar">
+    <div class="ps-top-bar" v-if="!isCloudNativeApp">
       <h2> {{ $t('应用市场') }} </h2>
     </div>
     <paas-content-loader
@@ -42,12 +42,14 @@
 
 <script>import MarketInfo from './market-info';
 import MarketManager from './market-manager';
+import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   components: {
     MarketInfo,
     MarketManager,
   },
+  mixins: [appBaseMixin],
   data() {
     return {
       isDataLoading: true,

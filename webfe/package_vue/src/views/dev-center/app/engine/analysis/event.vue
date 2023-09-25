@@ -1,18 +1,20 @@
 <template lang="html">
   <div class="right-main">
-    <app-top-bar
-      v-if="engineEnabled"
-      :title="$t('自定义事件统计')"
-      :can-create="canCreateModule"
-      :cur-module="curAppModule"
-      :module-list="curAppModuleList"
-    />
-    <div
-      v-else
-      class="ps-top-bar"
-    >
-      <h2> {{ $t('自定义事件统计') }} </h2>
-    </div>
+    <template v-if="appType !== 'cloud_native'">
+      <app-top-bar
+        v-if="engineEnabled"
+        :title="$t('自定义事件统计')"
+        :can-create="canCreateModule"
+        :cur-module="curAppModule"
+        :module-list="curAppModuleList"
+      />
+      <div
+        v-else
+        class="ps-top-bar"
+      >
+        <h2> {{ $t('自定义事件统计') }} </h2>
+      </div>
+    </template>
     <paas-content-loader
       :is-loading="isPageLoading"
       placeholder="analysis-loading"
@@ -255,6 +257,12 @@ export default {
     RenderSideslider,
   },
   mixins: [appBaseMixin],
+  props: {
+    appType: {
+      type: String,
+      default: 'normal'
+    }
+  },
   data() {
     return {
       engineEnabled: true,
@@ -944,6 +952,7 @@ export default {
         margin: 16px auto 30px;
         padding: 1px 24px;
         width: calc(100% - 50px);
+        padding-bottom: 24px;
     }
     .content-header {
         position: relative;

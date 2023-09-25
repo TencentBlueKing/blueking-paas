@@ -60,7 +60,7 @@
           >
             <bk-radio 
               v-if="curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE
-              :value="'sourceCode'">
+              :value="'soundCode'">
               {{ $t('源代码') }}
             </bk-radio>
             <bk-radio :value="'image'">
@@ -74,7 +74,7 @@
     <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
 
 
-    <section v-if="formData.sourceOrigin === 'sourceCode' && curStep === 1">
+    <section v-if="formData.sourceOrigin === 'soundCode' && curStep === 1">
       <bk-form
         ref="formModuleRef"
         :model="formData"
@@ -307,7 +307,7 @@
     </section>
 
     <!-- 源码&镜像 部署配置内容 -->
-    <div class="mt20" v-if="formData.sourceOrigin === 'sourceCode' && curStep === 2">
+    <div class="mt20" v-if="formData.sourceOrigin === 'soundCode' && curStep === 2">
       <collapseContent :title="$t('进程配置')">
         <bk-alert
           type="info">
@@ -658,7 +658,7 @@ export default {
       if (value === 'image') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE; // 6 仅镜像的云原生应用
         this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
-      } else if (value === 'sourceCode') {
+      } else if (value === 'soundCode') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP; // 1
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
       }

@@ -641,7 +641,7 @@ export default {
         placements: ['right'],
       },
       isBkPlugin: false,
-      structureType: 'sourceCode',
+      structureType: 'soundCode',
       mirrorType: 'open',
       valueBkInput: '',
       mirrorData: {
@@ -792,7 +792,7 @@ export default {
     structureType(value) {
       if (value === 'mirror') {
         this.sourceOrigin = 4;
-      } else if (value === 'sourceCode') {
+      } else if (value === 'soundCode') {
         this.handleCodeTypeChange(1);
       }
     },
@@ -1316,7 +1316,7 @@ export default {
         // 蓝鲸可视化平台推送的源码包
         if (codeSource === 'bkLesscode') {
           this.regionChoose = this.GLOBAL.CONFIG.REGION_CHOOSE;
-          this.structureType = 'sourceCode';
+          this.structureType = 'soundCode';
           this.handleCodeTypeChange(2);
         } else if (codeSource === 'default') {
           // 普通应用

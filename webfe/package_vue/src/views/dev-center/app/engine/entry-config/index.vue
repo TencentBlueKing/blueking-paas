@@ -1,12 +1,24 @@
 <template>
   <div class="right-main">
-    <div class="ps-top-bar">
+    <cloud-app-top-bar
+      v-if="isCloudNativeApp"
+      :title="$t('访问管理')"
+      :active="active"
+      :nav-list="panels"
+      :module-id="curModuleId"
+      @change="handleTabChange"
+    />
+    <div
+      v-else
+      class="ps-top-bar"
+    >
       <h2>
         {{ $t('访问管理') }}
       </h2>
     </div>
-    <section class="visit-container">
+    <section :class="['visit-container', { 'cloud-cls': isCloudNativeApp && active === 'moduleAddress' }]">
       <bk-tab
+        v-show="!isCloudNativeApp"
         :active.sync="active"
         ext-cls="domain-tab-cls"
         type="unborder-card"
@@ -47,10 +59,12 @@
   </div>
 </template>
 
-<script>import visitConfig from './comps/visit-config';
+<script>
+import visitConfig from './comps/visit-config';
 import accessUser from './comps/access-user';
 import accessIp from './comps/access-ip';
 import accessAudit from './comps/access-audit';
+import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
@@ -59,6 +73,7 @@ export default {
     accessUser,
     accessIp,
     accessAudit,
+    cloudAppTopBar,
   },
   mixins: [appBaseMixin],
   data() {
@@ -153,6 +168,9 @@ export default {
           background: #fff;
           margin: 20px 24px 0 24px;
           padding-bottom: 20px;
+          &.cloud-cls {
+            background: #F5F7FA;
+          }
         }
     .domain-tab-cls {
         min-height: auto;

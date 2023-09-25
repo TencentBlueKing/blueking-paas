@@ -70,3 +70,5 @@ static/runtime/runtime.js
 build.yml
 
 webfe-settings/
+
+.prettierrc

@@ -57,7 +57,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -65,10 +65,23 @@ export default {
     return {
       navTree: [],
       allowedRouterName: [
+        'cloudAppDeployForBuild',
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
+        'imageCredential',
+        'moduleInfo',
+        'appServices',
+        'appServiceInnerShared',
+        'appServiceInner',
+        'cloudAppDeployManageStag',
+        'cloudAppDeployManageProd',
+        'cloudAppDeployHistory',
+        'appObservability',
+        'cloudAppAnalysis',
+        'cloudAppServiceInnerShared',
+        'cloudAppServiceInner',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -78,6 +91,8 @@ export default {
           'appSummary',
           // 应用编排
           'cloudAppDeploy',
+          // 应用编排 - 构建配置
+          'cloudAppDeployForBuild',
           // 应用编排 - 进程配置
           'cloudAppDeployForProcess',
           // 应用编排 - 钩子命令
@@ -88,10 +103,18 @@ export default {
           'cloudAppDeployForResource',
           // 应用编排 - YAML
           'cloudAppDeployForYaml',
+          // 部署管理
+          'cloudAppDeployManage',
+          // 部署管理 - 预发布
+          'cloudAppDeployManageStag',
+          // 部署管理 - 生产
+          'cloudAppDeployManageProd',
+          // 部署管理 - 部署历史
+          'cloudAppDeployHistory',
           // 部署状态
           'appStatus',
-          // 日志查询
-          'appLog',
+          // 可观测性
+          'appObservability',
           // 访问入口
           'appAccessPortal',
           // 增强服务
@@ -110,12 +133,18 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          // 应用配置
+          'basicConfig',
+          // 访问统计
+          'cloudAppAnalysis',
         ],
         developer: [
           // 概览
           'appSummary',
           // 应用编排
           'cloudAppDeploy',
+          // 应用编排 - 构建配置
+          'cloudAppDeployForBuild',
           // 应用编排 - 进程配置
           'cloudAppDeployForProcess',
           // 应用编排 - 钩子命令
@@ -126,10 +155,18 @@ export default {
           'cloudAppDeployForResource',
           // 应用编排 - YAML
           'cloudAppDeployForYaml',
+          // 部署管理
+          'cloudAppDeployManage',
+          // 部署管理 - 预发布
+          'cloudAppDeployManageStag',
+          // 部署管理 - 生产
+          'cloudAppDeployManageProd',
+          // 部署管理 - 部署历史
+          'cloudAppDeployHistory',
           // 部署状态
           'appStatus',
-          // 日志查询
-          'appLog',
+          // 可观测性
+          'appObservability',
           // 访问入口
           'appAccessPortal',
           // 增强服务
@@ -146,6 +183,10 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          // 应用配置
+          'basicConfig',
+          // 访问统计
+          'cloudAppAnalysis',
         ],
         operator: [
           // 权限管理
@@ -196,8 +237,8 @@ export default {
   },
   methods: {
     /**
-             * 侧导航初始化入口
-             */
+     * 侧导航初始化入口
+     */
     async init(isReload = true) {
       if (!this.curAppInfo.application) return;
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
@@ -219,10 +260,12 @@ export default {
         const res = await this.$store.dispatch('fetchRegionInfo', region);
         this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
 
-        // 添加增强服务
-        res.services.categories.forEach((category) => {
-          navTree = this.addServiceNavItem(navTree, category.id, category.name);
-        });
+        // 非云原生应用添加增强服务
+        if (this.curAppInfo.application.type !== 'cloud_native') {
+          res.services.categories.forEach((category) => {
+            navTree = this.addServiceNavItem(navTree, category.id, category.name);
+          });
+        }
 
         // 添加权限管理
         if (res.access_control && res.access_control.module) {
@@ -273,7 +316,7 @@ export default {
         // 初始化属性
         this.allNavItems = [];
         navTree = navTree.map((nav) => {
-          nav.isExpanded = false; // 是否展开，有子项时可应用
+          nav.isExpanded = true; // 是否展开，有子项时可应用
           nav.isActived = false; // 是否激活，本身匹配或子项匹配时应用
           nav.hasChildSelected = false; // 是否展开，只有子项匹配时应用
 
@@ -338,17 +381,30 @@ export default {
     },
 
     /**
-             * 根据角色，初始访问权限
-             */
+     * 根据角色，初始访问权限
+     */
     initRouterPermission() {
       const appRole = this.curAppInfo.role;
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
 
       this.allowedRouterName = [
+        'cloudAppDeployForBuild',
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
+        'imageCredential',
+        'moduleInfo',
+        'appServices',
+        'appServiceInnerShared',
+        'appServiceInner',
+        'cloudAppDeployManageStag',
+        'cloudAppDeployManageProd',
+        'cloudAppDeployHistory',
+        'appObservability',
+        'cloudAppAnalysis',
+        'cloudAppServiceInnerShared',
+        'cloudAppServiceInner',
       ];
 
       this.navTree.forEach((nav) => {
@@ -369,8 +425,8 @@ export default {
     },
 
     /**
-             * 根据当前routeName选中导航
-             */
+     * 根据当前routeName选中导航
+     */
     async selectRouterByName(routeName) {
       try {
         await this.checkPermission(routeName);
@@ -378,7 +434,7 @@ export default {
           // 如果有子项，先遍历匹配
           if (nav.children && nav.children.length) {
             nav.isActived = false;
-            nav.isExpanded = false;
+            nav.isExpanded = true;
 
             nav.children.forEach((child) => {
               // 优先使用matchRouters来匹配，其次是destRoute
@@ -407,7 +463,7 @@ export default {
             });
           } else {
             // 优先使用matchRouters来匹配，其次是destRoute
-            nav.isExpanded = false;
+            nav.isExpanded = true;
             nav.hasChildSelected = false;
 
             if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
@@ -453,7 +509,8 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
+          || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
@@ -485,16 +542,16 @@ export default {
     },
 
     /**
-             * 强服务添加子项
-             * @param {Number} id id
-             * @param {String} name 名称
-             */
+     * 强服务添加子项
+     * @param {Number} id id
+     * @param {String} name 名称
+     */
     addServiceNavItem(navTree, id, name) {
       const category = navTree.find(item => item.name === 'appServices');
       category.children.push({
         categoryName: 'appServices',
         name,
-        matchRouters: ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
+        matchRouters: ['appService', 'appServiceConfig'], // 'appServiceInnerShared' 'appServiceInner',
         destRoute: {
           name: 'appService',
           params: {
@@ -555,17 +612,15 @@ export default {
       this.navTree.forEach((item) => {
         if (category.name === item.name) {
           category.isExpanded = !category.isExpanded;
-        } else {
-          item.isExpanded = false;
         }
       });
     },
 
     /**
-             * 访问相应路由
-             *
-             * @param {Object} nav 导航对象
-             */
+     * 访问相应路由
+     *
+     * @param {Object} nav 导航对象
+     */
     async goPage(navItem) {
       try {
         await this.checkPermission(navItem.destRoute.name);

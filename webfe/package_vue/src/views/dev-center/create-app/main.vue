@@ -1,9 +1,9 @@
 <template lang="html">
   <div
-    class="paas-content white"
+    class="paas-content"
     data-test-id="create_content_App"
   >
-    <div class="big-title mt30">
+    <div class="big-title">
       <span> {{ $t('创建应用') }} </span>
     </div>
     <div
@@ -45,83 +45,83 @@
 </template>
 
 <script>
-    import createDefaultApp from './default';
-    import createExternalApp from './external';
-    import createCloudApp from './cloud';
+import createDefaultApp from './default';
+import createExternalApp from './external';
+import createCloudApp from './cloud';
 
-    const queryMap = {
-        default: 'app',
-        cloud: 'cloudNativeApp',
-        smart: 'smartApp',
-        external: 'externalApp'
+const queryMap = {
+  default: 'app',
+  cloud: 'cloudNativeApp',
+  smart: 'smartApp',
+  external: 'externalApp',
+};
+
+export default {
+  components: {
+    createDefaultApp,
+    createExternalApp,
+    createCloudApp,
+  },
+  data() {
+    return {
+      appType: 'default',
     };
-
-    export default {
-        components: {
-            createDefaultApp,
-            createExternalApp,
-            createCloudApp
-        },
-        data () {
-            return {
-                appType: 'default'
-            };
-        },
-        computed: {
-            userFeature () {
-                return this.$store.state.userFeature;
-            },
-            cloudFlag () {
-                if (this.$store.state.userFeature) {
-                    return this.$store.state.userFeature.ALLOW_CREATE_CLOUD_NATIVE_APP;
-                }
-                return false;
-            },
-            searchQuery () {
-                return this.$route.query;
-            }
-        },
-        created () {
-            this.switchAppType();
-        },
-        methods: {
-            handleToggleType (type) {
-                if (this.searchQuery.type) {
-                    const query = JSON.parse(JSON.stringify(this.searchQuery));
-                    query.type = queryMap[type];
-                    this.$router.push({ path: this.$route.path, query });
-                }
-                if (this.appType === type) {
-                    return false;
-                }
-                this.appType = type;
-            },
-            switchAppType () {
-                if (this.searchQuery.type) {
-                    switch (this.searchQuery.type) {
-                        case 'cloudNativeApp':
-                            this.appType = 'cloud';
-                            break;
-                        case 'smartApp':
-                            this.appType = 'smart';
-                            break;
-                        case 'externalApp':
-                            this.appType = 'external';
-                            break;
-                        default:
-                            this.appType = 'default';
-                            break;
-                    }
-                }
-            }
+  },
+  computed: {
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+    cloudFlag() {
+      if (this.$store.state.userFeature) {
+        return this.$store.state.userFeature.ALLOW_CREATE_CLOUD_NATIVE_APP;
+      }
+      return false;
+    },
+    searchQuery() {
+      return this.$route.query;
+    },
+  },
+  created() {
+    this.switchAppType();
+  },
+  methods: {
+    handleToggleType(type) {
+      if (this.searchQuery.type) {
+        const query = JSON.parse(JSON.stringify(this.searchQuery));
+        query.type = queryMap[type];
+        this.$router.push({ path: this.$route.path, query });
+      }
+      if (this.appType === type) {
+        return false;
+      }
+      this.appType = type;
+    },
+    switchAppType() {
+      if (this.searchQuery.type) {
+        switch (this.searchQuery.type) {
+          case 'cloudNativeApp':
+            this.appType = 'cloud';
+            break;
+          case 'smartApp':
+            this.appType = 'smart';
+            break;
+          case 'externalApp':
+            this.appType = 'external';
+            break;
+          default:
+            this.appType = 'default';
+            break;
         }
-    };
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/border-active-logo.scss';
     .tab-box {
-        width: 1000px;
+        width: 1200px;
         margin: auto;
         height: 56px;
         list-style: none;
@@ -156,30 +156,14 @@
     }
 
     .big-title {
-        padding: 15px 0 11px 0;
         color: #666;
-        line-height: 36px;
+        height: 52px;
         position: relative;
         position: relative;
-        line-height: 34px;
+        line-height: 52px;
         text-align: center;
         font-weight: 700;
-
-        &::before,
-        &::after {
-            content: "";
-            position: absolute;
-            width: 528px;
-            height: 1px;
-            background: #e9edee;
-            left: 0;
-            top: 32px;
-        }
-
-        &::after {
-            left: auto;
-            right: 0
-        }
+        background: #fff;
 
         & span {
             display: inline-block;

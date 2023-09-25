@@ -158,3 +158,5 @@ apiserver/paasng/support-files/iam
 **/sync_success_records.json
 **/sync_failed_records.json
 webfe/package_vue/.bk.local.env
+.codecc
+.vscode

@@ -11,29 +11,29 @@
   </div>
 </template>
 <script>
-    export default {
-        name: 'RoundLoading',
-        props: {
-            size: {
-                type: String,
-                default: 'mini',
-                validator: function (value) {
-                    return ['large', 'small', 'mini'].includes(value);
-                }
-            },
-            theme: {
-                type: String,
-                default: 'primary',
-                validator: function (value) {
-                    return ['primary', 'danger', 'success', 'white', 'warning'].includes(value);
-                }
-            },
-            extCls: {
-                type: String,
-                default: ''
-            }
-        }
-    };
+export default {
+  name: 'RoundLoading',
+  props: {
+    size: {
+      type: String,
+      default: 'mini',
+      validator(value) {
+        return ['large', 'small', 'mini'].includes(value);
+      },
+    },
+    theme: {
+      type: String,
+      default: 'primary',
+      validator(value) {
+        return ['primary', 'danger', 'success', 'white', 'warning'].includes(value);
+      },
+    },
+    extCls: {
+      type: String,
+      default: '',
+    },
+  },
+};
 </script>
 <style lang="scss">
     .bk-spin-loading,
@@ -247,35 +247,35 @@
         width: 44px;
         height: 14px;
         margin: auto;
-        .point {
-            position: absolute;
-            top: 0;
-            width: 14px;
-            height: 14px;
-            animation-name: animate;
-            animation-duration: .8s;
-            animation-iteration-count: infinite;
-            animation-direction: normal;
-            transform: scale(.3);
-            border-radius: 50%;
-            background-color: #666;
-        }
-        .point1 {
-            left: 0;
-            animation-delay: 0.1s;
-        }
-        .point2 {
-            left: 10px;
-            animation-delay: 0.25s;
-        }
-        .point3 {
-            left: 20px;
-            animation-delay: 0.4s;
-        }
-        .point4 {
-            left: 30px;
-            animation-delay: 0.55s;
-        }
+        // .point {
+        //     position: absolute;
+        //     top: 0;
+        //     width: 14px;
+        //     height: 14px;
+        //     animation-name: animate;
+        //     animation-duration: .8s;
+        //     animation-iteration-count: infinite;
+        //     animation-direction: normal;
+        //     transform: scale(.3);
+        //     border-radius: 50%;
+        //     background-color: #666;
+        // }
+        // .point1 {
+        //     left: 0;
+        //     animation-delay: 0.1s;
+        // }
+        // .point2 {
+        //     left: 10px;
+        //     animation-delay: 0.25s;
+        // }
+        // .point3 {
+        //     left: 20px;
+        //     animation-delay: 0.4s;
+        // }
+        // .point4 {
+        //     left: 30px;
+        //     animation-delay: 0.55s;
+        // }
     }
 
     @keyframes animate {

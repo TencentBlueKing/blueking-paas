@@ -408,7 +408,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @transaction.atomic
     def destroy(self, request, code, module_name, environment_name, mount_path):
         module = self.get_module_via_path()
-        # TODO mount_path 参数带有 '/'，有没有其他编码方式(包),quote 不行api_client 会自动将 %2F 解析为 '/'
+        # TODO mount_path 参数带有 '/'，有没有其他编码方式(包),quote 不行， api_client 会自动将 %2F 解析为 '/'
         decode_mount_path = mount_path.replace("$2F", "/")
         mount_instance = get_object_or_404(
             Mount, module_id=module.id, mount_path=decode_mount_path, environment_name=environment_name

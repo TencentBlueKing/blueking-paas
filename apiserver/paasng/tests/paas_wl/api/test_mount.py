@@ -1,0 +1,133 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
+import uuid
+
+import pytest
+
+from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
+from paas_wl.cnative.specs.crd.bk_app import VolumeSource
+from paas_wl.cnative.specs.models import ConfigMapSource, Mount
+from paas_wl.cnative.specs.serializers import MountSLZ
+
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+
+
+@pytest.fixture
+def mount(bk_app, bk_module):
+    """创建一个 mount 对象"""
+    source_config_name = f"configmap-{uuid.uuid4()}"
+    mount, _ = Mount.objects.update_or_create(
+        defaults=dict(module_id=bk_module.id, mount_path="/", environment_name=MountEnvName.GLOBAL),
+        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+        name="mount-configmap",
+        source_type=VolumeSourceType.ConfigMap,
+        region="default",
+    )
+    ConfigMapSource.objects.update_or_create(
+        defaults=dict(application_id=bk_app.id, name=source_config_name, environment_name=MountEnvName.GLOBAL),
+        data={"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"},
+        module_id=bk_module.id,
+    )
+    return mount
+
+
+class TestVolumeMountViewSet:
+    def test_list(self, api_client, bk_app, bk_module, mount):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/"
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        assert response.data[0]["source_config_data"] == mount.source.data
+
+    def test_create(self, api_client, bk_app, bk_module):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/"
+        request_body = {
+            "environment_name": "_global_",
+            "source_config_data": {"configmap_z": "configmap_z_data"},
+            "mount_path": "/path/",
+            "name": "mount-configmap-test",
+            "source_type": "ConfigMap",
+            "region": "default",
+        }
+        response = api_client.post(url, request_body)
+        mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
+        assert response.status_code == 201
+        assert mount
+        assert mount.source.data == {"configmap_z": "configmap_z_data"}
+
+    def test_create_existing_mount(self, api_client, bk_app, bk_module, mount):
+        # 测试创建已创建 mount
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/"
+        request_body = {
+            "environment_name": "_global_",
+            "source_config_data": {"configmap_z": "configmap_z_data"},
+            "mount_path": "/",
+            "name": "mount-configmap-test",
+            "source_type": "ConfigMap",
+            "region": "default",
+        }
+        response = api_client.post(url, request_body)
+        assert response.status_code == 400
+
+    def test_updata(self, api_client, bk_app, bk_module, mount):
+        encode_mount_path = mount.mount_path.replace("/", "$2F")
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/{mount.environment_name}/{encode_mount_path}/"
+        )
+        body = MountSLZ(mount).data
+        body["source_config_data"] = {"configmap_z": "configmap_z_data_updated"}
+        body["name"] = "mount-configmap-updated"
+        body["environment_name"] = "stag"
+
+        response = api_client.put(url, body)
+
+        mount_updated = Mount.objects.get(pk=mount.pk)
+        assert response.status_code == 200
+        assert mount_updated.name == "mount-configmap-updated"
+        assert mount_updated.source.data == {"configmap_z": "configmap_z_data_updated"}
+        assert mount_updated.source.environment_name == "stag"
+
+    def test_destroy(self, api_client, bk_app, bk_module, mount):
+        encode_mount_path = mount.mount_path.replace("/", "$2F")
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/{mount.environment_name}/{encode_mount_path}/"
+        )
+        response = api_client.delete(url)
+        mount_query = Mount.objects.filter(
+            module_id=mount.module_id, mount_path=mount.mount_path, environment_name=mount.environment_name
+        )
+        assert response.status_code == 204
+        assert not mount_query.exists()
+
+    def test_destroy_404(self, api_client, bk_app, bk_module, mount):
+        # 删除不存在的 mount
+        encode_mount_path = "/path".replace("/", "$2F")
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/{mount.environment_name}/{encode_mount_path}/"
+        )
+        mount_query = Mount.objects.filter(
+            module_id=mount.module_id, mount_path=mount.mount_path, environment_name=mount.environment_name
+        )
+        response = api_client.delete(url)
+        assert response.status_code == 404
+        assert mount_query.exists()

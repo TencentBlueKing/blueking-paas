@@ -55,4 +55,14 @@ urlpatterns = [
         r"api/mres/quota_plans/$",
         views_enduser.ResQuotaPlanOptionsView.as_view(),
     ),
+    re_path(
+        make_app_pattern(r'/mres/volume_mount/$', include_envs=False),
+        views_enduser.VolumeMountViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='api.mres.volume_mount',
+    ),
+    re_path(
+        make_app_pattern(r'/mres/volume_mount/(?P<environment_name>\w+)/(?P<mount_path>[^/]+)/$', include_envs=False),
+        views_enduser.VolumeMountViewSet.as_view({'put': 'update', 'delete': 'destroy'}),
+        name='api.mres.volume_mount.detail',
+    ),
 ]

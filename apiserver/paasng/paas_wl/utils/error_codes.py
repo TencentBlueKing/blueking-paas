@@ -51,6 +51,7 @@ class ErrorCodes:
     INVALID_MRES = ErrorCode(_("The bkapp is invalid"))
     GET_DEPLOYMENT_FAILED = ErrorCode(_("Failed to find deployed version"))
     LIST_TAGS_FAILED = ErrorCode(_("Failed to list tag from image repository"))
+    CREATE_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to create volume mount"))
 
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode(_("Failed to create credentials"))

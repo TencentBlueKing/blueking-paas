@@ -16,11 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from .constants import DeployStatus
-from .models import AppModelDeploy
+from .models import AppModelDeploy, Mount
+
+logger = logging.getLogger(__name__)
 
 
 class AppModelResourceSerializer(serializers.Serializer):
@@ -142,3 +146,22 @@ class ResQuotaPlanSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="选项值")
     request = ResourceQuotaSLZ(help_text="资源请求")
     limit = ResourceQuotaSLZ(help_text="资源限制")
+
+
+class MountSLZ(serializers.ModelSerializer):
+    module_id = serializers.UUIDField(read_only=True)
+    source_config = serializers.JSONField(read_only=True)
+    created = serializers.DateTimeField(read_only=True)
+    updated = serializers.DateTimeField(read_only=True)
+    source_config_data = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Mount
+        fields = "__all__"
+
+    def get_source_config_data(self, obj):
+        try:
+            return obj.source.data
+        except ValueError as e:
+            logger.warning("failed to get metric results, for %s", e)
+            return {}

@@ -17,16 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+import uuid
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
@@ -34,13 +36,22 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan, VolumeSourceType
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
+from paas_wl.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.cnative.specs.image_parser import ImageParser
-from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
+from paas_wl.cnative.specs.models import (
+    AppModelDeploy,
+    AppModelResource,
+    ConfigMapSource,
+    Mount,
+    to_error_string,
+    update_app_resource,
+)
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
@@ -50,6 +61,7 @@ from paas_wl.cnative.specs.serializers import (
     DeployDetailSerializer,
     DeployPrepResultSLZ,
     DeploySerializer,
+    MountSLZ,
     MresStatusSLZ,
     QueryDeploysSerializer,
     ResQuotaPlanSLZ,
@@ -323,3 +335,86 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
             raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
         return Response(data=alternative_versions)
+
+
+class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    @swagger_auto_schema(responses={200: MountSLZ(many=True)})
+    def list(self, request, code, module_name):
+        """list all volume mount"""
+        module = self.get_module_via_path()
+        instances = Mount.objects.filter(module_id=module.id).order_by("created")
+
+        return Response(data=MountSLZ(instances, many=True).data)
+
+    @transaction.atomic
+    @swagger_auto_schema(responses={201: MountSLZ()}, request_body=MountSLZ)
+    def create(self, request, code, module_name):
+        application = self.get_application()
+        module = self.get_module_via_path()
+        mount_slz = MountSLZ(data=request.data)
+        mount_slz.is_valid(raise_exception=True)
+        # 生成 source_config name，需具有唯一性
+        # TODO source_config_name 命名规则需要优化
+        source_config_name = f"configmap-{uuid.uuid4()}"
+        try:
+            mount_instance = mount_slz.save(
+                module_id=module.id,
+                source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+            )
+        except IntegrityError:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同路径挂载卷已存在"))
+        source_config_data = request.data['source_config_data']
+        if not source_config_data:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("挂载卷数据不可为空"))
+
+        # 根据 VolumeSourceType 类型，创建不同的 VolumeSource
+        # TODO source_config 具体资源的生成应该抽象到 Mount 对象中，根据不同的资源类型创建不同的资源对象
+        if mount_instance.source_type == VolumeSourceType.ConfigMap:
+            try:
+                ConfigMapSource.objects.create(
+                    application_id=application.id,
+                    module_id=module.id,
+                    environment_name=mount_instance.environment_name,
+                    name=source_config_name,
+                    data=source_config_data,
+                )
+            except IntegrityError:
+                raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同名挂载资源已存在"))
+        return Response(data=MountSLZ(mount_instance).data, status=status.HTTP_201_CREATED)
+
+    @transaction.atomic
+    @swagger_auto_schema(responses={200: MountSLZ()}, request_body=MountSLZ)
+    def update(self, request, code, module_name, environment_name, mount_path):
+        module = self.get_module_via_path()
+        decode_mount_path = mount_path.replace("$2F", "/")
+        mount_instance = get_object_or_404(
+            Mount, module_id=module.id, mount_path=decode_mount_path, environment_name=environment_name
+        )
+        config_instance = mount_instance.source
+        source_config_data = request.data['source_config_data']
+        if not source_config_data:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("挂载卷数据不可为空"))
+
+        slz = MountSLZ(data=request.data, instance=mount_instance)
+        slz.is_valid(raise_exception=True)
+        updated = slz.save()
+
+        config_instance.data = source_config_data
+        config_instance.environment_name = request.data['environment_name']
+        config_instance.save(update_fields=["data", "updated", "environment_name"])
+
+        return Response(data=MountSLZ(updated).data, status=status.HTTP_200_OK)
+
+    @transaction.atomic
+    def destroy(self, request, code, module_name, environment_name, mount_path):
+        module = self.get_module_via_path()
+        # TODO mount_path 参数带有 '/'，有没有其他编码方式(包),quote 不行api_client 会自动将 %2F 解析为 '/'
+        decode_mount_path = mount_path.replace("$2F", "/")
+        mount_instance = get_object_or_404(
+            Mount, module_id=module.id, mount_path=decode_mount_path, environment_name=environment_name
+        )
+        config_instance = mount_instance.source
+        mount_instance.delete()
+        config_instance.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

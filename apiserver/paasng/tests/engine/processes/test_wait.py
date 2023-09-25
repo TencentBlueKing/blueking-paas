@@ -28,16 +28,15 @@ import pytest
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingStatus
 from django.dispatch import receiver
 
+from paasng.engine.deploy.bg_wait.base import AbortedDetails, AbortedDetailsPolicy
 from paasng.engine.deploy.bg_wait.wait_deployment import (
-    AbortedDetails,
-    AbortedDetailsPolicy,
     DynamicReadyTimeoutPolicy,
     TooManyRestartsPolicy,
     UserInterruptedPolicy,
     WaitForAllStopped,
     WaitForReleaseAllReady,
-    processes_updated,
 )
+from paasng.engine.signals import processes_updated
 
 if TYPE_CHECKING:
     from paas_wl.workloads.processes.entities import Process

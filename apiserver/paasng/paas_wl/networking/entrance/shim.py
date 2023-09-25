@@ -20,6 +20,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.core.env import env_is_running
 from paas_wl.networking.entrance.addrs import URL, Address
 from paas_wl.networking.entrance.allocator.domains import ModuleEnvDomains
 from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths
@@ -27,7 +28,6 @@ from paas_wl.networking.entrance.constants import AddressType
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
@@ -116,7 +116,7 @@ class LiveEnvAddresses(BaseEnvAddresses):
     """
 
     def list(self) -> List[Address]:
-        """"list all `live` addresses for deployed environment"""
+        """list all `live` addresses for deployed environment"""
         if not env_is_running(self.env):
             return []
 

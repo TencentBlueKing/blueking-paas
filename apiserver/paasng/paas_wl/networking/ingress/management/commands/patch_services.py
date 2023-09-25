@@ -22,6 +22,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 
+from paas_wl.core.app_structure import get_structure
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KService
@@ -41,7 +42,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for app in WlApp.objects.all().order_by('created'):
             client = get_client_by_app(app)
-            for process_type in app.get_structure():
+            for process_type in get_structure(app):
                 default_service_name = f"{app.region}-{app.scheduler_safe_name}-{process_type}"
                 try:
                     svc = KService(client).get(default_service_name, namespace=app.namespace)

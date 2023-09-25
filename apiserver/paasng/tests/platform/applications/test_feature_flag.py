@@ -43,6 +43,7 @@ class TestGetDefaultFeatureFlags:
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
                     'ENABLE_BK_LOG_COLLECTOR': False,
+                    'TOGGLE_EGRESS_BINDING': False,
                 },
             ),
             (
@@ -60,6 +61,7 @@ class TestGetDefaultFeatureFlags:
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
                     'ENABLE_BK_LOG_COLLECTOR': False,
+                    'TOGGLE_EGRESS_BINDING': False,
                 },
             ),
             (
@@ -77,6 +79,7 @@ class TestGetDefaultFeatureFlags:
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
                     'ENABLE_BK_LOG_COLLECTOR': False,
+                    'TOGGLE_EGRESS_BINDING': False,
                 },
             ),
             (
@@ -94,6 +97,7 @@ class TestGetDefaultFeatureFlags:
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
                     'ENABLE_BK_LOG_COLLECTOR': False,
+                    'TOGGLE_EGRESS_BINDING': False,
                 },
             ),
             (
@@ -120,6 +124,7 @@ class TestGetDefaultFeatureFlags:
                     'APPLICATION_DESCRIPTION': True,
                     'MODIFY_ENVIRONMENT_VARIABLE': True,
                     'ENABLE_BK_LOG_COLLECTOR': False,
+                    'TOGGLE_EGRESS_BINDING': False,
                 },
             ),
         ],

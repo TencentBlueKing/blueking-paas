@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     'paasng.accessories.bk_lesscode',
     'paasng.accessories.iam.bkpaas_iam_migration',
     'paasng.accessories.iam.members',
+    'paasng.accessories.bkmonitorv3',
     'paasng.extensions.declarative',
     'paasng.extensions.scene_app',
     'paasng.extensions.smart_app',
@@ -167,6 +168,8 @@ INSTALLED_APPS = [
     'paas_wl.workloads.images',
     'paas_wl.monitoring.app_monitor',
     'paas_wl.cnative.specs',
+    'paas_wl.deploy',
+    'paas_wl.resources.generation',
 ]
 
 # Allow extending installed apps
@@ -517,6 +520,8 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
 # Celery 队列名称
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
 
+# 用于生成唯一且有意义的 ID 的函数导入路径，默认复用增强服务模块下的工具函数，一般情况下无需调整
+UNIQUE_ID_GEN_FUNC = 'paasng.dev_resources.services.utils.gen_unique_id'
 
 # --------
 # 系统配置
@@ -1184,6 +1189,9 @@ IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', defa
 
 # 是否在开发者中心应用列表中展示插件应用
 DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
+
+# 插件开发中心在蓝盾的项目 ID
+PLUGIN_CENTER_PROJECT_ID = settings.get("PLUGIN_CENTER_PROJECT_ID", default="bkplugins")
 
 # -----------------
 # 蓝鲸监控配置项

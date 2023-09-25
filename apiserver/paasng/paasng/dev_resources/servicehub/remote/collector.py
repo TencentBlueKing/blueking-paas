@@ -30,7 +30,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.dev_resources.servicehub.remote.client import RemoteServiceClient, RemoteSvcConfig
 from paasng.dev_resources.servicehub.remote.exceptions import FetchRemoteSvcError, RemoteClientError
 from paasng.dev_resources.servicehub.remote.store import RemoteServiceStore
-from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class RemoteSpecDefinitionSLZ(serializers.Serializer):
     name = serializers.CharField()
     display_name = TranslatedCharField()
     description = serializers.CharField(allow_blank=True)
-    recommended_value = serializers.CharField(allow_null=True, default=None)
+    recommended_value = serializers.CharField(allow_blank=True, allow_null=True, default=None)
 
 
 class RemotePlanSLZ(serializers.Serializer):
@@ -122,6 +122,11 @@ class RemoteServiceSLZ(serializers.Serializer):
         child=RemoteSpecDefinitionSLZ(), default=list, allow_null=True, allow_empty=True
     )
     plans = RemotePlanSLZ(many=True)
+
+
+@i18n
+class RemoteSpecDefinitionUpdateSLZ(RemoteSpecDefinitionSLZ):
+    display_name = I18NExtend(serializers.CharField())  # type: ignore
 
 
 # Serializers end

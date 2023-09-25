@@ -22,13 +22,21 @@ from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
 
-from paas_wl.networking.ingress.models import get_default_subpath
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
+
+
+def get_default_subpath(app: 'WlApp') -> str:
+    """Get the default sub path for given application, this value will be used for:
+
+    - sub path based ingress resource, used as request accessing location
+    - injected builtin env variable: BKPAAS_SUB_PATH
+    """
+    return f"/{app.region}-{app.name}/"
 
 
 @dataclass

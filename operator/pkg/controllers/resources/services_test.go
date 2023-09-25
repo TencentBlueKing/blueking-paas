@@ -69,7 +69,8 @@ var _ = Describe("test build expect service", func() {
 
 		Expect(len(service.Spec.Ports)).To(Equal(1))
 		Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(80)))
-		Expect(service.Spec.Selector).To(Equal(labels.Deployment(bkapp, "web")))
+		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, "web")))
+		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, "web")))
 	})
 
 	It("test get hi process", func() {
@@ -78,7 +79,8 @@ var _ = Describe("test build expect service", func() {
 		Expect(service).NotTo(BeNil())
 		Expect(len(service.Spec.Ports)).To(Equal(1))
 		Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(5000)))
-		Expect(service.Spec.Selector).To(Equal(labels.Deployment(bkapp, "hi")))
+		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, "hi")))
+		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, "hi")))
 	})
 
 	It("build for missing process", func() {

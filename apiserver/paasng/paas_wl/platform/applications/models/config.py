@@ -84,16 +84,6 @@ class Config(UuidAuditedModel):
             return self.runtime.image
         return self.image or settings.DEFAULT_SLUGRUNNER_IMAGE
 
-    def refresh_res_reqs(self):
-        """Refresh resource_requirements field"""
-        from paas_wl.workloads.processes.models import ProcessSpec
-
-        self.resource_requirements = {
-            pack.name: pack.plan.get_resource_summary()
-            for pack in ProcessSpec.objects.filter(engine_app_id=self.app.pk)
-        }
-        self.save(update_fields=['resource_requirements'])
-
     @property
     def envs(self):
         # TODO add other env values such as service resource

@@ -44,10 +44,12 @@ class SourceOrigin(int, StructuredEnum):
     IMAGE_REGISTRY = EnumField(4, 'Image Registry')
     # 场景模板
     SCENE = EnumField(5, 'Scene')
+    # 仅托管镜像的云原生应用
+    CNATIVE_IMAGE = EnumField(6, 'CNative Image')
 
     @classmethod
     def get_default_origins(cls) -> List['SourceOrigin']:
-        return [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY]
+        return [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.CNATIVE_IMAGE]
 
 
 class APP_CATEGORY(str, StructuredEnum):
@@ -55,6 +57,7 @@ class APP_CATEGORY(str, StructuredEnum):
 
     NORMAL_APP = 'normal_app'
     S_MART_APP = 'smart_app'
+    CNATIVE_APP = 'cnative_app'
     LEGACY_APP = 'legacy_app'
 
 

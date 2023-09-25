@@ -18,7 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.utils.basic import first_true
+from paasng.utils.basic import first_true, unique_id_generator
+
+pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
@@ -31,3 +33,9 @@ from paasng.utils.basic import first_true
 )
 def test_first_true(data, default, ret):
     assert first_true(data, default=default) == ret
+
+
+def test_unique_id_generator():
+    val = unique_id_generator('foo')
+    assert val != ''
+    assert val.startswith('foo')

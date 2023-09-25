@@ -26,7 +26,7 @@ from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.deploy.release.legacy import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.engine.models import Deployment, DeployPhaseTypes
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 

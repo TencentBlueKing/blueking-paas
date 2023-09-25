@@ -19,12 +19,13 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import hashlib
 from collections import MutableMapping
-from typing import Collection, Dict
+from typing import Any, Collection, Dict
 from uuid import UUID
 
 import cattr
 import requests
 import requests.adapters
+from blue_krill.cubing_case import shortcuts
 from django.utils.encoding import force_bytes
 
 # Register cattr custom hooks
@@ -93,3 +94,19 @@ _requests_session.mount('https://', _adapter)
 def get_requests_session() -> requests.Session:
     """Return the global requests session object which supports connection pooling"""
     return _requests_session
+
+
+def convert_key_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
+    """将字典中的所有下划线分隔的键转换为驼峰格式"""
+    result: Dict[str, Any] = {}
+    for key, value in data.items():
+        if not isinstance(key, str):
+            raise TypeError("key must be a string")
+        camel_key = shortcuts.to_lower_camel_case(key)
+        if isinstance(value, dict):
+            result[camel_key] = convert_key_to_camel(value)
+        elif isinstance(value, list):
+            result[camel_key] = [convert_key_to_camel(item) if isinstance(item, dict) else item for item in value]
+        else:
+            result[camel_key] = value
+    return result

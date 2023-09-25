@@ -16,8 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from collections import defaultdict
+from typing import List
+
 from rest_framework import serializers
 
+from paasng.dev_resources.templates.models import Template
+from paasng.platform.region.models import Region
+from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import UserField, VerificationCodeField
 
 from .constants import AccountFeatureFlag
@@ -70,3 +76,37 @@ class OauthBackendInfoSLZ(serializers.Serializer):
 
 class OAuthRefreshTokenSLZ(serializers.Serializer):
     refresh_token = serializers.CharField(help_text="refresh_token")
+
+
+class AllRegionSpecsSLZ:
+    def __init__(self, regions: List[Region]):
+        self.regions = regions
+
+    def serialize(self):
+        data = {}
+        for region in self.regions:
+            languages = defaultdict(list)
+            for tmpl in Template.objects.filter_by_region(region.name):
+                languages[tmpl.language].append(TmplSLZ(tmpl).data)
+
+            data.update(
+                {
+                    region.name: {
+                        "display_name": region.display_name,
+                        "languages": languages,
+                        "description": region.basic_info.description,
+                        "allow_deploy_app_by_lesscode": region.allow_deploy_app_by_lesscode,
+                    }
+                }
+            )
+        return data
+
+
+class TmplSLZ(serializers.Serializer):
+    """创建应用/模块时，需要的模板信息"""
+
+    name = serializers.CharField()
+    display_name = TranslatedCharField()
+    description = TranslatedCharField()
+    language = serializers.CharField()
+    market_ready = serializers.BooleanField()

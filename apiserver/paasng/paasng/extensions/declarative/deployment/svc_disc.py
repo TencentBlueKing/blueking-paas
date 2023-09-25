@@ -36,7 +36,7 @@ from paasng.extensions.declarative.models import DeploymentDescription
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.preallocated import get_preallocated_address
+from paasng.publish.entrance.preallocated import get_exposed_url_type, get_preallocated_address
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +96,15 @@ class BkSaaSAddrDiscoverer:
         data: List[Dict] = []
         for saas_item, clusters in self.extend_with_clusters(items):
             value: Optional[Dict]
+
+            # Try to retrieve the exposed URL type in order to get a more accurate result.
+            preferred_url_type = get_exposed_url_type(saas_item.bk_app_code, saas_item.module_name)
             try:
                 value = get_preallocated_address(
-                    saas_item.bk_app_code, module_name=saas_item.module_name, clusters=clusters
+                    saas_item.bk_app_code,
+                    module_name=saas_item.module_name,
+                    clusters=clusters,
+                    preferred_url_type=preferred_url_type,
                 )._asdict()
             except ValueError:
                 value = None

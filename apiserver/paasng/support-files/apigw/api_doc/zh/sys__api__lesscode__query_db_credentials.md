@@ -1,37 +1,26 @@
-### 资源描述
-注册资源的简单描述
+### 功能描述
+查询数据库增强服务的 credential 信息
 
-### 输入参数说明
-|   参数名称   |    参数类型  |  必须  |     参数说明     |
-| ------------ | ------------ | ------ | ---------------- |
-| app_code   | string | 是 | 应用ID(app id)，可以通过 蓝鲸开发者中心 -> 应用基本设置 -> 基本信息 -> 鉴权信息 获取 |
-| app_secret | string | 否 | 安全秘钥(app secret)，可以通过 蓝鲸开发者中心 -> 应用基本设置 -> 基本信息 -> 鉴权信息 获取 |
+### 请求参数
 
-### 调用示例
-```python
-from bkapigw.paasv3.shortcuts import get_client_by_request
-client = get_client_by_request(request)
-# 填充参数
-kwargs = {
+#### 1、路径参数：
 
-}
-result = client.api.api_test(kwargs)
+| 参数名称  | 参数类型 | 必须 | 参数说明         |
+| --------- | -------- | ---- | ---------------- |
+| app_code  | string   | 是   | 应用 ID          |
+| module    | string   | 是   | 模块名称         |
+| env       | string   | 是   | 环境，如 "prod"  |
+
+#### 2、接口参数：
+暂无。
+
+### 请求示例
+```
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "visual-layout", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/appid1/modules/default/envs/prod/lesscode/query_db_credentials
 ```
 
-### 返回结果
+### 返回结果示例
 ```json
-# 内部版
-{
-    "credentials": {
-        "GCS_MYSQL_HOST": "--",
-        "GCS_MYSQL_PORT": --,
-        "GCS_MYSQL_NAME": "--",
-        "GCS_MYSQL_USER": "--",
-        "GCS_MYSQL_PASSWORD": "--"
-    }
-}
-
-# 企业版
 {
     "credentials": {
         "MYSQL_HOST": "--",
@@ -50,7 +39,15 @@ result = client.api.api_test(kwargs)
 
 ```
 
-### 返回结果说明
-|   参数名称   |  参数类型  |           参数说明             |
-| ------------ | ---------- | ------------------------------ |
-|              |            |                                |
+### 返回结果参数说明
+
+| 参数名称          | 参数类型 | 参数说明                   |
+| ----------------- | -------- | -------------------------- |
+| credentials       | dict     | 数据库连接信息             |
+| MYSQL_HOST        | string   | 数据库主机地址             |
+| MYSQL_PORT        | int      | 数据库端口                 |
+| MYSQL_NAME        | string   | 数据库名称                 |
+| MYSQL_USER        | string   | 数据库用户名               |
+| MYSQL_PASSWORD    | string   | 数据库密码                 |
+| code              | string   | 错误码                     |
+| detail            | string   | 错误详情                   |

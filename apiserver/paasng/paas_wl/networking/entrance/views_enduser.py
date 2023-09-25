@@ -27,6 +27,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.core.env import env_is_running
 from paas_wl.networking.entrance import serializers as slzs
 from paas_wl.networking.entrance.addrs import URL, Address
 from paas_wl.networking.entrance.allocator.domains import SubDomainAllocator
@@ -37,10 +38,9 @@ from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addr_
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
 from paasng.utils.api_docs import openapi_empty_response

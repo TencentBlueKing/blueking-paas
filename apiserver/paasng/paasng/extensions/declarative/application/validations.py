@@ -31,8 +31,8 @@ from paasng.extensions.declarative.application.resources import (
 from paasng.extensions.declarative.constants import AppDescPluginType
 from paasng.extensions.declarative.serializers import validate_language
 from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
-from paasng.platform.core.region import get_region
 from paasng.platform.modules.serializers import ModuleNameField
+from paasng.platform.region.states import get_region
 from paasng.publish.market.serializers import ProductTagByNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField

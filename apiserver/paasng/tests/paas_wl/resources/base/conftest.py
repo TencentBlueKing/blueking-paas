@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.resources.base.client import K8sScheduler
+from paas_wl.deploy.app_res.client import K8sScheduler
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
 

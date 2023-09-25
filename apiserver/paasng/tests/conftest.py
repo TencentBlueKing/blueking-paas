@@ -600,6 +600,7 @@ def setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
 def init_tmpls():
     from paasng.dev_resources.templates.constants import TemplateType
     from paasng.dev_resources.templates.models import Template
+    from paasng.engine.constants import RuntimeType
 
     Template.objects.get_or_create(
         name=settings.DUMMY_TEMPLATE_NAME,
@@ -649,7 +650,7 @@ def init_tmpls():
             'display_name_en': 'legacy django app migrate',
             'description_zh_cn': '旧版本 Django 应用迁移',
             'description_en': 'legacy django app migrate desc',
-            'language': 'PHP',
+            'language': 'Python',
             'market_ready': True,
             'preset_services_config': {},
             'blob_url': {settings.DEFAULT_REGION_NAME: f'file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz'},
@@ -658,6 +659,25 @@ def init_tmpls():
             'processes': {},
             'tags': [],
             'repo_url': 'http://github.com/blueking/django_legacy_tmpl',
+        },
+    )
+
+    Template.objects.get_or_create(
+        name='docker',
+        defaults={
+            'type': TemplateType.NORMAL,
+            'display_name_zh_cn': 'Docker应用模板',
+            'display_name_en': 'Docker app template',
+            'description_zh_cn': 'Docker应用模板',
+            'description_en': 'Docker app template',
+            'market_ready': True,
+            'preset_services_config': {},
+            'blob_url': {settings.DEFAULT_REGION_NAME: f'file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz'},
+            'enabled_regions': [settings.DEFAULT_REGION_NAME],
+            'required_buildpacks': [],
+            'processes': {},
+            'tags': [],
+            'runtime_type': RuntimeType.DOCKERFILE,
         },
     )
 
@@ -814,4 +834,16 @@ def mock_sync_developers_to_sentry():
     with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
         "paasng.extensions.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
     ):
+        yield
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_delete_process_probe(request):
+    skip_patch = request.param if hasattr(request, "param") else False
+
+    if not skip_patch:
+        # 避免所有单元测试会执行删除 ProcessProbe 操作
+        with mock.patch("paasng.extensions.declarative.deployment.controller.delete_process_probes"):
+            yield
+    else:
         yield

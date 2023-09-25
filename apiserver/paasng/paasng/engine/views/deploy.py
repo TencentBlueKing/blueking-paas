@@ -41,12 +41,13 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.engine.deploy.engine_svc import get_all_logs
+from paasng.engine.constants import RuntimeType
 from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models import Deployment
-from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.phases_steps.phases import DeployPhaseManager
+from paasng.engine.phases_steps.steps import get_sorted_steps
 from paasng.engine.serializers import (
     CheckPreparationsSLZ,
     CreateDeploymentResponseSLZ,
@@ -57,6 +58,8 @@ from paasng.engine.serializers import (
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
+from paasng.engine.utils.client import get_all_logs
+from paasng.engine.utils.query import DeploymentGetter
 from paasng.engine.workflow import DeploymentCoordinator
 from paasng.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
@@ -128,10 +131,13 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             build = Build.objects.get(pk=build_id)
 
         manifest = params.get("manifest", None)
-        version_info = None
-        # 只有仅托管镜像的云原生应用会传递 manifest
-        # 目前仅托管镜像的云原生应用的 image 字段由前端组装
-        if manifest is None:
+        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            if not manifest:
+                version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
+            else:
+                # v1alpha1 的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
+                version_info = VersionInfo("", "manifest", "manifest")
+        else:
             version_info = self._get_version_info(request.user, module, params, build=build)
 
         coordinator = DeploymentCoordinator(env)
@@ -176,6 +182,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 version_name=image_tag,
                 revision=image_tag,
             )
+
         version_name = params["version_name"]
         version_type = params["version_type"]
         revision = params.get("revision", None)
@@ -255,7 +262,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def get_resumable_deployment(self, request, code, module_name, environment):
         app_env = self.get_env_via_path()
-        deployment = DeploymentCoordinator(app_env).get_current_deployment()
+        deployment = DeploymentGetter(app_env).get_current_deployment()
         if not deployment:
             return Response({})
 
@@ -290,6 +297,9 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_frame(self, request, code, module_name, environment):
         env = self.get_env_via_path()
         phases = DeployPhaseManager(env).get_or_create_all()
+        # Set property for rendering by slz
+        for p in phases:
+            p._sorted_steps = get_sorted_steps(p)
         data = DeployFramePhaseSLZ(phases, many=True).data
         return Response(data=data)
 
@@ -307,6 +317,9 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             logger.exception("failed to get phase info")
             raise error_codes.CANNOT_GET_DEPLOYMENT_PHASES
 
+        # Set property for rendering by slz
+        for p in phases:
+            p._sorted_steps = get_sorted_steps(p)
         return Response(data=DeployPhaseSLZ(phases, many=True).data)
 
 

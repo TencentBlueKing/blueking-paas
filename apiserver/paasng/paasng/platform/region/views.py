@@ -26,8 +26,8 @@ from rest_framework.response import Response
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paasng.utils.views import allow_resp_patch
 
-from .models import get_all_regions, get_regions_by_user
-from .serializers import AllSpecsSLZ, RegionSerializer
+from .models import get_all_regions
+from .serializers import RegionSerializer
 
 
 class RegionBaseViewSet(viewsets.ViewSet):
@@ -53,17 +53,3 @@ class RegionViewSet(RegionBaseViewSet):
         # Attach region settings from workloads
         resp["module_custom_domain"] = asdict(get_custom_domain_config(region))
         return Response(resp)
-
-
-class RegionSpecsViewSet(RegionBaseViewSet):
-    """ViewSet for languages on region"""
-
-    permission_classes = [IsAuthenticated]
-
-    def retrieve(self, request):
-        # TODO: 当前存在漏洞，如果用户没有创建某 region 应用的权限，但他又是这个 region 下应用的开发者。那么当他进入该应用后，
-        # 点击创建新模块页面，访问 specs 接口时，不会返回对应 region 的相关信息（因为没权限），最终会导致前端页面报错。
-        #
-        # Region 的创建应用权限和管理某个 Region 下应用（创建模块）权限等没有细化。
-        all_spec_slz = AllSpecsSLZ(get_regions_by_user(self.request.user))
-        return Response(all_spec_slz.serialize())

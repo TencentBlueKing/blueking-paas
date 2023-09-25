@@ -31,8 +31,6 @@ from requests.models import Response
 from requests_oauthlib import OAuth2Session
 
 from paasng.accounts.oauth.exceptions import BKAppOauthRequestError, BKAppOauthResponseError
-from paasng.platform.applications.models import Application
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.utils.error_codes import error_codes
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -186,20 +184,6 @@ class BlueKingApplicationOauthMixin:
             app_code=settings.BKAUTH_TOKEN_APP_CODE,
             app_secret=settings.BKAUTH_TOKEN_SECRET_KEY,
             env_name=settings.AUTH_ENV_NAME,
-        )
-
-    @classmethod
-    def from_app(cls, application: Application, env_name: str = settings.AUTH_ENV_NAME):
-        """使用指定的应用的身份"""
-        app_secret = get_oauth2_client_secret(application.code, application.region)
-        return cls(
-            auth_url=settings.TOKEN_AUTH_ENDPOINT,
-            refresh_url=settings.TOKEN_REFRESH_ENDPOINT,
-            # 借用了 bkpaas-atuh 的配置项
-            validate_url=settings.BKAUTH_TOKEN_CHECK_ENDPOINT,
-            app_code=application.code,
-            app_secret=app_secret,
-            env_name=env_name,
         )
 
     @classmethod

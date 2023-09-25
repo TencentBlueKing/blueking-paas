@@ -25,8 +25,11 @@ from typing import TYPE_CHECKING, Any, Iterable, Tuple
 import requests
 import requests.adapters
 from bkpaas_auth import get_user_by_user_id
+from django.conf import settings
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_text
+from django.utils.module_loading import import_string
+from typing_extensions import Protocol
 
 if TYPE_CHECKING:
     from enum import Enum
@@ -221,3 +224,20 @@ _requests_session.mount('https://', _adapter)
 def get_requests_session() -> requests.Session:
     """Return the global requests session object which supports connection pooling"""
     return _requests_session
+
+
+class UniqueIDGenerator(Protocol):
+    def __call__(self, name: str, max_length: int = 16, namespace: str = 'default') -> str:
+        """Generate an meaningful and unique ID.
+
+        :param name: The name, it will be included in the ID result.
+        :param max_length: When the length of `name` exceeds this value, truncate it.
+        :param namespace: The namespace to distinguish the ID data.
+        :return: The ID value.
+        """
+
+
+def unique_id_generator(name: str, max_length: int = 16, namespace: str = 'default') -> str:
+    """The function which generates unique ID."""
+    func: UniqueIDGenerator = import_string(settings.UNIQUE_ID_GEN_FUNC)
+    return func(name, max_length=max_length, namespace=namespace)

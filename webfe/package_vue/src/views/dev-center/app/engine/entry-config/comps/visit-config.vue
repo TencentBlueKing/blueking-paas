@@ -635,6 +635,7 @@ export default {
             e.envs[envType][envIndex].isEdit = false;       // 改变本条数据的状态
             e.envs[envType][envIndex].is_running = true;    // 能保存和编辑这代表已经部署过了
             e.envs[envType][envIndex].address.url = `http://${curUrlParams.domain_name}${curUrlParams.path_prefix}`; // 拼接地址和路径
+            e.envs[envType][envIndex].address.id = this.curDataId;  // 成功添加，将响应id保存
           }
           return e;
         });

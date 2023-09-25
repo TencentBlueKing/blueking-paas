@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 38 22" class="design-iconfont">
+  <defs>
+    <filter x="-.6%" y="-1%" width="101.3%" height="102.9%" filterUnits="objectBoundingBox" id="p871gzyt2__asea9f5bla">
+      <feOffset dy="2" in="SourceAlpha" result="shadowOffsetOuter1"/>
+      <feGaussianBlur stdDeviation="2" in="shadowOffsetOuter1" result="shadowBlurOuter1"/>
+      <feColorMatrix values="0 0 0 0 0.0980392157 0 0 0 0 0.0980392157 0 0 0 0 0.160784314 0 0 0 0.05 0" in="shadowBlurOuter1"/>
+    </filter>
+    <rect id="p871gzyt2__evl2eaxq0b" x="0" y="0" width="1078" height="484" rx="2"/>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <path fill="#F5F7FA" d="M0 0H1366V1015H0z" transform="translate(-370 -212)"/>
+    <g transform="translate(-106 -8)">
+      <use fill="#000" filter="url(#p871gzyt2__asea9f5bla)" xlink:href="#p871gzyt2__evl2eaxq0b"/>
+      <use fill="#FFF" xlink:href="#p871gzyt2__evl2eaxq0b"/>
+    </g>
+    <path d="M2,0 L1076,0 C1077.10457,-2.02906125e-16 1078,0.8954305 1078,2 L1078,40 L1078,40 L0,40 L0,2 C-1.3527075e-16,0.8954305 0.8954305,2.02906125e-16 2,0 Z" transform="translate(-106 -8)" fill="#EAEBF0" fill-rule="nonzero"/>
+    <g>
+      <rect stroke-opacity=".3" stroke="#3A84FF" fill="#EDF4FF" x=".5" y="4.5" width="37" height="15" rx="7.5"/>
+      <text font-family="STSongti-SC-Regular, Songti SC" font-size="10" fill="#3A84FF">
+        <tspan x="4" y="11">已部署</tspan>
+      </text>
+    </g>
+    <g>
+      <rect stroke-opacity=".3" stroke="#3A84FF" fill="#EDF4FF" x=".5" y="4.5" width="37" height="15" rx="7.5"/>
+      <text font-family="STSongti-SC-Regular, Songti SC" font-size="10" fill="#3A84FF">
+        <tspan x="4" y="11">已部署</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

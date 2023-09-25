@@ -1,6 +1,6 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar">
+    <div class="ps-top-bar" v-if="!isCloudNativeApp">
       <h2> {{ $t('基本信息') }} </h2>
     </div>
     <paas-content-loader
@@ -582,651 +582,655 @@
 </template>
 
 <script>
-    import moment from 'moment';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import User from '@/components/user';
-    // import BluekingUserSelector from '@blueking/user-selector';
-    import authenticationInfo from '@/components/authentication-info.vue';
-    // import 'BKSelectMinCss';
+import moment from 'moment';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import User from '@/components/user';
+// import BluekingUserSelector from '@blueking/user-selector';
+import authenticationInfo from '@/components/authentication-info.vue';
+// import 'BKSelectMinCss';
 
-    export default {
-        components: {
-          authenticationInfo,
-          User
-          // BluekingUserSelector,
-          //   'bk-member-selector': () => {
-          //       return import('@/components/user/member-selector/member-selector.vue');
-          //   }
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: false,
-                formRemoveConfirmCode: '',
-                curEnv: '',
-                appSecret: null,
-                showingSecret: false,
-                appSecretVerificationCode: '',
-                appSecretTimeInterval: undefined,
-                appSecretTimer: 0,
-                resolveLocker: undefined,
-                isAcceptSMSCode: false,
-                phoneNumerLoading: true,
+export default {
+  components: {
+    authenticationInfo,
+    User,
+    // BluekingUserSelector,
+    //   'bk-member-selector': () => {
+    //       return import('@/components/user/member-selector/member-selector.vue');
+    //   }
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: false,
+      formRemoveConfirmCode: '',
+      curEnv: '',
+      appSecret: null,
+      showingSecret: false,
+      appSecretVerificationCode: '',
+      appSecretTimeInterval: undefined,
+      appSecretTimer: 0,
+      resolveLocker: undefined,
+      isAcceptSMSCode: false,
+      phoneNumerLoading: true,
 
-                localeAppInfo: {
-                    name: '',
-                    logo: '',
-                    introduction: '',
-                    contact: []
-                },
-                localeAppInfoNameTemp: '',
-                localeAppInfoPluginTemp: '',
-                rules: {
-                    appName: [
-                        {
-                            required: true,
-                            message: this.$t('请输入20个字符以内的应用名称'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 20,
-                            message: this.$t('应用名称不可超过20个字符'),
-                            trigger: 'blur'
-                        },
-                        {
-                            required: /[a-zA-Z\d\u4e00-\u9fa5]+/,
-                            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                delAppDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                isEdited: false,
-                pluginIntroDuction: false,
-                pluginPlaceholder: this.$t('无'),
-                isDisabled: true,
-                curVal: '',
-                contactCopy: [],
-                descAppStatus: false,
-                descAppDisabled: false,
-                pluginList: [],
-                targetPluginList: [],
-                restoringPluginList: [],
-                restoringTargetData: [],
-                PluginDataAllFirst: true,
-                TargetDataFirst: true,
-                titleArr: [this.$t('可选的插件使用方'), this.$t('已授权给以下使用方')],
-                promptContent: [this.$t('无数据'), this.$t('未选择已授权使用方')],
-                apiGwName: '',
-                AuthorizedUseList: [],
-                tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'),
-                pluginTypeList: [],
-                pluginTypeValue: '',
-                isPluginTypeSelect: true,
-                isFocus: true
-            };
+      localeAppInfo: {
+        name: '',
+        logo: '',
+        introduction: '',
+        contact: [],
+      },
+      localeAppInfoNameTemp: '',
+      localeAppInfoPluginTemp: '',
+      rules: {
+        appName: [
+          {
+            required: true,
+            message: this.$t('请输入20个字符以内的应用名称'),
+            trigger: 'blur',
+          },
+          {
+            max: 20,
+            message: this.$t('应用名称不可超过20个字符'),
+            trigger: 'blur',
+          },
+          {
+            required: /[a-zA-Z\d\u4e00-\u9fa5]+/,
+            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      delAppDialog: {
+        visiable: false,
+        isLoading: false,
+      },
+      isEdited: false,
+      pluginIntroDuction: false,
+      pluginPlaceholder: this.$t('无'),
+      isDisabled: true,
+      curVal: '',
+      contactCopy: [],
+      descAppStatus: false,
+      descAppDisabled: false,
+      pluginList: [],
+      targetPluginList: [],
+      restoringPluginList: [],
+      restoringTargetData: [],
+      PluginDataAllFirst: true,
+      TargetDataFirst: true,
+      titleArr: [this.$t('可选的插件使用方'), this.$t('已授权给以下使用方')],
+      promptContent: [this.$t('无数据'), this.$t('未选择已授权使用方')],
+      apiGwName: '',
+      AuthorizedUseList: [],
+      tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'),
+      pluginTypeList: [],
+      pluginTypeValue: '',
+      isPluginTypeSelect: true,
+      isFocus: true,
+    };
+  },
+  computed: {
+    canDeleteApp() {
+      return this.curAppInfo.role.name === 'administrator';
+    },
+    canViewSecret() {
+      return this.curAppInfo.role.name !== 'operator';
+    },
+    canEditAppBasicInfo() {
+      return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
+    },
+    formRemoveValidated() {
+      return this.curAppInfo.application.code === this.formRemoveConfirmCode;
+    },
+    appSecretText() {
+      if (this.appSecret && this.showingSecret) {
+        return this.appSecret;
+      }
+      return '************';
+    },
+    platformFeature() {
+      console.warn(this.$store.state.platformFeature);
+      return this.$store.state.platformFeature;
+    },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    isPluginTypeActive() {
+      return this.$route.params.pluginTypeActive;
+    },
+  },
+  watch: {
+    curAppInfo(value) {
+      this.isLoading = true;
+      this.localeAppInfo.name = value.application.name;
+      this.localeAppInfo.logo = value.application.logo_url;
+      if (value.application.type === 'bk_plugin') {
+        this.getProfile();
+      }
+      this.$refs.authenticationRef?.resetAppSecret();
+      setTimeout(() => {
+        this.isLoading = false;
+      }, 300);
+    },
+    'localeAppInfo.name'() {
+      this.appSecret = '';
+      this.appSecretTimer = 0;
+    },
+  },
+  created() {
+    moment.locale(this.localLanguage);
+  },
+  mounted() {
+    this.descAppStatus = this.curAppInfo.feature.APPLICATION_DESCRIPTION;
+    this.isLoading = true;
+    this.getDescAppStatus();
+    this.getPluginAll();
+    this.getAuthorizedUse();
+    this.init();
+    if (this.curAppInfo.application.type === 'bk_plugin') {
+      this.getProfile();
+    }
+    if (this.curAppInfo.application.name) {
+      this.localeAppInfo.name = this.curAppInfo.application.name;
+    }
+    setTimeout(() => {
+      this.isLoading = false;
+    }, 300);
+    this.$nextTick(() => {
+      // 是否active插件分类
+      if (this.isPluginTypeActive) {
+        this.showPluginSelected();
+      }
+    });
+  },
+  beforeDestroy() {
+    window.removeEventListener('click', this.isCustomActive);
+  },
+  methods: {
+    async getDescAppStatus() {
+      try {
+        const res = await this.$store.dispatch('market/getDescAppStatus', this.appCode);
+        this.descAppDisabled = res.DISABLE_APP_DESC.activated;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+    async init() {
+      this.initAppMarketInfo();
+      this.getPluginTypeList();
+      this.formRemoveConfirmCode = '';
+      this.appSecret = null;
+      this.showingSecret = false;
+    },
+
+    cancelBasicInfo() {
+      this.isEdited = false;
+      this.localeAppInfo.name = this.localeAppInfoNameTemp;
+    },
+
+    showEdit() {
+      this.isEdited = true;
+      this.localeAppInfoNameTemp = this.localeAppInfo.name;
+      this.$refs.nameInput.focus();
+    },
+
+    cancelPluginBasicInfo() {
+      this.pluginIntroDuction = false;
+      this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
+      this.pluginPlaceholder = this.$t('无');
+    },
+
+    cancelPluginContactBasicInfo() {
+      this.isDisabled = true;
+      this.localeAppInfo.contact = this.contactCopy;
+    },
+
+    showPluginEdit() {
+      this.pluginIntroDuction = true;
+      this.localeAppInfoPluginTemp = this.localeAppInfo.introduction;
+      this.pluginPlaceholder = this.$t('请输入插件简介');
+      this.$refs.pluginInput.focus();
+    },
+
+    showPluginContactEdit() {
+      this.isDisabled = false;
+      this.$nextTick(() => {
+        this.$refs.member_selector.focus();
+      });
+    },
+
+    updateContact(curVal) {
+      this.curVal = curVal.length > 0 ? curVal.join(';') : '';
+    },
+
+    async submitPluginBasicInfo(data = '') {
+      let params;
+      if (!data) {
+        params = {
+          introduction: this.localeAppInfo.introduction,
+        };
+      } else {
+        params = { ...data };
+      }
+      const url = `${BACKEND_URL}//api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
+      this.$http.patch(url, params).then(
+        (res) => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('插件信息修改成功！'),
+          });
+          if (data) {
+            this.contactCopy = res.contact ? res.contact.split(';') : [];
+          }
         },
-        computed: {
-            canDeleteApp () {
-                return this.curAppInfo.role.name === 'administrator';
-            },
-            canViewSecret () {
-                return this.curAppInfo.role.name !== 'operator';
-            },
-            canEditAppBasicInfo () {
-                return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
-            },
-            formRemoveValidated () {
-                return this.curAppInfo.application.code === this.formRemoveConfirmCode;
-            },
-            appSecretText () {
-                if (this.appSecret && this.showingSecret) {
-                    return this.appSecret;
-                } else {
-                    return '************';
-                }
-            },
-            platformFeature () {
-                console.warn(this.$store.state.platformFeature);
-                return this.$store.state.platformFeature;
-            },
-            userFeature () {
-                return this.$store.state.userFeature;
-            },
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            },
-            isPluginTypeActive () {
-                return this.$route.params.pluginTypeActive;
-            }
+        (e) => {
+          if (!data) this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
+          this.$paasMessage({
+            theme: 'error',
+            message: e.message || e.detail || this.$t('接口异常'),
+          });
         },
-        watch: {
-            curAppInfo (value) {
-                this.isLoading = true;
-                this.localeAppInfo.name = value.application.name;
-                this.localeAppInfo.logo = value.application.logo_url;
-                if (value.application.type === 'bk_plugin') {
-                    this.getProfile();
-                }
-                this.$refs.authenticationRef?.resetAppSecret();
-                setTimeout(() => {
-                    this.isLoading = false;
-                }, 300);
-            },
-            'localeAppInfo.name' () {
-                this.appSecret = '';
-                this.appSecretTimer = 0;
-            }
-        },
-        created () {
-            moment.locale(this.localLanguage);
-        },
-        mounted () {
-            this.descAppStatus = this.curAppInfo.feature.APPLICATION_DESCRIPTION;
-            this.isLoading = true;
-            this.getDescAppStatus();
+      )
+        .finally(() => {
+          if (data) {
+            this.isDisabled = true;
+          } else {
+            this.pluginIntroDuction = false;
+            this.pluginPlaceholder = this.$t('无');
+          }
+          this.isPluginTypeSelect = true;
+        });
+    },
+
+    transferChange(sourceList, targetList, targetValueList) {
+      this.AuthorizedUseList = targetValueList;
+    },
+
+    arrayEqual(arr1, arr2) {
+      if (arr1 === arr2) return true;
+      if (arr1.length !== arr2.length) return false;
+      for (let i = 0; i < arr1.length; ++i) {
+        if (arr1[i] !== arr2[i]) return false;
+      }
+      return true;
+    },
+
+    updateAuthorizationUse() {
+      const url = `${BACKEND_URL}/api/bk_plugins/${this.appCode}/distributors/`;
+      const data = this.AuthorizedUseList;
+      const flag = this.arrayEqual(this.targetPluginList, data);
+      if (!flag) {
+        this.$http.put(url, {
+          distributors: data,
+        }).then(
+          (res) => {
             this.getPluginAll();
             this.getAuthorizedUse();
-            this.init();
-            if (this.curAppInfo.application.type === 'bk_plugin') {
-                this.getProfile();
-            }
-            if (this.curAppInfo.application.name) {
-                this.localeAppInfo.name = this.curAppInfo.application.name;
-            }
-            setTimeout(() => {
-                this.isLoading = false;
-            }, 300);
-            this.$nextTick(() => {
-                // 是否active插件分类
-                if (this.isPluginTypeActive) {
-                    this.showPluginSelected();
-                }
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('授权成功！'),
             });
+          },
+          (res) => {
+            this.$paasMessage({
+              theme: 'error',
+              message: res.detail,
+            });
+          },
+        );
+      } else {
+        this.$paasMessage({
+          theme: 'warning',
+          message: this.$t('未选择授权使用方'),
+        });
+      }
+    },
+
+    getPluginAll() {
+      const url = `${BACKEND_URL}/api/bk_plugin_distributors/`;
+      this.$http.get(url).then((res) => {
+        this.pluginList = res;
+        if (this.PluginDataAllFirst) {
+          this.restoringPluginList = this.pluginList;
+          this.PluginDataAllFirst = false;
+        }
+      }, (e) => {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      });
+    },
+
+    getAuthorizedUse() {
+      const url = `${BACKEND_URL}/api/bk_plugins/${this.appCode}/distributors/`;
+      this.$http.get(url).then((res) => {
+        this.targetPluginList = res.map(item => item.code_name);
+        if (this.TargetDataFirst) {
+          this.restoringTargetData = this.targetPluginList;
+          this.TargetDataFirst = false;
+        }
+      }, (e) => {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      });
+    },
+
+    revivification() {
+      this.pluginList.splice(0, this.pluginList.length, ...this.restoringPluginList);
+      this.targetPluginList.splice(0, this.targetPluginList.length, ...this.restoringTargetData);
+    },
+
+    async submitBasicInfo() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
+      this.$http.put(url, {
+        name: this.localeAppInfo.name,
+      }).then(
+        (res) => {
+          this.$store.commit('updateCurAppName', this.localeAppInfo.name);
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('信息修改成功！'),
+          });
         },
-        beforeDestroy () {
-            window.removeEventListener('click', this.isCustomActive);
+        (res) => {
+          this.localeAppInfo.name = this.localeAppInfoNameTemp;
+          this.$paasMessage({
+            theme: 'error',
+            message: res.detail,
+          });
         },
-        methods: {
-            async getDescAppStatus () {
-                try {
-                    const res = await this.$store.dispatch('market/getDescAppStatus', this.appCode);
-                    this.descAppDisabled = res.DISABLE_APP_DESC.activated;
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-            async init () {
-                this.initAppMarketInfo();
-                this.getPluginTypeList();
-                this.formRemoveConfirmCode = '';
-                this.appSecret = null;
-                this.showingSecret = false;
-            },
+      )
+        .finally(() => {
+          this.isEdited = false;
+        });
+    },
 
-            cancelBasicInfo () {
-                this.isEdited = false;
-                this.localeAppInfo.name = this.localeAppInfoNameTemp;
-            },
+    showRemovePrompt() {
+      this.delAppDialog.visiable = true;
+    },
 
-            showEdit () {
-                this.isEdited = true;
-                this.localeAppInfoNameTemp = this.localeAppInfo.name;
-                this.$refs.nameInput.focus();
-            },
+    hookAfterClose() {
+      this.formRemoveConfirmCode = '';
+    },
 
-            cancelPluginBasicInfo () {
-                this.pluginIntroDuction = false;
-                this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
-                this.pluginPlaceholder = this.$t('无');
-            },
+    submitRemoveApp() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
 
-            cancelPluginContactBasicInfo () {
-                this.isDisabled = true;
-                this.localeAppInfo.contact = this.contactCopy;
-            },
+      this.$http.delete(url).then(
+        (res) => {
+          this.delAppDialog.visiable = false;
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('应用删除成功'),
+          });
+          this.$router.push({
+            name: 'myApplications',
+          });
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: res.detail,
+          });
+          this.delAppDialog.visiable = false;
+        },
+      );
+    },
+    onSecretToggle() {
+      if (!this.userFeature.VERIFICATION_CODE) {
+        const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
+        this.$http.post(url, { verification_code: '' }).then(
+          (res) => {
+            this.isAcceptSMSCode = false;
+            this.appSecret = res.app_secret;
+            this.showingSecret = true;
+          },
+          (res) => {
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('验证码错误！'),
+            });
+          },
+        );
+        return;
+      }
+      if (this.appSecret) {
+        this.showingSecret = !this.showingSecret;
+        return;
+      }
+      this.phoneNumerLoading = true;
+      this.sendMsg().then(() => {
+        this.phoneNumerLoading = false;
+        this.isAcceptSMSCode = true;
+      })
+        .catch((_) => {
+          this.isAcceptSMSCode = false;
+          this.appSecretTimer = 0;
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请求失败，请稍候重试'),
+          });
+        });
+    },
 
-            showPluginEdit () {
-                this.pluginIntroDuction = true;
-                this.localeAppInfoPluginTemp = this.localeAppInfo.introduction;
-                this.pluginPlaceholder = this.$t('请输入插件简介');
-                this.$refs.pluginInput.focus();
-            },
+    getAppSecret() {
+      if (this.appSecretVerificationCode === '') {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: this.$t('请输入验证码！'),
+        });
+        return;
+      }
+      const form = {
+        verification_code: this.appSecretVerificationCode,
+      };
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
+      this.$http.post(url, form).then(
+        (res) => {
+          this.isAcceptSMSCode = false;
+          this.appSecret = res.app_secret;
+          this.showingSecret = true;
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('验证码错误！'),
+          });
+        },
+      )
+        .then(() => {
+          this.appSecretVerificationCode = '';
+        });
+    },
 
-            showPluginContactEdit () {
-                this.isDisabled = false;
-                this.$nextTick(() => {
-                    this.$refs.member_selector.focus();
-                });
-            },
+    sendMsg() {
+      // 硬编码，需前后端统一
+      return new Promise((resolve, reject) => {
+        this.resolveLocker = resolve;
+        if (this.appSecretTimer > 0) {
+          this.resolveLocker();
+          return;
+        }
+        const url = `${BACKEND_URL}/api/accounts/verification/generation/`;
 
-            updateContact (curVal) {
-                this.curVal = curVal.length > 0 ? curVal.join(';') : '';
-            },
-
-            async submitPluginBasicInfo (data = '') {
-                let params;
-                if (!data) {
-                    params = {
-                        introduction: this.localeAppInfo.introduction
-                    };
+        this.appSecretTimer = 60;
+        this.$http.post(url, { func: 'GET_APP_SECRET' }).then(
+          (res) => {
+            this.appSecretVerificationCode = '';
+            this.resolveLocker();
+            if (!this.appSecretTimeInterval) {
+              this.appSecretTimeInterval = setInterval(() => {
+                if (this.appSecretTimer > 0) {
+                  this.appSecretTimer--;
                 } else {
-                    params = { ...data };
+                  clearInterval(this.appSecretTimeInterval);
+                  this.appSecretTimeInterval = undefined;
                 }
-                const url = `${BACKEND_URL}//api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
-                this.$http.patch(url, params).then(
-                    res => {
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('插件信息修改成功！')
-                        });
-                        if (data) {
-                            this.contactCopy = res.contact ? res.contact.split(';') : [];
-                        }
-                    },
-                    e => {
-                        if (!data) this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: e.message || e.detail || this.$t('接口异常')
-                        });
-                    }
-                ).finally(() => {
-                    if (data) {
-                        this.isDisabled = true;
-                    } else {
-                        this.pluginIntroDuction = false;
-                        this.pluginPlaceholder = this.$t('无');
-                    }
-                    this.isPluginTypeSelect = true;
-                });
-            },
+              }, 1000);
+            }
+          },
+          (res) => {
+            this.appSecretVerificationCode = '';
+            reject(new Error(this.$t('请求失败，请稍候重试！')));
+          },
+        );
+      });
+    },
 
-            transferChange (sourceList, targetList, targetValueList) {
-                this.AuthorizedUseList = targetValueList;
-            },
-
-            arrayEqual (arr1, arr2) {
-                if (arr1 === arr2) return true;
-                if (arr1.length !== arr2.length) return false;
-                for (let i = 0; i < arr1.length; ++i) {
-                    if (arr1[i] !== arr2[i]) return false;
-                }
-                return true;
-            },
-
-            updateAuthorizationUse () {
-                const url = `${BACKEND_URL}/api/bk_plugins/${this.appCode}/distributors/`;
-                const data = this.AuthorizedUseList;
-                const flag = this.arrayEqual(this.targetPluginList, data);
-                if (!flag) {
-                    this.$http.put(url, {
-                        distributors: data
-                    }).then(
-                        res => {
-                            this.getPluginAll();
-                            this.getAuthorizedUse();
-                            this.$paasMessage({
-                                theme: 'success',
-                                message: this.$t('授权成功！')
-                            });
-                        },
-                        res => {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: res.detail
-                            });
-                        }
-                    );
-                } else {
-                    this.$paasMessage({
-                        theme: 'warning',
-                        message: this.$t('未选择授权使用方')
-                    });
-                }
-            },
-
-            getPluginAll () {
-                const url = `${BACKEND_URL}/api/bk_plugin_distributors/`;
-                this.$http.get(url).then((res) => {
-                    this.pluginList = res;
-                    if (this.PluginDataAllFirst) {
-                        this.restoringPluginList = this.pluginList;
-                        this.PluginDataAllFirst = false;
-                    }
-                }, (e) => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                });
-            },
-
-            getAuthorizedUse () {
-                const url = `${BACKEND_URL}/api/bk_plugins/${this.appCode}/distributors/`;
-                this.$http.get(url).then((res) => {
-                    this.targetPluginList = res.map(item => item.code_name);
-                    if (this.TargetDataFirst) {
-                        this.restoringTargetData = this.targetPluginList;
-                        this.TargetDataFirst = false;
-                    }
-                }, (e) => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                });
-            },
-
-            revivification () {
-                this.pluginList.splice(0, this.pluginList.length, ...this.restoringPluginList);
-                this.targetPluginList.splice(0, this.targetPluginList.length, ...this.restoringTargetData);
-            },
-
-            async submitBasicInfo () {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
-                this.$http.put(url, {
-                    name: this.localeAppInfo.name
-                }).then(
-                    res => {
-                        this.$store.commit('updateCurAppName', this.localeAppInfo.name);
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('信息修改成功！')
-                        });
-                    },
-                    res => {
-                        this.localeAppInfo.name = this.localeAppInfoNameTemp;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: res.detail
-                        });
-                    }
-                ).finally(() => {
-                    this.isEdited = false;
-                });
-            },
-
-            showRemovePrompt () {
-                this.delAppDialog.visiable = true;
-            },
-
-            hookAfterClose () {
-                this.formRemoveConfirmCode = '';
-            },
-
-            submitRemoveApp () {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
-
-                this.$http.delete(url).then(
-                    res => {
-                        this.delAppDialog.visiable = false;
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('应用删除成功')
-                        });
-                        this.$router.push({
-                            name: 'myApplications'
-                        });
-                    },
-                    res => {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: res.detail
-                        });
-                        this.delAppDialog.visiable = false;
-                    }
-                );
-            },
-            onSecretToggle () {
-                if (!this.userFeature.VERIFICATION_CODE) {
-                    const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
-                    this.$http.post(url, { verification_code: '' }).then(
-                        res => {
-                            this.isAcceptSMSCode = false;
-                            this.appSecret = res.app_secret;
-                            this.showingSecret = true;
-                        },
-                        res => {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: this.$t('验证码错误！')
-                            });
-                        }
-                    );
-                    return;
-                }
-                if (this.appSecret) {
-                    this.showingSecret = !this.showingSecret;
-                    return;
-                }
-                this.phoneNumerLoading = true;
-                this.sendMsg().then(() => {
-                    this.phoneNumerLoading = false;
-                    this.isAcceptSMSCode = true;
-                }).catch(_ => {
-                    this.isAcceptSMSCode = false;
-                    this.appSecretTimer = 0;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('请求失败，请稍候重试')
-                    });
-                });
-            },
-
-            getAppSecret () {
-                if (this.appSecretVerificationCode === '') {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: this.$t('请输入验证码！')
-                    });
-                    return;
-                }
-                const form = {
-                    verification_code: this.appSecretVerificationCode
-                };
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
-                this.$http.post(url, form).then(
-                    res => {
-                        this.isAcceptSMSCode = false;
-                        this.appSecret = res.app_secret;
-                        this.showingSecret = true;
-                    },
-                    res => {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('验证码错误！')
-                        });
-                    }
-                ).then(() => {
-                    this.appSecretVerificationCode = '';
-                });
-            },
-
-            sendMsg () {
-                // 硬编码，需前后端统一
-                return new Promise((resolve, reject) => {
-                    this.resolveLocker = resolve;
-                    if (this.appSecretTimer > 0) {
-                        this.resolveLocker();
-                        return;
-                    }
-                    const url = `${BACKEND_URL}/api/accounts/verification/generation/`;
-
-                    this.appSecretTimer = 60;
-                    this.$http.post(url, { func: 'GET_APP_SECRET' }).then(
-                        res => {
-                            this.appSecretVerificationCode = '';
-                            this.resolveLocker();
-                            if (!this.appSecretTimeInterval) {
-                                this.appSecretTimeInterval = setInterval(() => {
-                                    if (this.appSecretTimer > 0) {
-                                        this.appSecretTimer--;
-                                    } else {
-                                        clearInterval(this.appSecretTimeInterval);
-                                        this.appSecretTimeInterval = undefined;
-                                    }
-                                }, 1000);
-                            }
-                        },
-                        res => {
-                            this.appSecretVerificationCode = '';
-                            reject(new Error(this.$t('请求失败，请稍候重试！')));
-                        }
-                    );
-                });
-            },
-
-            /**
+    /**
              * 选择文件后回调处理
              * @param {Object} e 事件
              */
-            async handlerUploadFile (e) {
-                e.preventDefault();
-                const files = e.target.files;
-                const data = new FormData();
-                const fileInfo = files[0];
-                const maxSize = 2 * 1024;
-                // 支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。验证
-                const imgSize = fileInfo.size / 1024;
+    async handlerUploadFile(e) {
+      e.preventDefault();
+      const { files } = e.target;
+      const data = new FormData();
+      const fileInfo = files[0];
+      const maxSize = 2 * 1024;
+      // 支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。验证
+      const imgSize = fileInfo.size / 1024;
 
-                if (imgSize > maxSize) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('文件大小应<2M！')
-                    });
-                    return;
-                }
+      if (imgSize > maxSize) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('文件大小应<2M！'),
+        });
+        return;
+      }
 
-                data.append('logo', files[0]);
-                const params = {
-                    appCode: this.appCode,
-                    data: data
-                };
+      data.append('logo', files[0]);
+      const params = {
+        appCode: this.appCode,
+        data,
+      };
 
-                try {
-                    const res = await this.$store.dispatch('market/uploadAppLogo', params);
-                    this.localeAppInfo.logo = res.logo_url;
-                    this.$emit('current-app-info-updated');
-                    this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
+      try {
+        const res = await this.$store.dispatch('market/uploadAppLogo', params);
+        this.localeAppInfo.logo = res.logo_url;
+        this.$emit('current-app-info-updated');
+        this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
 
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('logo上传成功！')
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
-            async initAppMarketInfo () {
-                try {
-                    const res = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
-                    this.localeAppInfo.logo = res.application.logo_url;
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-            async getProfile () {
-                const url = `${BACKEND_URL}/api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
-                this.$http.get(url).then((res) => {
-                    this.localeAppInfo.introduction = res.introduction;
-                    this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
-                    this.contactCopy = res.contact ? res.contact.split(';') : [];
-                    this.curVal = res.contact;
-                    this.apiGwName = res.api_gw_name;
-                    this.pluginTypeValue = res.tag || '';
-                }, (e) => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }).finally(() => {
-                    this.exportLoading = false;
-                });
-            },
-            async toggleDescSwitch () {
-                if (this.descAppDisabled) return;
-                console.log(this.descAppStatus);
-                let title = this.$t('确认启用应用描述文件');
-                let subTitle = this.$t('启用后，可在 app_desc.yaml 文件中定义环境变量，服务发现等');
-                if (this.descAppStatus) {
-                    title = this.$t('确认禁用应用描述文件');
-                    subTitle = this.$t('禁用后，将不再读取 app_desc.yaml 文件中定义的内容');
-                }
-                this.$bkInfo({
-                    width: 500,
-                    title: title,
-                    subTitle: subTitle,
-                    maskClose: true,
-                    confirmFn: () => {
-                        this.changeDescAppStatus();
-                    }
-                });
-            },
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('logo上传成功！'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
+    async initAppMarketInfo() {
+      try {
+        const res = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
+        this.localeAppInfo.logo = res.application.logo_url;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+    async getProfile() {
+      const url = `${BACKEND_URL}/api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
+      this.$http.get(url).then((res) => {
+        this.localeAppInfo.introduction = res.introduction;
+        this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
+        this.contactCopy = res.contact ? res.contact.split(';') : [];
+        this.curVal = res.contact;
+        this.apiGwName = res.api_gw_name;
+        this.pluginTypeValue = res.tag || '';
+      }, (e) => {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      })
+        .finally(() => {
+          this.exportLoading = false;
+        });
+    },
+    async toggleDescSwitch() {
+      if (this.descAppDisabled) return;
+      console.log(this.descAppStatus);
+      let title = this.$t('确认启用应用描述文件');
+      let subTitle = this.$t('启用后，可在 app_desc.yaml 文件中定义环境变量，服务发现等');
+      if (this.descAppStatus) {
+        title = this.$t('确认禁用应用描述文件');
+        subTitle = this.$t('禁用后，将不再读取 app_desc.yaml 文件中定义的内容');
+      }
+      this.$bkInfo({
+        width: 500,
+        title,
+        subTitle,
+        maskClose: true,
+        confirmFn: () => {
+          this.changeDescAppStatus();
+        },
+      });
+    },
 
-            async changeDescAppStatus () {
-                try {
-                    const res = await this.$store.dispatch('market/changeDescAppStatus', this.appCode);
-                    this.descAppStatus = res.APPLICATION_DESCRIPTION;
-                    this.$store.commit('updateCurDescAppStatus', this.descAppStatus);
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
+    async changeDescAppStatus() {
+      try {
+        const res = await this.$store.dispatch('market/changeDescAppStatus', this.appCode);
+        this.descAppStatus = res.APPLICATION_DESCRIPTION;
+        this.$store.commit('updateCurDescAppStatus', this.descAppStatus);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
 
-            async getPluginTypeList () {
-                try {
-                    const data = await this.$store.dispatch('market/getPluginTypeList');
-                    this.pluginTypeList = data || [];
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
+    async getPluginTypeList() {
+      try {
+        const data = await this.$store.dispatch('market/getPluginTypeList');
+        this.pluginTypeList = data || [];
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
 
-            showPluginSelected () {
-                window.addEventListener('click', this.isCustomActive);
-            },
+    showPluginSelected() {
+      window.addEventListener('click', this.isCustomActive);
+    },
 
-            cancelPluginType () {
-                this.isPluginTypeSelect = true;
-                window.removeEventListener('click', this.isCustomActive);
-            },
-            isCustomActive (ev) {
-                if (!this.isPluginTypeSelect) {
-                    this.isFocus = this.isParent(ev.target, document.querySelector('.plugin-type'));
-                }
-                this.isPluginTypeSelect = false;
-            },
-            isParent (obj, parentObj) {
-                while (obj !== undefined && obj !== null && obj.tagName.toUpperCase() !== 'BODY') {
-                    if (obj === parentObj) {
-                        return true;
-                    }
-                    obj = obj.parentNode;
-                }
-                return false;
-            }
+    cancelPluginType() {
+      this.isPluginTypeSelect = true;
+      window.removeEventListener('click', this.isCustomActive);
+    },
+    isCustomActive(ev) {
+      if (!this.isPluginTypeSelect) {
+        this.isFocus = this.isParent(ev.target, document.querySelector('.plugin-type'));
+      }
+      this.isPluginTypeSelect = false;
+    },
+    isParent(obj, parentObj) {
+      while (obj !== undefined && obj !== null && obj.tagName.toUpperCase() !== 'BODY') {
+        if (obj === parentObj) {
+          return true;
         }
-    };
+        obj = obj.parentNode;
+      }
+      return false;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

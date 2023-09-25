@@ -104,6 +104,7 @@ export const ENV_ENUM = {
   stag: '预发布环境',
 };
 
+export const RESQUOTADATA = ['default', '1C512M', '2C1G', '2C2G', '4C1G', '4C2G'];
 export const PLUGIN_ITSM_APPLY = {
   plugin_id: '插件标识',
   plugin_name: '插件名称',
@@ -114,10 +115,22 @@ export const PLUGIN_ITSM_APPLY = {
   source_version_name: '代码分支',
   category: '分类',
   introduction: '简介',
-  description: '详情描述'
+  description: '详情描述',
 };
 
 export const PLUGIN_ITSM_LADING = {
   title: '标题',
-  creator: '提单人'
+  creator: '提单人',
+};
+
+export const TAG_MAP = {
+  with_version: '{分支/标签}',
+  with_build_time: '构建时间',
+  with_commit_id: 'commitID',
+};
+
+export const DEPLOY_STATUS = {
+  successful: '成功',
+  failed: '失败',
+  interrupted: '中断'
 };

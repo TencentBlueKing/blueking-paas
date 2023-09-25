@@ -360,6 +360,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             mount_instance = mount_slz.save(
                 module_id=module.id,
                 source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+                region=application.region,
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同路径挂载卷已存在"))
@@ -372,6 +373,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if mount_instance.source_type == VolumeSourceType.ConfigMap:
             try:
                 ConfigMapSource.objects.create(
+                    region=application.region,
                     application_id=application.id,
                     module_id=module.id,
                     environment_name=mount_instance.environment_name,

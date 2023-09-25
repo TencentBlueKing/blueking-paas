@@ -38,7 +38,7 @@ def mount(bk_app, bk_module):
         source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
         name="mount-configmap",
         source_type=VolumeSourceType.ConfigMap,
-        region="default",
+        region=bk_app.region,
     )
     ConfigMapSource.objects.update_or_create(
         defaults=dict(application_id=bk_app.id, name=source_config_name, environment_name=MountEnvName.GLOBAL),
@@ -64,7 +64,6 @@ class TestVolumeMountViewSet:
             "mount_path": "/path/",
             "name": "mount-configmap-test",
             "source_type": "ConfigMap",
-            "region": "default",
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
@@ -81,7 +80,6 @@ class TestVolumeMountViewSet:
             "mount_path": "/",
             "name": "mount-configmap-test",
             "source_type": "ConfigMap",
-            "region": "default",
         }
         response = api_client.post(url, request_body)
         assert response.status_code == 400

@@ -149,6 +149,7 @@ class ResQuotaPlanSLZ(serializers.Serializer):
 
 
 class MountSLZ(serializers.ModelSerializer):
+    region = serializers.CharField(read_only=True)
     module_id = serializers.UUIDField(read_only=True)
     source_config = serializers.JSONField(read_only=True)
     created = serializers.DateTimeField(read_only=True)

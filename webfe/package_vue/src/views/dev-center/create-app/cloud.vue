@@ -58,9 +58,7 @@
             v-model="formData.sourceOrigin"
             class="construction-manner"
           >
-            <bk-radio 
-              v-if="curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE
-              :value="'soundCode'">
+            <bk-radio :value="'soundCode'">
               {{ $t('源代码') }}
             </bk-radio>
             <bk-radio :value="'image'">
@@ -449,7 +447,7 @@ export default {
         code: '',   // 应用ID
         url: '',    // 镜像仓库
         clusterName: '', // 集群名称
-        sourceOrigin: 'image',  // 托管方式
+        sourceOrigin: 'soundCode',  // 托管方式
         sourceInitTemplate: '', // 模版来源
         buildDir: '',   // 构建目录
         sourceRepoUrl: '',   // 代码仓库

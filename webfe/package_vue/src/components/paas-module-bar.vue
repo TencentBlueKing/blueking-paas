@@ -22,7 +22,7 @@
         <div
           class="icon-warapper"
           :title="$t('新增模块')"
-          @click="handleToAddModulePage"
+          @click="handleToAddCloudModulePage"
         >
           <i class="paasng-icon paasng-plus"></i>
         </div>
@@ -201,6 +201,17 @@ export default defineComponent({
       dialog.visiable = true;
     };
 
+    // 新增云原生应用模块
+    const handleToAddCloudModulePage = () => {
+      router.push({
+        name: 'appCreateCloudModule',
+        params: {
+          id: props.appCode,
+        },
+      });
+    };
+
+    // 新增普通应用模块
     const handleToAddModulePage = () => {
       router.push({
         name: 'appCreateModule',

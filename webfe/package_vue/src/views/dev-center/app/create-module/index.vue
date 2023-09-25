@@ -95,7 +95,9 @@
                     v-model="structureType"
                     class="construction-manner"
                   >
-                    <bk-radio :value="'soundCode'">
+                    <bk-radio 
+                      v-if="curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE
+                      :value="'sourceCode'">
                       {{ $t('源代码') }}
                     </bk-radio>
                     <bk-radio :value="'mirror'">
@@ -372,7 +374,7 @@
           </div>
 
           <!-- 源码&镜像 部署配置内容 -->
-          <div class="mt20" v-if="structureType === 'soundCode' && curStep === 2">
+          <div class="mt20" v-if="structureType === 'sourceCode' && curStep === 2">
             <collapseContent :title="$t('进程配置')">
               <bk-alert
                 type="info">
@@ -570,7 +572,7 @@ export default {
         placements: ['right'],
       },
       defaultlangName: DEFAULR_LANG_NAME,
-      structureType: 'soundCode',
+      structureType: 'mirror',
       imageCredentialsData: {
         name: '',
         username: '',
@@ -686,7 +688,7 @@ export default {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;   // 仅镜像的云原生
         this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
         this.getImageCredentialList(); // 获取镜像凭证
-      } else if (value === 'soundCode') {
+      } else if (value === 'sourceCode') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
         this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
         this.handleCodeTypeChange(1);

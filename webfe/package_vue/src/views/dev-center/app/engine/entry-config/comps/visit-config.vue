@@ -4,13 +4,25 @@
       class="content"
       style="position: relative;"
     >
-      <div class="table-title">
-        <i class="paasng-icon paasng-info-line info-icon" />
-        {{$t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。')}}
-        <a
-          :href="GLOBAL.DOC.APP_ENTRY_INTRO"
-          target="blank"
-        > {{ $t('详细使用说明') }} </a>
+      <div :class="['table-title', { 'cloud-cls': isCloudNativeApp }]">
+        <div class="tips">
+          <i class="paasng-icon paasng-info-line info-icon" />
+          {{$t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。')}}
+          <a
+            :href="GLOBAL.DOC.APP_ENTRY_INTRO"
+            target="blank"
+          > {{ $t('详细使用说明') }} </a>
+        </div>
+        <div
+          v-if="isIpConsistent"
+          :key="tipIndex"
+          class="ip-tips"
+          :class="isCloudNativeApp ? 'ip-cloud-tips' : 'ip-app-tips'"
+          v-bk-tooltips.bottom-start="configIpTip"
+        >
+          {{ $t('如何配置域名解析') }}
+          <i class="paasng-icon paasng-info-fill"></i>
+        </div>
       </div>
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
@@ -57,9 +69,9 @@
                 <div class="text-container">
                   <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
                   <div
-                    class="ml15 mr15 text"
+                    :class="['ml15', 'mr15', { 'text': configIpTip }]"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item]"
-                    v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</div>
+                    v-bk-tooltips="isIpConsistent ? { disabled: true } : configIpTip">{{ $t(entryEnv[item]) }}</div>
                   <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
                   <span
                     class="btn-container"
@@ -126,7 +138,7 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('操作')" :width="120" fixed="right">
+        <bk-table-column :label="$t('操作')" :width="120" fixed="right" >
           <template slot-scope="{ row, $index }">
             <div v-for="item in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
@@ -293,6 +305,10 @@ export default {
       setModuleLoading: false,
       hostInfo: {},
       curDataId: '',
+      curIngressIpConfigs: [],
+      defaultItem: {},
+      tipIndex: 0,
+      isIpConsistent: true
     };
   },
   computed: {
@@ -304,12 +320,12 @@ export default {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<div>
+        html: `<div style="padding: 10px 0px;">
           <div>域名解析目标IP</div>
           <div
             class="mt10"
             style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px; text-align: center;">
-            ${this.ipConfigInfo.frontend_ingress_ip}
+            ${this.defaultIp}
           </div>
           <div class="mt10 mb10">推荐操作流程: </div>
           <div>1. 点击右侧 “添加” 自定义域名</div>
@@ -328,6 +344,9 @@ export default {
           this.tipShow = true;
         },
       };
+    },
+    defaultIp () {
+      return this.defaultItem.frontend_ingress_ip;
     },
     // 域名规则placeholder
     domainInputPlaceholderText() {
@@ -549,6 +568,11 @@ export default {
       this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/custom_domains/config/`).then(
         (res) => {
           this.curIngressIpConfigs = res;
+          this.defaultItem = res[0] || { frontend_ingress_ip: '暂无ip地址信息' };
+          this.tipIndex++;
+          // 判断ip是否一致
+          const firstIp = this.defaultItem?.frontend_ingress_ip || ''
+          this.isIpConsistent = (res || []).every(item => firstIp === item.frontend_ingress_ip)
         },
         (res) => {
           this.$paasMessage({
@@ -745,10 +769,46 @@ export default {
     .table-title{
       font-size: 12px;
       color: #63656E;
-      margin-bottom: 15px;
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      &.cloud-cls {
+        background: #F5F7FA;
+      }
+
+      .ip-tips {
+        cursor: pointer;
+        font-size: 12px;
+        color: #63656E;
+        i {
+          transform: translateY(0px);
+          font-size: 14px;
+          color: #979BA5;
+        }
+        &.ip-app-tips {
+          i {
+            color: #3a84ff;
+          }
+        }
+        &.ip-cloud-tips {
+          background: #FFFFFF;
+          box-shadow: 0 2px 4px 0 #1919290d;
+          border-radius: 2px;
+          padding: 4px 8px;
+        }
+      }
     }
 
     .table-cls {
+      /deep/ td.is-last {
+        border-right: none;
+      }
+
+      /deep/ th.is-last {
+        border-right: none;
+      }
+
       /deep/ .cell{
         overflow:visible;
         display: flex;

@@ -25,11 +25,11 @@ const directives = {
   copy,
   charts,
   dashed,
-  enClass
+  enClass,
 };
 
 export default {
-  install (Vue) {
+  install(Vue) {
     Object.keys(directives).forEach((key) => {
       Vue.directive(key, directives[key]);
     });

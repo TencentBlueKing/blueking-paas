@@ -1,0 +1,99 @@
+@import '~@/assets/css/mixins/border-active-logo.scss';
+.cloud-app-container{
+    width: 1200px;
+    margin: 0 auto;
+    .form-item-title{
+        color: #313238;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .from-content{
+        background: #FFFFFF;
+        box-shadow: 0 2px 4px 0 #1919290d;
+        border-radius: 2px;
+        padding: 12px 24px;
+    }
+    .form-item-cls{
+        /deep/ .bk-label{
+            width: 100px !important;
+        }
+        .code-depot{
+            .on {
+                border: solid 2px #3A84FF;
+                padding: 0 16px 0 14px;
+                background-color: #fff;
+                color: #3A84FF;
+        
+                @include border-active-logo;
+            }
+        }
+        .code-depot-item{
+            width: 145px;
+            height: 100px;
+            background: #f0f1f5;
+            border-radius: 2px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            img{
+                width: 40px;
+                height: 36px;
+                margin: 12px 0 6px 0;
+            }
+        }
+        .source-control-title{
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+    }
+    .form-input-width{
+        width: 650px;
+    }
+
+    .form-btn{
+        margin-left: 100px;
+        margin-top: 20px;
+    }
+
+    .form-text-append{
+        color: #3a84ff !important;
+        background: #FAFBFD;
+        border-radius: 0 2px 2px 0;
+        cursor: pointer;
+        line-height: 30px;
+    }
+
+    .step-cls{
+        width: 400px;
+        margin: 20px auto 0;
+    }
+    .languages-card{
+        background: #FAFBFD;
+        border-radius: 2px;
+        width: 940px;
+        padding: 20px 20px 0 20px;
+        margin: 20px 0 0 100px;
+        .languages-name{
+            color: #63656E;
+        }
+        .languages-desc{
+            color: #979BA5;
+            font-size: 12px;
+        }
+    }
+}
+.build-info{
+    margin-right: 110px;
+    color: #3A84FF;
+    cursor: pointer;
+}
+.build-text{
+    color: #313238;
+}
+.config-item{
+    position: relative;
+    overflow:hidden; //超出的文本隐藏
+    text-overflow:ellipsis; //溢出用省略号显示
+    white-space:nowrap; //溢出不换行
+ }

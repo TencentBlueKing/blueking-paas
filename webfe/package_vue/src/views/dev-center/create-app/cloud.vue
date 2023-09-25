@@ -58,7 +58,9 @@
             v-model="formData.sourceOrigin"
             class="construction-manner"
           >
-            <bk-radio :value="'soundCode'">
+            <bk-radio 
+              v-if="curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE
+              :value="'soundCode'">
               {{ $t('源代码') }}
             </bk-radio>
             <bk-radio :value="'image'">

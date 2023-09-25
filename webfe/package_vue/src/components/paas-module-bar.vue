@@ -54,7 +54,7 @@
       ></bk-alert>
       <bk-button
         theme="primary"
-        @click="handleToAddModulePage"
+        @click="handleToAddCloudModulePage"
       >
         <i class="paasng-icon paasng-plus-thick add-icon" />
         {{ $t('新增模块') }}
@@ -211,16 +211,6 @@ export default defineComponent({
       });
     };
 
-    // 新增普通应用模块
-    const handleToAddModulePage = () => {
-      router.push({
-        name: 'appCreateModule',
-        params: {
-          id: props.appCode,
-        },
-      });
-    };
-
     const handleMouseEnter = (index) => {
       moduleItemIndex.value = index;
     };
@@ -273,7 +263,7 @@ export default defineComponent({
     return {
       handleTabChange,
       handleModuleAdd,
-      handleToAddModulePage,
+      handleToAddCloudModulePage,
       handleMouseEnter,
       active,
       dialog,

@@ -333,7 +333,7 @@
                         style="margin-right: 60px"
                       >
                         <span slot="title">
-                          {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
+                          {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
                           <a
                             target="_blank"
                             :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
@@ -505,7 +505,7 @@
                         style="margin-right: 60px"
                       >
                         <span slot="title">
-                          {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
+                          {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
                           <a
                             target="_blank"
                             :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"

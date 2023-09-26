@@ -23,6 +23,7 @@ import pytest
 from django_dynamic_fixture import G
 from rest_framework.reverse import reverse
 
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.oauth2.api import BkAppSecret
 from paasng.platform.oauth2.models import BkAppSecretInEnvVar
 
@@ -157,8 +158,17 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, toggle_secret_id, status_code",
-        [(True, 1, 204), (True, 2, 400), (False, 1, 403), (False, 2, 403)],
+        "has_app_permission, is_engineless_app, toggle_secret_id, status_code",
+        [
+            (True, False, 1, 204),
+            (True, False, 2, 400),
+            (False, False, 1, 403),
+            (False, False, 2, 403),
+            (True, True, 1, 204),
+            (True, True, 2, 204),
+            (False, True, 1, 403),
+            (False, True, 2, 403),
+        ],
     )
     def test_toggle_secret_whit_db_default_secret(
         self,
@@ -167,6 +177,7 @@ class TestAppSecret:
         api_client,
         change_default_app_secret,
         has_app_permission,
+        is_engineless_app,
         toggle_secret_id,
         status_code,
     ):
@@ -175,6 +186,9 @@ class TestAppSecret:
         ), mock.patch('paasng.platform.oauth2.api.BkOauthClient.toggle_app_secret', return_value=None), mock.patch(
             "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
+            if is_engineless_app:
+                bk_app.type = ApplicationType.ENGINELESS_APP
+                bk_app.save()
             response = api_client.post(
                 reverse('api.app_secret.secret', args=(bk_app.code, toggle_secret_id)),
                 data={"enabled": False},
@@ -183,17 +197,22 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, delete_secret_id, is_enabled, is_default, status_code",
+        "has_app_permission, is_engineless_app, delete_secret_id, is_enabled, is_default, status_code",
         [
-            (True, 1, True, False, 400),
-            (True, 1, False, True, 400),
-            (False, 1, True, False, 403),
-            (False, 1, False, True, 403),
+            (True, False, 1, True, False, 400),
+            (True, False, 1, False, True, 400),
+            (False, False, 1, True, False, 403),
+            (False, False, 1, False, True, 403),
+            (True, True, 1, True, False, 400),
+            (True, True, 1, False, True, 204),
+            (False, True, 1, True, False, 403),
+            (False, True, 1, False, True, 403),
         ],
     )
     def test_delete_secret(
         self,
         has_app_permission,
+        is_engineless_app,
         bk_app,
         two_enabled_app_secret_list,
         two_disabled_app_secret_list,
@@ -212,6 +231,10 @@ class TestAppSecret:
             default_app_secret = two_enabled_app_secret_list[0]
         else:
             default_app_secret = two_enabled_app_secret_list[1]
+
+        if is_engineless_app:
+            bk_app.type = ApplicationType.ENGINELESS_APP
+            bk_app.save()
 
         with mock.patch(
             'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list', return_value=app_secret_list

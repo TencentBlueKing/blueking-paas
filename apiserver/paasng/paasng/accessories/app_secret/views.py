@@ -39,7 +39,9 @@ from paasng.accounts.constants import FunctionType
 from paasng.accounts.models import make_verifier
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.serializers import VerificationCodeSLZ
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.oauth2.api import BkOauthClient
 from paasng.platform.oauth2.models import BkAppSecretInEnvVar
@@ -50,6 +52,14 @@ logger = logging.getLogger(__name__)
 
 class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def _is_default_secret_in_engine_app(self, application: Application, bk_app_secret_id: str) -> bool:
+        # 外链应用（非引擎应用）不需要将默认密钥写入到环境变量中
+        if application.type == ApplicationType.ENGINELESS_APP:
+            return False
+
+        app_secret_in_config_var = get_app_secret_in_env_var(application.code)
+        return app_secret_in_config_var.id == int(bk_app_secret_id)
 
     @swagger_auto_schema(tags=["鉴权信息"], responses={"200": AppSecretSLZ(many=True)})
     def list(self, request, code):
@@ -83,11 +93,10 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         application = self.get_application()
+        enabled = serializer.data['enabled']
         # 内置密钥不能被禁用
-        if not (enabled := serializer.data['enabled']):
-            app_secret_in_config_var = get_app_secret_in_env_var(application.code)
-            if app_secret_in_config_var.id == int(bk_app_secret_id):
-                raise ValidationError(_("当前密钥为内置密钥，不允许被禁用"))
+        if not enabled and self._is_default_secret_in_engine_app(application, bk_app_secret_id):
+            raise ValidationError(_("当前密钥为内置密钥，不允许被禁用"))
 
         BkOauthClient().toggle_app_secret(code, bk_app_secret_id, enabled)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -108,8 +117,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("密钥状态为：已启用，请先禁用后再删除密钥"))
 
         # 前面检查禁用时候已经保证不是内置密钥了，不过为了防止有意外的情况这里还是多加一步校验
-        app_secret_in_config_var = get_app_secret_in_env_var(application.code)
-        if app_secret_in_config_var.id == int(bk_app_secret_id):
+        if self._is_default_secret_in_engine_app(application, bk_app_secret_id):
             raise ValidationError(_("当前密钥为内置密钥，不允许删除"))
 
         client.del_app_secret(code, bk_app_secret_id)
@@ -146,6 +154,10 @@ class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_default_secret(self, request, code):
         """查询应用的环境变量默认密钥"""
         application = self.get_application()
+        # 外链应用（非引擎应用）不需要将默认密钥写入到环境变量中
+        if application.type == ApplicationType.ENGINELESS_APP:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         app_secret_in_config_var = get_app_secret_in_env_var(application.code).bk_app_secret
 
         return Response(AppSecretInEnvVarSLZ({"app_secret_in_config_var": app_secret_in_config_var}).data)

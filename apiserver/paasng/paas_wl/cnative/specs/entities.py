@@ -16,11 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 from typing import Dict, Optional
 
-from paas_wl.cnative.specs import mounts
+from paas_wl.cnative.specs import addons, mounts
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -31,7 +30,6 @@ from paas_wl.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     BKAPP_NAME_ANNO_KEY,
     BKAPP_REGION_ANNO_KEY,
-    BKPAAS_ADDONS_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -44,7 +42,6 @@ from paas_wl.cnative.specs.constants import (
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
 from paas_wl.platform.applications.models import Build, WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
-from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -91,6 +88,9 @@ class BkAppManifestProcessor:
         manifest.spec.configuration.env = merge_envvars(
             manifest.spec.configuration.env, generate_builtin_configurations(env=self.env)
         )
+
+        # 注入增强服务信息
+        addons.inject_to_app_resource(self.env, manifest)
 
         # 注入挂载信息
         mounts.inject_to_app_resource(self.env, manifest)
@@ -139,11 +139,6 @@ class BkAppManifestProcessor:
                 # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
                 USE_CNB_ANNO_KEY: ("true" if use_cnb else "false"),
             }
-        )
-
-        # inject addons services
-        manifest.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(
-            [svc.name for svc in mixed_service_mgr.list_binded(env.module)]
         )
 
         # inject pa site id when the feature is enabled

@@ -184,89 +184,88 @@
   </div>
 </template>
 
-<script>
-    import uploader from '@/components/uploader';
-    export default {
-        components: {
-            uploader
-        },
-        data () {
-            return {
-                isDataLoading: false,
-                packageData: null,
-                renderUploaderIndex: 0
-            };
-        },
-        computed: {
-            uploadHeader () {
-                return {
-                    name: 'X-CSRFToken',
-                    value: this.GLOBAL.CSRFToken
-                };
-            },
-            uploadUrl () {
-                return `${BACKEND_URL}/api/bkapps/s-mart/`;
-            }
-        },
-        methods: {
-            handleSuccess (res) {
-                this.packageData = res;
-            },
-
-            handleError () {
-                this.packageData = null;
-            },
-
-            back () {
-                this.$router.push({
-                    name: 'myApplications'
-                });
-            },
-
-            handleReUpload () {
-                this.packageData = null;
-            },
-
-            async handleCommit () {
-                this.isDataLoading = true;
-                try {
-                    await this.$store.dispatch('packages/createSmartApp', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId
-                    });
-
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('应用创建成功')
-                    });
-
-                    const objectKey = `SourceInitResult${Math.random().toString(36)}`;
-                    const appCode = this.packageData.app_description.code;
-                    this.$router.push({
-                        name: 'createSmartAppSucc',
-                        params: {
-                            id: appCode
-                        },
-                        query: { objectKey }
-                    });
-
-                    // this.$router.push({
-                    //     name: 'appDeploy',
-                    //     params: {
-                    //         id: this.packageData.app_description.code
-                    //     }
-                    // })
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isDataLoading = false;
-                }
-            }
-        }
+<script>import uploader from '@/components/uploader';
+export default {
+  components: {
+    uploader,
+  },
+  data() {
+    return {
+      isDataLoading: false,
+      packageData: null,
+      renderUploaderIndex: 0,
     };
+  },
+  computed: {
+    uploadHeader() {
+      return {
+        name: 'X-CSRFToken',
+        value: this.GLOBAL.CSRFToken,
+      };
+    },
+    uploadUrl() {
+      return `${BACKEND_URL}/api/bkapps/s-mart/`;
+    },
+  },
+  methods: {
+    handleSuccess(res) {
+      this.packageData = res;
+    },
+
+    handleError() {
+      this.packageData = null;
+    },
+
+    back() {
+      this.$router.push({
+        name: 'myApplications',
+      });
+    },
+
+    handleReUpload() {
+      this.packageData = null;
+    },
+
+    async handleCommit() {
+      this.isDataLoading = true;
+      try {
+        await this.$store.dispatch('packages/createSmartApp', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('应用创建成功'),
+        });
+
+        const objectKey = `SourceInitResult${Math.random().toString(36)}`;
+        const appCode = this.packageData.app_description.code;
+        this.$router.push({
+          name: 'createSmartAppSucc',
+          params: {
+            id: appCode,
+          },
+          query: { objectKey },
+        });
+
+        // this.$router.push({
+        //     name: 'appDeploy',
+        //     params: {
+        //         id: this.packageData.app_description.code
+        //     }
+        // })
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.isDataLoading = false;
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -279,7 +278,7 @@
     }
     .smart-app {
         padding-top: 20px;
-        width: 1000px;
+        width: 1200px;
         margin: auto;
     }
 

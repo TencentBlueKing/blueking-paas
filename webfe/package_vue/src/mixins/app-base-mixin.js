@@ -77,6 +77,10 @@ export default {
       // 统一根据 can_create_extra_modules 字段判断
       return this.$store.state.curAppInfo.web_config.can_create_extra_modules;
     },
+    // 云原生app
+    isCloudNativeApp() {
+      return this.curAppInfo.application.type === 'cloud_native';
+    },
   },
   mounted() {
     this.winHeight = window.innerHeight;

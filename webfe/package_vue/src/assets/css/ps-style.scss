@@ -73,7 +73,7 @@ span.ellipsis {
 .paas-content {
     width: 100%;
     background: #fafafa;
-    padding: 30px 0;
+    padding: 50px 0 10px 0;
 }
 
 .paas-content.white {
@@ -1133,4 +1133,11 @@ span.ellipsis {
     display: block;
     margin-bottom: 15px;
     margin-left: 0;
+}
+
+.bk-dialog-footer {
+    button:nth-of-type(2) {
+        color: #000;
+        margin-left: 10px;
+    }
 }

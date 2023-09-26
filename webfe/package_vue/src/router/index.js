@@ -86,6 +86,10 @@ const cloudAppDeployments = () => import(/* webpackChunkName: 'app-engine' */'@/
   window.showDeployTip(error);
 });
 
+const cloudAppDeploymentsForBuild = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/cloud-deployment/deploy-build').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const cloudAppDeploymentsForProcess = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/cloud-deployment/deploy-process').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -142,6 +146,10 @@ const appEnvVars = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev
   window.showDeployTip(error);
 });
 
+const cloudAppAnalysis = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/analysis/clound-index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appWebAnalysis = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/analysis/web').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -178,6 +186,16 @@ const appCreateModule = () => import(/* webpackChunkName: 'app-create-module' */
   window.showDeployTip(error);
 });
 
+const appCreateCloudModule = () => import(/* webpackChunkName: 'app-create-cloud-module' */'@/views/dev-center/app/create-cloud-module').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+
+// App: basic config
+const appConfigs = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // App: basic config
 const appMembers = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/members').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -187,7 +205,11 @@ const appCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/vi
   window.showDeployTip(error);
 });
 
-const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/image-credential').then(module => module).catch((error) => {
+const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/image-credential').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/module-info').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -199,6 +221,11 @@ const appBasicInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/v
   window.showDeployTip(error);
 });
 const moduleManage = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/module-manage').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+// App: Services
+const appServices = () => import(/* webpackChunkName: 'app-services' */'@/views/dev-center/app/engine/cloud-deployment/app-services').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -282,6 +309,27 @@ const docuManagement = () => import(/* webpackChunkName: 'docu-management' */'@/
   window.showDeployTip(error);
 });
 
+// 云原生部署管理
+const cloudAppDeployManage = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const cloudAppDeployManageStag = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/comps/stag').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const cloudAppDeployManageProd = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/comps/prod').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const cloudAppDeployHistory = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/comps/deploy-history').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const cloudAppEventQuery = () => import(/* webpackChunkName: 'cloud-event-query' */'@/views/dev-center/app/engine/cloud-event-query/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -338,6 +386,11 @@ const router = new Router({
       path: '/developer-center/apps/:id/module/create',
       component: appCreateModule,
       name: 'appCreateModule',
+    },
+    {
+      path: '/developer-center/apps/:id/cloud-module/create',
+      component: appCreateCloudModule,
+      name: 'appCreateCloudModule',
     },
     {
       path: '/developer-center/apps/migration/',
@@ -409,6 +462,80 @@ const router = new Router({
           },
         },
         {
+          path: ':id/app-configs',
+          component: appConfigs,
+          name: 'appConfigs',
+          redirect: {
+            name: 'cloudAppMarket',
+          },
+          children: [
+            {
+              path: 'market',
+              component: appMarket,
+              name: 'cloudAppMarket',
+              meta: {
+                module: 'market',
+              },
+            },
+            {
+              path: 'info',
+              component: appBasicInfo,
+              name: 'appBasicInfo',
+              meta: {
+                module: 'info',
+              },
+            },
+            {
+              path: 'member',
+              component: appMembers,
+              name: 'appMembers',
+              meta: {
+                module: 'member',
+              },
+            },
+          ],
+        },
+        {
+          path: ':id/:moduleId/event-query',
+          component: cloudAppEventQuery,
+          name: 'cloudAppEventQuery',
+        },
+        // 云原生访问统计
+        {
+          path: ':id/cloud-analysis',
+          component: cloudAppAnalysis,
+          name: 'cloudAppAnalysis',
+          redirect: {
+            name: 'cloudAppWebAnalysis',
+          },
+          children: [
+            {
+              path: 'web-analysis',
+              component: appWebAnalysis,
+              name: 'cloudAppWebAnalysis',
+              meta: {
+                module: 'web',
+              },
+            },
+            {
+              path: 'log-analysis',
+              component: appLogAnalysis,
+              name: 'cloudAppLogAnalysis',
+              meta: {
+                module: 'log',
+              },
+            },
+            {
+              path: 'event-analysis',
+              component: appEventAnalysis,
+              name: 'cloudAppEventAnalysis',
+              meta: {
+                module: 'event',
+              },
+            },
+          ],
+        },
+        {
           path: ':id/roles',
           component: appMembers,
           name: 'appRoles',
@@ -467,6 +594,14 @@ const router = new Router({
           },
           children: [
             {
+              path: 'build',
+              component: cloudAppDeploymentsForBuild,
+              name: 'cloudAppDeployForBuild',
+              meta: {
+                module: 'build',
+              },
+            },
+            {
               path: 'process',
               component: cloudAppDeploymentsForProcess,
               name: 'cloudAppDeployForProcess',
@@ -506,6 +641,45 @@ const router = new Router({
                 module: 'resource',
               },
             },
+            {
+              path: 'ticket',
+              component: imageCredential,
+              name: 'imageCredential',
+              meta: {
+                module: 'ticket',
+              },
+            },
+            {
+              path: 'module-info',
+              component: moduleInfo,
+              name: 'moduleInfo',
+              meta: {
+                module: 'module-info',
+              },
+            },
+            {
+              path: 'services',
+              component: appServices,
+              name: 'appServices',
+              meta: {
+                module: 'services',
+              },
+            },
+            {
+              path: 'service/:category_id/service_inner/:service',
+              component: appServicesInstance,
+              name: 'cloudAppServiceInner',
+            },
+            {
+              path: 'service/:category_id/service_inner_shared/:service',
+              component: appServicesSharedInstance,
+              name: 'cloudAppServiceInnerShared',
+            },
+            {
+              path: 'service/:category_id/service_inner_shared/:service',
+              component: appServicesSharedInstance,
+              name: 'cloudAppServiceInnerShared',
+            },
           ],
         },
         {
@@ -523,6 +697,42 @@ const router = new Router({
           component: appProcesses,
           name: 'appProcess',
         },
+        // 云原生部署管理
+        {
+          path: ':id/cloud-deploy-manage',
+          component: cloudAppDeployManage,
+          name: 'cloudAppDeployManage',
+          redirect: {
+            name: 'cloudAppDeployForProcess',
+          },
+          children: [
+            {
+              path: 'stag',
+              component: cloudAppDeployManageStag,
+              name: 'cloudAppDeployManageStag',
+              meta: {
+                module: 'cloudDeployStag',
+              },
+            },
+            {
+              path: 'prod',
+              component: cloudAppDeployManageProd,
+              name: 'cloudAppDeployManageProd',
+              meta: {
+                module: 'cloudDeployProd',
+              },
+            },
+            {
+              path: 'deploy-history',
+              component: cloudAppDeployHistory,
+              name: 'cloudAppDeployHistory',
+              meta: {
+                module: 'cloudAppDeployHistory',
+                history: true,
+              },
+            },
+          ],
+        },
         {
           path: ':id/:moduleId/status',
           component: appStatus,
@@ -537,11 +747,6 @@ const router = new Router({
           path: ':id/cloudapi',
           component: appCloudAPI,
           name: 'appCloudAPI',
-        },
-        {
-          path: ':id/ticket',
-          component: imageCredential,
-          name: 'imageCredential',
         },
         {
           path: ':id/access-portal',

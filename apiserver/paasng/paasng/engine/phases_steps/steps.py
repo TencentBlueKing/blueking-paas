@@ -21,9 +21,10 @@ import re
 from contextlib import suppress
 from typing import TYPE_CHECKING, Dict, List
 
+from paasng.engine.constants import DOCKER_BUILD_STEPSET_NAME, IMAGE_RELEASE_STEPSET_NAME, RuntimeType
 from paasng.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.engine.models.phases import DeployPhaseTypes
-from paasng.engine.models.steps import StepMetaSet
+from paasng.engine.models.steps import DeployStepMeta, StepMetaSet
 from paasng.engine.utils.output import RedisChannelStream
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 
@@ -50,6 +51,92 @@ def get_sorted_steps(phase: 'DeployPhase') -> List['DeployStep']:
     return steps
 
 
+def setup_dockerbuild_stepmeta():
+    """初始化 dockerbuild 的「构建阶段」的构建步骤"""
+    DeployStepMeta.objects.update_or_create(
+        phase=DeployPhaseTypes.BUILD,
+        name="下载构建上下文",
+        defaults={
+            "display_name_zh_cn": "下载构建上下文",
+            "display_name_en": "Download docker build context",
+            "started_patterns": [r"Downloading docker build context\.\.\."],
+            "finished_patterns": [r"\* Docker build context is ready"],
+        },
+    )
+
+    DeployStepMeta.objects.update_or_create(
+        phase=DeployPhaseTypes.BUILD,
+        name="构建镜像",
+        defaults={
+            "display_name_zh_cn": "构建镜像",
+            "display_name_en": "Building image",
+            "started_patterns": [r"Start building\.\.\."],
+            "finished_patterns": [r"\* Build success"],
+        },
+    )
+
+
+def bind_step_to_metaset(metaset: StepMetaSet, phase: DeployPhaseTypes, step_name: str):
+    try:
+        metaset.metas.get(phase=phase, name=step_name)
+    except DeployStepMeta.DoesNotExist:
+        try:
+            step_meta = DeployStepMeta.objects.get(phase=phase, name=step_name)
+        except DeployStepMeta.DoesNotExist:
+            return
+        except DeployStepMeta.MultipleObjectsReturned:
+            step_meta = DeployStepMeta.objects.filter(phase=phase, name=step_name)[0]
+        metaset.metas.add(step_meta)
+
+
+def setup_dockerbuild_metaset() -> StepMetaSet:
+    """初始化 dockerbuild 的构建步骤"""
+    setup_dockerbuild_stepmeta()
+    metaset, created = StepMetaSet.objects.update_or_create(
+        defaults={
+            "is_default": False,
+        },
+        name=DOCKER_BUILD_STEPSET_NAME,
+    )
+    if not created:
+        return metaset
+
+    steps = [
+        (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
+        (DeployPhaseTypes.PREPARATION, "上传仓库代码"),
+        (DeployPhaseTypes.PREPARATION, "配置资源实例"),
+        (DeployPhaseTypes.BUILD, "下载构建上下文"),
+        (DeployPhaseTypes.BUILD, "构建镜像"),
+        (DeployPhaseTypes.RELEASE, "部署应用"),
+        (DeployPhaseTypes.RELEASE, "检测部署结果"),
+    ]
+    for phase, step_name in steps:
+        bind_step_to_metaset(metaset, phase, step_name)
+    return metaset
+
+
+def setup_image_release_metaset() -> StepMetaSet:
+    """初始化 image release 的构建步骤"""
+    metaset, created = StepMetaSet.objects.update_or_create(
+        defaults={
+            "is_default": False,
+        },
+        name=IMAGE_RELEASE_STEPSET_NAME,
+    )
+    if not created:
+        return metaset
+
+    steps = [
+        (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
+        (DeployPhaseTypes.PREPARATION, "配置资源实例"),
+        (DeployPhaseTypes.RELEASE, "部署应用"),
+        (DeployPhaseTypes.RELEASE, "检测部署结果"),
+    ]
+    for phase, step_name in steps:
+        bind_step_to_metaset(metaset, phase, step_name)
+    return metaset
+
+
 class DeployStepPicker:
     """部署步骤选择器"""
 
@@ -57,11 +144,23 @@ class DeployStepPicker:
     def pick(cls, engine_app: 'EngineApp') -> StepMetaSet:
         """通过 engine_app 选择部署阶段应该绑定的步骤"""
         m = ModuleRuntimeManager(engine_app.env.module)
+        if m.build_config.build_method == RuntimeType.DOCKERFILE:
+            try:
+                return StepMetaSet.objects.get(name=DOCKER_BUILD_STEPSET_NAME)
+            except StepMetaSet.DoesNotExist:
+                return setup_dockerbuild_metaset()
+        elif m.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            try:
+                return StepMetaSet.objects.get(name=IMAGE_RELEASE_STEPSET_NAME)
+            except StepMetaSet.DoesNotExist:
+                return setup_image_release_metaset()
+
         # 以 SlugBuilder 匹配为主, 不存在绑定直接走缺省步骤集
         builder = m.get_slug_builder(raise_exception=False)
         if builder is None:
             return cls._get_default_meta_set()
 
+        # TODO 简化模型关系: StepMetaSet 增加 builder_provider 字段, 替代 DeployStepMeta.builder_provider
         meta_sets = StepMetaSet.objects.filter(metas__builder_provider=builder).order_by("-created").distinct()
         if not meta_sets:
             return cls._get_default_meta_set()

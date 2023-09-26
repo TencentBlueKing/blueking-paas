@@ -272,3 +272,26 @@ export function ajaxRequest(params = {}) {
   // 发送请求
   script.src = `${fetchParams.url}?${data}`;
 }
+
+/**
+ * 合并深层次对象
+ *
+ * @param {obj1, obj2} 需要合并的两个对象
+ *
+ * @return {obj1} 合并后的对象
+ */
+export function mergeObjects(obj1, obj2) {
+  // eslint-disable-next-line no-restricted-syntax
+  for (const prop in obj2) {
+    // eslint-disable-next-line no-prototype-builtins
+    if (obj2.hasOwnProperty(prop)) {
+      // eslint-disable-next-line no-prototype-builtins
+      if (obj1.hasOwnProperty(prop) && typeof obj1[prop] === 'object' && typeof obj2[prop] === 'object') {
+        mergeObjects(obj1[prop], obj2[prop]);
+      } else {
+        obj1[prop] = obj2[prop];
+      }
+    }
+  }
+  return obj1;
+}

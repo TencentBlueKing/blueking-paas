@@ -225,7 +225,7 @@
             >
               <span class="bk-icon icon-refresh f18" />
             </bk-button>
-            
+
             <bk-form
               form-type="inline"
               class="fr mr5"
@@ -540,7 +540,7 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components : {
+  components: {
     // dropdown,
     tooltipConfirm,
     numInput,
@@ -798,7 +798,7 @@ export default {
     });
     this.isDateChange = false;
   },
-  beforedestroy() {
+  beforeDestroy() {
     this.closeServerPush();
     this.closeLogDetail();
   },
@@ -1372,7 +1372,7 @@ export default {
 
         this.allProcesses.push(process);
       });
-
+      console.log('this.allProcesses', this.allProcesses);
       return this.allProcesses;
     },
 

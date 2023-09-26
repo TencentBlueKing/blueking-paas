@@ -23,6 +23,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from paasng.platform.applications.models import UserApplicationFilter
+from paasng.publish.entrance.exposer import get_exposed_links
 
 from .backends import BKDocumentSearcher, MixSearcher
 from .serializers import AppSearchResultSLZ, DocSearchResultSLZ, DocumentSearchWordSLZ, DocumentSLZ, UniversalSearchSLZ
@@ -73,6 +74,9 @@ class ApplicationsSearchViewset(ViewSet):
             include_inactive=True, order_by=['name'], search_term=slz.data['keyword']
         )
         paged_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
+        # Set exposed links property, to be used by the serializer later
+        for app in paged_applications:
+            app._deploy_info = get_exposed_links(app)
         return Response(AppSearchResultSLZ({'results': paged_applications, 'count': applications.count()}).data)
 
 

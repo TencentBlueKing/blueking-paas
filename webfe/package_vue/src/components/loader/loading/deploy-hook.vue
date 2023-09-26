@@ -6,9 +6,13 @@
         :speed="loadingConf.speed"
         :primaryColor="loadingConf.primaryColor"
         :secondaryColor="loadingConf.secondaryColor">
-        <rect x="0" y="30" rx="2" ry="2" width="80" height="28" />
-        <rect x="0" y="80" rx="2" ry="2" width="160" height="20" />
-        <rect x="80" y="115" rx="1" ry="1" :width="800" height="150" />
+        <rect x="0" y="0" rx="2" ry="2" width="120" height="24" />
+        <rect x="130" y="0" rx="2" ry="2" width="80" height="24" />
+        <rect x="220" y="0" rx="2" ry="2" width="60" height="24" />
+        <rect x="20" y="44" rx="2" ry="2" width="120" height="20" />
+        <rect x="160" y="44" rx="2" ry="2" width="200" height="20" />
+        <rect x="20" y="84" rx="2" ry="2" width="120" height="20" />
+        <rect x="160" y="84" rx="2" ry="2" width="200" height="20" />
     </content-loader>
 </template>
 <script>

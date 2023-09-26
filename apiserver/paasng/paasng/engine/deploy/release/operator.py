@@ -33,7 +33,7 @@ from paas_wl.platform.applications.models import Build
 from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.utils.basic import get_client_by_app
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.bg_wait.wait_bkapp import AppModelDeployStatusPoller, DeployStatusHandler
+from paasng.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.workflow import DeployStep
@@ -156,8 +156,8 @@ def release_by_k8s_operator(
 
     # TODO: 统计成功 metrics
     # Poll status in background
-    AppModelDeployStatusPoller.start(
-        {'deploy_id': app_model_deploy.id, 'deployment_id': deployment_id}, DeployStatusHandler
+    WaitAppModelReady.start(
+        {'env_id': env.id, 'deploy_id': app_model_deploy.id, 'deployment_id': deployment_id}, DeployStatusHandler
     )
     return str(app_model_deploy.id)
 

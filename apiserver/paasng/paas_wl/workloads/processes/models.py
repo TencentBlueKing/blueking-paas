@@ -27,7 +27,9 @@ from jsonfield import JSONField
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.utils.models import TimestampedModel
-from paas_wl.workloads.processes.constants import ProcessTargetStatus
+from paas_wl.workloads.processes.constants import ProbeType, ProcessTargetStatus
+from paasng.extensions.declarative.deployment.resources import ProbeHandler
+from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models import WlApp
@@ -217,3 +219,23 @@ class ProcessTmpl:
 
     def __post_init__(self):
         self.name = self.name.lower()
+
+
+ProbeHandlerField = make_json_field("ProbeHandlerField", ProbeHandler)
+
+
+class ProcessProbe(models.Model):
+    app = models.ForeignKey('api.App', related_name='process_probe', on_delete=models.CASCADE, db_constraint=False)
+    # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
+    process_type = models.CharField(max_length=255)
+    probe_type = models.CharField(max_length=255, choices=ProbeType.get_django_choices())
+
+    probe_handler = ProbeHandlerField(default=dict, help_text="具体的检测机制配置，例如 httpGet 完整配置")
+    initial_delay_seconds = models.IntegerField(default=0)
+    timeout_seconds = models.PositiveIntegerField(default=1)
+    period_seconds = models.PositiveIntegerField(default=10)
+    success_threshold = models.PositiveIntegerField(default=1)
+    failure_threshold = models.PositiveIntegerField(default=3)
+
+    class Meta:
+        unique_together = ('app', 'process_type', 'probe_type')

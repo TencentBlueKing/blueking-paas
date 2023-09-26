@@ -26,61 +26,61 @@
 </template>
 
 <script>
-    import i18n from '@/language/i18n.js';
-    const DEFAULT_APP_TYPE = [
-        {
-            title: i18n.t('代码仓库'),
-            type: 'default'
-        },
-        {
-            title: i18n.t('蓝鲸可视化开发平台'),
-            type: 'bkLesscode'
-        }
-    ];
+import i18n from '@/language/i18n.js';
+const DEFAULT_APP_TYPE = [
+  {
+    title: i18n.t('代码仓库'),
+    type: 'default',
+  },
+  {
+    title: i18n.t('蓝鲸可视化开发平台'),
+    type: 'bkLesscode',
+  },
+];
 
-    export default {
-        props: {
-            displayLesscode: {
-                type: Boolean,
-                default: false
-            }
-        },
-        data () {
-            return {
-                appType: 'default',
-                typeList: DEFAULT_APP_TYPE
-            };
-        },
-        computed: {
-            userFeature () {
-                return this.$store.state.userFeature;
-            },
-            // 过滤字段控制的smart应用
-            appTypeList () {
-                const list = [...this.typeList];
-                if (this.userFeature.ALLOW_CREATE_SMART_APP) {
-                    list.push({
-                        title: this.$t('S-mart 应用'),
-                        type: 'smart'
-                    });
-                }
-                return list;
-            }
-        },
-        methods: {
-            handleToggleType (type) {
-                this.$emit('on-change-type', type);
-                this.appType = type;
-            }
-        }
+export default {
+  props: {
+    displayLesscode: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      appType: 'default',
+      typeList: DEFAULT_APP_TYPE,
     };
+  },
+  computed: {
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+    // 过滤字段控制的smart应用
+    appTypeList() {
+      const list = [...this.typeList];
+      if (this.userFeature.ALLOW_CREATE_SMART_APP) {
+        list.push({
+          title: this.$t('S-mart 应用'),
+          type: 'smart',
+        });
+      }
+      return list;
+    },
+  },
+  methods: {
+    handleToggleType(type) {
+      this.$emit('on-change-type', type);
+      this.appType = type;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
     @import './default.scss';
     @import '~@/assets/css/mixins/border-active-logo.scss';
     .container {
-        width: 1000px;
+        width: 1200px;
         margin: auto;
         .create-item {
             width: 100%;

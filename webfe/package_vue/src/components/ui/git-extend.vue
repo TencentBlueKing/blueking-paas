@@ -5,39 +5,51 @@
       class="establish-tab"
       style="display: block;"
     >
-      <div
-        id="shorter-loading-animate"
-        class="mt10"
+
+      <bk-form
+        ref="formExtendRef"
+        :model="formData"
+        :rules="rules"
+        :label-width="labelWidth"
       >
-        <div class="form-label">
-          {{ $t('代码仓库') }}
-        </div>
-        <bk-select
-          :key="selected"
-          v-model="selected"
-          :placeholder="$t('请选择')"
-          :clearable="false"
-          :searchable="true"
-          :loading="isLoading"
-          @selected="selectedFun"
+        <bk-form-item
+          :required="true"
+          :property="'url'"
+          :rules="rules.url"
+          error-display-type="normal"
+          ext-cls="form-item-cls"
+          :label="$t('代码仓库')"
         >
-          <bk-option
-            v-for="(option, index) in repoList"
-            :id="option.id"
-            :key="index"
-            :name="option.name"
-          />
-        </bk-select>
-        <label
-          class="pl10"
-          style="font-weight: unset; padding-top: 0px; font-size: 12px"
-        >
-          <a
-            style="cursor: pointer;"
-            @click="fetchMethod"
-          > {{ $t('刷新') }} </a>
-        </label>
-      </div>
+          <div class="flex-row">
+            <bk-select
+              :key="formData.url"
+              v-model="formData.url"
+              :placeholder="$t('请选择')"
+              :clearable="false"
+              :searchable="true"
+              :loading="isLoading"
+              @change="selectedFun"
+              class="form-select-width"
+            >
+              <bk-option
+                v-for="(option, index) in repoList"
+                :id="option.id"
+                :key="index"
+                :name="option.name"
+              />
+            </bk-select>
+            <label
+              class="pl10"
+              style="font-weight: unset; padding-top: 0px; font-size: 12px"
+            >
+              <a
+                style="cursor: pointer;"
+                @click="fetchMethod"
+              > {{ $t('刷新') }} </a>
+            </label>
+          </div>
+        </bk-form-item>
+      </bk-form>
     </div>
     <div
       v-else
@@ -81,83 +93,96 @@
 </template>
 
 <script>
-    export default {
-        props: {
-            isAuth: {
-                type: Boolean,
-                default: false
-            },
-            isLoading: {
-                type: Boolean,
-                default: false
-            },
-            gitControlType: {
-                type: String
-            },
-            alertText: {
-                type: String
-            },
-            authAddress: {
-                type: String
-            },
-            authDocs: {
-                type: String
-            },
-            fetchMethod: {
-                type: Function
-            },
-            repoList: {
-                type: Array
-            },
-            selectedRepoUrl: {
-                type: String
-            }
-        },
-        data () {
-            return {
-                url: this.selectedRepoUrl
-            };
-        },
-        computed: {
-            selected: {
-                get: function () {
-                    return this.url;
-                },
-                set: function (url) {
-                    this.url = url;
-                    this.$emit('update:selectedRepoUrl', url);
-                    this.$emit('change', url);
-                }
-            }
-        },
-        watch: {
-            selectedRepoUrl (value) {
-                this.url = value;
-            }
-        },
-        methods: {
-            auth_associate (authUrl, callback) {
-                this.check_window_close(
-                    window.open(authUrl, this.$t('授权窗口'), 'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'),
-                    300, callback
-                );
-            },
-            async check_window_close (win, sleepTime = 300, callback = () => undefined) {
-                if (win.closed) {
-                    callback();
-                } else {
-                    await new Promise(resolve => {
-                        setTimeout(resolve, sleepTime);
-                    });
-                    this.check_window_close(win, sleepTime, callback);
-                }
-            },
-
-            selectedFun (value) {
-                this.$emit('selected', value);
-            }
-        }
+export default {
+  props: {
+    isAuth: {
+      type: Boolean,
+      default: false,
+    },
+    isLoading: {
+      type: Boolean,
+      default: false,
+    },
+    gitControlType: {
+      type: String,
+    },
+    alertText: {
+      type: String,
+    },
+    authAddress: {
+      type: String,
+    },
+    authDocs: {
+      type: String,
+    },
+    fetchMethod: {
+      type: Function,
+    },
+    repoList: {
+      type: Array,
+    },
+    selectedRepoUrl: {
+      type: String,
+    },
+    labelWidth: {
+      type: Number,
+      default: 100
+    }
+  },
+  data() {
+    return {
+      formData: {
+        url: this.selectedRepoUrl,
+      },
+      rules: {
+        url: [
+          {
+            required: true,
+            message: this.$t('请选择关联的远程仓库'),
+            trigger: 'blur',
+          },
+        ],
+      },
     };
+  },
+  watch: {
+    selectedRepoUrl(value) {
+      this.formData.url = value;
+    },
+  },
+  methods: {
+    auth_associate(authUrl, callback) {
+      this.check_window_close(
+        window.open(authUrl, this.$t('授权窗口'), 'height=600, width=600, top=200, left=400, toolbar=no, menubar=no, scrollbars=no, resizable=no, location=no, status=no'),
+        300, callback,
+      );
+    },
+    async check_window_close(win, sleepTime = 300, callback = () => undefined) {
+      if (win.closed) {
+        callback();
+      } else {
+        await new Promise((resolve) => {
+          setTimeout(resolve, sleepTime);
+        });
+        this.check_window_close(win, sleepTime, callback);
+      }
+    },
+
+    selectedFun(value) {
+      this.$emit('update:selectedRepoUrl', value);
+      this.$emit('change', value);
+    },
+
+    async valid() {
+      try {
+        const validRet = await this.$refs?.formExtendRef?.validate();
+        return validRet;
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -201,5 +226,8 @@
 
     .en-label #shorter-loading-animate .form-label {
         width: 100px;
+    }
+    .form-select-width{
+      width: 650px;
     }
 </style>

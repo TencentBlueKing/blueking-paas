@@ -1190,6 +1190,9 @@ IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', defa
 # 是否在开发者中心应用列表中展示插件应用
 DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 
+# 插件开发中心在蓝盾的项目 ID
+PLUGIN_CENTER_PROJECT_ID = settings.get("PLUGIN_CENTER_PROJECT_ID", default="bkplugins")
+
 # -----------------
 # 蓝鲸监控配置项
 # -----------------

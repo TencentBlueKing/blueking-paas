@@ -66,17 +66,22 @@ class RedisTokenBucketRateLimiter(abc.ABC):
         +------------------------------------------+
         """
         cur_timestamp = int(time.time())
-        self.key = self._gen_key()
+        key = self._gen_key()
 
-        raw = self.redis_db.get(self.key)
-        self.records = msgpack.unpackb(raw) if raw else []
+        raw = self.redis_db.get(key)
+        records = msgpack.unpackb(raw) if raw else []
 
-        if len(self.records) < self.threshold:
-            self._update_bucket(cur_timestamp)
+        if len(records) < self.threshold:
+            records.insert(0, cur_timestamp)
+            self.redis_db.set(key, msgpack.packb(records), ex=self.window_size)
             return True
 
-        if cur_timestamp - self.records[-1] >= self.window_size:
-            self._update_bucket(cur_timestamp, pop=True)
+        while cur_timestamp - records[-1] >= self.window_size:
+            records.pop(-1)
+
+        if len(records) < self.threshold:
+            records.insert(0, cur_timestamp)
+            self.redis_db.set(key, msgpack.packb(records), ex=self.window_size)
             return True
 
         return False
@@ -85,13 +90,6 @@ class RedisTokenBucketRateLimiter(abc.ABC):
     def _gen_key(self) -> str:
         """生成 redis 中的 key"""
         raise NotImplementedError
-
-    def _update_bucket(self, cur_timestamp: int, pop: bool = False):
-        """更新令牌桶数据，若指定 pop 为 True，则会移除最老的时间戳"""
-        self.records.insert(0, cur_timestamp)
-        if pop:
-            self.records.pop()
-        self.redis_db.set(self.key, msgpack.packb(self.records), ex=self.window_size)
 
 
 class UserActionRateLimiter(RedisTokenBucketRateLimiter):

@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 def generate_builder_name(app: 'WlApp') -> str:
     """Get the builder name"""
-    return "slug-builder"
+    return f"slug-builder--{app.scheduler_safe_name}"
 
 
 def generate_slug_path(bp: BuildProcess) -> str:

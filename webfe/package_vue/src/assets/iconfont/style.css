@@ -29,8 +29,14 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-link:before {
 	content: "\e220";
 }
+.paasng-stop-fill:before {
+	content: "\e25f";
+}
 .paasng-info-line:before {
 	content: "\e219";
+}
+.paasng-info-fill:before {
+	content: "\e268";
 }
 .paasng-return-small:before {
 	content: "\e222";
@@ -952,4 +958,70 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-process-2:before {
 	content: "\e24c";
+}
+.paasng-abnormal:before {
+	content: "\e257";
+}
+.paasng-normal:before {
+	content: "\e258";
+}
+.paasng-default:before {
+	content: "\e25e";
+}
+.paasng-success:before {
+	content: "\e25d";
+}
+.paasng-failed:before {
+	content: "\e25c";
+}
+.paasng-waiting:before {
+	content: "\e25b";
+}
+.paasng-warning-2:before {
+	content: "\e25a";
+}
+.paasng-unknown:before {
+	content: "\e259";
+}
+.paasng-lishijilu:before {
+	content: "\e261";
+}
+.paasng-bushu:before {
+	content: "\e24f";
+}
+.paasng-keguance:before {
+	content: "\e250";
+}
+.paasng-peizhi:before {
+	content: "\e252";
+}
+.paasng-jingxiang:before {
+	content: "\e253";
+}
+.paasng-guifan:before {
+	content: "\e255";
+}
+.paasng-anquan:before {
+	content: "\e256";
+}
+.paasng-duliang:before {
+	content: "\e254";
+}
+.paasng-deploy-item-dot:before {
+	content: "\e260";
+}
+.paasng-shouqi:before {
+	content: "\e262";
+}
+.paasng-zhankai:before {
+	content: "\e263";
+}
+.paasng-tableminus:before {
+	content: "\e264";
+}
+.paasng-tableplus:before {
+	content: "\e265";
+}
+.paasng-gitlab-3:before {
+	content: "\e266";
 }

@@ -190,7 +190,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         return Response(ListWatcherRespSLZ(data).data)
 
-    @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)
+    @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=30, threshold=8)
     def watch(self, request, code, module_name, environment):
         """实时监听进程与进程实例变动情况"""
         env = self.get_env_via_path()

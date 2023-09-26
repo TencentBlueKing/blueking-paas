@@ -16,14 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paasng.engine.deploy.bg_wait.base import AbortedDetails, AbortedDetailsPolicy
+
 """Wait processes to match certain conditions"""
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type
 
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, PollingStatus, TaskPoller
-from pydantic import BaseModel, validator
 
 from paas_wl.workloads.processes.processes import PlainProcess
 from paas_wl.workloads.processes.shim import ProcessManager
@@ -274,28 +275,3 @@ class WaitForReleaseAllReady(WaitProcedurePoller):
 
         logger.info(f'All processes has been updated to {self.release_version}, env: {self.env}')
         return PollingResult.done()
-
-
-class AbortedDetailsPolicy(BaseModel):
-    """`policy` field of `AbortedDetails`"""
-
-    reason: str
-    name: str
-    is_interrupted: bool = False
-
-
-class AbortedDetails(BaseModel):
-    """A model for storing aborted details, such as "reason" and other infos
-
-    :param extra_data: reserved field for storing extra info
-    """
-
-    aborted: bool
-    policy: Optional[AbortedDetailsPolicy]
-    extra_data: Optional[Any]
-
-    @validator('policy', always=True)
-    def data_not_empty(cls, v, values, **kwargs):
-        if values.get('aborted') and v is None:
-            raise ValueError('"data" can not be empty when aborted is "True"!')
-        return v

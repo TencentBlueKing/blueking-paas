@@ -105,7 +105,7 @@ export default {
     this.$store.commit('updataEnvEventData', []);
     this.init();
   },
-  beforedestroy() {
+  beforeDestroy() {
     this.$store.commit('updataEnvEventData', ['stag', 'prod']);
   },
   methods: {

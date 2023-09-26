@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
@@ -315,11 +316,24 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         version_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
 
         if not version_service.touch():
-            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足"))
+            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
 
         try:
             alternative_versions = AlternativeVersionSLZ(version_service.list_alternative_versions(), many=True).data
         except Exception:
+            if endpoint == "mirrors.tencent.com":
+                # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag
+                # TODO: 当镜像源迁移完成后移除该代码
+                project_name, slash, repo_name = repo.partition("/")
+                raise error_codes.LIST_TAGS_FAILED.set_data(
+                    {
+                        "tips": _("查看镜像 Tag"),
+                        "url": "https://mirrors.tencent.com/#/private/docker/detail"
+                        "?project_name={project_name}&repo_name={repo_name}".format(
+                            project_name=quote(project_name, safe=""), repo_name=quote(repo_name, safe="")
+                        ),
+                    }
+                )
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
             raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
         return Response(data=alternative_versions)

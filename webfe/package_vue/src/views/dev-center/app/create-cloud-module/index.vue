@@ -95,7 +95,7 @@
                     v-model="structureType"
                     class="construction-manner"
                   >
-                    <bk-radio :value="'soundCode'">
+                    <bk-radio v-if="curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE" :value="'soundCode'">
                       {{ $t('源代码') }}
                     </bk-radio>
                     <bk-radio :value="'mirror'">
@@ -717,6 +717,7 @@ export default {
     },
   },
   async created() {
+    this.structureType = this.curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE ? 'soundCode' : 'mirror';
     await this.fetchRegion();
     await this.getLanguageByRegion();
     await this.getCodeTypes();

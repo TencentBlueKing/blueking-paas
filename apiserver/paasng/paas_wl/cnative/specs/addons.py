@@ -32,20 +32,7 @@ def inject_to_app_resource(env: ModuleEnvironment, app_resource: bk_app.BkAppRes
 
     if app_resource.apiVersion == ApiVersion.V1ALPHA2:
         # inject addons services to specs
-        predefined_addons = app_resource.spec.addons
-        addons = [
-            bk_app.BkAppAddon(
-                name=name,
-            )
-            for name in bound_addon_names
-        ]
-
-        if predefined_addons and ({svc.name for svc in predefined_addons} - set(bound_addon_names)):
-            # manifest 中声明的增强服务列表与在 v3 上启用的列表不一致, 可能是通过 cli 触发部署且需要打开增强服务
-            # 目前的策略是合并 addons 列表
-            # TODO: 讨论是否需要兼容 cli 更新的情况
-            for svc in predefined_addons:
-                if svc.name in bound_addon_names:
-                    continue
-                addons.append(svc)
-        app_resource.spec.addons = addons
+        predefined_addons_names = {svc.name for svc in app_resource.spec.addons}
+        for svc_name in bound_addon_names:
+            if svc_name not in predefined_addons_names:
+                app_resource.spec.addons.append(bk_app.BkAppAddon(name=svc_name))

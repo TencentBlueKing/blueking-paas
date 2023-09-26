@@ -326,6 +326,10 @@ const cloudAppDeployHistory = () => import(/* webpackChunkName: 'cloud-deploy-ma
   window.showDeployTip(error);
 });
 
+const cloudAppEventQuery = () => import(/* webpackChunkName: 'cloud-event-query' */'@/views/dev-center/app/engine/cloud-event-query/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -387,7 +391,7 @@ const router = new Router({
       path: '/developer-center/apps/:id/cloud-module/create',
       component: appCreateCloudModule,
       name: 'appCreateCloudModule',
-    },  
+    },
     {
       path: '/developer-center/apps/migration/',
       name: 'appLegacyMigration',
@@ -490,6 +494,11 @@ const router = new Router({
               },
             },
           ],
+        },
+        {
+          path: ':id/:moduleId/event-query',
+          component: cloudAppEventQuery,
+          name: 'cloudAppEventQuery',
         },
         // 云原生访问统计
         {

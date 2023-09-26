@@ -2297,4 +2297,9 @@ export default {
   返回上一页: 'Go back',
   '请输入镜像Tag，如 latest': 'Please Enter the Image Tag, such as latest',
   源代码: 'Source Code',
+  可观测性: 'Observability',
+  访问统计: 'Statistics',
+  应用配置: 'App Config',
+  模块配置: 'Module Config',
+  事件查询: 'Event Query',
 };

@@ -82,6 +82,7 @@ export default {
         'cloudAppAnalysis',
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
+        'cloudAppEventQuery',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -137,6 +138,8 @@ export default {
           'basicConfig',
           // 访问统计
           'cloudAppAnalysis',
+          // 事件查询
+          'cloudAppEventQuery',
         ],
         developer: [
           // 概览
@@ -187,6 +190,8 @@ export default {
           'basicConfig',
           // 访问统计
           'cloudAppAnalysis',
+          // 事件查询
+          'cloudAppEventQuery',
         ],
         operator: [
           // 权限管理
@@ -405,6 +410,7 @@ export default {
         'cloudAppAnalysis',
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
+        'cloudAppEventQuery',
       ];
 
       this.navTree.forEach((nav) => {

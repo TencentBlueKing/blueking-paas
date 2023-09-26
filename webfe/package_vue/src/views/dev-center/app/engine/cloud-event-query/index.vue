@@ -96,6 +96,7 @@ export default {
         });
         this.eventList = res.events;
       } catch (e) {
+        this.eventList = [];
         if (e.code !== 'GET_DEPLOYMENT_FAILED') {
           this.$paasMessage({
             theme: 'error',

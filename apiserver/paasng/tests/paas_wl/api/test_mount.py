@@ -108,7 +108,8 @@ class TestVolumeMountViewSet:
 
     def test_destroy_404(self, api_client, bk_app, bk_module, mount):
         # 删除不存在的 mount
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id+1}/"
+        non_existent_id = 999999999
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{non_existent_id}/"
         response = api_client.delete(url)
         mount_query = Mount.objects.filter(id=mount.id)
         assert response.status_code == 404

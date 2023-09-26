@@ -164,5 +164,5 @@ class MountSLZ(serializers.ModelSerializer):
         try:
             return obj.source.data
         except ValueError as e:
-            logger.warning("failed to get metric results, for %s", e)
+            logger.warning("failed to get source config data, for %s", e)
             return {}

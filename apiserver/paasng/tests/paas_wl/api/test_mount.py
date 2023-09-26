@@ -50,14 +50,14 @@ def mount(bk_app, bk_module):
 
 class TestVolumeMountViewSet:
     def test_list(self, api_client, bk_app, bk_module, mount):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/"
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         response = api_client.get(url)
         assert response.status_code == 200
         assert len(response.data) == 1
         assert response.data[0]["source_config_data"] == mount.source.data
 
     def test_create(self, api_client, bk_app, bk_module):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/"
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
             "source_config_data": {"configmap_z": "configmap_z_data"},
@@ -73,7 +73,7 @@ class TestVolumeMountViewSet:
 
     def test_create_existing_mount(self, api_client, bk_app, bk_module, mount):
         # 测试创建已创建 mount
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/"
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
             "source_config_data": {"configmap_z": "configmap_z_data"},
@@ -85,11 +85,7 @@ class TestVolumeMountViewSet:
         assert response.status_code == 400
 
     def test_updata(self, api_client, bk_app, bk_module, mount):
-        encode_mount_path = mount.mount_path.replace("/", "$2F")
-        url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/{mount.environment_name}/{encode_mount_path}/"
-        )
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id}/"
         body = MountSLZ(mount).data
         body["source_config_data"] = {"configmap_z": "configmap_z_data_updated"}
         body["name"] = "mount-configmap-updated"
@@ -104,28 +100,16 @@ class TestVolumeMountViewSet:
         assert mount_updated.source.environment_name == "stag"
 
     def test_destroy(self, api_client, bk_app, bk_module, mount):
-        encode_mount_path = mount.mount_path.replace("/", "$2F")
-        url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/{mount.environment_name}/{encode_mount_path}/"
-        )
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id}/"
         response = api_client.delete(url)
-        mount_query = Mount.objects.filter(
-            module_id=mount.module_id, mount_path=mount.mount_path, environment_name=mount.environment_name
-        )
+        mount_query = Mount.objects.filter(id=mount.id)
         assert response.status_code == 204
         assert not mount_query.exists()
 
     def test_destroy_404(self, api_client, bk_app, bk_module, mount):
         # 删除不存在的 mount
-        encode_mount_path = "/path".replace("/", "$2F")
-        url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mount/{mount.environment_name}/{encode_mount_path}/"
-        )
-        mount_query = Mount.objects.filter(
-            module_id=mount.module_id, mount_path=mount.mount_path, environment_name=mount.environment_name
-        )
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id+1}/"
         response = api_client.delete(url)
+        mount_query = Mount.objects.filter(id=mount.id)
         assert response.status_code == 404
         assert mount_query.exists()

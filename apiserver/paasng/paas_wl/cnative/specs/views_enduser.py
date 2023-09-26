@@ -400,12 +400,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @transaction.atomic
     @swagger_auto_schema(responses={200: MountSLZ()}, request_body=MountSLZ)
-    def update(self, request, code, module_name, environment_name, mount_path):
-        module = self.get_module_via_path()
-        decode_mount_path = mount_path.replace("$2F", "/")
-        mount_instance = get_object_or_404(
-            Mount, module_id=module.id, mount_path=decode_mount_path, environment_name=environment_name
-        )
+    def update(self, request, code, module_name, mount_id):
+        mount_instance = get_object_or_404(Mount, id=mount_id)
         config_instance = mount_instance.source
         source_config_data = request.data['source_config_data']
         if not source_config_data:
@@ -422,13 +418,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(data=MountSLZ(updated).data, status=status.HTTP_200_OK)
 
     @transaction.atomic
-    def destroy(self, request, code, module_name, environment_name, mount_path):
-        module = self.get_module_via_path()
-        # TODO mount_path 参数带有 '/'，有没有其他编码方式(包),quote 不行， api_client 会自动将 %2F 解析为 '/'
-        decode_mount_path = mount_path.replace("$2F", "/")
-        mount_instance = get_object_or_404(
-            Mount, module_id=module.id, mount_path=decode_mount_path, environment_name=environment_name
-        )
+    def destroy(self, request, code, module_name, mount_id):
+        mount_instance = get_object_or_404(Mount, id=mount_id)
         config_instance = mount_instance.source
         mount_instance.delete()
         config_instance.delete()

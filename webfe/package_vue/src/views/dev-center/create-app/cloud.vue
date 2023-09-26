@@ -58,7 +58,7 @@
             v-model="formData.sourceOrigin"
             class="construction-manner"
           >
-            <bk-radio :value="'soundCode'">
+            <bk-radio :value="'soundCode'" v-if="userFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE">
               {{ $t('源代码') }}
             </bk-radio>
             <bk-radio :value="'image'">
@@ -428,7 +428,7 @@
 import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
-import collapseContent from '@/views/dev-center/app/create-module/comps/collapse-content.vue';
+import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 import { TAG_MAP } from '@/common/constants.js';
@@ -649,6 +649,9 @@ export default {
       }
       return tagStrList.join('-');
     },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
   },
   watch: {
     'formData.sourceOrigin'(value) {
@@ -687,6 +690,7 @@ export default {
     },
   },
   mounted() {
+    this.formData.sourceOrigin = this.userFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE ? 'soundCode' : 'image';
     this.init();
   },
   methods: {

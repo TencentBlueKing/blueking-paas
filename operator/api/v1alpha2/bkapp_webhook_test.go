@@ -457,7 +457,7 @@ var _ = Describe("test webhook.Validator", func() {
 					{
 						EnvName: "stag",
 						Process: "web",
-						Spec: paasv1alpha2.AutoscalingSpec{
+						AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 							MinReplicas: 2,
 							MaxReplicas: 5,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -523,7 +523,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					EnvName: "invalid-env",
 					Process: "web",
-					Spec: paasv1alpha2.AutoscalingSpec{
+					AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 						MinReplicas: 2,
 						MaxReplicas: 5,
 						Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -538,7 +538,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					EnvName: "stag",
 					Process: "invalid-proc",
-					Spec: paasv1alpha2.AutoscalingSpec{
+					AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 						MinReplicas: 2,
 						MaxReplicas: 5,
 						Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -553,7 +553,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					EnvName: "stag",
 					Process: "web",
-					Spec: paasv1alpha2.AutoscalingSpec{
+					AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 						MinReplicas: 2, MaxReplicas: 5, Policy: "fake",
 					},
 				},

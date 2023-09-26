@@ -83,7 +83,7 @@ var _ = Describe("test conversion back and forth", func() {
 						{
 							EnvName: "stag",
 							Process: "web",
-							Spec: AutoscalingSpec{
+							AutoscalingSpec: AutoscalingSpec{
 								MinReplicas: 1,
 								MaxReplicas: 3,
 								Policy:      ScalingPolicyDefault,
@@ -187,7 +187,7 @@ var _ = Describe("test conversion back and forth", func() {
 						{
 							EnvName: "stag",
 							Process: "web",
-							Spec: paasv1alpha2.AutoscalingSpec{
+							AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 								MinReplicas: 1,
 								MaxReplicas: 3,
 								Policy:      paasv1alpha2.ScalingPolicyDefault,

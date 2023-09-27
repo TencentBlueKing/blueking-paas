@@ -5,6 +5,9 @@
       :active="active"
       :nav-list="panels"
       :module-id="curModuleId"
+      :app-code="appCode"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
       @change="handleTabChange"
     />
     <div class="router-container">
@@ -48,6 +51,7 @@ export default {
         name: curPanel.routeName,
         params: {
           id: this.curAppCode,
+          moduleId: this.curAppModule.name,
         },
       });
     },

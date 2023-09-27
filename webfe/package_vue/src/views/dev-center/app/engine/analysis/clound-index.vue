@@ -3,7 +3,7 @@
     <cloud-app-top-bar
       :title="$t('访问统计')"
       :active="active"
-      :nav-list="panels"
+      :nav-list="curPanels"
       :module-id="curModuleId"
       :app-code="appCode"
       :cur-module="curAppModule"
@@ -28,12 +28,24 @@ export default {
   data() {
     return {
       panels: [
-        { name: 'web', label: this.$t('网站访问统计'), routeName: 'cloudAppWebAnalysis' },
-        { name: 'log', label: this.$t('访问日志统计'), routeName: 'cloudAppLogAnalysis' },
-        { name: 'event', label: this.$t('自定义事件统计'), routeName: 'cloudAppEventAnalysis' },
+        { name: 'web', label: this.$t('网站访问统计'), routeName: 'cloudAppWebAnalysis',  feature: 'PA_WEBSITE_ANALYTICS' },
+        { name: 'log', label: this.$t('访问日志统计'), routeName: 'cloudAppLogAnalysis', feature: 'PA_INGRESS_ANALYTICS' },
+        { name: 'event', label: this.$t('自定义事件统计'), routeName: 'cloudAppEventAnalysis', feature: 'PA_CUSTOM_EVENT_ANALYTICS' },
       ],
       active: 'web',
     };
+  },
+  computed: {
+    curPanels () {
+      return this.panels.filter(item => {
+        const key = item.feature;
+        // 接入 feature flag
+        if (this.curAppInfo.feature.hasOwnProperty(key)) {
+          return this.curAppInfo.feature[key];
+        }
+        return true;
+      });
+    }
   },
   watch: {
     $route: {

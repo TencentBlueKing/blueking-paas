@@ -231,7 +231,11 @@ export default defineComponent({
 .module-manager {
   color: #3a84ff;
   cursor: pointer;
-
+  display: flex;
+  align-items: center;
+  i {
+    transform: translateY(0);
+  }
   .title {
     font-size: 14px;
     color: #3a84ff;

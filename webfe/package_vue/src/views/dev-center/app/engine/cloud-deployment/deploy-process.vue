@@ -707,6 +707,17 @@
                       ext-cls="form-first-cls"
                     >
                       <span class="form-text">{{ extraConfigData[item.value].resQuotaPlan.plan || '--' }}</span>
+                      <span slot="tip">
+                        <i
+                          v-if="quotaPlansFlag"
+                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                        />
+                        <i
+                          v-else
+                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                          v-bk-tooltips="stagTips"
+                        />
+                      </span>
                     </bk-form-item>
 
                     <bk-form-item :label="`${$t('扩缩容方式')}：`">
@@ -1657,6 +1668,7 @@ export default {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
         const data = res.find((e) => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
+        this.resQuotaData = res.map(item => item.name);
         this.extraConfigData[env].limit = data.limit;
         this.extraConfigData[env].request = data.request;
       } catch (e) {

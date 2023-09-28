@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import uuid
+from unittest.mock import patch
 
 import pytest
 
@@ -24,15 +24,24 @@ from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.cnative.specs.models import ConfigMapSource, Mount
+from paas_wl.cnative.specs.mounts import generate_source_config_name
 from paas_wl.cnative.specs.serializers import MountSLZ
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
+@pytest.fixture(autouse=True, scope="session")
+def mock_volume_source_manager():
+    with patch("paas_wl.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
+        "paas_wl.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
+    ):
+        yield
+
+
 @pytest.fixture
 def mount(bk_app, bk_module):
     """创建一个 mount 对象"""
-    source_config_name = f"configmap-{uuid.uuid4()}"
+    source_config_name = generate_source_config_name(app_code=bk_app.code)
     mount, _ = Mount.objects.update_or_create(
         defaults=dict(module_id=bk_module.id, mount_path="/", environment_name=MountEnvName.GLOBAL),
         source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
@@ -48,13 +57,50 @@ def mount(bk_app, bk_module):
     return mount
 
 
+@pytest.fixture
+def mounts(bk_app, bk_module):
+    """创建一个包含 15 个 mount 对象的集合"""
+    mount_list = []
+
+    for i in range(15):
+        source_config_name = generate_source_config_name(app_code=bk_app.code)
+        mount, _ = Mount.objects.update_or_create(
+            defaults=dict(module_id=bk_module.id, mount_path=f"/{i}", environment_name=MountEnvName.GLOBAL),
+            source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+            name=f"mount-configmap-{i}",
+            source_type=VolumeSourceType.ConfigMap,
+            region=bk_app.region,
+        )
+        ConfigMapSource.objects.update_or_create(
+            defaults=dict(application_id=bk_app.id, name=source_config_name, environment_name=MountEnvName.GLOBAL),
+            data={"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"},
+            module_id=bk_module.id,
+        )
+        mount_list.append(mount)
+    return mount_list
+
+
 class TestVolumeMountViewSet:
-    def test_list(self, api_client, bk_app, bk_module, mount):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+    def test_list(self, api_client, bk_app, bk_module, mounts):
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules"
+            f"/{bk_module.name}/mres/volume_mounts/?limit=10&offset=0"
+        )
         response = api_client.get(url)
         assert response.status_code == 200
-        assert len(response.data) == 1
-        assert response.data[0]["source_config_data"] == mount.source.data
+        assert response.data["count"] == 15
+        assert len(response.data["results"]) == 10
+
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules"
+            f"/{bk_module.name}/mres/volume_mounts/?limit=10&offset=0&environment_name=stag&source_type=ConfigMap"
+        )
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert response.data["count"] == 0
+        assert len(response.data["results"]) == 0
 
     def test_create(self, api_client, bk_app, bk_module):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
@@ -71,17 +117,47 @@ class TestVolumeMountViewSet:
         assert mount
         assert mount.source.data == {"configmap_z": "configmap_z_data"}
 
-    def test_create_existing_mount(self, api_client, bk_app, bk_module, mount):
+    @pytest.mark.parametrize(
+        "request_body_error",
+        [
+            {
+                # 创建相同 unique_together = ('module_id', 'mount_path', 'environment_name') 的 Mount
+                "environment_name": "_global_",
+                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "mount_path": "/",
+                "name": "mount-configmap-test",
+                "source_type": "ConfigMap",
+            },
+            {
+                # 创建重命 Mount
+                "environment_name": "_global_",
+                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "mount_path": "/path",
+                "name": "mount-configmap",
+                "source_type": "ConfigMap",
+            },
+            {
+                # 创建错误挂载路径的 Mount
+                "environment_name": "_global_",
+                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "mount_path": "path/",
+                "name": "mount-configmap-test",
+                "source_type": "ConfigMap",
+            },
+            {
+                # 创建空挂载内容的 Mount
+                "environment_name": "_global_",
+                "source_config_data": {},
+                "mount_path": "/path",
+                "name": "mount-configmap-test",
+                "source_type": "ConfigMap",
+            },
+        ],
+    )
+    def test_create_error(self, api_client, bk_app, bk_module, mount, request_body_error):
         # 测试创建已创建 mount
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
-        request_body = {
-            "environment_name": "_global_",
-            "source_config_data": {"configmap_z": "configmap_z_data"},
-            "mount_path": "/",
-            "name": "mount-configmap-test",
-            "source_type": "ConfigMap",
-        }
-        response = api_client.post(url, request_body)
+        response = api_client.post(url, request_body_error)
         assert response.status_code == 400
 
     def test_updata(self, api_client, bk_app, bk_module, mount):
@@ -94,8 +170,9 @@ class TestVolumeMountViewSet:
         response = api_client.put(url, body)
 
         mount_updated = Mount.objects.get(pk=mount.pk)
+
         assert response.status_code == 200
-        assert mount_updated.name == "mount-configmap-updated"
+        assert mount_updated.name == mount.name
         assert mount_updated.source.data == {"configmap_z": "configmap_z_data_updated"}
         assert mount_updated.source.environment_name == "stag"
 
@@ -106,10 +183,12 @@ class TestVolumeMountViewSet:
         assert response.status_code == 204
         assert not mount_query.exists()
 
-    def test_destroy_404(self, api_client, bk_app, bk_module, mount):
+    def test_destroy_error(self, api_client, bk_app, bk_module, mount):
         # 删除不存在的 mount
         non_existent_id = 999999999
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{non_existent_id}/"
+        url = (
+            "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{non_existent_id}/"
+        )
         response = api_client.delete(url)
         mount_query = Mount.objects.filter(id=mount.id)
         assert response.status_code == 404

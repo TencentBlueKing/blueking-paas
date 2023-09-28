@@ -17,9 +17,12 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+import re
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+
+from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, Mount
@@ -148,21 +151,81 @@ class ResQuotaPlanSLZ(serializers.Serializer):
     limit = ResourceQuotaSLZ(help_text="资源限制")
 
 
+class BaseMountSLZ(serializers.ModelSerializer):
+    def validate_mount_path(self, value):
+        """校验 mount_path，需不为空，符合 / 开头，后跟任意数量的字符，数字，连字符，下划线，点或正斜杠"""
+        if not value:
+            raise serializers.ValidationError(_("挂载卷路径不能为空"))
+        # 检查 mount_path 是否符合路径规则（以正斜杠开头，后跟任意数量的字符，数字，连字符，下划线，点或正斜杠）
+        if not re.match(r'^(/[a-zA-Z0-9-_./]*)$', value):
+            raise serializers.ValidationError(_("挂载目录必须是以正斜杠开头的有效路径"))
+
+        return value
+
+
+class CreateMountSLZ(BaseMountSLZ):
+    class Meta:
+        model = Mount
+        fields = ('environment_name', 'name', 'mount_path', 'source_type')
+
+    def validate_name(self, value):
+        """校验 name，需不为空，符合 2-30 字符的小写字母、数字、连字符(-)，以小写字母开头，且不可重复"""
+        if not value:
+            raise serializers.ValidationError(_("挂载卷名称不能为空"))
+        # 检查 name 是否符合 2-30 字符的小写字母、数字、连字符(-），以小写字母开头
+        if not re.match(r'^[a-z][a-z0-9-]{1,29}$', value):
+            raise serializers.ValidationError(_("挂载卷名称长度必须为2-30个字符，包含小写字母、数字、连字符，并以小写字母开头"))
+
+        # 检查当前 module_id 下是否存在具有相同 name 的记录
+        module_id = self.context['module_id']
+        if Mount.objects.filter(module_id=module_id, name=value).exists():
+            raise serializers.ValidationError(_("该模块中已存在同名挂载卷"))
+
+        return value
+
+
+class UpdateMountSLZ(BaseMountSLZ):
+    class Meta:
+        model = Mount
+        fields = ('environment_name', 'mount_path', 'source_type')
+
+
 class MountSLZ(serializers.ModelSerializer):
-    region = serializers.CharField(read_only=True)
-    module_id = serializers.UUIDField(read_only=True)
-    source_config = serializers.JSONField(read_only=True)
-    created = serializers.DateTimeField(read_only=True)
-    updated = serializers.DateTimeField(read_only=True)
-    source_config_data = serializers.SerializerMethodField(read_only=True)
+    source_config_data = serializers.SerializerMethodField(label=_('Mount 挂载文件内容'))
 
     class Meta:
         model = Mount
-        fields = "__all__"
+        fields = (
+            'id',
+            'region',
+            'created',
+            'updated',
+            'module_id',
+            'environment_name',
+            'name',
+            'mount_path',
+            'source_type',
+            'source_config',
+            'source_config_data',
+        )
 
     def get_source_config_data(self, obj):
         try:
             return obj.source.data
         except ValueError as e:
             logger.warning("failed to get source config data, for %s", e)
-            return {}
+            raise e
+
+
+class QueryMountsSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)
+
+
+class ConfigMapDataSLZ(serializers.Serializer):
+    source_config_data = serializers.JSONField(label=_('挂载卷内容'))
+
+    def validate_source_config_data(self, value):
+        if not value:
+            raise serializers.ValidationError(_("挂载卷内容不能为空"))
+        return value

@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import uuid
+
 from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.cnative.specs.crd import bk_app
 from paas_wl.cnative.specs.models import BkAppResource, Mount
@@ -54,3 +56,13 @@ class VolumeSourceManager:
     def _upsert(self, mount: Mount):
         if mount.source_type == VolumeSourceType.ConfigMap:
             configmap_kmodel.upsert(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.data))
+
+    def delete_source_config(self, mount: Mount):
+        if mount.source_type == VolumeSourceType.ConfigMap:
+            configmap_kmodel.delete(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.data))
+
+
+def generate_source_config_name(app_code: str) -> str:
+    """Generate name of the Mount source_config"""
+
+    return f'{app_code}-{uuid.uuid4()}'

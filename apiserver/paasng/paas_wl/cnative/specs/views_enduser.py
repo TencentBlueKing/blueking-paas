@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import uuid
 from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
@@ -37,7 +36,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan, VolumeSourceType
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, MountEnvName, ResQuotaPlan, VolumeSourceType
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.cnative.specs.crd.bk_app import VolumeSource
@@ -53,19 +52,24 @@ from paas_wl.cnative.specs.models import (
     to_error_string,
     update_app_resource,
 )
+from paas_wl.cnative.specs.mounts import VolumeSourceManager, generate_source_config_name
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
+    ConfigMapDataSLZ,
     CreateDeploySerializer,
+    CreateMountSLZ,
     DeployDetailSerializer,
     DeployPrepResultSLZ,
     DeploySerializer,
     MountSLZ,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    QueryMountsSLZ,
     ResQuotaPlanSLZ,
+    UpdateMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
@@ -352,76 +356,135 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @property
+    def paginator(self):
+        if not hasattr(self, '_paginator'):
+            from rest_framework.pagination import LimitOffsetPagination
+
+            self._paginator = LimitOffsetPagination()
+            self._paginator.default_limit = 12
+        return self._paginator
+
     @swagger_auto_schema(responses={200: MountSLZ(many=True)})
     def list(self, request, code, module_name):
-        """list all volume mount"""
+        """
+        查询挂载卷
+        -  /api/bkapps/applications/ {code}/modules/{module_name}/mres/volume_mount/
+        - get param: environment_name, 部署的环境, string
+        - get param: source_type, 挂载卷类型, string
+        - get param: limit, 结果数量, integer
+        - get param: offset, 翻页跳过数量, integer
+        """
         module = self.get_module_via_path()
-        instances = Mount.objects.filter(module_id=module.id).order_by("created")
 
-        return Response(data=MountSLZ(instances, many=True).data)
+        slz = QueryMountsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.data
+
+        mounts = Mount.objects.filter(module_id=module.id).order_by("-created")
+
+        # Filter by environment_name if provided
+        environment_name = params.get('environment_name')
+        if environment_name:
+            mounts = mounts.filter(environment_name=environment_name)
+        # Filter by source_type if provided
+        source_type = params.get('source_type')
+        if environment_name:
+            mounts = mounts.filter(source_type=source_type)
+
+        # Paginator
+        page = self.paginator.paginate_queryset(mounts, self.request, view=self)
+        return self.paginator.get_paginated_response(MountSLZ(page, many=True).data)
 
     @transaction.atomic
-    @swagger_auto_schema(responses={201: MountSLZ()}, request_body=MountSLZ)
+    @swagger_auto_schema(responses={201: MountSLZ()}, request_body=CreateMountSLZ)
     def create(self, request, code, module_name):
         application = self.get_application()
         module = self.get_module_via_path()
-        mount_slz = MountSLZ(data=request.data)
+        mount_slz = CreateMountSLZ(data=request.data, context={'module_id': module.id})
         mount_slz.is_valid(raise_exception=True)
-        # 生成 source_config name，需具有唯一性
-        # TODO source_config_name 命名规则需要优化
-        source_config_name = f"configmap-{uuid.uuid4()}"
-        try:
-            mount_instance = mount_slz.save(
-                module_id=module.id,
-                source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
-                region=application.region,
-            )
-        except IntegrityError:
-            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同路径挂载卷已存在"))
-        source_config_data = request.data['source_config_data']
-        if not source_config_data:
-            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("挂载卷数据不可为空"))
 
-        # 根据 VolumeSourceType 类型，创建不同的 VolumeSource
-        # TODO source_config 具体资源的生成应该抽象到 Mount 对象中，根据不同的资源类型创建不同的资源对象
-        if mount_instance.source_type == VolumeSourceType.ConfigMap:
+        if mount_slz.validated_data['source_type'] == VolumeSourceType.ConfigMap.value:
+            # 生成 source_config name，具有唯一性
+            source_config_name = generate_source_config_name(app_code=code)
             try:
-                ConfigMapSource.objects.create(
-                    region=application.region,
-                    application_id=application.id,
+                mount_instance = mount_slz.save(
                     module_id=module.id,
-                    environment_name=mount_instance.environment_name,
-                    name=source_config_name,
-                    data=source_config_data,
+                    source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+                    region=application.region,
                 )
             except IntegrityError:
-                raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同名挂载资源已存在"))
-        return Response(data=MountSLZ(mount_instance).data, status=status.HTTP_201_CREATED)
+                raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同路径挂载卷已存在"))
+
+            configmap_slz = ConfigMapDataSLZ(data=request.data)
+            configmap_slz.is_valid(raise_exception=True)
+            source_config_data = configmap_slz.validated_data["source_config_data"]
+
+            # 根据 VolumeSourceType 类型，创建不同的 VolumeSource
+            # TODO source_config 具体资源的生成应该抽象到 Mount 对象中，根据不同的资源类型创建不同的资源对象
+            if mount_instance.source_type == VolumeSourceType.ConfigMap:
+                try:
+                    ConfigMapSource.objects.create(
+                        region=application.region,
+                        application_id=application.id,
+                        module_id=module.id,
+                        environment_name=mount_instance.environment_name,
+                        name=source_config_name,
+                        data=source_config_data,
+                    )
+                except IntegrityError:
+                    raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同名挂载资源已存在"))
+
+            return Response(data=MountSLZ(mount_instance).data, status=status.HTTP_201_CREATED)
+        else:
+            # 检验 source_type 不支持，理论上不会出现，创建 Mount 时，已经校验过source_type
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("不支持的挂载卷类型"))
 
     @transaction.atomic
     @swagger_auto_schema(responses={200: MountSLZ()}, request_body=MountSLZ)
     def update(self, request, code, module_name, mount_id):
         mount_instance = get_object_or_404(Mount, id=mount_id)
         config_instance = mount_instance.source
-        source_config_data = request.data['source_config_data']
-        if not source_config_data:
-            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("挂载卷数据不可为空"))
 
-        slz = MountSLZ(data=request.data, instance=mount_instance)
+        slz = UpdateMountSLZ(data=request.data, instance=mount_instance)
         slz.is_valid(raise_exception=True)
         updated = slz.save()
 
+        configmap_slz = ConfigMapDataSLZ(data=request.data)
+        configmap_slz.is_valid(raise_exception=True)
+        source_config_data = configmap_slz.validated_data["source_config_data"]
+
         config_instance.data = source_config_data
-        config_instance.environment_name = request.data['environment_name']
+        config_instance.environment_name = slz.validated_data['environment_name']
         config_instance.save(update_fields=["data", "updated", "environment_name"])
+
+        module = self.get_module_via_path()
+        # 需要删除对应的 k8s volume 资源
+        if updated.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
+            opposite_env_name = (
+                MountEnvName.STAG.value
+                if updated.environment_name == MountEnvName.PROD.value
+                else MountEnvName.PROD.value
+            )
+            env = module.get_envs(environment=opposite_env_name)
+            volume_source_manager = VolumeSourceManager(env)
+            if volume_source_manager:
+                volume_source_manager.delete_source_config(mount_instance)
 
         return Response(data=MountSLZ(updated).data, status=status.HTTP_200_OK)
 
     @transaction.atomic
     def destroy(self, request, code, module_name, mount_id):
+        module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id)
-        config_instance = mount_instance.source
+
+        # 需要删除对应的 k8s volume 资源
+        for env in module.get_envs():
+            VolumeSourceManager(env).delete_source_config(mount_instance)
+
         mount_instance.delete()
-        config_instance.delete()
+        mount_instance.source.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

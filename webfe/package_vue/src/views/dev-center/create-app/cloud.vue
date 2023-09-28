@@ -972,9 +972,17 @@ export default {
           data: params,
         });
 
+        const objectKey = `CloundSourceInitResult${Math.random().toString(36)}`;
+        if (res.source_init_result) {
+          localStorage.setItem(objectKey, JSON.stringify(res.source_init_result.extra_info));
+        }
+
         const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,
+          query: {
+            objectKey
+          },
         });
       } catch (e) {
         this.$paasMessage({

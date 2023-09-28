@@ -75,7 +75,7 @@ def mounts(bk_app, bk_module):
 @pytest.fixture(autouse=True, scope="class")
 def mock_volume_source_manager():
     with patch("paas_wl.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
-            "paas_wl.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
+        "paas_wl.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
     ):
         yield
 
@@ -155,7 +155,6 @@ class TestVolumeMountViewSet:
         ],
     )
     def test_create_error(self, api_client, bk_app, bk_module, mount, request_body_error):
-        # 测试创建已创建 mount
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         response = api_client.post(url, request_body_error)
         assert response.status_code == 400

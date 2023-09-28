@@ -399,7 +399,7 @@ export default {
           },
           {
             regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
-            message: this.$t('地址格式不正确'),
+            message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },
         ],

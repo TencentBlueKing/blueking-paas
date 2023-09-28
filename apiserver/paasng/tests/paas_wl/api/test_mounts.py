@@ -30,14 +30,6 @@ from paas_wl.cnative.specs.serializers import MountSLZ
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
-@pytest.fixture(autouse=True, scope="session")
-def mock_volume_source_manager():
-    with patch("paas_wl.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
-        "paas_wl.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
-    ):
-        yield
-
-
 @pytest.fixture
 def mount(bk_app, bk_module):
     """创建一个 mount 对象"""
@@ -78,6 +70,14 @@ def mounts(bk_app, bk_module):
         )
         mount_list.append(mount)
     return mount_list
+
+
+@pytest.fixture(autouse=True, scope="class")
+def mock_volume_source_manager():
+    with patch("paas_wl.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
+            "paas_wl.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
+    ):
+        yield
 
 
 class TestVolumeMountViewSet:

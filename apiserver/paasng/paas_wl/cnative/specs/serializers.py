@@ -23,6 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.cnative.specs.exceptions import GetSourceConfigDataError
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, Mount
@@ -213,8 +214,7 @@ class MountSLZ(serializers.ModelSerializer):
         try:
             return obj.source.data
         except ValueError as e:
-            logger.warning("failed to get source config data, for %s", e)
-            raise e
+            raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
 
 
 class QueryMountsSLZ(serializers.Serializer):

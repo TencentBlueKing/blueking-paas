@@ -52,6 +52,8 @@ class ErrorCodes:
     GET_DEPLOYMENT_FAILED = ErrorCode(_("Failed to find deployed version"))
     LIST_TAGS_FAILED = ErrorCode(_("Failed to list tag from image repository"))
     CREATE_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to create volume mount"))
+    LIST_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to list volume mount"))
+    UPDATE_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to update volume mount"))
 
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode(_("Failed to create credentials"))

@@ -42,7 +42,7 @@ from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceS
 from paas_wl.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
-from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.cnative.specs.image_parser import ImageParser
 from paas_wl.cnative.specs.models import (
     AppModelDeploy,
@@ -396,7 +396,12 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # Paginator
         page = self.paginator.paginate_queryset(mounts, self.request, view=self)
-        return self.paginator.get_paginated_response(MountSLZ(page, many=True).data)
+        try:
+            slz = MountSLZ(page, many=True)
+        except GetSourceConfigDataError as e:
+            raise error_codes.LIST_VOLUME_MOUNT_FAILED.f(_(e))
+
+        return self.paginator.get_paginated_response(slz.data)
 
     @transaction.atomic
     @swagger_auto_schema(responses={201: MountSLZ()}, request_body=CreateMountSLZ)
@@ -436,8 +441,11 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                     )
                 except IntegrityError:
                     raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同名挂载资源已存在"))
-
-            return Response(data=MountSLZ(mount_instance).data, status=status.HTTP_201_CREATED)
+            try:
+                slz = MountSLZ(mount_instance)
+            except GetSourceConfigDataError as e:
+                raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_(e))
+            return Response(data=slz.data, status=status.HTTP_201_CREATED)
         else:
             # 检验 source_type 不支持，理论上不会出现，创建 Mount 时，已经校验过source_type
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("不支持的挂载卷类型"))
@@ -473,7 +481,11 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             if volume_source_manager:
                 volume_source_manager.delete_source_config(mount_instance)
 
-        return Response(data=MountSLZ(updated).data, status=status.HTTP_200_OK)
+        try:
+            slz = MountSLZ(updated)
+        except GetSourceConfigDataError as e:
+            raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_(e))
+        return Response(data=slz.data, status=status.HTTP_200_OK)
 
     @transaction.atomic
     def destroy(self, request, code, module_name, mount_id):

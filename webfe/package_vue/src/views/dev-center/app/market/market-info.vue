@@ -105,9 +105,10 @@
           class="address-info-btn"
           theme="primary"
           text
+          :disabled="fillInfo || deployInfo"
           @click="handlerAddress"
         >
-          {{ isEditAddress ? $t( '确定') : $t( '编辑') }}
+          {{ isEditAddress ? $t('确定') : $t('编辑') }}
         </bk-button>
         <bk-button
           v-if="isEditAddress"

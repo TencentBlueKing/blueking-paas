@@ -60,11 +60,11 @@ from paasng.dev_resources.sourcectl.svn.client import RepoProvider
 from paasng.dev_resources.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.core.region import RegionType
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.region.states import RegionType
 from paasng.utils.error_codes import error_codes
 from paasng.utils.notifier import get_notification_backend
 

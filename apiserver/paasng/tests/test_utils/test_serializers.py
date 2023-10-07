@@ -23,7 +23,7 @@ from blue_krill.contextlib import nullcontext
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.utils.serializers import Base64FileField
+from paasng.utils.serializers import Base64FileField, ConfigVarReservedKeyValidator
 
 
 class Base64FileFieldSLZ(serializers.Serializer):
@@ -61,3 +61,21 @@ class TestBase64FileField:
         slz = Base64FileFieldSLZ({"file": data})
         with ctx as expected:
             assert slz.data == {"file": expected}
+
+
+@pytest.mark.parametrize(
+    "protected_key_list, protected_prefix_list, key, expected",
+    [
+        ([], [], "foo", nullcontext()),
+        (["foo"], [], "foo", pytest.raises(ValidationError)),
+        (["foo_"], [], "foo", nullcontext()),
+        (["f00"], [], "foo", nullcontext()),
+        ([], ["f"], "foo", pytest.raises(ValidationError)),
+        ([], ["foo"], "foo", pytest.raises(ValidationError)),
+        ([], ["foo_"], "foo", nullcontext()),
+    ],
+)
+def test_config_var_reserved_key_validator(protected_key_list, protected_prefix_list, key, expected):
+    v = ConfigVarReservedKeyValidator(protected_key_list, protected_prefix_list)
+    with expected:
+        v(key)

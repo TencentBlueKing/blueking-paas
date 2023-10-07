@@ -22,7 +22,7 @@
         <div
           class="icon-warapper"
           :title="$t('新增模块')"
-          @click="handleToAddModulePage"
+          @click="handleToAddCloudModulePage"
         >
           <i class="paasng-icon paasng-plus"></i>
         </div>
@@ -54,7 +54,7 @@
       ></bk-alert>
       <bk-button
         theme="primary"
-        @click="handleToAddModulePage"
+        @click="handleToAddCloudModulePage"
       >
         <i class="paasng-icon paasng-plus-thick add-icon" />
         {{ $t('新增模块') }}
@@ -128,7 +128,7 @@ export default defineComponent({
   name: 'EditorStatus',
   props: {
     appCode: {
-      type: String | Number,
+      type: String || Number,
     },
     title: {
       type: String,
@@ -201,9 +201,10 @@ export default defineComponent({
       dialog.visiable = true;
     };
 
-    const handleToAddModulePage = () => {
+    // 新增云原生应用模块
+    const handleToAddCloudModulePage = () => {
       router.push({
-        name: 'appCreateModule',
+        name: 'appCreateCloudModule',
         params: {
           id: props.appCode,
         },
@@ -262,7 +263,7 @@ export default defineComponent({
     return {
       handleTabChange,
       handleModuleAdd,
-      handleToAddModulePage,
+      handleToAddCloudModulePage,
       handleMouseEnter,
       active,
       dialog,

@@ -301,7 +301,7 @@ type AutoscalingOverlay struct {
 	// Process is the name of process
 	Process string `json:"process"`
 	// Spec is bkapp autoscaling config
-	Spec AutoscalingSpec `json:",inline"`
+	AutoscalingSpec `json:",inline"`
 }
 
 // AppStatus defines the observed state of BkApp

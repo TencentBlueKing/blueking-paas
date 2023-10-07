@@ -21,3 +21,7 @@ from django.apps import AppConfig
 
 class SourceCtlConfig(AppConfig):
     name = 'paasng.dev_resources.sourcectl'
+
+    def ready(self):
+        # Trigger register code
+        from paasng.dev_resources.sourcectl import models_utils  # noqa

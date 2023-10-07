@@ -16,9 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import os
 import shlex
-from typing import List, Optional
+from typing import Dict, List, Optional
 
+from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -30,6 +32,7 @@ from moby_distribution.registry.utils import parse_image
 
 from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.platform.applications.models.misc import OutputStream
+from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.dev_resources.sourcectl.models import VersionInfo
@@ -158,9 +161,7 @@ class Build(UuidAuditedModel):
         if self.env_variables:
             return self.env_variables
         # NOTE: 理论上 envs 环境变量应该在创建 Build 时固化, 这里兼容了未增加 envs 字段前未生成 env_variables 的情况
-        from paasng.engine.deploy.bg_build.utils import generate_launcher_env_vars
-
-        self.env_variables = generate_launcher_env_vars(self.slug_path)
+        self.env_variables = _generate_launcher_env_vars(self.slug_path)
         self.save(update_fields=["env_variables", "updated"])
         return self.env_variables
 
@@ -321,3 +322,19 @@ class BuildProcess(UuidAuditedModel):
             required_buildpacks.append(" ".join(buildpack))
 
         return ";".join(required_buildpacks)
+
+
+def _generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
+    # This function is a duplication of paasng.engine.deploy.bg_build.utils to void dep problem
+    store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
+    object_key = os.path.join(slug_path, "slug.tgz")
+    return {
+        'SLUG_URL': os.path.join(settings.BLOBSTORE_BUCKET_APP_SOURCE, object_key),
+        # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
+        'SLUG_GET_URL': store.generate_presigned_url(
+            # slug get url 签发尽可能长的时间, 避免应用长期不部署, 重新调度后无法运行。
+            key=object_key,
+            expires_in=60 * 60 * 24 * 365 * 20,
+            signature_type=SignatureType.DOWNLOAD,
+        ),
+    }

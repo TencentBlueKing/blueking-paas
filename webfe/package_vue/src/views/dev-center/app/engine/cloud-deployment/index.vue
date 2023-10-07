@@ -124,7 +124,7 @@ export default {
         visible: false,
         dialogWidth: 1200,
         top: 120,
-        height: 600
+        height: 600,
       },
       manifestExt: {},
       panels: [
@@ -156,7 +156,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.curTabPanels.find((e) => e.name === this.active);
+      const curPenel = this.curTabPanels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -178,10 +178,10 @@ export default {
     },
 
     curTabPanels() {
-      if (this.curAppModule.web_config?.runtime_type !== 'custom_image') {
+      if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
-      return this.panels.filter((item) => item.name !== 'cloudAppDeployForBuild');
+      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
     },
 
     // 是否需要保存操作按钮
@@ -195,13 +195,13 @@ export default {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
   created() {
-    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -213,6 +213,7 @@ export default {
   },
   mounted() {
     this.handleWindowResize();
+    this.handleResizeFun();
   },
   methods: {
     async init() {
@@ -320,11 +321,17 @@ export default {
       window.addEventListener('resize', throttle(this.handleResizeFun, 100));
     },
 
-    handleResizeFun () {
-      this.deployDialogConfig.dialogWidth = window.innerWidth < 1440 ? 800 : 1200;
-      this.deployDialogConfig.top = window.innerHeight < 900 ? 80 : 120;
-      this.deployDialogConfig.height = window.innerHeight < 900 ? 400 : 600;
-    }
+    handleResizeFun() {
+      if (window.innerWidth < 1366) {
+        this.deployDialogConfig.dialogWidth = 800;
+        this.deployDialogConfig.top = 80;
+        this.deployDialogConfig.height = 400;
+      } else {
+        this.deployDialogConfig.dialogWidth = 1200;
+        this.deployDialogConfig.top = 120;
+        this.deployDialogConfig.height = 600;
+      }
+    },
   },
 };
 </script>

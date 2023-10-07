@@ -94,10 +94,17 @@ class SourceCodePatcherWithDBDriver:
     @cached_property
     def module_dir(self) -> Path:
         """当前模块代码的路径"""
-        if not ModuleSpecs(self.module).deploy_via_package:
-            return self.source_dir / self.module.get_source_obj().get_source_dir()
+        user_dir = Path(self.get_user_source_dir())
+        if user_dir.is_absolute():
+            user_dir = Path(user_dir).relative_to('/')
+        return self.source_dir / str(user_dir)
 
-        return self.source_dir / self.deploy_description.source_dir
+    def get_user_source_dir(self) -> str:
+        """Return the directory of the source code which is defined by user."""
+        if ModuleSpecs(self.module).deploy_via_package:
+            return self.deploy_description.source_dir
+        else:
+            return self.module.get_source_obj().get_source_dir()
 
     def _make_key(self, key: str) -> Path:
         # 如果源码目录已加密, 则生成至应用描述文件的目录下.

@@ -19,15 +19,24 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 from .constants import ScopeType
 
-if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import GitProject
-
-
 logger = logging.getLogger(__name__)
+
+
+class Project(Protocol):
+    """A simple type that provides VCS project name info."""
+
+    type: str
+    # The name of the project
+    name: str
+
+    @property
+    def path_with_namespace(self) -> str:
+        """The full path with the namespace as prefix"""
+        ...
 
 
 @dataclass
@@ -54,7 +63,7 @@ class Scope:
             logger.warning(f"scope<{scope_str}> does not match regex")
             raise
 
-    def cover_project(self, project: 'GitProject') -> bool:
+    def cover_project(self, project: Project) -> bool:
         if self.type == ScopeType.USER:
             return True
 

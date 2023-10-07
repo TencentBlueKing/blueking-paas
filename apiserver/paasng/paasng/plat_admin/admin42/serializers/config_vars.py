@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.engine.serializers import RE_CONFIG_VAR_KEY
 from paasng.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
+from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
 class ConfigVarSLZ(BaseConfigVarSLZ):

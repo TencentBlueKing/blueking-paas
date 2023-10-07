@@ -23,7 +23,7 @@ from typing import Protocol
 from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.cnative.specs.resource import deploy_networking
+from paas_wl.core.env import env_is_running
 from paas_wl.networking.entrance.addrs import URL
 from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.networking.ingress.domains.independent import (
@@ -34,8 +34,8 @@ from paas_wl.networking.ingress.domains.independent import (
 from paas_wl.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
+from paas_wl.networking.ingress.signals import cnative_custom_domain_updated
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.publish.market.models import MarketConfig
@@ -176,7 +176,7 @@ class CNativeCustomDomainManager:
             defaults={"https_enabled": https_enabled},
         )
         try:
-            deploy_networking(env)
+            cnative_custom_domain_updated.send(sender=env, env=env)
         except Exception:
             logger.exception("Create custom domain for c-native app failed")
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f("未知错误")
@@ -196,7 +196,7 @@ class CNativeCustomDomainManager:
 
         environment = self.application.get_module(instance.module.name).get_envs(instance.environment.environment)
         try:
-            deploy_networking(environment)
+            cnative_custom_domain_updated.send(sender=environment, env=environment)
         except Exception as e:
             logger.exception("Update custom domain for c-native app failed")
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
@@ -212,7 +212,7 @@ class CNativeCustomDomainManager:
         instance.delete()
         environment = self.application.get_module(instance.module.name).get_envs(instance.environment.environment)
         try:
-            deploy_networking(environment)
+            cnative_custom_domain_updated.send(sender=environment, env=environment)
         except Exception:
             logger.exception("Delete custom domain for c-native app failed")
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")

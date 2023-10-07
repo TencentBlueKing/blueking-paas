@@ -206,7 +206,7 @@ ensure-buleking-image() {
     --display_name_en "Blueking Basic Image" \
     --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
-    --label secureEncrypted=1
+    --label secureEncrypted=1 normal_app=1 smart_app=1
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${python_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}"
@@ -229,7 +229,7 @@ ensure-legacy-image() {
     --display_name_en "Blueking Basic Image（legacy）" \
     --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
-    --label secureEncrypted=1 category=legacy_app
+    --label secureEncrypted=1 category=legacy_app legacy_app=1
     python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${python_buildpack_name}"
     python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${nodejs_buildpack_name}"

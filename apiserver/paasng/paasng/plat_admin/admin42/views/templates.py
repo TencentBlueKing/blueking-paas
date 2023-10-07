@@ -50,3 +50,4 @@ class TemplateViewSet(CreateModelMixin, DestroyModelMixin, ListModelMixin, Updat
     queryset = Template.objects.all()
     serializer_class = TemplateSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
+    schema = None

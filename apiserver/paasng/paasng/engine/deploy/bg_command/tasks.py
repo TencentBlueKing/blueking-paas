@@ -22,8 +22,8 @@ from typing import Dict, Optional
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
+from paas_wl.deploy.actions.exec import AppCommandExecutor
 from paas_wl.release_controller.hooks.models import Command, CommandTemplate
-from paas_wl.resources.actions.exec import AppCommandExecutor
 from paasng.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.core.storages.redisdb import get_default_redis

@@ -28,6 +28,7 @@ from jsonfield import JSONField
 
 from paas_wl.networking.constants import NetworkProtocol
 from paas_wl.platform.applications.models import AuditedModel, WlApp
+from paas_wl.resources.utils.basic import label_toleration_providers
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +80,12 @@ def filter_nodes_with_labels(nodes, ignore_labels):
             yield node
 
 
-def generate_state(region: str, cluster_name: str, sched_client, ignore_labels: List) -> RegionClusterState:
+# TODO: Move there functions out of models module to avoid circular imports
+def generate_state(region: str, cluster_name: str, client, ignore_labels: List) -> RegionClusterState:
     """Generate region state for a single region"""
-    nodes = sched_client.get_nodes()
+    from paas_wl.networking.egress.misc import get_nodes
+
+    nodes = get_nodes(client)
     nodes = list(filter_nodes_with_labels(nodes, ignore_labels))
     nodes_name = sorted([node.metadata.name for node in nodes])
     nodes_digest = get_digest_of_nodes_name(nodes_name)
@@ -140,7 +144,6 @@ def format_nodes_data(nodes: List[dict]) -> List[dict]:
 
 
 class EgressSpec(AuditedModel):
-
     wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE, db_constraint=False)
     replicas = models.IntegerField(default=1)
     cpu_limit = models.CharField(max_length=16)
@@ -199,3 +202,15 @@ class EgressRule(AuditedModel):
     # 一般来说，service 与 host 值相同，dport 与 sport 值相同
     src_port = models.IntegerField('源端口')
     service = models.CharField('服务名', max_length=128)
+
+
+@label_toleration_providers.register_labels
+def _get_labels_for_binding(app: WlApp) -> Dict[str, str]:
+    """Inject ClusterState labels when bound"""
+    try:
+        binding = RCStateAppBinding.objects.get(app=app)
+    except RCStateAppBinding.DoesNotExist:
+        pass
+    else:
+        return binding.state.to_labels()
+    return {}

@@ -1,23 +1,29 @@
-### Resource Description
-Query app module environment deployment information
+### Description
+Query application module environment deployment information
 
-### Get your access_token
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-### Call example
+### Request Parameters
+
+#### 1. Path Parameters:
+
+|   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
+| ------------ | ------------ | ------ | ---------------- |
+| code   | string | Yes | Application ID |
+| module_name   | string | Yes | Module name |
+| environment   | string | Yes | Environment name |
+
+#### 2. API Parameters:
+None.
+
+### Request Example
 ```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_info/
+curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_info/
 ```
 
-### Request parameter Description
+#### Get your access_token
+Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
-| Name                                | Description |
-| ----------------------------------- | ----------- |
-| code * <br/>string<br/>(path)       | code        |
-| environment *<br/>string<br/>(path) | environment |
-| module_name *<br/>string<br/>(path) | module_name |
-
-### Return result
+### Response Example
 ```json
 {
   "deployment": {
@@ -45,3 +51,43 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "你的access_token"}' h
   }
 }
 ```
+
+### Response Parameter Description
+
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| deployment | dict | Deployment information |
+| exposed_link | dict | Exposed link information |
+
+deployment
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| id | string | Deployment ID |
+| status | string | Deployment status |
+| operator | dict | Operator information |
+| created | string | Creation time |
+| deployment_id | string | Deployment ID |
+| environment | string | Environment name |
+| repo | dict | Repository information |
+
+operator
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| id | string | Operator ID |
+| username | string | Operator username |
+| provider_type | int | Provider type |
+
+repo
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| source_type | string | Source type |
+| type | string | Type |
+| name | string | Repository name |
+| url | string | Repository URL |
+| revision | string | Revision version |
+| comment | string | Comment |
+
+exposed_link
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| url | string | Link address |

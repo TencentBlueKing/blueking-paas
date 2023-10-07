@@ -16,11 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 from typing import Dict, Optional
 
-from paas_wl.cnative.specs import mounts
+from paas_wl.cnative.specs import addons, mounts
 from paas_wl.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -31,7 +30,6 @@ from paas_wl.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     BKAPP_NAME_ANNO_KEY,
     BKAPP_REGION_ANNO_KEY,
-    BKPAAS_ADDONS_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -44,7 +42,6 @@ from paas_wl.cnative.specs.constants import (
 from paas_wl.cnative.specs.models import AppModelDeploy, BkAppResource
 from paas_wl.platform.applications.models import Build, WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
-from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -57,12 +54,13 @@ class BkAppManifestProcessor:
         self.env = model_deploy.environment
         self.model_deploy = model_deploy
 
-    def build_manifest(self, build: Optional[Build] = None) -> Dict:
+    def build_manifest(self, build: Optional[Build] = None, acl_enabled: bool = False) -> Dict:
         """inject bkpaas-specific properties to annotations
 
         :param build: optional, artifact build by platform
             if build.image is not None, will overwrite the image filed in manifest
             if the image is built by CNB runtime, will set `use-cnb` annotation to "true"
+        :param acl_enabled: whether the access control module is enabled.
         """
         wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
         manifest = BkAppResource(**self.model_deploy.revision.json_value)
@@ -77,7 +75,9 @@ class BkAppManifestProcessor:
             use_cnb = build.artifact_metadata.get("use_cnb", False)
 
         # 更新注解，包含应用基本信息，增强服务，访问控制，镜像凭证等
-        self._inject_annotations(manifest, self.env.application, self.env, wl_app, use_cnb=use_cnb)
+        self._inject_annotations(
+            manifest, self.env.application, self.env, wl_app, use_cnb=use_cnb, acl_enabled=acl_enabled
+        )
 
         # 注入用户自定义变量，与 YAML 中定义的进行合并，优先级：页面填写的 > YAML 中已有的
         manifest.spec.configuration.env = merge_envvars(
@@ -89,6 +89,9 @@ class BkAppManifestProcessor:
             manifest.spec.configuration.env, generate_builtin_configurations(env=self.env)
         )
 
+        # 注入增强服务信息
+        addons.inject_to_app_resource(self.env, manifest)
+
         # 注入挂载信息
         mounts.inject_to_app_resource(self.env, manifest)
 
@@ -97,7 +100,7 @@ class BkAppManifestProcessor:
         data["status"] = {"conditions": []}
         return data
 
-    def _patch_image(self, manifest: BkAppResource, image: Optional[str] = None) -> None:
+    def _patch_image(self, manifest: BkAppResource, image: Optional[str] = None):
         if manifest.apiVersion == ApiVersion.V1ALPHA2 and manifest.spec.build:
             manifest.spec.build.image = image
 
@@ -112,7 +115,8 @@ class BkAppManifestProcessor:
         env: ModuleEnvironment,
         wl_app: WlApp,
         use_cnb: bool = False,
-    ) -> None:
+        acl_enabled: bool = False,
+    ):
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.model_deploy.pk)
 
@@ -137,11 +141,6 @@ class BkAppManifestProcessor:
             }
         )
 
-        # inject addons services
-        manifest.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(
-            [svc.name for svc in mixed_service_mgr.list_binded(env.module)]
-        )
-
         # inject pa site id when the feature is enabled
         if bkpa_site_id := get_metadata(wl_app).bkpa_site_id:
             manifest.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
@@ -150,10 +149,5 @@ class BkAppManifestProcessor:
         manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
 
         # inject access control enable info
-        try:
-            from paasng.security.access_control.models import ApplicationAccessControlSwitch
-        except ImportError:
-            logger.info('access control only supported in te region, skip when inject annotations...')
-        else:
-            if ApplicationAccessControlSwitch.objects.is_enabled(application):
-                manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
+        if acl_enabled:
+            manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"

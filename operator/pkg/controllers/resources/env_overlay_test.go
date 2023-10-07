@@ -205,7 +205,7 @@ var _ = Describe("Environment overlay related functions", func() {
 					{
 						EnvName: "stag",
 						Process: "web",
-						Spec: paasv1alpha2.AutoscalingSpec{
+						AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 							MinReplicas: 2, MaxReplicas: 5, Policy: "custom",
 						},
 					},

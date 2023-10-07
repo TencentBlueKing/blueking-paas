@@ -22,8 +22,8 @@ import cattr
 from attrs import define, field, validators
 
 from paasng.engine.constants import ConfigVarEnvName
-from paasng.engine.serializers import RE_CONFIG_VAR_KEY
 from paasng.platform.applications.constants import AppLanguage
+from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
 @define
@@ -59,6 +59,75 @@ class SvcDiscovery:
 
 
 @define
+class ExecAction:
+    command: List[str]
+
+
+@define
+class HTTPHeader:
+    name: str
+    value: str
+
+
+@define
+class HTTPGetAction:
+    port: str
+    host: Optional[str] = None
+    path: Optional[str] = None
+    http_headers: Optional[List[HTTPHeader]] = None
+    scheme: Optional[str] = None
+
+
+@define
+class TCPSocketAction:
+    port: str
+    host: Optional[str] = None
+
+
+@define
+class ProbeHandler:
+    exec: Optional[ExecAction] = None
+    http_get: Optional[HTTPGetAction] = None
+    tcp_socket: Optional[TCPSocketAction] = None
+
+
+@define
+class Probe:
+    """Resource: Probe
+
+    :param exec:命令行探活检测机制
+    :param http_get:http 请求探活检测机制
+    :param tcp_socket:tcp 请求探活检测机制
+    :param initial_delay_seconds:容器启动后等待时间
+    :param timeout_seconds:探针执行超时时间
+    :param period_seconds:探针执行间隔时间
+    :param success_threshold:连续几次检测成功后，判定容器是健康的
+    :param failure_threshold:连续几次检测失败后，判定容器是不健康
+    """
+
+    exec: Optional[ExecAction] = None
+    http_get: Optional[HTTPGetAction] = None
+    tcp_socket: Optional[TCPSocketAction] = None
+
+    initial_delay_seconds: Optional[int] = 0
+    timeout_seconds: Optional[int] = 1
+    period_seconds: Optional[int] = 10
+    success_threshold: Optional[int] = 1
+    failure_threshold: Optional[int] = 3
+
+    def get_probe_handler(self) -> ProbeHandler:
+        """返回 ProbeHandler 对象 """
+        return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
+
+
+@define
+class ProbeSet:
+    liveness: Optional[Probe] = None
+    readiness: Optional[Probe] = None
+    startup: Optional[Probe] = None
+
+
+@define
 class Process:
     """Resource: Process
 
@@ -70,6 +139,7 @@ class Process:
     command: str
     replicas: Optional[int] = field(default=None, validator=validators.optional(validators.gt(0)))
     plan: Optional[str] = None
+    probes: Optional[ProbeSet] = None
 
 
 @define

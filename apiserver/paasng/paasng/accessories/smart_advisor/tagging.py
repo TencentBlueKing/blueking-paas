@@ -25,8 +25,8 @@ from typing import List
 
 from unipath import Path
 
-from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.models.deployment import Deployment
+from paasng.engine.utils.client import get_all_logs
 
 from .constants import DeployFailurePatternType
 from .models import DeployFailurePattern

@@ -38,6 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
@@ -152,11 +154,12 @@ func (r *BkApp) validateAppName() *field.Error {
 
 func (r *BkApp) validateAnnotations() *field.Error {
 	annotations := r.GetAnnotations()
+	annosPath := field.NewPath("metadata").Child("annotations")
 	if _, ok := annotations[BkAppCodeKey]; !ok {
-		return field.Invalid(field.NewPath("metadata").Child("annotations"), annotations, "missing "+BkAppCodeKey)
+		return field.Invalid(annosPath, annotations, "missing "+BkAppCodeKey)
 	}
 	if _, ok := annotations[ModuleNameKey]; !ok {
-		return field.Invalid(field.NewPath("metadata").Child("annotations"), annotations, "missing "+ModuleNameKey)
+		return field.Invalid(annosPath, annotations, "missing "+ModuleNameKey)
 	}
 
 	// 校验 BkApp 的 name 是否满足注解 bkapp.paas.bk.tencent.com/code 和 bkapp.paas.bk.tencent.com/module-name 的拼接规则
@@ -168,7 +171,7 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	}
 	if r.Name != DNSSafeName(expectedRawName) {
 		return field.Invalid(
-			field.NewPath("metadata").Child("annotations"),
+			annosPath,
 			annotations,
 			fmt.Sprintf(
 				"%s and %s don't match with %s %s",
@@ -178,6 +181,32 @@ func (r *BkApp) validateAnnotations() *field.Error {
 				r.Name,
 			),
 		)
+	}
+
+	// 通过注解配置的进程资源信息，也需要校验是否合法
+	legacyProcResConfig, err := kubetypes.GetJsonAnnotation[LegacyProcConfig](
+		r, LegacyProcResAnnoKey,
+	)
+	// 获取进程中的资源配额注解成功，才需要进行检查
+	if err == nil {
+		for procName, cfg := range legacyProcResConfig {
+			for _, resType := range []quota.ResType{quota.CPU, quota.Memory} {
+				rawValue := cfg[string(resType)]
+				if _, err = quota.NewQuantity(rawValue, resType); err != nil {
+					return field.Invalid(
+						annosPath.Child(LegacyProcResAnnoKey),
+						annotations[LegacyProcResAnnoKey],
+						fmt.Sprintf(
+							"resource quota invalid, process %s %s %s invalid: %s",
+							procName,
+							resType,
+							rawValue,
+							err.Error(),
+						),
+					)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -499,7 +528,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), scaling.Process) {
 			return field.Invalid(pField.Child("process"), scaling.Process, "process name is invalid")
 		}
-		if err := r.validateAutoscaling(pField, scaling.Spec); err != nil {
+		if err := r.validateAutoscaling(pField, scaling.AutoscalingSpec); err != nil {
 			return err
 		}
 	}

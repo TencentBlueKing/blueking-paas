@@ -61,6 +61,8 @@ class TestAllEnvsArchivedCondition:
     def test_deploy_but_archived(self, bk_module, bk_stag_env):
         G(Deployment, status=JobStatus.SUCCESSFUL.value, app_environment=bk_stag_env)
         G(OfflineOperation, status=JobStatus.SUCCESSFUL.value, app_environment=bk_stag_env)
+        bk_stag_env.is_offlined = True
+        bk_stag_env.save()
         AllEnvsArchivedCondition(bk_module).validate()
 
     def test_redeploy(self, bk_module, bk_stag_env):

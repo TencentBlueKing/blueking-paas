@@ -1,28 +1,37 @@
-### Resource Description
+### Description
 
-Get the deployment history of "cloud-native" application in a given environment.
+Retrieve the deployment history of cloud-native applications in a specified environment.
 
-### Get your access_token
+### Request Parameters
 
-Before calling the interface, please obtain your access_token. For specific instructions, please refer to [using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+#### 1. Path Parameters:
 
-### Path parameters
+| Parameter Name | Parameter Type | Required | Parameter Description                |
+| -------------- | -------------- | -------- | ------------------------------------ |
+| app_code       | string         | Yes      | Application ID                       |
+| module         | string         | Yes      | Module name, e.g., "default"         |
+| env            | string         | Yes      | Environment name, "stag" / "prod"    |
 
-| Name     | Type   | Required | Description                                   |
-| -------- | ------ | -------- | --------------------------------------------- |
-| app_code | string | Y        | application code(ID)                          |
-| module   | string | Y        | name of module, e.g. "default"                |
-| env      | string | Y        | name of environment, choices: "stag" / "prod" |
+#### 2. API Parameters:
 
-### Query parameters
-
-| Name   | Type   | Required | Description |
-|--------|--------|----------|-------------|
-| offset | int    | N        | offset      |
-| limit  | int    | N        | limit       |
+| Parameter Name | Parameter Type | Required | Description |
+| -------------- | -------------- | -------- | ----------- |
+| offset         | int            | No       | Offset      |
+| limit          | int            | No       | Page size   |
 
 
-### Return result
+
+### Request Example
+
+```
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "access_token": "{{your AccessToken}}"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/cnative/specs/applications/appid1/modules/default/envs/prod/mres/deployments/
+```
+
+#### Get your access_token
+
+Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### Response Example
 
 ```json
 {
@@ -48,3 +57,25 @@ Before calling the interface, please obtain your access_token. For specific inst
     ]
 }
 ```
+
+### Response Parameter Description
+
+| Field                     | Type   | Required | Description          |
+| ------------------------- | ------ | -------- | -------------------- |
+| count                     | int    | Yes      | Total number of results |
+| next                      | string | Yes      | Next page link       |
+| previous                  | string | Yes      | Previous page link   |
+| results                   | list   | Yes      | Deployment history list |
+| results.id                | int    | Yes      | Deployment history ID |
+| results.operator          | string | Yes      | Operator             |
+| results.region            | string | Yes      | Region               |
+| results.created           | string | Yes      | Creation time        |
+| results.updated           | string | Yes      | Update time          |
+| results.application_id    | string | Yes      | Application ID       |
+| results.environment_name  | string | Yes      | Environment name     |
+| results.name              | string | Yes      | Deployment history name |
+| results.status            | string | Yes      | Deployment status    |
+| results.reason            | string | Yes      | Deployment reason    |
+| results.message           | string | Yes      | Deployment message   |
+| results.last_transition_time | string | Yes   | Last status transition time |
+| results.revision          | int    | Yes      | Deployment revision version |

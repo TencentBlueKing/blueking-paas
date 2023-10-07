@@ -1,23 +1,28 @@
-### 资源描述
+### 功能描述
 查看应用模块信息
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+### 请求参数
 
-### 路径接口说明
+#### 1、路径参数：
 
 | 参数名称 | 参数类型 | 必须 | 参数说明              |
 |----------|----------|-----|---------------------|
 | app_code | string   | 是   | 应用 ID               |
 | module   | string   | 是   | 模块名称，如 "default" |
 
-### 调用示例
+#### 2、接口参数：
+暂无。
+
+### 请求示例
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{填写你的AppCode}}/modules/{{填写你的模块名}}/
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{AppCode}}/modules/{{module_name}}/
 ```
 
-### 返回结果
+#### 获取你的 access_token
+在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
+
+### 返回结果示例
 ```json
 {
     "id": "01234567-89ab-cdef-0123-456789abcdef",
@@ -58,9 +63,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
 }
 ```
 
-### 返回结果说明
-
-成员对象各字段说明:
+### 返回结果参数说明
 
 | 参数名称                   | 参数类型          | 参数说明                                |
 |----------------------------|-------------------|-----------------------------------------|
@@ -71,8 +74,8 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
 | template_display_name      |                   | 初始化时使用的模板名称                  |
 | source_origin              | integer           | 模块源码来源，例如 1 表示 Git 等代码仓库 |
 | region                     | string            | 部署区域                                |
-| created                    | string(date-time) |                                         |
-| updated                    | string(date-time) |                                         |
+| created                    | string(date-time) | 创建时间                                |
+| updated                    | string(date-time) | 更新时间                                |
 | name                       | string            | 模块名称                                |
 | is_default                 | boolean           | 是否为默认模块                          |
 | language                   | string            | 编程语言                                |
@@ -80,7 +83,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{填写你的 AccessT
 | exposed_url_type           | integer           | 对外暴露访问的类型                      |
 | user_preferred_root_domain | string            | 用户偏好的根域名                        |
 | last_deployed_date         | string(date-time) | 最近部署时间                            |
-| application                |                   |                                         |
+| application                |                   | 应用信息                                |
 
 子成员 `.repo` 对象各字段说明:
 

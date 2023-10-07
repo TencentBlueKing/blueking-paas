@@ -19,10 +19,10 @@ to the current version of the project delivered to anyone in the future.
 """Serializer for third-party api"""
 from rest_framework import serializers
 
-from paasng.engine.serializers import field_env_var_key
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.serializers import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.serializers import field_env_var_key
 
 
 class PluginTemplateSLZ(serializers.Serializer):

@@ -2302,4 +2302,5 @@ export default {
   应用配置: 'App Config',
   模块配置: 'Module Config',
   事件查询: 'Event Query',
+  '请输入不包含标签(tag)的镜像仓库地址': 'Please enter the mirror warehouse address without tags',
 };

@@ -631,8 +631,11 @@ export default {
     },
     imageRepositoryTemplate() {
       if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
-      const imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
+      let imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
         .replace('{app_code}', this.formData.code);
+      if (imageRepositoryTemplate.includes('//')) {
+        imageRepositoryTemplate = imageRepositoryTemplate.replace('//', '/');
+      }
       return imageRepositoryTemplate.replace('{module_name}', 'default');
     },
     mirrorTag() {
@@ -981,7 +984,7 @@ export default {
         this.$router.push({
           path,
           query: {
-            objectKey
+            objectKey,
           },
         });
       } catch (e) {

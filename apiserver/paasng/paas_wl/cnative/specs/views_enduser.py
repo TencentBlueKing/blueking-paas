@@ -391,7 +391,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             mounts = mounts.filter(environment_name=environment_name)
         # Filter by source_type if provided
         source_type = params.get('source_type')
-        if environment_name:
+        if source_type:
             mounts = mounts.filter(source_type=source_type)
 
         # Paginator

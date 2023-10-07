@@ -130,7 +130,7 @@
                 :required="true"
                 :property="'url'"
                 error-display-type="normal"
-                ext-cls="item-cls"
+                ext-cls="item-cls image-item"
                 :label="$t('镜像仓库')"
               >
                 <div class="form-input-flex">
@@ -1175,5 +1175,8 @@ export default {
             margin: 5px 0 0 100px;
         }
     }
+}
+.item-cls.image-item .bk-form-content .form-error-tip {
+  margin: 0;
 }
 </style>

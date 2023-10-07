@@ -152,19 +152,9 @@ class ResQuotaPlanSLZ(serializers.Serializer):
     limit = ResourceQuotaSLZ(help_text="资源限制")
 
 
-class BaseMountSLZ(serializers.ModelSerializer):
-    def validate_mount_path(self, value):
-        """校验 mount_path，需不为空，符合 / 开头，后跟任意数量的字符，数字，连字符，下划线，点或正斜杠"""
-        if not value:
-            raise serializers.ValidationError(_("挂载卷路径不能为空"))
-        # 检查 mount_path 是否符合路径规则（以正斜杠开头，后跟任意数量的字符，数字，连字符，下划线，点或正斜杠）
-        if not re.match(r'^(/[a-zA-Z0-9-_./]*)$', value):
-            raise serializers.ValidationError(_("挂载目录必须是以正斜杠开头的有效路径"))
+class CreateMountSLZ(serializers.ModelSerializer):
+    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_./]*)$", required=True, allow_blank=False)
 
-        return value
-
-
-class CreateMountSLZ(BaseMountSLZ):
     class Meta:
         model = Mount
         fields = ('environment_name', 'name', 'mount_path', 'source_type')
@@ -185,14 +175,16 @@ class CreateMountSLZ(BaseMountSLZ):
         return value
 
 
-class UpdateMountSLZ(BaseMountSLZ):
+class UpdateMountSLZ(serializers.ModelSerializer):
+    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_./]*)$", required=True, allow_blank=False)
+
     class Meta:
         model = Mount
         fields = ('environment_name', 'mount_path', 'source_type')
 
 
 class MountSLZ(serializers.ModelSerializer):
-    source_config_data = serializers.SerializerMethodField(label=_('Mount 挂载文件内容'))
+    source_config_data = serializers.SerializerMethodField(label=_('挂载卷内容'))
 
     class Meta:
         model = Mount
@@ -223,7 +215,7 @@ class QueryMountsSLZ(serializers.Serializer):
 
 
 class ConfigMapDataSLZ(serializers.Serializer):
-    source_config_data = serializers.JSONField(label=_('挂载卷内容'))
+    source_config_data = serializers.JSONField(label=_('挂载卷内容'), required=True)
 
     def validate_source_config_data(self, value):
         if not value:

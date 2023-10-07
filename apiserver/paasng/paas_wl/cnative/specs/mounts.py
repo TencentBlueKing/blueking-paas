@@ -65,4 +65,4 @@ class VolumeSourceManager:
 def generate_source_config_name(app_code: str) -> str:
     """Generate name of the Mount source_config"""
 
-    return f'{app_code}-{uuid.uuid4()}'
+    return f'{app_code}-{uuid.uuid4().hex}'

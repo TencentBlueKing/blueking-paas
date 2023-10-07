@@ -357,26 +357,10 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
 
 class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    pagination_class = LimitOffsetPagination
 
-    @property
-    def paginator(self):
-        if not hasattr(self, '_paginator'):
-            from rest_framework.pagination import LimitOffsetPagination
-
-            self._paginator = LimitOffsetPagination()
-            self._paginator.default_limit = 12
-        return self._paginator
-
-    @swagger_auto_schema(responses={200: MountSLZ(many=True)})
+    @swagger_auto_schema(query_serializer=QueryMountsSLZ, responses={200: MountSLZ(many=True)})
     def list(self, request, code, module_name):
-        """
-        查询挂载卷
-        -  /api/bkapps/applications/ {code}/modules/{module_name}/mres/volume_mount/
-        - get param: environment_name, 部署的环境, string
-        - get param: source_type, 挂载卷类型, string
-        - get param: limit, 结果数量, integer
-        - get param: offset, 翻页跳过数量, integer
-        """
         module = self.get_module_via_path()
 
         slz = QueryMountsSLZ(data=request.query_params)
@@ -394,7 +378,6 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if source_type:
             mounts = mounts.filter(source_type=source_type)
 
-        # Paginator
         page = self.paginator.paginate_queryset(mounts, self.request, view=self)
         try:
             slz = MountSLZ(page, many=True)
@@ -411,6 +394,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_slz = CreateMountSLZ(data=request.data, context={'module_id': module.id})
         mount_slz.is_valid(raise_exception=True)
 
+        mount_instance = None
         if mount_slz.validated_data['source_type'] == VolumeSourceType.ConfigMap.value:
             # 生成 source_config name，具有唯一性
             source_config_name = generate_source_config_name(app_code=code)
@@ -428,8 +412,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             source_config_data = configmap_slz.validated_data["source_config_data"]
 
             # 根据 VolumeSourceType 类型，创建不同的 VolumeSource
-            # TODO source_config 具体资源的生成应该抽象到 Mount 对象中，根据不同的资源类型创建不同的资源对象
-            if mount_instance.source_type == VolumeSourceType.ConfigMap:
+            if mount_instance.source_type == VolumeSourceType.ConfigMap.value:
                 try:
                     ConfigMapSource.objects.create(
                         region=application.region,
@@ -441,19 +424,21 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                     )
                 except IntegrityError:
                     raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同名挂载资源已存在"))
-            try:
-                slz = MountSLZ(mount_instance)
-            except GetSourceConfigDataError as e:
-                raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_(e))
-            return Response(data=slz.data, status=status.HTTP_201_CREATED)
-        else:
-            # 检验 source_type 不支持，理论上不会出现，创建 Mount 时，已经校验过source_type
-            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("不支持的挂载卷类型"))
+
+        if not mount_instance:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("创建挂载资源失败"))
+
+        try:
+            slz = MountSLZ(mount_instance)
+        except GetSourceConfigDataError as e:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_(e))
+        return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     @swagger_auto_schema(responses={200: MountSLZ()}, request_body=MountSLZ)
     def update(self, request, code, module_name, mount_id):
-        mount_instance = get_object_or_404(Mount, id=mount_id)
+        module = self.get_module_via_path()
+        mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
         config_instance = mount_instance.source
 
         slz = UpdateMountSLZ(data=request.data, instance=mount_instance)
@@ -468,18 +453,14 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         config_instance.environment_name = slz.validated_data['environment_name']
         config_instance.save(update_fields=["data", "updated", "environment_name"])
 
-        module = self.get_module_via_path()
         # 需要删除对应的 k8s volume 资源
         if updated.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
-            opposite_env_name = (
-                MountEnvName.STAG.value
-                if updated.environment_name == MountEnvName.PROD.value
-                else MountEnvName.PROD.value
-            )
-            env = module.get_envs(environment=opposite_env_name)
-            volume_source_manager = VolumeSourceManager(env)
-            if volume_source_manager:
-                volume_source_manager.delete_source_config(mount_instance)
+            opposite_env_map = {
+                MountEnvName.STAG.value: MountEnvName.PROD.value,
+                MountEnvName.PROD.value: MountEnvName.STAG.value,
+            }
+            env = module.get_envs(environment=opposite_env_map.get(updated.environment_name))
+            VolumeSourceManager(env).delete_source_config(mount_instance)
 
         try:
             slz = MountSLZ(updated)
@@ -490,13 +471,13 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @transaction.atomic
     def destroy(self, request, code, module_name, mount_id):
         module = self.get_module_via_path()
-        mount_instance = get_object_or_404(Mount, id=mount_id)
+        mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
         # 需要删除对应的 k8s volume 资源
         for env in module.get_envs():
             VolumeSourceManager(env).delete_source_config(mount_instance)
 
-        mount_instance.delete()
         mount_instance.source.delete()
+        mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

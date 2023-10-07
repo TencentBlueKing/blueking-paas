@@ -1099,9 +1099,6 @@ export default {
         placements: ['bottom'],
       };
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
     curModuleId() {
       return this.curAppModule?.name;
     },

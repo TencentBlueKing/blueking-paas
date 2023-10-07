@@ -180,18 +180,19 @@
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">
-                <div class="round-wrapper" v-if="row.targetStatus === 'start'">
-                  <bk-popconfirm
-                    :content="$t('确认停止该进程？')"
-                    width="288"
-                    trigger="click"
-                    @confirm="handleUpdateProcess">
+                <bk-popconfirm
+                  v-if="row.targetStatus === 'start'"
+                  :content="$t('确认停止该进程？')"
+                  width="288"
+                  trigger="click"
+                  @confirm="handleUpdateProcess">
+                  <div class="round-wrapper">
                     <div
                       class="square-icon"
                       @click="handleProcessOperation(row)">
                     </div>
-                  </bk-popconfirm>
-                </div>
+                  </div>
+                </bk-popconfirm>
                 <div v-else>
                   <bk-popconfirm
                     :content="$t('确认启动该进程？')"

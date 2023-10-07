@@ -162,7 +162,9 @@
       @cancel="cancelOfflineApp"
     >
       <div class="tl">
-        {{ $t('将模块从') }}<em>{{ environment === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>{{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
+        {{ $t('将模块从') }}
+        <em>{{ environment === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>
+        {{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
       </div>
     </bk-dialog>
     <deploy-dialog

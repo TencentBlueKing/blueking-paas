@@ -19,6 +19,8 @@
 package resources
 
 import (
+	"strconv"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/samber/lo"
@@ -364,4 +366,162 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(c.Args).To(BeNil())
 		}
 	})
+})
+
+var _ = Describe("Test Update Policy", func() {
+	processName := "web"
+
+	DescribeTable(
+		"test deployment changed but no need to update",
+		func(current *appsv1.Deployment, want *appsv1.Deployment) {
+			Expect(IsDeploymentNeedUpdate(current, want)).To(Equal(false))
+		},
+		Entry("only update revision",
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:        processName,
+					Namespace:   "default",
+					Annotations: map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(1, 10)},
+				},
+			},
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:        processName,
+					Namespace:   "default",
+					Annotations: map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(2, 10)},
+				},
+			}),
+	)
+
+	DescribeTable(
+		"test deployment changed but no need to update",
+		func(current *appsv1.Deployment, want *appsv1.Deployment) {
+			Expect(IsDeploymentNeedUpdate(current, want)).To(Equal(true))
+		}, Entry("label changed",
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+					Labels: map[string]string{
+						paasv1alpha2.BkAppNameKey:   "foo",
+						paasv1alpha2.ProcessNameKey: processName,
+					},
+				},
+			},
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+					Labels: map[string]string{
+						paasv1alpha2.BkAppNameKey:    "foo",
+						paasv1alpha2.ProcessNameKey:  processName,
+						paasv1alpha2.ResourceTypeKey: "process",
+					},
+				},
+			}),
+		Entry("Replicas changed",
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+				}, Spec: appsv1.DeploymentSpec{
+					Replicas: lo.ToPtr(int32(1)),
+				},
+			},
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: lo.ToPtr(int32(2)),
+				},
+			}),
+
+		Entry("Annotations changed",
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+					Annotations: map[string]string{
+						"foo": "foo",
+					},
+				},
+			},
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+					Annotations: map[string]string{
+						"bar": "bar",
+					},
+				},
+			}),
+
+		Entry("Pod Specs changed",
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Image: "nginx:alpha",
+								},
+							},
+						},
+					},
+				},
+			},
+			&appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      processName,
+					Namespace: "default",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Image: "nginx:beta",
+								},
+							},
+						},
+					},
+				},
+			}),
+	)
 })

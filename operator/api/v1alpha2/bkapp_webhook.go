@@ -219,7 +219,10 @@ func (r *BkApp) validateAnnotations() *field.Error {
 		case RollingUpdateProcessUpdateStrategyType, OnNecessaryProcessUpdateStrategyType:
 			break
 		default:
-			validValues := []string{string(RollingUpdateProcessUpdateStrategyType), string(OnNecessaryProcessUpdateStrategyType)}
+			validValues := []string{
+				string(RollingUpdateProcessUpdateStrategyType),
+				string(OnNecessaryProcessUpdateStrategyType),
+			}
 			return field.NotSupported(annosPath.Child(ProcessUpdateStrategyTypeAnnoKey), v, validValues)
 		}
 	}

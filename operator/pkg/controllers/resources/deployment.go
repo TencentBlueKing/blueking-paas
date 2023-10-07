@@ -209,13 +209,13 @@ func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
 
 // IsDeploymentNeedUpdate inspect whether the current Deployment should be updated to the want one.
 func IsDeploymentNeedUpdate(current *appsv1.Deployment, want *appsv1.Deployment) (need bool) {
-	// Labels 用于将 Deployment 关联到 Process, 不一致时必须更新
-	if !equality.Semantic.DeepEqual(current.Labels, want.Labels) {
+	// 调整进程副本数需要更新
+	if !equality.Semantic.DeepEqual(current.Spec.Replicas, want.Spec.Replicas) {
 		return true
 	}
 
-	// 调整进程副本数需要更新
-	if !equality.Semantic.DeepEqual(current.Spec.Replicas, want.Spec.Replicas) {
+	// Labels 用于将 Deployment 关联到 Process, 不一致时必须更新
+	if !equality.Semantic.DeepEqual(current.Labels, want.Labels) {
 		return true
 	}
 

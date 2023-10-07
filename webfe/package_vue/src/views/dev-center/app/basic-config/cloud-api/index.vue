@@ -36,6 +36,25 @@
         </div>
       </div>
     </div>
+    <!-- 云原生-云API权限管理tab -->
+    <section
+      v-if="isCloudNativeApp"
+      class="cloud-tab-wrapper"
+    >
+      <bk-tab
+        :active.sync="active"
+        ext-cls="app-tab-cls"
+        type="unborder-card"
+        @tab-change="handleTabChange"
+      >
+        <bk-tab-panel
+          v-for="(panel, index) in panels"
+          :key="index"
+          :label="panel.label"
+          v-bind="panel"
+        />
+      </bk-tab>
+    </section>
     <section class="app-container middle cloud-container">
       <paas-content-loader
         :key="pageKey"
@@ -45,6 +64,7 @@
         :delay="1000"
       >
         <bk-tab
+          v-if="!isCloudNativeApp"
           :active.sync="active"
           type="unborder-card"
           @tab-change="handleTabChange"
@@ -55,7 +75,7 @@
             v-bind="panel"
           />
         </bk-tab>
-        <div class="cloud-type-item">
+        <div :class="['cloud-type-item', { 'cloud-class':isCloudNativeApp }]">
           <render-api
             v-if="active === 'gatewayApi'"
             :key="comKey"
@@ -163,6 +183,9 @@ export default {
       .cloud-type-item{
         padding: 0 24px 16px 24px;
       }
+      .cloud-class {
+        padding-top: 16px;
+      }
     }
     .overview-tit {
         display: flex;
@@ -209,5 +232,21 @@ export default {
 
     .cloud-wrapper /deep/ .bk-tab-section {
         padding: 16px 0 0 0;
+    }
+
+    .cloud-tab-wrapper {
+      margin-top: -18px;
+      position: relative;
+      background: #FFFFFF;
+      box-shadow: 0 3px 4px 0 #0000000a;
+      .app-tab-cls{
+        /deep/ .bk-tab-section{
+          padding: 0 !important;
+        }
+        /deep/ .bk-tab-header {
+          background-image: none !important;
+        }
+      }
+
     }
 </style>

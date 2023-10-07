@@ -510,7 +510,7 @@ const router = new Router({
           },
           children: [
             {
-              path: 'web-analysis',
+              path: ':moduleId/web-analysis',
               component: appWebAnalysis,
               name: 'cloudAppWebAnalysis',
               meta: {
@@ -518,7 +518,7 @@ const router = new Router({
               },
             },
             {
-              path: 'log-analysis',
+              path: ':moduleId/log-analysis',
               component: appLogAnalysis,
               name: 'cloudAppLogAnalysis',
               meta: {
@@ -526,7 +526,7 @@ const router = new Router({
               },
             },
             {
-              path: 'event-analysis',
+              path: ':moduleId/event-analysis',
               component: appEventAnalysis,
               name: 'cloudAppEventAnalysis',
               meta: {

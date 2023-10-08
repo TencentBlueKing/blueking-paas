@@ -130,7 +130,7 @@
                 :required="true"
                 :property="'url'"
                 error-display-type="normal"
-                ext-cls="item-cls"
+                ext-cls="item-cls image-item"
                 :label="$t('镜像仓库')"
               >
                 <div class="form-input-flex">
@@ -148,8 +148,8 @@
                       >{{$t('使用示例镜像')}}</div>
                     </template>
                   </bk-input>
-                  <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
                 </div>
+                <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
               </bk-form-item>
 
               <bk-form-item
@@ -1175,5 +1175,8 @@ export default {
             margin: 5px 0 0 100px;
         }
     }
+}
+.item-cls.image-item .bk-form-content .form-error-tip {
+  margin: 0;
 }
 </style>

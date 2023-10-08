@@ -213,10 +213,6 @@ const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/vie
   window.showDeployTip(error);
 });
 
-const appAccessPortal = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/entry-config').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const appBasicInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/info').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -747,11 +743,6 @@ const router = new Router({
           path: ':id/cloudapi',
           component: appCloudAPI,
           name: 'appCloudAPI',
-        },
-        {
-          path: ':id/access-portal',
-          component: appAccessPortal,
-          name: 'appAccessPortal',
         },
         {
           path: ':id/market',

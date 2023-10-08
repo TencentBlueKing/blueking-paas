@@ -7,7 +7,29 @@
     :offset-left="20"
     class="deploy-action-box"
   >
-    <div class="process-container">
+    <!-- 若托管方式为源码&镜像，进程配置页面都为当前空页面状态 -->
+    <section
+      v-if="!isCustomImage"
+      style="margin-top: 38px;"
+    >
+      <bk-exception
+        class="exception-wrap-item exception-part"
+        type="empty"
+        scene="part"
+      >
+        <span style="color: #63656E;">{{ $t('暂无进程') }}</span>
+        <p
+          class="mt10"
+          style="color: #979BA5;font-size: 12px;"
+        >
+          {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+        </p>
+      </bk-exception>
+    </section>
+    <div
+      v-else
+      class="process-container"
+    >
       <div
         class="btn-container flex-row align-items-baseline"
         :class="[isPageEdit ? '' : 'justify-content-between']"
@@ -86,7 +108,7 @@
             <bk-form-item
               :label="$t('镜像仓库')"
               :label-width="120"
-              v-if="isV1alpha2 && isCustomImage"
+              v-if="isV1alpha2"
             >
               {{ buildData.image }}
             </bk-form-item>
@@ -96,7 +118,8 @@
               :required="true"
               :label-width="120"
               :property="'image'"
-              v-else-if="!isV1alpha2"
+              :rules="rules.image"
+              v-else-if="isCustomImage && !isV1alpha2"
             >
               <bk-input
                 ref="mirrorUrl"
@@ -623,13 +646,13 @@
         <bk-form :model="formData">
           <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
           <bk-form-item
-            v-if="isV1alpha2 && isCustomImage"
+            v-if="isV1alpha2"
             :label="`${$t('镜像仓库')}：`"
           >
             <span class="form-text">{{ buildData.image || '--' }}</span>
           </bk-form-item>
           <bk-form-item
-            v-else-if="!isV1alpha2"
+            v-else-if="isCustomImage && !isV1alpha2"
             :label="`${$t('镜像地址')}：`"
           >
             <span class="form-text">{{ formData.image || '--' }}</span>
@@ -863,7 +886,7 @@ export default {
             trigger: 'blur change',
           },
           {
-            regex: /^(?:(?=[^:\\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9_]+$/,
             message: this.$t('地址格式不正确'),
             trigger: 'blur',
           },
@@ -1480,6 +1503,7 @@ export default {
         this.localCloudAppData = _.cloneDeep(this.localCloudAppDataBackUp);
         this.processData = this.localCloudAppDataBackUp.spec.processes;
         this.panels = _.cloneDeep(this.processData);
+        this.formData = _.cloneDeep(this.processData[this.btnIndex]);
       }
     },
 

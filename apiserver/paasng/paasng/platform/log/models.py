@@ -166,5 +166,5 @@ class CustomCollectorConfig(UuidAuditedModel):
     index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用", null=True)
     bk_data_id = models.BigIntegerField(_("数据管道ID"))
 
-    log_paths = models.JSONField(_("日志采集路径"))
+    log_paths = models.JSONField(_("日志文件的绝对路径，可使用 通配符;"))
     log_type = models.CharField(_("日志类型"), max_length=32)

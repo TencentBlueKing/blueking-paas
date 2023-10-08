@@ -20,16 +20,10 @@ from unittest import mock
 
 import pytest
 
-from paasng.accessories.log_search.client import BKLogAPIProtocol, BkLogClient
-from paasng.accessories.log_search.constatns import ETLType, FieldType
-from paasng.accessories.log_search.definitions import (
-    CustomCollectorConfig,
-    ETLConfig,
-    ETLField,
-    ETLParams,
-    StorageConfig,
-)
-from paasng.accessories.log_search.exceptions import CollectorConfigNotPersisted
+from paasng.accessories.bk_log.client import BKLogAPIProtocol, BkLogClient
+from paasng.accessories.bk_log.constatns import ETLType, FieldType
+from paasng.accessories.bk_log.definitions import CustomCollectorConfig, ETLConfig, ETLField, ETLParams, StorageConfig
+from paasng.accessories.bk_log.exceptions import CollectorConfigNotPersisted
 
 
 class TestBkLogClient:

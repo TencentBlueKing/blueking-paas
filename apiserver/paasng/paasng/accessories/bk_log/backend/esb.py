@@ -43,6 +43,14 @@ class Group(OperationGroup):
         path="/api/c/compapi/v2/bk_log/{collector_config_id}/databus_custom_update/",
     )
 
+    # 采集项列表
+    databus_list_collectors = bind_property(
+        Operation,
+        name="databus_list_collectors",
+        method="GET",
+        path="/api/c/compapi/v2/bk_log/databus_list_collectors/",
+    )
+
 
 class Client(ESBClient):
     """ESB Components"""

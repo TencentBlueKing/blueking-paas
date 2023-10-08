@@ -543,3 +543,26 @@ export function formatTime (time) {
   }
   return result;
 }
+
+/**
+ * 复制
+ * @param {Object} value 复制内容
+ * @param {Object} ctx 上下文对象，这里主要指当前的 Vue 组件
+ */
+export function copy (value, ctx) {
+  const el = document.createElement('textarea');
+  el.value = value;
+  el.setAttribute('readonly', '');
+  el.style.position = 'absolute';
+  el.style.left = '-9999px';
+  document.body.appendChild(el);
+  const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+  el.select();
+  document.execCommand('copy');
+  document.body.removeChild(el);
+  if (selected) {
+    document.getSelection().removeAllRanges();
+    document.getSelection().addRange(selected);
+  }
+  ctx.$bkMessage({ theme: 'primary', message: ctx.$t('复制成功'), delay: 2000, dismissable: false });
+}

@@ -117,7 +117,7 @@ export default {
           // 可观测性
           'appObservability',
           // 访问入口
-          'appAccessPortal',
+          'appEntryConfig',
           // 增强服务
           'appServices',
           // 权限管理
@@ -171,7 +171,7 @@ export default {
           // 可观测性
           'appObservability',
           // 访问入口
-          'appAccessPortal',
+          'appEntryConfig',
           // 增强服务
           'appServices',
           // 云 API 管理

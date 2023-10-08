@@ -2303,4 +2303,8 @@ export default {
   模块配置: 'Module Config',
   事件查询: 'Event Query',
   '请输入不包含标签(tag)的镜像仓库地址': 'Please enter the mirror warehouse address without tags',
+  暂无进程: 'No process',
+  '进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。': 'The process name and startup command are defined in the app_desc.yaml file in the build directory.',
+  暂无钩子命令: 'No hook command',
+  '钩子命令在 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file.',
 };

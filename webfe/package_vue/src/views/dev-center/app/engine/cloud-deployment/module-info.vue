@@ -391,6 +391,7 @@ export default {
       gatewayInfosStagLoading: false,
       pageLoading: true,
       envs: [],
+      credentialList: [],
       rules: {
         image: [
           {
@@ -440,6 +441,10 @@ export default {
       || !this.gatewayInfos.prod.node_ip_addresses.length
       || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
     },
+
+    isModuleInfoEdit () {
+      return this.$store.state.cloudApi.isModuleInfoEdit;
+    },
   },
   watch: {
     cloudAppData: {
@@ -475,9 +480,16 @@ export default {
     // 镜像凭证列表
     this.getCredentialList();
 
+    // 默认为编辑态
+    this.isModuleInfoEdit && this.handleEdit('isBasePageEdit');
+
     // 出口IP管理
     this.getGatewayInfos('stag');
     this.getGatewayInfos('prod');
+
+    this.$once('hook:beforeDestroy', () => {
+      this.$store.commit('cloudApi/updateModuleInfoEdit', false);
+    });
   },
   methods: {
     handleProcessNameEdit() {},

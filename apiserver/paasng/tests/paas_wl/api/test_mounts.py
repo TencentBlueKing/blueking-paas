@@ -21,10 +21,7 @@ from unittest.mock import patch
 import pytest
 
 from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
-from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.cnative.specs.crd.bk_app import VolumeSource
-from paas_wl.cnative.specs.models import ConfigMapSource, Mount
-from paas_wl.cnative.specs.mounts import generate_source_config_name
+from paas_wl.cnative.specs.models import Mount
 from paas_wl.cnative.specs.serializers import MountSLZ
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
@@ -33,19 +30,17 @@ pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 @pytest.fixture
 def mount(bk_app, bk_module):
     """创建一个 mount 对象"""
-    source_config_name = generate_source_config_name(app_code=bk_app.code)
-    mount, _ = Mount.objects.update_or_create(
-        defaults=dict(module_id=bk_module.id, mount_path="/", environment_name=MountEnvName.GLOBAL),
-        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+    mount = Mount.objects.new(
+        app_code=bk_app.code,
+        module_id=bk_module.id,
+        mount_path="/path/",
+        environment_name=MountEnvName.GLOBAL,
         name="mount-configmap",
-        source_type=VolumeSourceType.ConfigMap,
+        source_type=VolumeSourceType.ConfigMap.value,
         region=bk_app.region,
     )
-    ConfigMapSource.objects.update_or_create(
-        defaults=dict(application_id=bk_app.id, name=source_config_name, environment_name=MountEnvName.GLOBAL),
-        data={"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"},
-        module_id=bk_module.id,
-    )
+    source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
+    Mount.objects.upsert_source(mount, source_data)
     return mount
 
 
@@ -55,19 +50,17 @@ def mounts(bk_app, bk_module):
     mount_list = []
 
     for i in range(15):
-        source_config_name = generate_source_config_name(app_code=bk_app.code)
-        mount, _ = Mount.objects.update_or_create(
-            defaults=dict(module_id=bk_module.id, mount_path=f"/{i}", environment_name=MountEnvName.GLOBAL),
-            source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
+        mount = Mount.objects.new(
+            app_code=bk_app.code,
+            module_id=bk_module.id,
+            mount_path=f"/{i}",
+            environment_name=MountEnvName.GLOBAL,
             name=f"mount-configmap-{i}",
-            source_type=VolumeSourceType.ConfigMap,
+            source_type=VolumeSourceType.ConfigMap.value,
             region=bk_app.region,
         )
-        ConfigMapSource.objects.update_or_create(
-            defaults=dict(application_id=bk_app.id, name=source_config_name, environment_name=MountEnvName.GLOBAL),
-            data={"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"},
-            module_id=bk_module.id,
-        )
+        source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
+        Mount.objects.upsert_source(mount, source_data)
         mount_list.append(mount)
     return mount_list
 
@@ -129,14 +122,6 @@ class TestVolumeMountViewSet:
                 "source_type": "ConfigMap",
             },
             {
-                # 创建重命 Mount
-                "environment_name": "_global_",
-                "source_config_data": {"configmap_z": "configmap_z_data"},
-                "mount_path": "/path",
-                "name": "mount-configmap",
-                "source_type": "ConfigMap",
-            },
-            {
                 # 创建错误挂载路径的 Mount
                 "environment_name": "_global_",
                 "source_config_data": {"configmap_z": "configmap_z_data"},
@@ -167,7 +152,6 @@ class TestVolumeMountViewSet:
         body["environment_name"] = "stag"
 
         response = api_client.put(url, body)
-
         mount_updated = Mount.objects.get(pk=mount.pk)
 
         assert response.status_code == 200

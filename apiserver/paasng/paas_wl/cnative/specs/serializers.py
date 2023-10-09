@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import re
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -152,35 +151,30 @@ class ResQuotaPlanSLZ(serializers.Serializer):
     limit = ResourceQuotaSLZ(help_text="资源限制")
 
 
-class CreateMountSLZ(serializers.ModelSerializer):
-    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_./]*)$", required=True, allow_blank=False)
+class UpsertMountSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
+    name = serializers.RegexField(
+        help_text=_('挂载卷名称'), regex=r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', max_length=63, required=True
+    )
+    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_.]+/?)+$", required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
-    class Meta:
-        model = Mount
-        fields = ('environment_name', 'name', 'mount_path', 'source_type')
+    source_config_data = serializers.JSONField(
+        help_text=_(
+            "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。" "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
+        ),
+        default=dict,
+    )
 
-    def validate_name(self, value):
-        """校验 name，需不为空，符合 2-30 字符的小写字母、数字、连字符(-)，以小写字母开头，且不可重复"""
-        if not value:
-            raise serializers.ValidationError(_("挂载卷名称不能为空"))
-        # 检查 name 是否符合 2-30 字符的小写字母、数字、连字符(-），以小写字母开头
-        if not re.match(r'^[a-z][a-z0-9-]{1,29}$', value):
-            raise serializers.ValidationError(_("挂载卷名称长度必须为2-30个字符，包含小写字母、数字、连字符，并以小写字母开头"))
+    def validate(self, attrs):
+        # 在这里根据 source_type 验证 source_config_data
+        source_type = attrs["source_type"]
+        source_config_data = attrs["source_config_data"]
 
-        # 检查当前 module_id 下是否存在具有相同 name 的记录
-        module_id = self.context['module_id']
-        if Mount.objects.filter(module_id=module_id, name=value).exists():
-            raise serializers.ValidationError(_("该模块中已存在同名挂载卷"))
-
-        return value
-
-
-class UpdateMountSLZ(serializers.ModelSerializer):
-    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_./]*)$", required=True, allow_blank=False)
-
-    class Meta:
-        model = Mount
-        fields = ('environment_name', 'mount_path', 'source_type')
+        if source_type == VolumeSourceType.ConfigMap.value:
+            if not source_config_data:
+                raise serializers.ValidationError(_("挂载卷内容不可为空"))
+        return attrs
 
 
 class MountSLZ(serializers.ModelSerializer):
@@ -212,12 +206,3 @@ class MountSLZ(serializers.ModelSerializer):
 class QueryMountsSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)
-
-
-class ConfigMapDataSLZ(serializers.Serializer):
-    source_config_data = serializers.JSONField(label=_('挂载卷内容'), required=True)
-
-    def validate_source_config_data(self, value):
-        if not value:
-            raise serializers.ValidationError(_("挂载卷内容不能为空"))
-        return value

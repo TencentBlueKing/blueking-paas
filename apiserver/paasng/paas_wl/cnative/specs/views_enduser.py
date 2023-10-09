@@ -36,31 +36,20 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, MountEnvName, ResQuotaPlan, VolumeSourceType
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, MountEnvName, ResQuotaPlan
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.cnative.specs.image_parser import ImageParser
-from paas_wl.cnative.specs.models import (
-    AppModelDeploy,
-    AppModelResource,
-    ConfigMapSource,
-    Mount,
-    to_error_string,
-    update_app_resource,
-)
-from paas_wl.cnative.specs.mounts import VolumeSourceManager, generate_source_config_name
+from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, Mount, to_error_string, update_app_resource
+from paas_wl.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
-    ConfigMapDataSLZ,
     CreateDeploySerializer,
-    CreateMountSLZ,
     DeployDetailSerializer,
     DeployPrepResultSLZ,
     DeploySerializer,
@@ -69,7 +58,7 @@ from paas_wl.cnative.specs.serializers import (
     QueryDeploysSerializer,
     QueryMountsSLZ,
     ResQuotaPlanSLZ,
-    UpdateMountSLZ,
+    UpsertMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
@@ -382,51 +371,35 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             slz = MountSLZ(page, many=True)
         except GetSourceConfigDataError as e:
-            raise error_codes.LIST_VOLUME_MOUNT_FAILED.f(_(e))
+            raise error_codes.LIST_VOLUME_MOUNTS_FAILED.f(_(e))
 
         return self.paginator.get_paginated_response(slz.data)
 
     @transaction.atomic
-    @swagger_auto_schema(responses={201: MountSLZ()}, request_body=CreateMountSLZ)
+    @swagger_auto_schema(responses={201: MountSLZ()}, request_body=UpsertMountSLZ)
     def create(self, request, code, module_name):
         application = self.get_application()
         module = self.get_module_via_path()
-        mount_slz = CreateMountSLZ(data=request.data, context={'module_id': module.id})
-        mount_slz.is_valid(raise_exception=True)
+        slz = UpsertMountSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
 
-        mount_instance = None
-        if mount_slz.validated_data['source_type'] == VolumeSourceType.ConfigMap.value:
-            # 生成 source_config name，具有唯一性
-            source_config_name = generate_source_config_name(app_code=code)
-            try:
-                mount_instance = mount_slz.save(
-                    module_id=module.id,
-                    source_config=VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name)),
-                    region=application.region,
-                )
-            except IntegrityError:
-                raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同路径挂载卷已存在"))
+        # 创建 Mount
+        try:
+            mount_instance = Mount.objects.new(
+                module_id=module.id,
+                app_code=application.code,
+                name=validated_data['name'],
+                environment_name=validated_data['environment_name'],
+                mount_path=validated_data['mount_path'],
+                source_type=validated_data['source_type'],
+                region=application.region,
+            )
+        except IntegrityError:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
-            configmap_slz = ConfigMapDataSLZ(data=request.data)
-            configmap_slz.is_valid(raise_exception=True)
-            source_config_data = configmap_slz.validated_data["source_config_data"]
-
-            # 根据 VolumeSourceType 类型，创建不同的 VolumeSource
-            if mount_instance.source_type == VolumeSourceType.ConfigMap.value:
-                try:
-                    ConfigMapSource.objects.create(
-                        region=application.region,
-                        application_id=application.id,
-                        module_id=module.id,
-                        environment_name=mount_instance.environment_name,
-                        name=source_config_name,
-                        data=source_config_data,
-                    )
-                except IntegrityError:
-                    raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同名挂载资源已存在"))
-
-        if not mount_instance:
-            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("创建挂载资源失败"))
+        # 创建或更新 Mount source
+        Mount.objects.upsert_source(mount_instance, validated_data['source_config_data'])
 
         try:
             slz = MountSLZ(mount_instance)
@@ -435,35 +408,37 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
-    @swagger_auto_schema(responses={200: MountSLZ()}, request_body=MountSLZ)
+    @swagger_auto_schema(responses={200: MountSLZ()}, request_body=UpsertMountSLZ)
     def update(self, request, code, module_name, mount_id):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
-        config_instance = mount_instance.source
 
-        slz = UpdateMountSLZ(data=request.data, instance=mount_instance)
+        slz = UpsertMountSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        updated = slz.save()
+        validated_data = slz.validated_data
 
-        configmap_slz = ConfigMapDataSLZ(data=request.data)
-        configmap_slz.is_valid(raise_exception=True)
-        source_config_data = configmap_slz.validated_data["source_config_data"]
+        # 更新 Mount
+        mount_instance.environment_name = validated_data['environment_name']
+        mount_instance.mount_path = validated_data['mount_path']
+        try:
+            mount_instance.save(update_fields=['environment_name', 'mount_path'])
+        except IntegrityError:
+            raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
-        config_instance.data = source_config_data
-        config_instance.environment_name = slz.validated_data['environment_name']
-        config_instance.save(update_fields=["data", "updated", "environment_name"])
+        # 创建或更新 Mount source
+        Mount.objects.upsert_source(mount_instance, validated_data['source_config_data'])
 
         # 需要删除对应的 k8s volume 资源
-        if updated.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
+        if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
             opposite_env_map = {
                 MountEnvName.STAG.value: MountEnvName.PROD.value,
                 MountEnvName.PROD.value: MountEnvName.STAG.value,
             }
-            env = module.get_envs(environment=opposite_env_map.get(updated.environment_name))
+            env = module.get_envs(environment=opposite_env_map.get(mount_instance.environment_name))
             VolumeSourceManager(env).delete_source_config(mount_instance)
 
         try:
-            slz = MountSLZ(updated)
+            slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_(e))
         return Response(data=slz.data, status=status.HTTP_200_OK)

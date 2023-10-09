@@ -67,6 +67,13 @@ repos:
         pass_filenames: false
         entry: bash -c "cd apiserver && poetry run mypy . --config-file=./pyproject.toml"
         files: '^apiserver/'
+      - id: import-linter-apiserver
+        name: run import-linter check for "apiserver"
+        language: system
+        types: [python]
+        pass_filenames: false
+        entry: bash -c "cd apiserver/paasng && poetry run lint-imports"
+        files: '^apiserver/'
       # Disable this hook temporarily because is may results EOF error and loss
       # of changes.
       # - id: operator-fmt

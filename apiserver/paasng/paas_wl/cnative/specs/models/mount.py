@@ -98,7 +98,7 @@ class MountManager(models.Manager):
     def upsert_source(self, m: 'Mount', data: dict) -> Union[ConfigMapSource]:
         if m.source_type == VolumeSourceType.ConfigMap:
             if m.source_config.configMap is None:
-                raise ValueError(f'source config {m.source_config} is not null')
+                raise ValueError(f'source_config {m.source_config} is null')
             config_source, _ = ConfigMapSource.objects.update_or_create(
                 name=m.source_config.configMap.name,
                 module_id=m.module.id,

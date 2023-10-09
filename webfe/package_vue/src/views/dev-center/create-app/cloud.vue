@@ -41,7 +41,7 @@
       >
         <bk-input
           v-model="formData.name"
-          :placeholder="$t('由小写英文字母、下划线或数字组成，长度小于16个字符')"
+          :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')"
           class="form-input-width"
         >
         </bk-input>
@@ -563,24 +563,16 @@ export default {
             trigger: 'blur',
           },
           {
-            max: 16,
-            message: this.$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符'),
+            max: 20,
+            message: this.$t('由字母和数字以及连接符(-)组成，不能超过 20 个字符'),
             trigger: 'blur',
           },
           {
             validator(val) {
-              const reg = /^[a-z][a-z0-9-]*$/;
+              const reg = /^[a-zA-Z\d\u4e00-\u9fa5]*$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
-            trigger: 'blur',
-          },
-          {
-            validator(val) {
-              const reg = /^[a-z][a-z0-9-]{1,16}$/;
-              return reg.test(val);
-            },
-            message: this.$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符'),
+            message: this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
             trigger: 'blur',
           },
         ],

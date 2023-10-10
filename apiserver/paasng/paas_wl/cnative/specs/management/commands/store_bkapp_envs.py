@@ -25,13 +25,13 @@ from paas_wl.cnative.specs.configurations import EnvVarsReader
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import AppModelResource
 from paas_wl.platform.applications.models import Config
-from paasng.engine.constants import AppEnvName
-from paasng.engine.models.config_var import ConfigVar
-from paasng.engine.models.managers import ConfigVarManager
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.models.managers import ConfigVarManager
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.platform.region.models import get_all_regions
+from paasng.core.region.models import get_all_regions
 
 
 class Command(BaseCommand):

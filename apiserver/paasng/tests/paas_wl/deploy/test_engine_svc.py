@@ -20,7 +20,7 @@ import pytest
 
 from paas_wl.platform.applications.models import Build
 from paas_wl.workloads.images.models import AppImageCredential
-from paasng.engine.utils.client import EngineDeployClient
+from paasng.platform.engine.utils.client import EngineDeployClient
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 

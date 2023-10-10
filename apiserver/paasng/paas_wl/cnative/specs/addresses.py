@@ -49,7 +49,7 @@ def save_addresses(env: ModuleEnvironment) -> Set[WlApp]:
     :return: Affected engine apps, "affected" means the app's domains or
         paths were updated during this save operation.
     """
-    from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
+    from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 
     apps = set()
     domains = [AutoGenDomain(host=d.host, https_enabled=d.https_enabled) for d in AppDefaultDomains(env).domains]

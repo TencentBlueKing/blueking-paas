@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 
 from django.db import migrations
-from paasng.platform.core.storages.dbrouter import skip_if_found_record
+from paasng.core.core.storages.dbrouter import skip_if_found_record
 
 logger = logging.getLogger(__name__)
 

@@ -23,7 +23,7 @@ from django.http import HttpRequest
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_429_TOO_MANY_REQUESTS
 
-from paasng.platform.core.storages.redisdb import get_default_redis
+from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import UserActionRateLimiter as UserActionFixedWindowRateLimiter
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user

@@ -113,41 +113,41 @@ INSTALLED_APPS = [
     'corsheaders',
     'webpack_loader',
     'django_prometheus',
-    'paasng.platform.feature_flags',
-    'paasng.accounts',
+    'paasng.misc.feature_flags',
+    'paasng.infras.accounts',
     'paasng.platform.applications',
-    'paasng.platform.log',
+    'paasng.accessories.log',
     'paasng.platform.modules',
     'paasng.platform.oauth2',
-    'paasng.platform.operations',
+    'paasng.misc.operations',
     'paasng.platform.environments',
-    'paasng.ci',
-    'paasng.cnative',
-    'paasng.engine',
-    'paasng.engine.streaming',
-    'paasng.publish.market',
-    'paasng.publish.sync_market',
-    'paasng.dev_resources.sourcectl',
-    'paasng.dev_resources.servicehub',
-    'paasng.dev_resources.services',
-    'paasng.dev_resources.templates',
+    'paasng.accessories.ci',
+    'paasng.platform.cnative',
+    'paasng.platform.engine',
+    'paasng.platform.engine.streaming',
+    'paasng.accessories.publish.market',
+    'paasng.accessories.publish.sync_market',
+    'paasng.platform.sourcectl',
+    'paasng.accessories.servicehub',
+    'paasng.accessories.services',
+    'paasng.platform.templates',
     'paasng.plat_admin.api_doc',
     'paasng.plat_admin.admin42',
     'paasng.plat_admin.system',
     'paasng.monitoring.monitor',
     'paasng.monitoring.healthz',
-    'paasng.accessories.search',
+    'paasng.misc.search',
     'paasng.accessories.smart_advisor',
-    'paasng.accessories.bk_lesscode',
-    'paasng.accessories.iam.bkpaas_iam_migration',
-    'paasng.accessories.iam.members',
-    'paasng.accessories.bkmonitorv3',
-    'paasng.extensions.declarative',
-    'paasng.extensions.scene_app',
-    'paasng.extensions.smart_app',
-    'paasng.extensions.bk_plugins',
-    'paasng.pluginscenter',
-    'paasng.pluginscenter.iam_adaptor',
+    'paasng.platform.bk_lesscode',
+    'paasng.infras.iam.bkpaas_iam_migration',
+    'paasng.infras.iam.members',
+    'paasng.infras.bkmonitorv3',
+    'paasng.platform.declarative',
+    'paasng.platform.scene_app',
+    'paasng.platform.smart_app',
+    'paasng.bk_plugins.bk_plugins',
+    'paasng.bk_plugins.pluginscenter',
+    'paasng.bk_plugins.pluginscenter.iam_adaptor',
     'paasng.platform.mgrlegacy',
     'bkpaas_auth',
     'apigw_manager.apigw',
@@ -178,7 +178,7 @@ INSTALLED_APPS += EXTRA_INSTALLED_APPS
 
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
-    'paasng.accounts.middlewares.RequestIDProvider',  # 注入 RequestID
+    'paasng.infras.accounts.middlewares.RequestIDProvider',  # 注入 RequestID
     'paasng.utils.api_middleware.ApiLogMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -191,17 +191,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'paasng.utils.middlewares.WhiteNoiseRespectPrefixMiddleware',
     'bkpaas_auth.middlewares.CookieLoginMiddleware',
-    'paasng.accounts.middlewares.SiteAccessControlMiddleware',
-    'paasng.accounts.middlewares.PrivateTokenAuthenticationMiddleware',
+    'paasng.infras.accounts.middlewares.SiteAccessControlMiddleware',
+    'paasng.infras.accounts.middlewares.PrivateTokenAuthenticationMiddleware',
     # API Gateway related
     'apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware',  # JWT 认证
     'apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware',  # JWT 透传的应用信息
     'apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware',  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
-    'paasng.accounts.middlewares.AuthenticatedAppAsUserMiddleware',
+    'paasng.infras.accounts.middlewares.AuthenticatedAppAsUserMiddleware',
     # Internal service authentication related
     'blue_krill.auth.client.VerifiedClientMiddleware',
-    'paasng.accounts.internal.user.SysUserFromVerifiedClientMiddleware',
+    'paasng.infras.accounts.internal.user.SysUserFromVerifiedClientMiddleware',
     # Other utilities middlewares
     'paasng.utils.middlewares.AutoDisableCSRFMiddleware',
     'paasng.utils.middlewares.APILanguageMiddleware',
@@ -427,7 +427,7 @@ DATABASES = {
     "default": get_database_conf(settings),
     "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
 }
-DATABASE_ROUTERS = ["paasng.platform.core.storages.dbrouter.WorkloadsDBRouter"]
+DATABASE_ROUTERS = ["paasng.core.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存
 
@@ -521,7 +521,7 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
 
 # 用于生成唯一且有意义的 ID 的函数导入路径，默认复用增强服务模块下的工具函数，一般情况下无需调整
-UNIQUE_ID_GEN_FUNC = 'paasng.dev_resources.services.utils.gen_unique_id'
+UNIQUE_ID_GEN_FUNC = 'paasng.accessories.services.utils.gen_unique_id'
 
 # --------
 # 系统配置
@@ -1235,7 +1235,7 @@ OTEL_BK_DATA_TOKEN = settings.get('OTEL_BK_DATA_TOKEN', '')
 OTEL_GRPC_URL = settings.get('OTEL_GRPC_URL', '')
 
 if ENABLE_OTEL_TRACE:
-    INSTALLED_APPS += ('paasng.tracing',)
+    INSTALLED_APPS += ('paasng.misc.tracing',)
 
 # 本选项默认关闭。表示注入到应用运行环境中的 {prefix}_SUB_PATH 环境变量总是使用真实值（基于算法的最短子路径）。
 # 开启后将总是使用静态值：{region}-{engine-app-name} ，仅限特殊路由规则的部署环境启用。

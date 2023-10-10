@@ -24,8 +24,8 @@ from rest_framework.exceptions import ValidationError
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.publish.market.models import MarketConfig
-from paasng.publish.market.utils import MarketAvailableAddressHelper
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 

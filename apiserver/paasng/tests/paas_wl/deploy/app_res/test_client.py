@@ -41,8 +41,8 @@ from paas_wl.resources.kube_res.base import Schedule
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.processes.managers import AppProcessManager
-from paasng.engine.configurations.building import SlugBuilderTemplate
-from paasng.engine.deploy.bg_build.utils import generate_builder_name
+from paasng.platform.engine.configurations.building import SlugBuilderTemplate
+from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 
 from .conftest import construct_foo_pod
 

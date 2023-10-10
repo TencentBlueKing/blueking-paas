@@ -49,7 +49,7 @@ from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KSecret
 from paas_wl.utils.error_codes import error_codes
-from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 
 logger = logging.getLogger(__name__)
 

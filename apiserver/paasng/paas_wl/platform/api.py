@@ -24,8 +24,8 @@ to the current version of the project delivered to anyone in the future.
 
 Other modules which have similar purpose:
 
-- paasng.engine.deploy.utils.client.EngineDeployClient
-- paasng.engine.models.processes.ProcessManager
+- paasng.platform.engine.deploy.utils.client.EngineDeployClient
+- paasng.platform.engine.models.processes.ProcessManager
 
 These modules will be refactored in the future.
 """

@@ -28,7 +28,7 @@ from paas_wl.cluster.models import IngressConfig, PortMap
 from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.networking.entrance.addrs import URL
 from paas_wl.networking.entrance.utils import to_dns_safe
-from paasng.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
 
 

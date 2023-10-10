@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 
 from paas_wl.workloads.processes.shim import ProcessManager
-from paasng.engine.constants import AppInfoBuiltinEnv
-from paasng.engine.utils.query import DeploymentGetter
+from paasng.platform.engine.constants import AppInfoBuiltinEnv
+from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 

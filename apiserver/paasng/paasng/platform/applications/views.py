@@ -42,33 +42,33 @@ from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.shim import RegionClusterService
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.images.models import AppUserCredential
-from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
-from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.accessories.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
-from paasng.accessories.bkmonitorv3.shim import update_or_create_bk_monitor_space
-from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
-from paasng.accessories.iam.helpers import (
+from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
+from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
+from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
     fetch_user_main_role,
     remove_user_all_roles,
 )
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.constants import AccountFeatureFlag as AFF
-from paasng.accounts.constants import FunctionType
-from paasng.accounts.models import AccountFeatureFlag, make_verifier
-from paasng.accounts.permissions.application import application_perm_class, check_application_perm
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_required
-from paasng.accounts.permissions.permissions import HasPostRegionPermission
-from paasng.accounts.serializers import VerificationCodeSLZ
-from paasng.cnative.services import initialize_simple
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.models import Template
-from paasng.extensions.bk_plugins.config import get_bk_plugin_config
-from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.extensions.scene_app.initializer import SceneAPPInitializer
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.constants import FunctionType
+from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
+from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_required
+from paasng.infras.accounts.permissions.permissions import HasPostRegionPermission
+from paasng.infras.accounts.serializers import VerificationCodeSLZ
+from paasng.platform.cnative.services import initialize_simple
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
+from paasng.bk_plugins.bk_plugins.config import get_bk_plugin_config
+from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import (
     AppFeatureFlag,
@@ -102,19 +102,19 @@ from paasng.platform.applications.utils import (
     delete_all_modules,
     get_app_overview,
 )
-from paasng.platform.core.storages.object_storage import app_logo_storage
-from paasng.platform.core.storages.sqlalchemy import legacy_db
-from paasng.platform.feature_flags.constants import PlatformFeatureFlag
+from paasng.core.core.storages.object_storage import app_logo_storage
+from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
-from paasng.platform.region.models import get_all_regions
-from paasng.publish.entrance.exposer import get_exposed_links
-from paasng.publish.market.constant import AppState, ProductSourceUrlType
-from paasng.publish.market.models import MarketConfig, Product
-from paasng.publish.sync_market.managers import AppDeveloperManger
+from paasng.core.region.models import get_all_regions
+from paasng.accessories.publish.entrance.exposer import get_exposed_links
+from paasng.accessories.publish.market.constant import AppState, ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig, Product
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes

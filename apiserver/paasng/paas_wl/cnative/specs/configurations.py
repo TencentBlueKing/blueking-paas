@@ -23,9 +23,9 @@ from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource, EnvVar
-from paasng.engine.configurations.config_var import get_builtin_env_variables
-from paasng.engine.constants import AppEnvName
-from paasng.engine.models.config_var import get_config_vars
+from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.models.config_var import get_config_vars
 from paasng.platform.applications.models import ModuleEnvironment
 
 

@@ -62,13 +62,13 @@ from paas_wl.cnative.specs.serializers import (
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
-from paasng.dev_resources.sourcectl.controllers.docker import DockerRegistryController
-from paasng.dev_resources.sourcectl.serializers import AlternativeVersionSLZ
-from paasng.engine.deploy.release.operator import release_by_k8s_operator
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
+from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
+from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.publish.entrance.exposer import get_exposed_url
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
 

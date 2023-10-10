@@ -23,8 +23,8 @@ from typing import List, Optional, no_type_check
 from sqlalchemy import or_
 from sqlalchemy.orm.session import Session
 
-from paasng.accessories.iam.legacy import Permission
-from paasng.platform.core.storages.sqlalchemy import legacy_db
+from paasng.infras.iam.legacy import Permission
+from paasng.core.core.storages.sqlalchemy import legacy_db
 
 logger = logging.getLogger(__name__)
 LApplication = legacy_db.get_model('paas_app')

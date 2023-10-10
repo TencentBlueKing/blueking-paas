@@ -22,8 +22,8 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.dev_resources.templates.models import Template
-from paasng.platform.region.models import get_all_regions
+from paasng.platform.templates.models import Template
+from paasng.core.region.models import get_all_regions
 
 
 class TemplateSLZ(serializers.ModelSerializer):

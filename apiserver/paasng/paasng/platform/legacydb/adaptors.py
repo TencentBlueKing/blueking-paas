@@ -29,13 +29,13 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError as SqlIntegrityError
 from sqlalchemy.orm import Session
 
-from paasng.engine.constants import ConfigVarEnvName
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.legacydb import models as legacy_models
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.oauth2.models import OAuth2Client
-from paasng.publish.sync_market.constant import EnvItem, SaaSPackageInfo
-from paasng.publish.sync_market.models import TagData
+from paasng.accessories.publish.sync_market.constant import EnvItem, SaaSPackageInfo
+from paasng.accessories.publish.sync_market.models import TagData
 
 logger = logging.getLogger(__name__)
 

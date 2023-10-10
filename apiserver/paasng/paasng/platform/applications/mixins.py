@@ -22,7 +22,7 @@ from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 
 from paas_wl.platform.applications.models import WlApp
-from paasng.engine.models import EngineApp
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
 from .models import Application, ModuleEnvironment

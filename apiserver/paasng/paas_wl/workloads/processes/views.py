@@ -41,11 +41,11 @@ from paas_wl.workloads.processes.drf_serializers import (
 )
 from paas_wl.workloads.processes.shim import ProcessManager
 from paas_wl.workloads.processes.watch import ProcInstByEnvListWatcher, WatchEvent
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.constants import RuntimeType
-from paasng.engine.deploy.version import get_env_deployed_version_info
-from paasng.engine.utils.query import DeploymentGetter, OfflineOperationGetter
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.deploy.version import get_env_deployed_version_info
+from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import Module

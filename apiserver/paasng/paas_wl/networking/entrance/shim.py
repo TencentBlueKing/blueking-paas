@@ -30,7 +30,7 @@ from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.region.models import get_region
+from paasng.core.region.models import get_region
 
 logger = logging.getLogger(__name__)
 

@@ -23,7 +23,7 @@ from attrs import define
 
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
-from paasng.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
 
 from .replicas import ReplicasReader

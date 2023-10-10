@@ -45,7 +45,7 @@ from paasng.platform.applications.signals import (
 from paasng.platform.applications.specs import AppTypeSpecs
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
-from paasng.platform.region.states import get_region
+from paasng.core.region.states import get_region
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import NickNameField, UserField
 from paasng.utils.validators import (

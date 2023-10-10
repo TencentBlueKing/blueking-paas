@@ -23,7 +23,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from paas_wl.networking.ingress.models import AppDomainSharedCert
 from paas_wl.networking.ingress.serializers import AppDomainSharedCertSLZ, UpdateAppDomainSharedCertSLZ
-from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 
 
 class AppDomainSharedCertsViewSet(ModelViewSet):

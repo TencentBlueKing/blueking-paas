@@ -28,8 +28,8 @@ from django.utils.translation import gettext as _
 
 from paasng.platform.applications.constants import AppLanguage, ApplicationRole
 from paasng.platform.mgrlegacy.constants import AppMember, LegacyAppState
-from paasng.publish.market.constant import AppType
-from paasng.publish.sync_market.managers import AppEnvVarManger, AppSecureInfoManger
+from paasng.accessories.publish.market.constant import AppType
+from paasng.accessories.publish.sync_market.managers import AppEnvVarManger, AppSecureInfoManger
 
 logger = logging.getLogger(__name__)
 

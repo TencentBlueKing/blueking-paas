@@ -109,7 +109,7 @@ class ServiceHubProbe(VirtualProbe):
     is_core = False
 
     def diagnose(self) -> List[Issue]:
-        from paasng.dev_resources.servicehub.remote.collector import (
+        from paasng.accessories.servicehub.remote.collector import (
             FetchRemoteSvcError,
             RemoteSvcConfig,
             RemoteSvcFetcher,

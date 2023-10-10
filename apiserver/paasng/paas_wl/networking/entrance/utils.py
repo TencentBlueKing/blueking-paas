@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Optional
 
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.region.models import get_region
+from paasng.core.region.models import get_region
 
 
 def to_dns_safe(s: str) -> str:

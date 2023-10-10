@@ -27,7 +27,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
-from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.api_docs import openapi_empty_response

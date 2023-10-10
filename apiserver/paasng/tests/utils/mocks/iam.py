@@ -21,8 +21,8 @@ from typing import Dict, List
 
 from bkpaas_auth import get_user_by_user_id
 
-from paasng.accessories.iam.constants import APP_DEFAULT_ROLES
-from paasng.accessories.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+from paasng.infras.iam.constants import APP_DEFAULT_ROLES
+from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.platform.applications.constants import ApplicationRole
 from tests.utils.auth import create_user
 

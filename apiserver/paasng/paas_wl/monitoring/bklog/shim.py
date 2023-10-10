@@ -20,8 +20,8 @@ import logging
 
 from paas_wl.monitoring.bklog.managers import AppLogConfigController, NullController
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.log.constants import LogCollectorType
-from paasng.platform.log.shim import get_log_collector_type
+from paasng.accessories.log.constants import LogCollectorType
+from paasng.accessories.log.shim import get_log_collector_type
 
 logger = logging.getLogger(__name__)
 

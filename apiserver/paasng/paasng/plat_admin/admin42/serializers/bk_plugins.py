@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paasng.extensions.bk_plugins.models import BkPluginDistributor, BkPluginTag
+from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor, BkPluginTag
 
 
 class BKPluginTagSLZ(serializers.ModelSerializer):

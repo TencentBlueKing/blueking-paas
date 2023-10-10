@@ -38,7 +38,7 @@ from paas_wl.networking.ingress.signals import cnative_custom_domain_updated
 from paas_wl.utils.error_codes import error_codes
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.models import MarketConfig
 
 logger = logging.getLogger(__name__)
 

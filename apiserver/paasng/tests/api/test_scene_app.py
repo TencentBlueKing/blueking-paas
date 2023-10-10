@@ -22,7 +22,7 @@ import pytest
 from django.conf import settings
 from django.urls import reverse
 
-from paasng.dev_resources.templates.constants import TemplateType
+from paasng.platform.templates.constants import TemplateType
 from paasng.platform.modules.constants import SourceOrigin
 from tests.utils import mock
 from tests.utils.helpers import generate_random_string
@@ -54,8 +54,8 @@ class TestSceneApp:
         with mock.patch(
             'paasng.platform.applications.views.SourceOrigin.get_default_origins',
             new=lambda *args, **kwargs: [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.SCENE],
-        ), mock.patch('paasng.extensions.declarative.application.controller.initialize_smart_module'), mock.patch(
-            'paasng.extensions.scene_app.initializer.get_oauth2_client_secret',
+        ), mock.patch('paasng.platform.declarative.application.controller.initialize_smart_module'), mock.patch(
+            'paasng.platform.scene_app.initializer.get_oauth2_client_secret',
             new=lambda *args, **kwargs: 'test_app_secret',
         ):
             yield

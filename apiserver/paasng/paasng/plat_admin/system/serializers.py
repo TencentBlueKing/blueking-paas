@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.dev_resources.servicehub.services import ServiceSpecificationHelper
+from paasng.accessories.servicehub.services import ServiceSpecificationHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.serializers import UserNameField

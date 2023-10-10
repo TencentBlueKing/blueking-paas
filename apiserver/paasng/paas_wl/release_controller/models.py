@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from paasng.engine.constants import ImagePullPolicy
+from paasng.platform.engine.constants import ImagePullPolicy
 
 
 @dataclass

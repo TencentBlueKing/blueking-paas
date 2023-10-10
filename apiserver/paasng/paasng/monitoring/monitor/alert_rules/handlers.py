@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.dispatch import receiver
 
-from paasng.engine.models.deployment import Deployment
-from paasng.engine.signals import post_appenv_deploy
+from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.signals import post_appenv_deploy
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.applications.signals import application_member_updated
 

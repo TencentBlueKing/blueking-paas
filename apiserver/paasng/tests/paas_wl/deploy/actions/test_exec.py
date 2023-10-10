@@ -29,7 +29,7 @@ from paas_wl.release_controller.hooks.models import Command
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType
-from paasng.engine.utils.output import ConsoleStream
+from paasng.platform.engine.utils.output import ConsoleStream
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

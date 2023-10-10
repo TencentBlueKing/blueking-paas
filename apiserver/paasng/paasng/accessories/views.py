@@ -22,8 +22,8 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 from .serializers import DocumentaryLinkSLZ, ListAdvisedDocLinksSLZ

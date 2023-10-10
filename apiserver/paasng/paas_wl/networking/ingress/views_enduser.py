@@ -27,8 +27,8 @@ from paas_wl.networking.ingress.managers.misc import AppDefaultIngresses, Legacy
 from paas_wl.networking.ingress.serializers import ProcIngressSLZ, ProcServiceSLZ
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 

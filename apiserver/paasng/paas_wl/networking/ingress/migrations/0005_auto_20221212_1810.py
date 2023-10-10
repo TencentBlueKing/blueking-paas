@@ -2,7 +2,7 @@
 
 import django.core.validators
 from django.db import migrations, models
-from paasng.platform.core.storages.dbrouter import skip_if_found_record
+from paasng.core.core.storages.dbrouter import skip_if_found_record
 
 
 # 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress

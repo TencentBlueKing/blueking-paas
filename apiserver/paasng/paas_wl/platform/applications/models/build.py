@@ -35,7 +35,7 @@ from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
-from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.applications.models import ModuleEnvironment
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
@@ -325,7 +325,7 @@ class BuildProcess(UuidAuditedModel):
 
 
 def _generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
-    # This function is a duplication of paasng.engine.deploy.bg_build.utils to void dep problem
+    # This function is a duplication of paasng.platform.engine.deploy.bg_build.utils to void dep problem
     store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
     object_key = os.path.join(slug_path, "slug.tgz")
     return {

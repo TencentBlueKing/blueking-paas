@@ -27,9 +27,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
+from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager

@@ -23,7 +23,7 @@ from django.core.management import CommandError, call_command
 
 from paas_wl.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paas_wl.cnative.specs.models import AppModelResource, create_app_resource
-from paasng.engine.models import ConfigVar
+from paasng.platform.engine.models import ConfigVar
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 

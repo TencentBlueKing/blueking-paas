@@ -29,10 +29,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, QuerySet
 from django.utils.translation import get_language
 
-from paasng.engine.models.operations import ModuleEnvironmentOperations
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import Application, ModuleEnvironment, UserApplicationFilter
-from paasng.platform.core.storages.sqlalchemy import legacy_db
-from paasng.publish.sync_market.managers import AppDeveloperManger
+from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 
 from .constants import SimpleAppSource
 from .legacy import LegacyAppNormalizer, query_concrete_apps

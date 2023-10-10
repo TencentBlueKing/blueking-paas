@@ -93,11 +93,11 @@ class TestMresDeploymentsViewSet:
             },
         }
         # Mock out the interactions with k8s cluster
-        with mock.patch("paasng.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest), mock.patch(
-            'paasng.engine.deploy.release.operator.WaitAppModelReady.start',
+        with mock.patch("paasng.platform.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest), mock.patch(
+            'paasng.platform.engine.deploy.release.operator.WaitAppModelReady.start',
             return_value=None,
-        ), mock.patch("paasng.engine.deploy.release.operator.svc_disc"), mock.patch(
-            "paasng.engine.deploy.release.operator.ensure_namespace"
+        ), mock.patch("paasng.platform.engine.deploy.release.operator.svc_disc"), mock.patch(
+            "paasng.platform.engine.deploy.release.operator.ensure_namespace"
         ):
             response = api_client.post(url, data={"manifest": manifest})
 

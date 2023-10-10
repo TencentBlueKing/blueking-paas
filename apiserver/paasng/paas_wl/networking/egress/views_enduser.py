@@ -30,8 +30,8 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.networking.egress.serializers import RCStateAppBindingSLZ
 from paas_wl.utils.error_codes import error_codes
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 

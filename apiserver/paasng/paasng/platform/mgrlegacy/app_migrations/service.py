@@ -24,15 +24,15 @@ from typing import ClassVar, Dict, Optional, Tuple, Type, Union
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
-from paasng.dev_resources.servicehub.constants import LEGACY_PLAN_ID, LEGACY_PLAN_INSTANCE
-from paasng.dev_resources.servicehub.local.manager import LocalPlainInstanceMgr, LocalServiceObj
-from paasng.dev_resources.servicehub.manager import LocalServiceMgr, RemoteServiceMgr, mixed_service_mgr
-from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, ServiceEngineAppAttachment
-from paasng.dev_resources.servicehub.remote.manager import RemotePlainInstanceMgr
-from paasng.dev_resources.servicehub.remote.store import get_remote_store
-from paasng.dev_resources.servicehub.services import PlainInstanceMgr
-from paasng.dev_resources.services.models import Plan, ServiceInstance
-from paasng.engine.constants import AppEnvName
+from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID, LEGACY_PLAN_INSTANCE
+from paasng.accessories.servicehub.local.manager import LocalPlainInstanceMgr, LocalServiceObj
+from paasng.accessories.servicehub.manager import LocalServiceMgr, RemoteServiceMgr, mixed_service_mgr
+from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, ServiceEngineAppAttachment
+from paasng.accessories.servicehub.remote.manager import RemotePlainInstanceMgr
+from paasng.accessories.servicehub.remote.store import get_remote_store
+from paasng.accessories.servicehub.services import PlainInstanceMgr
+from paasng.accessories.services.models import Plan, ServiceInstance
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 
 logger = logging.getLogger(__name__)

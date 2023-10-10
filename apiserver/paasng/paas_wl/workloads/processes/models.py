@@ -28,7 +28,7 @@ from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.processes.constants import ProbeType, ProcessTargetStatus
-from paasng.extensions.declarative.deployment.resources import ProbeHandler
+from paasng.platform.declarative.deployment.resources import ProbeHandler
 from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:

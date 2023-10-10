@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""TestDoubles for paasng.engine module"""
+"""TestDoubles for paasng.platform.engine module"""
 from contextlib import contextmanager
 from typing import Dict, Optional
 

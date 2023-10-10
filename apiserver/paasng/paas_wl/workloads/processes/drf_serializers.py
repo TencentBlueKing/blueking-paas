@@ -37,9 +37,9 @@ from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.entities import Instance, Process
 from paas_wl.workloads.processes.models import ProcessSpec
-from paasng.dev_resources.sourcectl.models import VersionInfo
-from paasng.engine.constants import JobStatus, RuntimeType
-from paasng.engine.models import Deployment, OfflineOperation
+from paasng.platform.sourcectl.models import VersionInfo
+from paasng.platform.engine.constants import JobStatus, RuntimeType
+from paasng.platform.engine.models import Deployment, OfflineOperation
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):

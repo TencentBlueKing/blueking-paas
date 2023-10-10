@@ -27,8 +27,8 @@ from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KConfigMap
 from paas_wl.resources.utils.basic import get_client_by_app
-from paasng.extensions.declarative.deployment.resources import BkSaaSItem
-from paasng.extensions.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
+from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

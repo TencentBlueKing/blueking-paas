@@ -25,8 +25,8 @@ import jinja2
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
-from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
+from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
+from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.monitoring.monitor.alert_rules.config import RuleConfig
 from paasng.platform.applications.models import Application
 

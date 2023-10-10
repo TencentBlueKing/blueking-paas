@@ -23,7 +23,7 @@ from attrs import define
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django_dynamic_fixture import G
 
-from paasng.accounts.models import UserProfile
+from paasng.infras.accounts.models import UserProfile
 from paasng.utils.models import OrderByField, make_json_field, make_legacy_json_field
 
 pytestmark = pytest.mark.django_db

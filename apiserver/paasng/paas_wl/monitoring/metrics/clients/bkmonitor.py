@@ -24,8 +24,8 @@ from attrs import Factory, define
 from paas_wl.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
 from paas_wl.monitoring.metrics.constants import BKMONITOR_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
-from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
-from paasng.accessories.bkmonitorv3.exceptions import BkMonitorGatewayServiceError
+from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError
 
 logger = logging.getLogger(__name__)
 

@@ -38,11 +38,11 @@ from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addr_
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.networking.ingress.models import Domain
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.region.models import get_region
+from paasng.core.region.models import get_region
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 

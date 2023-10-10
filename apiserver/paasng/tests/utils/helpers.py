@@ -30,20 +30,20 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.platform.api import CreatedAppInfo
-from paasng.cnative.services import initialize_simple
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
+from paasng.platform.cnative.services import initialize_simple
+from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
-from paasng.platform.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
+from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.oauth2.utils import create_oauth2_client
-from paasng.platform.region.states import load_regions_from_settings
-from paasng.publish.market.constant import ProductSourceUrlType
-from paasng.publish.market.models import MarketConfig
+from paasng.core.region.states import load_regions_from_settings
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.utils.configs import RegionAwareConfig
 
 from .auth import create_user
@@ -82,7 +82,7 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
 
     default_mockers: List[ContextManager] = [
         mock.patch('paasng.platform.modules.manager.make_app_metadata'),
-        mock.patch('paasng.dev_resources.sourcectl.connector.SvnRepositoryClient'),
+        mock.patch('paasng.platform.sourcectl.connector.SvnRepositoryClient'),
         contextmanager(_mock_wl_services_in_creation)(),
     ]
     # 通过 Mock 被跳过的应用流程（性能原因）
@@ -393,17 +393,17 @@ def _mock_wl_services_in_creation():
     ), mock.patch(
         'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
-        'paasng.cnative.services.update_metadata_by_env', new=fake_update_metadata_by_env
+        'paasng.platform.cnative.services.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
         "paasng.platform.modules.manager.EnvClusterService"
     ), mock.patch(
-        'paasng.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
+        'paasng.platform.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
     ), mock.patch(
-        "paasng.cnative.services.create_cnative_app_model_resource"
+        "paasng.platform.cnative.services.create_cnative_app_model_resource"
     ), mock.patch(
-        "paasng.cnative.services.EnvClusterService"
+        "paasng.platform.cnative.services.EnvClusterService"
     ), mock.patch(
-        "paasng.platform.log.shim.EnvClusterService"
+        "paasng.accessories.log.shim.EnvClusterService"
     ) as fake_log:
         fake_log().get_cluster().has_feature_flag.return_value = False
         yield
@@ -437,11 +437,11 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
 
 def create_scene_tmpls():
     """创建单元测试用的场景 SaaS 模板"""
-    from paasng.dev_resources.templates.constants import TemplateType
-    from paasng.dev_resources.templates.models import Template
+    from paasng.platform.templates.constants import TemplateType
+    from paasng.platform.templates.models import Template
 
     repo_url = 'http://git.com/owner/scene_tmpl_proj'
-    blob_url = f'file://{settings.BASE_DIR}/tests/extensions/scene_app/contents/scene-tmpl.tar.gz'
+    blob_url = f'file://{settings.BASE_DIR}/tests/paasng/platform/scene_app/contents/scene-tmpl.tar.gz'
 
     Template.objects.get_or_create(
         name='scene_tmpl1',
@@ -576,8 +576,8 @@ def register_iam_after_create_application(application: Application):
     默认为每个新建的蓝鲸应用创建三个用户组（管理者，开发者，运营者），以及该应用对应的分级管理员
     将 创建者 添加到 管理者用户组 以获取应用的管理权限，并添加为 分级管理员成员 以获取审批其他用户加入各个用户组的权限
     """
-    from paasng.accessories.iam.constants import NEVER_EXPIRE_DAYS
-    from paasng.accessories.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+    from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
+    from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
     from paasng.utils.basic import get_username_by_bkpaas_user_id
     from tests.utils.mocks.iam import StubBKIAMClient
 

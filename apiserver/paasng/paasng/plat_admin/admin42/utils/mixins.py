@@ -21,8 +21,8 @@ from django.views.generic import TemplateView
 from rest_framework.generics import GenericAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_required
 
 
 class RetrieveModelMixin:

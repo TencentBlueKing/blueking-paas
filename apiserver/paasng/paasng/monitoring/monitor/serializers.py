@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from rest_framework import serializers
 
-from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
-from paasng.engine.constants import AppEnvName
+from paasng.infras.bkmonitorv3.params import QueryAlertsParams
+from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
 from .models import AppAlertRule

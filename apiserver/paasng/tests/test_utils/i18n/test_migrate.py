@@ -21,7 +21,7 @@ from django.apps.registry import apps
 from django.db import connection
 from django_dynamic_fixture import G
 
-from paasng.engine.models.steps import DeployPhase, DeployStep
+from paasng.platform.engine.models.steps import DeployPhase, DeployStep
 from paasng.utils.i18n.migrate import copy_field
 
 pytestmark = pytest.mark.django_db

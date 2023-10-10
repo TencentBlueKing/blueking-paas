@@ -21,7 +21,7 @@ from django.conf import settings
 from django.urls import reverse
 
 from paas_wl.cnative.specs.constants import BKPAAS_ADDONS_ANNO_KEY
-from paasng.dev_resources.servicehub.services import ServiceObj
+from paasng.accessories.servicehub.services import ServiceObj
 from tests.utils import mock
 
 pytestmark = pytest.mark.django_db
@@ -31,7 +31,7 @@ class TestCNative:
     @pytest.fixture(autouse=True)
     def mock_dependencies(self):
         with mock.patch(
-            'paasng.cnative.views.mixed_service_mgr.list_binded',
+            'paasng.platform.cnative.views.mixed_service_mgr.list_binded',
             new=lambda *args, **kwargs: [
                 ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid='xxx', name='mysql', logo='', is_visible=True),
                 ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid='xxx', name='redis', logo='', is_visible=True),

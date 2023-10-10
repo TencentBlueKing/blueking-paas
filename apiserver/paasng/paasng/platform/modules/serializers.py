@@ -33,13 +33,13 @@ from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import to_error_string
 from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.workloads.images.serializers import ImageCredentialSLZ
-from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
-from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
-from paasng.dev_resources.sourcectl.validators import validate_image_url
-from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.models import Template
-from paasng.engine.constants import RuntimeType
+from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
+from paasng.platform.sourcectl.serializers import RepositorySLZ
+from paasng.platform.sourcectl.validators import validate_image_url
+from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.models.deploy_config import ImageTagOptions

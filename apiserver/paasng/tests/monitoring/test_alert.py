@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from filelock import FileLock
 
-from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
+from paasng.infras.bkmonitorv3.params import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 fn = Path(__file__).parent / ".random"

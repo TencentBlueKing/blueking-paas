@@ -22,7 +22,7 @@ from paas_wl.cnative.specs.constants import DEFAULT_PROC_CPU, DEFAULT_PROC_MEM
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.models import create_app_resource
 from paas_wl.cnative.specs.procs import CNativeProcSpec, parse_proc_specs, parse_procfile
-from paasng.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

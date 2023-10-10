@@ -29,8 +29,8 @@ from paas_wl.networking.egress.models import EgressRule, EgressSpec
 from paas_wl.resources.base.crd import Egress
 from paas_wl.resources.base.kres import KPod
 from paas_wl.resources.utils.basic import get_client_by_app
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin

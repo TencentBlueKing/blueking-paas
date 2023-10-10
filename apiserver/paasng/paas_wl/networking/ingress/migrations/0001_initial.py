@@ -20,7 +20,7 @@ to the current version of the project delivered to anyone in the future.
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
-from paasng.platform.core.storages.dbrouter import skip_if_found_record
+from paasng.core.core.storages.dbrouter import skip_if_found_record
 
 
 # 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress

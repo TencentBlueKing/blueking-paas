@@ -20,7 +20,7 @@ import json
 
 from paas_wl.cnative.specs.constants import BKPAAS_ADDONS_ANNO_KEY, ApiVersion
 from paas_wl.cnative.specs.crd import bk_app
-from paasng.dev_resources.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 
 

@@ -22,7 +22,7 @@ from paas_wl.monitoring.bklog.entities import BkAppLogConfig, bklog_config_kmode
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.log.models import CustomCollectorConfig
+from paasng.accessories.log.models import CustomCollectorConfig
 
 
 def build_bklog_config_crd(wl_app: WlApp, custom_collector_config: CustomCollectorConfig) -> BkAppLogConfig:

@@ -20,7 +20,7 @@ import datetime
 
 import pytest
 
-from paasng.platform.core.storages.sqlalchemy import legacy_db
+from paasng.core.core.storages.sqlalchemy import legacy_db
 from tests.conftest import check_legacy_enabled
 from tests.utils.helpers import adaptive_lapplication_fields, configure_regions
 

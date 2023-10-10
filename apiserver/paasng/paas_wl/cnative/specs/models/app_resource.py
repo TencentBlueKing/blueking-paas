@@ -31,7 +31,7 @@ from paas_wl.core.env import EnvIsRunningHub
 from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
-from paasng.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module

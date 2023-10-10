@@ -24,8 +24,8 @@ from kubernetes.client.apis import VersionApi
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.resources.base.base import get_client_by_cluster_name
-from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
-from paasng.dev_resources.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 

@@ -26,7 +26,7 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus, Pol
 
 from paas_wl.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.cnative.specs.resource import ModelResState
-from paasng.engine.deploy.bg_wait.wait_bkapp import AbortedDetails, DeployStatusHandler, WaitAppModelReady
+from paasng.platform.engine.deploy.bg_wait.wait_bkapp import AbortedDetails, DeployStatusHandler, WaitAppModelReady
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy, create_condition, create_res_with_conds
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -45,7 +45,7 @@ def poller(bk_stag_env, dp):
 
 
 class TestWaitAppModelReady:
-    @patch('paasng.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster', return_value=create_res_with_conds([]))
+    @patch('paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster', return_value=create_res_with_conds([]))
     def test_pending(self, mocker, dp, poller):
         ret = poller.query()
         assert ret.status == PollingStatus.DOING
@@ -53,7 +53,7 @@ class TestWaitAppModelReady:
         assert dp.status == DeployStatus.PENDING
 
     @patch(
-        'paasng.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster',
+        'paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster',
         return_value=create_res_with_conds([create_condition(MResConditionType.APP_AVAILABLE)]),
     )
     def test_progressing(self, mocker, dp, poller):
@@ -63,7 +63,7 @@ class TestWaitAppModelReady:
         assert dp.status == DeployStatus.PROGRESSING
 
     @patch(
-        'paasng.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster',
+        'paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster',
         return_value=create_res_with_conds(
             [create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning
         ),

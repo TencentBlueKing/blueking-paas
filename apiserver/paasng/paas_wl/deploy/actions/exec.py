@@ -29,7 +29,7 @@ from paas_wl.release_controller.hooks.models import Command
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
-from paasng.engine.utils.output import DeployStream, Style
+from paasng.platform.engine.utils.output import DeployStream, Style
 
 logger = logging.getLogger(__name__)
 

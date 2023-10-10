@@ -58,7 +58,7 @@ class App(UuidAuditedModel):
         # The namespace of the cloud-native app follow naming rules that do not include the module name.
 
         if self.type == WlAppType.CLOUD_NATIVE.value:
-            from paasng.engine.models import EngineApp
+            from paasng.platform.engine.models import EngineApp
             from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX
 
             module_env = EngineApp.objects.get(region=self.region, name=self.name).env

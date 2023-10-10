@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from paasng.dev_resources.servicehub.remote.exceptions import GetClusterEgressInfoError
+from paasng.accessories.servicehub.remote.exceptions import GetClusterEgressInfoError
 from paasng.utils.error_message import find_coded_error_message, find_innermost_exception, wrap_validation_error
 
 

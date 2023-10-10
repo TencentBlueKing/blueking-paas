@@ -24,9 +24,9 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from elasticsearch_dsl.response import Hit
 
-from paasng.accessories.bkmonitorv3.models import BKMonitorSpace
-from paasng.platform.log.models import CustomCollectorConfig
-from paasng.platform.log.shim.setup_bklog import build_custom_collector_config_name
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+from paasng.accessories.log.models import CustomCollectorConfig
+from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
 
 pytestmark = pytest.mark.django_db
 
@@ -34,7 +34,7 @@ pytestmark = pytest.mark.django_db
 class TestModuleStructuredLogAPIView:
     def test_dsl(self, api_client, bk_app, bk_module):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/structured/list/?time_range=1h"
-        with mock.patch("paasng.platform.log.views.logs.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.accessories.log.views.logs.instantiate_log_client") as client_factory:
             client_factory().get_mappings.return_value = {"app_code": {"type": "text"}}
             # 无任何日志
             client_factory().execute_search.return_value = ([], 0)
@@ -92,7 +92,7 @@ class TestModuleStructuredLogAPIView:
 
     def test_complex(self, api_client, bk_app, bk_module):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/structured/list/?time_range=1h"
-        with mock.patch("paasng.platform.log.views.logs.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.accessories.log.views.logs.instantiate_log_client") as client_factory:
             # 无任何日志
             client_factory().execute_search.return_value = (
                 [
@@ -195,7 +195,7 @@ class TestCustomCollectorConfigViewSet:
 
     @pytest.fixture
     def apigw_client(self):
-        with mock.patch("paasng.accessories.bk_log.client.APIGWClient") as cls, override_settings(
+        with mock.patch("paasng.infras.bk_log.client.APIGWClient") as cls, override_settings(
             ENABLE_BK_LOG_APIGW=True
         ):
             yield cls().api

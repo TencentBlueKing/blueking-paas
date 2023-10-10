@@ -26,10 +26,10 @@ from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import check_application_perm
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import check_application_perm
 from paasng.platform.applications.models import Application
-from paasng.platform.core.storages.sqlalchemy import console_db
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 
 try:
@@ -54,8 +54,8 @@ from paasng.platform.mgrlegacy.tasks import (
     rollback_migration_process,
 )
 from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms
-from paasng.publish.entrance.exposer import get_exposed_url
-from paasng.publish.sync_market.managers import AppDeveloperManger, AppManger
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)

@@ -31,13 +31,14 @@ layers =
     paasng.dev_resources.servicehub
     paasng.accessories.documentation | paasng.accessories.paas_analysis | paasng.accessories.smart_advisor | paasng.platform.operations
     paasng.dev_resources.services | paasng.publish | paasng.service_proxy | paasng.platform.log | paasng.accessories.app_secret
-    paasng.accessories.bk_components | paasng.accounts.permissions | paasng.accessories.log_search | paasng.accessories.bkmonitorv3
+    paasng.accessories.bk_components | paasng.accounts.permissions | paasng.accessories.bk_log | paasng.accessories.bkmonitorv3
     paasng.accessories.iam 
     paasng.accounts.models
     paasng.accounts.oauth | paasng.platform.feature_flags
     paasng.platform.region | paasng.platform.core | paasng.accessories.changelog
 ignore_imports =
     paas_wl.workloads.processes.models -> paasng.extensions.declarative.deployment.resources
+    paasng.engine.utils.query -> paasng.engine.workflow
 
 
 [importlinter:contract:layers-engine]

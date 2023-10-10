@@ -31,7 +31,7 @@ from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.controllers import get_proc_ctl
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.workloads.processes.readers import instance_kmodel
-from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.platform.applications.models import ModuleEnvironment
 
 

@@ -21,7 +21,7 @@ from django.utils.crypto import get_random_string
 
 from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
-from paasng.dev_resources.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.applications.models import ModuleEnvironment
 
 

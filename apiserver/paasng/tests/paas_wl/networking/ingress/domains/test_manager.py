@@ -24,7 +24,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.networking.ingress.domains.manager import CNativeCustomDomainManager, check_domain_used_by_market
 from paas_wl.networking.ingress.models import Domain
-from paasng.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.models import MarketConfig
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

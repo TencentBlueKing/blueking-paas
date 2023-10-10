@@ -205,18 +205,16 @@
       <bk-alert type="error" :title="$t('删除此密钥后无法再恢复，蓝鲸云 API 将永久拒绝此密钥的所有请求。')"></bk-alert>
       <bk-form :label-width="427" form-type="vertical" :model="deleteFormData">
         <bk-form-item>
-          <template slot="label">
-            {{ $t('请完整输入') }} &nbsp;
-            <span style="color: #ff56f5">
-              {{ curAppInfo.application.code }}
-            </span>
-            &nbsp;{{ $t('来确认删除密钥！') }}
-            <bk-input
-              :placeholder="curAppInfo.application.code"
-              style="margin-bottom: 15px"
-              v-model="deleteFormData.verifyText"
-            />
-          </template>
+          {{ $t('请完整输入') }} &nbsp;
+          <span style="color: #ff56f5">
+            {{ curAppInfo.application.code }}
+          </span>
+          &nbsp;{{ $t('来确认删除密钥！') }}
+          <bk-input
+            :placeholder="curAppInfo.application.code"
+            style="margin-bottom: 15px"
+            v-model="deleteFormData.verifyText"
+          />
         </bk-form-item>
       </bk-form>
     </bk-dialog>

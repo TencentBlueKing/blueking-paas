@@ -16,11 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.cnative.specs.exceptions import GetSourceConfigDataError
+
 from .constants import DeployStatus
-from .models import AppModelDeploy
+from .models import AppModelDeploy, Mount
+
+logger = logging.getLogger(__name__)
 
 
 class AppModelResourceSerializer(serializers.Serializer):
@@ -142,3 +149,60 @@ class ResQuotaPlanSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="选项值")
     request = ResourceQuotaSLZ(help_text="资源请求")
     limit = ResourceQuotaSLZ(help_text="资源限制")
+
+
+class UpsertMountSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
+    name = serializers.RegexField(
+        help_text=_('挂载卷名称'), regex=r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', max_length=63, required=True
+    )
+    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_.]+/?)+$", required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+
+    source_config_data = serializers.JSONField(
+        help_text=_(
+            "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。" "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
+        ),
+        default=dict,
+    )
+
+    def validate(self, attrs):
+        # 在这里根据 source_type 验证 source_config_data
+        source_type = attrs["source_type"]
+        source_config_data = attrs["source_config_data"]
+
+        if source_type == VolumeSourceType.ConfigMap.value:
+            if not source_config_data:
+                raise serializers.ValidationError(_("挂载卷内容不可为空"))
+        return attrs
+
+
+class MountSLZ(serializers.ModelSerializer):
+    source_config_data = serializers.SerializerMethodField(label=_('挂载卷内容'))
+
+    class Meta:
+        model = Mount
+        fields = (
+            'id',
+            'region',
+            'created',
+            'updated',
+            'module_id',
+            'environment_name',
+            'name',
+            'mount_path',
+            'source_type',
+            'source_config',
+            'source_config_data',
+        )
+
+    def get_source_config_data(self, obj):
+        try:
+            return obj.source.data
+        except ValueError as e:
+            raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
+
+
+class QueryMountsSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)

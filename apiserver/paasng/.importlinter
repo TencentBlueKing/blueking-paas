@@ -36,6 +36,8 @@ layers =
     paasng.accounts.models
     paasng.accounts.oauth | paasng.platform.feature_flags
     paasng.platform.region | paasng.platform.core | paasng.accessories.changelog
+ignore_imports =
+    paas_wl.workloads.processes.models -> paasng.extensions.declarative.deployment.resources
 
 
 [importlinter:contract:layers-engine]
@@ -53,6 +55,7 @@ containers=
 ignore_imports =
     # TODO: Remove these rules after the dependency relations are fixed.
     paasng.engine.models.base -> paasng.engine.utils.output
+    paasng.engine.utils.query -> paasng.engine.workflow
 
 
 [importlinter:contract:independent-apps]
@@ -89,6 +92,7 @@ ignore_imports =
     paas_wl.** -> paas_wl.**.constants
     # view_enduser -> engine.deploy module, to be removed in the future if we find a better way
     paas_wl.cnative.specs.views_enduser -> paasng.engine.deploy.release.operator
+    paas_wl.workloads.resource_templates.utils -> paas_wl.workloads.processes.models
 
 
 [importlinter:contract:layers-paas-wl-resources]

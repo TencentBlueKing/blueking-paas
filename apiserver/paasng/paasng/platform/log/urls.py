@@ -20,100 +20,114 @@ from django.conf.urls import url
 
 from paasng.utils.basic import make_app_pattern, re_path
 
-from . import legacy_views, views
+from .views import config
+from .views import legacy as legacy_views
+from .views import logs as logs_views
 
 # log
 urlpatterns = [
     # 结构化日志
     re_path(
         make_app_pattern(r'/log/structured/list/$'),
-        views.StructuredLogAPIView.as_view({"post": "query_logs"}),
+        logs_views.StructuredLogAPIView.as_view({"post": "query_logs"}),
         name='api.logs.structured.query_logs',
     ),
     re_path(
         make_app_pattern(r'/log/structured/date_histogram/$'),
-        views.StructuredLogAPIView.as_view({"post": "aggregate_date_histogram"}),
+        logs_views.StructuredLogAPIView.as_view({"post": "aggregate_date_histogram"}),
         name='api.logs.structured.aggregate_date_histogram',
     ),
     re_path(
         make_app_pattern(r'/log/structured/fields_filters/$'),
-        views.StructuredLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        logs_views.StructuredLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name='api.logs.structured.aggregate_fields_filters',
     ),
     # 标准输出日志
     re_path(
         make_app_pattern(r'/log/stdout/list/$'),
-        views.StdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
+        logs_views.StdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
         name='api.logs.stdout.query_logs',
     ),
     re_path(
         make_app_pattern(r'/log/stdout/fields_filters/$'),
-        views.StdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        logs_views.StdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name='api.logs.stdout.aggregate_fields_filters',
     ),
     # Ingress 日志
     re_path(
         make_app_pattern(r'/log/ingress/list/$'),
-        views.IngressLogAPIView.as_view({"post": "query_logs"}),
+        logs_views.IngressLogAPIView.as_view({"post": "query_logs"}),
         name='api.logs.ingress.query_logs',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/date_histogram/$'),
-        views.IngressLogAPIView.as_view({"post": "aggregate_date_histogram"}),
+        logs_views.IngressLogAPIView.as_view({"post": "aggregate_date_histogram"}),
         name='api.logs.ingress.aggregate_date_histogram',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/fields_filters/$'),
-        views.IngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        logs_views.IngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name='api.logs.ingress.aggregate_fields_filters',
     ),
     # 模块维度下的日志搜索
     re_path(
         make_app_pattern(r'/log/structured/list/$', include_envs=False),
-        views.ModuleStructuredLogAPIView.as_view({"post": "query_logs"}),
+        logs_views.ModuleStructuredLogAPIView.as_view({"post": "query_logs"}),
         name='api.logs.structured.query_logs.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/structured/date_histogram/$', include_envs=False),
-        views.ModuleStructuredLogAPIView.as_view({"post": "aggregate_date_histogram"}),
+        logs_views.ModuleStructuredLogAPIView.as_view({"post": "aggregate_date_histogram"}),
         name='api.logs.structured.aggregate_date_histogram.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/structured/fields_filters/$', include_envs=False),
-        views.ModuleStructuredLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        logs_views.ModuleStructuredLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name='api.logs.structured.aggregate_fields_filters.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/stdout/list/$', include_envs=False),
-        views.ModuleStdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
+        logs_views.ModuleStdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
         name='api.logs.stdout.query_logs.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/stdout/fields_filters/$', include_envs=False),
-        views.ModuleStdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        logs_views.ModuleStdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name='api.logs.stdout.aggregate_fields_filters.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/list/$', include_envs=False),
-        views.ModuleIngressLogAPIView.as_view({"post": "query_logs"}),
+        logs_views.ModuleIngressLogAPIView.as_view({"post": "query_logs"}),
         name='api.logs.ingress.query_logs.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/date_histogram/$', include_envs=False),
-        views.ModuleIngressLogAPIView.as_view({"post": "aggregate_date_histogram"}),
+        logs_views.ModuleIngressLogAPIView.as_view({"post": "aggregate_date_histogram"}),
         name='api.logs.ingress.aggregate_date_histogram.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/fields_filters/$', include_envs=False),
-        views.ModuleIngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        logs_views.ModuleIngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
         name='api.logs.ingress.aggregate_fields_filters.legacy',
     ),
     # System APIs
     url(
         r'sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/'
         r'envs/(?P<environment>stag|prod)/structured/list/$',
-        views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
+        logs_views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
         name='sys.api.logs.structured',
+    ),
+]
+
+# 日志采集配置 API
+urlpatterns += [
+    re_path(
+        make_app_pattern(r"/log/custom-collector/$", include_envs=False),
+        config.CustomCollectorConfigViewSet.as_view({"get": "list", "post": "upsert"}),
+    ),
+    re_path(
+        make_app_pattern(r"/log/custom-collector/metadata/$", include_envs=False),
+        config.CustomCollectorConfigViewSet.as_view({"get": "list_metadata"}),
     ),
 ]
 

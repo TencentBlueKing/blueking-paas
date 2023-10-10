@@ -35,7 +35,7 @@ class TestBkOauthClient:
         "enable_bk_oauth, ctx", [(True, pytest.raises(BkOauthApiException)), (False, does_not_raise())]
     )
     def test_create_client(self, BkOauthClient, bk_oauth_client_id, bk_oauth_client_key, enable_bk_oauth, ctx):
-        BkOauthClient().get_client_secret.return_value = bk_oauth_client_key
+        BkOauthClient().get_default_app_secret.return_value = bk_oauth_client_key
 
         with override_settings(ENABLE_BK_OAUTH=enable_bk_oauth):
             region = "default"

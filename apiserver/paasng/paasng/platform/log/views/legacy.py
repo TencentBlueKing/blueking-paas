@@ -24,7 +24,7 @@ from rest_framework.response import Response
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.platform.log.serializers import LogQueryParamsSLZ
-from paasng.platform.log.views import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
+from paasng.platform.log.views.logs import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
 from paasng.utils.datetime import convert_timestamp_to_str
 
 

@@ -528,7 +528,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), scaling.Process) {
 			return field.Invalid(pField.Child("process"), scaling.Process, "process name is invalid")
 		}
-		if err := r.validateAutoscaling(pField, scaling.Spec); err != nil {
+		if err := r.validateAutoscaling(pField, scaling.AutoscalingSpec); err != nil {
 			return err
 		}
 	}

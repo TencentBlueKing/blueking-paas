@@ -34,12 +34,20 @@ class TestAlertRuleManager:
     ):
         manager = AlertRuleManager(bk_app)
         manager.init_rules()
-        mock_import_configs.assert_called_with(bk_app_init_rule_configs)
+
+        assert mock_import_configs.call_count == 2
+        rule_configs, notice_group_config = bk_app_init_rule_configs
+        expected_args = [
+            ((rule_configs,),),
+            ((notice_group_config, f'{bk_app.code}_notice_group'), {'incremental': False}),
+        ]
+        assert mock_import_configs.call_args_list == expected_args
+
         assert AppAlertRule.objects.filter(application=bk_app, alert_code='high_cpu_usage').count() == 2
 
-    def test_refresh_rules_by_module(self, bk_app, wl_namespaces):
+    def test_create_rules(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
-        manager.refresh_rules_by_module(bk_app.get_default_module().name, 'stag')
+        manager.create_rules(bk_app.get_default_module().name, 'stag')
         assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
             get_supported_alert_codes(bk_app.type).app_scoped_codes
         )
@@ -51,32 +59,8 @@ class TestAlertRuleManager:
             == DEFAULT_RULE_CONFIGS['high_cpu_usage']['threshold_expr']
         )
 
-    def test_refresh_rules_by_module_with_rule_obj(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
+    def test_update_notice_group(self, bk_app, mock_import_configs):
         manager = AlertRuleManager(bk_app)
-        manager.refresh_rules_by_module(bk_app.get_default_module().name, 'stag')
-        assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
-            get_supported_alert_codes(bk_app.type).app_scoped_codes
-        )
-        assert AppAlertRule.objects.filter_module_scoped(bk_app).count() == len(
-            get_supported_alert_codes(bk_app.type).module_scoped_codes
-        )
-        # 与 test_refresh_rules_by_module 不同, 这里测试 AlertRuleManager.refresh_rules_by_module 能够保留原 DB 中的配置值
-        assert AppAlertRule.objects.get(id=cpu_usage_alert_rule_obj.id).threshold_expr == 'N/A'
+        manager.update_notice_group()
 
-    def test_update_rule(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
-        from tests.utils.helpers import generate_random_string
-
-        receivers = [generate_random_string(6)]
-        manager = AlertRuleManager(bk_app)
-        manager.update_rule(cpu_usage_alert_rule_obj, {'enabled': False, 'receivers': receivers})
-
-        rule_obj = AppAlertRule.objects.get(id=cpu_usage_alert_rule_obj.id)
-        assert rule_obj.enabled is False
-        assert rule_obj.receivers == receivers
-
-    def test_delete_rules(self, bk_app, cpu_usage_alert_rule_obj):
-        module_name = bk_app.get_default_module().name
-        assert AppAlertRule.objects.filter(application=bk_app, module__name=module_name).exists() is True
-        manager = AlertRuleManager(bk_app)
-        manager.delete_rules(module_name, 'stag')
-        assert AppAlertRule.objects.filter(application=bk_app, module__name=module_name).exists() is False
+        mock_import_configs.assert_called()

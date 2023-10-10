@@ -25,6 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_403_FORBIDDEN
 
+from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.processes.shim import ProcessManager
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accessories.serializers import DocumentaryLinkSLZ
@@ -55,6 +56,18 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
         application_perm_class(AppAction.BASIC_DEVELOP),
     ]
 
+    def _is_whitelisted_user(self, request):
+        return user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self)
+
+    def _is_cloud_native_app(self, application):
+        return application.type == ApplicationType.CLOUD_NATIVE
+
+    def _is_s_mart_app(self, module):
+        return module.get_source_origin() == SourceOrigin.S_MART
+
+    def _is_buildpack_app(self, module):
+        return ModuleSpecs(module).runtime_type == RuntimeType.BUILDPACK
+
     @swagger_auto_schema(
         query_serializer=slzs.WebConsoleOpenSLZ, responses={200: slzs.WebConsoleResultSLZ}, tags=["获取控制台入口"]
     )
@@ -71,12 +84,8 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
             # 平台不支持 WebConsole 功能
             raise error_codes.FEATURE_FLAG_DISABLED
 
-        if user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self):
-            logger.debug("For users who have turned on the whitelist, allow any mirror to open the WebConsole")
-        elif application.type == ApplicationType.CLOUD_NATIVE:
-            logger.debug("Always allow cloud-native app to open the WebConsole")
-        elif module.get_source_origin() == SourceOrigin.S_MART:
-            logger.debug("Always allow s-mart app to open the WebConsole")
+        if self._is_whitelisted_user(request) or self._is_cloud_native_app(application) or self._is_s_mart_app(module):
+            logger.debug("Allow to open the WebConsole")
         elif ModuleSpecs(module).runtime_type == RuntimeType.BUILDPACK:
             try:
                 image = manager.get_running_image()
@@ -101,22 +110,20 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
                     data=DocumentaryLinkSLZ(link).data,
                     status=HTTP_403_FORBIDDEN,
                 )
-        # 云原生应用、镜像应用使用等非平台指定的镜像，使用 sh 命令
-        if (
-            application.type == ApplicationType.CLOUD_NATIVE
-            or module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY
-        ):
-            command = "sh"
-        else:
-            command = "bash"
 
-        result = manager.create_webconsole(
-            request.user.username,
-            process_type,
-            process_instance_name,
-            slz.validated_data.get("container_name"),
-            command,
-        )
+        # 云原生应用、镜像应用使用等非平台指定的镜像，使用 sh 命令
+        command = "sh" if self._is_cloud_native_app(application) or self._is_s_mart_app(module) else "bash"
+        try:
+            result = manager.create_webconsole(
+                request.user.username,
+                process_type,
+                process_instance_name,
+                slz.validated_data.get("container_name"),
+                command,
+            )
+        except AppEntityNotFound:
+            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f('未找到服务')
+
         data = result.get("data") or {}
         return Response(
             {

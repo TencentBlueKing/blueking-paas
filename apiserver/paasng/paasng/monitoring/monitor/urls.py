@@ -48,9 +48,6 @@ urlpatterns = [
         'api/monitor/applications/<slug:code>/alert_rules/init/',
         views.AlertRulesView.as_view({'post': 'init_alert_rules'}),
     ),
-    path(
-        'api/monitor/applications/<slug:code>/alert_rules/<int:id>/', views.AlertRulesView.as_view({'put': 'update'})
-    ),
     path('api/monitor/supported_alert_rules/', views.AlertRulesView.as_view({'get': 'list_supported_alert_rules'})),
     path('api/monitor/applications/<slug:code>/alerts/', views.ListAlertsView.as_view({'post': 'list'})),
 ]

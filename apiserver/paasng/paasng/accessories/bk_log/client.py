@@ -16,20 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Dict, Optional, Protocol, Union
+from typing import Any, Dict, List, Optional, Protocol, Union
 
 import cattr
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
-from paasng.accessories.log_search.backend.apigw import Client as APIGWClient
-from paasng.accessories.log_search.backend.esb import get_client_by_username
-from paasng.accessories.log_search.definitions import CustomCollectorConfig
-from paasng.accessories.log_search.exceptions import (
-    BkLogApiError,
-    BkLogGatewayServiceError,
-    CollectorConfigNotPersisted,
-)
+from paasng.accessories.bk_log.backend.apigw import Client as APIGWClient
+from paasng.accessories.bk_log.backend.esb import get_client_by_username
+from paasng.accessories.bk_log.definitions import CustomCollectorConfig, PlainCustomCollectorConfig
+from paasng.accessories.bk_log.exceptions import BkLogApiError, BkLogGatewayServiceError, CollectorConfigNotPersisted
 
 
 class _APIGWOperationStub(Protocol):
@@ -54,11 +50,63 @@ class BKLogAPIProtocol(Protocol):
 
     databus_custom_create: _APIGWOperationStub
     databus_custom_update: _APIGWOperationStub
+    databus_list_collectors: _APIGWOperationStub
 
 
 class BkLogClient:
     def __init__(self, client: BKLogAPIProtocol):
         self.client = client
+
+    def list_custom_collector_config(
+        self,
+        biz_or_space_id: Union[int, str],
+    ) -> List[PlainCustomCollectorConfig]:
+        """列举所有自定义采集项"""
+        try:
+            resp = self.client.databus_list_collectors(params={"bk_biz_id": biz_or_space_id})
+        except APIGatewayResponseError:
+            raise BkLogGatewayServiceError("Failed to list custom collector config")
+
+        if not resp["result"]:
+            raise BkLogApiError(resp["message"])
+
+        data = resp["data"]
+        return [
+            PlainCustomCollectorConfig(
+                name_en=item["collector_config_name_en"],
+                name_zh_cn=item["collector_config_name"],
+                custom_type=item["custom_type"],
+                id=item["collector_config_id"],
+                index_set_id=item["index_set_id"],
+                bk_data_id=item["bk_data_id"],
+            )
+            for item in data
+        ]
+
+    def get_custom_collector_config_by_name_en(
+        self, biz_or_space_id: Union[int, str], collector_config_name_en: str
+    ) -> Optional[PlainCustomCollectorConfig]:
+        """根据名字查询自定义采集项"""
+        try:
+            resp = self.client.databus_list_collectors(params={"bk_biz_id": biz_or_space_id})
+        except APIGatewayResponseError:
+            raise BkLogGatewayServiceError("Failed to list custom collector config")
+
+        if not resp["result"]:
+            raise BkLogApiError(resp["message"])
+
+        data = resp["data"]
+        for item in data:
+            if item["collector_config_name_en"] == collector_config_name_en:
+                return PlainCustomCollectorConfig(
+                    name_en=item["collector_config_name_en"],
+                    name_zh_cn=item["collector_config_name"],
+                    custom_type=item["custom_type"],
+                    id=item["collector_config_id"],
+                    index_set_id=item["index_set_id"],
+                    bk_data_id=item["bk_data_id"],
+                )
+        return None
 
     def create_custom_collector_config(self, biz_or_space_id: Union[int, str], config: CustomCollectorConfig):
         """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值
@@ -78,6 +126,7 @@ class BkLogClient:
         }
         if config.data_link_id:
             data["data_link_id"] = config.data_link_id
+
         if config.etl_config:
             data.update(
                 {

@@ -457,7 +457,7 @@ var _ = Describe("test webhook.Validator", func() {
 					{
 						EnvName: "stag",
 						Process: "web",
-						Spec: paasv1alpha2.AutoscalingSpec{
+						AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 							MinReplicas: 2,
 							MaxReplicas: 5,
 							Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -523,7 +523,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					EnvName: "invalid-env",
 					Process: "web",
-					Spec: paasv1alpha2.AutoscalingSpec{
+					AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 						MinReplicas: 2,
 						MaxReplicas: 5,
 						Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -538,7 +538,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					EnvName: "stag",
 					Process: "invalid-proc",
-					Spec: paasv1alpha2.AutoscalingSpec{
+					AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 						MinReplicas: 2,
 						MaxReplicas: 5,
 						Policy:      paasv1alpha2.ScalingPolicyDefault,
@@ -553,7 +553,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{
 					EnvName: "stag",
 					Process: "web",
-					Spec: paasv1alpha2.AutoscalingSpec{
+					AutoscalingSpec: paasv1alpha2.AutoscalingSpec{
 						MinReplicas: 2, MaxReplicas: 5, Policy: "fake",
 					},
 				},
@@ -664,6 +664,29 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 			},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).To(HaveOccurred())
+	})
+	
+	It("Create BkApp with EnvOverLay.Autoscaling", func() {
+		bkapp := buildApp(paasv1alpha1.AppSpec{
+			Processes: []paasv1alpha1.Process{
+				{Name: "web", Replicas: paasv1alpha1.ReplicasOne, Image: "nginx:latest", Autoscaling: nil},
+				{Name: "dev", Replicas: paasv1alpha1.ReplicasOne, Image: "nginx:latest", Autoscaling: nil},
+			},
+			EnvOverlay: &paasv1alpha1.AppEnvOverlay{
+				Autoscaling: []paasv1alpha1.AutoscalingOverlay{
+					{
+						EnvName: "stag",
+						Process: "web",
+						AutoscalingSpec: paasv1alpha1.AutoscalingSpec{
+							MinReplicas: 3,
+							MaxReplicas: 5,
+							Policy:      paasv1alpha1.ScalingPolicyDefault,
+						},
+					},
+				},
+			},
+		})
+		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
 	})
 })
 

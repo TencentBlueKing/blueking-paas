@@ -21,13 +21,14 @@ from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
 from pydantic import ValidationError as PDValidationError
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
@@ -35,13 +36,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, ResQuotaPlan
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, MountEnvName, ResQuotaPlan
 from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
-from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.cnative.specs.image_parser import ImageParser
-from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
+from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, Mount, to_error_string, update_app_resource
+from paas_wl.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
@@ -51,9 +53,12 @@ from paas_wl.cnative.specs.serializers import (
     DeployDetailSerializer,
     DeployPrepResultSLZ,
     DeploySerializer,
+    MountSLZ,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    QueryMountsSLZ,
     ResQuotaPlanSLZ,
+    UpsertMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
@@ -337,3 +342,117 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
             raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
         return Response(data=alternative_versions)
+
+
+class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    pagination_class = LimitOffsetPagination
+
+    @swagger_auto_schema(query_serializer=QueryMountsSLZ, responses={200: MountSLZ(many=True)})
+    def list(self, request, code, module_name):
+        module = self.get_module_via_path()
+
+        slz = QueryMountsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        mounts = Mount.objects.filter(module_id=module.id).order_by("-created")
+
+        # Filter by environment_name if provided
+        environment_name = params.get('environment_name')
+        if environment_name:
+            mounts = mounts.filter(environment_name=environment_name)
+        # Filter by source_type if provided
+        source_type = params.get('source_type')
+        if source_type:
+            mounts = mounts.filter(source_type=source_type)
+
+        page = self.paginator.paginate_queryset(mounts, self.request, view=self)
+        try:
+            slz = MountSLZ(page, many=True)
+        except GetSourceConfigDataError as e:
+            raise error_codes.LIST_VOLUME_MOUNTS_FAILED.f(_(e))
+
+        return self.paginator.get_paginated_response(slz.data)
+
+    @transaction.atomic
+    @swagger_auto_schema(responses={201: MountSLZ()}, request_body=UpsertMountSLZ)
+    def create(self, request, code, module_name):
+        application = self.get_application()
+        module = self.get_module_via_path()
+        slz = UpsertMountSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        # 创建 Mount
+        try:
+            mount_instance = Mount.objects.new(
+                module_id=module.id,
+                app_code=application.code,
+                name=validated_data['name'],
+                environment_name=validated_data['environment_name'],
+                mount_path=validated_data['mount_path'],
+                source_type=validated_data['source_type'],
+                region=application.region,
+            )
+        except IntegrityError:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
+
+        # 创建或更新 Mount source
+        Mount.objects.upsert_source(mount_instance, validated_data['source_config_data'])
+
+        try:
+            slz = MountSLZ(mount_instance)
+        except GetSourceConfigDataError as e:
+            raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_(e))
+        return Response(data=slz.data, status=status.HTTP_201_CREATED)
+
+    @transaction.atomic
+    @swagger_auto_schema(responses={200: MountSLZ()}, request_body=UpsertMountSLZ)
+    def update(self, request, code, module_name, mount_id):
+        module = self.get_module_via_path()
+        mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
+
+        slz = UpsertMountSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        # 更新 Mount
+        mount_instance.environment_name = validated_data['environment_name']
+        mount_instance.mount_path = validated_data['mount_path']
+        try:
+            mount_instance.save(update_fields=['environment_name', 'mount_path'])
+        except IntegrityError:
+            raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
+
+        # 创建或更新 Mount source
+        Mount.objects.upsert_source(mount_instance, validated_data['source_config_data'])
+
+        # 需要删除对应的 k8s volume 资源
+        if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
+            opposite_env_map = {
+                MountEnvName.STAG.value: MountEnvName.PROD.value,
+                MountEnvName.PROD.value: MountEnvName.STAG.value,
+            }
+            env = module.get_envs(environment=opposite_env_map.get(mount_instance.environment_name))
+            VolumeSourceManager(env).delete_source_config(mount_instance)
+
+        try:
+            slz = MountSLZ(mount_instance)
+        except GetSourceConfigDataError as e:
+            raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_(e))
+        return Response(data=slz.data, status=status.HTTP_200_OK)
+
+    @transaction.atomic
+    def destroy(self, request, code, module_name, mount_id):
+        module = self.get_module_via_path()
+        mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
+
+        # 需要删除对应的 k8s volume 资源
+        for env in module.get_envs():
+            VolumeSourceManager(env).delete_source_config(mount_instance)
+
+        mount_instance.source.delete()
+        mount_instance.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

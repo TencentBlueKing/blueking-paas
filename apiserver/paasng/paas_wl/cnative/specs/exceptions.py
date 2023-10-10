@@ -20,3 +20,7 @@ to the current version of the project delivered to anyone in the future.
 
 class InvalidImageCredentials(Exception):
     """不合法的镜像凭证信息"""
+
+
+class GetSourceConfigDataError(Exception):
+    """获取挂载卷内容失败"""

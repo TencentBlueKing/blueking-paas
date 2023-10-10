@@ -354,7 +354,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         slz = QueryMountsSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
-        params = slz.data
+        params = slz.validated_data
 
         mounts = Mount.objects.filter(module_id=module.id).order_by("-created")
 

@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.permissions import IsAuthenticated
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.engine.models.deployment import Deployment
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.plat_admin.admin42.serializers.engine import DeploymentForListSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 

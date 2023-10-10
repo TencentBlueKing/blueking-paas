@@ -28,8 +28,8 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppUserCredential
 from paas_wl.workloads.images.serializers import UsernamePasswordPairSLZ
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 

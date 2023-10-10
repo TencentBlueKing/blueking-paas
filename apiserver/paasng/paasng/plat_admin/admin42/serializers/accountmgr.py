@@ -21,8 +21,8 @@ import logging
 from bkpaas_auth.core.constants import ProviderType
 from rest_framework import serializers
 
-from paasng.accounts.constants import SiteRole
-from paasng.accounts.models import UserPrivateToken
+from paasng.infras.accounts.constants import SiteRole
+from paasng.infras.accounts.models import UserPrivateToken
 from paasng.utils.serializers import UserField as BaseUserField
 
 PROVIDER_TYPE_CHCOISE = (

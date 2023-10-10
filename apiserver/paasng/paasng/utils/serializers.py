@@ -34,8 +34,8 @@ from past.builtins import basestring
 from rest_framework import fields, serializers
 from rest_framework.fields import flatten_choices_dict, to_choices_dict
 
-from paasng.accounts.utils import get_user_avatar
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
+from paasng.infras.accounts.utils import get_user_avatar
+from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY

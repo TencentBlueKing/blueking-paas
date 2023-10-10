@@ -27,7 +27,7 @@ from django.http.response import HttpResponse
 from django.urls import resolve
 from django.utils.encoding import force_text
 
-from paasng.metrics import API_VISITED_COUNTER, API_VISITED_TIME_CONSUME_HISTOGRAM
+from paasng.misc.metrics import API_VISITED_COUNTER, API_VISITED_TIME_CONSUME_HISTOGRAM
 from paasng.utils.basic import get_client_ip
 
 logger = logging.getLogger(__name__)

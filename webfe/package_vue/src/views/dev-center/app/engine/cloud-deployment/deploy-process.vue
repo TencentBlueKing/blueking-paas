@@ -9,7 +9,7 @@
   >
     <!-- 若托管方式为源码&镜像，进程配置页面都为当前空页面状态 -->
     <section
-      v-if="!isCustomImage"
+      v-if="!isCustomImage && !isCreate"
       style="margin-top: 38px;"
     >
       <bk-exception
@@ -1389,13 +1389,13 @@ export default {
 
     // 编辑
     handleEditClick() {
-      // 扩缩容
-      this.getAutoScalFlag('stag');
-      this.getAutoScalFlag('prod');
       if (this.isCreate) {
         this.$store.commit('cloudApi/updateProcessPageEdit', true);
       } else {
         this.$store.commit('cloudApi/updatePageEdit', true);
+        // 扩缩容FeatureFlag 
+        this.getAutoScalFlag('stag');
+        this.getAutoScalFlag('prod');
       }
     },
 

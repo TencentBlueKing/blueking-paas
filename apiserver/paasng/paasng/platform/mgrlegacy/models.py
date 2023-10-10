@@ -40,7 +40,7 @@ class MigrationProcessManager(models.Manager):
             from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy  # type: ignore
         except ImportError:
             from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
-        from paasng.publish.sync_market.managers import AppManger
+        from paasng.accessories.publish.sync_market.managers import AppManger
 
         legacy_app = AppManger(session).get_by_app_id(legacy_app_id)
         legacy_app_proxy = LegacyAppProxy(legacy_app=legacy_app, session=session)

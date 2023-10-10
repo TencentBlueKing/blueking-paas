@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf.urls import url
 
-from paasng.accounts.views import OauthTokenViewSet
+from paasng.infras.accounts.views import OauthTokenViewSet
 
 from . import views
 

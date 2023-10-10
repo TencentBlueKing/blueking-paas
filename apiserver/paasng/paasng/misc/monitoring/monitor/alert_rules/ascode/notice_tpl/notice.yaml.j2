@@ -1,0 +1,24 @@
+name: '{{ notice_group_name }}'
+
+alert:
+  '00:00--23:59':
+    remind:
+      type: [rtx, weixin]
+    warning:
+      type: [rtx, weixin]
+    fatal:
+      type: [rtx, weixin]
+
+action:
+  '00:00--23:59':
+    execute:
+      type: [rtx, weixin]
+    execute_failed:
+      type: [rtx, weixin]
+    execute_success:
+      type: [rtx, weixin]
+
+users:
+{% for user in receivers or []%}
+  - {{ user }}
+{% endfor %}

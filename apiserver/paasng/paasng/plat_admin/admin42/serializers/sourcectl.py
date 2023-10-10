@@ -23,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.dev_resources.sourcectl.models import SourceTypeSpecConfig
+from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 
 
 class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):

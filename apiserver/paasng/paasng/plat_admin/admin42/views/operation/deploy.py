@@ -24,9 +24,9 @@ from django.views.generic import TemplateView
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.engine.models.deployment import Deployment
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.plat_admin.admin42.serializers.statistics import (
     AppDeploymentFilterSlz,
     AppDeploymentSlz,

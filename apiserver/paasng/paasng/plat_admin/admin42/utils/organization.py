@@ -20,7 +20,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
 
-from paasng.accessories.bk_components.tof import (
+from paasng.infras.bk_components.tof import (
     ComponentResponseInvalid,
     get_center_info_by_groupid,
     tof_get_bg_info_by_dept_id,

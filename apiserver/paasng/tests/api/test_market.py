@@ -24,11 +24,11 @@ import pytest
 from django.conf import settings
 from rest_framework.reverse import reverse
 
-from paas_wl.networking.ingress.models import Domain
+from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.publish.market.constant import OpenMode, ProductSourceUrlType
-from paasng.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
+from paasng.accessories.publish.market.constant import OpenMode, ProductSourceUrlType
+from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
 from tests.utils.helpers import create_app, override_region_configs
 
 pytestmark = pytest.mark.django_db
@@ -140,8 +140,8 @@ class TestGetAndUpdateProduct:
         assert product.displayoptions.open_mode == OpenMode.NEW_TAB.value
         # 开启了应用市场配置，则测试数据同步
         if getattr(settings, "BK_CONSOLE_DBCONF", None):
-            from paasng.platform.core.storages.sqlalchemy import console_db
-            from paasng.publish.sync_market.managers import AppManger
+            from paasng.core.core.storages.sqlalchemy import console_db
+            from paasng.accessories.publish.sync_market.managers import AppManger
 
             session = console_db.get_scoped_session()
             console_app = AppManger(session).get(bk_app_full.code)

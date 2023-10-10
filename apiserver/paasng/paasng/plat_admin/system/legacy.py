@@ -24,12 +24,12 @@ from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 from sqlalchemy.orm import Query, Session
 
-from paasng.platform.region.models import get_all_regions
+from paasng.core.region.models import get_all_regions
 
 try:
-    from paasng.platform.legacydb_te.models import get_developers_by_v2_application
+    from paasng.infras.legacydb_te.models import get_developers_by_v2_application
 except ImportError:
-    from paasng.platform.legacydb.models import get_developers_by_v2_application
+    from paasng.infras.legacydb.models import get_developers_by_v2_application
 
 
 RE_QQ = re.compile(r'^\d{5,}$')

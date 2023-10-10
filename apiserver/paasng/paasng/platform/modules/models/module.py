@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import RepositoryInstance
+    from paasng.platform.sourcectl.models import RepositoryInstance
 
 
 class Module(OwnerTimestampedModel):

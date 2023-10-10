@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from bkpaas_auth.models import User
 
-from paas_wl.platform.applications.models import Release
+from paas_wl.bk_app.applications.models import Release
 from paasng.platform.applications.models import ModuleEnvironment
 
 

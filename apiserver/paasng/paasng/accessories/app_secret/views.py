@@ -34,18 +34,18 @@ from paasng.accessories.app_secret.serializers import (
     DeployedSecretSLZ,
 )
 from paasng.accessories.app_secret.utilts import get_deployed_secret_list
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.constants import FunctionType
-from paasng.accounts.models import make_verifier
-from paasng.accounts.permissions.application import application_perm_class
-from paasng.accounts.serializers import VerificationCodeSLZ
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.constants import FunctionType
+from paasng.infras.accounts.models import make_verifier
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.feature_flags.constants import PlatformFeatureFlag
-from paasng.platform.oauth2.api import BkOauthClient
-from paasng.platform.oauth2.models import BkAppSecretInEnvVar
-from paasng.platform.oauth2.utils import get_app_secret_in_env_var
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.infras.oauth2.api import BkOauthClient
+from paasng.infras.oauth2.models import BkAppSecretInEnvVar
+from paasng.infras.oauth2.utils import get_app_secret_in_env_var
 
 logger = logging.getLogger(__name__)
 

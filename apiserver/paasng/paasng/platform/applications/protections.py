@@ -25,8 +25,8 @@ from django.utils.translation import gettext as _
 from rest_framework import permissions
 
 from paasng.platform.applications.models import Application
-from paasng.platform.core.protections.base import BaseCondition, ProtectionStatus
-from paasng.platform.core.protections.exceptions import ConditionNotMatched
+from paasng.core.core.protections.base import BaseCondition, ProtectionStatus
+from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.utils.error_codes import error_codes
 
 

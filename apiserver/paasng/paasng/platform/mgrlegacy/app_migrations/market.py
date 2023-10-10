@@ -21,8 +21,8 @@ import logging
 from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
-from paasng.publish.market.constant import ProductSourceUrlType
-from paasng.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
 
 logger = logging.getLogger(__name__)
 

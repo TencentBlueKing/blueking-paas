@@ -31,18 +31,18 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cluster.shim import get_application_cluster
+from paas_wl.infras.cluster.shim import get_application_cluster
 from paas_wl.workloads.images.models import AppUserCredential
-from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
-from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.constants import AccountFeatureFlag as AFF
-from paasng.accounts.models import AccountFeatureFlag
-from paasng.accounts.permissions.application import application_perm_class, check_application_perm
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.models import Template
-from paasng.engine.configurations.image import generate_image_repository
-from paasng.engine.constants import RuntimeType
+from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
+from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
+from paasng.platform.engine.configurations.image import generate_image_repository
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, pre_delete_module
@@ -74,9 +74,9 @@ from paasng.platform.modules.serializers import (
     ModuleSLZ,
 )
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.region.models import get_region
-from paasng.publish.market.models import MarketConfig
-from paasng.publish.market.protections import ModulePublishPreparer
+from paasng.core.region.models import get_region
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes

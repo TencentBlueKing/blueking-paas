@@ -20,7 +20,7 @@ to the current version of the project delivered to anyone in the future.
 
 from django.db import migrations, models
 import django.db.models.deletion
-import paasng.engine.constants
+import paasng.platform.engine.constants
 import paasng.platform.modules.models.deploy_config
 import uuid
 
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
                 ('uuid', models.UUIDField(auto_created=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True, verbose_name='UUID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
-                ('build_method', models.CharField(default=paasng.engine.constants.RuntimeType['BUILDPACK'], max_length=32, verbose_name='构建方式')),
+                ('build_method', models.CharField(default=paasng.platform.engine.constants.RuntimeType['BUILDPACK'], max_length=32, verbose_name='构建方式')),
                 ('dockerfile_path', models.CharField(help_text='Dockerfile文件路径, 必须保证 Dockerfile 在构建目录下, 填写时无需包含构建目录', max_length=512, null=True)),
                 ('docker_build_args', paasng.platform.modules.models.deploy_config.DockerBuildArgsField(default=dict)),
                 ('tag_options', paasng.platform.modules.models.deploy_config.ImageTagOptionsField(default=paasng.platform.modules.models.deploy_config.ImageTagOptions)),

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.engine.constants import RuntimeType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
 from paasng.platform.modules.models.deploy_config import ImageTagOptions

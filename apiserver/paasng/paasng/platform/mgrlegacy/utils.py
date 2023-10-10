@@ -26,8 +26,8 @@ from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.constants import LegacyAppTag, MigrationStatus
 from paasng.platform.mgrlegacy.models import MigrationProcess
-from paasng.platform.region.models import get_region
-from paasng.publish.sync_market.managers import AppDeveloperManger
+from paasng.core.region.models import get_region
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy

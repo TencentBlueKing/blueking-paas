@@ -28,9 +28,9 @@ from typing import Any, Dict, Type
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.models import Template
-from paasng.platform.region.models import get_region
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
+from paasng.core.region.models import get_region
 
 from .constants import ApplicationType
 from .models import Application

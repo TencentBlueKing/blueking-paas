@@ -37,26 +37,26 @@ from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from paas_wl.networking.entrance.addrs import Address, AddressType
-from paasng.accounts.constants import SiteRole
-from paasng.accounts.models import UserProfile
-from paasng.dev_resources.sourcectl.models import SourceTypeSpecConfig
-from paasng.dev_resources.sourcectl.source_types import refresh_sourcectl_types
-from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient, RepoProvider
-from paasng.dev_resources.sourcectl.utils import generate_temp_dir
-from paasng.extensions.bk_plugins.models import BkPluginProfile
+from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
+from paasng.infras.accounts.constants import SiteRole
+from paasng.infras.accounts.models import UserProfile
+from paasng.platform.sourcectl.models import SourceTypeSpecConfig
+from paasng.platform.sourcectl.source_types import refresh_sourcectl_types
+from paasng.platform.sourcectl.svn.client import LocalClient, RemoteClient, RepoProvider
+from paasng.platform.sourcectl.utils import generate_temp_dir
+from paasng.bk_plugins.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
-from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
-from paasng.platform.core.storages.utils import SADBManager
+from paasng.core.core.storages.sqlalchemy import console_db, legacy_db
+from paasng.core.core.storages.utils import SADBManager
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
-from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
-from paasng.publish.sync_market.managers import AppManger
+from paasng.accessories.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.utils.blobstore import S3Store, make_blob_store
-from tests.engine.setup_utils import create_fake_deployment
+from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
 from tests.utils.auth import create_user
 from tests.utils.helpers import (
@@ -334,9 +334,9 @@ def bk_user(request):
 @pytest.fixture(autouse=True)
 def mock_iam():
     def mock_user_has_app_action_perm(user, application, action) -> bool:
-        from paasng.accessories.iam.constants import APP_DEFAULT_ROLES
-        from paasng.accessories.iam.helpers import fetch_user_roles
-        from paasng.accessories.iam.utils import get_app_actions_by_role
+        from paasng.infras.iam.constants import APP_DEFAULT_ROLES
+        from paasng.infras.iam.helpers import fetch_user_roles
+        from paasng.infras.iam.utils import get_app_actions_by_role
         from paasng.utils.basic import get_username_by_bkpaas_user_id
 
         user_roles = fetch_user_roles(application.code, get_username_by_bkpaas_user_id(user.pk))
@@ -348,17 +348,17 @@ def mock_iam():
     from tests.utils.mocks.iam import StubBKIAMClient
     from tests.utils.mocks.permissions import StubApplicationPermission
 
-    with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
-        'paasng.accessories.iam.helpers.BKIAMClient',
+    with mock.patch('paasng.infras.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
+        'paasng.infras.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
     ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
-        'paasng.accessories.iam.helpers.IAM_CLI',
+        'paasng.infras.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(
-        'paasng.accounts.permissions.application.user_has_app_action_perm',
+        'paasng.infras.accounts.permissions.application.user_has_app_action_perm',
         new=mock_user_has_app_action_perm,
     ), mock.patch(
-        'paasng.extensions.declarative.application.controller.user_has_app_action_perm',
+        'paasng.platform.declarative.application.controller.user_has_app_action_perm',
         new=mock_user_has_app_action_perm,
     ), mock.patch(
         'paasng.platform.applications.models.ApplicationPermission',
@@ -509,7 +509,7 @@ def svn_repo_credentials():
 def dummy_svn_spec():
     """Local Svn address for running unittest"""
     return {
-        'spec_cls': 'paasng.dev_resources.sourcectl.type_specs.BkSvnSourceTypeSpec',
+        'spec_cls': 'paasng.platform.sourcectl.type_specs.BkSvnSourceTypeSpec',
         'attrs': {
             'name': 'dft_bk_svn',
             'server_config': {
@@ -519,7 +519,7 @@ def dummy_svn_spec():
                 "su_pass": 'test-password',
                 "need_security": False,
                 "admin_url": "127.0.0.1:3790",
-                "auth_mgr_cls": 'paasng.dev_resources.sourcectl.svn.admin.DummyAppAuthorization',
+                "auth_mgr_cls": 'paasng.platform.sourcectl.svn.admin.DummyAppAuthorization',
             },
         },
     }
@@ -529,7 +529,7 @@ def dummy_svn_spec():
 def dummy_gitlab_spec():
     """Local GitLab address for running unittest"""
     return {
-        'spec_cls': 'paasng.dev_resources.sourcectl.type_specs.GitLabSourceTypeSpec',
+        'spec_cls': 'paasng.platform.sourcectl.type_specs.GitLabSourceTypeSpec',
         'attrs': {
             'name': 'dft_gitlab',
             'server_config': {'api_url': 'http://127.0.0.1:8080/'},
@@ -546,7 +546,7 @@ def dummy_gitlab_spec():
 
 @pytest.fixture(autouse=True)
 def setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
-    spec_cls_module_path = 'paasng.dev_resources.sourcectl.type_specs'
+    spec_cls_module_path = 'paasng.platform.sourcectl.type_specs'
 
     dummy_oauth_config = {
         'client_id': 'dummy_client_id',
@@ -598,9 +598,9 @@ def setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
 
 @pytest.fixture
 def init_tmpls():
-    from paasng.dev_resources.templates.constants import TemplateType
-    from paasng.dev_resources.templates.models import Template
-    from paasng.engine.constants import RuntimeType
+    from paasng.platform.templates.constants import TemplateType
+    from paasng.platform.templates.models import Template
+    from paasng.platform.engine.constants import RuntimeType
 
     Template.objects.get_or_create(
         name=settings.DUMMY_TEMPLATE_NAME,
@@ -704,7 +704,7 @@ def create_custom_app():
         register_iam_after_create_application(application)
 
         # 添加开发者
-        from paasng.accessories.iam.helpers import add_role_members
+        from paasng.infras.iam.helpers import add_role_members
 
         if 'developers' in kwargs and isinstance(kwargs['developers'], list):
             add_role_members(application.code, ApplicationRole.DEVELOPER, kwargs['developers'])
@@ -771,8 +771,8 @@ def mock_env_is_running():
         return status.get(env.environment, False)
 
     status["side_effect"] = side_effect  # type: ignore
-    with mock.patch("paasng.publish.entrance.exposer.env_is_running") as m1, mock.patch(
-        "paas_wl.networking.entrance.shim.env_is_running"
+    with mock.patch("paasng.accessories.publish.entrance.exposer.env_is_running") as m1, mock.patch(
+        "paas_wl.workloads.networking.entrance.shim.env_is_running"
     ) as m2:
         m1.side_effect = side_effect
         m2.side_effect = side_effect
@@ -789,7 +789,7 @@ def mock_get_builtin_addresses(mock_env_is_running):
             return env_is_running, addresses[env]
         return env_is_running, addresses.get(env.environment, [])
 
-    with mock.patch("paas_wl.networking.entrance.shim.get_builtin_addrs") as m:
+    with mock.patch("paas_wl.workloads.networking.entrance.shim.get_builtin_addrs") as m:
         m.side_effect = side_effect
         yield addresses
 
@@ -832,7 +832,7 @@ def with_wl_apps(request):
 def mock_sync_developers_to_sentry():
     # 避免单元测试时会往 celery 推送任务
     with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
-        "paasng.extensions.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
+        "paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
     ):
         yield
 
@@ -843,7 +843,7 @@ def mock_delete_process_probe(request):
 
     if not skip_patch:
         # 避免所有单元测试会执行删除 ProcessProbe 操作
-        with mock.patch("paasng.extensions.declarative.deployment.controller.delete_process_probes"):
+        with mock.patch("paasng.platform.declarative.deployment.controller.delete_process_probes"):
             yield
     else:
         yield

@@ -20,9 +20,9 @@ from unittest.mock import patch
 
 import pytest
 
-from paas_wl.cnative.specs.constants import MountEnvName, VolumeSourceType
-from paas_wl.cnative.specs.models import Mount
-from paas_wl.cnative.specs.serializers import MountSLZ
+from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.models import Mount
+from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
@@ -67,8 +67,8 @@ def mounts(bk_app, bk_module):
 
 @pytest.fixture(autouse=True, scope="class")
 def mock_volume_source_manager():
-    with patch("paas_wl.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
-        "paas_wl.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
+    with patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
+        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
     ):
         yield
 

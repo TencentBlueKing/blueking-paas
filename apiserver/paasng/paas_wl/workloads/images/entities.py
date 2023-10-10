@@ -24,10 +24,10 @@ from typing import Dict, List, Optional
 from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.resources.base import kres
-from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
-from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.resources.base import kres
+from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import b64decode, b64encode
 from paas_wl.workloads.images import constants
 from paas_wl.workloads.images.models import AppImageCredential

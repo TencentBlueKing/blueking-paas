@@ -25,8 +25,8 @@ import pytest
 from django.urls import reverse
 from django_dynamic_fixture import G
 
-from paasng.engine.models.deployment import Deployment
-from paasng.engine.workflow import DeploymentCoordinator
+from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
@@ -186,7 +186,7 @@ class TestDeploymentViewSet:
 
     def test_deploy(self, api_client, init_tmpls, bk_app_full, bk_module_full):
         url = reverse("api.deploy", kwargs={"code": bk_app_full.code, "environment": "stag"})
-        with mock.patch("paasng.engine.views.deploy.DeployTaskRunner"):
+        with mock.patch("paasng.platform.engine.views.deploy.DeployTaskRunner"):
             resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar", "revision": "baz"})
 
         coordinator = DeploymentCoordinator(bk_module_full.get_envs("stag"))

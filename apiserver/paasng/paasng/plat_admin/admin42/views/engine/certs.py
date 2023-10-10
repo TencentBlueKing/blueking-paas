@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.permissions import IsAuthenticated
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.platform.region.models import get_all_regions
+from paasng.core.region.models import get_all_regions
 
 
 class SharedCertsManageView(GenericTemplateView):

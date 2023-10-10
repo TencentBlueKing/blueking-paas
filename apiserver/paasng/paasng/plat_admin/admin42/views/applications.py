@@ -20,17 +20,17 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
-from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
-from paasng.accessories.iam.helpers import (
+from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
     remove_user_all_roles,
 )
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.engine.constants import ClusterType
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.platform.engine.constants import ClusterType
 from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -40,7 +40,7 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
-from paasng.platform.core.storages.redisdb import DefaultRediStore
+from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.utils.error_codes import error_codes
 
 

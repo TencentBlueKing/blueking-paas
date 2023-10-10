@@ -160,7 +160,7 @@
             <template slot-scope="props">
               <div class="container">
                 <div
-                  v-for="(item, i) in props.row.data"
+                  v-for="item in props.row.data"
                   :key="item.latest_deployed_at"
                   style="height: 40px; line-height: 40px"
                   class="container-child"
@@ -178,7 +178,7 @@
             <template slot-scope="props">
               <div class="container">
                 <div
-                  v-for="(item, i) in props.row.data"
+                  v-for="item in props.row.data"
                   :key="item.latest_deployed_at"
                   style="height: 40px; line-height: 40px"
                   class="container-child"
@@ -197,7 +197,7 @@
             <template slot-scope="props">
               <div class="container">
                 <div
-                  v-for="(item, i) in props.row.data"
+                  v-for="item in props.row.data"
                   :key="item.latest_deployed_at"
                   class="container-child"
                 >
@@ -246,8 +246,8 @@
       :ok-text="$t('禁用')"
       :title="$t('禁用密钥')"
       header-position="left"
-      @confirm="confirmDisabled">
-    
+      @confirm="confirmDisabled"
+    >
       {{
         $t(
           "禁用此密钥后，蓝鲸云 API 将拒绝此密钥的所有请求。禁用后，预计 15 分钟内生效。"
@@ -263,8 +263,8 @@
       :title="$t('删除密钥')"
       header-position="left"
       @confirm="confirmDeleteSecret"
-      @cancel="cancelDelete">
-    
+      @cancel="cancelDelete"
+    >
       <bk-alert
         type="error"
         :title="
@@ -273,7 +273,7 @@
       ></bk-alert>
       <bk-form :label-width="427" form-type="vertical" :model="deleteFormData">
         <bk-form-item>
-          <template slot-scope="label">
+          <template>
             {{ $t("请完整输入") }} &nbsp;
             <span style="color: #ff56f5">
               {{ curAppInfo.application.code }}
@@ -296,8 +296,8 @@
       :mask-close="false"
       :title="$t('更换默认密钥')"
       header-position="left"
-      @confirm="confirmchangeDefault">
-    
+      @confirm="confirmchangeDefault"
+    >
       {{ $t("请选择密钥（只能选择已启用的密钥）：") }}
       <bk-select v-model="curSelect" class="secretSelect">
         <bk-option
@@ -337,8 +337,8 @@
       width="475"
       :ok-text="$t('提交')"
       @cancel="cancelSend"
-      @confirm="confirmSend">
-    
+      @confirm="confirmSend"
+    >
       <p>{{ $t("验证码已发送至您的企业微信，请注意查收！") }}</p>
       <p style="display: flex; align-items: center" class="mt15">
         <b> {{ $t("验证码：") }} </b>
@@ -428,9 +428,11 @@ export default {
     // 部署密钥和默认密钥是否一致
     isSameSecrect() {
       if (this.originDeployedSecret.length !== 0) {
-        let isNull=this.originDeployedSecret.some(item => item.bk_app_secret=== null)
-        if(isNull){
-          return true
+        let isNull = this.originDeployedSecret.some(
+          (item) => item.bk_app_secret === null
+        );
+        if (isNull) {
+          return true;
         }
         return this.originDeployedSecret.every(
           (item) => item.bk_app_secret === this.defaultSecret
@@ -452,9 +454,9 @@ export default {
           return false;
         }
         let startFlag =
-          code.substring(0, 4) == this.defaultSecret.substring(0, 4);
+          code.substring(0, 4) === this.defaultSecret.substring(0, 4);
         let endFlag =
-          code.substring(code.length - 4) ==
+          code.substring(code.length - 4) ===
           this.defaultSecret.substring(this.defaultSecret.length - 4);
         return startFlag && endFlag;
       };
@@ -469,7 +471,7 @@ export default {
             console.log("res--appSecret", res);
             this.appSecret = res.app_secret;
           },
-          (res) => {
+          () => {
             this.$paasMessage({
               theme: "error",
               message: this.$t("验证码错误！"),
@@ -511,7 +513,7 @@ export default {
           (res) => {
             this.appSecret = res.app_secret;
           },
-          (res) => {
+          () => {
             this.$paasMessage({
               theme: "error",
               message: this.$t("验证码错误！"),
@@ -534,7 +536,7 @@ export default {
 
         this.appSecretTimer = 60;
         this.$http.post(url, { func: "GET_APP_SECRET" }).then(
-          (res) => {
+          () => {
             this.appSecretVerificationCode = "";
             this.resolveLocker();
             if (!this.appSecretTimeInterval) {
@@ -548,7 +550,7 @@ export default {
               }, 1000);
             }
           },
-          (res) => {
+          () => {
             this.appSecretVerificationCode = "";
             reject(new Error(this.$t("请求失败，请稍候重试！")));
           }
@@ -581,7 +583,7 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verification/${status.id}/`;
       this.$http.post(url).then((res) => {
         this.appSecretList.forEach((item) => {
-          if (item.id == status.id) {
+          if (item.id === status.id) {
             item.bk_app_secret = res.bk_app_secret;
             return;
           }
@@ -626,13 +628,13 @@ export default {
         .then(
           (res) => {
             this.appSecretList.forEach((item) => {
-              if (item.id == this.viewStatus.id) {
+              if (item.id === this.viewStatus.id) {
                 item.bk_app_secret = res.bk_app_secret;
                 return;
               }
             });
           },
-          (res) => {
+          () => {
             this.$paasMessage({
               theme: "error",
               message: this.$t("验证码错误！"),
@@ -653,11 +655,11 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secrets/`;
       this.$http
         .post(url)
-        .then((res) => {})
+        .then(() => {})
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("接口异常"),
+            message: err.message || err.detail || this.$t("接口异常"),
           });
         })
         .finally(() => {
@@ -676,7 +678,7 @@ export default {
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("接口异常"),
+            message: err.message || err.detail || this.$t("接口异常"),
           });
         });
     },
@@ -685,11 +687,11 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secrets/${status.id}/`;
       this.$http
         .post(url, { enabled: !status.enabled })
-        .then((res) => {})
+        .then(() => {})
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("接口异常"),
+            message: err.message || err.detail || this.$t("接口异常"),
           });
         })
         .finally(() => {
@@ -730,11 +732,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secrets/${this.curSecret.id}/`;
       this.$http
         .delete(url)
-        .then((res) => {})
+        .then(() => {})
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("删除失败，请重新操作"),
+            message:
+              err.message || err.detail || this.$t("删除失败，请重新操作"),
           });
         })
         .finally(() => {
@@ -758,7 +761,7 @@ export default {
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("接口异常"),
+            message: err.message || err.detail || this.$t("接口异常"),
           });
         })
         .finally(() => {
@@ -792,7 +795,7 @@ export default {
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("接口异常"),
+            message: err.message || err.detail || this.$t("接口异常"),
           });
         });
     },
@@ -806,11 +809,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/default_secret/`;
       this.$http
         .post(url, { id })
-        .then((res) => {})
+        .then(() => {})
         .catch((err) => {
           this.$paasMessage({
             theme: "error",
-            message: e.message || e.detail || this.$t("更换失败，请重新操作"),
+            message:
+              err.message || err.detail || this.$t("更换失败，请重新操作"),
           });
         })
         .finally(() => {

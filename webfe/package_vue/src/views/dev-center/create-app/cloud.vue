@@ -607,7 +607,7 @@ export default {
           },
           {
             regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
-            message: this.$t('地址格式不正确'),
+            message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },
         ],
@@ -631,8 +631,11 @@ export default {
     },
     imageRepositoryTemplate() {
       if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
-      const imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
+      let imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
         .replace('{app_code}', this.formData.code);
+      if (imageRepositoryTemplate.includes('//')) {
+        imageRepositoryTemplate = imageRepositoryTemplate.replace('//', '/');
+      }
       return imageRepositoryTemplate.replace('{module_name}', 'default');
     },
     mirrorTag() {
@@ -972,9 +975,17 @@ export default {
           data: params,
         });
 
+        const objectKey = `CloundSourceInitResult${Math.random().toString(36)}`;
+        if (res.source_init_result) {
+          localStorage.setItem(objectKey, JSON.stringify(res.source_init_result.extra_info));
+        }
+
         const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,
+          query: {
+            objectKey,
+          },
         });
       } catch (e) {
         this.$paasMessage({

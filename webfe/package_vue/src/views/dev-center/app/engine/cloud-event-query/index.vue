@@ -1,7 +1,9 @@
 <template>
   <div class="cloud-event-query">
-    <app-top-bar
+    <cloud-app-top-bar
       :title="$t('事件查询')"
+      :module-id="curModuleId"
+      :app-code="appCode"
       :cur-module="curAppModule"
       :module-list="curAppModuleList"
     />
@@ -32,12 +34,14 @@
 <script>
 import processEvent from './comps/process-event.vue';
 import appTopBar from '@/components/paas-app-bar';
+import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 export default {
   name: 'cloud-event-query',
   components: {
     processEvent,
     appTopBar,
+    cloudAppTopBar
   },
   mixins: [appBaseMixin],
   data() {

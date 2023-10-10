@@ -7,7 +7,29 @@
     :is-transition="false"
     class="deploy-action-box"
   >
-    <div class="form-pre">
+    <!-- 若托管方式为源码&镜像，钩子命令页面都为当前空页面状态 -->
+    <section
+      v-if="!isCustomImage && !isCreate"
+      style="margin-top: 38px;"
+    >
+      <bk-exception
+        class="exception-wrap-item exception-part"
+        type="empty"
+        scene="part"
+      >
+        <span style="color: #63656E;">{{ $t('暂无钩子命令') }}</span>
+        <p
+          class="mt10"
+          style="color: #979BA5;font-size: 12px;"
+        >
+          {{ $t('钩子命令在 app_desc.yaml 文件中定义。') }}
+        </p>
+      </bk-exception>
+    </section>
+    <div
+      v-else
+      class="form-pre"
+    >
       <div class="flex-row align-items-center">
         <div class="item-title-container">
           <div class="item-title">
@@ -235,6 +257,12 @@ export default {
   computed: {
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.hookPageEdit;
+    },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+    isCustomImage () {
+      return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
 

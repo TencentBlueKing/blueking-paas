@@ -192,7 +192,7 @@ func (g *AutoscalingSpecGetter) buildEnvOverlay(env paasv1alpha2.EnvName) {
 	// Pick values which matches environment
 	for _, c := range g.bkapp.Spec.EnvOverlay.Autoscaling {
 		if c.EnvName == env {
-			g.specMap[c.Process] = &c.Spec
+			g.specMap[c.Process] = &c.AutoscalingSpec
 		}
 	}
 }

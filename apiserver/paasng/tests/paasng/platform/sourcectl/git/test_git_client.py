@@ -99,6 +99,7 @@ class TestGitClient:
                 ],
                 {"branch": ["develop"], "tag": ["develop", "v20210203"]},
             ),
+            (["9n8b7u6y5t refs/remotes/origin/develop/1.2"], {"branch": ["develop/1.2"]}),
         ],
     )
     def test_list_refs(self, client, refs, expected):

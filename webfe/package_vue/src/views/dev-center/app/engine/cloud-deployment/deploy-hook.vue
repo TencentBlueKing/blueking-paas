@@ -9,7 +9,7 @@
   >
     <!-- 若托管方式为源码&镜像，钩子命令页面都为当前空页面状态 -->
     <section
-      v-if="!isCustomImage"
+      v-if="!isCustomImage && !isCreate"
       style="margin-top: 38px;"
     >
       <bk-exception

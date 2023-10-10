@@ -25,8 +25,8 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.platform.applications.constants import ArtifactType
-from paas_wl.platform.applications.models import Build, BuildProcess
+from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.models import Build, BuildProcess
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.engine import serializers

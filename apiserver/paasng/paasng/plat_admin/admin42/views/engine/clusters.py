@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.platform.engine.constants import ClusterType

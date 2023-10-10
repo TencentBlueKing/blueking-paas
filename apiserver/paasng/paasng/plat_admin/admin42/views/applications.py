@@ -20,7 +20,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import (
     add_role_members,

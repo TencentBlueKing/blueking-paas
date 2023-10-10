@@ -20,8 +20,8 @@ import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
-from paas_wl.networking.entrance.addrs import EnvExposedURL, default_port_map
-from paas_wl.networking.entrance.shim import LiveEnvAddresses, get_builtin_addrs
+from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL, default_port_map
+from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, get_builtin_addrs
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.accessories.publish.entrance.exposer import get_exposed_url

@@ -24,12 +24,12 @@ from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 from django.utils.encoding import force_text
 
-from paas_wl.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.platform.applications.constants import ArtifactType
+from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
-from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
-from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
+from paas_wl.bk_app.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
+from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.kubestatus import check_pod_health_status
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.utils import (
@@ -48,7 +48,7 @@ from paasng.platform.engine.workflow import DeployStep
 from paasng.core.core.storages.redisdb import get_default_redis
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models import WlApp
+    from paas_wl.bk_app.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 

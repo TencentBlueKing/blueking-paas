@@ -25,7 +25,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
-from paas_wl.cnative.specs.models import AppModelDeploy
+from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paasng.platform.engine.constants import AppEnvName, JobStatus
 from paasng.platform.engine.models import Deployment
 from paasng.platform.applications.models import Application
@@ -177,7 +177,7 @@ class AppDeploymentOperationObj(OperationObj):
 
 
 class CNativeAppDeployOperationObj(OperationObj):
-    """Operation object: paas_wl.cnative.specs.models.AppModelDeploy"""
+    """Operation object: paas_wl.bk_app.cnative.specs.models.AppModelDeploy"""
 
     default_op_type = OP.DEPLOY_CNATIVE_APP
     values_type = DeployOpValues

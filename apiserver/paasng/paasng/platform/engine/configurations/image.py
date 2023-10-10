@@ -21,11 +21,11 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import arrow
 from django.conf import settings
 
-from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.cnative.specs.image_parser import ImageParser
-from paas_wl.cnative.specs.utils import get_bkapp
-from paas_wl.platform.applications.models import Build
-from paas_wl.workloads.processes.services import refresh_res_reqs
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
+from paas_wl.bk_app.cnative.specs.utils import get_bkapp
+from paas_wl.bk_app.applications.models import Build
+from paas_wl.bk_app.processes.services import refresh_res_reqs
 from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment

@@ -23,7 +23,7 @@ import cattr
 from attrs import fields
 from django.db.transaction import atomic
 
-from paas_wl.monitoring.app_monitor.shim import upsert_app_monitor
+from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe

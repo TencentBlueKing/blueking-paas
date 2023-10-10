@@ -20,7 +20,7 @@ import logging
 from copy import deepcopy
 from typing import Dict, Optional
 
-from paas_wl.cnative.specs.models import AppModelResource, update_app_resource
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, update_app_resource
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.engine.constants import OperationTypes, RuntimeType

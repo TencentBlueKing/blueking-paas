@@ -20,7 +20,7 @@ from typing import Type
 
 from blue_krill.async_utils.poll_task import CallbackHandler
 
-from paas_wl.cnative.specs.resource import delete_bkapp
+from paas_wl.bk_app.cnative.specs.resource import delete_bkapp
 from paasng.platform.engine.deploy.archive.base import BaseArchiveManager
 from paasng.platform.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
 from paasng.platform.engine.models.offline import OfflineOperation

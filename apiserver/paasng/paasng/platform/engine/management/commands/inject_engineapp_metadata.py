@@ -20,7 +20,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from paas_wl.platform.api import update_metadata_by_env
+from paas_wl.bk_app.applications.api import update_metadata_by_env
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import Module
 

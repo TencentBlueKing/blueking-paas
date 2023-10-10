@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Optional
 from django.db import models
 from django.utils import timezone
 
-from paas_wl.platform.applications.models import WlApp
+from paas_wl.bk_app.applications.models import WlApp
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 

@@ -23,9 +23,9 @@ from typing import Dict, Optional
 import cattr
 from django.conf import settings
 
-from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
-from paas_wl.cluster.models import APIServer, Cluster, IngressConfig
-from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
+from paas_wl.infras.cluster.models import APIServer, Cluster, IngressConfig
+from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from tests.utils.mocks.helper import patch_class_with_stub
 
 

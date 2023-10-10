@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pickle
 from typing import List, Optional, Set, Tuple, TypeVar
 
-from paas_wl.workloads.processes.processes import PlainProcess
+from paas_wl.bk_app.processes.processes import PlainProcess
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.core.core.storages.redisdb import get_default_redis
 

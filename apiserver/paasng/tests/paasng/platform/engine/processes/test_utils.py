@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.workloads.processes.processes import PlainInstance, PlainProcess
+from paas_wl.bk_app.processes.processes import PlainInstance, PlainProcess
 from paasng.platform.engine.processes.utils import ProcessesSnapshotStore
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])

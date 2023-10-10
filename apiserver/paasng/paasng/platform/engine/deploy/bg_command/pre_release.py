@@ -21,7 +21,7 @@ from typing import Dict
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from django.utils.translation import gettext as _
 
-from paas_wl.release_controller.hooks.models import Command, CommandTemplate
+from paas_wl.workloads.release_controller.hooks.models import Command, CommandTemplate
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config

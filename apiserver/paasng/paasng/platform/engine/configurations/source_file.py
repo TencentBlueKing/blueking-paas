@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import yaml
 from typing_extensions import Protocol
 
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client

@@ -21,8 +21,8 @@ from pathlib import Path
 import yaml
 from django.utils.functional import cached_property
 
-from paas_wl.cnative.specs.models import AppModelRevision, BkAppResource
-from paas_wl.cnative.specs.procs import parse_procfile
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision, BkAppResource
+from paas_wl.bk_app.cnative.specs.procs import parse_procfile
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.exceptions import SkipPatchCode
 from paasng.platform.engine.models import Deployment

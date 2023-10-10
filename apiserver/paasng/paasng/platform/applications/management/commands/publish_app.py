@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 
 from django.core.management.base import BaseCommand
 
-from paas_wl.networking.entrance.serializers import DomainSLZ, validate_domain_payload
-from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr
+from paas_wl.workloads.networking.entrance.serializers import DomainSLZ, validate_domain_payload
+from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paasng.platform.applications.models import Application
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig

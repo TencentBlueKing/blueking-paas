@@ -20,8 +20,8 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.cnative.specs.crd.bk_app import ApiVersion, BkAppResource
-from paas_wl.platform.applications.models import Build
+from paas_wl.bk_app.cnative.specs.crd.bk_app import ApiVersion, BkAppResource
+from paas_wl.bk_app.applications.models import Build
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.engine.configurations.image import (
     RuntimeImageInfo,

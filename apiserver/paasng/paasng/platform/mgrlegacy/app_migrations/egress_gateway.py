@@ -22,8 +22,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 
 from .base import BaseMigration
 

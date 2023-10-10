@@ -19,8 +19,8 @@ from typing import Dict, Optional
 
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.constants import ArtifactType
-from paas_wl.platform.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
+from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.applications.models import ModuleEnvironment
 

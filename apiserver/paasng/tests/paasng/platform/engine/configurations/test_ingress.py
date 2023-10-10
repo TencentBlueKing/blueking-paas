@@ -21,7 +21,7 @@ from unittest import mock
 import cattr
 import pytest
 
-from paas_wl.cluster.models import IngressConfig
+from paas_wl.infras.cluster.models import IngressConfig
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.constants import AppEnvName

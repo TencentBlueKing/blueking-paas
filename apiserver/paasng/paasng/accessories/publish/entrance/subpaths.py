@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 """Subpaths management"""
 from typing import List, NamedTuple, Optional
 
-from paas_wl.cluster.models import IngressConfig
-from paas_wl.cluster.shim import EnvClusterService
-from paas_wl.networking.entrance.allocator.subpaths import Subpath, SubPathAllocator
+from paas_wl.infras.cluster.models import IngressConfig
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.workloads.networking.entrance.allocator.subpaths import Subpath, SubPathAllocator
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
 

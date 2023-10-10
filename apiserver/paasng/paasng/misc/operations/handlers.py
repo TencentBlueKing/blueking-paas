@@ -22,8 +22,8 @@ from typing import Dict, Optional
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paas_wl.cnative.specs.models import AppModelDeploy
-from paas_wl.cnative.specs.signals import post_cnative_env_deploy
+from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
+from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paas_wl.core.signals import new_operation_happened
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models import Deployment, ModuleEnvironmentOperations

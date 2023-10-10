@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 
 from django.conf import settings
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log.constants import LogCollectorType

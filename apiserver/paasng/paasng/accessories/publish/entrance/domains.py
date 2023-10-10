@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 """Domain management"""
 from typing import List, NamedTuple, Optional
 
-from paas_wl.cluster.models import IngressConfig
-from paas_wl.cluster.shim import EnvClusterService
-from paas_wl.networking.entrance.allocator.domains import Domain, SubDomainAllocator
+from paas_wl.infras.cluster.models import IngressConfig
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.workloads.networking.entrance.allocator.domains import Domain, SubDomainAllocator
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
 

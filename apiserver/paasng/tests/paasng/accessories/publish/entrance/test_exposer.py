@@ -21,8 +21,8 @@ to the current version of the project delivered to anyone in the future.
 
 import pytest
 
-from paas_wl.networking.entrance.addrs import Address
-from paas_wl.networking.entrance.constants import AddressType
+from paas_wl.workloads.networking.entrance.addrs import Address
+from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from tests.utils.helpers import override_region_configs

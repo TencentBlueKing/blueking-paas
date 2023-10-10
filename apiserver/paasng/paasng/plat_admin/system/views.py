@@ -25,7 +25,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
-from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp

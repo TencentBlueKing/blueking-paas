@@ -38,9 +38,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.shim import RegionClusterService
-from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError

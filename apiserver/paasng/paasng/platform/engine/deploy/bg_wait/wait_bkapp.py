@@ -34,10 +34,10 @@ from blue_krill.async_utils.poll_task import (
 from django.utils import timezone
 from pydantic import ValidationError as PyDanticValidationError
 
-from paas_wl.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS, DeployStatus
-from paas_wl.cnative.specs.models import AppModelDeploy
-from paas_wl.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
-from paas_wl.cnative.specs.signals import post_cnative_env_deploy
+from paas_wl.bk_app.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS, DeployStatus
+from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
+from paas_wl.bk_app.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
+from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.base import AbortedDetails, AbortedDetailsPolicy
 from paasng.platform.engine.exceptions import StepNotInPresetListError

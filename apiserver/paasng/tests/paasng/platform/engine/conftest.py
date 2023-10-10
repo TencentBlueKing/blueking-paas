@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.test.utils import override_settings
 
-from paas_wl.platform.applications.models import BuildProcess, WlApp
+from paas_wl.bk_app.applications.models import BuildProcess, WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 from tests.paas_wl.utils.build import create_build_proc
 

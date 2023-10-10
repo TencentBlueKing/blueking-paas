@@ -28,14 +28,14 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.monitoring.metrics.exceptions import (
+from paas_wl.bk_app.monitoring.metrics.exceptions import (
     AppInstancesNotFoundError,
     AppMetricNotSupportedError,
     RequestMetricBackendError,
 )
-from paas_wl.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
-from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
-from paas_wl.platform.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
+from paas_wl.bk_app.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
+from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
+from paas_wl.apis.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class

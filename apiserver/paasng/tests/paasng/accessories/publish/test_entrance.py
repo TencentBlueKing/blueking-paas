@@ -24,7 +24,7 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paas_wl.networking.entrance.addrs import Address, AddressType
+from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.platform.engine.constants import JobStatus
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.modules.constants import ExposedURLType

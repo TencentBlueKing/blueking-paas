@@ -23,12 +23,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.egress.models import EgressRule, EgressSpec
-from paas_wl.resources.base.crd import Egress
-from paas_wl.resources.base.kres import KPod
-from paas_wl.resources.utils.basic import get_client_by_app
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.workloads.networking.egress.models import EgressRule, EgressSpec
+from paas_wl.infras.resources.base.crd import Egress
+from paas_wl.infras.resources.base.kres import KPod
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ

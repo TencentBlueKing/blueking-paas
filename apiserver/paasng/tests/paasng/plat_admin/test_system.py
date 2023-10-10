@@ -26,7 +26,7 @@ from django.conf import settings
 from django.utils.translation import override
 from django_dynamic_fixture import G
 
-from paas_wl.cluster.models import Cluster
+from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import ServiceObjNotFound
 from paasng.accessories.services.models import Plan, Service, ServiceCategory

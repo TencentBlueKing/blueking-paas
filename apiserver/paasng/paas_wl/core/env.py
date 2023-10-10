@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Callable, Dict
 
-from paas_wl.platform.applications.models.release import Release
+from paas_wl.bk_app.applications.models.release import Release
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 

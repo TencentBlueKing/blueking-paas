@@ -21,11 +21,11 @@ from unittest import mock
 import arrow
 import pytest
 
-from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource, BkAppStatus, MetaV1Condition
-from paas_wl.cnative.specs.events import Event
-from paas_wl.networking.entrance.addrs import Address, AddressType
-from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
+from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppStatus, MetaV1Condition
+from paas_wl.bk_app.cnative.specs.events import Event
+from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
+from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -168,9 +168,9 @@ class TestMresStatusViewSet:
             )
         ]
         with mock.patch(
-            "paas_wl.cnative.specs.views_enduser.get_mres_from_cluster", return_value=bkapp_res
-        ), mock.patch('paas_wl.cnative.specs.views_enduser.list_events', return_value=events,), mock.patch(
-            'paas_wl.cnative.specs.views_enduser.get_exposed_url',
+            "paas_wl.bk_app.cnative.specs.views_enduser.get_mres_from_cluster", return_value=bkapp_res
+        ), mock.patch('paas_wl.bk_app.cnative.specs.views_enduser.list_events', return_value=events,), mock.patch(
+            'paas_wl.bk_app.cnative.specs.views_enduser.get_exposed_url',
             return_value=Address(type=AddressType.SUBDOMAIN, url="http://example.com").to_exposed_url(),
         ):
             response = api_client.get(url)

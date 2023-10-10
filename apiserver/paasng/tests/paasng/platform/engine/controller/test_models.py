@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import cattr
 
-from paas_wl.cluster.models import IngressConfig
+from paas_wl.infras.cluster.models import IngressConfig
 
 
 def test_find_subdomain_domain():

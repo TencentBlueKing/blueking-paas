@@ -28,10 +28,10 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator, qs_exists
 
-from paas_wl.cluster.shim import RegionClusterService
-from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.cnative.specs.models import to_error_string
+from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.models import to_error_string
 from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.platform.applications.constants import AppLanguage, ApplicationRole, ApplicationType
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError

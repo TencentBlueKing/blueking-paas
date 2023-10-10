@@ -27,7 +27,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
-from paas_wl.networking.entrance.shim import LiveEnvAddresses
+from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses
 from paasng.platform.applications.serializers import ApplicationField, AppNameField
 from paasng.platform.modules.models import Module
 from paasng.accessories.publish.market.constant import AppState, ProductSourceUrlType

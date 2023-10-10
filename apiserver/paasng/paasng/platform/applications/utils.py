@@ -23,8 +23,8 @@ from typing import Optional
 
 from django.db import transaction
 
-from paas_wl.cnative.specs.models import AppModelDeploy
-from paas_wl.workloads.processes.shim import ProcessManager
+from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment

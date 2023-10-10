@@ -33,7 +33,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.platform.applications.models import Build
+from paas_wl.bk_app.applications.models import Build
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.accessories.smart_advisor.utils import get_failure_hint

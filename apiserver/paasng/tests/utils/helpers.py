@@ -29,7 +29,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
-from paas_wl.platform.api import CreatedAppInfo
+from paas_wl.bk_app.applications.api import CreatedAppInfo
 from paasng.platform.cnative.services import initialize_simple
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.applications.constants import ApplicationType
@@ -417,8 +417,8 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
 
     :param bk_app: Application object.
     """
-    from paas_wl.platform.api import update_metadata_by_env
-    from paas_wl.platform.applications.models import WlApp
+    from paas_wl.bk_app.applications.api import update_metadata_by_env
+    from paas_wl.bk_app.applications.models import WlApp
 
     for module in bk_app.modules.all():
         for env in module.envs.all():

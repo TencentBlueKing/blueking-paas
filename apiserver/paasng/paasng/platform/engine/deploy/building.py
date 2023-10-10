@@ -26,8 +26,8 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
-from paas_wl.cnative.specs.models import AppModelResource, generate_bkapp_name, update_app_resource
-from paas_wl.platform.applications.models.build import BuildProcess
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, generate_bkapp_name, update_app_resource
+from paas_wl.bk_app.applications.models.build import BuildProcess
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.sourcectl.utils import (
     ExcludeChecker,

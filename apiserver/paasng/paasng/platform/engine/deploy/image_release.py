@@ -21,10 +21,10 @@ import logging
 from celery import shared_task
 from django.utils.translation import gettext as _
 
-from paas_wl.cnative.specs.credentials import get_references, validate_references
-from paas_wl.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.cnative.specs.models import AppModelRevision
-from paas_wl.platform.applications.constants import ArtifactType
+from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
+from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision
+from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo

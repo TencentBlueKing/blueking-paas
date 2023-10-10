@@ -23,7 +23,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.networking.ingress.config import get_custom_domain_config
+from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paasng.utils.views import allow_resp_patch
 
 from .models import get_all_regions

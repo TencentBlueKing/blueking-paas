@@ -3,9 +3,9 @@ from typing import Dict, List
 
 from django.conf import settings
 
-from paas_wl.networking.entrance.allocator.domains import Domain, ModuleEnvDomains
-from paas_wl.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, Subpath
-from paas_wl.networking.ingress.shim import sync_subdomains, sync_subpaths
+from paas_wl.workloads.networking.entrance.allocator.domains import Domain, ModuleEnvDomains
+from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, Subpath
+from paas_wl.workloads.networking.ingress.shim import sync_subdomains, sync_subpaths
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.core.region.models import get_region

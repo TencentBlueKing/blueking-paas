@@ -68,8 +68,8 @@ urlpatterns = [
     url(r'^', include('paasng.accessories.urls')),
     url(r'^', include('paasng.infras.iam.open_apis.urls')),
     url(r'^', include('paasng.misc.search.urls')),
-    url(r'^', include('paasng.monitoring.healthz.urls')),
-    url(r'^', include('paasng.monitoring.monitor.urls')),
+    url(r'^', include('paasng.misc.monitoring.healthz.urls')),
+    url(r'^', include('paasng.misc.monitoring.monitor.urls')),
     url(r'^', include('paasng.plat_admin.system.urls')),
     url(r'^', include('paasng.platform.bk_lesscode.urls')),
     url(r"^", include('paasng.bk_plugins.pluginscenter.urls')),
@@ -80,7 +80,7 @@ urlpatterns = [
     # switch language
     url(r'^i18n/setlang/$', django_i18n_views.set_language, name="set_language"),
     path('', include('paasng.misc.changelog.urls')),
-    path('', include('paas_wl.networking.entrance.urls')),
-    path('', include('paas_wl.workloads.processes.urls')),
-    path('', include('paas_wl.cnative.specs.urls')),
+    path('', include('paas_wl.workloads.networking.entrance.urls')),
+    path('', include('paas_wl.bk_app.processes.urls')),
+    path('', include('paas_wl.bk_app.cnative.specs.urls')),
 ]

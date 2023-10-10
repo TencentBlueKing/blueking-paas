@@ -5,9 +5,9 @@ from typing import Dict, List, NamedTuple, Optional
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from paas_wl.cluster.shim import Cluster, RegionClusterService
-from paas_wl.networking.entrance.addrs import URL, EnvExposedURL
-from paas_wl.networking.entrance.utils import get_legacy_url
+from paas_wl.infras.cluster.shim import Cluster, RegionClusterService
+from paas_wl.workloads.networking.entrance.addrs import URL, EnvExposedURL
+from paas_wl.workloads.networking.entrance.utils import get_legacy_url
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment

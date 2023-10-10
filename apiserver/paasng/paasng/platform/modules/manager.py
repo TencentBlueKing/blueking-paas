@@ -31,12 +31,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from paas_wl.cluster.shim import EnvClusterService
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
-from paas_wl.deploy.actions.delete import delete_module_related_res
-from paas_wl.platform.api import create_app_ignore_duplicated, update_metadata_by_env
-from paas_wl.platform.applications.constants import WlAppType
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
+from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
+from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
+from paas_wl.bk_app.applications.constants import WlAppType
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager

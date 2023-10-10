@@ -25,8 +25,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
-from paas_wl.cnative.specs.models import generate_bkapp_name
-from paas_wl.workloads.processes.models import ProcessTmpl
+from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
+from paas_wl.bk_app.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.sourcectl.controllers.package import PackageController

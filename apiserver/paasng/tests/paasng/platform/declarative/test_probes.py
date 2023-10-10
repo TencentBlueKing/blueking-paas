@@ -21,9 +21,9 @@ from textwrap import dedent
 
 import pytest
 
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.workloads.processes.constants import ProbeType
-from paas_wl.workloads.processes.models import ProcessProbe
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.processes.constants import ProbeType
+from paas_wl.bk_app.processes.models import ProcessProbe
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

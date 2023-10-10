@@ -71,7 +71,7 @@ class AdvancedOptions:
 
 @dataclass
 class ProcessTmpl:
-    """This class is a duplication of paas_wl.workloads.processes.models.ProcessTmpl, it
+    """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
     avoids a circular import problem.
     """
 

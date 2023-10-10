@@ -24,8 +24,8 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.release_controller.api import get_latest_build_id
-from paas_wl.workloads.processes.shim import ProcessManager
+from paas_wl.workloads.release_controller.api import get_latest_build_id
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.engine.deploy.release.legacy import release_by_engine

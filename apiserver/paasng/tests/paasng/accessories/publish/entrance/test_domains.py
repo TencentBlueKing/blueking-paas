@@ -21,9 +21,9 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paas_wl.cluster.models import Domain as DomainCfg
-from paas_wl.cluster.models import IngressConfig, PortMap
-from paas_wl.networking.entrance.allocator.domains import DomainPriorityType, ModuleEnvDomains, SubDomainAllocator
+from paas_wl.infras.cluster.models import Domain as DomainCfg
+from paas_wl.infras.cluster.models import IngressConfig, PortMap
+from paas_wl.workloads.networking.entrance.allocator.domains import DomainPriorityType, ModuleEnvDomains, SubDomainAllocator
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from tests.utils.mocks.engine import mock_cluster_service
 

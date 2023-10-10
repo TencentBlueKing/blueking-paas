@@ -24,7 +24,7 @@ import pytest
 from django.conf import settings
 from rest_framework.reverse import reverse
 
-from paas_wl.networking.ingress.models import Domain
+from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.market.constant import OpenMode, ProductSourceUrlType

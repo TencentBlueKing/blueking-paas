@@ -134,8 +134,8 @@ INSTALLED_APPS = [
     'paasng.plat_admin.api_doc',
     'paasng.plat_admin.admin42',
     'paasng.plat_admin.system',
-    'paasng.monitoring.monitor',
-    'paasng.monitoring.healthz',
+    'paasng.misc.monitoring.monitor',
+    'paasng.misc.monitoring.healthz',
     'paasng.misc.search',
     'paasng.accessories.smart_advisor',
     'paasng.platform.bk_lesscode',
@@ -156,20 +156,20 @@ INSTALLED_APPS = [
     'paasng.platform.scheduler',
     'revproxy',
     # workloads apps
-    'paas_wl.platform.applications',
-    'paas_wl.cluster',
-    'paas_wl.monitoring.metrics',
-    'paas_wl.networking.egress',
-    'paas_wl.networking.ingress',
-    'paas_wl.networking.entrance',
-    'paas_wl.workloads.resource_templates',
-    'paas_wl.release_controller.hooks',
-    'paas_wl.workloads.processes',
+    'paas_wl.bk_app.applications',
+    'paas_wl.infras.cluster',
+    'paas_wl.bk_app.monitoring.metrics',
+    'paas_wl.workloads.networking.egress',
+    'paas_wl.workloads.networking.ingress',
+    'paas_wl.workloads.networking.entrance',
+    'paas_wl.infras.resource_templates',
+    'paas_wl.workloads.release_controller.hooks',
+    'paas_wl.bk_app.processes',
     'paas_wl.workloads.images',
-    'paas_wl.monitoring.app_monitor',
-    'paas_wl.cnative.specs',
-    'paas_wl.deploy',
-    'paas_wl.resources.generation',
+    'paas_wl.bk_app.monitoring.app_monitor',
+    'paas_wl.bk_app.cnative.specs',
+    'paas_wl.bk_app.deploy',
+    'paas_wl.infras.resources.generation',
 ]
 
 # Allow extending installed apps
@@ -600,16 +600,16 @@ BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
 HEALTHZ_TOKEN = settings.get('HEALTHZ_TOKEN')
 
 # 已启用探针列表
-# 参照 paasng.monitoring.healthz.probes 中包含的探针配置
+# 参照 paasng.misc.monitoring.healthz.probes 中包含的探针配置
 HEALTHZ_PROBES = settings.get(
     'HEALTHZ_PROBES',
     [
-        'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
-        'paasng.monitoring.healthz.probes.WorkloadsMysqlProbe',
-        'paasng.monitoring.healthz.probes.PlatformRedisProbe',
-        'paasng.monitoring.healthz.probes.ServiceHubProbe',
-        'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
-        'paasng.monitoring.healthz.probes.BKIAMProbe',
+        'paasng.misc.monitoring.healthz.probes.PlatformMysqlProbe',
+        'paasng.misc.monitoring.healthz.probes.WorkloadsMysqlProbe',
+        'paasng.misc.monitoring.healthz.probes.PlatformRedisProbe',
+        'paasng.misc.monitoring.healthz.probes.ServiceHubProbe',
+        'paasng.misc.monitoring.healthz.probes.PlatformBlobStoreProbe',
+        'paasng.misc.monitoring.healthz.probes.BKIAMProbe',
     ],
 )
 

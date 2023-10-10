@@ -29,7 +29,7 @@ from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.utils import termcolors
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.misc import OutputStream
+    from paas_wl.bk_app.applications.models.misc import OutputStream
 
 
 def make_style(*args, **kwargs):

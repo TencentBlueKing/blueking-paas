@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.networking.entrance.views_enduser import AppDomainsViewSet
+from paas_wl.workloads.networking.entrance.views_enduser import AppDomainsViewSet
 from paasng.utils.basic import make_app_pattern, make_app_pattern_with_global_envs, re_path
 
 from . import views

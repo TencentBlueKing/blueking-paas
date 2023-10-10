@@ -21,9 +21,9 @@ import logging
 from typing import Dict, Optional
 
 from paas_wl.core.env import env_is_running
-from paas_wl.networking.entrance.addrs import EnvExposedURL
-from paas_wl.networking.entrance.handlers import refresh_module_domains
-from paas_wl.networking.entrance.shim import get_builtin_addr_preferred
+from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
+from paas_wl.workloads.networking.entrance.handlers import refresh_module_domains
+from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferred
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module

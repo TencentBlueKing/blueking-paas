@@ -26,8 +26,8 @@ from typing import Dict, List, Optional, Type
 
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, PollingStatus, TaskPoller
 
-from paas_wl.workloads.processes.processes import PlainProcess
-from paas_wl.workloads.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import PlainProcess
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.processes.events import ProcEventsProducer
 from paasng.platform.engine.processes.utils import ProcessesSnapshotStore

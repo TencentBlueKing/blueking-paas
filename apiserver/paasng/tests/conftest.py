@@ -37,7 +37,7 @@ from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from paas_wl.networking.entrance.addrs import Address, AddressType
+from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
@@ -772,7 +772,7 @@ def mock_env_is_running():
 
     status["side_effect"] = side_effect  # type: ignore
     with mock.patch("paasng.accessories.publish.entrance.exposer.env_is_running") as m1, mock.patch(
-        "paas_wl.networking.entrance.shim.env_is_running"
+        "paas_wl.workloads.networking.entrance.shim.env_is_running"
     ) as m2:
         m1.side_effect = side_effect
         m2.side_effect = side_effect
@@ -789,7 +789,7 @@ def mock_get_builtin_addresses(mock_env_is_running):
             return env_is_running, addresses[env]
         return env_is_running, addresses.get(env.environment, [])
 
-    with mock.patch("paas_wl.networking.entrance.shim.get_builtin_addrs") as m:
+    with mock.patch("paas_wl.workloads.networking.entrance.shim.get_builtin_addrs") as m:
         m.side_effect = side_effect
         yield addresses
 

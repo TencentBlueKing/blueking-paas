@@ -20,14 +20,14 @@ from typing import Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
-from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.platform.api import (
+from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.bk_app.applications.api import (
     create_app_ignore_duplicated,
     create_cnative_app_model_resource,
     update_metadata_by_env,
 )
-from paas_wl.platform.applications.constants import WlAppType
+from paas_wl.bk_app.applications.constants import WlAppType
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment

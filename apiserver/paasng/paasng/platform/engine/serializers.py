@@ -24,9 +24,9 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
-from paas_wl.monitoring.metrics.constants import MetricsResourceType
-from paas_wl.platform.applications.models import Build, BuildProcess
-from paas_wl.workloads.processes.drf_serializers import ProcessSpecSLZ
+from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType
+from paas_wl.bk_app.applications.models import Build, BuildProcess
+from paas_wl.bk_app.processes.drf_serializers import ProcessSpecSLZ
 from paasng.platform.engine.constants import (
     ConfigVarEnvName,
     DeployConditions,

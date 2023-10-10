@@ -22,7 +22,7 @@ import json
 
 import pytest
 
-from paas_wl.cluster.models import Cluster, Domain, IngressConfig
+from paas_wl.infras.cluster.models import Cluster, Domain, IngressConfig
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.entrance.preallocated import (

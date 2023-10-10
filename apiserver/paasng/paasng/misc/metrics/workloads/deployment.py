@@ -22,10 +22,10 @@ from django.core.cache import cache
 from django.utils.timezone import now
 from prometheus_client.core import GaugeMetricFamily
 
-from paas_wl.cluster.models import Cluster
-from paas_wl.resources.base.base import get_client_by_cluster_name
-from paas_wl.resources.base.kube_client import CoreDynamicClient
-from paas_wl.workloads.processes.utils import list_unavailable_deployment
+from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
+from paas_wl.bk_app.processes.utils import list_unavailable_deployment
 
 logger = logging.getLogger(__name__)
 

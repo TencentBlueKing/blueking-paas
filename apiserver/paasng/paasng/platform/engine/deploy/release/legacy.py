@@ -26,12 +26,12 @@ from typing import Dict, Optional, Tuple
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as PyDanticValidationError
 
-from paas_wl.deploy.actions.deploy import DeployAction
-from paas_wl.platform.applications.models.build import Build
-from paas_wl.platform.applications.models.release import Release
-from paas_wl.resources.base.exceptions import KubeException
-from paas_wl.workloads.processes.models import ProcessTmpl
-from paas_wl.workloads.processes.shim import ProcessManager
+from paas_wl.bk_app.deploy.actions.deploy import DeployAction
+from paas_wl.bk_app.applications.models.build import Build
+from paas_wl.bk_app.applications.models.release import Release
+from paas_wl.infras.resources.base.exceptions import KubeException
+from paas_wl.bk_app.processes.models import ProcessTmpl
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.platform.engine.configurations.building import get_processes_by_build
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config

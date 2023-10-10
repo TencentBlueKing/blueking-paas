@@ -20,7 +20,7 @@ import logging
 
 import pytest
 
-from paas_wl.cnative.specs.constants import DeployStatus
+from paas_wl.bk_app.cnative.specs.constants import DeployStatus
 from paasng.platform.engine.constants import JobStatus
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import (
@@ -30,7 +30,7 @@ from paasng.misc.operations.models import (
     Operation,
 )
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
-from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
+from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
 
 logger = logging.getLogger(__name__)
 

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Preconditions for publish Application/Module"""
 from django.utils.translation import gettext as _
 
-from paas_wl.networking.entrance.shim import LiveEnvAddresses
+from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses
 from paasng.platform.engine.models.managers import DeployOperationManager
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker

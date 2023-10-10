@@ -27,7 +27,7 @@ import cattr
 from django.conf import settings
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.cluster.models import Cluster
+from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import Deployment

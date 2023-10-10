@@ -31,7 +31,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cluster.shim import get_application_cluster
+from paas_wl.infras.cluster.shim import get_application_cluster
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError

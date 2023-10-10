@@ -20,8 +20,8 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.networking.entrance.addrs import Address
-from paas_wl.networking.entrance.constants import AddressType
+from paas_wl.workloads.networking.entrance.addrs import Address
+from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import AvailableAddress, MarketConfig

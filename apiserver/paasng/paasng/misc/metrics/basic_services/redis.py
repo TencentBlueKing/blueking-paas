@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.monitoring.probe.base import ProbeSet
 
-from paasng.monitoring.healthz.probes import PlatformRedisProbe
+from paasng.misc.monitoring.healthz.probes import PlatformRedisProbe
 
 from .base import GaugeMetric
 

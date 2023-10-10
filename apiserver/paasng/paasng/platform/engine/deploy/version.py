@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Optional, Tuple
 
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.cnative.specs.image_parser import ImageParser
-from paas_wl.cnative.specs.models import AppModelRevision
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter

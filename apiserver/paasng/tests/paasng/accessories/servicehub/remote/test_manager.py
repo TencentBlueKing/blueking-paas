@@ -26,7 +26,7 @@ import pytest
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
-from paas_wl.cluster.models import Cluster
+from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.servicehub.exceptions import CanNotModifyPlan, ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
@@ -105,7 +105,7 @@ class TestRemoteEngineAppInstanceRel:
         assert plan.is_eager is plan_data["properties"]["is_eager"]  # type: ignore
         assert plan.properties == plan_data["properties"]
 
-    @mock.patch("paas_wl.networking.egress.shim.get_cluster_egress_info")
+    @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
     @mock.patch('paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance')
     @pytest.mark.parametrize(
         "plans",

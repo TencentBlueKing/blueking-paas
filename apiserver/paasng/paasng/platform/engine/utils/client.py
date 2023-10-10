@@ -22,9 +22,9 @@ from typing import Dict, List, TypedDict
 
 from django.utils.functional import cached_property
 
-from paas_wl.platform.applications.constants import ArtifactType
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.models.build import Build, BuildProcess
+from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.applications.models.build import Build, BuildProcess
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.platform.engine.models.deployment import Deployment
 

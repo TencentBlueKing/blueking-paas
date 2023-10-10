@@ -22,16 +22,16 @@ from typing import Optional, Type
 
 from django.db import IntegrityError
 
-from paas_wl.cnative.specs import svc_disc
-from paas_wl.cnative.specs.constants import DeployStatus
-from paas_wl.cnative.specs.entities import BkAppManifestProcessor
-from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
-from paas_wl.cnative.specs.mounts import VolumeSourceManager
-from paas_wl.cnative.specs.resource import deploy as apply_bkapp_to_k8s
-from paas_wl.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.platform.applications.models import Build
-from paas_wl.resources.base.kres import KNamespace
-from paas_wl.resources.utils.basic import get_client_by_app
+from paas_wl.bk_app.cnative.specs import svc_disc
+from paas_wl.bk_app.cnative.specs.constants import DeployStatus
+from paas_wl.bk_app.cnative.specs.entities import BkAppManifestProcessor
+from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
+from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
+from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
+from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
+from paas_wl.bk_app.applications.models import Build
+from paas_wl.infras.resources.base.kres import KNamespace
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError

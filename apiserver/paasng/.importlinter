@@ -20,18 +20,16 @@ ignore_imports =
     # Below packages are not excluded from contracts them will introduces too many errors, 
     # the dependencies around these modules is too complicated at this moment. The plan is
     # to fix this in the near future.
-    paasng.platform.applications.** -> **
     ** -> paasng.platform.applications.**
-    paasng.platform.modules.** -> **
     ** -> paasng.platform.modules.**
-    paasng.platform.engine.** -> **
     ** -> paasng.platform.engine.**
-    paasng.platform.sourcectl.** -> **
     ** -> paasng.platform.sourcectl.**
-    paasng.platform.templates.** -> **
     ** -> paasng.platform.templates.**
+    paasng.platform.modules.views_ext -> paasng.plat_admin.system.applications
+    paasng.platform.applications.views -> paasng.bk_plugins.bk_plugins.config
+    paasng.platform.applications.views_ext -> paasng.plat_admin.system.applications
     # Other ignores
-    paas_wl.workloads.processes.models -> paasng.platform.declarative.deployment.resources
+    paas_wl.bk_app.processes.models -> paasng.platform.declarative.deployment.resources
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
     paasng.accessories.log.client -> paasng.bk_plugins.pluginscenter.**
     # legacydb
@@ -75,29 +73,20 @@ modules =
 name=the layers for paas_wl module
 type=layers
 layers = 
-    # -- The admin layer
-    paas_wl.admin | paas_wl.platform.system_api
-    # -- The domain services layer
-    paas_wl.deploy
-    paas_wl.monitoring
-    paas_wl.workloads.processes
-    paas_wl.cnative
-    paas_wl.tracing | paas_wl.networking | paas_wl.configuration | paas_wl.release_controller | paas_wl.workloads.images
-    paas_wl.workloads.autoscaling
+    paas_wl.apis
+    paas_wl.bk_app
+    paas_wl.workloads
     paas_wl.core
-    # -- The infrastructure and data models layer
-    paas_wl.resources | paas_wl.workloads.resource_templates
-    paas_wl.cluster
-    paas_wl.platform.applications
-    # -- The utils layer
+    paas_wl.infras
     paas_wl.utils
 ignore_imports =
+    ** -> paas_wl.bk_app.applications.**
     # Depend on the "constants" submodule is excluded because "constants" is treated like
     # a shared settings globally.
     paas_wl.** -> paas_wl.**.constants
     # view_enduser -> engine.deploy module, to be removed in the future if we find a better way
-    paas_wl.cnative.specs.views_enduser -> paasng.platform.engine.deploy.release.operator
-    paas_wl.workloads.resource_templates.utils -> paas_wl.workloads.processes.models
+    paas_wl.bk_app.cnative.specs.views_enduser -> paasng.platform.engine.deploy.release.operator
+    paas_wl.infras.resource_templates.utils -> paas_wl.bk_app.processes.models
 
 
 [importlinter:contract:layers-paas-wl-resources]
@@ -109,4 +98,4 @@ layers =
     utils
     base
 containers=
-    paas_wl.resources
+    paas_wl.infras.resources

@@ -50,7 +50,7 @@ class AsCodeClient:
     def apply_rule_configs(self, rule_configs: List[RuleConfig]):
         """下发告警规则"""
         self._validate(rule_configs)
-        configs = self._render_configs(rule_configs)
+        configs = self._render_rule_configs(rule_configs)
         self._apply_rule_configs(configs)
 
     def apply_notice_group(self, receivers: List[str]):
@@ -73,7 +73,7 @@ class AsCodeClient:
                     f'app_code({self.app_code})'
                 )
 
-    def _render_configs(self, rule_configs: List[RuleConfig]) -> Dict:
+    def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
 
         └── rule

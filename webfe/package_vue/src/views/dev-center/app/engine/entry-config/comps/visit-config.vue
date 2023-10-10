@@ -240,6 +240,7 @@
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
+import { copy } from '@/common/tools';
 export default {
   mixins: [appBaseMixin],
   data() {
@@ -320,15 +321,16 @@ export default {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<div style="padding: 10px 0px;">
-          <div>域名解析目标IP</div>
+        html: `<div style="padding: 10px 0px;color: #313238;">
+          <div>IP 信息：</div>
           <div
-            class="mt10"
-            style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px; text-align: center;">
+            class="mt10 ip-view-wrapper"
+            style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px;">
             ${this.defaultIp}
+            <i class="paasng-icon paasng-general-copy ip-icon-customize-cls"></i>
           </div>
-          <div class="mt10 mb10">推荐操作流程: </div>
-          <div>1. 点击右侧 “添加” 自定义域名</div>
+          <div class="mt10 mb10" style="color: #979BA5;">推荐操作流程: </div>
+          <div>1. 首先在“域名管理”添加域名</div>
           <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
           <div>3. 打开浏览器，测试访问是否正常 </div>
           <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
@@ -342,6 +344,7 @@ export default {
         },
         onShown: () => {
           this.tipShow = true;
+          this.ipCopy();
         },
       };
     },
@@ -723,6 +726,15 @@ export default {
     handleRowMouseLeave() {
       this.rowIndex = '';
     },
+
+    ipCopy () {
+      const ioncEl = document.querySelector('.ip-icon-customize-cls')
+      ioncEl.addEventListener('click', this.handleCopyIp);
+    },
+
+    handleCopyIp() {
+      copy(this.defaultIp, this);
+    },
   },
 };
 </script>
@@ -941,4 +953,16 @@ export default {
     .btn-container{
       text-align: center;
     }
+</style>
+<style>
+.ip-view-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+}
+.ip-icon-customize-cls {
+  color: #3a84ff;
+  cursor: pointer;
+}
 </style>

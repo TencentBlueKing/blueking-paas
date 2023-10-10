@@ -857,6 +857,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-time:before {
 	content: "\e24b";
 }
+.paasng-project:before {
+	content: "\e269";
+}
 .paasng-angle-double-down:before {
 	content: "\e241";
 }

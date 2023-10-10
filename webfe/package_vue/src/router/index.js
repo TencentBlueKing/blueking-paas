@@ -213,10 +213,6 @@ const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/vie
   window.showDeployTip(error);
 });
 
-const appAccessPortal = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/entry-config').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const appBasicInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/info').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -510,7 +506,7 @@ const router = new Router({
           },
           children: [
             {
-              path: 'web-analysis',
+              path: ':moduleId/web-analysis',
               component: appWebAnalysis,
               name: 'cloudAppWebAnalysis',
               meta: {
@@ -518,7 +514,7 @@ const router = new Router({
               },
             },
             {
-              path: 'log-analysis',
+              path: ':moduleId/log-analysis',
               component: appLogAnalysis,
               name: 'cloudAppLogAnalysis',
               meta: {
@@ -526,7 +522,7 @@ const router = new Router({
               },
             },
             {
-              path: 'event-analysis',
+              path: ':moduleId/event-analysis',
               component: appEventAnalysis,
               name: 'cloudAppEventAnalysis',
               meta: {
@@ -747,11 +743,6 @@ const router = new Router({
           path: ':id/cloudapi',
           component: appCloudAPI,
           name: 'appCloudAPI',
-        },
-        {
-          path: ':id/access-portal',
-          component: appAccessPortal,
-          name: 'appAccessPortal',
         },
         {
           path: ':id/market',

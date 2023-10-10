@@ -624,12 +624,12 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
-                "name": "appAccessPortal",
+                "name": "appEntryConfig",
                 "label": staticI18n.$t("访问管理"),
                 "iconfontName": "diamond",
                 "supportModule": false,
                 "destRoute": {
-                    "name": "appAccessPortal"
+                    "name": "appEntryConfig"
                 },
                 "children": []
             },

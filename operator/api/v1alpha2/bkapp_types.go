@@ -385,12 +385,12 @@ type AutoscalingOverlay struct {
 	// Process is the name of process
 	Process string `json:"process"`
 	// Spec is bkapp autoscaling config
-	Spec AutoscalingSpec `json:",inline"`
+	AutoscalingSpec `json:",inline"`
 }
 
 // MountOverlay overwrite or add application's mounts by environment
 type MountOverlay struct {
-	Mount Mount `json:",inline"`
+	Mount `json:",inline"`
 	// EnvName is app environment name
 	EnvName EnvName `json:"envName"`
 }

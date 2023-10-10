@@ -186,6 +186,10 @@ const appCreateModule = () => import(/* webpackChunkName: 'app-create-module' */
   window.showDeployTip(error);
 });
 
+const appCreateCloudModule = () => import(/* webpackChunkName: 'app-create-cloud-module' */'@/views/dev-center/app/create-cloud-module').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 
 // App: basic config
 const appConfigs = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/index').then(module => module).catch((error) => {
@@ -206,10 +210,6 @@ const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'
 });
 
 const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/module-info').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
-const appAccessPortal = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/entry-config').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -322,6 +322,10 @@ const cloudAppDeployHistory = () => import(/* webpackChunkName: 'cloud-deploy-ma
   window.showDeployTip(error);
 });
 
+const cloudAppEventQuery = () => import(/* webpackChunkName: 'cloud-event-query' */'@/views/dev-center/app/engine/cloud-event-query/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -378,6 +382,11 @@ const router = new Router({
       path: '/developer-center/apps/:id/module/create',
       component: appCreateModule,
       name: 'appCreateModule',
+    },
+    {
+      path: '/developer-center/apps/:id/cloud-module/create',
+      component: appCreateCloudModule,
+      name: 'appCreateCloudModule',
     },
     {
       path: '/developer-center/apps/migration/',
@@ -482,6 +491,11 @@ const router = new Router({
             },
           ],
         },
+        {
+          path: ':id/:moduleId/event-query',
+          component: cloudAppEventQuery,
+          name: 'cloudAppEventQuery',
+        },
         // 云原生访问统计
         {
           path: ':id/cloud-analysis',
@@ -492,7 +506,7 @@ const router = new Router({
           },
           children: [
             {
-              path: 'web-analysis',
+              path: ':moduleId/web-analysis',
               component: appWebAnalysis,
               name: 'cloudAppWebAnalysis',
               meta: {
@@ -500,7 +514,7 @@ const router = new Router({
               },
             },
             {
-              path: 'log-analysis',
+              path: ':moduleId/log-analysis',
               component: appLogAnalysis,
               name: 'cloudAppLogAnalysis',
               meta: {
@@ -508,7 +522,7 @@ const router = new Router({
               },
             },
             {
-              path: 'event-analysis',
+              path: ':moduleId/event-analysis',
               component: appEventAnalysis,
               name: 'cloudAppEventAnalysis',
               meta: {
@@ -729,11 +743,6 @@ const router = new Router({
           path: ':id/cloudapi',
           component: appCloudAPI,
           name: 'appCloudAPI',
-        },
-        {
-          path: ':id/access-portal',
-          component: appAccessPortal,
-          name: 'appAccessPortal',
         },
         {
           path: ':id/market',

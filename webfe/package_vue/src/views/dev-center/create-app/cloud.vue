@@ -58,7 +58,7 @@
             v-model="formData.sourceOrigin"
             class="construction-manner"
           >
-            <bk-radio :value="'soundCode'">
+            <bk-radio :value="'soundCode'" v-if="userFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE">
               {{ $t('源代码') }}
             </bk-radio>
             <bk-radio :value="'image'">
@@ -428,7 +428,7 @@
 import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
-import collapseContent from '@/views/dev-center/app/create-module/comps/collapse-content.vue';
+import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 import { TAG_MAP } from '@/common/constants.js';
@@ -607,7 +607,7 @@ export default {
           },
           {
             regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
-            message: this.$t('地址格式不正确'),
+            message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },
         ],
@@ -631,8 +631,11 @@ export default {
     },
     imageRepositoryTemplate() {
       if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
-      const imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
+      let imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
         .replace('{app_code}', this.formData.code);
+      if (imageRepositoryTemplate.includes('//')) {
+        imageRepositoryTemplate = imageRepositoryTemplate.replace('//', '/');
+      }
       return imageRepositoryTemplate.replace('{module_name}', 'default');
     },
     mirrorTag() {
@@ -648,6 +651,9 @@ export default {
         tagStrList.unshift(tagOptions.prefix);
       }
       return tagStrList.join('-');
+    },
+    userFeature() {
+      return this.$store.state.userFeature;
     },
   },
   watch: {
@@ -687,6 +693,7 @@ export default {
     },
   },
   mounted() {
+    this.formData.sourceOrigin = this.userFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE ? 'soundCode' : 'image';
     this.init();
   },
   methods: {
@@ -968,9 +975,17 @@ export default {
           data: params,
         });
 
+        const objectKey = `CloundSourceInitResult${Math.random().toString(36)}`;
+        if (res.source_init_result) {
+          localStorage.setItem(objectKey, JSON.stringify(res.source_init_result.extra_info));
+        }
+
         const path = `/developer-center/apps/${res.application.code}/create/${this.sourceControlTypeItem}/success`;
         this.$router.push({
           path,
+          query: {
+            objectKey,
+          },
         });
       } catch (e) {
         this.$paasMessage({

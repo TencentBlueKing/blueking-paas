@@ -3,20 +3,20 @@ name: '{{ notice_group_name }}'
 alert:
   '00:00--23:59':
     remind:
-      type: [weixin, mail]
+      type: [rtx, weixin]
     warning:
-      type: [weixin, mail]
+      type: [rtx, weixin]
     fatal:
-      type: [weixin, mail]
+      type: [rtx, weixin]
 
 action:
   '00:00--23:59':
     execute:
-      type: [weixin, mail]
+      type: [rtx, weixin]
     execute_failed:
-      type: [weixin, mail]
+      type: [rtx, weixin]
     execute_success:
-      type: [weixin, mail]
+      type: [rtx, weixin]
 
 users:
 {% for user in receivers or []%}

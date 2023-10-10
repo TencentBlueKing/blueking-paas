@@ -20,7 +20,6 @@ import pytest
 
 from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
-from paasng.monitoring.monitor.models import AppAlertRule
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
@@ -41,16 +40,6 @@ class TestAlertRulesView:
             f'/api/monitor/applications/{bk_app.code}/modules/{bk_module.name}/alert_rules/?alert_code=ddd'
         )
         assert len(resp.data) == 0
-
-    def test_update_rule(self, api_client, bk_app):
-        threshold_expr = '> 10 < 50'
-        rule_obj = AppAlertRule.objects.all()[0]
-        resp = api_client.put(
-            f'/api/monitor/applications/{bk_app.code}/alert_rules/{rule_obj.id}/',
-            {'threshold_expr': threshold_expr, 'receivers': rule_obj.receivers, 'enabled': rule_obj.enabled},
-        )
-        assert resp.status_code == 200
-        assert AppAlertRule.objects.get(id=rule_obj.id).threshold_expr == threshold_expr
 
     def test_list_supported_alert_rules(self, api_client):
         resp = api_client.get('/api/monitor/supported_alert_rules/')

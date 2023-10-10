@@ -7,7 +7,29 @@
     :offset-left="20"
     class="deploy-action-box"
   >
-    <div class="process-container">
+    <!-- 若托管方式为源码&镜像，进程配置页面都为当前空页面状态 -->
+    <section
+      v-if="!isCustomImage && !isCreate"
+      style="margin-top: 38px;"
+    >
+      <bk-exception
+        class="exception-wrap-item exception-part"
+        type="empty"
+        scene="part"
+      >
+        <span style="color: #63656E;">{{ $t('暂无进程') }}</span>
+        <p
+          class="mt10"
+          style="color: #979BA5;font-size: 12px;"
+        >
+          {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+        </p>
+      </bk-exception>
+    </section>
+    <div
+      v-else
+      class="process-container"
+    >
       <div
         class="btn-container flex-row align-items-baseline"
         :class="[isPageEdit ? '' : 'justify-content-between']"
@@ -82,6 +104,7 @@
             :rules="rules"
             ext-cls="form-process"
           >
+            <!-- v1alpha2 镜像仓库不带tag -->
             <bk-form-item
               :label="$t('镜像仓库')"
               :label-width="120"
@@ -89,13 +112,14 @@
             >
               {{ buildData.image }}
             </bk-form-item>
-
+            <!-- v1alpha1 镜像地址 -->
             <bk-form-item
               :label="$t('镜像地址')"
               :required="true"
               :label-width="120"
               :property="'image'"
-              v-else
+              :rules="rules.image"
+              v-else-if="isCustomImage && !isV1alpha2"
             >
               <bk-input
                 ref="mirrorUrl"
@@ -185,6 +209,7 @@
                 :allow-auto-match="true"
                 :has-delete-icon="hasDeleteIcon"
                 :paste-fn="copyStartMommand"
+                :key="tagInputIndex"
               />
               <p class="whole-item-tips">
                 {{ $t('示例：start_server，多个命令可用回车键分隔') }}
@@ -321,6 +346,8 @@
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
+                          :disabled="!autoScalDisableConfig.stag?.ENABLE_AUTOSCALING"
+                          v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.stag?.ENABLE_AUTOSCALING }"
                         >
                           {{ $t('自动调节') }}
                         </bk-radio-button>
@@ -333,7 +360,7 @@
                         style="margin-right: 60px"
                       >
                         <span slot="title">
-                          {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
+                          {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
                           <a
                             target="_blank"
                             :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
@@ -493,6 +520,8 @@
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
+                          :disabled="!autoScalDisableConfig.prod?.ENABLE_AUTOSCALING"
+                          v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.prod?.ENABLE_AUTOSCALING }"
                         >
                           {{ $t('自动调节') }}
                         </bk-radio-button>
@@ -505,7 +534,7 @@
                         style="margin-right: 60px"
                       >
                         <span slot="title">
-                          {{ $t('根据当前负载呵触发条件中设置的阈值自动扩缩容') }}
+                          {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
                           <a
                             target="_blank"
                             :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
@@ -615,8 +644,18 @@
         v-else
       >
         <bk-form :model="formData">
-          <bk-form-item :label="isV1alpha2 ? `${$t('镜像仓库')}：` : `${$t('镜像地址')}：`">
-            <span class="form-text">{{ isV1alpha2 ? buildData.image : formData.image || '--' }}</span>
+          <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
+          <bk-form-item
+            v-if="isV1alpha2"
+            :label="`${$t('镜像仓库')}：`"
+          >
+            <span class="form-text">{{ buildData.image || '--' }}</span>
+          </bk-form-item>
+          <bk-form-item
+            v-else-if="isCustomImage && !isV1alpha2"
+            :label="`${$t('镜像地址')}：`"
+          >
+            <span class="form-text">{{ formData.image || '--' }}</span>
           </bk-form-item>
           <bk-form-item :label="`${$t('镜像凭证')}：`">
             <span class="form-text">
@@ -691,6 +730,17 @@
                       ext-cls="form-first-cls"
                     >
                       <span class="form-text">{{ extraConfigData[item.value].resQuotaPlan.plan || '--' }}</span>
+                      <span slot="tip">
+                        <i
+                          v-if="quotaPlansFlag"
+                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                        />
+                        <i
+                          v-else
+                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                          v-bk-tooltips="stagTips"
+                        />
+                      </span>
                     </bk-form-item>
 
                     <bk-form-item :label="`${$t('扩缩容方式')}：`">
@@ -808,8 +858,6 @@ export default {
       panels: [],
       processNameActive: 'web', // 选中的进程名
       btnIndex: 0,
-      showEditIconIndex: null,
-      iconIndex: '',
       panelActive: 0,
       formData: {
         image: '',
@@ -838,7 +886,7 @@ export default {
             trigger: 'blur change',
           },
           {
-            regex: /^(?:(?=[^:\\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/,
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9_]+$/,
             message: this.$t('地址格式不正确'),
             trigger: 'blur',
           },
@@ -965,7 +1013,6 @@ export default {
           },
         ],
       },
-      isBlur: true,
       imageCredential: '',
       imageCredentialList: [],
       targetPortErrTips: '',
@@ -1019,6 +1066,8 @@ export default {
           request: {},
         },
       },
+      autoScalDisableConfig: {},
+      tagInputIndex: 0,
     };
   },
   computed: {
@@ -1041,7 +1090,6 @@ export default {
     isV1alpha2() {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
     },
-
     stagTips() {
       return {
         theme: 'light',
@@ -1074,9 +1122,14 @@ export default {
         placements: ['bottom'],
       };
     },
-
-    localLanguage() {
-      return this.$store.state.localLanguage;
+    curModuleId() {
+      return this.curAppModule?.name;
+    },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+    isCustomImage () {
+      return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
   watch: {
@@ -1330,6 +1383,8 @@ export default {
       this.localProcessNameActive = v; // 点击的tab名，编辑数据时需要用到
       this.processNameActive = v;
       this.btnIndex = i;
+      // tag-input 输入切换问题
+      this.tagInputIndex++;
     },
 
     // 编辑
@@ -1338,6 +1393,9 @@ export default {
         this.$store.commit('cloudApi/updateProcessPageEdit', true);
       } else {
         this.$store.commit('cloudApi/updatePageEdit', true);
+        // 扩缩容FeatureFlag 
+        this.getAutoScalFlag('stag');
+        this.getAutoScalFlag('prod');
       }
     },
 
@@ -1435,7 +1493,7 @@ export default {
     // 弹窗取消
     handleDialogCancel() {
       this.processDialog.visiable = false;
-      this.$refs?.formDialog.clearError();
+      this.$refs?.formDialog?.clearError();
     },
 
     // 页面取消
@@ -1445,6 +1503,7 @@ export default {
         this.localCloudAppData = _.cloneDeep(this.localCloudAppDataBackUp);
         this.processData = this.localCloudAppDataBackUp.spec.processes;
         this.panels = _.cloneDeep(this.processData);
+        this.formData = _.cloneDeep(this.processData[this.btnIndex]);
       }
     },
 
@@ -1630,6 +1689,7 @@ export default {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
         const data = res.find((e) => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
+        this.resQuotaData = res.map(item => item.name);
         this.extraConfigData[env].limit = data.limit;
         this.extraConfigData[env].request = data.request;
       } catch (e) {
@@ -1639,6 +1699,25 @@ export default {
         });
       } finally {
         this.quotaPlansFlag = false;
+      }
+    },
+
+    /**
+     * 获取扩缩容featureflag 
+     */
+    async getAutoScalFlag(env) {
+      try {
+        const res = await this.$store.dispatch('deploy/getAutoScalFlagWithEnv', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env,
+        });
+        this.autoScalDisableConfig[env] = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
       }
     },
   },

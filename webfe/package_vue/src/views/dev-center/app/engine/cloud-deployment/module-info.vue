@@ -55,6 +55,7 @@
               error-display-type="normal"
             >
               <bk-input
+                ref="imageRef"
                 v-model="buildData.image"
                 style="width: 450px;"
                 :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
@@ -399,7 +400,7 @@ export default {
           },
           {
             regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
-            message: this.$t('地址格式不正确'),
+            message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },
         ],
@@ -484,6 +485,9 @@ export default {
     // 编辑
     handleEdit(value) {
       this[value] = true;
+      this.$nextTick(() => {
+        this.$refs.imageRef?.focus();
+      });
     },
 
 
@@ -502,7 +506,7 @@ export default {
             theme: 'success',
             message: this.$t('操作成功'),
           });
-          this.$refs.baseInfoRef.clearError();
+          this.$refs.baseInfoRef?.clearError();
           this.isBasePageEdit = false;
         } catch (error) {
           console.log(error);
@@ -519,7 +523,7 @@ export default {
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
         this.isBasePageEdit = false;
       }
-      this.$refs.baseInfoRef.clearError();
+      this.$refs.baseInfoRef?.clearError();
     },
 
 

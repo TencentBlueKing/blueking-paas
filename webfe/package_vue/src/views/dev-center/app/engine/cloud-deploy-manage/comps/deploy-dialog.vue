@@ -145,6 +145,7 @@
                 :popover-min-width="420"
                 :clearable="false"
                 :searchable="true"
+                :disabled="!!errorTips"
                 :loading="isTagLoading"
               >
                 <bk-option
@@ -154,6 +155,7 @@
                   :name="option.name"
                 />
               </bk-select>
+              <span v-if="errorTips" class="error-text">{{ errorTips }}</span>
             </bk-form-item>
           </bk-form>
         </div>
@@ -259,6 +261,7 @@ export default {
       },
       tagUrl: '',
       customImageTagList: [],
+      errorTips: '',
     };
   },
   computed: {
@@ -580,6 +583,7 @@ export default {
       try {
         this.isTagLoading = true;
         this.tagUrl = '';
+        this.errorTips = '';
         const res =  await this.$store.dispatch('deploy/getCustomImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -590,6 +594,7 @@ export default {
         this.tagData.tagValue = this.customImageTagList[0]?.name || '';
       } catch (e) {
         this.tagUrl = e?.data?.url;
+        this.errorTips = e.message;
       } finally {
         this.isTagLoading = false;
       }
@@ -686,5 +691,9 @@ export default {
   position: absolute;
   top: -30px;
   right: 0;
+}
+.error-text{
+  font-size: 12px;
+  color: #ea3636;
 }
 </style>

@@ -37,11 +37,11 @@ class ImageParser:
 
     def get_tag(self) -> Optional[str]:
         """get part `tag` in image field"""
-        return parse_image(self.image, default_registry="docker.io").tag
+        return parse_image(self.image, default_registry="registry.hub.docker.com").tag
 
     def get_repository(self) -> str:
         """get part `repository` in image field"""
-        parsed = parse_image(self.image, default_registry="docker.io")
+        parsed = parse_image(self.image, default_registry="registry.hub.docker.com")
         return f"{parsed.domain}/{parsed.name}"
 
     def get_image_field(self, bkapp: BkAppResource) -> str:

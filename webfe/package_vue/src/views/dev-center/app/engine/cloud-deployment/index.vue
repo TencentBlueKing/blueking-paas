@@ -178,7 +178,7 @@ export default {
     },
 
     curTabPanels() {
-      if (this.curAppModule.web_config?.runtime_type !== 'custom_image') {
+      if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
       return this.panels.filter((item) => item.name !== 'cloudAppDeployForBuild');

@@ -82,6 +82,7 @@ export default {
         'cloudAppAnalysis',
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
+        'cloudAppEventQuery',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -116,7 +117,7 @@ export default {
           // 可观测性
           'appObservability',
           // 访问入口
-          'appAccessPortal',
+          'appEntryConfig',
           // 增强服务
           'appServices',
           // 权限管理
@@ -137,6 +138,8 @@ export default {
           'basicConfig',
           // 访问统计
           'cloudAppAnalysis',
+          // 事件查询
+          'cloudAppEventQuery',
         ],
         developer: [
           // 概览
@@ -168,7 +171,7 @@ export default {
           // 可观测性
           'appObservability',
           // 访问入口
-          'appAccessPortal',
+          'appEntryConfig',
           // 增强服务
           'appServices',
           // 云 API 管理
@@ -187,6 +190,8 @@ export default {
           'basicConfig',
           // 访问统计
           'cloudAppAnalysis',
+          // 事件查询
+          'cloudAppEventQuery',
         ],
         operator: [
           // 权限管理
@@ -335,14 +340,11 @@ export default {
 
         // 接入feature flag来控制应用导航
         const featureMaps = {
-          appAnalysis: 'ANALYTICS', // 数据统计
           docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
           appCloudAPI: 'API_GATEWAY', // 云API权限管理
         };
         const subFeatureMaps = {
-          appWebAnalysis: 'PA_WEBSITE_ANALYTICS', // 网站访问统计
-          appLogAnalysis: 'PA_INGRESS_ANALYTICS', // 访问日志统计
-          appEventAnalysis: 'PA_CUSTOM_EVENT_ANALYTICS', // 自定义事件统计
+          cloudAppAnalysis: 'ANALYTICS', // 访问统计
           codeReview: 'CI', // 代码检查
           monitorAlarm: 'PHALANX', // 告警记录
         };
@@ -405,6 +407,7 @@ export default {
         'cloudAppAnalysis',
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
+        'cloudAppEventQuery',
       ];
 
       this.navTree.forEach((nav) => {

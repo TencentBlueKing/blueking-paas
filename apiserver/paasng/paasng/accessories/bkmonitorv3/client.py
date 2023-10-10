@@ -54,6 +54,9 @@ class BkMonitorBackend(Protocol):
     def promql_query(self, *args, **kwargs) -> Dict:
         ...
 
+    def as_code_import_config(self, *args, **kwargs) -> Dict:
+        ...
+
 
 class BKMonitorSpaceManager:
     """BK Monitor Space Management API provider"""
@@ -201,6 +204,32 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp['error'])
 
         return resp.get('data', {}).get('series', [])
+
+    def as_code_import_config(
+        self, configs: Dict, biz_or_space_id: int, config_group: str, overwrite: bool = False, incremental: bool = True
+    ):
+        """通过 ascode 下发告警规则
+
+        :param biz_or_space_id: 业务或空间 ID
+        :param config_group: 配置分组组名, 默认 default
+        :param overwrite: 是否跨分组覆盖同名配置,
+        :param incremental: 是否增量更新
+        """
+        try:
+            resp = self.client.as_code_import_config(
+                data={
+                    "bk_biz_id": biz_or_space_id,
+                    "configs": configs,
+                    "app": config_group,
+                    "overwrite": overwrite,
+                    "incremental": incremental,
+                }
+            )
+        except APIGatewayResponseError:
+            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+
+        if not resp.get('result'):
+            raise BkMonitorApiError(resp['message'])
 
 
 def _make_bk_minotor_backend() -> BkMonitorBackend:

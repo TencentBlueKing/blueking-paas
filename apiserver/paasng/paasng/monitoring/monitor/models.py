@@ -43,7 +43,7 @@ class AppAlertRuleManager(models.Manager):
 
 
 class AppAlertRule(AuditedModel):
-    """记录 app 告警规则配置"""
+    """记录 app 初始的告警规则配置"""
 
     alert_code = models.CharField(max_length=64, help_text='alert rule code e.g. high_cpu_usage')
     display_name = models.CharField(max_length=512)

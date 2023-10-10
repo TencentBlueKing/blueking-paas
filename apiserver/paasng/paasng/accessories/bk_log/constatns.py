@@ -33,3 +33,8 @@ class FieldType(str, StructuredEnum):
     STRING = EnumField("string")
     OBJECT = EnumField("object")
     NESTED = EnumField("nested")
+
+
+class BkLogType(str, StructuredEnum):
+    JSON = EnumField("json")
+    STDOUT = EnumField("stdout")

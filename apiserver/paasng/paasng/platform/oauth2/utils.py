@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from paasng.platform.oauth2.api import BkOauthClient
+from paasng.platform.oauth2.api import BkAppSecret, BkOauthClient
 from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.platform.oauth2.models import OAuth2Client
+from paasng.platform.oauth2.models import BkAppSecretInEnvVar, OAuth2Client
 
 
 def get_random_secret_key():
@@ -32,23 +32,44 @@ def get_random_secret_key():
     return get_random_string(50, chars)
 
 
-def create_oauth2_client(code: str, region: str) -> bool:
+def create_oauth2_client(bk_app_code: str, region: str) -> bool:
     """Create oauth2 client for application"""
     if settings.ENABLE_BK_OAUTH:
-        return BkOauthClient().create_client(code)
+        return BkOauthClient().create_client(bk_app_code)
 
     OAuth2Client.objects.get_or_create(
-        region=region, client_id=code, defaults={'client_secret': get_random_secret_key()}
+        region=region, client_id=bk_app_code, defaults={'client_secret': get_random_secret_key()}
     )
     return True
 
 
-def get_oauth2_client_secret(code: str, region: str) -> str:
+def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:
+    """应用部署时，写入环境变量中的密钥
+    如果用户未主动设置，则为 BkAuth API 中返回的默认密钥
+    """
+    client = BkOauthClient()
+
+    # 如果平台 DB 中记录了环境变量默认密钥的 ID，则以平台记录的为准
+    try:
+        secret_in_db = BkAppSecretInEnvVar.objects.get(bk_app_code=bk_app_code).bk_app_secret_id
+    except BkAppSecretInEnvVar.DoesNotExist:
+        secret_in_db = None
+    if secret_in_db:
+        secret_in_db = client.get_secret_by_id(bk_app_code, secret_in_db)
+        if secret_in_db:
+            return secret_in_db
+
+    # 平台中没有记录，则从 bkAuth 返回的 API 中选择默认的密钥: 已启用且创建时间最早的
+    return client.get_default_app_secret(bk_app_code)
+
+
+def get_oauth2_client_secret(bk_app_code: str, region: str) -> str:
+    """获取应用的 OAuth 默认密钥"""
     if settings.ENABLE_BK_OAUTH:
-        return BkOauthClient().get_client_secret(code)
+        return get_app_secret_in_env_var(bk_app_code).bk_app_secret
 
     try:
-        client_secret = OAuth2Client.objects.get(region=region, client_id=code).client_secret
+        client_secret = OAuth2Client.objects.get(region=region, client_id=bk_app_code).client_secret
     except OAuth2Client.DoesNotExist:
-        raise BkOauthClientDoesNotExist(f"Bk Oauth client({code}) not exist")
+        raise BkOauthClientDoesNotExist(f"Bk Oauth client({bk_app_code}) not exist")
     return client_secret

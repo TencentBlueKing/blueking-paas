@@ -27,8 +27,9 @@ Rules:
 import logging
 from typing import Tuple, Union
 
-import curlify
 import requests
+
+import paasng.utils.masked_curlify as curlify
 
 logger = logging.getLogger(__name__)
 

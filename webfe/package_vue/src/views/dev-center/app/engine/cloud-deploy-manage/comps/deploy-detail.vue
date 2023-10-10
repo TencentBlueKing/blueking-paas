@@ -180,18 +180,19 @@
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">
-                <div class="round-wrapper" v-if="row.targetStatus === 'start'">
-                  <bk-popconfirm
-                    :content="$t('确认停止该进程？')"
-                    width="288"
-                    trigger="click"
-                    @confirm="handleUpdateProcess">
+                <bk-popconfirm
+                  v-if="row.targetStatus === 'start'"
+                  :content="$t('确认停止该进程？')"
+                  width="288"
+                  trigger="click"
+                  @confirm="handleUpdateProcess">
+                  <div class="round-wrapper">
                     <div
                       class="square-icon"
                       @click="handleProcessOperation(row)">
                     </div>
-                  </bk-popconfirm>
-                </div>
+                  </div>
+                </bk-popconfirm>
                 <div v-else>
                   <bk-popconfirm
                     :content="$t('确认启动该进程？')"
@@ -638,6 +639,8 @@ export default {
         link: '',
       },
       rowDisplayName: '',
+      // EventSource handler
+      serverProcessEvent: undefined,
     };
   },
   computed: {
@@ -669,7 +672,9 @@ export default {
     moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
     if (this.index === 0) {   // 只需要启动一次stream
-      this.watchServerPush();
+      if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
+        this.watchServerPush();
+      }
     }
   },
 
@@ -1178,12 +1183,17 @@ export default {
         clearTimeout(this.watchServerTimer);
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
-      this.serverProcessEvent = new EventSource(url, {
+
+      var serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });
+      if (this.serverProcessEvent !== undefined) {
+        this.serverProcessEvent.close();
+      }
+      this.serverProcessEvent = serverProcessEvent;
 
       // 收藏服务推送消息
-      this.serverProcessEvent.onmessage = (event) => {
+      serverProcessEvent.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log(this.$t('接受到推送'), data);
         if (data.object_type === 'process') {
@@ -1202,10 +1212,10 @@ export default {
       };
 
       // 服务异常
-      this.serverProcessEvent.onerror = (event) => {
+      serverProcessEvent.onerror = (event) => {
         // 异常后主动关闭，否则会继续重连
         console.error(this.$t('推送异常'), event);
-        this.serverProcessEvent.close();
+        serverProcessEvent.close();
 
         // 推迟调用，防止过于频繁导致服务性能问题
         // this.watchServerTimer = setTimeout(() => {
@@ -1214,13 +1224,15 @@ export default {
       };
 
       // 服务结束
-      this.serverProcessEvent.addEventListener('EOF', () => {
-        // 服务结束请求列表接口
-        bus.$emit('get-release-info');
-        this.serverProcessEvent.close();
-        this.watchServerTimer = setTimeout(() => {
-          this.watchServerPush();
-        }, 3000);
+      serverProcessEvent.addEventListener('EOF', () => {
+        serverProcessEvent.close();
+        if (this.serverProcessEvent === serverProcessEvent) {
+          // 服务结束请求列表接口
+          bus.$emit('get-release-info');
+          this.watchServerTimer = setTimeout(() => {
+            this.watchServerPush();
+          }, 3000);
+        }
       });
     },
 

@@ -36,6 +36,11 @@ class Group(OperationGroup):
         path="/{collector_config_id}/databus_custom_update/",
     )
 
+    # 采集项列表
+    databus_list_collectors = bind_property(
+        Operation, name="databus_list_collectors", method="GET", path="/databus_list_collectors/"
+    )
+
 
 class Client(APIGatewayClient):
     """bk-log日志平台 API"""

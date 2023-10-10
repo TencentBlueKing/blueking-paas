@@ -28,8 +28,8 @@ from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.core.region.app import BuiltInEnvsRegionHelper
 from paasng.core.region.models import get_region
 from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix

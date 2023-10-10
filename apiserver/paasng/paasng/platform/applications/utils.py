@@ -33,7 +33,7 @@ from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
-from paasng.platform.oauth2.utils import create_oauth2_client
+from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.core.region.models import get_region
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.accessories.publish.market.constant import ProductSourceUrlType

@@ -27,7 +27,7 @@ from paasng.accessories.publish.market.models import Tag
 from paasng.accessories.publish.sync_market.models import TagData, TagMap
 
 try:
-    from paasng.platform.legacydb_te.adaptors import (
+    from paasng.infras.legacydb_te.adaptors import (
         AppAdaptor,
         AppDeveloperAdaptor,
         AppEnvVarAdaptor,
@@ -39,7 +39,7 @@ try:
         EngineAppAdaptor,
     )
 except ImportError:
-    from paasng.platform.legacydb.adaptors import (  # type: ignore
+    from paasng.infras.legacydb.adaptors import (  # type: ignore
         AppAdaptor,
         AppDeveloperAdaptor,
         AppEnvVarAdaptor,

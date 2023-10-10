@@ -33,7 +33,7 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
+from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.blobstore import make_blob_store
 

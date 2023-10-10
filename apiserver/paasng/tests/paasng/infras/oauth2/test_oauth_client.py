@@ -22,14 +22,14 @@ import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django.test.utils import override_settings
 
-from paasng.platform.oauth2.exceptions import BkOauthApiException
-from paasng.platform.oauth2.models import OAuth2Client
-from paasng.platform.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
+from paasng.infras.oauth2.exceptions import BkOauthApiException
+from paasng.infras.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
 
 pytestmark = pytest.mark.django_db
 
 
-@mock.patch("paasng.platform.oauth2.api.BkOauthClient")
+@mock.patch("paasng.infras.oauth2.api.BkOauthClient")
 class TestBkOauthClient:
     @pytest.mark.parametrize(
         "enable_bk_oauth, ctx", [(True, pytest.raises(BkOauthApiException)), (False, does_not_raise())]

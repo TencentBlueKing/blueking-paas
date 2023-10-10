@@ -109,7 +109,7 @@ from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.protections import ModuleDeletionPreparer
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.core.region.models import get_all_regions
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.constant import AppState, ProductSourceUrlType
@@ -120,11 +120,11 @@ from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
 try:
-    from paasng.platform.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
-    from paasng.platform.legacydb_te.models import get_developers_by_v2_application
+    from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
+    from paasng.infras.legacydb_te.models import get_developers_by_v2_application
 except ImportError:
-    from paasng.platform.legacydb.adaptors import AppAdaptor, AppTagAdaptor  # type: ignore
-    from paasng.platform.legacydb.models import get_developers_by_v2_application  # type: ignore
+    from paasng.infras.legacydb.adaptors import AppAdaptor, AppTagAdaptor  # type: ignore
+    from paasng.infras.legacydb.models import get_developers_by_v2_application  # type: ignore
 
 logger = logging.getLogger(__name__)
 

@@ -38,7 +38,7 @@ from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTo
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.misc.feature_flags.constants import PlatformFeatureFlag
-from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
+from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.utils.error_codes import error_codes
 from paasng.utils.notifier import get_notification_backend
 

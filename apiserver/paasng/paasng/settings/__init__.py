@@ -118,7 +118,7 @@ INSTALLED_APPS = [
     'paasng.platform.applications',
     'paasng.accessories.log',
     'paasng.platform.modules',
-    'paasng.platform.oauth2',
+    'paasng.infras.oauth2',
     'paasng.misc.operations',
     'paasng.platform.environments',
     'paasng.accessories.ci',

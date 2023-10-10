@@ -35,9 +35,9 @@ from tests.utils import mock
 from tests.utils.auth import create_user
 
 try:
-    from paasng.platform.legacydb_te.models import LApplication
+    from paasng.infras.legacydb_te.models import LApplication
 except ImportError:
-    from paasng.platform.legacydb.models import LApplication
+    from paasng.infras.legacydb.models import LApplication
 
 logger = logging.getLogger(__name__)
 

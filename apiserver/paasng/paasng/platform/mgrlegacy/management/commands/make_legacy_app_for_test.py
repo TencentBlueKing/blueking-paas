@@ -25,7 +25,7 @@ from django.core.management.base import BaseCommand
 from django.utils.decorators import method_decorator
 
 from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.platform.oauth2.utils import get_random_secret_key
+from paasng.infras.oauth2.utils import get_random_secret_key
 from paasng.accessories.publish.sync_market.constant import RegionConverter
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger, AppTagManger
 from paasng.accessories.publish.sync_market.models import TagMap, market_models

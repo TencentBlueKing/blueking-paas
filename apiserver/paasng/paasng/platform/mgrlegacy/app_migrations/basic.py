@@ -35,7 +35,7 @@ from paasng.platform.mgrlegacy.models import MigrationProcess
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
-from paasng.platform.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.models import OAuth2Client
 from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.utils.error_codes import error_codes
 

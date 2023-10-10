@@ -40,8 +40,8 @@ from paasng.platform.applications.signals import before_finishing_application_cr
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import create_default_module
 from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.platform.oauth2.models import OAuth2Client
-from paasng.platform.oauth2.utils import create_oauth2_client
+from paasng.infras.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.accessories.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator

@@ -25,9 +25,9 @@ from tests.conftest import check_legacy_enabled
 from tests.utils.helpers import adaptive_lapplication_fields, configure_regions
 
 try:
-    from paasng.platform.legacydb_te.models import LApplication
+    from paasng.infras.legacydb_te.models import LApplication
 except ImportError:
-    from paasng.platform.legacydb.models import LApplication
+    from paasng.infras.legacydb.models import LApplication
 
 
 @pytest.fixture

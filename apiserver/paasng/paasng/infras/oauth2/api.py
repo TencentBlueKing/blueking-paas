@@ -27,7 +27,7 @@ import requests
 from django.conf import settings
 
 import paasng.utils.masked_curlify as curlify
-from paasng.platform.oauth2.exceptions import BkOauthApiException, BkOauthApiResponseError, BkOauthClientDoesNotExist
+from paasng.infras.oauth2.exceptions import BkOauthApiException, BkOauthApiResponseError, BkOauthClientDoesNotExist
 
 logger = logging.getLogger(__name__)
 

@@ -60,7 +60,7 @@ from paasng.platform.modules.helpers import (
 )
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.utils.addons import ReplaceableFunction
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes

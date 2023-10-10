@@ -40,7 +40,7 @@ from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
-from paasng.platform.oauth2.utils import create_oauth2_client
+from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.core.region.states import load_regions_from_settings
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
@@ -49,9 +49,9 @@ from paasng.utils.configs import RegionAwareConfig
 from .auth import create_user
 
 try:
-    from paasng.platform.legacydb_te.models import LApplication, LApplicationTag
+    from paasng.infras.legacydb_te.models import LApplication, LApplicationTag
 except ImportError:
-    from paasng.platform.legacydb.models import LApplication, LApplicationTag
+    from paasng.infras.legacydb.models import LApplication, LApplicationTag
 
 
 def initialize_application(application, *args, **kwargs):

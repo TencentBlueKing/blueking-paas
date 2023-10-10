@@ -23,7 +23,7 @@ from django.conf import settings
 
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.platform.applications.models import Application
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 
 
 def get_user_avatar(username):

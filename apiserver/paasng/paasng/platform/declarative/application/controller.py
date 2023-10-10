@@ -45,7 +45,7 @@ from paasng.platform.applications.signals import application_default_module_swit
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.manager import Module, initialize_smart_module
-from paasng.platform.oauth2.utils import create_oauth2_client
+from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.core.region.models import get_region
 from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product

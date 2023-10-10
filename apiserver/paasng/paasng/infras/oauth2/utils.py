@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from paasng.platform.oauth2.api import BkAppSecret, BkOauthClient
-from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.platform.oauth2.models import BkAppSecretInEnvVar, OAuth2Client
+from paasng.infras.oauth2.api import BkAppSecret, BkOauthClient
+from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
+from paasng.infras.oauth2.models import BkAppSecretInEnvVar, OAuth2Client
 
 
 def get_random_secret_key():

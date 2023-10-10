@@ -26,7 +26,7 @@ from django.conf import settings
 from typing_extensions import Protocol
 
 from paasng.platform.applications.models import Application
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 
 from .exceptions import PluginApiGatewayServiceError
 from .models import BkPluginDistributor

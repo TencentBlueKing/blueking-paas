@@ -39,7 +39,7 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.templater import Templater
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.utils.basic import get_username_by_bkpaas_user_id, unique_id_generator
 from paasng.utils.blobstore import BlobStore, make_blob_store
 

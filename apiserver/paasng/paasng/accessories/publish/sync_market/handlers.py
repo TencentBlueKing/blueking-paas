@@ -39,7 +39,7 @@ from paasng.platform.applications.signals import (
     prepare_use_application_name,
 )
 from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.platform.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.models import OAuth2Client
 from paasng.core.region.models import get_region
 from paasng.accessories.publish.market.constant import AppState
 from paasng.accessories.publish.market.models import MarketConfig, Product

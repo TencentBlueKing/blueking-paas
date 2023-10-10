@@ -38,11 +38,11 @@ from .constants import SimpleAppSource
 from .legacy import LegacyAppNormalizer, query_concrete_apps
 
 try:
-    from paasng.platform.legacydb_te.adaptors import AppAdaptor
-    from paasng.platform.legacydb_te.models import LApplication
+    from paasng.infras.legacydb_te.adaptors import AppAdaptor
+    from paasng.infras.legacydb_te.models import LApplication
 except ImportError:
-    from paasng.platform.legacydb.adaptors import AppAdaptor  # type: ignore
-    from paasng.platform.legacydb.models import LApplication
+    from paasng.infras.legacydb.adaptors import AppAdaptor  # type: ignore
+    from paasng.infras.legacydb.models import LApplication
 
 
 # Util function for get username for User obj

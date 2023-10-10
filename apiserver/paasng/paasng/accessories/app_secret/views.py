@@ -43,9 +43,9 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.misc.feature_flags.constants import PlatformFeatureFlag
-from paasng.platform.oauth2.api import BkOauthClient
-from paasng.platform.oauth2.models import BkAppSecretInEnvVar
-from paasng.platform.oauth2.utils import get_app_secret_in_env_var
+from paasng.infras.oauth2.api import BkOauthClient
+from paasng.infras.oauth2.models import BkAppSecretInEnvVar
+from paasng.infras.oauth2.utils import get_app_secret_in_env_var
 
 logger = logging.getLogger(__name__)
 

@@ -24,9 +24,9 @@ from tests.conftest import check_legacy_enabled
 from tests.utils.helpers import adaptive_lapplicationtag_fields, generate_random_string
 
 try:
-    from paasng.platform.legacydb_te.adaptors import AppAdaptor, legacy_models
+    from paasng.infras.legacydb_te.adaptors import AppAdaptor, legacy_models
 except ImportError:
-    from paasng.platform.legacydb.adaptors import AppAdaptor, legacy_models  # type: ignore
+    from paasng.infras.legacydb.adaptors import AppAdaptor, legacy_models  # type: ignore
 
 pytestmark = pytest.mark.django_db
 

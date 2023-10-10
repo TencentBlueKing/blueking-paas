@@ -19,15 +19,16 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import jinja2
-import requests
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from rest_framework import status
 
+from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
+from paasng.accessories.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.monitoring.monitor.alert_rules.config import RuleConfig
+from paasng.platform.applications.models import Application
 
 from .exceptions import AsCodeAPIError
 
@@ -42,31 +43,39 @@ class AsCodeClient:
     :param default_receivers: app 的默认告警接收者
     """
 
-    def __init__(self, app_code: str, rule_configs: List[RuleConfig], default_receivers: List[str]):
+    def __init__(self, app_code: str):
         self.app_code = app_code
-        self.rule_configs = rule_configs
-        self.default_receivers = default_receivers
         self.default_notice_group_name = f"[{self.app_code}] {_('通知组')}"
 
-    def apply_rule_configs(self):
+    def apply_rule_configs(self, rule_configs: List[RuleConfig]):
         """下发告警规则"""
-        self._validate()
-        configs = self._render_configs()
+        self._validate(rule_configs)
+        configs = self._render_rule_configs(rule_configs)
         self._apply_rule_configs(configs)
 
-    def _validate(self):
-        for config in self.rule_configs:
+    def apply_notice_group(self, receivers: List[str]):
+        """下发通知组"""
+        tpl_dir = Path(os.path.dirname(__file__))
+        loader = jinja2.FileSystemLoader([tpl_dir / 'notice_tpl'])
+        j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
+        configs = {
+            'notice/default_notice.yaml': j2_env.get_template('notice.yaml.j2').render(
+                notice_group_name=self.default_notice_group_name, receivers=receivers
+            )
+        }
+        self._apply_rule_configs(configs, f'{self.app_code}_notice_group', incremental=False)
+
+    def _validate(self, rule_configs: List[RuleConfig]):
+        for config in rule_configs:
             if config.app_code != self.app_code:
                 raise ValueError(
                     f'apply rules error: app_code({config.app_code}) from rule_configs not match '
                     f'app_code({self.app_code})'
                 )
 
-    def _render_configs(self) -> Dict:
+    def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
 
-        ├── notice
-          └── notice.yaml
         └── rule
           ├── high_cpu_usage.yaml
           └── high_mem_usage.yaml
@@ -76,18 +85,9 @@ class AsCodeClient:
         j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
         configs = {}
-        for conf in self.rule_configs:
+        for conf in rule_configs:
             ctx = conf.to_dict()
-
-            if set(conf.receivers) == set(self.default_receivers):
-                ctx['notice_group_name'] = self.default_notice_group_name
-            else:
-                # 配置中告警接收者与 app 的默认告警接收者不一致时, 单独创建告警组
-                ctx['notice_group_name'] = f"{conf.alert_rule_display_name} {_('通知组')}"
-                configs[f'notice/{conf.alert_rule_name}.yaml'] = j2_env.get_template('notice.yaml.j2').render(
-                    notice_group_name=ctx['notice_group_name'], receivers=conf.receivers
-                )
-
+            ctx['notice_group_name'] = self.default_notice_group_name
             # 涉及到 rabbitmq 的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
             if 'rabbitmq' in conf.alert_code:
                 ctx['rabbitmq_metric_name_prefix'] = settings.RABBITMQ_MONITOR_CONF.get('metric_name_prefix', '')
@@ -96,38 +96,24 @@ class AsCodeClient:
                 **ctx
             )
 
-        # 配置 App 默认通知组
-        configs['notice/default_notice.yaml'] = j2_env.get_template('notice.yaml.j2').render(
-            notice_group_name=self.default_notice_group_name, receivers=self.default_receivers
-        )
-
         return configs
 
-    def _apply_rule_configs(self, configs: Dict):
-        """同步告警配置到 bkmonitor"""
-        # TODO import_config 接口接入网关后, 调整为通过 apigw 访问
-        http_schema_url = settings.BK_MONITORV3_URL.replace('https', 'http', 1)
-        resp = requests.post(
-            url=f'{http_schema_url}/rest/v2/as_code/import_config/',
-            json={
-                'bk_biz_id': settings.MONITOR_AS_CODE_CONF.get('bk_biz_id'),
-                'app': self.app_code,
-                'configs': configs,
-                'overwrite': False,
-            },
-            headers={'Authorization': f"Bearer {settings.MONITOR_AS_CODE_CONF.get('token')}"},
-            verify=False,
-        )
+    def _apply_rule_configs(self, configs: Dict, config_group: Optional[str] = None, incremental: bool = True):
+        """同步告警配置到 bkmonitor
 
-        err_msg_format = f'ascode import alert rule configs of app_code({self.app_code}) error: {{err_msg}}'
-
-        if resp.status_code == status.HTTP_200_OK:
-            resp_data = resp.json()
-            if resp_data['result']:
-                return
-
-            logger.error(err_msg_format.format(err_msg=resp.text))
-            raise AsCodeAPIError(resp_data['message'])
-
-        logger.error(err_msg_format.format(err_msg=resp.text))
-        raise AsCodeAPIError('unknown error')
+        :param configs: 告警规则配置
+        :param config_group: 配置分组
+        :param incremental: 是否增量更新
+        """
+        space, _ = get_or_create_bk_monitor_space(Application.objects.get(code=self.app_code))
+        try:
+            make_bk_monitor_client().as_code_import_config(
+                configs,
+                int(space.iam_resource_id),
+                config_group or self.app_code,
+                overwrite=False,
+                incremental=incremental,
+            )
+        except Exception as e:
+            logger.error(f'ascode import alert rule configs of app_code({self.app_code}) error: {e}')
+            raise AsCodeAPIError(e)

@@ -28,33 +28,21 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def refresh_rules_by_module(app_code: str, module_name: str, run_env: str):
+def create_rules(app_code: str, module_name: str, run_env: str):
     try:
         rule_mgr = AlertRuleManager(Application.objects.get(code=app_code))
-        rule_mgr.refresh_rules_by_module(module_name, run_env)
+        rule_mgr.create_rules(module_name, run_env)
     except Exception:
         logger.exception(
-            f"Unable to refresh alert rules after release app"
+            f"Unable to create alert rules after release app"
             f"(code: {app_code}, module: {module_name}, run_env: {run_env})"
         )
 
 
 @shared_task
-def delete_rules(app_code: str, module_name: str, run_env: str):
+def update_notice_group(app_code: str):
     try:
         rule_mgr = AlertRuleManager(Application.objects.get(code=app_code))
-        rule_mgr.delete_rules(module_name, run_env)
+        rule_mgr.update_notice_group()
     except Exception:
-        logger.exception(
-            f"Unable to refresh alert rules after offline app"
-            f"(code: {app_code}, module: {module_name}, run_env: {run_env})"
-        )
-
-
-@shared_task
-def refresh_rules(app_code: str):
-    try:
-        rule_mgr = AlertRuleManager(Application.objects.get(code=app_code))
-        rule_mgr.refresh_rules()
-    except Exception:
-        logger.exception(f"Unable to refresh alert rules for app(code: {app_code})")
+        logger.exception(f"Unable to update notice group (code: {app_code})")

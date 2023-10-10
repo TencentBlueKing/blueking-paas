@@ -34,7 +34,7 @@ random_vhost = generate_random_string()
 random_cluster_id = generate_random_string()
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def mock_import_configs():
     with mock.patch.object(AsCodeClient, "_apply_rule_configs", return_value=None) as mock_method:
         yield mock_method
@@ -117,10 +117,13 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
                 notice_group_name=notice_group_name,
             )
 
-    init_rule_configs['notice/default_notice.yaml'] = j2_env.get_template('notice.yaml.j2').render(
-        notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developers()
-    )
-    return init_rule_configs
+    notice_group_config = {
+        'notice/default_notice.yaml': j2_env.get_template('notice.yaml.j2').render(
+            notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developers()
+        )
+    }
+
+    return init_rule_configs, notice_group_config
 
 
 @pytest.fixture

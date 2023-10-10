@@ -76,6 +76,14 @@ class Group(OperationGroup):
         path='/promql_query/',
     )
 
+    # 下发告警规则
+    as_code_import_config = bind_property(
+        Operation,
+        name='as_code_import_config',
+        method='POST',
+        path='/as_code_import_config/',
+    )
+
 
 class Client(APIGatewayClient):
     """bkmonitorv3

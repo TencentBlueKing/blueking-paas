@@ -23,9 +23,9 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
-from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
-from paasng.engine.models import EngineApp
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
 from paasng.platform.applications.models import Application
@@ -35,8 +35,8 @@ from paasng.platform.mgrlegacy.models import MigrationProcess
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
-from paasng.platform.oauth2.models import OAuth2Client
-from paasng.publish.sync_market.handlers import application_oauth_handler
+from paasng.infras.oauth2.models import OAuth2Client
+from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.utils.error_codes import error_codes
 
 from .base import BaseMigration

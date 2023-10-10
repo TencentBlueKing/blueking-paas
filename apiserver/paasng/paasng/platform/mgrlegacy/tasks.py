@@ -20,7 +20,7 @@ import logging
 
 from celery import shared_task
 
-from paasng.platform.core.storages.sqlalchemy import console_db
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 from paasng.platform.mgrlegacy.models import MigrationProcess
 

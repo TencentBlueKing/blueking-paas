@@ -22,7 +22,7 @@ import traceback
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 from paasng.platform.mgrlegacy.exceptions import MigrationFailed
 from paasng.platform.mgrlegacy.models import MigrationContext, MigrationRegister
-from paasng.publish.sync_market.managers import AppManger
+from paasng.accessories.publish.sync_market.managers import AppManger
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy

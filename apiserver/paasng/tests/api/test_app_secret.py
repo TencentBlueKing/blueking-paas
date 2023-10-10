@@ -24,8 +24,8 @@ from django_dynamic_fixture import G
 from rest_framework.reverse import reverse
 
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.oauth2.api import BkAppSecret
-from paasng.platform.oauth2.models import BkAppSecretInEnvVar
+from paasng.infras.oauth2.api import BkAppSecret
+from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 
 pytestmark = pytest.mark.django_db
 
@@ -97,10 +97,10 @@ class TestAppSecret:
     )
     def test_get_secret_perm(self, bk_app, api_client, two_enabled_app_secret_list, has_app_permission, status_code):
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list',
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list',
             return_value=two_enabled_app_secret_list,
         ), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
 
             response = api_client.get(reverse('api.app_secret.secrets', args=(bk_app.code,)))
@@ -125,10 +125,10 @@ class TestAppSecret:
         else:
             return_value = two_enabled_app_secret_list
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list',
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list',
             return_value=return_value,
-        ), mock.patch('paasng.platform.oauth2.api.BkOauthClient.create_app_secret', return_value=None), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+        ), mock.patch('paasng.infras.oauth2.api.BkOauthClient.create_app_secret', return_value=None), mock.patch(
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(reverse('api.app_secret.secrets', args=(bk_app.code,)))
             assert response.status_code == status_code
@@ -146,9 +146,9 @@ class TestAppSecret:
         self, bk_app, two_enabled_app_secret_list, api_client, has_app_permission, toggle_secret_id, status_code
     ):
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list', return_value=two_enabled_app_secret_list
-        ), mock.patch('paasng.platform.oauth2.api.BkOauthClient.toggle_app_secret', return_value=None), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list', return_value=two_enabled_app_secret_list
+        ), mock.patch('paasng.infras.oauth2.api.BkOauthClient.toggle_app_secret', return_value=None), mock.patch(
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(
                 reverse('api.app_secret.secret', args=(bk_app.code, toggle_secret_id)),
@@ -182,9 +182,9 @@ class TestAppSecret:
         status_code,
     ):
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list', return_value=two_enabled_app_secret_list
-        ), mock.patch('paasng.platform.oauth2.api.BkOauthClient.toggle_app_secret', return_value=None), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list', return_value=two_enabled_app_secret_list
+        ), mock.patch('paasng.infras.oauth2.api.BkOauthClient.toggle_app_secret', return_value=None), mock.patch(
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             if is_engineless_app:
                 bk_app.type = ApplicationType.ENGINELESS_APP
@@ -237,11 +237,11 @@ class TestAppSecret:
             bk_app.save()
 
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list', return_value=app_secret_list
-        ), mock.patch('paasng.platform.oauth2.api.BkOauthClient.del_app_secret', return_value=None), mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_default_app_secret', return_value=default_app_secret
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list', return_value=app_secret_list
+        ), mock.patch('paasng.infras.oauth2.api.BkOauthClient.del_app_secret', return_value=None), mock.patch(
+            'paasng.infras.oauth2.api.BkOauthClient.get_default_app_secret', return_value=default_app_secret
         ), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.delete(reverse('api.app_secret.secret', args=(bk_app.code, delete_secret_id)))
             assert response.status_code == status_code
@@ -271,9 +271,9 @@ class TestAppSecret:
             app_secret_list = two_disabled_app_secret_list
 
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list', return_value=app_secret_list
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list', return_value=app_secret_list
         ), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             response = api_client.post(
                 reverse('api.app_secret.default_secret', args=(bk_app.code,)), data={"id": 1}, format='json'
@@ -288,10 +288,10 @@ class TestAppSecret:
         self, bk_app, api_client, two_enabled_app_secret_list, has_app_permission, status_code
     ):
         with mock.patch(
-            'paasng.platform.oauth2.api.BkOauthClient.get_app_secret_list',
+            'paasng.infras.oauth2.api.BkOauthClient.get_app_secret_list',
             return_value=two_enabled_app_secret_list,
         ), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
 
             response = api_client.get(reverse('api.app_secret.default_secret', args=(bk_app.code,)))
@@ -303,7 +303,7 @@ class TestAppSecret:
     )
     def test_get_deployed_secret_perm(self, bk_app, api_client, has_app_permission, status_code):
         with mock.patch('paasng.accessories.app_secret.utilts.get_deployed_secret_list', return_value=[],), mock.patch(
-            "paasng.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
 
             response = api_client.get(reverse('api.app_secret.deployed_secret', args=(bk_app.code,)))

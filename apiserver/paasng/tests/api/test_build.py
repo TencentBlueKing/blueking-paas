@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 
 import pytest
 
-from paas_wl.platform.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.utils.constants import BuildStatus
 from tests.paas_wl.utils.build import create_build, create_build_proc
 

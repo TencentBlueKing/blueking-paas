@@ -20,9 +20,9 @@ from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModel
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.extensions.bk_plugins.models import BkPluginDistributor, BkPluginTag
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor, BkPluginTag
 from paasng.plat_admin.admin42.serializers.bk_plugins import BkPluginDistributorSLZ, BKPluginTagSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 

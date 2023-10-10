@@ -21,11 +21,11 @@ from typing import Optional
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
-from paas_wl.cluster.shim import EnvClusterService
-from paasng.engine.constants import JobStatus
-from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.operations import ModuleEnvironmentOperations
-from paasng.engine.serializers import OperationSLZ as BaseModuleEnvironmentOperationsSLZ
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
+from paasng.platform.engine.serializers import OperationSLZ as BaseModuleEnvironmentOperationsSLZ
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 

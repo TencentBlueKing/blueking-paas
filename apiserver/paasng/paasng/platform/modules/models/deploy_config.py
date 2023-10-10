@@ -24,7 +24,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
-from paasng.engine.constants import RuntimeType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.models import UuidAuditedModel, make_json_field, make_legacy_json_field
 

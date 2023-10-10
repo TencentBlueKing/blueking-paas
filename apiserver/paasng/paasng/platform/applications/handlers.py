@@ -26,13 +26,13 @@ from django.core.files.storage import Storage
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
-from paasng.engine.constants import JobStatus
-from paasng.engine.models import Deployment
-from paasng.metrics import NEW_APP_COUNTER
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.models import Deployment
+from paasng.misc.metrics import NEW_APP_COUNTER
 from paasng.platform.applications.models import Application
-from paasng.platform.region.app import S3BucketRegionHelper
-from paasng.platform.region.models import get_region
+from paasng.core.region.app import S3BucketRegionHelper
+from paasng.core.region.models import get_region
 from paasng.utils.blobstore import get_storage_by_bucket
 from paasng.utils.error_codes import error_codes
 

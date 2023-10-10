@@ -25,7 +25,7 @@ from django.utils.translation import gettext as _
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tagging import get_deployment_tags
-from paasng.engine.models.deployment import Deployment
+from paasng.platform.engine.models.deployment import Deployment
 
 
 @dataclass

@@ -26,7 +26,7 @@ from django.core.management.base import BaseCommand
 from moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef
 from moby_distribution.registry.utils import parse_image
 
-from paasng.extensions.smart_app.conf import bksmart_settings
+from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)

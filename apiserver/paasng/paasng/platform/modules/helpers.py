@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, overload
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
-from paas_wl.cluster.models import Cluster, Domain
-from paas_wl.cluster.shim import EnvClusterService
-from paasng.engine.constants import AppEnvName, RuntimeType
+from paas_wl.infras.cluster.models import Cluster, Domain
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound

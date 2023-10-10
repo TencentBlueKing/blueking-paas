@@ -29,20 +29,20 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, QuerySet
 from django.utils.translation import get_language
 
-from paasng.engine.models.operations import ModuleEnvironmentOperations
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import Application, ModuleEnvironment, UserApplicationFilter
-from paasng.platform.core.storages.sqlalchemy import legacy_db
-from paasng.publish.sync_market.managers import AppDeveloperManger
+from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 
 from .constants import SimpleAppSource
 from .legacy import LegacyAppNormalizer, query_concrete_apps
 
 try:
-    from paasng.platform.legacydb_te.adaptors import AppAdaptor
-    from paasng.platform.legacydb_te.models import LApplication
+    from paasng.infras.legacydb_te.adaptors import AppAdaptor
+    from paasng.infras.legacydb_te.models import LApplication
 except ImportError:
-    from paasng.platform.legacydb.adaptors import AppAdaptor  # type: ignore
-    from paasng.platform.legacydb.models import LApplication
+    from paasng.infras.legacydb.adaptors import AppAdaptor  # type: ignore
+    from paasng.infras.legacydb.models import LApplication
 
 
 # Util function for get username for User obj

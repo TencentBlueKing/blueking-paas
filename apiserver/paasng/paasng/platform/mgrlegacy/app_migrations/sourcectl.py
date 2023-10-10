@@ -18,12 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from paasng.dev_resources.sourcectl.connector import get_repo_connector
-from paasng.dev_resources.sourcectl.package.uploader import upload_package_via_url
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
-from paasng.platform.core.storages.sqlalchemy import console_db
+from paasng.platform.sourcectl.connector import get_repo_connector
+from paasng.platform.sourcectl.package.uploader import upload_package_via_url
+from paasng.platform.sourcectl.source_types import get_sourcectl_names
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
-from paasng.publish.sync_market.managers import AppManger, AppSecureInfoManger
+from paasng.accessories.publish.sync_market.managers import AppManger, AppSecureInfoManger
 
 logger = logging.getLogger(__name__)
 

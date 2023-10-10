@@ -24,7 +24,7 @@ import wrapt
 from rest_framework.response import Response
 from rest_framework.status import HTTP_429_TOO_MANY_REQUESTS
 
-from paasng.platform.core.storages.redisdb import get_default_redis
+from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.utils.rate_limit.constants import UserAction
 
 

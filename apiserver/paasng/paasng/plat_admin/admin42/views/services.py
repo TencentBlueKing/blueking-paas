@@ -24,14 +24,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.dev_resources.servicehub.constants import LEGACY_PLAN_ID
-from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
-from paasng.dev_resources.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
-from paasng.dev_resources.servicehub.remote.exceptions import UnsupportedOperationError
-from paasng.dev_resources.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
-from paasng.dev_resources.services.providers import (
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
+from paasng.accessories.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
+from paasng.accessories.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
+from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
+from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
+from paasng.accessories.services.providers import (
     get_instance_schema_by_service_name,
     get_plan_schema_by_provider_name,
     get_provider_choices,
@@ -46,7 +46,7 @@ from paasng.plat_admin.admin42.serializers.services import (
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.region.models import get_all_regions
+from paasng.core.region.models import get_all_regions
 from paasng.utils.error_codes import error_codes
 
 

@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
 
-from paas_wl.resources.base import crd
-from paas_wl.resources.kube_res.base import AppEntity
+from paas_wl.infras.resources.base import crd
+from paas_wl.infras.resources.kube_res.base import AppEntity
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
 

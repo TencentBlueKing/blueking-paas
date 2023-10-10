@@ -100,7 +100,7 @@ def update_or_create_custom_collector_config(
         else:
             client.update_custom_collector_config(collector_config)
 
-        db_obj, _ = CustomCollectorConfigModel.objects.update_or_create(
+        CustomCollectorConfigModel.objects.update_or_create(
             module=module,
             name_en=collector_config.name_en,
             defaults={

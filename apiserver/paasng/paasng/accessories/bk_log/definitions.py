@@ -20,7 +20,7 @@ from typing import List, Literal, Optional
 
 from attrs import define, field
 
-from paasng.accessories.log_search.constatns import ETLType, FieldType
+from paasng.accessories.bk_log.constatns import ETLType, FieldType
 
 
 @define
@@ -95,6 +95,29 @@ class StorageConfig:
 
 
 @define
+class PlainCustomCollectorConfig:
+    """自定义采集项配置(精简)
+
+    :param name_en: 采集英文名称，重要，5-50个字符，仅包含字母数字下划线
+    :param name_zh_cn: 采集项中文名, 最多50个字符
+    :param custom_type: 日志类型，无特殊要求一般固定为log。当前可选的值(log、otlp_trace、otlp_log)
+
+    :param id: 采集项ID
+    :param index_set_id: 索引集ID，查询时使用
+    :param bk_data_id: 数据管道ID
+    """
+
+    name_en: str
+    name_zh_cn: str
+    custom_type: Literal["log"] = "log"
+
+    # readonly fields
+    id: Optional[int] = None
+    index_set_id: Optional[int] = None
+    bk_data_id: Optional[int] = None
+
+
+@define
 class CustomCollectorConfig:
     """自定采集项配置
 
@@ -121,6 +144,7 @@ class CustomCollectorConfig:
     data_link_id: Optional[int] = None
     description: str = ""
 
+    # readonly fields
     id: Optional[int] = None
     index_set_id: Optional[int] = None
     bk_data_id: Optional[int] = None

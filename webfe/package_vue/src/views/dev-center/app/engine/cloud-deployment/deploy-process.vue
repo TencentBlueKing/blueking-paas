@@ -1389,13 +1389,13 @@ export default {
 
     // 编辑
     handleEditClick() {
-      // 扩缩容
-      this.getAutoScalFlag('stag');
-      this.getAutoScalFlag('prod');
       if (this.isCreate) {
         this.$store.commit('cloudApi/updateProcessPageEdit', true);
       } else {
         this.$store.commit('cloudApi/updatePageEdit', true);
+        // 扩缩容FeatureFlag 
+        this.getAutoScalFlag('stag');
+        this.getAutoScalFlag('prod');
       }
     },
 

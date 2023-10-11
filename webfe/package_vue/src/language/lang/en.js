@@ -2346,4 +2346,5 @@ export default {
   '进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。': 'The process name and startup command are defined in the app_desc.yaml file in the build directory.',
   暂无钩子命令: 'No hook command',
   '钩子命令在 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file.',
+  '请输入包含标签(tag)的镜像地址': 'Please enter the mirror address containing the tag',
 };

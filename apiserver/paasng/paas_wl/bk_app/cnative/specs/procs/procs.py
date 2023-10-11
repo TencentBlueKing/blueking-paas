@@ -24,11 +24,11 @@ from attrs import define
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 from .quota import ResourceQuotaReader
-from .replicas import ReplicasReader
+from .replicas import AutoScalingDetector, ReplicasReader
 
 # THe default maximum replicas for cloud-native apps's processes
 DEFAULT_MAX_REPLICAS = 5
@@ -43,6 +43,7 @@ class CNativeProcSpec:
     target_status: str
     cpu_limit: str
     memory_limit: str
+    autoscaling: bool = False
 
     # TODO: Use dynamic limitation for each app
     max_replicas: int = DEFAULT_MAX_REPLICAS
@@ -61,9 +62,19 @@ def parse_proc_specs(res: BkAppResource, env_name: AppEnvName) -> List[CNativePr
     results = []
     counts = ReplicasReader(res).read_all(env_name)
     quotas = ResourceQuotaReader(res).read_all()
+    autoscaling = AutoScalingDetector(res).read_all(env_name)
     for name, (cnt, _) in counts.items():
         target_status = ProcessTargetStatus.START.value if cnt > 0 else ProcessTargetStatus.STOP.value
-        results.append(CNativeProcSpec(name, cnt, target_status, quotas[name].cpu, quotas[name].memory))
+        results.append(
+            CNativeProcSpec(
+                name=name,
+                target_replicas=cnt,
+                target_status=target_status,
+                cpu_limit=quotas[name].cpu,
+                memory_limit=quotas[name].memory,
+                autoscaling=autoscaling.get(name, (False, False))[0],
+            )
+        )
     return results
 
 

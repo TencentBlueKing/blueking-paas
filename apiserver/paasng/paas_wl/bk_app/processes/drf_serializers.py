@@ -28,18 +28,18 @@ from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
-from paas_wl.bk_app.cnative.specs.procs import CNativeProcSpec
-from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paas_wl.bk_app.applications.models import Release
-from paas_wl.infras.resources.kube_res.base import WatchEvent
-from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig
+from paas_wl.bk_app.cnative.specs.procs import CNativeProcSpec
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec
-from paasng.platform.sourcectl.models import VersionInfo
+from paas_wl.infras.resources.kube_res.base import WatchEvent
+from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig
+from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.platform.engine.constants import JobStatus, RuntimeType
 from paasng.platform.engine.models import Deployment, OfflineOperation
+from paasng.platform.sourcectl.models import VersionInfo
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):
@@ -324,6 +324,7 @@ class CNativeProcSpecSLZ(serializers.Serializer):
     cpu_limit = serializers.CharField()
     memory_limit = serializers.CharField()
     resource_limit_quota = serializers.SerializerMethodField(read_only=True)
+    autoscaling = serializers.BooleanField()
 
     def get_resource_limit_quota(self, obj: CNativeProcSpec) -> dict:
         # 内存的单位为 Mi

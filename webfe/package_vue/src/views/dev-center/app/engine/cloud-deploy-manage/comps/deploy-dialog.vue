@@ -140,7 +140,7 @@
               <bk-select
                 v-else
                 v-model="tagData.tagValue"
-                :placeholder="$t('请选择')"
+                :placeholder="$t('请选择下拉数据或手动填写')"
                 style="width: 470px; display: inline-block; vertical-align: middle;"
                 :popover-min-width="420"
                 :clearable="false"
@@ -655,6 +655,11 @@ export default {
 
     handleOpenUrl(url) {
       window.open(url, '_blank');
+    },
+
+    test(data) {
+      console.log(data);
+      return '1';
     },
   },
 };

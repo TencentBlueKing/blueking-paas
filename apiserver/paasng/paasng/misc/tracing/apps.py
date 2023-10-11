@@ -23,7 +23,7 @@ from .setup import setup_by_settings
 
 
 class TracingConfig(AppConfig):
-    name = 'paasng.tracing'
+    name = 'paasng.misc.tracing'
 
     def ready(self):
         setup_by_settings()

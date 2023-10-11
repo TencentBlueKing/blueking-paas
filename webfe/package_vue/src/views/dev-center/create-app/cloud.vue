@@ -71,6 +71,74 @@
 
     <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
 
+    <section v-if="formData.sourceOrigin === 'image' && curStep === 1">
+      <!-- 镜像管理 -->
+      <bk-form
+        ref="formImageRef"
+        :model="formData"
+        :rules="rules"
+        :label-width="100"
+        class="from-content mt20"
+      >
+        <div class="form-item-title mb10">
+          {{ $t('镜像信息') }}
+        </div>
+        <bk-form-item
+          :required="true"
+          :property="'url'"
+          error-display-type="normal"
+          ext-cls="form-item-cls"
+          :label="$t('镜像仓库')"
+        >
+          <bk-input
+            v-model="formData.url"
+            class="form-input-width"
+            clearable
+            :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
+          >
+
+            <template slot="append">
+              <div
+                class="group-text form-text-append"
+                @click="handleSetMirrorUrl"
+              >{{$t('使用示例镜像')}}</div>
+            </template>
+          </bk-input>
+          <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+        </bk-form-item>
+        <bk-form-item
+          error-display-type="normal"
+          ext-cls="form-item-cls"
+          :label="$t('镜像凭证')"
+        >
+          <div class="flex-row form-input-width">
+            <bk-input
+              class="mr10"
+              v-model="formData.imageCredentialName"
+              clearable
+              :placeholder="$t('请输入名称，如 default')"
+            >
+            </bk-input>
+            <bk-input
+              class="mr10"
+              v-model="formData.imageCredentialUserName"
+              clearable
+              :placeholder="$t('请输入账号')"
+            >
+            </bk-input>
+            <bk-input
+              type="password"
+              v-model="formData.imageCredentialPassWord"
+              clearable
+              :placeholder="$t('请输入密码')"
+            >
+            </bk-input>
+          </div>
+          <p slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</p>
+        </bk-form-item>
+      </bk-form>
+    </section>
+
     <section v-if="curStep === 1">
       <template v-if="formData.sourceOrigin === 'soundCode'">
         <bk-form
@@ -231,75 +299,6 @@
               :name="option"
             />
           </bk-select>
-        </bk-form-item>
-      </bk-form>
-    </section>
-
-    <section v-if="formData.sourceOrigin === 'image' && curStep === 1">
-
-      <!-- 镜像管理 -->
-      <bk-form
-        ref="formImageRef"
-        :model="formData"
-        :rules="rules"
-        :label-width="100"
-        class="from-content mt20"
-      >
-        <div class="form-item-title mb10">
-          {{ $t('镜像信息') }}
-        </div>
-        <bk-form-item
-          :required="true"
-          :property="'url'"
-          error-display-type="normal"
-          ext-cls="form-item-cls"
-          :label="$t('镜像仓库')"
-        >
-          <bk-input
-            v-model="formData.url"
-            class="form-input-width"
-            clearable
-            :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
-          >
-
-            <template slot="append">
-              <div
-                class="group-text form-text-append"
-                @click="handleSetMirrorUrl"
-              >{{$t('使用示例镜像')}}</div>
-            </template>
-          </bk-input>
-          <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
-        </bk-form-item>
-        <bk-form-item
-          error-display-type="normal"
-          ext-cls="form-item-cls"
-          :label="$t('镜像凭证')"
-        >
-          <div class="flex-row form-input-width">
-            <bk-input
-              class="mr10"
-              v-model="formData.imageCredentialName"
-              clearable
-              :placeholder="$t('请输入名称，如 default')"
-            >
-            </bk-input>
-            <bk-input
-              class="mr10"
-              v-model="formData.imageCredentialUserName"
-              clearable
-              :placeholder="$t('请输入账号')"
-            >
-            </bk-input>
-            <bk-input
-              type="password"
-              v-model="formData.imageCredentialPassWord"
-              clearable
-              :placeholder="$t('请输入密码')"
-            >
-            </bk-input>
-          </div>
-          <p slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</p>
         </bk-form-item>
       </bk-form>
     </section>

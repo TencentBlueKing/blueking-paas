@@ -87,6 +87,9 @@
                 <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署分支') }}
               </div>
             </bk-select>
+            <p class="error-text mt5" v-if="branchErrorTips">
+              {{ branchErrorTips }}
+            </p>
           </div>
 
           <div class="image-source mt20" v-if="buttonActive === 'image'">
@@ -190,8 +193,7 @@
     </bk-sideslider>
   </div>
 </template>
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
 import _ from 'lodash';
 // :ok-text="$t('部署至')`${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
@@ -264,6 +266,7 @@ export default {
       tagUrl: '',
       customImageTagList: [],
       errorTips: '',
+      branchErrorTips: '',
     };
   },
   computed: {
@@ -337,6 +340,7 @@ export default {
   methods: {
     async getModuleBranches(favBranchName) {
       this.isBranchesLoading = true;
+      this.branchErrorTips = '';
       try {
         // 获取上次部署staging环境的分支
         const availableBranch = await this.$store.dispatch('deploy/refreshAvailableBranch', {
@@ -387,6 +391,7 @@ export default {
         this.initBranchSelection(favBranchName);
       } catch (e) {
         this.branchList = [];
+        this.branchErrorTips = e.detail;
         if (!e.code === 'APP_NOT_RELEASED') {
           this.$paasMessage({
             theme: 'error',

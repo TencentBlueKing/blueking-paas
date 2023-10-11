@@ -61,8 +61,7 @@
   </bk-sideslider>
 </template>
 
-<script>
-import deployTimeline from './deploy-timeline';
+<script>import deployTimeline from './deploy-timeline';
 
 export default {
   components: {
@@ -160,8 +159,7 @@ export default {
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
-          moduleId: this.moduleId,
-          env: params.environment,
+          moduleId: params.moduleName || this.moduleId,
           deployId: params.deployment_id,
         });
         if (res.logs && res.logs === '\n') {
@@ -243,6 +241,24 @@ export default {
         this.curDeployLog = row.logDetail;
       } else {
         this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`;
+        this.getDeployTimeline(row);
+        this.getDeployLog(row);
+      }
+      this.historySideslider.isShow = true;
+    },
+
+    /** 构建详情 */
+    handleShowBuildLog(row) {
+      this.timeLineList = [];
+      this.curDeployLog = '';
+      if (this.isTimelineLoading || this.isLogLoading) {
+        return false;
+      }
+
+      this.historySideslider.title = this.$t('构建详情');
+      if (row.operation_type === 'offline') {
+        this.curDeployLog = row.logDetail;
+      } else {
         this.getDeployTimeline(row);
         this.getDeployLog(row);
       }

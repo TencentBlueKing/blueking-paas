@@ -145,6 +145,7 @@
                 :popover-min-width="420"
                 :clearable="false"
                 searchable
+                :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
                 :disabled="!!errorTips"
                 :loading="isTagLoading"
                 allow-create

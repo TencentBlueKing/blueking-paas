@@ -171,12 +171,14 @@
                 v-if="row.status === 'Running'"
                 class="flex-row align-items-center mr10"
               >
-                <img
-                  src="/static/images/btn_loading.gif"
-                  class="loading"
-                >
-                <span class="pl10">
-                  {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                <span v-if="!row.autoscaling">
+                  <img
+                    src="/static/images/btn_loading.gif"
+                    class="loading"
+                  >
+                  <span class="pl10">
+                    {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                  </span>
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">
@@ -1184,7 +1186,7 @@ export default {
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
 
-      var serverProcessEvent = new EventSource(url, {
+      const serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });
       if (this.serverProcessEvent !== undefined) {

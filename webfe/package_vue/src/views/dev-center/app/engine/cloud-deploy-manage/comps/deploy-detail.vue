@@ -168,17 +168,15 @@
           <template slot-scope="{ row }">
             <div class="operation">
               <div
-                v-if="row.status === 'Running'"
+                v-if="row.status === 'Running' && !row.autoscaling"
                 class="flex-row align-items-center mr10"
               >
-                <span v-if="!row.autoscaling">
-                  <img
-                    src="/static/images/btn_loading.gif"
-                    class="loading"
-                  >
-                  <span class="pl10">
-                    {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
-                  </span>
+                <img
+                  src="/static/images/btn_loading.gif"
+                  class="loading"
+                >
+                <span class="pl10">
+                  {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">
@@ -780,6 +778,7 @@ export default {
           memLimit: processInfo.memory_limit,
           clusterLink: processInfo.cluster_link,
           isExpand: true,
+          autoscaling: processInfo.autoscaling,
           type,
         };
 

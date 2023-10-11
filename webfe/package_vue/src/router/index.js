@@ -326,6 +326,16 @@ const cloudAppEventQuery = () => import(/* webpackChunkName: 'cloud-event-query'
   window.showDeployTip(error);
 });
 
+const cloudAppImageManage = () => import(/* webpackChunkName: 'cloud-image-manage' */'@/views/dev-center/app/engine/clound-image-manage/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+const cloudAppImageList = () => import(/* webpackChunkName: 'cloud-image-manage' */'@/views/dev-center/app/engine/clound-image-manage/comps/image-list').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+const cloudAppBuildHistory = () => import(/* webpackChunkName: 'cloud-image-manage' */'@/views/dev-center/app/engine/clound-image-manage/comps/build-history').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -692,6 +702,26 @@ const router = new Router({
           path: ':id/:moduleId/process',
           component: appProcesses,
           name: 'appProcess',
+        },
+        {
+          path: ':id/clound-image-manage',
+          component: cloudAppImageManage,
+          name: 'cloudAppImageManage',
+          redirect: {
+            name: 'cloudAppImageList',
+          },
+          children: [
+            {
+              path: 'image-list',
+              component: cloudAppImageList,
+              name: 'cloudAppImageList',
+            },
+            {
+              path: 'build-history',
+              component: cloudAppBuildHistory,
+              name: 'cloudAppBuildHistory',
+            },
+          ]
         },
         // 云原生部署管理
         {

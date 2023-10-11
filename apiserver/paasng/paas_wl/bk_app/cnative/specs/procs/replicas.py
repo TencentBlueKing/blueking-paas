@@ -28,8 +28,8 @@ from paas_wl.infras.resources.base.base import EnhancedApiClient
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import PatchType
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 from .exceptions import ProcNotDeployed, ProcNotFoundInRes
 
@@ -150,4 +150,34 @@ class ReplicasReader:
             # Only add entries which were defined in main configuration
             if r.envName == env_name.value and r.process in results:
                 results[r.process] = (r.count, True)
+        return results
+
+
+class AutoScalingDetector:
+    """Detect the opening status of AutoScaling
+
+    :param res: App model resource object
+    """
+
+    def __init__(self, res: BkAppResource):
+        self.res = res
+
+    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[bool, bool]]:
+        """Read opening status of AutoScaling
+
+        :param env_name: Environment name
+        :return: A dict contains replicas for all processes, value format:
+            (AutoScaling?, whether AutoScaling was defined in "envOverlay")
+        """
+        results = {p.name: (p.autoscaling is not None, False) for p in self.res.spec.processes}
+        # Read value from "envOverlay"
+        if overlay := self.res.spec.envOverlay:
+            autoscaling_overlay = overlay.autoscaling or []
+        else:
+            autoscaling_overlay = []
+
+        for r in autoscaling_overlay:
+            # Only add entries which were defined in main configuration
+            if r.envName == env_name.value and r.process in results:
+                results[r.process] = (True, True)
         return results

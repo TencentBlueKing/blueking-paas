@@ -41,9 +41,9 @@
               <div class="flex-row align-items-center"
               >{{ row.name || '--' }}
                 <img
-                  class="module-default ml10"
+                  :class="['module-default', 'ml10', { en: localLanguage === 'en' }]"
                   v-if="row.is_default"
-                  src="/static/images/main.png"
+                  :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png' }`"
                 >
               </div>
               <bk-button
@@ -138,7 +138,7 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('操作')" :width="120" fixed="right" >
+        <bk-table-column :label="$t('操作')" :width="120" fixed="right">
           <template slot-scope="{ row, $index }">
             <div v-for="item in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
@@ -309,7 +309,7 @@ export default {
       curIngressIpConfigs: [],
       defaultItem: {},
       tipIndex: 0,
-      isIpConsistent: true
+      isIpConsistent: true,
     };
   },
   computed: {
@@ -330,7 +330,7 @@ export default {
             <i class="paasng-icon paasng-general-copy ip-icon-customize-cls"></i>
           </div>
           <div class="mt10 mb10" style="color: #979BA5;">推荐操作流程: </div>
-          <div>1. 首先在“域名管理”添加域名</div>
+          <div>1. 首先在页面上添加好自定义访问地址</div>
           <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
           <div>3. 打开浏览器，测试访问是否正常 </div>
           <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
@@ -348,7 +348,7 @@ export default {
         },
       };
     },
-    defaultIp () {
+    defaultIp() {
       return this.defaultItem.frontend_ingress_ip;
     },
     // 域名规则placeholder
@@ -367,6 +367,10 @@ export default {
         prev.push(textData[v]);
         return prev;
       }, []);
+    },
+
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -574,8 +578,8 @@ export default {
           this.defaultItem = res[0] || { frontend_ingress_ip: '暂无ip地址信息' };
           this.tipIndex++;
           // 判断ip是否一致
-          const firstIp = this.defaultItem?.frontend_ingress_ip || ''
-          this.isIpConsistent = (res || []).every(item => firstIp === item.frontend_ingress_ip)
+          const firstIp = this.defaultItem?.frontend_ingress_ip || '';
+          this.isIpConsistent = (res || []).every(item => firstIp === item.frontend_ingress_ip);
         },
         (res) => {
           this.$paasMessage({
@@ -727,8 +731,8 @@ export default {
       this.rowIndex = '';
     },
 
-    ipCopy () {
-      const ioncEl = document.querySelector('.ip-icon-customize-cls')
+    ipCopy() {
+      const ioncEl = document.querySelector('.ip-icon-customize-cls');
       ioncEl.addEventListener('click', this.handleCopyIp);
     },
 
@@ -837,6 +841,9 @@ export default {
         .module-default{
           height: 22px;
           width: 38px;
+          &.en {
+            width: 81px;
+          }
         }
         .module-cursor{
           cursor: pointer;

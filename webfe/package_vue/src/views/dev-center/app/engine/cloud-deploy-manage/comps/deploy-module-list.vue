@@ -29,8 +29,8 @@
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                 >
                   <img
-                    class="deploy-icon"
-                    src="/static/images/deployed.png"
+                    :class="['deploy-icon', { en: localLanguage === 'en' }]"
+                    :src="`/static/images/${localLanguage === 'en' ? 'deployed_en.png' : 'deployed_zh.png' }`"
                   >
                   <i class="paasng-icon paasng-jump-link"></i>
                 </div>
@@ -198,8 +198,7 @@
   </div>
 </template>
 
-<script>
-import deployDetail from './deploy-detail';
+<script>import deployDetail from './deploy-detail';
 import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog';
 import deployStatusDetail from './deploy-status-detail';
@@ -256,6 +255,9 @@ export default {
     curModuleId() {
     // 当前模块的名称
       return this.curDeploymentInfoItem.module_name;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
 
@@ -576,6 +578,11 @@ export default {
         width: 38px;
         height: 22px;
         margin-right: 5px;
+        transform: translateY(-1px);
+
+        &.en {
+          width: 54px;
+        }
       }
     }
   }

@@ -19,19 +19,22 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 
+import yaml
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.cnative.bkapp_model.manifest import get_manifest
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: Remove this API entirely because if become stale
 class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """云原生应用扩展信息管理"""
 
@@ -53,3 +56,21 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 manifest_ext["metadata"]["annotations"][ACCESS_CONTROL_ANNO_KEY] = "true"
 
         return Response(data=manifest_ext)
+
+
+class BkappModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """The main viewset for managing the manifests of blueking application model."""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def retrieve(self, request, code, module_name):
+        """Get the current manifest by module."""
+        module = self.get_module_via_path()
+
+        output_format = request.GET.get('output_format', 'json')
+        if output_format == 'yaml':
+            manifests = get_manifest(module)
+            response = '---'.join(yaml.safe_dump(d) for d in manifests)
+            return Response({'manifest': response})
+        else:
+            return Response({'manifest': get_manifest(module)})

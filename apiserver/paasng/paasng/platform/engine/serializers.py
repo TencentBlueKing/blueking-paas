@@ -24,9 +24,11 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
-from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType
 from paas_wl.bk_app.applications.models import Build, BuildProcess
+from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType
 from paas_wl.bk_app.processes.drf_serializers import ProcessSpecSLZ
+from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import (
     ConfigVarEnvName,
     DeployConditions,
@@ -41,8 +43,7 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.offline import OfflineOperation
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.phases_steps.display_blocks import DeployDisplayBlockRenderer
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
+from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.models import OrderByField
@@ -172,6 +173,8 @@ class BuildProcessSLZ(serializers.Serializer):
     start_at = serializers.DateTimeField(help_text="开始时间", source="created")
     completed_at = serializers.DateTimeField(help_text="结束时间", allow_null=True)
 
+    module = serializers.SerializerMethodField(help_text='所属模块')
+    environment = serializers.SerializerMethodField(help_text='部署环境')
     deployment_id = serializers.SerializerMethodField(help_text="用于查询详情日志")
     build_id = serializers.CharField(source="build.uuid", allow_null=True)
 
@@ -180,6 +183,20 @@ class BuildProcessSLZ(serializers.Serializer):
         deployment = Deployment.objects.filter(build_process_id=bp.uuid).first()
         if deployment:
             return deployment.pk
+        return None
+
+    def get_module(self, bp: BuildProcess):
+        # Note: 这里设计多次数据库查询
+        module = Module.objects.filter(id=bp.module_id).first()
+        if module:
+            return module.name
+        return None
+
+    def get_environment(self, bp: BuildProcess):
+        # Note: 这里设计多次数据库查询
+        env = ModuleEnvironment.objects.filter(engine_app_id=bp.app_id).first()
+        if env:
+            return env.environment
         return None
 
     def get_image_tag(self, bp: BuildProcess):

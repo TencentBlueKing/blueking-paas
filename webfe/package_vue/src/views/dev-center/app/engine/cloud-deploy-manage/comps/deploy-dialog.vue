@@ -143,13 +143,15 @@
               <bk-select
                 v-else
                 v-model="tagData.tagValue"
-                :placeholder="$t('请选择')"
+                :placeholder="$t('请选择下拉数据或手动填写')"
                 style="width: 470px; display: inline-block; vertical-align: middle;"
                 :popover-min-width="420"
                 :clearable="false"
-                :searchable="true"
+                searchable
+                :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
                 :disabled="!!errorTips"
                 :loading="isTagLoading"
+                allow-create
               >
                 <bk-option
                   v-for="option in customImageTagList"
@@ -506,7 +508,6 @@ export default {
           if (this.buttonActive === 'image') {
             advancedOptions.build_id = this.tagData.tagValue;
           }
-          console.log('this.curSelectData', this.curSelectData);
           params = {
             revision: this.curSelectData.revision,
             version_type: this.curSelectData.type,

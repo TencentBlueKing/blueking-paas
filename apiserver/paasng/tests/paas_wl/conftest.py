@@ -319,6 +319,14 @@ def wl_release(wl_app):
 
 
 @pytest.fixture
+def wl_dirty_release(wl_app):
+    return create_wl_release(
+        wl_app=wl_app,
+        release_params={"version": 1, "build": None},
+    )
+
+
+@pytest.fixture
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
     env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)

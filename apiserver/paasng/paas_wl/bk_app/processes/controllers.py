@@ -100,7 +100,12 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
     else:
         try:
             release: Release = Release.objects.get_latest(wl_app)
-            procfile = release.get_procfile()
+            # 历史遗留问题，release 脏数据符合条件 version = 1 ， procfile 为空 ，build 为 None
+            is_dirty_release = release.version == 1 and not release.procfile and not release.build
+            if is_dirty_release:
+                procfile = {}
+            else:
+                procfile = release.get_procfile()
         except Release.DoesNotExist:
             logger.warning("Not any available Release")
 

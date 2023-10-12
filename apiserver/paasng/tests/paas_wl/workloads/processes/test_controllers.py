@@ -89,6 +89,10 @@ def test_list_processes(bk_stag_env, wl_app, wl_release, mock_reader):
     assert list_processes(bk_stag_env).processes == [web_proc, worker_proc]
 
 
+def test_list_processes_with_dirty_release(bk_stag_env, wl_app, wl_dirty_release, mock_reader):
+    assert not list_processes(bk_stag_env).processes
+
+
 def test_list_processes_boundary_case(bk_stag_env, wl_app, wl_release, mock_reader):
     mock_reader.set_processes(
         # worker 没有实例, 不会被忽略

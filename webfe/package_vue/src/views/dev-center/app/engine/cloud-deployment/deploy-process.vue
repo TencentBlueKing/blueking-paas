@@ -346,8 +346,11 @@
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
-                          :disabled="!autoScalDisableConfig.stag?.ENABLE_AUTOSCALING"
-                          v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.stag?.ENABLE_AUTOSCALING }"
+                          :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
+                          v-bk-tooltips="{
+                            content: $t('该环境暂不支持自动扩缩容'),
+                            disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
+                          }"
                         >
                           {{ $t('自动调节') }}
                         </bk-radio-button>
@@ -520,8 +523,11 @@
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
-                          :disabled="!autoScalDisableConfig.prod?.ENABLE_AUTOSCALING"
-                          v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.prod?.ENABLE_AUTOSCALING }"
+                          :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
+                          v-bk-tooltips="{
+                            content: $t('该环境暂不支持自动扩缩容'),
+                            disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
+                          }"
                         >
                           {{ $t('自动调节') }}
                         </bk-radio-button>
@@ -1303,6 +1309,9 @@ export default {
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
+      // 扩缩容FeatureFlag
+      this.getAutoScalFlag('stag');
+      this.getAutoScalFlag('prod');
     }
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
@@ -1392,9 +1401,6 @@ export default {
         this.$store.commit('cloudApi/updateProcessPageEdit', true);
       } else {
         this.$store.commit('cloudApi/updatePageEdit', true);
-        // 扩缩容FeatureFlag
-        this.getAutoScalFlag('stag');
-        this.getAutoScalFlag('prod');
       }
     },
 

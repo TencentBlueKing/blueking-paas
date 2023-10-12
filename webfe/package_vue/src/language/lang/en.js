@@ -2347,4 +2347,5 @@ export default {
   暂无钩子命令: 'No hook command',
   '钩子命令在 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file.',
   '请输入包含标签(tag)的镜像地址': 'Please enter the mirror address containing the tag',
+  如何配置域名解析: 'How to configure domain name resolution',
 };

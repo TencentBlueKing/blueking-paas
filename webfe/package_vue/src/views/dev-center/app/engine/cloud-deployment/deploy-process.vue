@@ -111,6 +111,10 @@
               v-if="isV1alpha2"
             >
               {{ buildData.image }}
+              <i
+                class="paasng-icon paasng-edit-2 image-store-icon"
+                @click="handleToModuleInfo"
+              />
             </bk-form-item>
             <!-- v1alpha1 镜像地址 -->
             <bk-form-item
@@ -1724,6 +1728,12 @@ export default {
         });
       }
     },
+
+    // 跳转模块信息
+    handleToModuleInfo() {
+      this.$store.commit('cloudApi/updateModuleInfoEdit', true);
+      this.$emit('tab-change', 'moduleInfo');
+    }
   },
 };
 </script>
@@ -1905,5 +1915,10 @@ export default {
 }
 .process-btn-wrapper {
   margin-left: 80px;
+}
+.image-store-icon {
+  margin-left: 5px;
+  cursor: pointer;
+  color: #3a84ff;
 }
 </style>

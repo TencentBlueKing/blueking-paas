@@ -100,8 +100,8 @@ def crds_is_configured(django_db_setup, django_db_blocker):
         yield False
     else:
         crd_infos = [
-            ("bkapps.paas.bk.tencent.com", "cnative/specs/crd/bkapp_v1.yaml"),
-            ("domaingroupmappings.paas.bk.tencent.com", "cnative/specs/crd/domaingroupmappings_v1.yaml"),
+            ("bkapps.paas.bk.tencent.com", "bk_app/cnative/specs/crd/bkapp_v1.yaml"),
+            ("domaingroupmappings.paas.bk.tencent.com", "bk_app/cnative/specs/crd/domaingroupmappings_v1.yaml"),
         ]
         crd_client = KCustomResourceDefinition(client)
 

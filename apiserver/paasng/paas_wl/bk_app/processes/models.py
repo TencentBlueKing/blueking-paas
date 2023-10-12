@@ -80,17 +80,20 @@ class ProcessSpec(TimestampedModel):
         'api.App', on_delete=models.DO_NOTHING, db_constraint=False, related_name='process_specs'
     )
 
-    image = models.CharField(help_text="容器镜像, 仅用于 v1alpha1 的云原生应用", max_length=255, null=True)
-    proc_command = models.TextField(help_text="进程启动命令(Procfile格式), 只能与 command/args 二选一", null=True)
+    proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
     command: List[str] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: List[str] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
+
+    # Deprecated: 仅用于 v1alpha1 的云原生应用
+    image = models.CharField(help_text="容器镜像, 仅用于 v1alpha1 的云原生应用", max_length=255, null=True)
     image_pull_policy = models.CharField(
-        help_text="镜像拉取策略",
+        help_text="镜像拉取策略(仅用于 v1alpha1 的云原生应用)",
         choices=ImagePullPolicy.get_choices(),
         default=ImagePullPolicy.IF_NOT_PRESENT,
         max_length=20,
     )
+    image_credential_ame = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
 
     target_replicas = models.IntegerField('期望副本数', default=1)
     target_status = models.CharField('期望状态', max_length=32, default="start")

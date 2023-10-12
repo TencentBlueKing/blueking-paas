@@ -179,6 +179,7 @@
                     <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
                   </div> -->
                 </bk-select>
+                <span slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</span>
               </bk-form-item>
             </bk-form>
           </div>
@@ -1140,9 +1141,9 @@ export default {
       this.$router.push({ name: 'imageCredential' });
     },
 
-    goBack () {
+    goBack() {
       this.$router.go(-1);
-    }
+    },
   },
 };
 </script>

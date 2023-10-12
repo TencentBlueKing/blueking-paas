@@ -8,7 +8,14 @@
       @change="handleTabChange"
     />
     <div class="app-container middle main">
-      <router-view :key="routeIndex"></router-view>
+      <paas-content-loader
+        :is-loading="isLoading"
+        placeholder="image-manage-loading"
+        :offset-top="0"
+        class="access-user"
+      >
+        <router-view :key="routeIndex" @hide-loading="isLoading = false"></router-view>
+      </paas-content-loader>
     </div>
   </div>
 </template>
@@ -30,6 +37,7 @@ export default {
         { name: 'image', label: this.$t('镜像管理'), routeName: 'cloudAppImageList' },
         { name: 'history', label: this.$t('构建历史'), routeName: 'cloudAppBuildHistory' },
       ],
+      isLoading: true,
     };
   },
   created() {
@@ -37,6 +45,7 @@ export default {
   },
   methods: {
     handleTabChange(name) {
+      this.isLoading = true;
       this.active = name;
       const curPanel = this.panels.find(item => item.name === name);
       this.$router.push({

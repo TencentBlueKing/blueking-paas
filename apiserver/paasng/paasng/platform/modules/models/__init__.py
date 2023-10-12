@@ -16,6 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .deploy_config import BuildConfig, DeployConfig  # noqa
-from .module import Module  # noqa
-from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType  # noqa
+from .build_cfg import BuildConfig
+from .deploy_config import DeployConfig
+from .module import Module
+from .processes import ModuleProcessSpec
+from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType
+
+__all__ = [
+    "BuildConfig",
+    "DeployConfig",
+    "Module",
+    "AppBuildPack",
+    "AppSlugBuilder",
+    "AppSlugRunner",
+    "BuildPackType",
+    "ModuleProcessSpec",
+]

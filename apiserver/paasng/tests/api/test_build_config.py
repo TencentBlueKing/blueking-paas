@@ -22,7 +22,7 @@ from django_dynamic_fixture import G
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
-from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db

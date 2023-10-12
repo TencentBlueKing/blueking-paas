@@ -16,7 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.anti_contracts.platform.mgrlegacy import signals
 
-post_change_app_router = signals.post_change_app_router
-rollback_change_app_router = signals.rollback_change_app_router
+"""
+被 paasng/infras/legacydb_te/adaptors.py 引用
+"""
+from dataclasses import dataclass
+
+
+@dataclass
+class TagData:
+    id: int
+    name: str
+    enabled: bool
+    index: int
+    remark: str
+    parent_id: int
+    region: str

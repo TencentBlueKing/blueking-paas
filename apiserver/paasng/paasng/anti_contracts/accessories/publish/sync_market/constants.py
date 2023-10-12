@@ -16,7 +16,33 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.anti_contracts.platform.mgrlegacy import signals
 
-post_change_app_router = signals.post_change_app_router
-rollback_change_app_router = signals.rollback_change_app_router
+"""
+被 paasng/infras/legacydb_te/adaptors.py 引用
+"""
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class EnvItem:
+    key: str
+    value: str
+    description: str
+    is_builtin: bool
+    environment_name: Optional[str] = None
+
+
+class RegionConverter:
+    _data = {
+        "ieod": "ied",
+    }
+    _data_reverse = {v: k for k, v in list(_data.items())}
+
+    @classmethod
+    def to_old(cls, region):
+        return cls._data.get(region, region)
+
+    @classmethod
+    def to_new(cls, region):
+        return cls._data_reverse.get(region, region)

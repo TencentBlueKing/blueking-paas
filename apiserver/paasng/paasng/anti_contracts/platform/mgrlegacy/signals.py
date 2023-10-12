@@ -16,7 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.anti_contracts.platform.mgrlegacy import signals
 
-post_change_app_router = signals.post_change_app_router
-rollback_change_app_router = signals.rollback_change_app_router
+"""
+被 paasng/accessories/publish/sync_market/handlers_ext.py 引用
+"""
+import django
+
+post_change_app_router = django.dispatch.Signal(providing_args=['application', 'legacy_app', 'migration_process'])
+rollback_change_app_router = django.dispatch.Signal(providing_args=['application', 'legacy_app', 'migration_process'])

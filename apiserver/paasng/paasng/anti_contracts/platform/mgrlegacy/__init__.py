@@ -16,7 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.anti_contracts.platform.mgrlegacy import signals
-
-post_change_app_router = signals.post_change_app_router
-rollback_change_app_router = signals.rollback_change_app_router

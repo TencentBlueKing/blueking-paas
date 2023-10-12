@@ -16,7 +16,30 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.anti_contracts.platform.mgrlegacy import signals
 
-post_change_app_router = signals.post_change_app_router
-rollback_change_app_router = signals.rollback_change_app_router
+"""
+被 paasng/infras/legacydb_te/adaptors.py 引用
+"""
+from paasng.utils.basic import ChoicesEnum
+
+
+class LegacyAppState(ChoicesEnum):
+    """命名保持跟 PaaS2.0 一致，方便核对"""
+
+    OUTLINE = 0
+    DEVELOPMENT = 1
+    TEST = 3
+    ONLINE = 4
+    IN_TEST = 8
+    IN_ONLINE = 9
+    IN_OUTLINE = 10
+
+    _choices_labels = (
+        (OUTLINE, '已下架'),
+        (DEVELOPMENT, '开发中'),
+        (TEST, '测试中'),
+        (ONLINE, '已上线'),
+        (IN_TEST, '正在提测'),
+        (IN_ONLINE, '正在上线'),
+        (IN_OUTLINE, '正在下架'),
+    )

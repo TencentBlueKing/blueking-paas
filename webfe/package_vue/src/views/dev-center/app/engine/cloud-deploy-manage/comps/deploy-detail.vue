@@ -167,6 +167,7 @@
         >
           <template slot-scope="{ row }">
             <div class="operation">
+              <!--  && !row.autoscaling -->
               <div
                 v-if="row.status === 'Running'"
                 class="flex-row align-items-center mr10"
@@ -778,6 +779,7 @@ export default {
           memLimit: processInfo.memory_limit,
           clusterLink: processInfo.cluster_link,
           isExpand: true,
+          autoscaling: processInfo.autoscaling,
           type,
         };
 
@@ -1184,7 +1186,7 @@ export default {
       };
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
 
-      var serverProcessEvent = new EventSource(url, {
+      const serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });
       if (this.serverProcessEvent !== undefined) {

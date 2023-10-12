@@ -100,11 +100,11 @@ class GitCloneCommand(GitCommand):
 class GitClient:
     """Git 客户端"""
 
-    VERSION_REGEX = re.compile(r"refs/(?P<type>(remotes/origin|tags))/(?P<name>[{}\w.\-_]+)")
+    VERSION_REGEX = re.compile(r"refs/(?P<type>(remotes/origin|tags))/(?P<name>[{}\w.\-_/]+)")
     COMMIT_INFO_REGEX = re.compile(r"(?P<ts>(\d+))/(?P<msg>[\S\s]*)", re.M)
     META_GIT_DIR = ".git"
     _git_filepath = "git"
-    _default_timeout = 30
+    _default_timeout = 600
 
     def checkout(self, path: Path, target: str) -> str:
         """切换分支或tag"""

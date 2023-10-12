@@ -67,9 +67,9 @@ def mounts(bk_app, bk_module):
 
 @pytest.fixture(autouse=True, scope="class")
 def mock_volume_source_manager():
-    with patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
-        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
-    ):
+    with patch(
+        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None
+    ), patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):
         yield
 
 
@@ -117,7 +117,7 @@ class TestVolumeMountViewSet:
                 # 创建相同 unique_together = ('module_id', 'mount_path', 'environment_name') 的 Mount
                 "environment_name": "_global_",
                 "source_config_data": {"configmap_z": "configmap_z_data"},
-                "mount_path": "/",
+                "mount_path": "/path/",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
             },

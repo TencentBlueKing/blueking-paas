@@ -27,6 +27,7 @@
         :data="historyList"
         :outer-border="false"
         :size="'small'"
+        :height="historyList.length ? '' : '520px'"
         :pagination="pagination"
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
@@ -62,6 +63,7 @@
         <bk-table-column
           :label="$t('触发信息')"
           prop="invoke_message"
+          :render-header="$renderHeader"
           :show-overflow-tooltip="true"
         />
         <bk-table-column
@@ -193,6 +195,7 @@ export default {
         });
       } finally {
         this.isPageLoading = false;
+        this.$emit('hide-loading');
       }
     },
 

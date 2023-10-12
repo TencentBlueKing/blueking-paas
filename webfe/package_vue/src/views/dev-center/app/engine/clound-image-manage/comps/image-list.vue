@@ -67,7 +67,7 @@
                   <bk-form-item :label="`${$t('镜像仓库')}：`">
                     <span class="form-text">{{ row.detail.image_info.repository || '--' }}</span>
                   </bk-form-item>
-                  <bk-form-item :label="`${$t('镜像 Tag')}：`">
+                  <bk-form-item :label="`${$t('镜像 tag')}：`">
                     <span class="form-text">{{ row.detail.image_info.tag || '--' }}</span>
                   </bk-form-item>
                   <bk-form-item :label="`${$t('大小')}：`">
@@ -217,6 +217,7 @@ export default {
         });
       } finally {
         this.isTableLoading = false;
+        this.$emit('hide-loading');
       }
     },
 

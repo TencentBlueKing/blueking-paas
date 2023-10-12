@@ -167,8 +167,9 @@
         >
           <template slot-scope="{ row }">
             <div class="operation">
+              <!--  && !row.autoscaling -->
               <div
-                v-if="row.status === 'Running' && !row.autoscaling"
+                v-if="row.status === 'Running'"
                 class="flex-row align-items-center mr10"
               >
                 <img

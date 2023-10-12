@@ -662,11 +662,6 @@ export default {
     handleOpenUrl(url) {
       window.open(url, '_blank');
     },
-
-    test(data) {
-      console.log(data);
-      return '1';
-    },
   },
 };
 </script>

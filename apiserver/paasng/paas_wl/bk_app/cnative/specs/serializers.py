@@ -156,7 +156,7 @@ class UpsertMountSLZ(serializers.Serializer):
     name = serializers.RegexField(
         help_text=_('挂载卷名称'), regex=r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', max_length=63, required=True
     )
-    mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_.]+/?)+$", required=True)
+    mount_path = serializers.RegexField(regex=r"^(/)?([^/\0]+(/)?)*$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
     source_config_data = serializers.JSONField(

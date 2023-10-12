@@ -21,9 +21,9 @@ import logging
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.engine.models import ConfigVar
-from paasng.extensions.bk_plugins.apigw import safe_sync_apigw
-from paasng.extensions.bk_plugins.models import BkPluginDistributor
+from paasng.platform.engine.models import ConfigVar
+from paasng.bk_plugins.bk_plugins.apigw import safe_sync_apigw
+from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
 
 logger = logging.getLogger(__name__)
 

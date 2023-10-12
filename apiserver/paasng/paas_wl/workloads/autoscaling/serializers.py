@@ -20,9 +20,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.platform.applications.constants import WlAppType
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
+from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.autoscaling.constants import (
     GPA_COMPUTE_BY_LIMITS_ANNO_KEY,
     ScalingMetric,
@@ -31,7 +31,7 @@ from paas_wl.workloads.autoscaling.constants import (
     ScalingMetricTargetType,
 )
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig, MetricSpec, ScalingObjectRef
-from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
+from paas_wl.bk_app.processes.constants import PROCESS_NAME_KEY
 
 if TYPE_CHECKING:
     from paas_wl.workloads.autoscaling.entities import ProcAutoscaling

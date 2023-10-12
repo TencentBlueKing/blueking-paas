@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from paas_wl.networking.constants import NetworkProtocol
+from paas_wl.workloads.networking.constants import NetworkProtocol
 
 
 class EgressRuleSLZ(serializers.Serializer):

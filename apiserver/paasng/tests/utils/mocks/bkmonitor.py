@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 import random
 from typing import List
 
-from paasng.accessories.bkmonitorv3.client import BkMonitorClient
-from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
+from paasng.infras.bkmonitorv3.client import BkMonitorClient
+from paasng.infras.bkmonitorv3.params import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 

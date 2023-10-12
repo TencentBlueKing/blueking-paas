@@ -20,11 +20,11 @@ import logging
 
 from rest_framework.permissions import IsAuthenticated
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.engine.constants import ConfigVarEnvName
-from paasng.engine.models.config_var import ConfigVar
-from paasng.engine.views import ConfigVarViewSet as BaseConfigVarViewSet
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.platform.engine.constants import ConfigVarEnvName
+from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.views import ConfigVarViewSet as BaseConfigVarViewSet
 from paasng.plat_admin.admin42.serializers.config_vars import ConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView

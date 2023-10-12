@@ -36,26 +36,26 @@ from rest_framework.fields import get_attribute
 from sqlalchemy import func
 from sqlalchemy.orm import Query, Session
 
-from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
-from paasng.accounts.models import Oauth2TokenHolder, UserProfile
-from paasng.dev_resources.sourcectl.controllers.bk_svn import SvnRepoController
-from paasng.dev_resources.sourcectl.models import GitProject
-from paasng.dev_resources.sourcectl.repo_controller import BaseGitRepoController
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
-from paasng.dev_resources.sourcectl.svn.server_config import get_bksvn_config
+from paasng.infras.iam.permissions.resources.application import ApplicationPermission
+from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
+from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController
+from paasng.platform.sourcectl.models import GitProject
+from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
+from paasng.platform.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
+from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 from paasng.plat_admin.system.constants import SimpleAppSource
 from paasng.plat_admin.system.legacy import LegacyAppNormalizer, query_concrete_apps
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.core.storages.sqlalchemy import legacy_db
+from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.region.models import get_region
-from paasng.publish.market.models import MarketConfig, Tag
+from paasng.core.region.models import get_region
+from paasng.accessories.publish.market.models import MarketConfig, Tag
 
 try:
-    from paasng.platform.legacydb_te.models import LApplication, LApplicationUseRecord
+    from paasng.infras.legacydb_te.models import LApplication, LApplicationUseRecord
 except ImportError:
-    from paasng.platform.legacydb.models import LApplication, LApplicationUseRecord
+    from paasng.infras.legacydb.models import LApplication, LApplicationUseRecord
 
 try:
     from paasng.accessories.paas_analysis.utils import get_pv_uv_for_env

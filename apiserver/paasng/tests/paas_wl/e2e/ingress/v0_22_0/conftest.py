@@ -22,8 +22,8 @@ import pytest
 import yaml
 from kubernetes.client.apis import VersionApi
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.resources.base.kube_client import CoreDynamicClient
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
 from tests.paas_wl.e2e.ingress.utils import (
     IngressNginxReloadChecker,
     create_from_yaml_allow_conflict,

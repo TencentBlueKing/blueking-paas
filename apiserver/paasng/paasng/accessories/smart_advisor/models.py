@@ -21,7 +21,7 @@ from django.utils import timezone
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.publish.entrance.preallocated import get_bk_doc_url_prefix
+from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 
 from .constants import DeployFailurePatternType
 from .tags import get_default_tagset, get_dynamic_tag

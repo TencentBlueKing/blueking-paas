@@ -20,7 +20,7 @@ from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, TypedDic
 
 from attrs import define, field, fields
 
-from paasng.platform.log.exceptions import LogLineInfoBrokenError
+from paasng.accessories.log.exceptions import LogLineInfoBrokenError
 
 NOT_SET = object()
 _ConverterType = Callable[[Any], Any]

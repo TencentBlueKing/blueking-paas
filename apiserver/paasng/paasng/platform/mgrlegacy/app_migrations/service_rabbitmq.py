@@ -20,8 +20,8 @@ import logging
 
 from django.utils.translation import ugettext_lazy as _
 
-from paasng.engine.constants import AppEnvName
-from paasng.engine.models.config_var import ConfigVar
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration
 
 logger = logging.getLogger(__name__)

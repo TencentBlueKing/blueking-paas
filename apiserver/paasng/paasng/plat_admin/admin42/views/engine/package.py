@@ -21,12 +21,12 @@ from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.dev_resources.sourcectl.models import SourcePackage
-from paasng.dev_resources.sourcectl.package.downloader import download_package
-from paasng.dev_resources.sourcectl.utils import generate_temp_file
-from paasng.engine.constants import AppEnvName
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.platform.sourcectl.models import SourcePackage
+from paasng.platform.sourcectl.package.downloader import download_package
+from paasng.platform.sourcectl.utils import generate_temp_file
+from paasng.platform.engine.constants import AppEnvName
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.serializers.packages import SourcePackageSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView

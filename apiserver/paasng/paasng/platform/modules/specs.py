@@ -23,9 +23,9 @@ to the current version of the project delivered to anyone in the future.
 from abc import ABC
 from typing import Any, Dict, Type
 
-from paas_wl.platform.applications.constants import ArtifactType
-from paasng.engine.configurations.building import SlugbuilderInfo
-from paasng.engine.constants import RuntimeType
+from paas_wl.bk_app.applications.constants import ArtifactType
+from paasng.platform.engine.configurations.building import SlugbuilderInfo
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig, Module

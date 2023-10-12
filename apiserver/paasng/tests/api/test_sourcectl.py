@@ -26,8 +26,8 @@ from blue_krill.data_types.enum import FeatureFlagField
 from django.conf import settings
 from django.urls import reverse
 
-from paasng.dev_resources.sourcectl.models import SvnAccount
-from paasng.platform.feature_flags.constants import PlatformFeatureFlag
+from paasng.platform.sourcectl.models import SvnAccount
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.utils.notification_plugins import BaseComponentAPIPlugin
 from tests.utils.helpers import generate_random_string
 
@@ -63,7 +63,7 @@ def patch_feature_flag(name, default):
 
 
 class TestSvnAPI:
-    @mock.patch('paasng.dev_resources.sourcectl.svn.admin.IeodSvnAuthClient.add_user')
+    @mock.patch('paasng.platform.sourcectl.svn.admin.IeodSvnAuthClient.add_user')
     def test_create_account(self, add_user, mocked_call_api, api_client, bk_user):
         def mock_add_user(account, password):
             return {"account": account.strip(), "password": password.strip()}

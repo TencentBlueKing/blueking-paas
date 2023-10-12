@@ -21,8 +21,8 @@ from django.conf import settings
 from django.urls import reverse
 from django_dynamic_fixture import G
 
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.models import Template
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from tests.utils.helpers import generate_random_string
 

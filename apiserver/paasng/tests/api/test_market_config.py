@@ -22,12 +22,12 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
-from paasng.engine.models import Deployment
+from paasng.platform.sourcectl.source_types import get_sourcectl_names
+from paasng.platform.engine.models import Deployment
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.publish.market.models import Product
-from paasng.publish.market.protections import AppPublishPreparer
+from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.market.protections import AppPublishPreparer
 from tests.conftest import mark_skip_if_console_not_configured
 from tests.utils.helpers import generate_random_string
 
@@ -100,7 +100,7 @@ def test_create_then_release(
     assert market_config.enabled == released_state
 
     # 通过 mock 控制 Preparer 所依赖的“环境部署状态”，保持与部署结果同步
-    with patch('paasng.publish.market.protections.env_is_deployed', return_value=deployment_status):
+    with patch('paasng.accessories.publish.market.protections.env_is_deployed', return_value=deployment_status):
         assert (market_config.enabled and AppPublishPreparer(application).all_matched) == console_state
 
     if console_state:

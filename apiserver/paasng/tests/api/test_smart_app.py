@@ -27,8 +27,8 @@ import pytest
 import yaml
 from django.conf import settings
 
-from paasng.dev_resources.sourcectl.utils import compress_directory
-from paasng.publish.market.models import Tag
+from paasng.platform.sourcectl.utils import compress_directory
+from paasng.accessories.publish.market.models import Tag
 
 pytestmark = pytest.mark.django_db
 
@@ -72,7 +72,7 @@ class TestCreateSMartApp:
         # was never really committed.
         #
         # Disable parallel processing to let unittest pass.
-        with mock.patch('paasng.extensions.smart_app.utils._PARALLEL_PATCHING', new=False), mock.patch(
+        with mock.patch('paasng.platform.smart_app.utils._PARALLEL_PATCHING', new=False), mock.patch(
             'moby_distribution.ImageRef.push'
         ) as mock_push:
             mock_push().config.digest.replace.return_value = ""

@@ -21,14 +21,14 @@ from typing import Any, Dict
 import pytest
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.resources.base import crd
-from paas_wl.resources.generation.version import get_mapper_version
-from paas_wl.resources.kube_res.base import GVKConfig
+from paas_wl.infras.resources.base import crd
+from paas_wl.infras.resources.generation.version import get_mapper_version
+from paas_wl.infras.resources.kube_res.base import GVKConfig
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig, MetricSpec, ScalingObjectRef
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
-from paas_wl.workloads.processes.entities import Process
+from paas_wl.bk_app.processes.entities import Process
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

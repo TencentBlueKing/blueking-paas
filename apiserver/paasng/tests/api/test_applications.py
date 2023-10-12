@@ -24,15 +24,15 @@ from django.conf import settings
 from django.urls import reverse
 from django_dynamic_fixture import G
 
-from paasng.accounts.constants import AccountFeatureFlag as AFF
-from paasng.accounts.models import AccountFeatureFlag, UserProfile
-from paasng.dev_resources.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
-from paasng.extensions.declarative.handlers import get_desc_handler
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
+from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
+from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.operations.constant import OperationType
-from paasng.platform.operations.models import Operation
+from paasng.misc.operations.constant import OperationType
+from paasng.misc.operations.models import Operation
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -70,7 +70,7 @@ class TestMembershipViewset:
     def test_list_with_another_user(self, api_client, bk_app, bk_user, another_user, role, status, ok):
         url = reverse("api.applications.members", kwargs=dict(code=bk_app.code))
         if role is not ...:
-            from paasng.accessories.iam.helpers import add_role_members
+            from paasng.infras.iam.helpers import add_role_members
 
             add_role_members(bk_app.code, role, get_username_by_bkpaas_user_id(another_user.pk))
 
@@ -131,7 +131,7 @@ class TestMembershipViewset:
     def test_delete(
         self, api_client, bk_app, bk_user, another_user, another_user_role, request_user_idx, be_deleted_idx, status
     ):
-        from paasng.accessories.iam.helpers import add_role_members, fetch_application_members
+        from paasng.infras.iam.helpers import add_role_members, fetch_application_members
 
         add_role_members(bk_app.code, another_user_role, get_username_by_bkpaas_user_id(another_user.pk))
         user_choices = [bk_user, another_user, create_user("dummy")]
@@ -160,7 +160,7 @@ class TestMembershipViewset:
         ],
     )
     def test_level(self, api_client, bk_app, bk_user, another_user, another_user_role, request_user_idx, status, code):
-        from paasng.accessories.iam.helpers import add_role_members, fetch_application_members
+        from paasng.infras.iam.helpers import add_role_members, fetch_application_members
 
         add_role_members(bk_app.code, another_user_role, get_username_by_bkpaas_user_id(another_user.pk))
         user_choices = [bk_user, another_user, create_user("dummy")]
@@ -178,7 +178,7 @@ class TestMembershipViewset:
             assert response.json()["code"] == code
 
     def test_level_last_admin(self, api_client, bk_app, bk_user, another_user):
-        from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+        from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
 
         add_role_members(bk_app.code, ApplicationRole.ADMINISTRATOR, get_username_by_bkpaas_user_id(another_user.pk))
         remove_user_all_roles(bk_app.code, get_username_by_bkpaas_user_id(bk_user.pk))
@@ -516,7 +516,7 @@ class TestCreateCloudNativeApp:
         assert app_data['modules'][0]['web_config']['artifact_type'] == 'none'
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
-    @mock.patch('paasng.engine.configurations.building.ModuleRuntimeManager')
+    @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')
     def test_create_with_buildpack(
         self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, init_tmpls
     ):

@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from paasng.accessories.iam.client import BKIAMClient
-from paasng.accessories.iam.constants import NEVER_EXPIRE_DAYS
-from paasng.accessories.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+from paasng.infras.iam.client import BKIAMClient
+from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
+from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.platform.applications.models import Application
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 

@@ -563,7 +563,7 @@ export default {
           },
           {
             max: 20,
-            message: this.$t('由字母和数字以及连接符(-)组成，不能超过 20 个字符'),
+            message: this.$t('请输入 1-20 字符的字母、数字、汉字'),
             trigger: 'blur',
           },
           {
@@ -571,7 +571,7 @@ export default {
               const reg = /^[a-zA-Z\d\u4e00-\u9fa5]*$/;
               return reg.test(val);
             },
-            message: this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
+            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符'),
             trigger: 'blur',
           },
         ],

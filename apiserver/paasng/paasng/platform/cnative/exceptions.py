@@ -17,5 +17,5 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class ManifestBuilderError(Exception):
+class ManifestConstructorError(Exception):
     """Error when building the manifest of bkapp model."""

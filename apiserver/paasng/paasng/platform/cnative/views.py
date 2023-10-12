@@ -20,6 +20,8 @@ import json
 import logging
 
 import yaml
+from django.http.response import HttpResponse
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -30,6 +32,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.cnative.bkapp_model.manifest import get_manifest
+from paasng.platform.cnative.serializers import GetManifestInputSLZ
 
 logger = logging.getLogger(__name__)
 
@@ -58,19 +61,23 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
         return Response(data=manifest_ext)
 
 
-class BkappModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """The main viewset for managing the manifests of blueking application model."""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    @swagger_auto_schema(query_serializer=GetManifestInputSLZ, tags=["云原生应用"])
     def retrieve(self, request, code, module_name):
-        """Get the current manifest by module."""
+        """获取当前模块的蓝鲸应用模型数据，支持 JSON、YAML 等不同格式。"""
+        slz = GetManifestInputSLZ(data=request.GET)
+        slz.is_valid(raise_exception=True)
         module = self.get_module_via_path()
 
-        output_format = request.GET.get('output_format', 'json')
+        output_format = slz.validated_data['output_format']
         if output_format == 'yaml':
             manifests = get_manifest(module)
-            response = '---'.join(yaml.safe_dump(d) for d in manifests)
-            return Response({'manifest': response})
+            response = yaml.safe_dump_all(manifests)
+            # Use django's response to ignore DRF's renders
+            return HttpResponse(response, content_type='application/yaml')
         else:
-            return Response({'manifest': get_manifest(module)})
+            return Response(get_manifest(module))

@@ -39,24 +39,24 @@ from paasng.platform.modules.models import Module
 logger = logging.getLogger(__name__)
 
 
-class ManifestBuilder(ABC):
-    """Builds the manifest for bk_app model, it is usually only responsible for a small part of the manifest."""
+class ManifestConstructor(ABC):
+    """Construct the manifest for bk_app model, it is usually only responsible for a small part of the manifest."""
 
     @abstractmethod
-    def build_into(self, model_res: BkAppResource, module: Module):
-        """Apply current builder to the model resource object.
+    def apply_to(self, model_res: BkAppResource, module: Module):
+        """Apply current constructor to the model resource object.
 
         :param model_res: The bkapp model resource object.
         :param module: The application module.
-        :raise ManifestBuilderError: Unable to apply current builder due to errors.
+        :raise ManifestConstructorError: Unable to apply current constructor due to errors.
         """
         raise NotImplementedError()
 
 
-class AddonsManifestBuilder(ManifestBuilder):
-    """Build the "addons" part."""
+class AddonsManifestConstructor(ManifestConstructor):
+    """Construct the "addons" part."""
 
-    def build_into(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: BkAppResource, module: Module):
         names = [svc.name for svc in mixed_service_mgr.list_binded(module)]
         # Modify both annotations and spec
         model_res.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(names)
@@ -64,10 +64,10 @@ class AddonsManifestBuilder(ManifestBuilder):
             model_res.spec.addons.append(BkAppAddon(name=name))
 
 
-class AccessControlManifestBuilder(ManifestBuilder):
-    """Build the access-control part."""
+class AccessControlManifestConstructor(ManifestConstructor):
+    """Construct the access-control part."""
 
-    def build_into(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: BkAppResource, module: Module):
         try:
             from paasng.security.access_control.models import ApplicationAccessControlSwitch
         except ImportError:
@@ -78,34 +78,34 @@ class AccessControlManifestBuilder(ManifestBuilder):
             model_res.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
 
 
-class BuiltinAnnotsManifestBuilder(ManifestBuilder):
-    """Build the built-in annotations."""
+class BuiltinAnnotsManifestConstructor(ManifestConstructor):
+    """Construct the built-in annotations."""
 
-    def build_into(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: BkAppResource, module: Module):
         # TODO: ref to `_inject_annotations()` method
         pass
 
 
-class BuildConfigManifestBuilder(ManifestBuilder):
-    """Build the build config."""
+class BuildConfigManifestConstructor(ManifestConstructor):
+    """Construct the build config."""
 
-    def build_into(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: BkAppResource, module: Module):
         # TODO
         pass
 
 
-class ProcessesManifestBuilder(ManifestBuilder):
-    """Build the processes part."""
+class ProcessesManifestConstructor(ManifestConstructor):
+    """Construct the processes part."""
 
-    def build_into(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: BkAppResource, module: Module):
         # TODO
         pass
 
 
-class EnvVarsManifestBuilder(ManifestBuilder):
-    """Build the env variables part."""
+class EnvVarsManifestConstructor(ManifestConstructor):
+    """Construct the env variables part."""
 
-    def build_into(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: BkAppResource, module: Module):
         # The global variables
         for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by('key'):
             model_res.spec.configuration.env.append(EnvVar(name=var.key, value=var.value))
@@ -136,13 +136,13 @@ def get_bk_app_resource(module: Module) -> BkAppResource:
     :param module: The module object.
     :returns: The resource object.
     """
-    builders: List[ManifestBuilder] = [
-        BuiltinAnnotsManifestBuilder(),
-        AddonsManifestBuilder(),
-        AccessControlManifestBuilder(),
-        ProcessesManifestBuilder(),
-        BuildConfigManifestBuilder(),
-        EnvVarsManifestBuilder(),
+    builders: List[ManifestConstructor] = [
+        BuiltinAnnotsManifestConstructor(),
+        AddonsManifestConstructor(),
+        AccessControlManifestConstructor(),
+        ProcessesManifestConstructor(),
+        BuildConfigManifestConstructor(),
+        EnvVarsManifestConstructor(),
     ]
     obj = BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,
@@ -150,5 +150,5 @@ def get_bk_app_resource(module: Module) -> BkAppResource:
         spec=BkAppSpec(),
     )
     for builder in builders:
-        builder.build_into(obj, module)
+        builder.apply_to(obj, module)
     return obj

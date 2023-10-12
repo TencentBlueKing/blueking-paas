@@ -23,7 +23,11 @@ from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec, EnvVar, EnvVarOverlay, ObjectMetadata
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
-from paasng.platform.cnative.bkapp_model.manifest import AddonsManifestBuilder, EnvVarsManifestBuilder, get_manifest
+from paasng.platform.cnative.bkapp_model.manifest import (
+    AddonsManifestConstructor,
+    EnvVarsManifestConstructor,
+    get_manifest,
+)
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from tests.utils.helpers import generate_random_string
 
@@ -46,24 +50,24 @@ def local_service(bk_app):
     return mixed_service_mgr.get(service.uuid, region=bk_app.region)
 
 
-def test_AddonsManifestBuilder_empty(bk_module, blank_resource):
-    AddonsManifestBuilder().build_into(blank_resource, bk_module)
+def test_AddonsManifestConstructor_empty(bk_module, blank_resource):
+    AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
     annots = blank_resource.metadata.annotations
     assert annots['bkapp.paas.bk.tencent.com/addons'] == '[]'
     assert len(blank_resource.spec.addons) == 0
 
 
-def test_AddonsManifestBuilder_with_addons(bk_module, blank_resource, local_service):
+def test_AddonsManifestConstructor_with_addons(bk_module, blank_resource, local_service):
     mixed_service_mgr.bind_service(local_service, bk_module)
-    AddonsManifestBuilder().build_into(blank_resource, bk_module)
+    AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
     annots = blank_resource.metadata.annotations
     assert annots['bkapp.paas.bk.tencent.com/addons'] == '["mysql"]'
     assert len(blank_resource.spec.addons) == 1
 
 
-def test_EnvVarsManifestBuilder_integrated(bk_module, bk_stag_env, blank_resource):
+def test_EnvVarsManifestConstructor_integrated(bk_module, bk_stag_env, blank_resource):
     ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key='FOO_STAG', value='1')
     ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key='BAR', value='1')
     ConfigVar.objects.create(
@@ -74,7 +78,7 @@ def test_EnvVarsManifestBuilder_integrated(bk_module, bk_stag_env, blank_resourc
         is_global=True,
     )
 
-    EnvVarsManifestBuilder().build_into(blank_resource, bk_module)
+    EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
     assert blank_resource.spec.configuration.env == [EnvVar(name='BAR', value='2')]
     assert blank_resource.spec.envOverlay.envVariables == [
         EnvVarOverlay(envName='stag', name='BAR', value='1'),

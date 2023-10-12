@@ -71,172 +71,7 @@
 
     <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
 
-
-    <section v-if="formData.sourceOrigin === 'soundCode' && curStep === 1">
-      <bk-form
-        ref="formModuleRef"
-        :model="formData"
-        :rules="rules"
-        :label-width="100"
-        class="from-content mt20"
-      >
-        <div class="form-item-title mb10">
-          {{ $t('应用模版') }}
-        </div>
-        <bk-form-item
-          error-display-type="normal"
-          ext-cls="form-item-cls"
-          :label="$t('模版来源')"
-        >
-          <div>{{ $t('蓝鲸开发框架') }}</div>
-        </bk-form-item>
-        <bk-form-item
-          error-display-type="normal"
-          ext-cls="form-item-cls mt10"
-        >
-          <div class="flex-row justify-content-between">
-            <div class="bk-button-group">
-              <bk-button
-                v-for="(item, key) in languagesData"
-                :key="key"
-                :class="buttonActive === key ? 'is-selected' : ''"
-                @click="handleSelected(item, key)"
-              >
-                {{ $t(defaultlangName[key]) }}
-              </bk-button>
-            </div>
-            <div class="build-info" @click="showBuildDialog">
-              <i class="row-icon paasng-icon paasng-page-fill"></i>
-              {{ $t('构建信息') }}
-            </div>
-          </div>
-        </bk-form-item>
-        <div class="languages-card">
-          <bk-radio-group v-model="formData.sourceInitTemplate">
-            <div v-for="(item) in languagesList" :key="item.name" class="pb20">
-              <bk-radio :value="item.name">
-                <div class="languages-name pl5">
-                  {{ item.display_name }}
-                </div>
-                <div class="languages-desc pl5">
-                  {{ item.description }}
-                </div>
-              </bk-radio>
-            </div>
-          </bk-radio-group>
-        </div>
-      </bk-form>
-
-
-      <bk-form
-        ref="formSourceRef"
-        :model="formData"
-        :rules="rules"
-        :label-width="100"
-        class="from-content mt20"
-      >
-        <div class="form-item-title mb10">
-          {{ $t('源码管理') }}
-        </div>
-
-        <bk-form-item
-          :required="true"
-          :label="$t('代码源')"
-          :rules="rules.name"
-          error-display-type="normal"
-          ext-cls="form-item-cls mt20"
-        >
-          <div class="flex-row align-items-center code-depot mb20">
-            <div
-              v-for="(item, index) in sourceControlTypes"
-              :key="index"
-              :class="['code-depot-item mr10', { 'on': item.value === sourceControlTypeItem }]"
-              @click="changeSourceControl(item)"
-            >
-              <img :src="'/static/images/' + item.imgSrc + '.png'">
-              <div
-                class="source-control-title"
-                :title="item.name"
-              >
-                {{ item.name }}
-              </div>
-            </div>
-          </div>
-        </bk-form-item>
-        <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
-          <git-extend
-            ref="extend"
-            :key="sourceControlTypeItem"
-            :git-control-type="sourceControlTypeItem"
-            :is-auth="gitExtendConfig[sourceControlTypeItem].isAuth"
-            :is-loading="gitExtendConfig[sourceControlTypeItem].isLoading"
-            :alert-text="gitExtendConfig[sourceControlTypeItem].alertText"
-            :auth-address="gitExtendConfig[sourceControlTypeItem].authAddress"
-            :auth-docs="gitExtendConfig[sourceControlTypeItem].authDocs"
-            :fetch-method="gitExtendConfig[sourceControlTypeItem].fetchMethod"
-            :repo-list="gitExtendConfig[sourceControlTypeItem].repoList"
-            :selected-repo-url.sync="gitExtendConfig[sourceControlTypeItem].selectedRepoUrl"
-          />
-
-          <bk-form-item
-            :label="$t('构建目录')"
-            error-display-type="normal"
-            ext-cls="form-item-cls mt20"
-          >
-            <div class="flex-row align-items-center code-depot">
-              <bk-input
-                v-model="formData.buildDir"
-                class="form-input-width"
-                :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
-              />
-            </div>
-          </bk-form-item>
-        </section>
-
-        <section v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
-          <repo-info
-            ref="repoInfo"
-            :key="sourceControlTypeItem"
-            :type="sourceControlTypeItem"
-          />
-        </section>
-      </bk-form>
-
-
-      <bk-form
-        ref="formSourceRef"
-        :model="formData"
-        :rules="rules"
-        :label-width="100"
-        class="from-content mt20"
-      >
-        <div class="form-item-title">
-          {{ $t('高级选项') }}
-        </div>
-
-        <bk-form-item
-          :label="$t('选择集群')"
-          error-display-type="normal"
-          ext-cls="form-item-cls mt20"
-        >
-          <bk-select
-            v-model="formData.clusterName"
-            class="form-input-width"
-            searchable
-          >
-            <bk-option
-              v-for="option in clusterList"
-              :id="option"
-              :key="option"
-              :name="option"
-            />
-          </bk-select>
-        </bk-form-item>
-      </bk-form>
-    </section>
-
     <section v-if="formData.sourceOrigin === 'image' && curStep === 1">
-
       <!-- 镜像管理 -->
       <bk-form
         ref="formImageRef"
@@ -300,6 +135,170 @@
             </bk-input>
           </div>
           <p slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</p>
+        </bk-form-item>
+      </bk-form>
+    </section>
+
+    <section v-if="curStep === 1">
+      <template v-if="formData.sourceOrigin === 'soundCode'">
+        <bk-form
+          ref="formModuleRef"
+          :model="formData"
+          :rules="rules"
+          :label-width="100"
+          class="from-content mt20"
+        >
+          <div class="form-item-title mb10">
+            {{ $t('应用模版') }}
+          </div>
+          <bk-form-item
+            error-display-type="normal"
+            ext-cls="form-item-cls"
+            :label="$t('模版来源')"
+          >
+            <div>{{ $t('蓝鲸开发框架') }}</div>
+          </bk-form-item>
+          <bk-form-item
+            error-display-type="normal"
+            ext-cls="form-item-cls mt10"
+          >
+            <div class="flex-row justify-content-between">
+              <div class="bk-button-group">
+                <bk-button
+                  v-for="(item, key) in languagesData"
+                  :key="key"
+                  :class="buttonActive === key ? 'is-selected' : ''"
+                  @click="handleSelected(item, key)"
+                >
+                  {{ $t(defaultlangName[key]) }}
+                </bk-button>
+              </div>
+              <div class="build-info" @click="showBuildDialog">
+                <i class="row-icon paasng-icon paasng-page-fill"></i>
+                {{ $t('构建信息') }}
+              </div>
+            </div>
+          </bk-form-item>
+          <div class="languages-card">
+            <bk-radio-group v-model="formData.sourceInitTemplate">
+              <div v-for="(item) in languagesList" :key="item.name" class="pb20">
+                <bk-radio :value="item.name">
+                  <div class="languages-name pl5">
+                    {{ item.display_name }}
+                  </div>
+                  <div class="languages-desc pl5">
+                    {{ item.description }}
+                  </div>
+                </bk-radio>
+              </div>
+            </bk-radio-group>
+          </div>
+        </bk-form>
+
+
+        <bk-form
+          ref="formSourceRef"
+          :model="formData"
+          :rules="rules"
+          :label-width="100"
+          class="from-content mt20"
+        >
+          <div class="form-item-title mb10">
+            {{ $t('源码管理') }}
+          </div>
+
+          <bk-form-item
+            :required="true"
+            :label="$t('代码源')"
+            :rules="rules.name"
+            error-display-type="normal"
+            ext-cls="form-item-cls mt20"
+          >
+            <div class="flex-row align-items-center code-depot mb20">
+              <div
+                v-for="(item, index) in sourceControlTypes"
+                :key="index"
+                :class="['code-depot-item mr10', { 'on': item.value === sourceControlTypeItem }]"
+                @click="changeSourceControl(item)"
+              >
+                <img :src="'/static/images/' + item.imgSrc + '.png'">
+                <div
+                  class="source-control-title"
+                  :title="item.name"
+                >
+                  {{ item.name }}
+                </div>
+              </div>
+            </div>
+          </bk-form-item>
+          <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
+            <git-extend
+              ref="extend"
+              :key="sourceControlTypeItem"
+              :git-control-type="sourceControlTypeItem"
+              :is-auth="gitExtendConfig[sourceControlTypeItem].isAuth"
+              :is-loading="gitExtendConfig[sourceControlTypeItem].isLoading"
+              :alert-text="gitExtendConfig[sourceControlTypeItem].alertText"
+              :auth-address="gitExtendConfig[sourceControlTypeItem].authAddress"
+              :auth-docs="gitExtendConfig[sourceControlTypeItem].authDocs"
+              :fetch-method="gitExtendConfig[sourceControlTypeItem].fetchMethod"
+              :repo-list="gitExtendConfig[sourceControlTypeItem].repoList"
+              :selected-repo-url.sync="gitExtendConfig[sourceControlTypeItem].selectedRepoUrl"
+            />
+
+            <bk-form-item
+              :label="$t('构建目录')"
+              error-display-type="normal"
+              ext-cls="form-item-cls mt20"
+            >
+              <div class="flex-row align-items-center code-depot">
+                <bk-input
+                  v-model="formData.buildDir"
+                  class="form-input-width"
+                  :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
+                />
+              </div>
+            </bk-form-item>
+          </section>
+
+          <section v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
+            <repo-info
+              ref="repoInfo"
+              :key="sourceControlTypeItem"
+              :type="sourceControlTypeItem"
+            />
+          </section>
+        </bk-form>
+      </template>
+
+      <bk-form
+        ref="formSourceRef"
+        :model="formData"
+        :rules="rules"
+        :label-width="100"
+        class="from-content mt20"
+      >
+        <div class="form-item-title">
+          {{ $t('高级选项') }}
+        </div>
+
+        <bk-form-item
+          :label="$t('选择集群')"
+          error-display-type="normal"
+          ext-cls="form-item-cls mt20"
+        >
+          <bk-select
+            v-model="formData.clusterName"
+            class="form-input-width"
+            searchable
+          >
+            <bk-option
+              v-for="option in clusterList"
+              :id="option"
+              :key="option"
+              :name="option"
+            />
+          </bk-select>
         </bk-form-item>
       </bk-form>
     </section>

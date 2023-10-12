@@ -67,9 +67,9 @@ def mounts(bk_app, bk_module):
 
 @pytest.fixture(autouse=True, scope="class")
 def mock_volume_source_manager():
-    with patch(
-        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None
-    ), patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):
+    with patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
+        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
+    ):
         yield
 
 

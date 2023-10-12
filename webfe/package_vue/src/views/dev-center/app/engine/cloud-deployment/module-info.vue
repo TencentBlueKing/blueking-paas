@@ -351,8 +351,7 @@
     </div>
   </paas-content-loader>
 </template>
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import moment from 'moment';
 import _ from 'lodash';
 export default {
@@ -405,7 +404,7 @@ export default {
             trigger: 'blur',
           },
         ],
-      }
+      },
     };
   },
   computed: {
@@ -442,7 +441,8 @@ export default {
       || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
     },
 
-    isModuleInfoEdit () {
+    // 基本信息是否为编辑态
+    isModuleInfoEdit() {
       return this.$store.state.cloudApi.isModuleInfoEdit;
     },
   },
@@ -487,7 +487,9 @@ export default {
     this.getGatewayInfos('stag');
     this.getGatewayInfos('prod');
 
+    // 组件销毁前
     this.$once('hook:beforeDestroy', () => {
+      // 关闭基本信息编辑态
       this.$store.commit('cloudApi/updateModuleInfoEdit', false);
     });
   },

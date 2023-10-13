@@ -268,4 +268,6 @@ class BkAppResource(BaseModel):
         """Return the deployable manifest, some fields are excluded."""
         # Set `exclude_none` to remove all fields whose value is `None` because
         # entries such as `"hooks": null` is not processable in Kubernetes 1.18.
-        return self.dict(exclude_none=True, exclude={"status"})
+        result = self.dict(exclude_none=True, exclude={"status"})
+        result['metadata'].pop('generation', None)
+        return result

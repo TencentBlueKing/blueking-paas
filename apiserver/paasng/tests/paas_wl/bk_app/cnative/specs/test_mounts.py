@@ -139,4 +139,5 @@ class TestVolumeSourceManager:
         mounts.VolumeSourceManager(bk_stag_env).deploy()
 
     def test_delete(self, create_namespace, bk_stag_env, with_wl_apps, mount):
+        mounts.VolumeSourceManager(bk_stag_env).deploy()
         mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount)

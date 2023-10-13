@@ -20,8 +20,8 @@ import logging
 
 from django.utils.translation import gettext_lazy as _
 
-from paasng.platform.mgrlegacy.signals import post_change_app_router, rollback_change_app_router
 from paasng.accessories.publish.sync_market.utils import set_migrated_state
+from paasng.core.signals import post_change_app_router, rollback_change_app_router
 
 from .base import BaseMigration
 

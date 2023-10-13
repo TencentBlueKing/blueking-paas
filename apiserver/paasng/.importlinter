@@ -25,9 +25,7 @@ ignore_imports =
     ** -> paasng.platform.engine.**
     ** -> paasng.platform.sourcectl.**
     ** -> paasng.platform.templates.**
-    paasng.platform.modules.views_ext -> paasng.plat_admin.system.applications
     paasng.platform.applications.views -> paasng.bk_plugins.bk_plugins.config
-    paasng.platform.applications.views_ext -> paasng.plat_admin.system.applications
     # Other ignores
     paas_wl.bk_app.processes.models -> paasng.platform.declarative.deployment.resources
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
@@ -35,10 +33,6 @@ ignore_imports =
     # legacydb
     paasng.infras.legacydb.adaptors -> paasng.accessories.publish.sync_market.*
     paasng.infras.legacydb.adaptors -> paasng.platform.mgrlegacy.constants
-    paasng.infras.legacydb_te.adaptors -> paasng.accessories.publish.sync_market.*
-    paasng.infras.legacydb_te.adaptors -> paasng.platform.mgrlegacy.constants
-    # mgrlegacy
-    paasng.accessories.publish.sync_market.handlers_ext -> paasng.platform.mgrlegacy.signals
 
 
 [importlinter:contract:layers-engine]
@@ -47,7 +41,7 @@ type=layers
 layers =
     deploy | streaming
     workflow | processes
-    mobile_config | phases_steps 
+    phases_steps
     utils
     configurations
     models

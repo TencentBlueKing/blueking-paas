@@ -120,5 +120,23 @@ class TestVolumeSourceManager:
             yield
             KNamespace(client).delete(bk_stag_env.wl_app.namespace)
 
+    @pytest.fixture
+    def mount(self, bk_app, bk_module):
+        mount = Mount.objects.new(
+            app_code=bk_app.code,
+            module_id=bk_module.id,
+            mount_path="/path/",
+            environment_name=MountEnvName.GLOBAL,
+            name="mount-configmap",
+            source_type=VolumeSourceType.ConfigMap.value,
+            region=bk_app.region,
+        )
+        source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
+        Mount.objects.upsert_source(mount, source_data)
+        return mount
+
     def test_deploy(self, create_namespace, bk_stag_env, with_wl_apps):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
+
+    def test_delete(self, create_namespace, bk_stag_env, with_wl_apps, mount):
+        mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount)

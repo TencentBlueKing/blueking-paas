@@ -1075,7 +1075,10 @@ export default {
           request: {},
         },
       },
-      autoScalDisableConfig: {},
+      autoScalDisableConfig: {
+        prod: {},
+        stag: {},
+      },
       tagInputIndex: 0,
     };
   },
@@ -1733,7 +1736,7 @@ export default {
     handleToModuleInfo() {
       this.$store.commit('cloudApi/updateModuleInfoEdit', true);
       this.$emit('tab-change', 'moduleInfo');
-    }
+    },
   },
 };
 </script>

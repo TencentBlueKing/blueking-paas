@@ -39,9 +39,9 @@ from paasng.accessories.servicehub.remote.manager import RemotePlanMgr, RemoteSe
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
 from paasng.accessories.services.models import ServiceCategory
+from paasng.core.region.models import get_all_regions, set_service_categories_loader
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
-from paasng.core.region.models import get_all_regions, set_service_categories_loader
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +181,7 @@ class MixedServiceMgr:
         Callable[..., EngineAppInstanceRel], _proxied_svc_dispatcher('get_instance_rel_by_instance_id')
     )
     get_provisioned_queryset = _proxied_svc_dispatcher('get_provisioned_queryset')
+    get_provisioned_envs = _proxied_svc_dispatcher('get_provisioned_envs')
     module_is_bound_with = _proxied_svc_dispatcher('module_is_bound_with')
     update = _proxied_svc_dispatcher("update")
     destroy = _proxied_svc_dispatcher("destroy")

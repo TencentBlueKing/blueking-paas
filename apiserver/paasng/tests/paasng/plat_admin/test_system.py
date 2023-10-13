@@ -30,16 +30,16 @@ from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import ServiceObjNotFound
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
-from paasng.platform.engine.constants import OperationTypes
-from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.plat_admin.system.applications import (
-    get_contact_info,
     query_default_apps_by_ids,
     query_legacy_apps_by_ids,
     query_uni_apps_by_ids,
     query_uni_apps_by_keyword,
     str_username,
 )
+from paasng.platform.applications.operators import get_contact_info
+from paasng.platform.engine.constants import OperationTypes
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
 from tests.utils.helpers import create_legacy_application, generate_random_string

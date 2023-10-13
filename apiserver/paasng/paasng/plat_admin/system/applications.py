@@ -25,14 +25,12 @@ from typing import Any, Collection, Dict, List, Optional
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import BasicUser, User
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q, QuerySet
+from django.db.models import Q
 from django.utils.translation import get_language
 
-from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
-from paasng.platform.applications.models import Application, ModuleEnvironment, UserApplicationFilter
-from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
+from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.platform.applications.models import Application, UserApplicationFilter
 
 from .constants import SimpleAppSource
 from .legacy import LegacyAppNormalizer, query_concrete_apps
@@ -171,44 +169,6 @@ def query_legacy_apps_by_username(username: str) -> List[UniSimpleApp]:
             if uni_simle_app is not None:
                 results.append(uni_simle_app)
     return results
-
-
-@dataclass
-class AppContactInfo:
-    """Information for contacting application"""
-
-    latest_operator: Optional[User]
-    recent_deployment_operators: List[User]
-
-
-def get_contact_info(application: Application) -> AppContactInfo:
-    """Get application's contact info"""
-    try:
-        latest_operator = application.latest_op.operation.user
-    except ObjectDoesNotExist:
-        latest_operator = None
-
-    # 获取距离最近操作时间一个月内，仍然在部署应用的用户
-    recent_deployment_operators = query_recent_deployment_operators(application.module_operations, days_range=31)
-    return AppContactInfo(latest_operator=latest_operator, recent_deployment_operators=recent_deployment_operators)
-
-
-def get_env_recent_deployment_ops(env: ModuleEnvironment) -> List[User]:
-    """Get environment's recent deployment operators"""
-    return query_recent_deployment_operators(env.module_operations, days_range=31)
-
-
-def query_recent_deployment_operators(operations: QuerySet, days_range: int) -> List[User]:
-    """Query latest deployment operators within given days
-
-    :param days_range: the max days range until the latest deployment operation
-    """
-    try:
-        latest_deployment_operation = operations.latest("created")
-        earliest_date = latest_deployment_operation.created - datetime.timedelta(days=days_range)
-        return list(operations.filter(created__gte=earliest_date).values_list("operator", flat=True).distinct())
-    except ModuleEnvironmentOperations.DoesNotExist:
-        return []
 
 
 @dataclass

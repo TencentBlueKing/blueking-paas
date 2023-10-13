@@ -23,19 +23,19 @@ from django.conf import settings
 from django.utils.translation import override
 from django_dynamic_fixture import G
 
-from paasng.infras.accounts.models import UserProfile
+from paasng.accessories.publish.market.models import Product, Tag
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.core.region.models import get_all_regions
+from paasng.infras.accounts.models import UserProfile
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.controller import APP_CODE_FIELD, AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
 from paasng.platform.declarative.application.validations import AppDescriptionSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
-from paasng.platform.applications.models import Application
-from paasng.core.region.models import get_all_regions
-from paasng.accessories.publish.market.models import Product, Tag
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
@@ -99,6 +99,18 @@ class TestAppDeclarativeControllerCreation:
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(get_app_description(app_json))
         assert field_name in exc_info.value.detail
+
+    @pytest.mark.parametrize('bk_app_code_len,is_valid', [(16, True), (20, False), (30, False)])
+    def test_app_code_length(self, bk_user, random_name, bk_app_code_len, is_valid):
+        bk_app_code = generate_random_string(length=bk_app_code_len)
+        app_json = make_app_desc(bk_app_code)
+
+        controller = AppDeclarativeController(bk_user)
+        if is_valid:
+            controller.perform_action(get_app_description(app_json))
+        else:
+            with pytest.raises(DescriptionValidationError):
+                controller.perform_action(get_app_description(app_json))
 
     def test_name_is_duplicated(self, bk_user, random_name):
         existed_app = create_app()

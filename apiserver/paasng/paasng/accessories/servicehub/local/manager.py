@@ -52,10 +52,10 @@ from paasng.accessories.servicehub.services import (
     ServiceSpecificationHelper,
 )
 from paasng.accessories.services.models import Plan, Service
-from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models import EngineApp
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
@@ -368,6 +368,16 @@ class LocalServiceMgr(BaseServiceMgr):
     def module_is_bound_with(self, service: ServiceObj, module: Module) -> bool:
         """Check if a module is bound with a service"""
         return ServiceModuleAttachment.objects.filter(module=module, service_id=service.uuid).exists()
+
+    def get_provisioned_envs(self, service: ServiceObj, module: Module) -> List[AppEnvName]:
+        """Get a list of bound envs"""
+        env_list = []
+        for env in module.get_envs():
+            if ServiceEngineAppAttachment.objects.filter(
+                engine_app=env.get_engine_app(), service=service, service_instance__isnull=True
+            ).exists():
+                env_list.append(env.environment)
+        return env_list
 
 
 class LocalPlanMgr(BasePlanMgr):

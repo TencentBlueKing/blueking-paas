@@ -17,7 +17,7 @@
           <div class="overview-title-text">
             <div class="overflow-app-metedata">
               <strong
-                v-bk-tooltips="appInfo.name"
+                v-bk-overflow-tips
                 class="app-title"
               >{{ appInfo.name }}</strong>
               <div

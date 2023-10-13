@@ -30,6 +30,7 @@ export default {
     isPageEdit: false,
     processPageEdit: false,
     hookPageEdit: false,
+    isModuleInfoEdit: false,
   },
   getters: {},
   mutations: {
@@ -44,6 +45,9 @@ export default {
     },
     updateHookPageEdit(state, data) {
       state.hookPageEdit = data;
+    },
+    updateModuleInfoEdit(state, data) {
+      state.isModuleInfoEdit = data;
     },
   },
   actions: {

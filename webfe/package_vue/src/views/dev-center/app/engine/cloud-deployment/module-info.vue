@@ -351,8 +351,7 @@
     </div>
   </paas-content-loader>
 </template>
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import moment from 'moment';
 import _ from 'lodash';
 export default {
@@ -391,6 +390,7 @@ export default {
       gatewayInfosStagLoading: false,
       pageLoading: true,
       envs: [],
+      credentialList: [],
       rules: {
         image: [
           {
@@ -404,7 +404,7 @@ export default {
             trigger: 'blur',
           },
         ],
-      }
+      },
     };
   },
   computed: {
@@ -439,6 +439,11 @@ export default {
       || this.isGatewayInfosBeClearing
       || !this.gatewayInfos.prod.node_ip_addresses.length
       || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+    },
+
+    // 基本信息是否为编辑态
+    isModuleInfoEdit() {
+      return this.$store.state.cloudApi.isModuleInfoEdit;
     },
   },
   watch: {
@@ -475,9 +480,18 @@ export default {
     // 镜像凭证列表
     this.getCredentialList();
 
+    // 默认为编辑态
+    this.isModuleInfoEdit && this.handleEdit('isBasePageEdit');
+
     // 出口IP管理
     this.getGatewayInfos('stag');
     this.getGatewayInfos('prod');
+
+    // 组件销毁前
+    this.$once('hook:beforeDestroy', () => {
+      // 关闭基本信息编辑态
+      this.$store.commit('cloudApi/updateModuleInfoEdit', false);
+    });
   },
   methods: {
     handleProcessNameEdit() {},

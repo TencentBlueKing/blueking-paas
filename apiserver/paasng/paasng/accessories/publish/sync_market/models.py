@@ -16,12 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from dataclasses import dataclass
+
 from django.db import models as django_models
 
 from paasng.accessories.publish.market import models as market_models
-from paasng.anti_contracts.accessories.publish.sync_market import models as sync_market_models
 
-TagData = sync_market_models.TagData
+
+@dataclass
+class TagData:
+    id: int
+    name: str
+    enabled: bool
+    index: int
+    remark: str
+    parent_id: int
+    region: str
 
 
 class TagMap(django_models.Model):

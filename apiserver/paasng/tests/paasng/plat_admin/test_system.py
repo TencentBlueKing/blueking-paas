@@ -37,7 +37,7 @@ from paasng.plat_admin.system.applications import (
     query_uni_apps_by_keyword,
     str_username,
 )
-from paasng.platform.applications.operations import get_contact_info
+from paasng.platform.applications.operators import get_contact_info
 from paasng.platform.engine.constants import OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment

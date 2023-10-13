@@ -52,7 +52,7 @@ from paasng.plat_admin.system.serializers import (
 from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.operations import get_contact_info
+from paasng.platform.applications.operators import get_contact_info
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.utils.error_codes import error_codes
 

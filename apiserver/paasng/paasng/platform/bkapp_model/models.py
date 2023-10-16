@@ -29,7 +29,7 @@ class ModuleProcessSpec(TimestampedModel):
 
     部署应用时会同步到 paas_wl.ProcessSpec, 需保证字段与 ProcessSpec 一致"""
 
-    module = models.OneToOneField(
+    module = models.ForeignKey(
         'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name="process_specs"
     )
     name = models.CharField('进程名称', max_length=32)
@@ -54,3 +54,6 @@ class ModuleProcessSpec(TimestampedModel):
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
     autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
     scaling_config = models.JSONField('自动扩缩容配置', default={})
+
+    class Meta:
+        unique_together = ("module", "name")

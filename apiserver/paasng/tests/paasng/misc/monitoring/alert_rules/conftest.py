@@ -71,7 +71,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
 
     app_code = bk_app.code
     rule_configs = DEFAULT_RULE_CONFIGS
-    notice_group_name = f"[{app_code}] {_('通知组')}"
+    notice_group_name = f"{_('应用成员')}"
 
     default_rules = {
         AlertCode.HIGH_CPU_USAGE.value: {
@@ -103,7 +103,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
         for env in ['stag', 'prod']:
             alert_rule_name = c['alert_rule_name_format'].format(env=env)
             init_rule_configs[f"rule/{alert_rule_name}.yaml"] = j2_env.get_template(c['template_name']).render(
-                alert_rule_display_name=f"[{app_code}:default:{env}] " f"{rule_configs[alert_code]['display_name']}",
+                alert_rule_display_name=f"{rule_configs[alert_code]['display_name']} [default:{env}]",
                 app_code=app_code,
                 run_env=env,
                 alert_code=alert_code,
@@ -119,7 +119,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
 
     notice_group_config = {
         'notice/default_notice.yaml': j2_env.get_template('notice.yaml.j2').render(
-            notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developers()
+            notice_group_name=f"{_('应用成员')}", receivers=bk_app.get_developers()
         )
     }
 

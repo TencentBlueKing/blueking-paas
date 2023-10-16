@@ -52,7 +52,7 @@ urlpatterns = [
     url(r'^', include('paasng.platform.engine.urls')),
     url(r'^', include('paasng.platform.engine.processes.urls')),
     url(r'^', include('paasng.accessories.ci.urls')),
-    url(r'^', include('paasng.platform.cnative.urls')),
+    url(r'^', include('paasng.platform.bkapp_model.urls')),
     url(r'^', include('paasng.platform.engine.streaming.urls')),
     url(r'^', include('paasng.platform.sourcectl.urls')),
     url(r'^', include('paasng.accessories.servicehub.urls')),

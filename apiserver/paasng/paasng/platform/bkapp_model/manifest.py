@@ -178,7 +178,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """Get K8s COMMAND/ARGS pair from process_spec"""
         # 仅托管镜像的应用目前会在页面上配置 command/args 字段, 其余类型的应用使用 proc_command 声明启动命令
         if process_spec.command or process_spec.args:
-            return process_spec.command, process_spec.args
+            return process_spec.command or [], process_spec.args or []
 
         mgr = ModuleRuntimeManager(module)
         if mgr.build_config.build_method == RuntimeType.BUILDPACK:

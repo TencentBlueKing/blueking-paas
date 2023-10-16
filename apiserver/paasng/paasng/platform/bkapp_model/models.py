@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
+from typing import List, Optional
 
 from django.db import models
 
@@ -35,8 +35,8 @@ class ModuleProcessSpec(TimestampedModel):
     name = models.CharField('进程名称', max_length=32)
 
     proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
-    command: List[str] = models.JSONField(help_text="容器执行命令", default=None, null=True)
-    args: List[str] = models.JSONField(help_text="命令参数", default=None, null=True)
+    command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
+    args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
 
     # Deprecated: 仅用于 v1alpha1 的云原生应用
@@ -47,7 +47,7 @@ class ModuleProcessSpec(TimestampedModel):
         default=ImagePullPolicy.IF_NOT_PRESENT,
         max_length=20,
     )
-    image_credential_ame = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
+    image_credential_name = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
 
     target_replicas = models.IntegerField('期望副本数', default=1)
     target_status = models.CharField('期望状态', max_length=32, default="start")

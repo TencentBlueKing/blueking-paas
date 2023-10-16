@@ -16,17 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .build_cfg import BuildConfig
-from .deploy_config import DeployConfig
-from .module import Module
-from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType
+from dataclasses import dataclass
+from typing import Optional
 
-__all__ = [
-    "BuildConfig",
-    "DeployConfig",
-    "Module",
-    "AppBuildPack",
-    "AppSlugBuilder",
-    "AppSlugRunner",
-    "BuildPackType",
-]
+
+@dataclass
+class EnvItem:
+    key: str
+    value: str
+    description: str
+    is_builtin: bool
+    environment_name: Optional[str] = None

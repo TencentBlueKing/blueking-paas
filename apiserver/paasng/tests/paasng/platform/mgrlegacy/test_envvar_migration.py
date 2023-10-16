@@ -16,11 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paasng.infras.legacydb.entities import EnvItem
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.mgrlegacy.app_migrations.basic import BaseObjectMigration, MainInfoMigration
 from paasng.platform.mgrlegacy.app_migrations.envs_base import BaseEnvironmentVariableMigration
 from paasng.platform.mgrlegacy.app_migrations.product import ProductMigration
-from paasng.accessories.publish.sync_market.constant import EnvItem
 from tests.paasng.platform.mgrlegacy.test_migration import BaseTestCaseForMigration
 
 try:

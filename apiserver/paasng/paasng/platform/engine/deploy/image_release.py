@@ -21,12 +21,15 @@ import logging
 from celery import shared_task
 from django.utils.translation import gettext as _
 
+from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.models import AppModelRevision
-from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -36,9 +39,6 @@ from paasng.platform.engine.signals import post_phase_end, pre_phase_start
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep
-from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.i18n.celery import I18nTask
 
@@ -107,6 +107,11 @@ class ImageReleaseMgr(DeployStep):
                     procfile={},
                     extra_envs={},
                 )
+            # TODO: 增加阶段 解析应用进程信息
+            # with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+            # TODO: build processes from ModuleProcessSpec model, and save it into deployment
+            # processes = ModuleProcessSpec
+            # self.deployment.update_fields(processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
             self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
         with self.procedure_force_phase('配置镜像访问凭证', phase=preparation_phase):

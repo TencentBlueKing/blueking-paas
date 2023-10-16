@@ -122,7 +122,7 @@ INSTALLED_APPS = [
     'paasng.misc.operations',
     'paasng.platform.environments',
     'paasng.accessories.ci',
-    'paasng.platform.cnative',
+    'paasng.platform.bkapp_model',
     'paasng.platform.engine',
     'paasng.platform.engine.streaming',
     'paasng.accessories.publish.market',

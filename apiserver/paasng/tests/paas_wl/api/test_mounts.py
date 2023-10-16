@@ -68,8 +68,7 @@ def mounts(bk_app, bk_module):
 @pytest.fixture(autouse=True, scope="class")
 def mock_volume_source_manager():
     with patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
-        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None
-    ):
+            "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):
         yield
 
 
@@ -117,7 +116,7 @@ class TestVolumeMountViewSet:
                 # 创建相同 unique_together = ('module_id', 'mount_path', 'environment_name') 的 Mount
                 "environment_name": "_global_",
                 "source_config_data": {"configmap_z": "configmap_z_data"},
-                "mount_path": "/",
+                "mount_path": "/path/",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
             },
@@ -133,6 +132,22 @@ class TestVolumeMountViewSet:
                 # 创建空挂载内容的 Mount
                 "environment_name": "_global_",
                 "source_config_data": {},
+                "mount_path": "/path",
+                "name": "mount-configmap-test",
+                "source_type": "ConfigMap",
+            },
+            {
+                # 创建挂载内容为数组的 Mount
+                "environment_name": "_global_",
+                "source_config_data": ["configmap_x", "configmap_y"],
+                "mount_path": "/path",
+                "name": "mount-configmap-test",
+                "source_type": "ConfigMap",
+            },
+            {
+                # 创建挂载内容 key 为空的 Mount
+                "environment_name": "_global_",
+                "source_config_data": {"": "configmap_z_data", "configmap_z": "configmap_z_data"},
                 "mount_path": "/path",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",

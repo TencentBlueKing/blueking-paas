@@ -21,7 +21,7 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 from blue_krill.web.std_error import APIError
 
-from paasng.platform.cnative.services import get_default_cluster_name
+from paasng.platform.bkapp_model.services import get_default_cluster_name
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.mocks.engine import mock_cluster_service
 

@@ -45,13 +45,7 @@ class AsCodeClient:
 
     def __init__(self, app_code: str):
         self.app_code = app_code
-        self.default_notice_group_name = f"[{self.app_code}] {_('通知组')}"
-
-    def apply_rule_configs(self, rule_configs: List[RuleConfig]):
-        """下发告警规则"""
-        self._validate(rule_configs)
-        configs = self._render_rule_configs(rule_configs)
-        self._apply_rule_configs(configs)
+        self.default_notice_group_name = f"{_('应用成员')}"
 
     def apply_notice_group(self, receivers: List[str]):
         """下发通知组"""
@@ -64,6 +58,12 @@ class AsCodeClient:
             )
         }
         self._apply_rule_configs(configs, f'{self.app_code}_notice_group', incremental=False)
+
+    def apply_rule_configs(self, rule_configs: List[RuleConfig]):
+        """下发告警规则"""
+        self._validate(rule_configs)
+        configs = self._render_rule_configs(rule_configs)
+        self._apply_rule_configs(configs)
 
     def _validate(self, rule_configs: List[RuleConfig]):
         for config in rule_configs:

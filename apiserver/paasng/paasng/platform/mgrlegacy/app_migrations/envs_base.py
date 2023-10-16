@@ -24,12 +24,12 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.publish.sync_market.managers import AppEnvVarManger
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.legacydb.entities import EnvItem
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
-from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
-from paasng.accessories.publish.sync_market.constant import EnvItem
-from paasng.accessories.publish.sync_market.managers import AppEnvVarManger
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import ApplicationEnvironment

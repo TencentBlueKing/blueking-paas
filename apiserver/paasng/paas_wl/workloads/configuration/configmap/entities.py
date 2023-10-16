@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -23,7 +24,15 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base.kres import KConfigMap
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
+from paas_wl.infras.resources.kube_res.base import (
+    AppEntity,
+    AppEntityDeserializer,
+    AppEntityManager,
+    AppEntitySerializer,
+)
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigMapSerializer(AppEntitySerializer['ConfigMap']):
@@ -60,4 +69,20 @@ class ConfigMap(AppEntity):
         serializer = ConfigMapSerializer
 
 
-configmap_kmodel: AppEntityManager[ConfigMap] = AppEntityManager[ConfigMap](ConfigMap)
+class ConfigMapManager(AppEntityManager[ConfigMap]):
+    def __init__(self):
+        super().__init__(ConfigMap)
+
+    def delete(self, res: ConfigMap, non_grace_period: bool = False):
+        namespace = res.app.namespace
+        config_name = res.name
+
+        try:
+            existed_one = self.get(app=res.app, name=config_name)
+        except AppEntityNotFound:
+            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
+            return
+        return super().delete(existed_one, non_grace_period)
+
+
+configmap_kmodel = ConfigMapManager()

@@ -159,11 +159,11 @@ class UpsertMountSLZ(serializers.Serializer):
     mount_path = serializers.RegexField(regex=r"^(/[a-zA-Z0-9-_.]+/?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
-    source_config_data = serializers.JSONField(
+    source_config_data = serializers.DictField(
         help_text=_(
             "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。" "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
         ),
-        default=dict,
+        child=serializers.CharField(),
     )
 
     def validate(self, attrs):
@@ -175,6 +175,12 @@ class UpsertMountSLZ(serializers.Serializer):
             if not source_config_data:
                 raise serializers.ValidationError(_("挂载卷内容不可为空"))
         return attrs
+
+    def validate_source_config_data(self, value):
+        for key in value.keys():
+            if not key:
+                raise serializers.ValidationError("key cannot be empty")
+        return value
 
 
 class MountSLZ(serializers.ModelSerializer):

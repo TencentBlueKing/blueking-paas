@@ -26,14 +26,10 @@ from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.publish.sync_market.managers import AppEnvVarManger
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.legacydb.entities import EnvItem
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
-
-try:
-    from paasng.infras.legacydb_te.constants import EnvItem
-except ImportError:
-    from paasng.accessories.publish.sync_market.constant import EnvItem  # type: ignore
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import ApplicationEnvironment

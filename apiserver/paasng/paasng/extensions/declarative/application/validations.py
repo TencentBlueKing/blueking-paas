@@ -109,6 +109,8 @@ class AppDescriptionSLZ(serializers.Serializer):
     region = serializers.ChoiceField(required=False, allow_null=True, choices=get_region().get_choices())
     bk_app_code = AppIDField(
         # DNS safe(prefix)
+        # S-mart 应用ID 长度限制为 20 个字符
+        max_length=20,
         regex="^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$",
         validators=[ReservedWordValidator("应用 ID"), AppIDUniqueValidator()],
         error_messages={'invalid': _('格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)')},

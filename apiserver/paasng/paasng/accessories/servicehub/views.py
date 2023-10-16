@@ -31,8 +31,6 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.accessories.servicehub import serializers as slzs
 from paasng.accessories.servicehub.exceptions import (
     ReferencedAttachmentNotFound,
@@ -44,18 +42,20 @@ from paasng.accessories.servicehub.models import ServiceSetGroupByName
 from paasng.accessories.servicehub.services import ServiceObj, ServicePlansHelper, ServiceSpecificationHelper
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.models import Template
-from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
+from paasng.core.region.models import get_all_regions
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter
 from paasng.platform.applications.protections import ProtectedRes, raise_if_protected, res_must_not_be_protected_perm
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.serializers import MinimalModuleSLZ
-from paasng.core.region.models import get_all_regions
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
@@ -405,7 +405,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in services
         }
         for env in module.get_envs():
-            list_provisioned_rels = mixed_service_mgr.list_provisioned_rels(env.engine_app)
+            list_provisioned_rels = mixed_service_mgr.list_all_rels(env.engine_app)
             for rel in list_provisioned_rels:
                 svc = rel.get_service()
                 if svc.uuid not in svc_allocation_map:

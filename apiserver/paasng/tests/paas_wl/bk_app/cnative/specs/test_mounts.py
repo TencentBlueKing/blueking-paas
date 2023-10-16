@@ -26,7 +26,9 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount
 from paas_wl.infras.resources.base.kres import KNamespace
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.workloads.configuration.configmap.entities import configmap_kmodel
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -120,5 +122,27 @@ class TestVolumeSourceManager:
             yield
             KNamespace(client).delete(bk_stag_env.wl_app.namespace)
 
+    @pytest.fixture
+    def mount(self, bk_app, bk_module):
+        mount = Mount.objects.new(
+            app_code=bk_app.code,
+            module_id=bk_module.id,
+            mount_path="/path/",
+            environment_name=MountEnvName.GLOBAL,
+            name="mount-configmap",
+            source_type=VolumeSourceType.ConfigMap.value,
+            region=bk_app.region,
+        )
+        source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
+        Mount.objects.upsert_source(mount, source_data)
+        return mount
+
     def test_deploy(self, create_namespace, bk_stag_env, with_wl_apps):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
+
+    def test_delete(self, create_namespace, bk_stag_env, with_wl_apps, mount):
+        mounts.VolumeSourceManager(bk_stag_env).deploy()
+        assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=mount.source.name)
+        mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount)
+        with pytest.raises(AppEntityNotFound):
+            configmap_kmodel.get(app=bk_stag_env.wl_app, name=mount.source.name)

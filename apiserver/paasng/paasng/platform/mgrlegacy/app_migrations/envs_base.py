@@ -33,7 +33,7 @@ from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 try:
     from paasng.infras.legacydb_te.constants import EnvItem
 except ImportError:
-    from paasng.accessories.publish.sync_market.constant import EnvItem
+    from paasng.accessories.publish.sync_market.constant import EnvItem  # type: ignore
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import ApplicationEnvironment

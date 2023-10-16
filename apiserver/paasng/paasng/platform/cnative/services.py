@@ -20,18 +20,18 @@ from typing import Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.applications.api import (
     create_app_ignore_duplicated,
     create_cnative_app_model_resource,
     update_metadata_by_env,
 )
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paasng.accessories.log.shim import setup_env_log_model
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import EngineApp
-from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.accessories.log.shim import setup_env_log_model
 from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
 from paasng.platform.modules.models import Module
 from paasng.utils.configs import get_region_aware
@@ -106,7 +106,7 @@ def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> E
 
 
 def get_default_cluster_name(region: str) -> str:
-    """get default cluster name from settings, and valid if we have this cluster."""
+    """Get default cluster name from settings, and valid if we have this cluster."""
     try:
         default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
     except Exception as e:

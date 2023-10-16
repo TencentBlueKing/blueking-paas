@@ -18,6 +18,7 @@ module.exports = {
     return {
       // dev配置项
       devServer: {
+        https:true,
       },
     };
   },

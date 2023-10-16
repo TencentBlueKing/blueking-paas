@@ -19,19 +19,25 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 
+import yaml
+from django.http.response import HttpResponse
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.cnative.bkapp_model.manifest import get_manifest
+from paasng.platform.cnative.serializers import GetManifestInputSLZ
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: Remove this API entirely because if become stale
 class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """云原生应用扩展信息管理"""
 
@@ -53,3 +59,25 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 manifest_ext["metadata"]["annotations"][ACCESS_CONTROL_ANNO_KEY] = "true"
 
         return Response(data=manifest_ext)
+
+
+class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """The main viewset for managing the manifests of blueking application model."""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(query_serializer=GetManifestInputSLZ, tags=["云原生应用"])
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的蓝鲸应用模型数据，支持 JSON、YAML 等不同格式。"""
+        slz = GetManifestInputSLZ(data=request.GET)
+        slz.is_valid(raise_exception=True)
+        module = self.get_module_via_path()
+
+        output_format = slz.validated_data['output_format']
+        if output_format == 'yaml':
+            manifests = get_manifest(module)
+            response = yaml.safe_dump_all(manifests)
+            # Use django's response to ignore DRF's renders
+            return HttpResponse(response, content_type='application/yaml')
+        else:
+            return Response(get_manifest(module))

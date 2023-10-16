@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 from paasng.utils.basic import ChoicesEnum
 
@@ -63,15 +63,6 @@ class PVTimeType(ChoicesEnum):
         (TYPE_7d, u"7天"),
         (TYPE_CUSTOMIZED, u"自定义"),
     )
-
-
-@dataclass
-class EnvItem:
-    key: str
-    value: str
-    description: str
-    is_builtin: bool
-    environment_name: Optional[str] = None
 
 
 @dataclass

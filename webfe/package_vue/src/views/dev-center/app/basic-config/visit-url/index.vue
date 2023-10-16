@@ -1,16 +1,10 @@
 <template>
   <div class="port-config" v-bkloading="{ isLoading: setModuleLoading, title: $t('正在设置主模块') }">
-    <div
-      class="content"
-      style="position: relative;"
-    >
+    <div class="content" style="position: relative">
       <div class="table-title">
         <i class="paasng-icon paasng-info-line info-icon" />
-        {{$t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。')}}
-        <a
-          :href="GLOBAL.DOC.APP_ENTRY_INTRO"
-          target="blank"
-        > {{ $t('详细使用说明') }} </a>
+        {{ $t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。') }}
+        <a :href="GLOBAL.DOC.APP_ENTRY_INTRO" target="blank"> {{ $t('详细使用说明') }} </a>
       </div>
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
@@ -23,21 +17,18 @@
       >
         <bk-table-column :label="$t('模块')" :width="190" class-name="table-colum-module-cls">
           <template slot-scope="{ row, $index }">
-            <section
-              class="module-container"
-              :class="rowIndex === $index && !row.is_default ? 'module-cursor' : ''">
-              <div class="flex-row align-items-center"
-              >{{ row.name || '--' }}
-                <img
-                  class="module-default ml10"
-                  v-if="row.is_default"
-                  src="/static/images/main.png"
-                >
+            <section class="module-container" :class="rowIndex === $index && !row.is_default ? 'module-cursor' : ''">
+              <div class="flex-row align-items-center">
+                {{ row.name || '--' }}
+                <img class="module-default ml10" v-if="row.is_default" src="/static/images/main.png" />
               </div>
               <bk-button
-                v-if="rowIndex === $index && !row.is_default" text theme="primary"
+                v-if="rowIndex === $index && !row.is_default"
+                text
+                theme="primary"
                 class="set-module-btn"
-                @click="handleSetDefault(row)">
+                @click="handleSetDefault(row)"
+              >
                 {{ $t('设为主模块') }}
               </bk-button>
             </section>
@@ -46,32 +37,45 @@
         <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls">
           <template slot-scope="{ row, $index }">
             <div
-              v-for="(item, i) in row.envsData" :key="item"
-              :style="{height: `${46 * row.envs[item].length}px`}"
+              v-for="(item, i) in row.envsData"
+              :key="item"
+              :style="{ height: `${46 * row.envs[item].length}px` }"
               class="cell-container flex-column justify-content-center"
               @mouseenter="handleEnvMouseEnter($index, i, row, item)"
-              @mouseleave="handleEnvMouseLeave">
-              <div
-                class="env-container"
-              >
+              @mouseleave="handleEnvMouseLeave"
+            >
+              <div class="env-container">
                 <div class="text-container">
                   <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
                   <div
                     class="ml15 mr15 text"
                     v-if="tableIndex === $index && envIndex === i && row.envs[item]"
-                    v-bk-tooltips="configIpTip">{{ $t(entryEnv[item]) }}</div>
+                    v-bk-tooltips="configIpTip"
+                  >
+                    {{ $t(entryEnv[item]) }}
+                  </div>
                   <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
                   <span
                     class="btn-container"
-                    v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
-                    v-if="rowIndex === $index && row.envs[item]">
+                    v-bk-tooltips="{
+                      content: $t(
+                        row.envs[item][0].is_running
+                          ? '添加自定义访问地址'
+                          : '需要先部署该环境后，才能添加自定义访问地址'
+                      ),
+                    }"
+                    v-if="rowIndex === $index && row.envs[item]"
+                  >
                     <i
                       class="paasng-icon paasng-plus-thick"
-                      :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''" />
+                      :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''"
+                    />
                     <bk-button
                       :disabled="!row.envs[item][0].is_running"
-                      text theme="primary"
-                      @click="handleAdd($index, i, row, item)">
+                      text
+                      theme="primary"
+                      @click="handleAdd($index, i, row, item)"
+                    >
                       {{ $t('添加') }}
                     </bk-button>
                   </span>
@@ -83,12 +87,16 @@
         </bk-table-column>
         <bk-table-column :label="$t('访问地址')" :min-width="600">
           <template slot-scope="{ row, $index }">
-            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
+            <div v-for="item in row.envsData" :key="item" class="cell-container">
               <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
                 <div v-if="e.isEdit">
                   <bk-form
-                    :label-width="0" form-type="inline" :model="e.address" ref="urlInfoForm"
-                    class="url-from-cls">
+                    :label-width="0"
+                    form-type="inline"
+                    :model="e.address"
+                    ref="urlInfoForm"
+                    class="url-from-cls"
+                  >
                     <bk-form-item :required="true" :property="'url'" :rules="rules.url">
                       <bk-input v-model="e.address.url" :placeholder="domainInputPlaceholderText" class="url-input-cls">
                         <template slot="prepend">
@@ -100,25 +108,29 @@
                       <bk-input
                         class="path-input-cls"
                         v-model="e.address.pathPrefix"
-                        :placeholder="$t('请输入路径')"></bk-input>
+                        :placeholder="$t('请输入路径')"
+                      ></bk-input>
                     </bk-form-item>
                   </bk-form>
                 </div>
                 <section v-else>
                   <div
-                    v-bk-tooltips="{content: $t(rowIndex === $index ?'该环境未部署，无法访问' : ''), disabled: e.is_running}"
-                    class="flex-row align-items-center">
+                    v-bk-tooltips="{
+                      content: $t(rowIndex === $index ? '该环境未部署，无法访问' : ''),
+                      disabled: e.is_running,
+                    }"
+                    class="flex-row align-items-center"
+                  >
                     <bk-button
-                      text theme="primary"
+                      text
+                      theme="primary"
                       class="address-btn-cls"
                       :disabled="!e.is_running"
                       @click="handleUrlOpen(e.address.url)"
-                    > {{ e.address.url }}</bk-button>
-                    <img
-                      class="custom-image ml10"
-                      v-if="e.address.type === 'custom'"
-                      src="/static/images/custom.png"
                     >
+                      {{ e.address.url }}</bk-button
+                    >
+                    <img class="custom-image ml10" v-if="e.address.type === 'custom'" src="/static/images/custom.png" />
                   </div>
                 </section>
                 <div class="line"></div>
@@ -143,15 +155,13 @@
                     <bk-button text theme="primary" @click="handleEdit($index, i, row, item)">
                       {{ $t('编辑') }}
                     </bk-button>
-                    <bk-button
-                      text theme="primary" class="pl20"
-                      @click="showRemoveModal(i, row, item)">
+                    <bk-button text theme="primary" class="pl20" @click="showRemoveModal(i, row, item)">
                       {{ $t('删除') }}
                     </bk-button>
                   </section>
                 </div>
-                <div v-else> -- </div>
-                <div class="line" :style="{top: $index < 4 ? '100%' : 'calc(100% - 0.5px)'}"></div>
+                <div v-else>--</div>
+                <div class="line" :style="{ top: $index < 4 ? '100%' : 'calc(100% - 0.5px)' }"></div>
               </div>
             </div>
           </template>
@@ -170,10 +180,10 @@
         @cancel="visitDialog.visiable = false"
       >
         <div class="tl">
-          <p> {{ $t('注意事项：') }} </p>
-          <p> {{ $t('1、应用的主访问路径将会变为子域名方式') }} </p>
-          <p> {{ $t('2、如果应用框架代码没有适配过独立域名访问方式，一些静态文件路径可能会出现问题') }} </p>
-          <p> {{ $t('3、旧的子路径地址依然有效，可以正常访问') }} </p>
+          <p>{{ $t('注意事项：') }}</p>
+          <p>{{ $t('1、应用的主访问路径将会变为子域名方式') }}</p>
+          <p>{{ $t('2、如果应用框架代码没有适配过独立域名访问方式，一些静态文件路径可能会出现问题') }}</p>
+          <p>{{ $t('3、旧的子路径地址依然有效，可以正常访问') }}</p>
         </div>
       </bk-dialog>
 
@@ -186,38 +196,30 @@
         :mask-close="false"
       >
         <div class="tl">
-          <p> {{ $t('设定后：') }} </p>
+          <p>{{ $t('设定后：') }}</p>
           <div class="flex-row mt5">
-            <p>1. </p>
+            <p>1.</p>
             <p class="pl10">
-              {{ $t('应用短地址') }}{{$t('（')}}{{ $route.params.id }}
-              {{ getAppRootDomain(curClickAppModule.clusters.prod) }}{{$t('）')}}
-              {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
+              {{ $t('应用短地址') }}{{ $t('（') }}{{ $route.params.id }}
+              {{ getAppRootDomain(curClickAppModule.clusters.prod) }}{{ $t('）') }} {{ $t('指向到应用') }}
+              {{ domainDialog.moduleName }}
               {{ $t('模块的生产环境') }}
             </p>
           </div>
           <div class="flex-row mt5">
-            <p>2. </p>
+            <p>2.</p>
             <p class="pl10">
-              {{ $t('应用访问限制') }}{{$t('（')}}{{ accessControlText.join('、') }}{{$t('）')}}{{ $t('变更为') }}
+              {{ $t('应用访问限制') }}{{ $t('（') }}{{ accessControlText.join('、') }}{{ $t('）') }}{{ $t('变更为') }}
               {{ $t('对') }}{{ domainDialog.moduleName }} {{ $t('生效') }}
             </p>
           </div>
         </div>
 
         <div slot="footer">
-          <bk-button
-            theme="primary"
-            @click="submitSetModule"
-            :loading="setModuleLoading"
-          >
+          <bk-button theme="primary" @click="submitSetModule" :loading="setModuleLoading">
             {{ $t('确定') }}
           </bk-button>
-          <bk-button
-            theme="default"
-            class="ml10"
-            @click="domainDialog.visiable = false"
-          >
+          <bk-button theme="default" class="ml10" @click="domainDialog.visiable = false">
             {{ $t('取消') }}
           </bk-button>
         </div>
@@ -226,7 +228,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 export default {
   mixins: [appBaseMixin],
@@ -348,7 +351,7 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
   },
@@ -357,13 +360,13 @@ export default {
   },
   methods: {
     /**
-       * 数据初始化入口
-       */
+     * 数据初始化入口
+     */
     init() {
-      this.getAppRegion();    // 环境信息
-      this.getEntryList();    // 列表信息
+      this.getAppRegion(); // 环境信息
+      this.getEntryList(); // 列表信息
       // this.getDefaultDomainInfo();
-      this.loadDomainConfig();    // 域名信息
+      this.loadDomainConfig(); // 域名信息
     },
 
     // 获取域名信息
@@ -489,7 +492,7 @@ export default {
           message: this.$t('主模块设置成功'),
         });
         this.$store.commit('updateCurAppModuleIsDefault', this.curClickAppModule.id);
-        this.getEntryList();    // 重新请求数据
+        this.getEntryList(); // 重新请求数据
       } catch (res) {
         this.$paasMessage({
           limit: 1,
@@ -520,9 +523,7 @@ export default {
 
     // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
-      this.ipConfigInfo = (this.curIngressIpConfigs || [])
-        .find(e => e.environment === env && e.module === payload.name)
-        || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
+      this.ipConfigInfo = (this.curIngressIpConfigs || []).find(e => e.environment === env && e.module === payload.name) || { frontend_ingress_ip: '暂无ip地址信息' }; // ip地址信息
       this.tableIndex = index;
       this.envIndex = envIndex;
       this.mouseEnter = true;
@@ -579,10 +580,9 @@ export default {
     // 保存一条数据
     async handleSubmit(index, envIndex, payload, envType) {
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
-      const readDataLength =  (payload?.envs[envType] || [])
-        .filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
-      const validateFromIndex = envIndex - readDataLength;    // 当前点击保存的输入框下标
-      await this.$refs.urlInfoForm[validateFromIndex].validate();   // 校验
+      const readDataLength = (payload?.envs[envType] || []).filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
+      const validateFromIndex = envIndex - readDataLength; // 当前点击保存的输入框下标
+      await this.$refs.urlInfoForm[validateFromIndex].validate(); // 校验
       const curUrlParams = {
         environment_name: envType,
         domain_name: payload.envs[envType][envIndex].address.url,
@@ -608,8 +608,8 @@ export default {
         });
         this.entryList = this.entryList.map((e, i) => {
           if (index === i) {
-            e.envs[envType][envIndex].isEdit = false;       // 改变本条数据的状态
-            e.envs[envType][envIndex].is_running = true;    // 能保存和编辑这代表已经部署过了
+            e.envs[envType][envIndex].isEdit = false; // 改变本条数据的状态
+            e.envs[envType][envIndex].is_running = true; // 能保存和编辑这代表已经部署过了
             e.envs[envType][envIndex].address.url = `http://${curUrlParams.domain_name}${curUrlParams.path_prefix}`; // 拼接地址和路径
           }
           return e;
@@ -636,11 +636,11 @@ export default {
     // 处理删除域名
     async handleDelete(envIndex, payload, envType) {
       try {
-        await this.$store.dispatch(
-          'entryConfig/deleteDomainInfo',
-          { appCode: this.appCode, id: payload.envs[envType][envIndex].address.id || this.curDataId },
-        );
-        this.getEntryList();    // 重新请求数据
+        await this.$store.dispatch('entryConfig/deleteDomainInfo', {
+          appCode: this.appCode,
+          id: payload.envs[envType][envIndex].address.id || this.curDataId,
+        });
+        this.getEntryList(); // 重新请求数据
         this.$paasMessage({
           theme: 'success',
           message: `${this.$t('删除成功')}`,
@@ -660,7 +660,7 @@ export default {
       this.entryList = this.entryList.map((e, i) => {
         if (index === i) {
           e.envs[envType][envIndex].isEdit = true;
-          const u = e.envs[envType][envIndex].address.url ? new URL(e.envs[envType][envIndex].address.url) : '';   // 格式化地址
+          const u = e.envs[envType][envIndex].address.url ? new URL(e.envs[envType][envIndex].address.url) : ''; // 格式化地址
           e.envs[envType][envIndex].address.url = u.hostname;
           e.envs[envType][envIndex].address.pathPrefix = u.pathname;
           this.hostInfo.hostName = u.hostname;
@@ -702,183 +702,182 @@ export default {
 };
 </script>
 
-  <style lang="scss" scoped>
-      .toggle-type {
-          position: absolute;
-          right: 20px;
-          top: 11px;
-      }
+<style lang="scss" scoped>
+.toggle-type {
+  position: absolute;
+  right: 20px;
+  top: 11px;
+}
 
-      .root-domains-row {
-          display: flex;
-          justify-content: space-between;
-      }
+.root-domains-row {
+  display: flex;
+  justify-content: space-between;
+}
 
-      .root-domains-wrapper {
-          display: flex;
-          .root-domain:nth-child(n + 2) {
-              margin-left: 20px;
-          }
-      }
+.root-domains-wrapper {
+  display: flex;
+  .root-domain:nth-child(n + 2) {
+    margin-left: 20px;
+  }
+}
 
-      .action-box {
-          line-height: 40px;
-          margin-right: 20px;
-      }
+.action-box {
+  line-height: 40px;
+  margin-right: 20px;
+}
 
-      .root-url {
-          font-size: 13px;
-      }
+.root-url {
+  font-size: 13px;
+}
 
-      .td-focus {
-          border: 1px solid #3a84ff;
-          transition: all .1s;
-          transform: translateY(-1px);
-      }
-      .td-title {
-          width: 180px;
-          text-align: center;
-          padding: 0;
-      }
+.td-focus {
+  border: 1px solid #3a84ff;
+  transition: all 0.1s;
+  transform: translateY(-1px);
+}
+.td-title {
+  width: 180px;
+  text-align: center;
+  padding: 0;
+}
 
-      .table-title{
-        font-size: 12px;
-        color: #63656E;
-        margin-bottom: 15px;
-      }
+.table-title {
+  font-size: 12px;
+  color: #63656e;
+  margin-bottom: 15px;
+}
 
-      .table-cls {
-        /deep/ .cell{
-          overflow:visible;
-          display: flex;
-          flex-flow: column;
-          align-items: flex-start;
-        }
+.table-cls {
+  /deep/ .cell {
+    overflow: visible;
+    display: flex;
+    flex-flow: column;
+    align-items: flex-start;
+  }
 
-        .module-container{
-          position: relative;
-          height: 46px;
-          display: flex;
-          flex-flow: column;
-          justify-content: center;
-          .module-default{
-            height: 22px;
-            width: 38px;
-          }
-          .module-cursor{
-            cursor: pointer;
-          }
-          .set-module-btn {
-            position: absolute;
-            bottom: -7px;
-            white-space: nowrap;
-          }
-        }
+  .module-container {
+    position: relative;
+    height: 46px;
+    display: flex;
+    flex-flow: column;
+    justify-content: center;
+    .module-default {
+      height: 22px;
+      width: 38px;
+    }
+    .module-cursor {
+      cursor: pointer;
+    }
+    .set-module-btn {
+      position: absolute;
+      bottom: -7px;
+      white-space: nowrap;
+    }
+  }
 
-        .cell-container{
-          width: 100%;
-          position: relative;
-        }
-        .env-container{
-          font-size: 12px;
-        }
+  .cell-container {
+    width: 100%;
+    position: relative;
+  }
+  .env-container {
+    font-size: 12px;
+  }
 
-        .text-container{
-          position: relative;
-          display: flex;
-          align-items: center;
-          .text{
-            border-bottom: 1px dashed #979ba5;
-          }
-        }
-        .btn-container{
-          position: absolute;
-          left: 80px;
-          color: #3a84ff;
-          cursor: pointer;
-          width: 50px;
-          .disable-add-icon{
-            color: #dcdee5;
-          }
-        }
+  .text-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    .text {
+      border-bottom: 1px dashed #979ba5;
+    }
+  }
+  .btn-container {
+    position: absolute;
+    left: 80px;
+    color: #3a84ff;
+    cursor: pointer;
+    width: 50px;
+    .disable-add-icon {
+      color: #dcdee5;
+    }
+  }
 
-        .line{
-          height: 1px;
-          background: #dfe0e5;
-          width: calc(100% + 30px);
-          position: absolute;
-          top: 100%;
-          left: -15px;
-          z-index: 1;
-        }
+  .line {
+    height: 1px;
+    background: #dfe0e5;
+    width: calc(100% + 30px);
+    position: absolute;
+    top: 100%;
+    left: -15px;
+    z-index: 1;
+  }
 
-        .url-container{
-          position: relative;
-          height: 46px;
-          line-height: 46px;
-          width: 100%;
-          .module-market{
-            width: 88px;
-            height: 22px;
-            font-size: 12px;
-            color: #14A568;
-            text-align: center;
-            line-height: 20px;
-            background: #E4FAF0;
-            border: 1px solid #14a5684d;
-            border-radius: 11px;
-          }
-          .address-btn-cls{
-            height: 46px !important;
-          }
-          .custom-image{
-            height: 22px;
-            width: 38px;
-          }
-        }
-      }
+  .url-container {
+    position: relative;
+    height: 46px;
+    line-height: 46px;
+    width: 100%;
+    .module-market {
+      width: 88px;
+      height: 22px;
+      font-size: 12px;
+      color: #14a568;
+      text-align: center;
+      line-height: 20px;
+      background: #e4faf0;
+      border: 1px solid #14a5684d;
+      border-radius: 11px;
+    }
+    .address-btn-cls {
+      height: 46px !important;
+    }
+    .custom-image {
+      height: 22px;
+      width: 38px;
+    }
+  }
+}
 
-      .url-input-cls{
-        /deep/ .bk-form-input{
-          width: 380px;
-        }
-      }
-      .path-input-cls{
-        /deep/ .bk-form-input{
-          width: 100px;
-        }
-      }
+.url-input-cls {
+  /deep/ .bk-form-input {
+    width: 380px;
+  }
+}
+.path-input-cls {
+  /deep/ .bk-form-input {
+    width: 100px;
+  }
+}
 
-      .port-config{
-        width: calc(100vw - 326px);
-        overflow-x: auto;
-      }
+.port-config {
+  width: calc(100vw - 326px);
+  overflow-x: auto;
+}
 
-      /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
-          padding: 0;
-          background: #FAFBFD;
-          z-index: 1;
-        }
+/deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even) {
+  padding: 0;
+  background: #fafbfd;
+  z-index: 1;
+}
 
-        /deep/ .bk-table-body-wrapper .hover-row .table-colum-cls :nth-child(even){
-          padding: 0;
-          background: #f5f7fa;
-          z-index: 1;
-        }
+/deep/ .bk-table-body-wrapper .hover-row .table-colum-cls :nth-child(even) {
+  padding: 0;
+  background: #f5f7fa;
+  z-index: 1;
+}
 
-        /deep/ .bk-table-body-wrapper .table-colum-cls .cell-container:nth-child(2){
-          border-top: 1px solid #dfe0e5;
-        }
-      /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
-        padding: 0 !important;
-      }
+/deep/ .bk-table-body-wrapper .table-colum-cls .cell-container:nth-child(2) {
+  border-top: 1px solid #dfe0e5;
+}
+/deep/ .bk-table-body-wrapper .table-colum-cls .cell {
+  padding: 0 !important;
+}
 
-      /deep/ .bk-table-body-wrapper .table-colum-module-cls {
-        background: #FAFBFD;
-      }
+/deep/ .bk-table-body-wrapper .table-colum-module-cls {
+  background: #fafbfd;
+}
 
-      .btn-container{
-        text-align: center;
-      }
-  </style>
-
+.btn-container {
+  text-align: center;
+}
+</style>

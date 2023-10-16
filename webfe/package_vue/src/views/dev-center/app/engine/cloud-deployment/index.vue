@@ -14,38 +14,19 @@
       :offset-top="30"
       class="app-container middle overview"
     >
-      <div
-        v-if="!isTab"
-        class="top-return-bar flex-row align-items-center"
-        @click="handleGoBack"
-      >
-        <i
-          class="paasng-icon paasng-arrows-left icon-cls-back mr5"
-        />
+      <div v-if="!isTab" class="top-return-bar flex-row align-items-center" @click="handleGoBack">
+        <i class="paasng-icon paasng-arrows-left icon-cls-back mr5" />
         <h4>{{ $t('返回上一页') }}</h4>
       </div>
       <section class="deploy-panel deploy-main mt5">
         <!-- 增强服务实例详情隐藏tab -->
-        <bk-tab
-          v-show="isTab"
-          ext-cls="deploy-tab-cls"
-          :active.sync="active"
-          @tab-change="handleGoPage"
-        >
+        <bk-tab v-show="isTab" ext-cls="deploy-tab-cls" :active.sync="active" @tab-change="handleGoPage">
           <template slot="setting">
-            <bk-button
-              class="pr20"
-              text
-              @click="handleYamlView"
-            >
+            <bk-button class="pr20" text @click="handleYamlView">
               {{ $t('查看YAML') }}
             </bk-button>
           </template>
-          <bk-tab-panel
-            v-for="(panel, index) in curTabPanels"
-            v-bind="panel"
-            :key="index"
-          ></bk-tab-panel>
+          <bk-tab-panel v-for="(panel, index) in curTabPanels" v-bind="panel" :key="index"></bk-tab-panel>
         </bk-tab>
 
         <div class="deploy-content">
@@ -92,10 +73,7 @@
         :position="{ top: deployDialogConfig.top }"
         :show-footer="false"
       >
-        <deployYaml
-          :height="deployDialogConfig.height"
-          :cloud-app-data="dialogCloudAppData"
-        />
+        <deployYaml :height="deployDialogConfig.height" :cloud-app-data="dialogCloudAppData" />
       </bk-dialog>
     </paas-content-loader>
   </div>
@@ -124,7 +102,7 @@ export default {
         visible: false,
         dialogWidth: 1200,
         top: 120,
-        height: 600
+        height: 600,
       },
       manifestExt: {},
       panels: [
@@ -132,6 +110,7 @@ export default {
         { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
         { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook' },
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env' },
+        { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
         { name: 'imageCredential', label: this.$t('镜像凭证-title'), ref: 'ticket' },
         { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
@@ -156,7 +135,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.curTabPanels.find((e) => e.name === this.active);
+      const curPenel = this.curTabPanels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -181,7 +160,7 @@ export default {
       if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
-      return this.panels.filter((item) => item.name !== 'cloudAppDeployForBuild');
+      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
     },
 
     // 是否需要保存操作按钮
@@ -192,16 +171,17 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
+      console.log(this.$route);
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
   created() {
-    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -321,7 +301,7 @@ export default {
       window.addEventListener('resize', throttle(this.handleResizeFun, 100));
     },
 
-    handleResizeFun () {
+    handleResizeFun() {
       if (window.innerWidth < 1366) {
         this.deployDialogConfig.dialogWidth = 800;
         this.deployDialogConfig.top = 80;
@@ -331,7 +311,7 @@ export default {
         this.deployDialogConfig.top = 120;
         this.deployDialogConfig.height = 600;
       }
-    }
+    },
   },
 };
 </script>
@@ -391,7 +371,7 @@ export default {
 }
 
 .top-return-bar {
-  background: #F5F7FA;
+  background: #f5f7fa;
   cursor: pointer;
   h4 {
     font-size: 14px;
@@ -399,8 +379,8 @@ export default {
     font-weight: 400;
     padding: 0;
   }
-  .icon-cls-back{
-    color: #3A84FF;
+  .icon-cls-back {
+    color: #3a84ff;
     font-size: 14px;
     font-weight: bold;
   }

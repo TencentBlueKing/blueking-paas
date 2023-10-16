@@ -1,10 +1,10 @@
 <template lang="html">
   <div
-    :class="[{ 'paas-loading-content': isLoaderShow, 'loading': localLoading, 'fadeout': !localLoading }]"
+    :class="[{ 'paas-loading-content': isLoaderShow, loading: localLoading, fadeout: !localLoading }]"
     :style="{ 'min-height': localLoading && height ? height + 'px' : 'calc(100% - 50px)' }"
   >
     <div
-      :class="['loading-placeholder', { 'hide': !isLoaderShow }, { 'transition': !isTransition }]"
+      :class="['loading-placeholder', { hide: !isLoaderShow }, { transition: !isTransition }]"
       :style="{ 'background-color': backgroundColor }"
     >
       <template v-if="placeholder">
@@ -20,7 +20,8 @@
   </div>
 </template>
 
-<script>import ByUserLoading from './loading/by-user';
+<script>
+import ByUserLoading from './loading/by-user';
 import LogLoading from './loading/log';
 import ProcessLoading from './loading/process';
 import IndexLoading from './loading/index';
@@ -66,6 +67,7 @@ import CloudApiIndexLoading from './loading/cloud-api-index';
 import DeployYamlLoading from './loading/deploy-yaml';
 import DeployResourceLoading from './loading/deploy-resource';
 import DeployEnvLoading from './loading/deploy-env';
+import DeployVolumeLoading from './loading/deploy-volume';
 import DeployProcessLoading from './loading/deploy-process';
 import DeployHookLoading from './loading/deploy-hook.vue';
 import SummaryPluginLoading from './loading/summary-plugin.vue';
@@ -126,6 +128,7 @@ export default {
     DeployYamlLoading,
     DeployResourceLoading,
     DeployEnvLoading,
+    DeployVolumeLoading,
     DeployProcessLoading,
     DeployHookLoading,
     SummaryPluginLoading,
@@ -168,7 +171,7 @@ export default {
     },
     isTransition: {
       type: Boolean,
-      default: true
+      default: true,
     },
   },
   data() {
@@ -258,77 +261,75 @@ export default {
 </script>
 
 <style lang="scss">
-  .paas-loading-content {
-    position: relative;
-    overflow: hidden;
+.paas-loading-content {
+  position: relative;
+  overflow: hidden;
 
-    &.loading {
-      * {
-        opacity: 0 !important;
-      }
-    }
-
-    &.fadeout {
-      .loading-placeholder {
-        opacity: 0 !important;
-      }
-    }
-
-    .loading-placeholder {
-      opacity: 1 !important;
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      z-index: 100;
-      transition: opacity ease 0.5s;
-      padding: 0 24px;
-      margin-top: 14px;
-
-      &.hide {
-        z-index: -1;
-      }
-
-      &.transition {
-        transition: none;
-      }
-
-      svg {
-        width: 1180px;
-      }
-
-      * {
-        opacity: 1 !important;
-      }
+  &.loading {
+    * {
+      opacity: 0 !important;
     }
   }
+
+  &.fadeout {
+    .loading-placeholder {
+      opacity: 0 !important;
+    }
+  }
+
+  .loading-placeholder {
+    opacity: 1 !important;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: opacity ease 0.5s;
+    padding: 0 24px;
+    margin-top: 14px;
+
+    &.hide {
+      z-index: -1;
+    }
+
+    &.transition {
+      transition: none;
+    }
+
+    svg {
+      width: 1180px;
+    }
+
+    * {
+      opacity: 1 !important;
+    }
+  }
+}
 
 @media (min-width: 1280px) {
-    .paas-loading-content .loading-placeholder {
-        width: auto;
-        svg {
-          width: 100%;
-        }
+  .paas-loading-content .loading-placeholder {
+    width: auto;
+    svg {
+      width: 100%;
     }
+  }
 }
 @media screen and (min-width: 1680px) {
-
 }
 @media screen and (min-width: 1920px) {
-
 }
 @media screen and (min-width: 2450px) {
-    .paas-loading-content .loading-placeholder {
-      width: auto;
-      svg {
-        width: 100%;
-      }
+  .paas-loading-content .loading-placeholder {
+    width: auto;
+    svg {
+      width: 100%;
     }
-}
-  .hide {
-    display: none;
   }
+}
+.hide {
+  display: none;
+}
 </style>

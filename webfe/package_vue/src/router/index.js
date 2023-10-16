@@ -98,6 +98,10 @@ const cloudAppDeploymentsForEnv = () => import(/* webpackChunkName: 'app-engine'
   window.showDeployTip(error);
 });
 
+const cloudAppDeployForVolume = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/cloud-deployment/deploy-volume').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const cloudAppDeploymentsForYaml = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/cloud-deployment/deploy-yaml').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -611,6 +615,14 @@ const router = new Router({
               name: 'cloudAppDeployForEnv',
               meta: {
                 module: 'env',
+              },
+            },
+            {
+              path: 'volume',
+              component: cloudAppDeployForVolume,
+              name: 'cloudAppDeployForVolume',
+              meta: {
+                module: 'volume',
               },
             },
             {

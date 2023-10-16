@@ -15,15 +15,12 @@
         :height="fullScreen ? clientHeight : height"
         @error="handleEditorErr"
       />
-      <EditorStatus
-        v-show="!!editorErr.message"
-        class="status-wrapper"
-        :message="editorErr.message"
-      />
+      <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
     </div>
   </paas-content-loader>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 import ResourceEditor from './comps/deploy-resource-editor';
 import EditorStatus from './comps/deploy-resource-editor/editor-status';
 import _ from 'lodash';
@@ -40,8 +37,8 @@ export default {
     },
     height: {
       type: Number,
-      default: 600
-    }
+      default: 600,
+    },
   },
   data() {
     return {
@@ -56,19 +53,20 @@ export default {
       screenIsLoading: true,
     };
   },
-  computed: {
-  },
+  computed: {},
   watch: {
     cloudAppData: {
       handler(val) {
         if (val.spec) {
           val.spec.processes.forEach((element) => {
-            if (typeof element.isEdit === 'boolean') { // false 也需要删除
+            if (typeof element.isEdit === 'boolean') {
+              // false 也需要删除
               delete element.isEdit;
             }
           });
           val.spec.configuration.env.forEach((element) => {
-            if (element.envName) { // envName 删除
+            if (element.envName) {
+              // envName 删除
               delete element.envName;
             }
             if (element.isAdd) {
@@ -108,10 +106,10 @@ export default {
       deep: true,
     },
   },
-  mounted() {
-  },
+  mounted() {},
   methods: {
-    handleEditorErr(err) { // 捕获编辑器错误提示
+    handleEditorErr(err) {
+      // 捕获编辑器错误提示
       this.editorErr.type = 'content'; // 编辑内容错误
       this.editorErr.message = err;
     },
@@ -124,5 +122,4 @@ export default {
   },
 };
 </script>
-<style scope>
-</style>
+<style scope></style>

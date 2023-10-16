@@ -12,31 +12,18 @@
         <bk-alert type="info">
           <span slot="title">
             {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
-            <span
-              class="built-in-env"
-              @click="handleShoEnvDialog"
-            >
+            <span class="built-in-env" @click="handleShoEnvDialog">
               {{ $t('查看内置环境变量') }}
             </span>
           </span>
         </bk-alert>
         <div class="flex-row align-items-center justify-content-between mt20">
           <div>
-            <bk-dropdown-menu
-              ref="largeDropdown"
-              trigger="click"
-              ext-cls="env-export-wrapper"
-            >
-              <bk-button
-                slot="dropdown-trigger"
-                class="mr10"
-              >
+            <bk-dropdown-menu ref="largeDropdown" trigger="click" ext-cls="env-export-wrapper">
+              <bk-button slot="dropdown-trigger" class="mr10">
                 {{ $t('批量导入') }}
               </bk-button>
-              <ul
-                slot="dropdown-content"
-                class="bk-dropdown-list"
-              >
+              <ul slot="dropdown-content" class="bk-dropdown-list">
                 <li>
                   <a
                     href="javascript:;"
@@ -59,12 +46,7 @@
                 </li>
               </ul>
             </bk-dropdown-menu>
-            <bk-button
-              :theme="'default'"
-              :outline="true"
-              class="export-btn-cls"
-              @click="handleExportToFile"
-            >
+            <bk-button :theme="'default'" :outline="true" class="export-btn-cls" @click="handleExportToFile">
               {{ $t('批量导出') }}
             </bk-button>
           </div>
@@ -93,10 +75,7 @@
             :sortable="!isPageEdit"
           >
             <template slot-scope="{ row, $index }">
-              <div
-                v-if="isPageEdit"
-                class="table-colum-cls"
-              >
+              <div v-if="isPageEdit" class="table-colum-cls">
                 <bk-form
                   :label-width="0"
                   form-type="inline"
@@ -104,11 +83,7 @@
                   class="env-from-cls"
                   :model="row"
                 >
-                  <bk-form-item
-                    :required="true"
-                    :property="'key'"
-                    :rules="rules.key"
-                  >
+                  <bk-form-item :required="true" :property="'key'" :rules="rules.key">
                     <bk-input
                       v-model="row.key"
                       class="env-input-cls"
@@ -122,10 +97,7 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column
-            :render-header="handleRenderHander"
-            class-name="table-colum-module-cls"
-          >
+          <bk-table-column :render-header="handleRenderHander" class-name="table-colum-module-cls">
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit">
                 <bk-form
@@ -135,11 +107,7 @@
                   class="env-from-cls"
                   :model="row"
                 >
-                  <bk-form-item
-                    :required="true"
-                    :property="'value'"
-                    :rules="rules.value"
-                  >
+                  <bk-form-item :required="true" :property="'value'" :rules="rules.value">
                     <bk-input
                       v-model="row.value"
                       @enter="handleInputEvent(row, $index)"
@@ -163,10 +131,7 @@
           >
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
-                <bk-form
-                  form-type="inline"
-                  class="env-from-cls"
-                >
+                <bk-form form-type="inline" class="env-from-cls">
                   <bk-form-item :required="true">
                     <bk-select
                       v-model="row.environment_name"
@@ -188,26 +153,12 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column
-            :label="$t('描述')"
-            class-name="table-colum-module-cls"
-          >
+          <bk-table-column :label="$t('描述')" class-name="table-colum-module-cls">
             <template slot-scope="{ row }">
               <div v-if="isPageEdit">
-                <bk-form
-                  form-type="inline"
-                  :ref="`envRefDescription`"
-                  class="env-from-cls"
-                >
-                  <bk-form-item
-                    :required="true"
-                    :property="'description'"
-                    :rules="rules.description"
-                  >
-                    <bk-input
-                      v-model="row.description"
-                      class="env-input-cls"
-                    ></bk-input>
+                <bk-form form-type="inline" :ref="`envRefDescription`" class="env-from-cls">
+                  <bk-form-item :required="true" :property="'description'" :rules="rules.description">
+                    <bk-input v-model="row.description" class="env-input-cls"></bk-input>
                   </bk-form-item>
                 </bk-form>
               </div>
@@ -215,21 +166,10 @@
             </template>
           </bk-table-column>
 
-          <bk-table-column
-            :label="$t('操作')"
-            width="100"
-            class-name="table-colum-module-cls"
-            v-if="isPageEdit"
-          >
+          <bk-table-column :label="$t('操作')" width="100" class-name="table-colum-module-cls" v-if="isPageEdit">
             <template slot-scope="{ $index }">
-              <div
-                v-if="isPageEdit"
-                class="env-table-icon"
-              >
-                <i
-                  class="icon paasng-icon paasng-plus-circle-shape"
-                  @click="handleEnvTableListData('add', $index)"
-                ></i>
+              <div v-if="isPageEdit" class="env-table-icon">
+                <i class="icon paasng-icon paasng-plus-circle-shape" @click="handleEnvTableListData('add', $index)"></i>
                 <i
                   class="icon paasng-icon paasng-minus-circle-shape pl20"
                   v-if="envVarList.length > 1"
@@ -239,28 +179,15 @@
             </template>
           </bk-table-column>
         </bk-table>
-        <div
-          v-else
-          class="ps-no-result"
-        >
+        <div v-else class="ps-no-result">
           <table-empty empty />
         </div>
 
-        <div
-          class="env-btn-wrapper"
-          v-if="isPageEdit && isComponentBtn"
-        >
-          <bk-button
-            class="pl20 pr20"
-            :theme="'primary'"
-            @click="$emit('save')"
-          >
+        <div class="env-btn-wrapper" v-if="isPageEdit && isComponentBtn">
+          <bk-button class="pl20 pr20" :theme="'primary'" @click="$emit('save')">
             {{ $t('保存') }}
           </bk-button>
-          <bk-button
-            class="pl20 pr20 ml20"
-            @click="$emit('cancel')"
-          >
+          <bk-button class="pl20 pr20 ml20" @click="$emit('cancel')">
             {{ $t('取消') }}
           </bk-button>
         </div>
@@ -274,25 +201,14 @@
       :quick-close="true"
       @shown="showEnvVariable"
     >
-      <div
-        slot="content"
-        v-bkloading="{ isLoading: envLoading, zIndex: 10 }"
-        class="slider-env-content"
-      >
+      <div slot="content" v-bkloading="{ isLoading: envLoading, zIndex: 10 }" class="slider-env-content">
         <div v-if="basicInfo.length">
           <p class="env-title mb10">
             {{ $t('应用基本信息') }}
           </p>
           <div ref="basicInfoWrapper">
-            <p
-              v-for="item in basicInfo"
-              :key="item.label"
-              class="env-item"
-            >
-              <span
-                ref="basicText"
-                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >
+            <p v-for="item in basicInfo" :key="item.label" class="env-item">
+              <span ref="basicText" v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }">
                 {{ item.label }}: {{ item.value }}
               </span>
             </p>
@@ -303,11 +219,7 @@
             {{ $t('应用运行时信息') }}
           </p>
           <div ref="appRuntimeInfoWrapper">
-            <p
-              v-for="item in appRuntimeInfo"
-              :key="item.label"
-              class="env-item"
-            >
+            <p v-for="item in appRuntimeInfo" :key="item.label" class="env-item">
               <span
                 ref="appRuntimeText"
                 v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
@@ -322,11 +234,7 @@
             {{ $t('蓝鲸体系内平台地址') }}
           </p>
           <div ref="bkPlatformInfoWrapper">
-            <p
-              v-for="item in bkPlatformInfo"
-              :key="item.label"
-              class="env-item"
-            >
+            <p v-for="item in bkPlatformInfo" :key="item.label" class="env-item">
               <span
                 ref="bkPlatformText"
                 v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
@@ -360,23 +268,13 @@
             style="flex: 0 0 390px"
             @selected="handleModuleSelected"
           >
-            <bk-option
-              v-for="option in addedModuleList"
-              :id="option.id"
-              :key="option.id"
-              :name="option.name"
-            />
+            <bk-option v-for="option in addedModuleList" :id="option.id" :key="option.id" :name="option.name" />
           </bk-select>
         </div>
-        <div
-          v-bkloading="{ isLoading: exportDialog.isLoading, opacity: 1 }"
-          class="export-by-module-tips"
-        >
-          <p
-            v-if="exportDialog.count"
-            style="line-height: 20px"
-          >
-            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+        <div v-bkloading="{ isLoading: exportDialog.isLoading, opacity: 1 }" class="export-by-module-tips">
+          <p v-if="exportDialog.count" style="line-height: 20px">
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }}
+            {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
           </p>
           <p v-else>【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}</p>
         </div>
@@ -406,14 +304,10 @@
       ext-cls="paas-env-var-upload-dialog"
       @after-leave="handleImportFileLeave"
     >
-      <div
-        slot="header"
-        class="header"
-      >
-        {{ $t('从文件导入环境变量到') }}【<span
-          class="title"
-          :title="curModuleId"
-        >{{ curModuleId }}</span> 】{{ $t('模块') }}
+      <div slot="header" class="header">
+        {{ $t('从文件导入环境变量到') }}【<span class="title" :title="curModuleId">{{ curModuleId }}</span> 】{{
+          $t('模块')
+        }}
       </div>
       <div>
         <div class="download-tips">
@@ -421,48 +315,24 @@
             <i class="paasng-icon paasng-exclamation-circle" />
             {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
           </span>
-          <bk-button
-            text
-            theme="primary"
-            size="small"
-            style="line-height: 40px"
-            @click="handleDownloadTemplate"
-          >
+          <bk-button text theme="primary" size="small" style="line-height: 40px" @click="handleDownloadTemplate">
             {{ $t('下载模板') }}
           </bk-button>
         </div>
         <div class="upload-content">
           <p><i class="paasng-icon paasng-file-fill file-icon" /></p>
           <p>
-            <bk-button
-              text
-              theme="primary"
-              ext-cls="env-var-upload-btn-cls"
-              @click="handleTriggerUpload"
-            >
+            <bk-button text theme="primary" ext-cls="env-var-upload-btn-cls" @click="handleTriggerUpload">
               {{ $t('选择文件') }}
             </bk-button>
           </p>
-          <p
-            v-if="curFile.name"
-            class="cur-upload-file"
-          >
-            {{ $t('已选择文件：') }} {{ curFile.name }}
-          </p>
-          <p
-            v-if="isFileTypeError"
-            class="file-error-tips"
-          >
+          <p v-if="curFile.name" class="cur-upload-file">{{ $t('已选择文件：') }} {{ curFile.name }}</p>
+          <p v-if="isFileTypeError" class="file-error-tips">
             {{ $t('请选择yaml文件') }}
           </p>
         </div>
 
-        <input
-          ref="upload"
-          type="file"
-          style="position: absolute; width: 0; height: 0"
-          @change="handleStartUpload"
-        />
+        <input ref="upload" type="file" style="position: absolute; width: 0; height: 0" @change="handleStartUpload" />
       </div>
       <div slot="footer">
         <bk-button
@@ -522,7 +392,7 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter((item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
+              const flag = this.envVarList.filter(item => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
@@ -617,7 +487,7 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
   watch: {},
@@ -631,16 +501,21 @@ export default {
     },
     getEnvVarList() {
       this.isTableLoading = true;
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
-        this.envVarList = [...response];
-        this.envLocalVarList = _.cloneDeep(this.envVarList);
-      }, (errRes) => {
-        const errorMsg = errRes.message;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-        });
-      })
+      this.$http
+        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`)
+        .then(
+          (response) => {
+            this.envVarList = [...response];
+            this.envLocalVarList = _.cloneDeep(this.envVarList);
+          },
+          (errRes) => {
+            const errorMsg = errRes.message;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+            });
+          },
+        )
         .finally(() => {
           this.isTableLoading = false;
           this.isLoading = false;
@@ -692,7 +567,11 @@ export default {
     // 保存
     async save() {
       try {
-        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: this.envVarList });
+        await this.$store.dispatch('envVar/saveEnvItem', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data: this.envVarList,
+        });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('添加环境变量成功'),
@@ -826,7 +705,7 @@ export default {
     // 选中环境
     handleEnvChange(curItem) {
       this.curItem = curItem;
-      const flag = this.envVarList.filter((item) => item.name === this.curItem.name && item.envName === this.curItem.envName);
+      const flag = this.envVarList.filter(item => item.name === this.curItem.name && item.envName === this.curItem.envName);
       if (flag.length <= 1) {
         // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {
@@ -863,7 +742,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportDialog.isLoading = false;
@@ -965,7 +844,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -989,7 +868,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -1065,7 +944,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.importFileDialog.loading = false;
@@ -1109,13 +988,10 @@ export default {
         default:
           break;
       }
-      return h(
-        'span', { class: 'custom-header-cls flex-row align-items-center' },
-        [
-          h('span', null, columnName),
-          h('span', { class: 'header-required' }, '*'),
-        ],
-      );
+      return h('span', { class: 'custom-header-cls flex-row align-items-center' }, [
+        h('span', null, columnName),
+        h('span', { class: 'header-required' }, '*'),
+      ]);
     },
   },
 };

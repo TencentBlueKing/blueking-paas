@@ -5,32 +5,21 @@
         v-if="category.children && category.children.length"
         :key="categoryIndex"
         :class="{
-          'on': category.isActived && !category.isExpanded,
-          'expanded': category.isExpanded
+          on: category.isActived && !category.isExpanded,
+          expanded: category.isExpanded,
         }"
       >
-        <a
-          class="overview-text"
-          href="javascript:"
-          @click.stop.prevent="toggleNavCategory(category)"
-        >
+        <a class="overview-text" href="javascript:" @click.stop.prevent="toggleNavCategory(category)">
           {{ category.label }}
-          <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]" />
+          <i :class="['paasng-icon paasng-angle-right', { down: category.isExpanded }]" />
         </a>
         <span :class="getIconClass(category)" />
-        <transition
-          @enter="enter"
-          @after-enter="afterEnter"
-          @leave="leave"
-        >
-          <div
-            v-if="category.isExpanded"
-            class="overview-text-slide"
-          >
+        <transition @enter="enter" @after-enter="afterEnter" @leave="leave">
+          <div v-if="category.isExpanded" class="overview-text-slide">
             <a
               v-for="(navItem, navIndex) in category.children"
               :key="navIndex"
-              :class="{ 'on': navItem.isSelected }"
+              :class="{ on: navItem.isSelected }"
               href="javascript: void(0);"
               @click.stop.prevent="goPage(navItem)"
             >
@@ -40,16 +29,8 @@
         </transition>
       </li>
 
-      <li
-        v-else-if="category.destRoute"
-        :key="categoryIndex"
-        :class="{ 'no-child-actived': category.isActived }"
-      >
-        <a
-          class="overview-text"
-          href="javascript:"
-          @click.stop.prevent="goPage(category)"
-        >
+      <li v-else-if="category.destRoute" :key="categoryIndex" :class="{ 'no-child-actived': category.isActived }">
+        <a class="overview-text" href="javascript:" @click.stop.prevent="goPage(category)">
           {{ category.label }}
         </a>
         <span :class="getIconClass(category)" />
@@ -58,7 +39,8 @@
   </ul>
 </template>
 
-<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>
+import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -132,8 +114,8 @@ export default {
       },
       deep: true,
     },
-    '$route'(newVal, oldVal) {
-      const isReload = (newVal.params.id !== oldVal.params.id) || (newVal.params.moduleId !== oldVal.params.moduleId);
+    $route(newVal, oldVal) {
+      const isReload = newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId;
       this.init(isReload);
     },
   },
@@ -208,8 +190,10 @@ export default {
         }
 
         // smart应用或lesscode应用，包管理
-        if (this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
-        && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
+        if (
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
+          && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
+        ) {
           navTree.forEach((nav) => {
             if (nav.name === 'appEngine') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
@@ -395,8 +379,7 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
-          || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
@@ -476,7 +459,7 @@ export default {
 
         const routeName = navItem.destRoute.name;
         const params = {
-          ...navItem.destRoute.params || {},
+          ...(navItem.destRoute.params || {}),
           ...this.$router.params,
           moduleId: this.curAppModule?.name,
         };
@@ -531,133 +514,132 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .app-nav {
-        padding-top: 9px;
-        width: 240px;
-        margin-top: 1px;
+.app-nav {
+  padding-top: 9px;
+  width: 240px;
+  margin-top: 1px;
 
-        > li {
-            width: 239px;
-            position: relative;
-            &.expanded {
-                background: #f5f7fa;
-            }
-
-            &.on {
-                .overview-text {
-                    color: #313238 !important;
-                }
-                .app-nav-icon {
-                    color: #313238 !important;
-                }
-            }
-
-            &.no-child-actived,
-            &.has-child-selected {
-                .overview-text {
-                    color: #3A84FF !important;
-                    background: #E1ECFF;
-                }
-                .app-nav-icon {
-                    color: #3A84FF !important;
-                }
-            }
-
-            &:hover {
-                .overview-text {
-                    color: #63656E;
-                }
-                .app-nav-icon {
-                    color: #63656E;
-                }
-                background: #f5f7fa;
-            }
-        }
+  > li {
+    width: 239px;
+    position: relative;
+    &.expanded {
+      background: #f5f7fa;
     }
 
-    .overview-text {
-        color: #63656E;
-        padding-left: 50px;
-        z-index: 1;
-        line-height: 42px;
-        font-size: 14px;
-        display: block;
-
-        &:hover {
-            color: #63656E;
-        }
+    &.on {
+      .overview-text {
+        color: #313238 !important;
+      }
+      .app-nav-icon {
+        color: #313238 !important;
+      }
     }
 
-    .overview-text-slide {
-        width: 100%;
-        position: relative;
-        overflow: hidden;
-        background: rgb(245, 247, 250);
-        > a {
-            width: 240px;
-            display: block;
-            line-height: 42px;
-            height: 42px;
-            display: block;
-            color: #63656E;
-            padding-left: 50px;
-            cursor: pointer;
-            position: relative;
-
-            &:hover,
-            &.on {
-                color: #3A84FF;
-                background: #E1ECFF;
-
-                &:after {
-                    background-color: #3A84FF;
-                }
-            }
-
-            &:after {
-                content: "";
-                width: 4px;
-                height: 4px;
-                position: absolute;
-                left: 28px;
-                top: 50%;
-                margin-top: -2px;
-                background-color: #DCDEE5;
-                border-radius: 50%;
-            }
-        }
+    &.no-child-actived,
+    &.has-child-selected {
+      .overview-text {
+        color: #3a84ff !important;
+        background: #e1ecff;
+      }
+      .app-nav-icon {
+        color: #3a84ff !important;
+      }
     }
 
-    .app-nav {
-        .paasng-icon {
-            font-size: 12px;
-            font-weight: bold;
-            position: absolute;
-            top: 16px;
-            right: 14px;
-            color: #979BA5;
-            display: inline-block;
-            transition: all ease 0.3s;
+    &:hover {
+      .overview-text {
+        color: #63656e;
+      }
+      .app-nav-icon {
+        color: #63656e;
+      }
+      background: #f5f7fa;
+    }
+  }
+}
 
-            &.app-nav-icon {
-                position: absolute;
-                font-weight: normal;
-                top: 12px;
-                left: 20px;
-                right: auto;
-                z-index: 2;
-                color: #666;
-                font-size: 18px;
-            }
+.overview-text {
+  color: #63656e;
+  padding-left: 50px;
+  z-index: 1;
+  line-height: 42px;
+  font-size: 14px;
+  display: block;
 
-            &.down {
-                transform: rotate(90deg);
-            }
-        }
+  &:hover {
+    color: #63656e;
+  }
+}
 
-        li.active i.paasng-icon {
-            color: #313238;
-        }
+.overview-text-slide {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: rgb(245, 247, 250);
+  > a {
+    width: 240px;
+    display: block;
+    line-height: 42px;
+    height: 42px;
+    display: block;
+    color: #63656e;
+    padding-left: 50px;
+    cursor: pointer;
+    position: relative;
+
+    &:hover,
+    &.on {
+      color: #3a84ff;
+      background: #e1ecff;
+
+      &:after {
+        background-color: #3a84ff;
+      }
     }
 
+    &:after {
+      content: '';
+      width: 4px;
+      height: 4px;
+      position: absolute;
+      left: 28px;
+      top: 50%;
+      margin-top: -2px;
+      background-color: #dcdee5;
+      border-radius: 50%;
+    }
+  }
+}
+
+.app-nav {
+  .paasng-icon {
+    font-size: 12px;
+    font-weight: bold;
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    color: #979ba5;
+    display: inline-block;
+    transition: all ease 0.3s;
+
+    &.app-nav-icon {
+      position: absolute;
+      font-weight: normal;
+      top: 12px;
+      left: 20px;
+      right: auto;
+      z-index: 2;
+      color: #666;
+      font-size: 18px;
+    }
+
+    &.down {
+      transform: rotate(90deg);
+    }
+  }
+
+  li.active i.paasng-icon {
+    color: #313238;
+  }
+}
 </style>

@@ -25,16 +25,17 @@ from paas_wl.bk_app.cnative.specs.constants import LEGACY_PROC_IMAGE_ANNO_KEY, A
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec, EnvVar, EnvVarOverlay, ObjectMetadata
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
-from paasng.platform.cnative.bkapp_model.manifest import (
+from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
     EnvVarsManifestConstructor,
     ProcessesManifestConstructor,
     get_manifest,
 )
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
-from paasng.platform.modules.models import BuildConfig, ModuleProcessSpec
+from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -59,7 +60,9 @@ def local_service(bk_app):
 @pytest.fixture
 def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
-    return G(ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000)
+    return G(
+        ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000, image=None
+    )
 
 
 class TestAddonsManifestConstructor:
@@ -124,9 +127,7 @@ class TestProcessesManifestConstructor:
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         cfg.build_method = build_method
         cfg.save()
-        with mock.patch(
-            "paasng.platform.cnative.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime
-        ):
+        with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
             assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
 
     def test_integrated(self, bk_module, blank_resource, process_web):

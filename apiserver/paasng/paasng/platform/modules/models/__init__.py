@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 from .build_cfg import BuildConfig
 from .deploy_config import DeployConfig
 from .module import Module
-from .processes import ModuleProcessSpec
 from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType
 
 __all__ = [
@@ -30,5 +29,4 @@ __all__ = [
     "AppSlugBuilder",
     "AppSlugRunner",
     "BuildPackType",
-    "ModuleProcessSpec",
 ]

@@ -45,10 +45,11 @@ from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.modules.models import Module, ModuleProcessSpec
+from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -116,15 +117,19 @@ class ProcessesManifestConstructor(ManifestConstructor):
     """Construct the processes part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        qs = ModuleProcessSpec.objects.filter(module=module).order_by("created")
-        if qs.count() == 0:
+        process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
+        if not process_specs:
             logger.warning("模块<%s> 未定义任何进程", module)
             return
 
         legacy_processes = {}
         processes = []
-        for process_spec in qs:
-            command, args = self.get_command_and_args(module, process_spec)
+        for process_spec in process_specs:
+            try:
+                command, args = self.get_command_and_args(module, process_spec)
+            except ValueError:
+                logger.warning("模块<%s>的 %s 进程 未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
+                command, args = [], []
             processes.append(
                 BkAppProcess(
                     name=process_spec.name,
@@ -171,8 +176,10 @@ class ProcessesManifestConstructor(ManifestConstructor):
     @staticmethod
     def get_command_and_args(module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get K8s COMMAND/ARGS pair from process_spec"""
+        # 仅托管镜像的应用目前会在页面上配置 command/args 字段, 其余类型的应用使用 proc_command 声明启动命令
         if process_spec.command or process_spec.args:
             return process_spec.command, process_spec.args
+
         mgr = ModuleRuntimeManager(module)
         if mgr.build_config.build_method == RuntimeType.BUILDPACK:
             if mgr.is_cnb_runtime:
@@ -183,7 +190,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         elif mgr.build_config.build_method == RuntimeType.DOCKERFILE:
             o = shlex.split(process_spec.proc_command)
             return [o[0]], o[1:]
-        raise NotImplementedError
+        raise ValueError
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):
@@ -208,7 +215,7 @@ class EnvVarsManifestConstructor(ManifestConstructor):
 
 
 class HooksManifestConstructor(ManifestConstructor):
-    """Construct the env variables part."""
+    """Construct the hooks part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
         # TODO

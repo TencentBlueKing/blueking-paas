@@ -31,7 +31,7 @@ class TestCNative:
     @pytest.fixture(autouse=True)
     def mock_dependencies(self):
         with mock.patch(
-            'paasng.platform.cnative.views.mixed_service_mgr.list_binded',
+            'paasng.platform.bkapp_model.views.mixed_service_mgr.list_binded',
             new=lambda *args, **kwargs: [
                 ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid='xxx', name='mysql', logo='', is_visible=True),
                 ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid='xxx', name='redis', logo='', is_visible=True),

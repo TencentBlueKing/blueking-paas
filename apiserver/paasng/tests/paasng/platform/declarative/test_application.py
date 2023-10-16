@@ -64,7 +64,7 @@ def make_app_desc(
     display_options: Optional[Dict] = None,
     tag: Optional[Tag] = None,
     description: Optional[str] = None,
-    services: Optional[List] = None
+    services: Optional[List] = None,
 ):
     """Make description data for testing"""
     result: Dict[str, Any] = {
@@ -102,7 +102,8 @@ class TestAppDeclarativeControllerCreation:
 
     @pytest.mark.parametrize('bk_app_code_len,is_valid', [(16, True), (20, False), (30, False)])
     def test_app_code_length(self, bk_user, random_name, bk_app_code_len, is_valid):
-        bk_app_code = generate_random_string(length=bk_app_code_len)
+        # 保证应用 ID 是以字母开头
+        bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len-2))}"
         app_json = make_app_desc(bk_app_code)
 
         controller = AppDeclarativeController(bk_user)

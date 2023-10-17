@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.core.env import env_is_running
-from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
+from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
 from tests.paas_wl.workloads.conftest import create_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

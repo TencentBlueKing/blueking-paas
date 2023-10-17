@@ -20,7 +20,7 @@ from typing import List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
-from paasng.engine.constants import JobStatus
+from paasng.platform.engine.constants import JobStatus
 
 
 class BuildStatus(str, StructuredEnum):

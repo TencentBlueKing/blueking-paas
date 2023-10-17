@@ -27,16 +27,16 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accounts.constants import AccountFeatureFlag as AFF
-from paasng.accounts.constants import SiteRole
-from paasng.accounts.models import AccountFeatureFlag, User, UserPrivateToken, UserProfile
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.accounts.serializers import AccountFeatureFlagSLZ
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.constants import SiteRole
+from paasng.infras.accounts.models import AccountFeatureFlag, User, UserPrivateToken, UserProfile
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
 from paasng.plat_admin.admin42.serializers import accountmgr
 from paasng.plat_admin.admin42.utils.filters import UserProfileFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.platform.region.models import get_all_regions
+from paasng.core.region.models import get_all_regions
 
 logger = logging.getLogger(__name__)
 

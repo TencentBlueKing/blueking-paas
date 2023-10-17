@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Callable, Dict
 
-from paas_wl.platform.applications.models import WlApp
+from paas_wl.bk_app.applications.models import WlApp
 
 _get_structure_func = None
 

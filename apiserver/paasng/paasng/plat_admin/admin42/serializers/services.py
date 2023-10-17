@@ -20,10 +20,10 @@ from django.utils.translation import get_language
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.dev_resources.servicehub.local.manager import LocalServiceObj
-from paasng.dev_resources.servicehub.remote.manager import RemoteServiceObj
-from paasng.dev_resources.servicehub.services import ServiceSpecificationDefinition
-from paasng.dev_resources.services.models import Plan, PreCreatedInstance
+from paasng.accessories.servicehub.local.manager import LocalServiceObj
+from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
+from paasng.accessories.servicehub.services import ServiceSpecificationDefinition
+from paasng.accessories.services.models import Plan, PreCreatedInstance
 from paasng.plat_admin.admin42.serializers.engine import EnvironmentSLZ
 from paasng.utils.i18n import to_translated_field
 

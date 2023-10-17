@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.networking.ingress.models import AppDomain, Domain
+from paas_wl.workloads.networking.ingress.models import AppDomain, Domain
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
 from tests.conftest import CLUSTER_NAME_FOR_TESTING

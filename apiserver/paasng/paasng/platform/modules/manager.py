@@ -31,26 +31,26 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from paas_wl.cluster.shim import EnvClusterService
-from paas_wl.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
-from paas_wl.deploy.actions.delete import delete_module_related_res
-from paas_wl.platform.api import create_app_ignore_duplicated, update_metadata_by_env
-from paas_wl.platform.applications.constants import WlAppType
-from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
-from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
-from paasng.dev_resources.sourcectl.connector import get_repo_connector
-from paasng.dev_resources.sourcectl.docker.models import init_image_repo
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.manager import AppBuildPack, TemplateRuntimeManager
-from paasng.dev_resources.templates.models import Template
-from paasng.engine.constants import RuntimeType
-from paasng.engine.models import EngineApp
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
+from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
+from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
+from paas_wl.bk_app.applications.constants import WlAppType
+from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.sharing import SharingReferencesManager
+from paasng.platform.sourcectl.connector import get_repo_connector
+from paasng.platform.sourcectl.docker.models import init_image_repo
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
+from paasng.platform.templates.models import Template
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.log.shim import setup_env_log_model
+from paasng.accessories.log.shim import setup_env_log_model
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.helpers import (
@@ -60,7 +60,7 @@ from paasng.platform.modules.helpers import (
 )
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.utils.addons import ReplaceableFunction
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes

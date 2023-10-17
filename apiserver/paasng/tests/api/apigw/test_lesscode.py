@@ -21,8 +21,8 @@ import string
 import pytest
 from django.conf import settings
 
-from paasng.accounts.constants import AccountFeatureFlag as AFF
-from paasng.accounts.models import AccountFeatureFlag
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.modules.constants import SourceOrigin
 from tests.utils.helpers import generate_random_string
 

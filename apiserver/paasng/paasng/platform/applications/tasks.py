@@ -22,11 +22,11 @@ from typing import cast
 
 from celery import shared_task
 
-from paasng.dev_resources.servicehub.manager import LocalServiceObj, mixed_service_mgr
-from paasng.dev_resources.servicehub.models import ServiceEngineAppAttachment
+from paasng.accessories.servicehub.manager import LocalServiceObj, mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import ResQuotasAggregation
-from paasng.platform.core.storages.redisdb import DefaultRediStore
+from paasng.core.core.storages.redisdb import DefaultRediStore
 
 logger = logging.getLogger(__name__)
 

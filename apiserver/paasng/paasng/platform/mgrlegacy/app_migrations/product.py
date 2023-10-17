@@ -22,9 +22,9 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
-from paasng.publish.market.models import DisplayOptions, Product, Tag
-from paasng.publish.market.signals import product_create_or_update_by_operator
-from paasng.publish.sync_market.models import TagMap
+from paasng.accessories.publish.market.models import DisplayOptions, Product, Tag
+from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
+from paasng.accessories.publish.sync_market.models import TagMap
 
 logger = logging.getLogger(__name__)
 

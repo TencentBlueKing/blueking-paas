@@ -16,4 +16,4 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from tests.extensions.bk_plugins.conftest import mock_apigw_api_client  # noqa
+from tests.paasng.bk_plugins.bk_plugins.conftest import mock_apigw_api_client  # noqa

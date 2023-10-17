@@ -24,12 +24,12 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.decorators import method_decorator
 
-from paasng.platform.core.storages.sqlalchemy import console_db
-from paasng.platform.oauth2.utils import get_random_secret_key
-from paasng.publish.sync_market.constant import RegionConverter
-from paasng.publish.sync_market.managers import AppDeveloperManger, AppManger, AppTagManger
-from paasng.publish.sync_market.models import TagMap, market_models
-from paasng.publish.sync_market.utils import run_required_db_console_config
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.oauth2.utils import get_random_secret_key
+from paasng.accessories.publish.sync_market.constant import RegionConverter
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger, AppTagManger
+from paasng.accessories.publish.sync_market.models import TagMap, market_models
+from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
 
 logger = logging.getLogger(__name__)
 

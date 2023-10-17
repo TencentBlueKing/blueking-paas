@@ -24,8 +24,8 @@ from bkpaas_auth.models import user_id_encoder
 from django.db.models import Q
 from rest_framework.filters import BaseFilterBackend
 
-from paasng.accounts.constants import SiteRole
-from paasng.accounts.models import UserProfile
+from paasng.infras.accounts.constants import SiteRole
+from paasng.infras.accounts.models import UserProfile
 from paasng.plat_admin.admin42.serializers.accountmgr import UserProfileQueryParamSLZ
 from paasng.plat_admin.admin42.serializers.application import ApplicationFilterSLZ
 from paasng.platform.applications.models import Application, BaseApplicationFilter

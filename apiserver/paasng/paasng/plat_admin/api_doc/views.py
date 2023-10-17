@@ -25,8 +25,8 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework.response import Response
 
-from paasng.accounts.permissions.constants import SiteAction
-from paasng.accounts.permissions.global_site import site_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 
 schema_view = get_schema_view(
     openapi.Info(

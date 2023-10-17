@@ -29,8 +29,8 @@ from django.db import IntegrityError as DjangoIntegrityError
 from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
-from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
-from paasng.accessories.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.handlers import application_logo_updated
@@ -39,18 +39,18 @@ from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import before_finishing_application_creation
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import create_default_module
-from paasng.platform.core.storages.sqlalchemy import console_db
-from paasng.platform.oauth2.models import OAuth2Client
-from paasng.platform.oauth2.utils import create_oauth2_client
-from paasng.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
-from paasng.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
-from paasng.publish.market.signals import product_create_or_update_by_operator
-from paasng.publish.sync_market.handlers import (
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.utils import create_oauth2_client
+from paasng.accessories.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
+from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
+from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
+from paasng.accessories.publish.sync_market.handlers import (
     application_oauth_handler,
     market_config_update_handler,
     sync_external_url_to_market,
 )
-from paasng.publish.sync_market.managers import AppManger
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)

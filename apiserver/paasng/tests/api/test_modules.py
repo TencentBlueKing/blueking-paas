@@ -23,14 +23,14 @@ import cattr
 import pytest
 from django.conf import settings
 
-from paasng.accounts.constants import AccountFeatureFlag as AFF
-from paasng.accounts.models import AccountFeatureFlag
-from paasng.dev_resources.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import Hook
 from paasng.platform.modules.models.module import Module
-from paasng.platform.operations.constant import OperationType
-from paasng.platform.operations.models import Operation
+from paasng.misc.operations.constant import OperationType
+from paasng.misc.operations.models import Operation
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
@@ -151,7 +151,7 @@ class TestCreateCloudNativeModule:
         assert module_data['web_config']['artifact_type'] == 'none'
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
-    @mock.patch('paasng.engine.configurations.building.ModuleRuntimeManager')
+    @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')
     def test_create_with_buildpack(
         self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, bk_cnative_app, init_tmpls
     ):

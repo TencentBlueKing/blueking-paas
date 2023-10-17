@@ -23,7 +23,7 @@ import yaml
 from kubernetes.client.apis import VersionApi
 from kubernetes.utils.create_from_yaml import create_from_yaml_single_item
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from tests.paas_wl.e2e.ingress.utils import (
     IngressNginxReloadChecker,
     create_from_yaml_allow_conflict,

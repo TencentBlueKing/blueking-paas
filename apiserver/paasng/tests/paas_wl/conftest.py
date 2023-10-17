@@ -30,13 +30,13 @@ from django.db import transaction
 from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.cluster.models import Cluster
-from paas_wl.cluster.utils import get_default_cluster_by_region
-from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
-from paas_wl.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
-from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
+from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.utils import get_default_cluster_by_region
+from paas_wl.bk_app.applications.models import Build, BuildProcess, WlApp
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
+from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
-from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
+from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paasng.platform.applications.models import ModuleEnvironment
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
@@ -63,7 +63,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
             cluster = create_default_cluster()
             setup_default_client(cluster)
 
-        from paas_wl.workloads.processes.models import initialize_default_proc_spec_plans
+        from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 
         # The initialization in `processes.models` will not create default package plans in the TEST database,
         # it only creates the default plans in the non-test database(without the "test_" prefix).
@@ -100,8 +100,8 @@ def crds_is_configured(django_db_setup, django_db_blocker):
         yield False
     else:
         crd_infos = [
-            ("bkapps.paas.bk.tencent.com", "cnative/specs/crd/bkapp_v1.yaml"),
-            ("domaingroupmappings.paas.bk.tencent.com", "cnative/specs/crd/domaingroupmappings_v1.yaml"),
+            ("bkapps.paas.bk.tencent.com", "bk_app/cnative/specs/crd/bkapp_v1.yaml"),
+            ("domaingroupmappings.paas.bk.tencent.com", "bk_app/cnative/specs/crd/domaingroupmappings_v1.yaml"),
         ]
         crd_client = KCustomResourceDefinition(client)
 
@@ -261,7 +261,7 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
     """Modify the original get_cluster function with extra hooks"""
 
     def _wrapped(app: WlApp) -> Cluster:
-        from paas_wl.cluster.utils import get_cluster_by_app
+        from paas_wl.infras.cluster.utils import get_cluster_by_app
 
         cluster = get_cluster_by_app(app)
         cluster = hook_func(cluster)
@@ -315,6 +315,14 @@ def wl_release(wl_app):
         wl_app=wl_app,
         build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
         release_params={"version": 5},
+    )
+
+
+@pytest.fixture
+def wl_dirty_release(wl_app):
+    return create_wl_release(
+        wl_app=wl_app,
+        release_params={"version": 1, "build": None},
     )
 
 

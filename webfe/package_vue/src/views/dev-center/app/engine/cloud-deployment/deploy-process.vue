@@ -111,6 +111,10 @@
               v-if="isV1alpha2"
             >
               {{ buildData.image }}
+              <i
+                class="paasng-icon paasng-edit-2 image-store-icon"
+                @click="handleToModuleInfo"
+              />
             </bk-form-item>
             <!-- v1alpha1 镜像地址 -->
             <bk-form-item
@@ -346,8 +350,11 @@
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
-                          :disabled="!autoScalDisableConfig.stag?.ENABLE_AUTOSCALING"
-                          v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.stag?.ENABLE_AUTOSCALING }"
+                          :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
+                          v-bk-tooltips="{
+                            content: $t('该环境暂不支持自动扩缩容'),
+                            disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
+                          }"
                         >
                           {{ $t('自动调节') }}
                         </bk-radio-button>
@@ -520,8 +527,11 @@
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
-                          :disabled="!autoScalDisableConfig.prod?.ENABLE_AUTOSCALING"
-                          v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.prod?.ENABLE_AUTOSCALING }"
+                          :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
+                          v-bk-tooltips="{
+                            content: $t('该环境暂不支持自动扩缩容'),
+                            disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
+                          }"
                         >
                           {{ $t('自动调节') }}
                         </bk-radio-button>
@@ -828,8 +838,7 @@
   </paas-content-loader>
 </template>
 
-<script>
-import _ from 'lodash';
+<script>import _ from 'lodash';
 import { bus } from '@/common/bus';
 import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
 
@@ -887,7 +896,7 @@ export default {
           },
           {
             regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9_]+$/,
-            message: this.$t('地址格式不正确'),
+            message: this.$t('请输入包含标签(tag)的镜像地址'),
             trigger: 'blur',
           },
         ],
@@ -999,13 +1008,13 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: (v) => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
+            validator: v => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
             message: `${this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')}`,
             trigger: 'blur',
           },
           {
             validator: (v) => {
-              const panelName = this.panels.map((e) => e.name);
+              const panelName = this.panels.map(e => e.name);
               return !panelName.includes(v);
             },
             message: `${this.$t('不允许添加同名进程')}`,
@@ -1066,7 +1075,10 @@ export default {
           request: {},
         },
       },
-      autoScalDisableConfig: {},
+      autoScalDisableConfig: {
+        prod: {},
+        stag: {},
+      },
       tagInputIndex: 0,
     };
   },
@@ -1128,7 +1140,7 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
-    isCustomImage () {
+    isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
@@ -1168,18 +1180,18 @@ export default {
 
           // 更多配置信息
           // 资源配额方案
-          this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find((e) => e.process === this.processNameActive && e.envName === 'stag') || { plan: 'default' };
-          this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find((e) => e.process === this.processNameActive && e.envName === 'prod') || { plan: 'default' };
+          this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { plan: 'default' };
+          this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { plan: 'default' };
 
           // 扩缩容-自动
-          const autoscalingStag = (this.envOverlayData?.autoscaling || []).find((e) => e.process === this.processNameActive && e.envName === 'stag');
-          const autoscalingProd = (this.envOverlayData?.autoscaling || []).find((e) => e.process === this.processNameActive && e.envName === 'prod');
+          const autoscalingStag = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'stag');
+          const autoscalingProd = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'prod');
           this.extraConfigData.stag.isAutoscaling = !!autoscalingStag;
           this.extraConfigData.prod.isAutoscaling = !!autoscalingProd;
 
           // 扩缩容-手动
-          const replicasStag = (this.envOverlayData?.replicas || []).find((e) => e.process === this.processNameActive && e.envName === 'stag') || { count: 1 };
-          const replicasProd = (this.envOverlayData?.replicas || []).find((e) => e.process === this.processNameActive && e.envName === 'prod') || { count: 1 };
+          const replicasStag = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { count: 1 };
+          const replicasProd = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { count: 1 };
 
           // 自动
           if (!!autoscalingStag) {
@@ -1304,6 +1316,9 @@ export default {
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
+      // 扩缩容FeatureFlag
+      this.getAutoScalFlag('stag');
+      this.getAutoScalFlag('prod');
     }
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
@@ -1393,9 +1408,6 @@ export default {
         this.$store.commit('cloudApi/updateProcessPageEdit', true);
       } else {
         this.$store.commit('cloudApi/updatePageEdit', true);
-        // 扩缩容FeatureFlag 
-        this.getAutoScalFlag('stag');
-        this.getAutoScalFlag('prod');
       }
     },
 
@@ -1521,13 +1533,13 @@ export default {
       this.formData = this.processData[0];
 
       // 过滤外层envOverlay中的自动调节数据
-      this.localCloudAppData.spec.envOverlay.autoscaling = (this.localCloudAppData.spec.envOverlay.autoscaling || []).filter((e) => e.process !== this.processNameActive);
+      this.localCloudAppData.spec.envOverlay.autoscaling = (this.localCloudAppData.spec.envOverlay.autoscaling || []).filter(e => e.process !== this.processNameActive);
 
       // 过滤外层envOverlay中配额数据
-      this.localCloudAppData.spec.envOverlay.resQuotas = (this.localCloudAppData.spec.envOverlay.resQuotas || []).filter((e) => e.process !== this.processNameActive);
+      this.localCloudAppData.spec.envOverlay.resQuotas = (this.localCloudAppData.spec.envOverlay.resQuotas || []).filter(e => e.process !== this.processNameActive);
 
       // 过滤外层envOverlay中副本数量
-      this.localCloudAppData.spec.envOverlay.replicas = (this.localCloudAppData.spec.envOverlay?.replicas || []).filter((e) => e.process !== this.processNameActive);
+      this.localCloudAppData.spec.envOverlay.replicas = (this.localCloudAppData.spec.envOverlay?.replicas || []).filter(e => e.process !== this.processNameActive);
 
       this.processData = this.localCloudAppData.spec.processes;
       this.panels = _.cloneDeep(this.processData);
@@ -1544,10 +1556,10 @@ export default {
     handleFilterAutoscalingData(data, process) {
       if (this.extraConfigData[this.envName].isAutoscaling) {
         // 自动调节 需要过滤手动调节相关数据
-        this.localCloudAppData.spec.envOverlay.replicas = (data?.replicas || []).filter((e) => !(e.process === process && e.envName === this.envName));
+        this.localCloudAppData.spec.envOverlay.replicas = (data?.replicas || []).filter(e => !(e.process === process && e.envName === this.envName));
       } else {
         // 手动调节 需要过滤自动调节相关数据
-        this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || []).filter((e) => !(e.process === process && e.envName === this.envName));
+        this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || []).filter(e => !(e.process === process && e.envName === this.envName));
       }
     },
 
@@ -1569,9 +1581,9 @@ export default {
         this.localCloudAppData.spec.envOverlay = {};
       }
 
-      const resQuotasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).filter((e) => e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) || [];
+      const resQuotasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).filter(e => e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) || [];
 
-      const resQuotasFilterData = (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).filter((e) => e.process !== resQuotaPlanData.process || e.envName !== resQuotaPlanData.envName) || [];
+      const resQuotasFilterData = (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).filter(e => e.process !== resQuotaPlanData.process || e.envName !== resQuotaPlanData.envName) || [];
 
       if (!resQuotasWithProcessEnv.length) {
         // 没有resQuotas时
@@ -1590,9 +1602,9 @@ export default {
 
       if (replicasData.count) {
         // 副本数量
-        const replicasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.replicas || []).filter((e) => e.process === replicasData.process && e.envName === replicasData.envName) || [];
+        const replicasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.replicas || []).filter(e => e.process === replicasData.process && e.envName === replicasData.envName) || [];
 
-        const replicasFilterData = (this.localCloudAppData.spec?.envOverlay?.replicas || []).filter((e) => e.process !== replicasData.process || e.envName !== replicasData.envName) || [];
+        const replicasFilterData = (this.localCloudAppData.spec?.envOverlay?.replicas || []).filter(e => e.process !== replicasData.process || e.envName !== replicasData.envName) || [];
         if (!replicasWithProcessEnv.length) {
           if (!this.localCloudAppData.spec.envOverlay.replicas) {
             this.localCloudAppData.spec.envOverlay.replicas = [];
@@ -1620,10 +1632,9 @@ export default {
           minReplicas: minReplicas ? Number(minReplicas) : 1,
           maxReplicas: maxReplicas ? Number(maxReplicas) : '',
         };
-        const autoscalingWithProcessEnv =
-          (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).filter((e) => e.process === autoscalingData.process && e.envName === autoscalingData.envName) || [];
+        const autoscalingWithProcessEnv =          (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).filter(e => e.process === autoscalingData.process && e.envName === autoscalingData.envName) || [];
 
-        const autoscalingFilterData = (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).filter((e) => e.process !== autoscalingData.process || e.envName !== autoscalingData.envName) || [];
+        const autoscalingFilterData = (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).filter(e => e.process !== autoscalingData.process || e.envName !== autoscalingData.envName) || [];
 
         // 没有autoscaling时
         if (!autoscalingWithProcessEnv.length) {
@@ -1688,7 +1699,7 @@ export default {
       try {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        const data = res.find((e) => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
+        const data = res.find(e => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
         this.resQuotaData = res.map(item => item.name);
         this.extraConfigData[env].limit = data.limit;
         this.extraConfigData[env].request = data.request;
@@ -1703,7 +1714,7 @@ export default {
     },
 
     /**
-     * 获取扩缩容featureflag 
+     * 获取扩缩容featureflag
      */
     async getAutoScalFlag(env) {
       try {
@@ -1719,6 +1730,12 @@ export default {
           message: e.message || e.detail || this.$t('接口异常'),
         });
       }
+    },
+
+    // 跳转模块信息
+    handleToModuleInfo() {
+      this.$store.commit('cloudApi/updateModuleInfoEdit', true);
+      this.$emit('tab-change', 'moduleInfo');
     },
   },
 };
@@ -1901,5 +1918,10 @@ export default {
 }
 .process-btn-wrapper {
   margin-left: 80px;
+}
+.image-store-icon {
+  margin-left: 5px;
+  cursor: pointer;
+  color: #3a84ff;
 }
 </style>

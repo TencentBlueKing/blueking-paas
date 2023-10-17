@@ -23,8 +23,8 @@ from blue_krill.web.std_error import APIError
 from django.utils.translation import gettext as _
 from rest_framework.exceptions import ErrorDetail, ValidationError
 
-from paasng.dev_resources.servicehub.remote.exceptions import GetClusterEgressInfoError
-from paasng.dev_resources.services.exceptions import ResourceNotEnoughError
+from paasng.accessories.servicehub.remote.exceptions import GetClusterEgressInfoError
+from paasng.accessories.services.exceptions import ResourceNotEnoughError
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)

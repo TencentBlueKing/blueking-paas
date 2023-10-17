@@ -21,8 +21,8 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler as Scheduler
 from django.conf import settings
 
-from paasng.dev_resources.servicehub.remote.collector import fetch_all_remote_services
-from paasng.dev_resources.servicehub.remote.store import get_remote_store
+from paasng.accessories.servicehub.remote.collector import fetch_all_remote_services
+from paasng.accessories.servicehub.remote.store import get_remote_store
 
 logger = logging.getLogger(__name__)
 scheduler = Scheduler()

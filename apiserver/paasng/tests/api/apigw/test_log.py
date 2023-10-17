@@ -31,7 +31,7 @@ class TestLegacyStdoutLogAPIView:
         url = (
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/standard_output/list/?time_range=1h"
         )
-        with mock.patch("paasng.platform.log.views.logs.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.accessories.log.views.logs.instantiate_log_client") as client_factory:
             client_factory().get_mappings.return_value = {"app_code": {"type": "text"}}
             # 无任何日志
             client_factory().execute_scroll_search.return_value = (
@@ -94,7 +94,7 @@ class TestLegacyStdoutLogAPIView:
         url = (
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/standard_output/list/?time_range=1h"
         )
-        with mock.patch("paasng.platform.log.views.logs.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.accessories.log.views.logs.instantiate_log_client") as client_factory:
             client_factory().execute_scroll_search.return_value = (
                 Response(
                     Search(),
@@ -157,7 +157,7 @@ class TestLegacySysStructuredLogAPIView:
             f"/sys/api/log/applications/{bk_app.code}/modules/{bk_module.name}/structured/list/?"
             f"time_range=1h&page=1&page_size=10"
         )
-        with mock.patch("paasng.platform.log.views.logs.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.accessories.log.views.logs.instantiate_log_client") as client_factory:
             # 无任何日志
             client_factory().execute_search.return_value = (
                 [
@@ -226,7 +226,7 @@ class TestLegacySysStructuredLogAPIView:
 class TestSysBkPluginLogsViewset:
     def test_dsl(self, sys_api_client, bk_plugin_app):
         url = f"/sys/api/bk_plugins/{bk_plugin_app.code}/logs/?trace_id=foo&scroll_id=bar"
-        with mock.patch("paasng.extensions.bk_plugins.logging.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.bk_plugins.bk_plugins.logging.instantiate_log_client") as client_factory:
             client_factory().get_mappings.return_value = {"app_code": {"type": "text"}}
             client_factory().execute_scroll_search.return_value = (
                 Response(
@@ -262,7 +262,7 @@ class TestSysBkPluginLogsViewset:
 
     def test_list(self, sys_api_client, bk_plugin_app):
         url = f"/sys/api/bk_plugins/{bk_plugin_app.code}/logs/?trace_id=foo&scroll_id=bar"
-        with mock.patch("paasng.extensions.bk_plugins.logging.instantiate_log_client") as client_factory:
+        with mock.patch("paasng.bk_plugins.bk_plugins.logging.instantiate_log_client") as client_factory:
             client_factory().execute_scroll_search.return_value = (
                 Response(
                     Search(),

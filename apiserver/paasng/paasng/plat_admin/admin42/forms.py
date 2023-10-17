@@ -22,7 +22,7 @@ from typing import Dict
 from django.forms import CharField, ChoiceField, ModelChoiceField, ModelForm, Textarea
 
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
-from paasng.platform.region.states import RegionType
+from paasng.core.region.states import RegionType
 
 
 class ModelNameChoiceField(ModelChoiceField):

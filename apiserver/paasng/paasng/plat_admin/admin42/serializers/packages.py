@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paasng.dev_resources.sourcectl.models import SourcePackage
+from paasng.platform.sourcectl.models import SourcePackage
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.utils.serializers import UserNameField
 

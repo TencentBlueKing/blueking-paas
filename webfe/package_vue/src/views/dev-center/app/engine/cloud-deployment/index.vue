@@ -58,6 +58,7 @@
             @save="handleSave"
             @cancel="handleCancel"
             @hide-tab="isTab = false"
+            @tab-change="handleGoPage"
           />
         </div>
       </section>

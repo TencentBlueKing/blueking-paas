@@ -30,12 +30,12 @@ from django.db.models import Q, QuerySet
 from django.shortcuts import get_object_or_404
 from pilkit.processors import ResizeToFill
 
-from paasng.accessories.iam.helpers import fetch_role_members
-from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
+from paasng.infras.iam.helpers import fetch_role_members
+from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
-from paasng.platform.core.storages.object_storage import app_logo_storage
+from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.region.models import get_region
+from paasng.core.region.models import get_region
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import (
     BkUserField,
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import RepositoryInstance
+    from paasng.platform.sourcectl.models import RepositoryInstance
 
 
 LOGO_SIZE = (144, 144)
@@ -433,7 +433,7 @@ class ApplicationEnvironment(TimestampedModel):
     def is_running(self) -> bool:
         """Check if current environment is up and running"""
         # TODO: Replace with env_is_running
-        from paasng.engine.models import Deployment
+        from paasng.platform.engine.models import Deployment
 
         if self.is_offlined:
             return False

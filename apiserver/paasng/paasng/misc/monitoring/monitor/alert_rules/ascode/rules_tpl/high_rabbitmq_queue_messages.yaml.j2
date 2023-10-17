@@ -1,0 +1,27 @@
+name: '{{ alert_rule_display_name }}'
+enabled: {{ enabled }}
+
+labels:
+  - PAAS_BUILTIN
+  - {{ run_env }}
+  - {{ alert_code }}
+
+query:
+  data_source: prometheus
+  data_type: time_series
+  query_configs:
+  - metric: 'sum({{ rabbitmq_metric_name_prefix }}rabbitmq_instance_queue_messages{vhost="{{ metric_labels['vhost'] }}"})'
+    interval: 60 # 单位 s
+
+detect: # 检测配置
+  algorithm: # 检测算法
+    fatal: # 告警级别[致命]
+    - type: Threshold # 算法类型
+      config: "{{ threshold_expr }}" # 算法配置
+
+  trigger: 10/10/10 # 触发条件. 异常次数/检测周期数/恢复周期数
+
+notice: # 通知配置
+  interval: 30 # 通知收敛间隔(分钟)
+  user_groups: # 通知组配置
+  - '{{ notice_group_name }}'

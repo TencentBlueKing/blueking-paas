@@ -93,7 +93,7 @@ class ProcessSpec(TimestampedModel):
         default=ImagePullPolicy.IF_NOT_PRESENT,
         max_length=20,
     )
-    image_credential_ame = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
+    image_credential_name = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
 
     target_replicas = models.IntegerField('期望副本数', default=1)
     target_status = models.CharField('期望状态', max_length=32, default="start")

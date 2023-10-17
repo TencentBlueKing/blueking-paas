@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='processspec',
-            name='image_credential_ame',
+            name='image_credential_name',
             field=models.CharField(help_text='镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)', max_length=64, null=True),
         ),
         migrations.AddField(

@@ -154,8 +154,8 @@ class TestProcessesManifestConstructor:
     @pytest.fixture
     def v1alpha1_process_web(self, bk_module, process_web) -> ModuleProcessSpec:
         process_web.image = "python:latest"
-        process_web.image_credential_ame = "auto-generated"
-        process_web.save(update_fields=["image", "image_credential_ame"])
+        process_web.image_credential_name = "auto-generated"
+        process_web.save(update_fields=["image", "image_credential_name"])
         return process_web
 
     def test_v1alpha1(self, bk_module, blank_resource, v1alpha1_process_web):

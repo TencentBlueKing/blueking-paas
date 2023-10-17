@@ -21,6 +21,7 @@ from paas_wl.bk_app.cnative.specs.constants import ApiVersion, ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.converter import BkAppResourceConverter
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppProcess, BkAppResource, BkAppSpec
 from paas_wl.bk_app.cnative.specs.models import create_app_resource
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
 class TestBkAppResourceConverter:
@@ -42,6 +43,7 @@ class TestBkAppResourceConverter:
                         cpu='2000m',
                         memory='1200Mi',
                         targetPort=80,
+                        imagePullPolicy=ImagePullPolicy.ALWAYS,
                     )
                 ],
             ),
@@ -52,11 +54,13 @@ class TestBkAppResourceConverter:
             spec=BkAppSpec(
                 build=BkAppBuildConfig(
                     image='nginx',
+                    imagePullPolicy=ImagePullPolicy.ALWAYS,
                 ),
                 processes=[
                     BkAppProcess(
                         name='web',
                         image=None,
+                        imagePullPolicy=ImagePullPolicy.ALWAYS,
                         command=[],
                         args=[],
                         resQuotaPlan=ResQuotaPlan.P_2C2G,

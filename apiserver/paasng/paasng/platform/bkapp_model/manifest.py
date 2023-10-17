@@ -20,32 +20,50 @@ import logging
 import shlex
 from abc import ABC, abstractmethod
 from operator import itemgetter
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
 
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     ACCESS_CONTROL_ANNO_KEY,
+    BKAPP_CODE_ANNO_KEY,
+    BKAPP_NAME_ANNO_KEY,
+    BKAPP_REGION_ANNO_KEY,
     BKPAAS_ADDONS_ANNO_KEY,
+    BKPAAS_DEPLOY_ID_ANNO_KEY,
+    ENVIRONMENT_ANNO_KEY,
+    IMAGE_CREDENTIALS_REF_ANNO_KEY,
     LEGACY_PROC_IMAGE_ANNO_KEY,
+    MODULE_NAME_ANNO_KEY,
+    PA_SITE_ID_ANNO_KEY,
+    USE_CNB_ANNO_KEY,
+    WLAPP_NAME_ANNO_KEY,
     ApiVersion,
+    MountEnvName,
     ResQuotaPlan,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     BkAppAddon,
+    BkAppBuildConfig,
     BkAppProcess,
     BkAppResource,
     BkAppSpec,
     EnvOverlay,
     EnvVar,
     EnvVarOverlay,
-    ObjectMetadata,
 )
-from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata
+from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.utils import merge_env_vars
+from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -101,8 +119,25 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
     """Construct the built-in annotations."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        # TODO: ref to `_inject_annotations()` method
-        pass
+        # Application basic info
+        application = module.application
+        model_res.metadata.annotations.update(
+            {
+                BKAPP_REGION_ANNO_KEY: application.region,
+                BKAPP_NAME_ANNO_KEY: application.name,
+                BKAPP_CODE_ANNO_KEY: application.code,
+                MODULE_NAME_ANNO_KEY: module.name,
+            }
+        )
+        # Set the annotation to inform operator that the secret has been created.
+        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
+
+        # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
+        # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注
+        # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+        model_res.metadata.annotations[USE_CNB_ANNO_KEY] = (
+            "true" if ModuleRuntimeManager(module).is_cnb_runtime else "false"
+        )
 
 
 class BuildConfigManifestConstructor(ManifestConstructor):
@@ -222,14 +257,42 @@ class HooksManifestConstructor(ManifestConstructor):
         pass
 
 
+class MountsManifestConstructor(ManifestConstructor):
+    """Construct the mounts part."""
+
+    def apply_to(self, model_res: BkAppResource, module: Module):
+        model_res.spec.mounts = model_res.spec.mounts or []
+        # The global mounts
+        for config in Mount.objects.filter(module_id=module.pk, environment_name=MountEnvName.GLOBAL.value):
+            model_res.spec.mounts.append(
+                MountSpec(name=config.name, mountPath=config.mount_path, source=config.source_config)
+            )
+
+        # The environment specific mounts
+        overlay = model_res.spec.envOverlay
+        if not overlay:
+            overlay = EnvOverlay()
+        for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
+            for config in Mount.objects.filter(module_id=module.pk, environment_name=env):
+                if overlay.mounts is None:
+                    overlay.mounts = []
+                overlay.mounts.append(
+                    MountOverlay(
+                        envName=env, name=config.name, mountPath=config.mount_path, source=config.source_config
+                    )
+                )
+
+        model_res.spec.envOverlay = overlay
+
+
 def get_manifest(module: Module) -> List[Dict]:
     """Get the manifest of current module, the result might contain multiple items."""
     return [
-        get_bk_app_resource(module).to_deployable(),
+        get_bkapp_resource(module).to_deployable(),
     ]
 
 
-def get_bk_app_resource(module: Module) -> BkAppResource:
+def get_bkapp_resource(module: Module) -> BkAppResource:
     """Get the manifest of current module.
 
     :param module: The module object.
@@ -252,3 +315,62 @@ def get_bk_app_resource(module: Module) -> BkAppResource:
     for builder in builders:
         builder.apply_to(obj, module)
     return obj
+
+
+def get_bkapp_resource_for_deploy(
+    env: ModuleEnvironment, deploy_id: str, force_image: Optional[str] = None
+) -> BkAppResource:
+    """Get the BkApp manifest for deploy.
+
+    :param env: The environment object.
+    :param deploy_id: The ID of the deployment object.
+    :param force_image: If given, set the image of the application to this value.
+    :returns: The BkApp resource that is ready for deploying.
+    """
+    model_res = get_bkapp_resource(env.module)
+
+    if force_image:
+        if not model_res.spec.build:
+            model_res.spec.build = BkAppBuildConfig()
+        model_res.spec.build.image = force_image
+
+    # Apply other changes to the resource
+    apply_env_annots(model_res, env, deploy_id=deploy_id)
+    apply_builtin_env_vars(model_res, env)
+
+    # TODO: Missing parts: "build", "hooks", "service-disc"
+    return model_res
+
+
+def apply_env_annots(model_res: BkAppResource, env: ModuleEnvironment, deploy_id: Optional[str] = None):
+    """Apply environment-specified annotations to the resource object.
+
+    :param model_res: The model resource object, it will be modified in-place.
+    :param env: The environment object.
+    :param deploy_id: The ID of the deployment object.
+    """
+    wl_app = env.wl_app
+    # Add environment–specific data
+    model_res.metadata.annotations[ENVIRONMENT_ANNO_KEY] = env.environment
+    model_res.metadata.annotations[WLAPP_NAME_ANNO_KEY] = wl_app.name
+    if deploy_id is not None:
+        model_res.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(deploy_id)
+
+    # Add PaaS-Analysis related values when the module has been enabled
+    if bkpa_site_id := get_metadata(wl_app).bkpa_site_id:
+        model_res.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
+
+
+def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
+    """Apply the builtin environment vars to the resource object. These vars are hidden from
+    the default manifest view and should only be used in the deploying procedure.
+
+    :param model_res: The model resource object, it will be modified in-place.
+    :param env: The environment object.
+    """
+    env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
+    for name, value in get_builtin_env_variables(env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX).items():
+        env_vars.append(EnvVar(name=name, value=value))
+
+    # Merge the variables, the builtin env vars will override the existed ones
+    model_res.spec.configuration.env = merge_env_vars(model_res.spec.configuration.env, env_vars)

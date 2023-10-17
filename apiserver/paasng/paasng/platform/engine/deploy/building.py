@@ -26,17 +26,14 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
-from paas_wl.bk_app.cnative.specs.models import AppModelResource, generate_bkapp_name, update_app_resource
 from paas_wl.bk_app.applications.models.build import BuildProcess
+from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.platform.sourcectl.utils import (
-    ExcludeChecker,
-    compress_directory_ext,
-    generate_temp_dir,
-    generate_temp_file,
-)
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.models import Template
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.manifest import get_bk_app_resource
+from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
@@ -44,7 +41,7 @@ from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
-from paasng.platform.engine.exceptions import DeployShouldAbortError
+from paasng.platform.engine.exceptions import HandleAppDescriptionError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line
@@ -54,17 +51,21 @@ from paasng.platform.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
-    get_bkapp_manifest_for_module,
     get_dockerignore,
     get_processes,
     get_source_package_path,
     tag_module_from_source_files,
 )
 from paasng.platform.engine.workflow import DeploymentCoordinator, DeploymentStateMgr, DeployProcedure, DeployStep
-from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.utils import (
+    ExcludeChecker,
+    compress_directory_ext,
+    generate_temp_dir,
+    generate_temp_file,
+)
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from paasng.utils.blobstore import make_blob_store
 from paasng.utils.i18n.celery import I18nTask
 
@@ -136,43 +137,33 @@ class BaseBuilder(DeployStep):
                     package_path, source_destination_path
                 )
 
-    def must_handle_bkapp_manifest(self) -> int:
-        """Handle bkapp manifest for deployment"""
-        module = self.deployment.app_environment.module
-        application = module.application
-        operator = self.deployment.operator
-        version_info = self.deployment.version_info
-        relative_source_dir = self.deployment.get_source_dir()
+    def handle_app_description(self, raise_exception: bool = False):
+        """Handle application description for deployment
 
-        manifest = get_bkapp_manifest_for_module(module, operator, version_info, relative_source_dir)
-        if not manifest:
-            self.stream.write_message(
-                Style.Error(
-                    _("bkapp.yaml 不存在该模块的信息, 请检查该文件内是否提供了 metadata.name = {} 的资源").format(generate_bkapp_name(module))
-                )
-            )
-            raise DeployShouldAbortError("bkapp.yaml not found")
-
-        update_app_resource(application, module, manifest)
-        # Get current module resource object
-        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
-        # 从源码部署总是使用最新创建的 revision
-        return model_resource.revision.id
-
-    def try_handle_app_description(self):
-        """A tiny wrapper for _handle_app_description, will ignore all exception raise from _handle_app_description"""
+        :param raise_exception: bool, will ignore all exception raise from _handle_app_description
+                                      if raise_exception is False
+        """
         try:
             self._handle_app_description()
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             logger.debug("App description file not defined, do not process.")
+            if raise_exception:
+                raise HandleAppDescriptionError from e
         except DescriptionValidationError as e:
             self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
-            logger.exception("Exception while parsing app description file, skip.")
+            if raise_exception:
+                raise HandleAppDescriptionError from e
+            else:
+                logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
             self.stream.write_message(Style.Error(e.message))
+            if raise_exception:
+                raise HandleAppDescriptionError from e
             logger.exception("Exception while processing app description file, skip.")
-        except Exception:
+        except Exception as e:
             self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
+            if raise_exception:
+                raise HandleAppDescriptionError from e
             logger.exception("Exception while processing app description file, skip.")
 
     def _handle_app_description(self):
@@ -199,6 +190,18 @@ class BaseBuilder(DeployStep):
             return
 
         handler.handle_deployment(self.deployment)
+
+    def create_bkapp_revision(self) -> int:
+        """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
+        module = self.module_environment.module
+        application = module.application
+        bkapp = get_bk_app_resource(module=module)
+
+        # Get current module resource object
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
+        model_resource.use_resource(bkapp)
+        # 从源码部署总是使用最新创建的 revision
+        return model_resource.revision.id
 
     def provision_services(self, p: DeployProcedure, module: Module):
         """Provision all preset services
@@ -233,10 +236,7 @@ class BaseBuilder(DeployStep):
             self.stream.write_message(Style.Warning(message))
 
     def async_start_build_process(
-        self,
-        source_tar_path: str,
-        procfile: Dict[str, str],
-        bkapp_revision_id: Optional[int] = None,
+        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
     ):
         """Start a new build process and check the status periodically"""
         build_process_id = self.launch_build_processes(
@@ -262,26 +262,26 @@ class ApplicationBuilder(BaseBuilder):
         # Trigger signal
         pre_appenv_build.send(self.deployment.app_environment, deployment=self.deployment, step=self)
 
-        bkapp_revision_id = None
-        if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE:
-            bkapp_revision_id = self.must_handle_bkapp_manifest()
-            # 从源码构建总是使用 bkapp.yaml 创建新的 revision
-            self.deployment.bkapp_revision_id = bkapp_revision_id
-            self.deployment.save(update_fields=["bkapp_revision_id"])
-        else:
-            self.try_handle_app_description()
-
         # TODO: 改造提示信息&错误信息都需要入库
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
+
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        processes = {}
-        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
-            with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-                processes = get_processes(deployment=self.deployment, stream=self.stream)
-                self.deployment.update_fields(processes=processes)
+        with self.procedure_force_phase('解析应用描述文件', phase=preparation_phase):
+            is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
+            self.handle_app_description(raise_exception=is_cnative_app)
+
+        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            self.deployment.update_fields(processes=processes)
+            ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
+
+        if is_cnative_app:
+            with self.procedure_force_phase('生成应用模型', phase=preparation_phase):
+                bkapp_revision_id = self.create_bkapp_revision()
+                self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
 
         with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
@@ -298,7 +298,6 @@ class ApplicationBuilder(BaseBuilder):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
                 procfile={p.name: p.command for p in processes.values()},
-                bkapp_revision_id=bkapp_revision_id,
             )
 
     def launch_build_processes(
@@ -361,23 +360,25 @@ class DockerBuilder(BaseBuilder):
         # Trigger signal
         pre_appenv_build.send(self.deployment.app_environment, deployment=self.deployment, step=self)
 
-        bkapp_revision_id = None
-        if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE:
-            bkapp_revision_id = self.must_handle_bkapp_manifest()
-        else:
-            self.try_handle_app_description()
-
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
 
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        processes = {}
-        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
-            with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-                processes = get_processes(deployment=self.deployment, stream=self.stream)
-                self.deployment.update_fields(processes=processes)
+        with self.procedure_force_phase('解析应用描述文件', phase=preparation_phase):
+            is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
+            self.handle_app_description(raise_exception=is_cnative_app)
+
+        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
+            self.deployment.update_fields(processes=processes)
+
+        if is_cnative_app:
+            with self.procedure_force_phase('生成应用模型', phase=preparation_phase):
+                bkapp_revision_id = self.create_bkapp_revision()
+                self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
 
         with self.procedure_force_phase('解析 .dockerignore', phase=preparation_phase):
             dockerignore = get_dockerignore(deployment=self.deployment)
@@ -401,7 +402,6 @@ class DockerBuilder(BaseBuilder):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
                 procfile={p.name: p.command for p in processes.values()},
-                bkapp_revision_id=bkapp_revision_id,
             )
 
     def launch_build_processes(

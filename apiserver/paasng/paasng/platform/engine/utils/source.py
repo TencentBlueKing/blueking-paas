@@ -25,25 +25,24 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
-from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
+from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
+from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.engine.configurations.source_file import get_metadata_reader
+from paasng.platform.engine.exceptions import DeployShouldAbortError, SkipPatchCode
+from paasng.platform.engine.models import Deployment, EngineApp
+from paasng.platform.engine.models.deployment import ProcessTmpl
+from paasng.platform.engine.utils.output import DeployStream, Style
+from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
+from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.controllers.package import PackageController
 from paasng.platform.sourcectl.exceptions import GetAppYamlError, GetDockerIgnoreError, GetProcfileError
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.platform.sourcectl.utils import DockerIgnore
-from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.engine.exceptions import DeployShouldAbortError, SkipPatchCode
-from paasng.platform.engine.models import Deployment, EngineApp
-from paasng.platform.engine.utils.output import DeployStream, Style
-from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
-from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
-from paasng.platform.declarative.models import DeploymentDescription
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
-from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 logger = logging.getLogger(__name__)
@@ -197,22 +196,6 @@ def get_app_description_handler(
         return None
 
     return get_desc_handler(app_desc)
-
-
-def get_bkapp_manifest_for_module(
-    module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
-) -> Optional[Dict]:
-    """Get app manifest from bkapp.yaml"""
-    try:
-        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=source_dir)
-    except NotImplementedError:
-        return None
-    try:
-        manifests = metadata_reader.get_bkapp_manifests(version_info)
-    except GetAppYamlError:
-        return None
-    name = generate_bkapp_name(module)
-    return manifests.get(name, None)
 
 
 def get_source_package_path(deployment: Deployment) -> str:

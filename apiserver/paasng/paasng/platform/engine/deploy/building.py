@@ -272,8 +272,8 @@ class ApplicationBuilder(BaseBuilder):
 
         with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
-            self.deployment.update_fields(processes=processes)
             ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
+            self.deployment.update_fields(processes=processes)
 
         bkapp_revision_id = None
         if is_cnative_app:

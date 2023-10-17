@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from contextlib import suppress
 from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
@@ -302,11 +303,10 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
 
         :raise: error_codes.INVALID_CREDENTIALS: If the credentials are invalid or the repository is unreachable.
         """
-        try:
+        with suppress(Exception):
             # bkrepo 的 docker 仓库，镜像凭证没有填写正确时，.touch() 时会抛出异常
-            if not registry_service.touch():
-                raise ValueError()
-        except Exception:
+            if registry_service.touch():
+                return
             raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
 
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))

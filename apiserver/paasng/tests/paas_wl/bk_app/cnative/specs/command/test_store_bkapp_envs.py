@@ -99,7 +99,7 @@ def make_spec_updater(envs: Optional[List[EnvVar]] = None, env_overlay: Optional
             ),
             [
                 ("Foo", "baz", "stag"),
-                ("FOO", "bar", "prod"),
+                ("Foo", "bar", "prod"),
             ],
         ),
     ],

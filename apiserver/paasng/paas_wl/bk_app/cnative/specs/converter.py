@@ -67,8 +67,7 @@ class BkAppResourceConverter:
             p.image = None
 
         # v1alpha2 仅保存镜像仓库，去掉 Tag
-        _image = used_images.pop()
-        repository = _image.split(":", 1)[0]
+        repository, _, _ = used_images.pop().partition(":")
         self.bkapp.spec.build = BkAppBuildConfig(image=repository)
         self.bkapp.apiVersion = ApiVersion.V1ALPHA2
         return True

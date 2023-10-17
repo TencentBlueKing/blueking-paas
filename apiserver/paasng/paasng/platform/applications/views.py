@@ -106,7 +106,7 @@ from paasng.platform.applications.utils import (
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.cnative.services import initialize_simple
+from paasng.platform.bkapp_model.services import initialize_simple
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin

@@ -31,8 +31,8 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.cnative.bkapp_model.manifest import get_manifest
-from paasng.platform.cnative.serializers import GetManifestInputSLZ
+from paasng.platform.bkapp_model.manifest import get_manifest
+from paasng.platform.bkapp_model.serializers import GetManifestInputSLZ
 
 logger = logging.getLogger(__name__)
 

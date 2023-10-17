@@ -22,7 +22,7 @@ from attrs import define
 
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
-from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 
 
 @define

@@ -37,7 +37,7 @@ from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
-from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs, SourceOriginSpecs
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.platform.sourcectl.serializers import RepositorySLZ

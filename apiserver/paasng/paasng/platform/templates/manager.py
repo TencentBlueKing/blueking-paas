@@ -26,7 +26,7 @@ from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import APP_CATEGORY
 from paasng.platform.modules.entities import BuildConfig
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
-from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.templates.exceptions import TmplRegionNotSupported
 from paasng.platform.templates.models import Template
 

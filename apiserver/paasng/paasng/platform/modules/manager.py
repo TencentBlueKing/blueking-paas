@@ -56,7 +56,7 @@ from paasng.platform.modules.helpers import (
     update_build_config_with_method,
 )
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
-from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo

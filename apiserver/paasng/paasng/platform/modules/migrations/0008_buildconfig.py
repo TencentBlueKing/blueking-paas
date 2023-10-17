@@ -21,6 +21,7 @@ to the current version of the project delivered to anyone in the future.
 from django.db import migrations, models
 import django.db.models.deletion
 import paasng.platform.engine.constants
+import paasng.platform.modules.models.build_cfg
 import paasng.platform.modules.models.deploy_config
 import uuid
 
@@ -40,8 +41,8 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('build_method', models.CharField(default=paasng.platform.engine.constants.RuntimeType['BUILDPACK'], max_length=32, verbose_name='构建方式')),
                 ('dockerfile_path', models.CharField(help_text='Dockerfile文件路径, 必须保证 Dockerfile 在构建目录下, 填写时无需包含构建目录', max_length=512, null=True)),
-                ('docker_build_args', paasng.platform.modules.models.deploy_config.DockerBuildArgsField(default=dict)),
-                ('tag_options', paasng.platform.modules.models.deploy_config.ImageTagOptionsField(default=paasng.platform.modules.models.deploy_config.ImageTagOptions)),
+                ('docker_build_args', paasng.platform.modules.models.build_cfg.DockerBuildArgsField(default=dict)),
+                ('tag_options', paasng.platform.modules.models.build_cfg.ImageTagOptionsField(default=paasng.platform.modules.models.build_cfg.ImageTagOptions)),
                 ('buildpack_builder', models.ForeignKey(db_constraint=False, null=True, on_delete=django.db.models.deletion.SET_NULL, to='modules.appslugbuilder')),
                 ('buildpack_runner', models.ForeignKey(db_constraint=False, null=True, on_delete=django.db.models.deletion.SET_NULL, to='modules.appslugrunner')),
                 ('buildpacks', models.ManyToManyField(null=True, related_name='related_build_configs', to='modules.AppBuildPack')),

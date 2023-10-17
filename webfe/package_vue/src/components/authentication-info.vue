@@ -509,11 +509,12 @@ export default {
       }
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verification/${status.id}/`;
       this.$http.post(url).then((res) => {
-        const sFlag = status.bk_app_secret.substring(0, 4) === this.defaultSecret.substring(0, 4);
-        const eFlag =          status.bk_app_secret.substring(status.bk_app_secret.length - 4)
-          === this.defaultSecret.substring(this.defaultSecret.length - 4);
-        if (sFlag && eFlag) {
-          this.togeDefaultFlag = sFlag && eFlag;
+        const curCode = status.bk_app_secret;
+        const curDefaultSec = this.defaultSecret;
+        const startFlag = curCode.substring(0, 4) === curDefaultSec.substring(0, 4);
+        const endFlag = curCode.substring(curCode.length - 4) === curDefaultSec.substring(curDefaultSec.length - 4);
+        if (startFlag && endFlag) {
+          this.togeDefaultFlag = startFlag && endFlag;
           this.appSecret = res.bk_app_secret;
         }
         this.appSecretList.forEach((item) => {
@@ -567,12 +568,12 @@ export default {
         .post(url, form)
         .then(
           (res) => {
-            const curSecretCode = this.curViewSecret.bk_app_secret;
-            const sFlag = curSecretCode.substring(0, 4) === this.defaultSecret.substring(0, 4);
-            const eFlag =              curSecretCode.substring(curSecretCode.length - 4)
-              === this.defaultSecret.substring(this.defaultSecret.length - 4);
-            if (sFlag && eFlag) {
-              this.togeDefaultFlag = sFlag && eFlag;
+            const curCode = this.curViewSecret.bk_app_secret;
+            const curDefaultSec = this.defaultSecret;
+            const startFlag = curCode.substring(0, 4) === curDefaultSec.substring(0, 4);
+            const endFlag = curCode.substring(curCode.length - 4) === curDefaultSec.substring(curDefaultSec.length - 4);
+            if (startFlag && endFlag) {
+              this.togeDefaultFlag = startFlag && endFlag;
               this.appSecret = res.bk_app_secret;
             }
             this.appSecretList.forEach((item) => {
@@ -783,43 +784,37 @@ export default {
     },
     // 部署更新密钥
     handleDeploy(item) {
+      const isEnvStag = item.environment === 'stag';
+      const params = {
+        id: this.curAppInfo.application.code,
+        moduleId: item.module,
+      };
       if (this.curAppInfo.application.type === 'cloud_native') {
-        const cloudRouterInfo =          item.environment === 'stag'
-          ? {
-            name: 'cloudAppDeployManageStag',
-            params: {
-              id: this.curAppInfo.application.code,
-              moduleId: item.module,
-            },
-          }
-          : {
-            name: 'cloudAppDeployManageProd',
-            params: {
-              id: this.curAppInfo.application.code,
-              moduleId: item.module,
-            },
-          };
+        const cloudStag = {
+          name: 'cloudAppDeployManageStag',
+          params,
+        };
+        const cloudProd = {
+          name: 'cloudAppDeployManageProd',
+          params,
+        };
+        const cloudRouterInfo = isEnvStag ? cloudStag : cloudProd;
         this.$router.push(cloudRouterInfo);
         return;
       }
-      const appRouterInfo =        item.environment === 'stag'
-        ? {
-          name: 'appDeploy',
-          params: {
-            id: this.curAppInfo.application.code,
-            moduleId: item.module,
-          },
-        }
-        : {
-          name: 'appDeployForProd',
-          params: {
-            id: this.curAppInfo.application.code,
-            moduleId: item.module,
-          },
-          query: {
-            focus: 'prod',
-          },
-        };
+      const appStag = {
+        name: 'appDeploy',
+        params,
+      };
+      const appProd = {
+        name: 'appDeployForProd',
+        params,
+        query: {
+          focus: 'prod',
+        },
+      };
+      const appRouterInfo = isEnvStag ? appStag : appProd;
+
       this.$router.push(appRouterInfo);
     },
   },

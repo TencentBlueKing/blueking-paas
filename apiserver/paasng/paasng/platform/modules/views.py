@@ -33,21 +33,25 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.shim import get_application_cluster
 from paas_wl.workloads.images.models import AppUserCredential
-from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
-from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.protections import ModulePublishPreparer
+from paasng.core.region.models import get_region
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.models import Template
-from paasng.platform.engine.configurations.image import generate_image_repository
-from paasng.platform.engine.constants import RuntimeType
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import delete_module
+from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
+from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.engine.configurations.image import generate_image_repository
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.helpers import (
@@ -74,9 +78,8 @@ from paasng.platform.modules.serializers import (
     ModuleSLZ,
 )
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.market.models import MarketConfig
-from paasng.accessories.publish.market.protections import ModulePublishPreparer
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
@@ -514,17 +517,28 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """Deprecated: 旧镜像应用的「部署配置」API"""
+
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(response_serializer=ModuleDeployConfigSLZ)
+    @swagger_auto_schema(response_serializer=ModuleDeployConfigSLZ, deprecated=True)
     def retrieve(self, request, *args, **kwargs):
         """获取当前模块的部署配置信息"""
         module = self.get_module_via_path()
         deploy_config = module.get_deploy_config()
 
-        return Response(ModuleDeployConfigSLZ(deploy_config).data)
+        return Response(
+            ModuleDeployConfigSLZ(
+                {
+                    "hooks": deploy_config.hooks,
+                    "procfile": {
+                        proc.name: proc.get_proc_command() for proc in ModuleProcessSpec.objects.filter(module=module)
+                    },
+                }
+            ).data
+        )
 
-    @swagger_auto_schema(request_body=ModuleDeployHookSLZ, responses={204: openapi_empty_response})
+    @swagger_auto_schema(request_body=ModuleDeployHookSLZ, responses={204: openapi_empty_response}, deprecated=True)
     def upsert_hook(self, request, *args, **kwargs):
         """更新或创建当前模块的部署配置的钩子"""
         module = self.get_module_via_path()
@@ -539,7 +553,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(responses={204: openapi_empty_response})
+    @swagger_auto_schema(responses={204: openapi_empty_response}, deprecated=True)
     def disable_hook(self, request, code, module_name, type_: str):
         """禁用当前模块的部署配置的钩子"""
         module = self.get_module_via_path()
@@ -553,7 +567,9 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(request_body=ModuleDeployProcfileSLZ, response_serializer=ModuleDeployProcfileSLZ)
+    @swagger_auto_schema(
+        request_body=ModuleDeployProcfileSLZ, response_serializer=ModuleDeployProcfileSLZ, deprecated=True
+    )
     def update_procfile(self, request, *args, **kwargs):
         """更新或创建当前模块的部署配置的启动命令"""
         module = self.get_module_via_path()
@@ -562,10 +578,21 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         slz = ModuleDeployProcfileSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
+        procfile = slz.validated_data["procfile"]
 
-        deploy_config = module.get_deploy_config()
-        deploy_config.procfile = data["procfile"]
-        deploy_config.save(update_fields=["procfile", "updated"])
+        mgr = ModuleProcessSpecManager(module)
+        mgr.sync_from_desc(
+            processes=[
+                ProcessTmpl(name=proc_name, command=proc_command) for proc_name, proc_command in procfile.items()
+            ]
+        )
 
-        return Response(ModuleDeployProcfileSLZ({"procfile": deploy_config.procfile}).data)
+        return Response(
+            ModuleDeployProcfileSLZ(
+                {
+                    "procfile": {
+                        proc.name: proc.get_proc_command() for proc in ModuleProcessSpec.objects.filter(module=module)
+                    }
+                }
+            ).data
+        )

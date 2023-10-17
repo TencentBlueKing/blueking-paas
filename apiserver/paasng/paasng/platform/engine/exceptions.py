@@ -83,3 +83,10 @@ class SkipPatchCode(Exception):
 
 class HandleAppDescriptionError(Exception):
     """Raise this exception when failed to handle a app description file"""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(self.reason)
+
+    def __str__(self):
+        return self.reason

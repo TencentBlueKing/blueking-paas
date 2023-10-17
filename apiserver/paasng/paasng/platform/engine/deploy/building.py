@@ -146,24 +146,21 @@ class BaseBuilder(DeployStep):
         try:
             self._handle_app_description()
         except FileNotFoundError as e:
-            logger.debug("App description file not defined, do not process.")
+            logger.debug("App description file is not defined, do not process.")
             if raise_exception:
-                raise HandleAppDescriptionError from e
+                raise HandleAppDescriptionError("App description file is not defined") from e
         except DescriptionValidationError as e:
-            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
             if raise_exception:
-                raise HandleAppDescriptionError from e
+                raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
             else:
                 logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
-            self.stream.write_message(Style.Error(e.message))
             if raise_exception:
-                raise HandleAppDescriptionError from e
+                raise HandleAppDescriptionError(reason=e.message) from e
             logger.exception("Exception while processing app description file, skip.")
         except Exception as e:
-            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
             if raise_exception:
-                raise HandleAppDescriptionError from e
+                raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
             logger.exception("Exception while processing app description file, skip.")
 
     def _handle_app_description(self):
@@ -268,9 +265,9 @@ class ApplicationBuilder(BaseBuilder):
         relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
 
+        is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase('解析应用描述文件', phase=preparation_phase):
-            is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
             self.handle_app_description(raise_exception=is_cnative_app)
 
         with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
@@ -278,6 +275,7 @@ class ApplicationBuilder(BaseBuilder):
             self.deployment.update_fields(processes=processes)
             ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
 
+        bkapp_revision_id = None
         if is_cnative_app:
             with self.procedure_force_phase('生成应用模型', phase=preparation_phase):
                 bkapp_revision_id = self.create_bkapp_revision()
@@ -298,6 +296,7 @@ class ApplicationBuilder(BaseBuilder):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
                 procfile={p.name: p.command for p in processes.values()},
+                bkapp_revision_id=bkapp_revision_id,
             )
 
     def launch_build_processes(
@@ -365,9 +364,9 @@ class DockerBuilder(BaseBuilder):
         relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
 
+        is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase('解析应用描述文件', phase=preparation_phase):
-            is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
             self.handle_app_description(raise_exception=is_cnative_app)
 
         with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
@@ -375,6 +374,7 @@ class DockerBuilder(BaseBuilder):
             ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
             self.deployment.update_fields(processes=processes)
 
+        bkapp_revision_id = None
         if is_cnative_app:
             with self.procedure_force_phase('生成应用模型', phase=preparation_phase):
                 bkapp_revision_id = self.create_bkapp_revision()
@@ -402,6 +402,7 @@ class DockerBuilder(BaseBuilder):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
                 procfile={p.name: p.command for p in processes.values()},
+                bkapp_revision_id=bkapp_revision_id,
             )
 
     def launch_build_processes(

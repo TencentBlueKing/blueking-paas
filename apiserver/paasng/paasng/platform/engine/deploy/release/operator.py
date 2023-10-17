@@ -58,12 +58,6 @@ class BkAppReleaseMgr(DeployStep):
 
     def start(self):
         build = Build.objects.get(pk=self.deployment.build_id)
-        # TODO: 增加步骤 "更新进程配置"
-        # TODO: 需要支持直接发布镜像
-        # with self.procedure('更新进程配置'):
-        #     # Turn the processes into the corresponding type in paas_wl module
-        #     procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
-        #     ProcessManager(self.engine_app.env).sync_processes_specs(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)

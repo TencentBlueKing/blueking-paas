@@ -128,11 +128,6 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
         except DeploymentDescription.DoesNotExist:
             logger.info("Can't get related DeploymentDescription, read Procfile directly.")
 
-    if not proc_data:
-        deploy_config = module.get_deploy_config()
-        if deploy_config.procfile:
-            proc_data = {name: {"command": command} for name, command in deploy_config.procfile.items()}
-
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
         proc_data_form_source = {

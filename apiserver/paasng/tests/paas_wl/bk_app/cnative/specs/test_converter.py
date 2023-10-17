@@ -51,7 +51,7 @@ class TestBkAppResourceConverter:
             metadata=ObjectMetadata(name='foo'),
             spec=BkAppSpec(
                 build=BkAppBuildConfig(
-                    image='nginx:latest',
+                    image='nginx',
                 ),
                 processes=[
                     BkAppProcess(

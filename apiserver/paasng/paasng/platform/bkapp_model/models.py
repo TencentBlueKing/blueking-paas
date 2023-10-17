@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import shlex
 from typing import List, Optional
 
 from django.db import models
@@ -57,3 +58,8 @@ class ModuleProcessSpec(TimestampedModel):
 
     class Meta:
         unique_together = ("module", "name")
+
+    def get_proc_command(self) -> str:
+        if self.proc_command:
+            return self.proc_command
+        return shlex.join(self.command or []) + " " + shlex.join(self.args or [])

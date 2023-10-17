@@ -25,12 +25,13 @@ from django.conf import settings
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
+from paasng.misc.operations.constant import OperationType
+from paasng.misc.operations.models import Operation
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import Hook
 from paasng.platform.modules.models.module import Module
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
@@ -211,9 +212,7 @@ class TestModuleDeployConfigViewSet:
 
     @pytest.fixture
     def the_procfile(self, bk_module):
-        deploy_config = bk_module.get_deploy_config()
-        deploy_config.procfile = {"web": "python -m http.server"}
-        deploy_config.save()
+        ModuleProcessSpec.objects.update_or_create(module=bk_module, name="web", proc_command="python -m http.server")
         return [{"name": "web", "command": "python -m http.server"}]
 
     def test_retrieve(self, api_client, bk_app, bk_module, the_procfile, the_hook):
@@ -282,8 +281,9 @@ class TestModuleDeployConfigViewSet:
         else:
             assert response.status_code == 400
 
-        deploy_config = bk_module.get_deploy_config()
-        assert deploy_config.procfile == expected_procfile
+        assert {
+            proc.name: proc.get_proc_command() for proc in ModuleProcessSpec.objects.filter(module=bk_module)
+        } == expected_procfile
 
 
 class TestModuleDeletion:

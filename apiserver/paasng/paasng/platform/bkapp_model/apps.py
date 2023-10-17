@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class CNativeConfig(AppConfig):
-    name = 'paasng.platform.cnative'
+    name = 'paasng.platform.bkapp_model'

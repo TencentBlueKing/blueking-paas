@@ -24,10 +24,10 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
-from paasng.platform.applications.models import Application
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import HookList
 from paasng.utils.models import OwnerTimestampedModel, TimestampedModel
@@ -70,7 +70,7 @@ class DeploymentDescription(TimestampedModel):
     plugins = JSONField(verbose_name='extra plugins', blank=True, default=[])
 
     def get_procfile(self) -> Dict[str, str]:
-        """get Procfile
+        """[Deprecated] get Procfile, should only be used to generate Procfile for buildpack
 
         Procfile is a dict containing a process type and its corresponding command
         """

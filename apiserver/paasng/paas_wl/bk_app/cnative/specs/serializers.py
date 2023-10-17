@@ -21,6 +21,8 @@ import logging
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 
@@ -212,3 +214,51 @@ class MountSLZ(serializers.ModelSerializer):
 class QueryMountsSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)
+
+
+class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
+    """A service discovery entry that represents an application and an optional module."""
+    bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20)
+    module_name = serializers.CharField(help_text='被服务发现的应用模块', max_length=20, required=False,
+                                        allow_null=True)
+
+    def validate(self, attrs):
+        """ 校验应用和模块存在，否则抛出异常 """
+        # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
+        bk_app_code = attrs['bk_app_code']
+        module_name = attrs['module_name']
+
+        # 判断应用是否存在
+        try:
+            app = Application.objects.get(code=bk_app_code)
+        except Application.DoesNotExist:
+            raise serializers.ValidationError(_('应用 %s 不存在') % bk_app_code)
+
+        if not module_name:
+            return attrs
+
+        # 判断应用下是否存在模块(name=module_name)
+        try:
+            app.modules.get(name=module_name)
+        except Module.DoesNotExist:
+            raise serializers.ValidationError(_('模块 %s 不存在') % module_name)
+
+        return attrs
+
+
+class SvcDiscConfig(serializers.Serializer):
+    application_id = serializers.UUIDField(help_text='所属应用')
+
+    bk_saas = serializers.ListField(help_text='服务发现列表', child=SvcDiscEntryBkSaaSSLZ())
+
+
+class HostAliasSLZ(serializers.Serializer):
+    ip = serializers.CharField()
+    hostnames = serializers.ListField(help_text='域名列表', child=serializers.CharField())
+
+
+class DomainResolutionSLZ(serializers.Serializer):
+    application_id = serializers.UUIDField(help_text='所属应用')
+
+    nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.CharField())
+    hostAliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ())

@@ -60,7 +60,9 @@ class ModuleSpecs:
     def templated_source_enabled(self) -> bool:
         """Whether current module has templated source"""
         # TODO: Do not read value from application, store metadata in module object itself
-        return (self.app_specs.require_templated_source or self.module.source_init_template) and self.has_template_code
+        return (
+            self.app_specs.require_templated_source or bool(self.module.source_init_template)
+        ) and self.has_template_code
 
     @property
     def runtime_type(self) -> RuntimeType:

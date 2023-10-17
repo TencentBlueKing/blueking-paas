@@ -23,10 +23,10 @@ from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, EnvVar
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.config_var import get_config_vars
-from paasng.platform.applications.models import ModuleEnvironment
 
 
 def generate_user_configurations(env: ModuleEnvironment) -> List[EnvVar]:
@@ -84,10 +84,10 @@ class EnvVarsReader:
         """
         env_vars = {}
         for env in self.res.spec.configuration.env:
-            env_vars[env.name.upper()] = env.value
+            env_vars[env.name] = env.value
 
         if self.res.spec.envOverlay and self.res.spec.envOverlay.envVariables:
             for env_overlay in self.res.spec.envOverlay.envVariables:
                 if env_overlay.envName == env_name:
-                    env_vars[env_overlay.name.upper()] = env_overlay.value
+                    env_vars[env_overlay.name] = env_overlay.value
         return [EnvVar(name=k, value=v) for k, v in env_vars.items()]

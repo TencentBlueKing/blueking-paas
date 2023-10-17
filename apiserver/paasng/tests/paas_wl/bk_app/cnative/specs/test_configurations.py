@@ -71,14 +71,14 @@ class TestEnvVarsReader:
     @pytest.mark.parametrize(
         "envs, expected",
         [
-            ([EnvVar(name="foo", value="")], [EnvVar(name="FOO", value="")]),
+            ([EnvVar(name="foo", value="")], [EnvVar(name="foo", value="")]),
             (
                 [EnvVar(name="foo", value="1"), EnvVar(name="foo", value="2"), EnvVar(name="Foo", value="3")],
-                [EnvVar(name="FOO", value="3")],
+                [EnvVar(name="foo", value="2"), EnvVar(name="Foo", value="3")],
             ),
             (
                 [EnvVar(name="foo", value="1"), EnvVar(name="bar", value="2"), EnvVar(name="baz", value="3")],
-                [EnvVar(name="FOO", value="1"), EnvVar(name="BAR", value="2"), EnvVar(name="BAZ", value="3")],
+                [EnvVar(name="foo", value="1"), EnvVar(name="bar", value="2"), EnvVar(name="baz", value="3")],
             ),
         ],
     )
@@ -92,16 +92,16 @@ class TestEnvVarsReader:
         "envs, overlays, expected_stag, expected_prod",
         [
             (
-                [EnvVar(name="foo", value="1")],
-                [EnvVarOverlay(name="foo", value="2", envName="prod")],
-                [EnvVar(name="FOO", value="1")],
-                [EnvVar(name="FOO", value="2")],
+                [EnvVar(name="Foo", value="1")],
+                [EnvVarOverlay(name="Foo", value="2", envName="prod")],
+                [EnvVar(name="Foo", value="1")],
+                [EnvVar(name="Foo", value="2")],
             ),
             (
-                [EnvVar(name="foo", value="1"), EnvVar(name="baz", value="3")],
+                [EnvVar(name="Foo", value="1"), EnvVar(name="baz", value="3")],
                 [EnvVarOverlay(name="bar", value="2", envName="prod")],
-                [EnvVar(name="FOO", value="1"), EnvVar(name="BAZ", value="3")],
-                [EnvVar(name="FOO", value="1"), EnvVar(name="BAZ", value="3"), EnvVar(name="BAR", value="2")],
+                [EnvVar(name="Foo", value="1"), EnvVar(name="baz", value="3")],
+                [EnvVar(name="Foo", value="1"), EnvVar(name="baz", value="3"), EnvVar(name="bar", value="2")],
             ),
         ],
     )

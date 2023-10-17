@@ -22,12 +22,8 @@ import pytest
 from rest_framework import serializers
 
 from paasng.platform.applications.exceptions import AppFieldValidationError
-from paasng.platform.applications.serializers import (
-    AppIDField,
-    AppNameField,
-    prepare_use_application_code,
-    prepare_use_application_name,
-)
+from paasng.platform.applications.serializers import AppIDField, AppNameField
+from paasng.platform.applications.signals import prepare_use_application_code, prepare_use_application_name
 from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db

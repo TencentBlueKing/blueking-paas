@@ -26,13 +26,13 @@ from django_dynamic_fixture import G
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
-from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
-from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
+from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.models import Application
+from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -497,6 +497,7 @@ class TestCreateCloudNativeApp:
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
+                "build_config": {"build_method": "custom_image"},
                 "manifest": {
                     "apiVersion": "paas.bk.tencent.com/v1alpha2",
                     "kind": "BkApp",
@@ -533,6 +534,7 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
+                "build_config": {"build_method": "buildpack"},
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -556,6 +558,7 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
+                "build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"},
                 "source_config": {
                     "source_init_template": "docker",
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,

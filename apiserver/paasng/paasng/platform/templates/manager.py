@@ -20,36 +20,17 @@ import logging
 from operator import attrgetter
 from typing import Dict, List, Optional
 
-from attrs import define
 from django.core.exceptions import ObjectDoesNotExist
 
-from paasng.platform.templates.exceptions import TmplRegionNotSupported
-from paasng.platform.templates.models import Template
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import APP_CATEGORY
+from paasng.platform.modules.entities import BuildConfig
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.templates.exceptions import TmplRegionNotSupported
+from paasng.platform.templates.models import Template
 
 logger = logging.getLogger(__name__)
-
-
-@define
-class BuildConfig:
-    """BuildConfig dataclass, provide similar attribute of modules.models.BuildConfig
-
-    This class is used to keep the response structure of `RegionTemplateViewSet.retrieve`
-    similar to `ModuleBuildConfigViewSet.retrieve`
-    """
-
-    build_method: RuntimeType
-    tag_options: ImageTagOptions
-
-    dockerfile_path: Optional[str] = None
-    docker_build_args: Optional[Dict] = None
-
-    buildpacks: Optional[List[AppBuildPack]] = None
-    buildpack_builder: Optional[AppSlugBuilder] = None
-    buildpack_runner: Optional[AppSlugRunner] = None
 
 
 def retrieve_template_build_config(region: str, template: Template) -> BuildConfig:

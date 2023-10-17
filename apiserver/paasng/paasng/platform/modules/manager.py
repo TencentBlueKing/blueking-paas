@@ -31,27 +31,24 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
+from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
-from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
-from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
-from paasng.platform.sourcectl.connector import get_repo_connector
-from paasng.platform.sourcectl.docker.models import init_image_repo
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
-from paasng.platform.templates.models import Template
-from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.models import EngineApp
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
-from paasng.accessories.log.shim import setup_env_log_model
-from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.models import EngineApp
+from paasng.platform.modules import entities
+from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.helpers import (
     ModuleRuntimeBinder,
@@ -59,8 +56,13 @@ from paasng.platform.modules.helpers import (
     update_build_config_with_method,
 )
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
+from paasng.platform.modules.models.deploy_config import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.platform.sourcectl.connector import get_repo_connector
+from paasng.platform.sourcectl.docker.models import init_image_repo
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
+from paasng.platform.templates.models import Template
 from paasng.utils.addons import ReplaceableFunction
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
@@ -217,16 +219,14 @@ class ModuleInitializer:
         """Bind default services after module creation"""
         DefaultServicesBinder(self.module).bind()
 
-    def initialize_docker_build_config(self):
+    def initialize_docker_build_config(self, cfg: entities.BuildConfig):
         """初始化 Dockerfile 类型的构建配置"""
-        tmpl_mgr = TemplateRuntimeManager(region=self.module.region, tmpl_name=self.module.source_init_template)
-        cfg = tmpl_mgr.get_docker_build_config()
         db_instance = BuildConfig.objects.get_or_create_by_module(self.module)
         update_build_config_with_method(
             db_instance,
             build_method=cfg.build_method,
             dockerfile_path=cfg.dockerfile_path,
-            docker_build_args=cfg.docker_build_args,
+            docker_build_args=cfg.docker_build_args or {},
         )
 
     def bind_default_runtime(self):
@@ -341,6 +341,7 @@ def initialize_module(
     source_dir: str = '',
     cluster_name: Optional[str] = None,
     manifest: Optional[Dict] = None,
+    build_config: Optional[entities.BuildConfig] = None,
 ) -> ModuleInitResult:
     """Initialize a module
 
@@ -350,6 +351,7 @@ def initialize_module(
     :param source_dir: The work dir, which containing Procfile.
     :param cluster_name: optional engine cluster name
     :param manifest: optional cnative module manifest(only build_method=custom_image required)
+    :param build_config: optional build config
     :raises: ModuleInitializationError when any steps failed
     """
     module_initializer = ModuleInitializer(module)
@@ -367,30 +369,29 @@ def initialize_module(
                 repo_type, repo_url, repo_auth_info=repo_auth_info, source_dir=source_dir
             )
 
-    if module_spec.templated_source_enabled:
-        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
+    if not build_config:
+        if module_spec.templated_source_enabled:
             tmpl_mgr = TemplateRuntimeManager(region=module.region, tmpl_name=module.source_init_template)
-            if tmpl_mgr.template.runtime_type == RuntimeType.BUILDPACK:
-                # bind heroku runtime, such as slug builder/runner and buildpacks
-                module_initializer.bind_default_runtime()
-            elif tmpl_mgr.template.runtime_type == RuntimeType.DOCKERFILE:
-                # setup build_config, such as dockerfile path and build args
-                module_initializer.initialize_docker_build_config()
+            build_config = entities.BuildConfig(
+                build_method=tmpl_mgr.template.runtime_type, tag_options=ImageTagOptions()
+            )
+        else:
+            build_config = entities.BuildConfig(build_method=module_spec.runtime_type, tag_options=ImageTagOptions())
 
-    elif module_spec.runtime_type != RuntimeType.CUSTOM_IMAGE:
-        # Matches source_origin type: Lesscode or BK_PLUGIN
+    config_obj = BuildConfig.objects.get_or_create_by_module(module)
+    config_obj.build_method = build_config.build_method
+    config_obj.save(update_fields=["build_method"])
+
+    if build_config.build_method == RuntimeType.BUILDPACK:
         with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
             # bind heroku runtime, such as slug builder/runner and buildpacks
             module_initializer.bind_default_runtime()
-    elif not manifest:
-        # Matches source_origin type: IMAGE_REGISTRY and NOT cloud native app
+    elif build_config.build_method == RuntimeType.DOCKERFILE:
+        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
+            module_initializer.initialize_docker_build_config(build_config)
+    elif module_spec.source_origin == SourceOrigin.IMAGE_REGISTRY:
         with _humanize_exception('config_image_registry', _('配置镜像 Registry 失败，请稍候再试')):
             init_image_repo(module, repo_url or '', source_dir, repo_auth_info or {})
-    else:
-        # cloud native app
-        build_config = BuildConfig.objects.get_or_create_by_module(module)
-        build_config.build_method = RuntimeType.CUSTOM_IMAGE
-        build_config.save(update_fields=["build_method"])
 
     with _humanize_exception('bind_default_services', _('绑定初始增强服务失败，请稍候再试')):
         module_initializer.bind_default_services()

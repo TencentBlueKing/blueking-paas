@@ -21,12 +21,12 @@ to the current version of the project delivered to anyone in the future.
 "Specification" describes an module. It includes many aspects, such as "use templated source code" etc.
 """
 from abc import ABC
-from typing import Any, Dict, Type
+from typing import Any, Dict, List, Type
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.engine.configurations.building import SlugbuilderInfo
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig, Module
 
@@ -49,7 +49,8 @@ class ModuleSpecs:
     def __init__(self, module: Module):
         self.module = module
         self.app_specs = AppSpecs(module.application)
-        self.source_origin_specs = SourceOriginSpecs.get(SourceOrigin(module.get_source_origin()))
+        self.source_origin = SourceOrigin(module.get_source_origin())
+        self.source_origin_specs = SourceOriginSpecs.get(self.source_origin)
 
     has_vcs = source_origin_property('has_vcs')
     has_template_code = source_origin_property('has_template_code')
@@ -59,11 +60,14 @@ class ModuleSpecs:
     def templated_source_enabled(self) -> bool:
         """Whether current module has templated source"""
         # TODO: Do not read value from application, store metadata in module object itself
-        return self.app_specs.require_templated_source and self.has_template_code
+        return (self.app_specs.require_templated_source or self.module.source_init_template) and self.has_template_code
 
     @property
     def runtime_type(self) -> RuntimeType:
-        """运行时类型/构建方式"""
+        """运行时类型/构建方式
+
+        :return: 运行时类型. 默认为 RuntimeType.BUILDPACK
+        """
         if runtime_type := getattr(self.source_origin_specs, "runtime_type", None):
             return runtime_type
         return RuntimeType(BuildConfig.objects.get_or_create_by_module(self.module).build_method)
@@ -124,6 +128,11 @@ class SourceOriginSpecs(ABC):
         except KeyError:
             raise RuntimeError(f'{source_origin} is not valid, no SourceOriginSpecs can be found!')
 
+    @classmethod
+    def supported_runtime_types(self) -> List[RuntimeType]:
+        """List of supported runtime types"""
+        return [self.runtime_type]
+
 
 class AuthorizedVcsSpecs(SourceOriginSpecs):
     """Specs for source_origin: AUTHORIZED_VCS"""
@@ -132,6 +141,11 @@ class AuthorizedVcsSpecs(SourceOriginSpecs):
     has_vcs = True
     has_template_code = True
     deploy_via_package = False
+
+    @classmethod
+    def supported_runtime_types(self) -> List[RuntimeType]:
+        """List of supported runtime types"""
+        return [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]
 
 
 class PackageMixin:

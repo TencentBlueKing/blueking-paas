@@ -26,27 +26,37 @@ from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.infras.cluster.serializers import ClusterSLZ
-from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.models import to_error_string
 from paas_wl.core.resource import CNativeBkAppNameGenerator
+from paas_wl.infras.cluster.serializers import ClusterSLZ
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.images.serializers import ImageCredentialSLZ
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.modules import entities
+from paasng.platform.modules.constants import DeployHookType, SourceOrigin
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
+from paasng.platform.modules.models.deploy_config import ImageTagOptions
+from paasng.platform.modules.specs import ModuleSpecs, SourceOriginSpecs
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.platform.sourcectl.serializers import RepositorySLZ
 from paasng.platform.sourcectl.validators import validate_image_url
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
-from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.modules.constants import DeployHookType, SourceOrigin
-from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
-from paasng.platform.modules.models.deploy_config import ImageTagOptions
-from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
 from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator, validate_procfile
+
+
+def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin):
+    """根据 SourceOrigin 校验 build_method"""
+    err_msg = f"invalid build_method {build_method} when source is {source_origin}"
+
+    origin_specs = SourceOriginSpecs.get(source_origin)
+    if build_method not in origin_specs.supported_runtime_types():
+        raise ValidationError(err_msg)
 
 
 class ModuleNameField(serializers.RegexField):
@@ -263,6 +273,29 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         return tmpl_name
 
 
+class CreateModuleBuildConfigSLZ(serializers.Serializer):
+    """创建模块构建信息"""
+
+    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
+    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
+
+    # docker build 相关字段
+    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
+    docker_build_args = serializers.DictField(
+        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
+    )
+
+    def to_internal_value(self, data) -> entities.BuildConfig:
+        # TODO 增加一些可能的基础校验
+        data = super().to_internal_value(data)
+        return entities.BuildConfig(
+            build_method=data["build_method"],
+            tag_options=data.get("tag_options", ImageTagOptions()),
+            dockerfile_path=data.get('dockerfile_path'),
+            docker_build_args=data.get('docker_build_args'),
+        )
+
+
 class ModuleBuildConfigSLZ(serializers.Serializer):
     """模块镜像构建信息"""
 
@@ -302,11 +335,15 @@ class CreateCNativeModuleSLZ(serializers.Serializer):
     name = ModuleNameField()
     source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码配置'))
     image_credentials = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
+    build_config = CreateModuleBuildConfigSLZ(required=True, help_text=_('构建配置'))
     manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
 
     def validate(self, attrs):
         application = self.context["application"]
         source_cfg = attrs["source_config"]
+
+        validate_build_method(attrs["build_config"].build_method, source_cfg['source_origin'])
+
         if manifest := attrs.get('manifest'):
             # 检查 source_config 中 source_origin 类型必须为 CNATIVE_IMAGE
             if source_cfg['source_origin'] != SourceOrigin.CNATIVE_IMAGE:

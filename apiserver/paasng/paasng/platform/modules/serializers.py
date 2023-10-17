@@ -426,7 +426,7 @@ class ProcfileSLZ(serializers.Serializer):
 class ModuleDeployProcfileSLZ(serializers.Serializer):
     procfile = serializers.ListField(child=ProcfileSLZ(), default=list)
 
-    def validate_procfile(self, data):
+    def validate_procfile(self, data) -> Dict[str, str]:
         """validate and convert the format of procfile"""
         procfile = {proc_data["name"]: proc_data["command"] for proc_data in data}
         return validate_procfile(procfile)

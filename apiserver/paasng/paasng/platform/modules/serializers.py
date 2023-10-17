@@ -52,11 +52,9 @@ from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedW
 
 def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin):
     """根据 SourceOrigin 校验 build_method"""
-    err_msg = f"invalid build_method {build_method} when source is {source_origin}"
-
     origin_specs = SourceOriginSpecs.get(source_origin)
     if build_method not in origin_specs.supported_runtime_types():
-        raise ValidationError(err_msg)
+        raise ValidationError(f"invalid build_method {build_method} when source is {source_origin}")
 
 
 class ModuleNameField(serializers.RegexField):

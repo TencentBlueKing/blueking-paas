@@ -23,13 +23,13 @@ from paas_wl.workloads.configuration.configmap.entities import ConfigMap, config
 from paasng.platform.applications.models import ModuleEnvironment
 
 
-def inject_to_app_resource(env: ModuleEnvironment, app_resource: BkAppResource):
+def inject_to_app_resource(env: ModuleEnvironment, bkapp_res: BkAppResource):
     """将 mounts 配置注入到 BkAppResource 模型中"""
     if mount_queryset := Mount.objects.filter(
         module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
     ):
         # TODO 处理用户可能在 bkapp.yaml 中定义 mounts 的场景
-        app_resource.spec.mounts = [
+        bkapp_res.spec.mounts = [
             bk_app.Mount(
                 name=m.name,
                 mountPath=m.mount_path,

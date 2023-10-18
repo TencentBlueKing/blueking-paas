@@ -32,7 +32,6 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.shim import get_cluster_egress_info
-from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.accessories.servicehub import constants, exceptions
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient
@@ -58,13 +57,16 @@ from paasng.accessories.servicehub.services import (
     ServiceSpecificationHelper,
 )
 from paasng.accessories.services.models import ServiceCategory
-from paasng.platform.engine.models import EngineApp
+from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:
     import datetime
+
+    from paasng.platform.engine.constants import AppEnvName
 
 logger = logging.getLogger(__name__)
 
@@ -641,6 +643,16 @@ class RemoteServiceMgr(BaseServiceMgr):
     def module_is_bound_with(self, service: ServiceObj, module: Module) -> bool:
         """Check if a module is bound with a service"""
         return RemoteServiceModuleAttachment.objects.filter(module=module, service_id=service.uuid).exists()
+
+    def get_provisioned_envs(self, service: ServiceObj, module: Module) -> List['AppEnvName']:
+        """Get a list of bound envs"""
+        env_list = []
+        for env in module.get_envs():
+            if RemoteServiceEngineAppAttachment.objects.filter(
+                engine_app=env.get_engine_app(), service=service, service_instance__isnull=True
+            ).exists():
+                env_list.append(env.environment)
+        return env_list
 
 
 class RemotePlanMgr(BasePlanMgr):

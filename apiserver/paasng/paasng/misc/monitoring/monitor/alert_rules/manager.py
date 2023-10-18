@@ -99,8 +99,8 @@ class AlertRuleManager:
 
     def _apply_rule_configs(self, rule_configs: List[RuleConfig]):
         """通过 MonitorAsCode 方式下发告警规则到 bkmonitor"""
-        self.client.apply_rule_configs(rule_configs)
         self.client.apply_notice_group(self.default_receivers)
+        self.client.apply_rule_configs(rule_configs)
 
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""

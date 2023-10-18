@@ -16,8 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from paasng.utils.basic import make_app_pattern, re_path
 
+from . import views
 
-class CNativeConfig(AppConfig):
-    name = 'paasng.platform.cnative'
+urlpatterns = [
+    re_path(
+        make_app_pattern(r'/manifest_ext/$', include_envs=True),
+        views.CNativeAppManifestExtViewset.as_view({'get': 'retrieve'}),
+        name='api.cnative.retrieve_manifest_ext',
+    ),
+    re_path(
+        make_app_pattern(r'/bkapp_model/manifests/current/$', include_envs=False),
+        views.BkAppModelManifestsViewset.as_view({'get': 'retrieve'}),
+        name='api.bkapp_model.current_manifests',
+    ),
+]

@@ -292,8 +292,8 @@
     display_name_zh_cn: 下载构建上下文
     display_name_en: Download docker build context
     phase: build
-    started_patterns: '["Downloading docker build context\.\.\."]'
-    finished_patterns: '["\* Docker build context is ready"]'
+    started_patterns: '["Downloading docker build context\\.\\.\\."]'
+    finished_patterns: '["\\* Docker build context is ready"]'
     updated: 2023-09-14 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
@@ -304,8 +304,8 @@
     display_name_zh_cn: 构建镜像
     display_name_en: Building image
     phase: build
-    started_patterns: '["Start building\.\.\."]'
-    finished_patterns: '["\* Build success"]'
+    started_patterns: '["Start building\\.\\.\\."]'
+    finished_patterns: '["\\* Build success"]'
     updated: 2023-09-14 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:

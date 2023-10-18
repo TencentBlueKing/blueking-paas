@@ -87,6 +87,9 @@
                 <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署分支') }}
               </div>
             </bk-select>
+            <p class="error-text mt5" v-if="branchErrorTips">
+              {{ branchErrorTips }}
+            </p>
           </div>
 
           <div class="image-source mt20" v-if="buttonActive === 'image'">
@@ -140,13 +143,15 @@
               <bk-select
                 v-else
                 v-model="tagData.tagValue"
-                :placeholder="$t('请选择')"
+                :placeholder="$t('请选择下拉数据或手动填写')"
                 style="width: 470px; display: inline-block; vertical-align: middle;"
                 :popover-min-width="420"
                 :clearable="false"
-                :searchable="true"
+                searchable
+                :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
                 :disabled="!!errorTips"
                 :loading="isTagLoading"
+                allow-create
               >
                 <bk-option
                   v-for="option in customImageTagList"
@@ -188,8 +193,7 @@
     </bk-sideslider>
   </div>
 </template>
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
 import _ from 'lodash';
 // :ok-text="$t('部署至')`${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
@@ -262,6 +266,7 @@ export default {
       tagUrl: '',
       customImageTagList: [],
       errorTips: '',
+      branchErrorTips: '',
     };
   },
   computed: {
@@ -335,6 +340,7 @@ export default {
   methods: {
     async getModuleBranches(favBranchName) {
       this.isBranchesLoading = true;
+      this.branchErrorTips = '';
       try {
         // 获取上次部署staging环境的分支
         const availableBranch = await this.$store.dispatch('deploy/refreshAvailableBranch', {
@@ -385,6 +391,7 @@ export default {
         this.initBranchSelection(favBranchName);
       } catch (e) {
         this.branchList = [];
+        this.branchErrorTips = e.detail;
         if (!e.code === 'APP_NOT_RELEASED') {
           this.$paasMessage({
             theme: 'error',
@@ -501,7 +508,6 @@ export default {
           if (this.buttonActive === 'image') {
             advancedOptions.build_id = this.tagData.tagValue;
           }
-          console.log('this.curSelectData', this.curSelectData);
           params = {
             revision: this.curSelectData.revision,
             version_type: this.curSelectData.type,

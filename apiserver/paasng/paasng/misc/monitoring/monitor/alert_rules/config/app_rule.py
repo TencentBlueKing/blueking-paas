@@ -134,7 +134,7 @@ class AppScopedRuleConfig:
 
         display_name = DEFAULT_RULE_CONFIGS[self.alert_code]['display_name']
         if not self.alert_rule_display_name:
-            self.alert_rule_display_name = f"[{self.app_code}:{self.run_env}] {display_name}"
+            self.alert_rule_display_name = f"{display_name} [{self.run_env}]"
 
         if not self.metric_labels:
             self.metric_labels = {'app_code': self.app_code, 'run_env': self.run_env}
@@ -191,9 +191,7 @@ class ModuleScopedRuleConfig(AppScopedRuleConfig):
 
         r_configs = DEFAULT_RULE_CONFIGS[self.alert_code]
         if not self.alert_rule_display_name:
-            self.alert_rule_display_name = (
-                f"[{self.app_code}:{self.module_name}:{self.run_env}] {r_configs['display_name']}"
-            )
+            self.alert_rule_display_name = f"{r_configs['display_name']} [{self.module_name}:{self.run_env}]"
 
         if not self.metric_labels:
             try:

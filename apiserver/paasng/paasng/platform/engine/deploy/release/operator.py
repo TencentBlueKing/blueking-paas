@@ -22,6 +22,7 @@ from typing import Optional, Type
 
 from django.db import IntegrityError
 
+from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus
 from paas_wl.bk_app.cnative.specs.entities import BkAppManifestProcessor
@@ -29,15 +30,14 @@ from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.bk_app.applications.models import Build
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError
-from paasng.platform.engine.models.phases import DeployPhaseTypes
+from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.workflow import DeployStep
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,12 @@ class BkAppReleaseMgr(DeployStep):
 
     def start(self):
         build = Build.objects.get(pk=self.deployment.build_id)
+        # TODO: 增加步骤 "更新进程配置"
+        # with self.procedure('更新进程配置'):
+        #     # Turn the processes into the corresponding type in paas_wl module
+        #     procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
+        #     ProcessManager(self.engine_app.env).sync_processes_specs(procs)
+
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure('部署应用'):
@@ -139,8 +145,12 @@ def release_by_k8s_operator(
         else:
             acl_enabled = False
 
+        advanced_options = Deployment.objects.get(id=deployment_id).advanced_options if deployment_id else None
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build, acl_enabled=acl_enabled)
+            env,
+            BkAppManifestProcessor(app_model_deploy, advanced_options).build_manifest(
+                build=build, acl_enabled=acl_enabled
+            ),
         )
 
         # 下发日志采集配置

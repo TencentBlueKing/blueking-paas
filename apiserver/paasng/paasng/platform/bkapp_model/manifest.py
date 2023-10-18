@@ -323,7 +323,7 @@ def get_bkapp_resource_for_deploy(
     """Get the BkApp manifest for deploy.
 
     :param env: The environment object.
-    :param deploy_id: The ID of the deployment object.
+    :param deploy_id: The ID of the AppModelDeploy object.
     :param force_image: If given, set the image of the application to this value.
     :returns: The BkApp resource that is ready for deploying.
     """

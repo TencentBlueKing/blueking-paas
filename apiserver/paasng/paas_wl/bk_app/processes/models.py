@@ -24,10 +24,11 @@ from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.utils.models import TimestampedModel
 from paas_wl.bk_app.processes.constants import ProbeType, ProcessTargetStatus
+from paas_wl.core.app_structure import set_global_get_structure
+from paas_wl.utils.models import TimestampedModel
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.platform.declarative.deployment.resources import ProbeHandler
 from paasng.utils.models import make_json_field
 
@@ -36,8 +37,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Django models start
-# All models was originally defined in PaaSNG Service
 
 PROC_DEFAULT_REPLICAS = 1
 
@@ -80,6 +79,22 @@ class ProcessSpec(TimestampedModel):
     engine_app = models.ForeignKey(
         'api.App', on_delete=models.DO_NOTHING, db_constraint=False, related_name='process_specs'
     )
+
+    proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
+    command: List[str] = models.JSONField(help_text="容器执行命令", default=None, null=True)
+    args: List[str] = models.JSONField(help_text="命令参数", default=None, null=True)
+    port = models.IntegerField(help_text="容器端口", null=True)
+
+    # Deprecated: 仅用于 v1alpha1 的云原生应用
+    image = models.CharField(help_text="容器镜像, 仅用于 v1alpha1 的云原生应用", max_length=255, null=True)
+    image_pull_policy = models.CharField(
+        help_text="镜像拉取策略(仅用于 v1alpha1 的云原生应用)",
+        choices=ImagePullPolicy.get_choices(),
+        default=ImagePullPolicy.IF_NOT_PRESENT,
+        max_length=20,
+    )
+    image_credential_name = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
+
     target_replicas = models.IntegerField('期望副本数', default=1)
     target_status = models.CharField('期望状态', max_length=32, default="start")
     plan = models.ForeignKey(ProcessSpecPlan, on_delete=models.CASCADE)
@@ -143,6 +158,7 @@ class ProcessSpecManager:
                 engine_app_id=self.wl_app.pk,
                 target_replicas=target_replicas,
                 plan=plan,
+                proc_command=process.command,
             )
             spec_create_bulks.append(process_spec)
         if spec_create_bulks:
@@ -154,17 +170,19 @@ class ProcessSpecManager:
         for process in updating_proc_specs:
             process_spec = proc_specs.get(name=process.name)
             changed = False
-            if plan_name := process.plan:
-                if plan := self.get_plan(plan_name, None):
-                    changed = True
-                    process_spec.plan = plan
-            if replicas := process.replicas:
+            if (command := process.command) and command != process_spec.proc_command:
+                changed = True
+                process_spec.proc_command = command
+            if (plan_name := process.plan) and (plan := self.get_plan(plan_name, None)):
+                changed = True
+                process_spec.plan = plan
+            if (replicas := process.replicas) and replicas != process_spec.target_replicas:
                 changed = True
                 process_spec.target_replicas = replicas
             if changed:
                 spec_update_bulks.append(process_spec)
         if spec_update_bulks:
-            ProcessSpec.objects.bulk_update(spec_update_bulks, ["target_replicas", "plan", "updated"])
+            ProcessSpec.objects.bulk_update(spec_update_bulks, ["proc_command", "target_replicas", "plan", "updated"])
 
     @staticmethod
     def get_default_replicas(process_type: str, environment: str):
@@ -199,8 +217,6 @@ def _get_structure(app: 'WlApp') -> Dict:
 
 # Set the "get_structure" function to current implementation
 set_global_get_structure(_get_structure)
-
-# Django models end
 
 
 @dataclass

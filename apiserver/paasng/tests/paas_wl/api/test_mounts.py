@@ -116,7 +116,7 @@ class TestVolumeMountViewSet:
                 # 创建相同 unique_together = ('module_id', 'mount_path', 'environment_name') 的 Mount
                 "environment_name": "_global_",
                 "source_config_data": {"configmap_z": "configmap_z_data"},
-                "mount_path": "/",
+                "mount_path": "/path/",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
             },

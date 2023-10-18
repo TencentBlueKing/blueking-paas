@@ -30,20 +30,20 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.api import CreatedAppInfo
-from paasng.platform.cnative.services import initialize_simple
-from paasng.platform.sourcectl.source_types import get_sourcectl_types
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
+from paasng.core.region.states import load_regions_from_settings
+from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
-from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
+from paasng.platform.bkapp_model.services import initialize_simple
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
-from paasng.infras.oauth2.utils import create_oauth2_client
-from paasng.core.region.states import load_regions_from_settings
-from paasng.accessories.publish.market.constant import ProductSourceUrlType
-from paasng.accessories.publish.market.models import MarketConfig
+from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
 
 from .auth import create_user
@@ -393,15 +393,15 @@ def _mock_wl_services_in_creation():
     ), mock.patch(
         'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
-        'paasng.platform.cnative.services.update_metadata_by_env', new=fake_update_metadata_by_env
+        'paasng.platform.bkapp_model.services.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
         "paasng.platform.modules.manager.EnvClusterService"
     ), mock.patch(
-        'paasng.platform.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
+        'paasng.platform.bkapp_model.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
     ), mock.patch(
-        "paasng.platform.cnative.services.create_cnative_app_model_resource"
+        "paasng.platform.bkapp_model.services.create_cnative_app_model_resource"
     ), mock.patch(
-        "paasng.platform.cnative.services.EnvClusterService"
+        "paasng.platform.bkapp_model.services.EnvClusterService"
     ), mock.patch(
         "paasng.accessories.log.shim.EnvClusterService"
     ) as fake_log:

@@ -203,9 +203,9 @@
       <bk-form :label-width="427" form-type="vertical" :model="deleteFormData">
         <bk-form-item>
           {{ $t('请完整输入') }} &nbsp;
-          <span style="color: #ff56f5">
+          <code>
             {{ curAppInfo.application.code }}
-          </span>
+          </code>
           &nbsp;{{ $t('来确认删除密钥！') }}
           <bk-input
             :placeholder="curAppInfo.application.code"
@@ -763,7 +763,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/default_secret/`;
       this.$http
         .post(url, { id })
-        .then(() => {})
+        .then(() => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('默认密钥更换成功'),
+          });
+        })
         .catch((err) => {
           this.$paasMessage({
             theme: 'error',

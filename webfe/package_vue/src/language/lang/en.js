@@ -2362,4 +2362,5 @@ export default {
   挂载卷: 'Mount volume',
   '请输入包含标签(tag)的镜像地址': 'Please enter the mirror address containing the tag',
   如何配置域名解析: 'How to configure domain name resolution',
+  默认密钥更换成功: 'Default key changed successfully',
 };

@@ -174,7 +174,7 @@ class UpsertMountSLZ(serializers.Serializer):
         module_id = self.context['module_id']
         if Mount.objects.filter(
             module_id=module_id, name=name, environment_name__in=[environment_name, MountEnvName.GLOBAL.value]
-        ):
+        ).exists():
             raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
 
         # 根据 source_type 验证 source_config_data

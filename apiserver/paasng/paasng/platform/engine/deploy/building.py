@@ -31,7 +31,7 @@ from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
-from paasng.platform.bkapp_model.manifest import get_bk_app_resource
+from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
@@ -192,8 +192,8 @@ class BaseBuilder(DeployStep):
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
         module = self.module_environment.module
         application = module.application
-        # TODO: replace `get_bk_app_resource` with `get_bkapp_resource_for_deploy`
-        bkapp = get_bk_app_resource(module=module)
+        # TODO: replace `get_bkapp_resource` with `get_bkapp_resource_for_deploy`
+        bkapp = get_bkapp_resource(module=module)
 
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)

@@ -42,7 +42,13 @@ from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_re
 from paas_wl.bk_app.cnative.specs.events import list_events
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, Mount, to_error_string, update_app_resource
+from paas_wl.bk_app.cnative.specs.models import (
+    AppModelDeploy,
+    AppModelResource,
+    Mount,
+    to_error_string,
+    update_app_resource,
+)
 from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -62,13 +68,13 @@ from paas_wl.bk_app.cnative.specs.serializers import (
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
-from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.accessories.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
 
@@ -380,7 +386,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def create(self, request, code, module_name):
         application = self.get_application()
         module = self.get_module_via_path()
-        slz = UpsertMountSLZ(data=request.data)
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -413,15 +419,16 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        slz = UpsertMountSLZ(data=request.data)
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
         # 更新 Mount
+        mount_instance.name = validated_data['name']
         mount_instance.environment_name = validated_data['environment_name']
         mount_instance.mount_path = validated_data['mount_path']
         try:
-            mount_instance.save(update_fields=['environment_name', 'mount_path'])
+            mount_instance.save(update_fields=['name', 'environment_name', 'mount_path'])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 

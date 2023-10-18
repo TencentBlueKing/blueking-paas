@@ -405,8 +405,8 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in services
         }
         for env in module.get_envs():
-            list_provisioned_rels = mixed_service_mgr.list_all_rels(env.engine_app)
-            for rel in list_provisioned_rels:
+            rels = mixed_service_mgr.list_all_rels(env.engine_app)
+            for rel in rels:
                 svc = rel.get_service()
                 if svc.uuid not in svc_allocation_map:
                     continue

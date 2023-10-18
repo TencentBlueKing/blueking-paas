@@ -42,13 +42,21 @@ from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_re
 from paas_wl.bk_app.cnative.specs.events import list_events
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, Mount, to_error_string, update_app_resource
+from paas_wl.bk_app.cnative.specs.models import (
+    AppModelDeploy,
+    AppModelResource,
+    AppModelRevision,
+    Mount,
+    to_error_string,
+    update_app_resource,
+)
 from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelResourceSerializer,
+    AppModelRevisionSerializer,
     CreateDeploySerializer,
     DeployDetailSerializer,
     DeployPrepResultSLZ,
@@ -62,13 +70,13 @@ from paas_wl.bk_app.cnative.specs.serializers import (
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
-from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.accessories.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +248,21 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return AppModelDeploy.objects.filter(
             application_id=application.id, module_id=module.id, environment_name=self.kwargs["environment"]
         )
+
+
+class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """应用资源版本相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(responses={"200": AppModelRevisionSerializer})
+    def retrieve(self, request, code, module_name, environment, revision_id):
+        """获取某个部署版本的详细信息"""
+        try:
+            revision = AppModelRevision.objects.get(pk=revision_id)
+        except AppModelRevision.DoesNotExist:
+            raise error_codes.GET_DEPLOYMENT_FAILED.f(f"id=`{revision_id}` not found.")
+        return Response(AppModelRevisionSerializer(revision).data)
 
 
 class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):

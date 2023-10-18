@@ -7,12 +7,13 @@
     :primary-color="loadingConf.primaryColor"
     :secondary-color="loadingConf.secondaryColor"
   >
-    <rect x="0" y="0" rx="2" ry="2" width="80" height="28" />
-    <rect x="100" y="0" rx="2" ry="2" width="80" height="28" />
-    <rect x="0" y="48" rx="2" ry="2" :width="baseWidth" height="28" />
-    <rect x="0" y="89" rx="1" ry="1" :width="baseWidth" height="20" />
-    <rect x="0" y="122" rx="1" ry="1" :width="baseWidth" height="20" />
-    <rect x="0" y="155" rx="1" ry="1" :width="baseWidth" height="20" />
+    <rect x="0" y="30" rx="2" ry="2" width="120" height="30" />
+    <rect x="0" y="80" rx="2" ry="2" :width="baseWidth" height="40" />
+    <rect x="0" y="125" rx="2" ry="2" :width="baseWidth" height="30" />
+    <rect x="0" y="160" rx="2" ry="2" :width="baseWidth" height="30" />
+    <rect x="0" y="195" rx="2" ry="2" :width="baseWidth" height="30" />
+    <rect x="0" y="230" rx="2" ry="2" :width="baseWidth" height="30" />
+    <rect x="0" y="265" rx="2" ry="2" :width="baseWidth" height="30" />
   </content-loader>
 </template>
 <script>

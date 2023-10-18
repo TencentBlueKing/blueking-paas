@@ -24,15 +24,15 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 
 
-def inject_to_app_resource(env: ModuleEnvironment, app_resource: bk_app.BkAppResource):
+def inject_to_app_resource(env: ModuleEnvironment, bkapp_res: bk_app.BkAppResource):
     """将 增强服务(addon) 配置注入到 BkAppResource 模型中"""
     # inject addons services to annotations for legacy version manifest
     bound_addon_names = [svc.name for svc in mixed_service_mgr.list_binded(env.module)]
-    app_resource.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(bound_addon_names)
+    bkapp_res.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(bound_addon_names)
 
-    if app_resource.apiVersion == ApiVersion.V1ALPHA2:
+    if bkapp_res.apiVersion == ApiVersion.V1ALPHA2:
         # inject addons services to specs
-        predefined_addons_names = {svc.name for svc in app_resource.spec.addons}
+        predefined_addons_names = {svc.name for svc in bkapp_res.spec.addons}
         for svc_name in bound_addon_names:
             if svc_name not in predefined_addons_names:
-                app_resource.spec.addons.append(bk_app.BkAppAddon(name=svc_name))
+                bkapp_res.spec.addons.append(bk_app.BkAppAddon(name=svc_name))

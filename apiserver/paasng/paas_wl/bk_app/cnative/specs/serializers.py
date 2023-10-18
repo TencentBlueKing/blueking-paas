@@ -21,10 +21,10 @@ import logging
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.models import Module
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
+from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, Mount
@@ -218,9 +218,9 @@ class QueryMountsSLZ(serializers.Serializer):
 
 class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     """A service discovery entry that represents an application and an optional module."""
+
     bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20)
-    module_name = serializers.CharField(help_text='被服务发现的应用模块', max_length=20, required=False,
-                                        allow_null=True)
+    module_name = serializers.CharField(help_text='被服务发现的应用模块', max_length=20, required=False, allow_null=True)
 
     def validate(self, attrs):
         """ 校验应用和模块存在，否则抛出异常 """
@@ -246,7 +246,7 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
         return attrs
 
 
-class SvcDiscConfig(serializers.Serializer):
+class SvcDiscConfigSLZ(serializers.Serializer):
     application_id = serializers.UUIDField(help_text='所属应用')
 
     bk_saas = serializers.ListField(help_text='服务发现列表', child=SvcDiscEntryBkSaaSSLZ())

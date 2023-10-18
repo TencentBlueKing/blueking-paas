@@ -65,4 +65,14 @@ urlpatterns = [
         views_enduser.VolumeMountViewSet.as_view({'put': 'update', 'delete': 'destroy'}),
         name='api.mres.volume_mount.detail',
     ),
+    re_path(
+        r'api/bkapps/applications/(?P<code>[^/]+)/svc_disc/$',
+        views_enduser.SvcDiscConfigViewSet.as_view({'get': 'retrieve', 'post': 'create'}),
+        name='api.applications.svc_disc',
+    ),
+    re_path(
+        r'api/bkapps/applications/(?P<code>[^/]+)/svc_disc/$',
+        views_enduser.SvcDiscConfigViewSet.as_view({'put': 'update'}),
+        name='api.applications.svc_disc_update',
+    ),
 ]

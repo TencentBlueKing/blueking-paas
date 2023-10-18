@@ -42,7 +42,13 @@ from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_re
 from paas_wl.bk_app.cnative.specs.events import list_events
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, Mount, to_error_string, update_app_resource
+from paas_wl.bk_app.cnative.specs.models import (
+    AppModelDeploy,
+    AppModelResource,
+    Mount,
+    to_error_string,
+    update_app_resource,
+)
 from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -62,13 +68,13 @@ from paas_wl.bk_app.cnative.specs.serializers import (
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
-from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.accessories.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
 
@@ -456,3 +462,29 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SvcDiscConfigViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def retrieve(self, request, code):
+        pass
+
+    def create(self, request, code):
+        pass
+
+    def update(self, request, code):
+        pass
+
+
+class DomainResolutionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def retrieve(self, request, code):
+        pass
+
+    def create(self, request, code):
+        pass
+
+    def update(self, request, code):
+        pass

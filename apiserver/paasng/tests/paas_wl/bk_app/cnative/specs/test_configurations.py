@@ -28,7 +28,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvOverlay, EnvVar, EnvVarOv
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 
-pytestmark = pytest.mark.django_db(databases=["default"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_generate_builtin_configurations(bk_stag_env, bk_prod_env):

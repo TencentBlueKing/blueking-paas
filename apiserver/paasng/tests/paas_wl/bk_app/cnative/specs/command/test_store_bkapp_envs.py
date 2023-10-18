@@ -24,6 +24,7 @@ from django.core.management import CommandError, call_command
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
 from paasng.platform.engine.models import ConfigVar
+from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
@@ -78,28 +79,27 @@ def make_spec_updater(envs: Optional[List[EnvVar]] = None, env_overlay: Optional
     [
         (make_spec_updater(), []),
         (
-            make_spec_updater([EnvVar(name="foo", value="bar")]),
+            make_spec_updater([EnvVar(name="Foo", value="bar")]),
             [
-                ("FOO", "bar", "stag"),
-                ("FOO", "bar", "prod"),
+                ("Foo", "bar", ENVIRONMENT_ID_FOR_GLOBAL),
             ],
         ),
         (
             make_spec_updater(
-                [EnvVar(name="foo", value="bar")], [EnvVarOverlay(name="foo", value="baz", envName="stag")]
+                [EnvVar(name="Foo", value="bar")], [EnvVarOverlay(name="Foo", value="baz", envName="stag")]
             ),
             [
-                ("FOO", "baz", "stag"),
-                ("FOO", "bar", "prod"),
-            ],
-        ),
-        (
-            make_spec_updater(
-                [EnvVar(name="foo", value="bar")], [EnvVarOverlay(name="Foo", value="baz", envName="stag")]
-            ),
-            [
+                ("Foo", "bar", ENVIRONMENT_ID_FOR_GLOBAL),
                 ("Foo", "baz", "stag"),
-                ("foo", "bar", "prod"),
+            ],
+        ),
+        (
+            make_spec_updater(
+                [EnvVar(name="Foo", value="bar")], [EnvVarOverlay(name="Foo", value="baz", envName="prod")]
+            ),
+            [
+                ("Foo", "bar", ENVIRONMENT_ID_FOR_GLOBAL),
+                ("Foo", "baz", "prod"),
             ],
         ),
     ],
@@ -114,4 +114,7 @@ def test_handle(bk_cnative_app, bk_module, bk_stag_wl_app, spec_updator, expecte
 
     assert ConfigVar.objects.filter(module=bk_module).count() == len(expected)
     for key, value, env_name in expected:
-        assert ConfigVar.objects.get(key=key, environment=bk_module.get_envs(env_name)).value == value
+        if env_name == ENVIRONMENT_ID_FOR_GLOBAL:
+            assert ConfigVar.objects.get(key=key, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).value == value
+        else:
+            assert ConfigVar.objects.get(key=key, environment=bk_module.get_envs(env_name)).value == value

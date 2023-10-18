@@ -17,26 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
-from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paas_wl.bk_app.cnative.specs.models import BkAppResource, Mount
+from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.workloads.configuration.configmap.entities import ConfigMap, configmap_kmodel
 from paasng.platform.applications.models import ModuleEnvironment
-
-
-def inject_to_app_resource(env: ModuleEnvironment, app_resource: BkAppResource):
-    """将 mounts 配置注入到 BkAppResource 模型中"""
-    if mount_queryset := Mount.objects.filter(
-        module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
-    ):
-        # TODO 处理用户可能在 bkapp.yaml 中定义 mounts 的场景
-        app_resource.spec.mounts = [
-            bk_app.Mount(
-                name=m.name,
-                mountPath=m.mount_path,
-                source=m.source_config,
-            )
-            for m in mount_queryset
-        ]
 
 
 class VolumeSourceManager:

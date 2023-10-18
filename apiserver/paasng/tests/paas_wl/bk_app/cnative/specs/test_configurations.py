@@ -18,53 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.cnative.specs.configurations import (
-    AppEnvName,
-    EnvVarsReader,
-    MergeStrategy,
-    generate_builtin_configurations,
-    merge_envvars,
-)
+from paas_wl.bk_app.cnative.specs.configurations import AppEnvName, EnvVarsReader
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvOverlay, EnvVar, EnvVarOverlay
 from paas_wl.bk_app.cnative.specs.models import create_app_resource
 
 pytestmark = pytest.mark.django_db(databases=["default"])
-
-
-def test_generate_builtin_configurations(bk_stag_env, bk_prod_env):
-    configurations = generate_builtin_configurations(bk_stag_env)
-    assert {"BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL"} - {item.name for item in configurations} == set()
-
-
-@pytest.mark.parametrize(
-    "x, y, strategy, z",
-    [
-        ([], [], MergeStrategy.OVERRIDE, []),
-        ([], [EnvVar(name="a", value="a")], MergeStrategy.OVERRIDE, [EnvVar(name="a", value="a")]),
-        ([EnvVar(name="a", value="a")], [], MergeStrategy.OVERRIDE, [EnvVar(name="a", value="a")]),
-        (
-            [EnvVar(name="a", value="a")],
-            [EnvVar(name="a", value="A")],
-            MergeStrategy.OVERRIDE,
-            [EnvVar(name="a", value="A")],
-        ),
-        (
-            [EnvVar(name="a", value="a")],
-            [EnvVar(name="a", value="A")],
-            MergeStrategy.IGNORE,
-            [EnvVar(name="a", value="a")],
-        ),
-        # override 在原来的位置修改, 然后再 append
-        (
-            [EnvVar(name="a", value="a"), EnvVar(name="b", value="b")],
-            [EnvVar(name="B", value="B"), EnvVar(name="a", value="A")],
-            MergeStrategy.OVERRIDE,
-            [EnvVar(name="a", value="A"), EnvVar(name="b", value="b"), EnvVar(name="B", value="B")],
-        ),
-    ],
-)
-def test_merge_envvars(x, y, strategy, z):
-    assert merge_envvars(x, y, strategy) == z
 
 
 class TestEnvVarsReader:

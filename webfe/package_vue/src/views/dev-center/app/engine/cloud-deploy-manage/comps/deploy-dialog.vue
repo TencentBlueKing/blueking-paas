@@ -164,12 +164,31 @@
             </bk-form-item>
           </bk-form>
         </div>
+        <bk-form form-type="vertical">
+          <bk-form-item
+            :label="$t('镜像拉取策略')"
+            :property="'tagValue'"
+            :error-display-type="'normal'"
+          >
+            <bk-radio-group v-model="imagePullStrategy">
+              <bk-radio :value="'IfNotPresent'">IfNotPresent</bk-radio>
+              <bk-radio :value="'Always'">Always</bk-radio>
+            </bk-radio-group>
+          </bk-form-item>
+        </bk-form>
       </div>
       <div v-else class="v1-container">
         <div>{{$t('请确认模块下进程对应的镜像地址')}}</div>
         <div class="mt10" v-for="item in processesData" :key="item.name">
           <span class="name">{{ item.name }}：</span>
           <span class="value">{{ item.image }}</span>
+        </div>
+        <div class="image-pull-strategy">
+          <label>{{ $t('镜像拉取策略') }}：</label>
+          <bk-radio-group v-model="imagePullStrategy">
+            <bk-radio :value="'IfNotPresent'">IfNotPresent</bk-radio>
+            <bk-radio :value="'Always'">Always</bk-radio>
+          </bk-radio-group>
         </div>
       </div>
     </bk-dialog>
@@ -267,6 +286,7 @@ export default {
       customImageTagList: [],
       errorTips: '',
       branchErrorTips: '',
+      imagePullStrategy: 'IfNotPresent',
     };
   },
   computed: {
@@ -500,10 +520,11 @@ export default {
       try {
         this.deployAppDialog.isLoading = true;
         let params = {};
+        // V1alpha1与V1alpha2都添加镜像拉取策略
+        const advancedOptions = {
+          image_pull_policy: this.imagePullStrategy,
+        };
         if (this.isV1alpha2) {
-          const advancedOptions = {
-            image_pull_policy: 'IfNotPresent',
-          };
           // 如果是镜像则需要传构建产物ID, 镜像列表接口里的 `id` 字段
           if (this.buttonActive === 'image') {
             advancedOptions.build_id = this.tagData.tagValue;
@@ -525,6 +546,7 @@ export default {
             params = {
               version_type: 'image',
               version_name: this.tagData.tagValue,
+              advanced_options: advancedOptions,
             };
             this.deploymentInfoBackUp.version_info.version_name = this.tagData.tagValue;
           }
@@ -533,6 +555,7 @@ export default {
           params = {
             version_type: 'manifest',
             version_name: 'manifest',
+            advanced_options: advancedOptions,
             manifest: this.cloudAppData,
           };
         }
@@ -701,5 +724,12 @@ export default {
 .error-text{
   font-size: 12px;
   color: #ea3636;
+}
+.image-pull-strategy {
+  margin-top: 10px;
+  display: flex;
+  label {
+    white-space: nowrap;
+  }
 }
 </style>

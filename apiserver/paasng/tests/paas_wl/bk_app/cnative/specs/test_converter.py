@@ -60,7 +60,7 @@ class TestBkAppResourceConverter:
                     BkAppProcess(
                         name='web',
                         image=None,
-                        imagePullPolicy=ImagePullPolicy.ALWAYS,
+                        imagePullPolicy=None,
                         command=[],
                         args=[],
                         resQuotaPlan=ResQuotaPlan.P_2C2G,

@@ -71,8 +71,10 @@ class BkAppResourceConverter:
         if any(policy == ImagePullPolicy.ALWAYS for policy in image_pull_policies):
             image_pull_policy = ImagePullPolicy.ALWAYS
 
+        # 进程中的镜像相关信息都设置为 None
         for p in self.bkapp.spec.processes:
             p.image = None
+            p.imagePullPolicy = None
 
         # v1alpha2 仅保存镜像仓库，去掉 Tag
         repository, _, _ = used_images.pop().partition(":")

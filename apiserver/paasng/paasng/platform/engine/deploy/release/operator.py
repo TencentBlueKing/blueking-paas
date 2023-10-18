@@ -36,7 +36,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError
-from paasng.platform.engine.models.phases import DeployPhaseTypes
+from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.workflow import DeployStep
 
 logger = logging.getLogger(__name__)
@@ -145,8 +145,12 @@ def release_by_k8s_operator(
         else:
             acl_enabled = False
 
+        advanced_options = Deployment.objects.get(id=deployment_id).advanced_options if deployment_id else None
         deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build, acl_enabled=acl_enabled)
+            env,
+            BkAppManifestProcessor(app_model_deploy, advanced_options).build_manifest(
+                build=build, acl_enabled=acl_enabled
+            ),
         )
 
         # 下发日志采集配置

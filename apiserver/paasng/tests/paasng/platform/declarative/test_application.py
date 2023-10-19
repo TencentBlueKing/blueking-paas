@@ -65,7 +65,7 @@ def make_app_desc(
     tag: Optional[Tag] = None,
     description: Optional[str] = None,
     services: Optional[List] = None,
-):
+) -> Dict[str, Any]:
     """Make description data for testing"""
     result: Dict[str, Any] = {
         'region': region,
@@ -123,7 +123,6 @@ class TestAppDeclarativeControllerCreation:
             AppDeclarativeController(bk_user).perform_action(get_app_description(app_json))
         assert 'bk_app_name' in exc_info.value.detail
 
-    @pytest.mark.xfail(raises=DescriptionValidationError)
     @pytest.mark.parametrize("module_name", ["$", "0us0", "-a", "a-", "_a", "a_", "a0us0b"])
     def test_invalid_module_name(self, module_name, random_name):
         app_json = {
@@ -131,7 +130,8 @@ class TestAppDeclarativeControllerCreation:
             'bk_app_name': random_name,
             'modules': {module_name: {"is_default": True, "language": "python"}},
         }
-        get_app_description(app_json)
+        with pytest.raises(DescriptionValidationError):
+            get_app_description(app_json)
 
     @pytest.mark.parametrize(
         'profile_regions,region,is_success',

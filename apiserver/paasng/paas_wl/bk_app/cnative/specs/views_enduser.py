@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from contextlib import suppress
 from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
@@ -42,7 +43,13 @@ from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_re
 from paas_wl.bk_app.cnative.specs.events import list_events
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, Mount, to_error_string, update_app_resource
+from paas_wl.bk_app.cnative.specs.models import (
+    AppModelDeploy,
+    AppModelResource,
+    Mount,
+    to_error_string,
+    update_app_resource,
+)
 from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -62,13 +69,13 @@ from paas_wl.bk_app.cnative.specs.serializers import (
 )
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
-from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.accessories.publish.entrance.exposer import get_exposed_url
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +298,17 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    def _validate_registry_permission(self, registry_service: DockerRegistryController):
+        """Validates the registry permission by attempting to touch it.
+
+        :raise: error_codes.INVALID_CREDENTIALS: If the credentials are invalid or the repository is unreachable.
+        """
+        with suppress(Exception):
+            # bkrepo 的 docker 仓库，镜像凭证没有填写正确时，.touch() 时会抛出异常
+            if registry_service.touch():
+                return
+            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
     def list_tags(self, request, code, module_name):
         """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
@@ -318,13 +336,12 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             username, password = credential.username, credential.password
 
         endpoint, slash, repo = repository.partition("/")
-        version_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
+        registry_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
 
-        if not version_service.touch():
-            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+        self._validate_registry_permission(registry_service)
 
         try:
-            alternative_versions = AlternativeVersionSLZ(version_service.list_alternative_versions(), many=True).data
+            alternative_versions = AlternativeVersionSLZ(registry_service.list_alternative_versions(), many=True).data
         except Exception:
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag

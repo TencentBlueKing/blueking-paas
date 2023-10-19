@@ -19,16 +19,16 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.bk_app.cnative.specs.configurations import (
-    AppEnvName,
     EnvVarsReader,
     MergeStrategy,
     generate_builtin_configurations,
     merge_envvars,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvOverlay, EnvVar, EnvVarOverlay
-from paas_wl.bk_app.cnative.specs.models import create_app_resource
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
+from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 
-pytestmark = pytest.mark.django_db(databases=["default"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_generate_builtin_configurations(bk_stag_env, bk_prod_env):
@@ -69,45 +69,32 @@ def test_merge_envvars(x, y, strategy, z):
 
 class TestEnvVarsReader:
     @pytest.mark.parametrize(
-        "envs, expected",
+        "envs",
         [
-            ([EnvVar(name="foo", value="")], [EnvVar(name="FOO", value="")]),
-            (
-                [EnvVar(name="foo", value="1"), EnvVar(name="foo", value="2"), EnvVar(name="Foo", value="3")],
-                [EnvVar(name="FOO", value="3")],
-            ),
-            (
-                [EnvVar(name="foo", value="1"), EnvVar(name="bar", value="2"), EnvVar(name="baz", value="3")],
-                [EnvVar(name="FOO", value="1"), EnvVar(name="BAR", value="2"), EnvVar(name="BAZ", value="3")],
-            ),
+            ([EnvVar(name="foo", value="")]),
+            ([EnvVar(name="foo", value="1"), EnvVar(name="bar", value="2")]),
         ],
     )
-    def test_read(self, envs, expected):
+    def test_global_envs(self, bk_app, bk_module, envs):
         res = create_app_resource("foo", "nginx")
         res.spec.configuration.env = envs
-        assert EnvVarsReader(res).read_all(AppEnvName.STAG) == expected
-        assert EnvVarsReader(res).read_all(AppEnvName.PROD) == expected
+        AppModelResource.objects.create_from_resource(bk_app.region, bk_app.id, bk_module.id, res)
+        config_vars = EnvVarsReader(res).read_all(bk_module)
+
+        for _var in config_vars:
+            assert _var.environment_id == ENVIRONMENT_ID_FOR_GLOBAL
 
     @pytest.mark.parametrize(
-        "envs, overlays, expected_stag, expected_prod",
+        "overlays, expected_env",
         [
-            (
-                [EnvVar(name="foo", value="1")],
-                [EnvVarOverlay(name="foo", value="2", envName="prod")],
-                [EnvVar(name="FOO", value="1")],
-                [EnvVar(name="FOO", value="2")],
-            ),
-            (
-                [EnvVar(name="foo", value="1"), EnvVar(name="baz", value="3")],
-                [EnvVarOverlay(name="bar", value="2", envName="prod")],
-                [EnvVar(name="FOO", value="1"), EnvVar(name="BAZ", value="3")],
-                [EnvVar(name="FOO", value="1"), EnvVar(name="BAZ", value="3"), EnvVar(name="BAR", value="2")],
-            ),
+            ([EnvVarOverlay(name="Foo", value="2", envName="prod")], 'prod'),
+            ([EnvVarOverlay(name="bar", value="2", envName="stag")], 'stag'),
         ],
     )
-    def test_overlay(self, envs, overlays, expected_stag, expected_prod):
+    def test_overlay(self, bk_app, bk_module, overlays, expected_env):
         res = create_app_resource("foo", "nginx")
-        res.spec.configuration.env = envs
         res.spec.envOverlay = EnvOverlay(envVariables=overlays)
-        assert EnvVarsReader(res).read_all(AppEnvName.STAG) == expected_stag
-        assert EnvVarsReader(res).read_all(AppEnvName.PROD) == expected_prod
+        AppModelResource.objects.create_from_resource(bk_app.region, bk_app.id, bk_module.id, res)
+        config_vars = EnvVarsReader(res).read_all(bk_module)
+        for _var in config_vars:
+            assert _var.environment == bk_module.get_envs(expected_env)

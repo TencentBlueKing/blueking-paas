@@ -17,16 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import copy
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, EnvVar
-from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
-from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models.config_var import get_config_vars
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
+from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar, get_config_vars
+
+if TYPE_CHECKING:
+    from paasng.platform.modules.models import Module
 
 
 def generate_user_configurations(env: ModuleEnvironment) -> List[EnvVar]:
@@ -76,18 +78,38 @@ class EnvVarsReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, env_name: AppEnvName) -> List[EnvVar]:
-        """Read all env vars defined at given `env_name`
+    def read_all(self, module: 'Module') -> List[ConfigVar]:
+        """Read all the env vars and keep the original formatting
 
-        :param env_name: Environment name
-        :return: A list contains all env vars defined at given `env_name`, including `envOverlay`
+        :param module: App module object
+        :retrun: A list contains all env vars defined at `configuration.env` and  `envOverlay.envVariables`
         """
-        env_vars = {}
-        for env in self.res.spec.configuration.env:
-            env_vars[env.name.upper()] = env.value
+        config_vars = []
 
+        # env vars that take effect in all environments
+        for env in self.res.spec.configuration.env:
+            config_vars.append(
+                ConfigVar(
+                    module=module,
+                    is_global=True,
+                    environment_id=ENVIRONMENT_ID_FOR_GLOBAL,
+                    key=env.name,
+                    value=env.value,
+                    description="auto created from BkApp",
+                )
+            )
+
+        # env vars that take effect in the specify environment
         if self.res.spec.envOverlay and self.res.spec.envOverlay.envVariables:
             for env_overlay in self.res.spec.envOverlay.envVariables:
-                if env_overlay.envName == env_name:
-                    env_vars[env_overlay.name.upper()] = env_overlay.value
-        return [EnvVar(name=k, value=v) for k, v in env_vars.items()]
+                module_env = module.get_envs(env_overlay.envName)
+                config_vars.append(
+                    ConfigVar(
+                        module=module,
+                        environment=module_env,
+                        key=env_overlay.name,
+                        value=env_overlay.value,
+                        description="auto created from BkApp",
+                    )
+                )
+        return config_vars

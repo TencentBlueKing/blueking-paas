@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,19 +15,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern, re_path
+from attrs import define
 
-from . import views
 
-urlpatterns = [
-    re_path(
-        make_app_pattern(r'/manifest_ext/$', include_envs=True),
-        views.CNativeAppManifestExtViewset.as_view({'get': 'retrieve'}),
-        name='api.cnative.retrieve_manifest_ext',
-    ),
-    re_path(
-        make_app_pattern(r'/bkapp_model/manifests/current/$', include_envs=False),
-        views.BkAppModelManifestsViewset.as_view({'get': 'retrieve', 'put': 'replace'}),
-        name='api.bkapp_model.current_manifests',
-    ),
-]
+@define
+class ImportEnvVarsResult:
+    """The result of the env vars importing procedure.
+
+    :param affected_num: How many objects have been affected.
+    :param removed_num: How many objects have been removed.
+    """
+
+    affected_num: int
+    removed_num: int

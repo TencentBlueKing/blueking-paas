@@ -19,3 +19,4 @@ to the current version of the project delivered to anyone in the future.
 
 # 应用所能拥有的最大密钥的个数
 MAX_SECRET_COUNT = 2
+MIN_SECRET_COUNT = 1

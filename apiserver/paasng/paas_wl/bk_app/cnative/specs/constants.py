@@ -133,6 +133,7 @@ class ResQuotaPlan(str, StructuredEnum):
     P_1C512M = EnumField("1C512M", label="1C512M")
     P_2C1G = EnumField("2C1G", label="2C1G")
     P_2C2G = EnumField("2C2G", label="2C2G")
+    P_2C4G = EnumField("2C4G", label="2C4G")
     P_4C1G = EnumField("4C1G", label="4C1G")
     P_4C2G = EnumField("4C2G", label="4C2G")
     P_4C4G = EnumField("4C4G", label="4C4G")

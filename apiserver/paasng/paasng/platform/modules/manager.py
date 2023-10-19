@@ -220,7 +220,10 @@ class ModuleInitializer:
         DefaultServicesBinder(self.module).bind()
 
     def initialize_docker_build_config(self, cfg: entities.BuildConfig):
-        """初始化 Dockerfile 类型的构建配置"""
+        """初始化 Dockerfile 类型的构建配置
+
+        :param cfg: 构建配置, 其中含有 Dockerfile 相关的构建参数等
+        """
         db_instance = BuildConfig.objects.get_or_create_by_module(self.module)
         update_build_config_with_method(
             db_instance,

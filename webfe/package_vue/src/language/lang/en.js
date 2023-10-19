@@ -2349,4 +2349,7 @@ export default {
   '请输入包含标签(tag)的镜像地址': 'Please enter the mirror address containing the tag',
   如何配置域名解析: 'How to configure domain name resolution',
   默认密钥更换成功: 'Default key changed successfully',
+  镜像拉取策略: 'Image pull strategy',
+  '如果本地不存在指定的镜像，才会从远程仓库拉取': 'This policy pulls the container image from the remote registry only if it is not already present locally.',
+  '总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项': 'Always pull the image when starting a container, each image tag is pulled only once by default. If the content of the image tag is updated, please select this option.',
 };

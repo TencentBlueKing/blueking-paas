@@ -102,7 +102,12 @@
       <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
     </bk-dialog>
     <!-- 新增/编辑挂卷 -->
-    <bk-sideslider :is-show.sync="volumeDefaultSettings.isShow" :quick-close="true" :width="960">
+    <bk-sideslider
+      :is-show.sync="volumeDefaultSettings.isShow"
+      :quick-close="true"
+      :width="960"
+      ext-cls="volume-slider"
+    >
       <div slot="header">
         {{ $t('新增/编辑挂载券') }}&emsp;
         <span style="color: #979ba5; font-size: 14px" v-if="curType === 'edit'">{{ volumeFormData.name }}</span>
@@ -295,7 +300,6 @@ export default {
             validator: () => {
               const flag = this.volumeList.some(item => item.mount_path === this.volumeFormData.mount_path
                   && item.environment_name === this.volumeFormData.environment_name);
-              console.log(flag);
               if (flag) {
                 return false;
               }
@@ -363,9 +367,6 @@ export default {
     this.init();
   },
   methods: {
-    test() {
-      this.isEdit = true;
-    },
     handleEditorErr(err) {
       // 捕获编辑器错误提示
       this.editorErr.type = 'content'; // 编辑内容错误
@@ -377,9 +378,9 @@ export default {
     },
     // 新增挂载
     handleCreate(type) {
-      console.log(this.$refs);
       this.curType = type;
       this.isAddFile = false;
+      this.active = '';
       this.volumeFormData = {
         name: '',
         mount_path: '',
@@ -387,7 +388,6 @@ export default {
         source_config_data: [],
         source_type: 'ConfigMap',
       };
-      // this.sliderEditordetail = '';
       this.volumeDefaultSettings.isShow = true;
       this.$nextTick(() => {
         this.$refs.editorRefSlider.setValue('');
@@ -400,7 +400,6 @@ export default {
         .get(url)
         .then((res) => {
           this.volumeList = res.results;
-          console.log(this.volumeList);
         })
         .finally(() => {
           this.isLoading = false;
@@ -410,7 +409,6 @@ export default {
     editVolume(type, row) {
       this.isAddFile = false;
       this.curType = type;
-      console.log(row);
       // eslint-disable-next-line no-underscore-dangle
       const _row = cloneDeep(row);
       _row.source_config_data = Object.entries(_row.source_config_data).map(([key, value]) => ({
@@ -420,7 +418,11 @@ export default {
       }));
       this.volumeFormData = _row;
       this.volumeDefaultSettings.isShow = true;
-      console.log(this.volumeFormData.source_config_data);
+      this.active = this.volumeFormData.source_config_data[0].label;
+      const editContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
+      this.$nextTick(() => {
+        this.$refs.editorRefSlider.setValue(editContent);
+      });
     },
     // 删除挂载券
     deleteVolume(row) {
@@ -445,8 +447,6 @@ export default {
     },
     // 点击标签
     handleTag(row, item) {
-      console.log(row);
-      console.log(item);
       this.fileDialogConfig.visiable = true;
       const addressDom = document.querySelectorAll('.plusIcon');
       for (const item of addressDom) {
@@ -457,16 +457,10 @@ export default {
         }
       }
       this.detail = row[item];
-      console.log(this.detail);
       // eslint-disable-next-line no-underscore-dangle
       const _detail = cloneDeep(this.detail);
-      const formatDetail = _detail.replace(/'/g, '"');
-      this.$refs.editorRefDialog?.setValue(JSON.parse(formatDetail));
-      this.$nextTick(() => {
-        console.log(this.detail);
-      });
-
-      // console.log(JSON.parse({ getEditorValue }));
+      const resultFormatDetail = this.convertToObjectIfPossible(_detail);
+      this.$refs.editorRefDialog?.setValue(resultFormatDetail);
     },
     // 筛选生效环境
     sourceFilterMethod(value, row, column) {
@@ -475,59 +469,55 @@ export default {
     },
     // 确定新增或编辑挂载券
     confirmVolume() {
-      console.log(this.volumeFormData.source_config_data);
-      const curVolumId = this.volumeFormData.id;
-      const testConfigData = cloneDeep(this.volumeFormData.source_config_data);
+      // eslint-disable-next-line no-underscore-dangle
+      const _row = cloneDeep(this.volumeFormData);
+      const testConfigData = _row.source_config_data;
       const formatConfig = testConfigData.reduce((obj, item) => {
         // eslint-disable-next-line no-param-reassign
         obj[item.label] = item.content;
         return obj;
       }, {});
-      console.log(formatConfig);
-      this.volumeFormData.source_config_data = formatConfig;
-      console.log(this.volumeFormData);
+      _row.source_config_data = formatConfig;
       if (this.curType === 'add') {
         const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/`;
         this.$http
-          .post(url, this.volumeFormData)
+          .post(url, _row)
           .then(() => {
             this.$paasMessage({
               theme: 'success',
               message: this.$t('创建成功'),
             });
+            this.volumeDefaultSettings.isShow = false;
+            this.curType = '';
+            this.getVolumeList();
           })
           .catch((err) => {
             this.$paasMessage({
               theme: 'error',
               message: err.message || err.detail || this.$t('创建失败'),
             });
-          })
-          .finally(() => {
-            this.curType = '';
-            this.getVolumeList();
           });
       } else if (this.curType === 'edit') {
+        const curVolumId = this.volumeFormData.id;
         const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/${curVolumId}`;
         this.$http
-          .put(url, this.volumeFormData)
+          .put(url, _row)
           .then(() => {
             this.$paasMessage({
               theme: 'success',
               message: this.$t('修改成功'),
             });
+            this.volumeDefaultSettings.isShow = false;
+            this.curType = '';
+            this.getVolumeList();
           })
           .catch(() => {
             this.$paasMessage({
               theme: 'error',
               message: this.$t('修改失败'),
             });
-          })
-          .finally(() => {
-            this.curType = '';
-            this.getVolumeList();
           });
       }
-      this.volumeDefaultSettings.isShow = false;
     },
     // 取消新增或编辑挂载券
     cancelVolume() {
@@ -536,17 +526,35 @@ export default {
     },
     // tab切换
     tabChange(val) {
-      this.active = val;
-      console.log(this.volumeFormData.source_config_data);
+      if (val === '') {
+        this.$refs.editorRefSlider.setValue('');
+        return;
+      }
       const curTab = this.volumeFormData.source_config_data.find(item => item.name === val);
-      console.log(val);
-      console.log(curTab);
+      if (curTab === undefined) {
+        this.active = this.volumeFormData.source_config_data[0].label;
+        const curContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
+        this.$refs.editorRefSlider.setValue(curContent);
+        return;
+      }
       // eslint-disable-next-line no-underscore-dangle
       const _detail = cloneDeep(curTab.content);
-      const formatDetail = _detail.replace(/'/g, '"');
-      this.$refs.editorRefSlider.setValue(JSON.parse(formatDetail));
-      console.log(this.volumeFormData);
-      console.log(this.sliderEditordetail);
+      this.active = val;
+      const resultFormatDetail = this.convertToObjectIfPossible(_detail);
+      this.$refs.editorRefSlider.setValue(resultFormatDetail);
+    },
+    // 转换数据格式
+    convertToObjectIfPossible(value) {
+      try {
+        const formatDetail = value.replace(/'/g, '"');
+        const parsedValue = JSON.parse(formatDetail);
+        if (typeof parsedValue === 'object' && parsedValue !== null) {
+          return parsedValue;
+        }
+      } catch (error) {
+        // 解析失败，保持原样
+      }
+      return value;
     },
     // 鼠标进入tab
     handleEnter(label) {
@@ -561,12 +569,18 @@ export default {
       this.isAddFile = true;
       this.$refs.editorRefSlider?.setValue('');
       this.addFileInput = '';
-      console.log(this.volumeFormData.source_config_data);
+      this.volumeFormData.source_config_data.forEach((item) => {
+        this.$refs[`editInput${item.label}`][0].style.display = 'none';
+        this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
+      });
     },
     // 添加文件input失焦
     handleBlurAddInput() {
       if (this.addFileInput.trim() === '') {
         this.isAddFile = false;
+        const curTab = this.volumeFormData.source_config_data.find(item => item.name === this.active);
+        const curContent = this.convertToObjectIfPossible(curTab.content);
+        this.$refs.editorRefSlider.setValue(curContent);
         return;
       }
       const fileName = this.volumeFormData.source_config_data;
@@ -578,7 +592,7 @@ export default {
         });
         return;
       }
-      if (JSON.stringify(this.sliderEditordetail) === '{}') {
+      if (this.$refs.editorRefSlider?.getValue() === '') {
         this.$paasMessage({
           theme: 'error',
           message: this.$t('文件内容不能为空'),
@@ -586,26 +600,28 @@ export default {
         return;
       }
       this.active = this.addFileInput;
+      const isObj = JSON.stringify(this.sliderEditordetail) === '{}';
+      const curContent = this.$refs.editorRefSlider?.getValue();
+      const content = isObj ? curContent : JSON.stringify(this.sliderEditordetail);
       const addFileContent = {
         name: this.addFileInput,
         label: this.addFileInput,
-        content: JSON.stringify(this.sliderEditordetail),
+        content,
       };
       this.isAddFile = false;
       this.volumeFormData.source_config_data.unshift(addFileContent);
-      console.log(addFileContent);
-      console.log(this.addFileInput);
-      console.log(this.volumeFormData);
     },
     // 编辑文件内容的tab
     fileEdit(label) {
+      this.isAddFile = false;
+      const curTab = this.volumeFormData.source_config_data.find(item => item.label === label);
+      const curContent = this.convertToObjectIfPossible(curTab.content);
+      this.$refs.editorRefSlider.setValue(curContent);
       this.$refs[`editInput${label}`][0].style.display = 'block';
       this.$refs[`labelContainer${label}`][0].style.display = 'none';
     },
     // 编辑文件input失焦
     handleBlurEditInput(label, index) {
-      console.log(this.sliderEditordetail);
-      console.log(label);
       this.$nextTick(() => {
         Object.keys(this.$refs).forEach((item) => {
           if (this.$refs[item].length === 0) {
@@ -620,13 +636,16 @@ export default {
       const volumeData = this.volumeFormData.source_config_data;
       const fileName = cloneDeep(volumeData);
       const curTab = volumeData.find(item => item.label === label);
-      curTab.content = JSON.stringify(this.sliderEditordetail);
+      this.active = curTab.name;
+      const isObj = JSON.stringify(this.sliderEditordetail) === '{}';
+      const curContent = this.$refs.editorRefSlider?.getValue();
+      curTab.content = isObj ? curContent : JSON.stringify(this.sliderEditordetail);
       fileName.splice(index, 1);
       const flag = fileName.some(item => item.label === label);
       if (flag) {
         this.$paasMessage({
           theme: 'error',
-          message: this.$t('文件同名！'),
+          message: this.$t('文件同名，请重新编辑'),
         });
         return;
       }
@@ -635,6 +654,10 @@ export default {
     },
     // 删除文件内容的tab
     fileDelete(label) {
+      this.isAddFile = false;
+      this.active = this.volumeFormData.source_config_data[0].label;
+      const curContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
+      this.$refs.editorRefSlider.setValue(curContent);
       const volumeFile = this.volumeFormData.source_config_data;
       const curConfigData = volumeFile.filter(item => item.label !== label);
       this.volumeFormData.source_config_data = curConfigData;
@@ -650,6 +673,16 @@ export default {
 }
 </style>
 
+<style lang="scss">
+.volume-slider {
+  .bk-sideslider-wrapper {
+    .bk-sideslider-content {
+      height: calc(100vh - 129px);
+    }
+  }
+}
+</style>
+
 <style lang="scss" scoped>
 .volume-container {
   padding: 0 20px 20px;
@@ -658,11 +691,10 @@ export default {
 .activeTag:hover {
   color: #3a84ff;
 }
+
 .bk-sideslider {
   .bk-sideslider-wrapper {
     .bk-sideslider-content {
-      max-height: calc(100vh - 129px) !important;
-
       .slider-volume-content {
         padding: 20px 40px;
         .name-tip {
@@ -703,6 +735,7 @@ export default {
                           cursor: pointer;
                         }
                         .paasng-icon-close {
+                          cursor: pointer;
                           font-size: 20px;
                         }
                       }

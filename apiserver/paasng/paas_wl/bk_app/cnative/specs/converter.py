@@ -24,6 +24,7 @@ from kubernetes.utils import parse_quantity
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppBuildConfig, BkAppResource
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +64,21 @@ class BkAppResourceConverter:
             logger.warning(f"BkAppResource {self.bkapp.metadata.name} has multiple images, cannot upgrade to v1alpha2")
             return False
 
+        image_pull_policy = ImagePullPolicy.IF_NOT_PRESENT
+        image_pull_policies = [p.imagePullPolicy for p in self.bkapp.spec.processes]
+
+        # 如果有进程中的镜像拉取策略为 Always, 则将整个模块的策略设置为 Always
+        if any(policy == ImagePullPolicy.ALWAYS for policy in image_pull_policies):
+            image_pull_policy = ImagePullPolicy.ALWAYS
+
+        # 进程中的镜像相关信息都设置为 None
         for p in self.bkapp.spec.processes:
             p.image = None
-        self.bkapp.spec.build = BkAppBuildConfig(image=used_images.pop())
+            p.imagePullPolicy = None
+
+        # v1alpha2 仅保存镜像仓库，去掉 Tag
+        repository, _, _ = used_images.pop().partition(":")
+        self.bkapp.spec.build = BkAppBuildConfig(image=repository, imagePullPolicy=image_pull_policy)
         self.bkapp.apiVersion = ApiVersion.V1ALPHA2
         return True
 

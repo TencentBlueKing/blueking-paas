@@ -74,7 +74,7 @@ class BkAppProcess(BaseModel):
     # Deprecated: use spec.build.image instead in v1alpha2
     image: Optional[str] = None
     # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
-    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    imagePullPolicy: Optional[str] = ImagePullPolicy.IF_NOT_PRESENT
 
 
 class Hook(BaseModel):

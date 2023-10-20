@@ -71,6 +71,11 @@ class BuildConfig(UuidAuditedModel):
     )
     docker_build_args = DockerBuildArgsField(default=dict)
 
+    # custom image 相关配置
+    image_repository = models.TextField(verbose_name=_("镜像仓库"), null=True)
+    image = models.TextField(verbose_name=_("镜像地址"), null=True)
+    image_credential_name = models.CharField(verbose_name=_("镜像凭证名称"), null=True, max_length=32)
+
     # Image Tag Policy
     tag_options: ImageTagOptions = ImageTagOptionsField(default=ImageTagOptions)
     objects = BuildConfigManager()

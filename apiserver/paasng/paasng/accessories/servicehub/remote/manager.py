@@ -649,7 +649,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         env_list = []
         for env in module.get_envs():
             if RemoteServiceEngineAppAttachment.objects.filter(
-                engine_app=env.get_engine_app(), service=service, service_instance__isnull=True
+                engine_app=env.get_engine_app(), service_id=service.uuid, service_instance_id__isnull=False
             ).exists():
                 env_list.append(env.environment)
         return env_list

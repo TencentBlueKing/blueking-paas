@@ -16,13 +16,29 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from typing import Dict, List, Optional
+
+from attrs import define
+
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 
 
-class SpecsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'paas_wl.bk_app.cnative.specs'
+@define
+class BuildConfig:
+    """BuildConfig dataclass, provide similar attribute of modules.models.BuildConfig
 
-    def ready(self):
-        # Install signal handlers
-        from . import handlers  # noqa: F401
+    This class is used to keep the response structure of `RegionTemplateViewSet.retrieve`
+    similar to `ModuleBuildConfigViewSet.retrieve`
+    """
+
+    build_method: RuntimeType
+    tag_options: ImageTagOptions
+
+    dockerfile_path: Optional[str] = None
+    docker_build_args: Optional[Dict] = None
+
+    buildpacks: Optional[List[AppBuildPack]] = None
+    buildpack_builder: Optional[AppSlugBuilder] = None
+    buildpack_runner: Optional[AppSlugRunner] = None

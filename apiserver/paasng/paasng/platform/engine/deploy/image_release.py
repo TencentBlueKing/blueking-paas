@@ -25,9 +25,12 @@ from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.models import AppModelRevision
+from paas_wl.bk_app.processes.shim import ProcessManager, ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
@@ -64,55 +67,54 @@ class ImageReleaseMgr(DeployStep):
     def start(self):
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
+
+        is_smart_app = self.module_environment.module.get_source_origin() == SourceOrigin.S_MART
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        if self.module_environment.application.type != ApplicationType.CLOUD_NATIVE:
-            self.try_handle_app_description()
-            with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-                build_id = self.deployment.advanced_options.build_id
-                if not build_id:
-                    # 旧的镜像应用从 deploy_config 读取进程信息
-                    processes = get_processes(deployment=self.deployment)
-                    # 旧的镜像应用需要构造 fake build
-                    runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
-                    build_id = self.engine_client.create_build(
-                        image=runtime_info.generate_image(self.version_info),
-                        procfile={p.name: p.command for p in processes.values()},
-                        extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
-                        # 需要兼容 s-mart 应用
-                        artifact_type=ArtifactType.SLUG
-                        if self.module_environment.module.get_source_origin() == SourceOrigin.S_MART
-                        else ArtifactType.NONE,
-                    )
-                else:
-                    # TODO: 提供更好的处理方式, 不应该依赖上一个 Deployment
-                    # Q: 为什么不从 Build.procfile 里读取?
-                    # A: 因为 Build.procfile 目前只存储了启动命令, 没有 replicas/plan 等信息...
-                    # 普通应用从第一个使用该 build 部署的 deployment 获取进程信息
-                    deployment = (
-                        Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
-                    )
-                    if not deployment:
-                        raise DeployShouldAbortError("failed to get processes")
-                    processes = deployment.processes
-                self.deployment.update_fields(
-                    processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id
-                )
-        else:
+        with self.procedure('更新进程配置', phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id
-            if not build_id:
-                # 仅托管镜像的云原生应用需要构造 fake build
+            if build_id:
+                # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空
+                deployment = (
+                    Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
+                )
+                if not deployment:
+                    raise DeployShouldAbortError("failed to get processes")
+                processes = deployment.get_processes()
+                ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(processes=processes)
+            else:
+                # advanced_options.build_id 为空有 2 种可能情况
+                # 1. s-mart 应用
+                # 2. 仅托管镜像的应用(包含云原生应用和旧镜像应用)
+                if is_smart_app:
+                    # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
+                    self.try_handle_app_description()
+                    processes = list(get_processes(deployment=self.deployment).values())
+                    ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(processes=processes)
+                else:
+                    processes = [
+                        ProcessTmpl(
+                            name=proc_spec.name,
+                            command=proc_spec.get_proc_command(),
+                            replicas=proc_spec.target_replicas,
+                            plan=proc_spec.plan_name,
+                        )
+                        for proc_spec in ModuleProcessSpec.objects.filter(module=self.module_environment.module)
+                    ]
+
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
+                # 目前构建流程必须 build_id, 因此需要构造 Build 对象
                 build_id = self.engine_client.create_build(
                     image=runtime_info.generate_image(self.version_info),
-                    procfile={},
-                    extra_envs={},
+                    procfile={p.name: p.command for p in processes},
+                    extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
+                    # 需要兼容 s-mart 应用
+                    artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
                 )
-            # TODO: 增加阶段 解析应用进程信息
-            # with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
-            # TODO: build processes from ModuleProcessSpec model, and save it into deployment
-            # processes = ModuleProcessSpec
-            # self.deployment.update_fields(processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
-            self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
+
+            ProcessManager(self.engine_app.env).sync_processes_specs(processes=processes)
+            self.deployment.update_fields(
+                processes={p.name: p for p in processes}, build_status=JobStatus.SUCCESSFUL, build_id=build_id
+            )
 
         with self.procedure_force_phase('配置镜像访问凭证', phase=preparation_phase):
             self._setup_image_credentials()
@@ -149,6 +151,7 @@ class ImageReleaseMgr(DeployStep):
                     password=credential.password,
                 )
         else:
+            # TODO: 云原生应用需要增加模型存储 image_credential_name
             application = self.module_environment.application
             revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
             try:

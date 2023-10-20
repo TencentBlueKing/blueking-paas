@@ -20,7 +20,6 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.platform.modules.constants import DeployHookType
-from paasng.platform.modules.models.deploy_config import Hook
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -33,34 +32,29 @@ class TestDeployConfig:
 
     @pytest.fixture(autouse=True)
     def setup(self, bk_module, command):
-        config = bk_module.get_deploy_config()
-        config.hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, command=command)
-        config.save()
+        bk_module.deploy_hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=command)
 
     def test_add_hook(self, bk_module, command):
-        config = bk_module.get_deploy_config()
-        assert config.hooks.get_hook(DeployHookType.PRE_RELEASE_HOOK) == Hook(
-            type=DeployHookType.PRE_RELEASE_HOOK, command=command, enabled=True
-        )
+        hook = bk_module.deploy_hooks.get_by_type(type_=DeployHookType.PRE_RELEASE_HOOK)
+        assert hook
+        assert hook.type == DeployHookType.PRE_RELEASE_HOOK
+        assert hook.get_proc_command() == command
+        assert hook.enabled
 
     def test_disable_hook(self, bk_module, command):
-        config = bk_module.get_deploy_config()
-        config.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        config.save()
+        bk_module.deploy_hooks.disable(type_=DeployHookType.PRE_RELEASE_HOOK)
 
-        config = bk_module.get_deploy_config()
-        assert config.hooks.get_hook(DeployHookType.PRE_RELEASE_HOOK) == Hook(
-            type=DeployHookType.PRE_RELEASE_HOOK, command=command, enabled=False
-        )
+        hook = bk_module.deploy_hooks.get_by_type(type_=DeployHookType.PRE_RELEASE_HOOK)
+        assert hook
+        assert hook.type == DeployHookType.PRE_RELEASE_HOOK
+        assert hook.get_proc_command() == command
+        assert not hook.enabled
 
     def test_upsert(self, bk_module):
         new_command = "another " + generate_random_string()
-        config = bk_module.get_deploy_config()
-        config.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        config.hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, command=new_command)
-        config.save()
-
-        config = bk_module.get_deploy_config()
-        assert config.hooks.get_hook(DeployHookType.PRE_RELEASE_HOOK) == Hook(
-            type=DeployHookType.PRE_RELEASE_HOOK, command=new_command, enabled=True
-        )
+        bk_module.deploy_hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=new_command)
+        hook = bk_module.deploy_hooks.get_by_type(type_=DeployHookType.PRE_RELEASE_HOOK)
+        assert hook
+        assert hook.type == DeployHookType.PRE_RELEASE_HOOK
+        assert hook.get_proc_command() == new_command
+        assert hook.enabled

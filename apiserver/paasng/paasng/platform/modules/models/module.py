@@ -77,12 +77,6 @@ class Module(OwnerTimestampedModel):
             return self.envs.get(environment=environment)
         return self.envs.all()
 
-    def get_deploy_config(self):
-        from .deploy_config import DeployConfig
-
-        deploy_config, _ = DeployConfig.objects.get_or_create(module=self)
-        return deploy_config
-
     def __str__(self):
         return f"{self.application.code}-{self.name}"
 

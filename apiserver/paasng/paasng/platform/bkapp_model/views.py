@@ -91,6 +91,11 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             return Response(get_manifest(module))
 
+    def replace(self, request, code, module_name):
+        """替换当前模块的蓝鲸应用模型数据。"""
+        # TODO: Add logics
+        return Response({})
+
 
 class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """API for CRUD ModuleProcessSpec"""

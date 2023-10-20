@@ -23,9 +23,10 @@ from typing import List, TypedDict
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.workloads.networking.egress.models import format_nodes_data, get_digest_of_nodes_name
 from paas_wl.infras.resources.base.kres import KNode
 from paas_wl.infras.resources.utils.basic import EnhancedApiClient, get_client_by_cluster_name
+
+from .cluster_state import format_nodes_data, get_digest_of_nodes_name
 
 logger = logging.getLogger(__name__)
 

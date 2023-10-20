@@ -21,7 +21,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.workloads.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.workloads.networking.ingress.domains.independent import ReplaceAppDomainService
-from paas_wl.workloads.networking.ingress.entities.ingress import ingress_kmodel
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 from paas_wl.workloads.networking.ingress.managers.domain import CustomDomainIngressMgr
 from paas_wl.workloads.networking.ingress.models import Domain
 

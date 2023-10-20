@@ -27,7 +27,7 @@ from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
-from paas_wl.workloads.release_controller.models import ContainerRuntimeSpec
+from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resources.base.exceptions import (
     PodAbsentError,
     PodNotSucceededError,
@@ -40,7 +40,7 @@ from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
-from paas_wl.bk_app.processes.managers import AppProcessManager
+from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 

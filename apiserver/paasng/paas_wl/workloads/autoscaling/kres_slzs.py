@@ -22,6 +22,7 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.processes.constants import PROCESS_NAME_KEY
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.autoscaling.constants import (
     GPA_COMPUTE_BY_LIMITS_ANNO_KEY,
@@ -30,11 +31,10 @@ from paas_wl.workloads.autoscaling.constants import (
     ScalingMetricSourceType,
     ScalingMetricTargetType,
 )
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, MetricSpec, ScalingObjectRef
-from paas_wl.bk_app.processes.constants import PROCESS_NAME_KEY
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, MetricSpec, ScalingObjectRef
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
+    from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 
 
 class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):

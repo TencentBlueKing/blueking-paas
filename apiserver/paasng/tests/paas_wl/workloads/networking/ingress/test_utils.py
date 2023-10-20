@@ -20,7 +20,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain, ProcessIngress
 from paas_wl.workloads.networking.ingress.utils import (
     get_main_process_service_name,
     get_service_dns_name,
@@ -28,7 +29,6 @@ from paas_wl.workloads.networking.ingress.utils import (
     make_service_name,
     parse_process_type,
 )
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -17,21 +17,41 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
+from typing import List, Optional
 
-from paas_wl.infras.resources.base import crd
-from paas_wl.infras.resources.kube_res.base import AppEntity
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
-from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
+from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 
 
 @dataclass
-class ProcAutoscaling(AppEntity):
-    """自动伸缩实例定义"""
+class ScalingObjectRef:
+    """自动扩缩容资源引用"""
 
-    spec: AutoscalingConfig
-    target_ref: ScalingObjectRef
+    api_version: str
+    kind: str
+    name: str
 
-    class Meta:
-        kres_class = crd.GPA
-        deserializer = ProcAutoscalingDeserializer
-        serializer = ProcAutoscalingSerializer
+
+@dataclass
+class MetricSpec:
+    """扩缩容指标配置"""
+
+    # 指标来源类型
+    type: ScalingMetricSourceType
+    # 指标名称
+    metric: ScalingMetric
+    # 指标值：百分比 / 绝对数值
+    value: str
+    # 指标来源对象，搭配 Object Type 使用
+    described_object: Optional[ScalingObjectRef] = None
+
+
+@dataclass
+class AutoscalingConfig:
+    """自动扩缩容配置"""
+
+    # 最小副本数量
+    min_replicas: int
+    # 最大副本数量
+    max_replicas: int
+    # 扩缩容指标
+    metrics: List[MetricSpec]

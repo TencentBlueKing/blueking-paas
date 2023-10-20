@@ -26,7 +26,7 @@ from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.configuration.configmap.entities import configmap_kmodel
+from paas_wl.workloads.configuration.configmap.kres_entities import configmap_kmodel
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

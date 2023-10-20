@@ -25,10 +25,10 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.workloads.networking.ingress.entities.service import PServicePortPair, service_kmodel
-from paas_wl.workloads.networking.ingress.models import AppDomainSharedCert
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import DNS_SAFE_PATTERN
+from paas_wl.workloads.networking.ingress.kres_entities.service import PServicePortPair, service_kmodel
+from paas_wl.workloads.networking.ingress.models import AppDomainSharedCert
 
 
 class ProcServicePortSLZ(serializers.Serializer):

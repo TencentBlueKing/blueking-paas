@@ -16,85 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
-import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
-from django.conf import settings
-from kubernetes.dynamic import ResourceInstance
-
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.utils.text import b64decode, b64encode
-from paas_wl.workloads.images import constants
-from paas_wl.workloads.images.models import AppImageCredential
-
-logger = logging.getLogger(__name__)
-
-
-def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
-    """transform credentials to docker config json format"""
-    return {
-        "auths": {
-            item.registry: {
-                "username": item.username,
-                "password": item.password,
-                "auth": b64encode(f"{item.username}:{item.password}"),
-            }
-            for item in obj.credentials
-        }
-    }
-
-
-def build_app_registry_auth(obj: 'ImageCredentials') -> Dict:
-    """transform credentials to CNB required format"""
-    return {item.registry: "Basic " + b64encode(f"{item.username}:{item.password}") for item in obj.credentials}
-
-
-class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
-    api_version = "v1"
-
-    def serialize(self, obj: 'ImageCredentials', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
-        return {
-            'apiVersion': self.api_version,
-            'kind': 'Secret',
-            'type': constants.KUBE_SECRET_TYPE,
-            'metadata': {
-                'name': obj.name,
-                'namespace': obj.app.namespace,
-            },
-            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(build_dockerconfig(obj)))},
-        }
-
-
-class ImageCredentialsDeserializer(AppEntityDeserializer['ImageCredentials']):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance):
-        if kube_data.type != constants.KUBE_SECRET_TYPE:
-            raise ValueError(f"Invalid kube resource: {kube_data.type}")
-
-        if kube_data.metadata.name != constants.KUBE_RESOURCE_NAME:
-            logger.warning(
-                "unexpected resource name, "
-                f"given is '{kube_data.metadata.name}', but expected is '{constants.KUBE_RESOURCE_NAME}'"
-            )
-
-        b64encoded = kube_data.data[constants.KUBE_DATA_KEY]
-        config: Dict[str, Dict] = json.loads(b64decode(b64encoded))["auths"]
-
-        # Only deserialize the first auths info
-        credentials = [
-            ImageCredential(registry=registry, username=auth["username"], password=auth["password"])
-            for registry, auth in config.items()
-        ]
-
-        return ImageCredentials(
-            app=app,
-            name=kube_data.metadata.name,
-            credentials=credentials,
-        )
+from attrs import define
 
 
 @dataclass
@@ -104,52 +28,7 @@ class ImageCredential:
     password: str
 
 
-@dataclass
-class ImageCredentials(AppEntity):
-    credentials: List[ImageCredential]
-
-    class Meta:
-        kres_class = kres.KSecret
-        deserializer = ImageCredentialsDeserializer
-        serializer = ImageCredentialsSerializer
-
-    @classmethod
-    def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
-        qs = AppImageCredential.objects.filter(app=app)
-        credentials = [
-            ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
-            for instance in qs
-        ]
-        # inject builtin credential for APP_DOCKER_REGISTRY_HOST
-        if settings.APP_DOCKER_REGISTRY_HOST:
-            credentials.append(
-                ImageCredential(
-                    registry=settings.APP_DOCKER_REGISTRY_HOST,
-                    username=settings.APP_DOCKER_REGISTRY_USERNAME,
-                    password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-                )
-            )
-        return ImageCredentials(
-            app=app,
-            name=constants.KUBE_RESOURCE_NAME,
-            credentials=credentials,
-        )
-
-
-class ImageCredentialsManager(AppEntityManager[ImageCredentials]):
-    def __init__(self):
-        super().__init__(ImageCredentials)
-
-    def delete(self, res: ImageCredentials, non_grace_period: bool = False):
-        namespace = res.app.namespace
-        secret_name = res.name
-
-        try:
-            existed = self.get(app=res.app, name=secret_name)
-        except AppEntityNotFound:
-            logger.info("Secret<%s/%s> does not exist, will skip delete", namespace, secret_name)
-            return
-        return super().delete(existed, non_grace_period)
-
-
-credentials_kmodel = ImageCredentialsManager()
+@define
+class ImageCredentialRef:
+    image: str
+    credential_name: str

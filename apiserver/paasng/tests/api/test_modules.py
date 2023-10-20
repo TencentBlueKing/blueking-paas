@@ -25,12 +25,12 @@ from django.conf import settings
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
+from paasng.misc.operations.constant import OperationType
+from paasng.misc.operations.models import Operation
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import Hook
 from paasng.platform.modules.models.module import Module
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
@@ -129,6 +129,9 @@ class TestCreateCloudNativeModule:
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
+                "build_config": {
+                    "build_method": "custom_image",
+                },
                 "manifest": {
                     "apiVersion": "paas.bk.tencent.com/v1alpha2",
                     "kind": "BkApp",
@@ -166,6 +169,9 @@ class TestCreateCloudNativeModule:
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
                 "name": f'uta-{random_suffix}',
+                "build_config": {
+                    "build_method": "buildpack",
+                },
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -186,6 +192,10 @@ class TestCreateCloudNativeModule:
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
                 "name": f'uta-{random_suffix}',
+                "build_config": {
+                    "build_method": "dockerfile",
+                    'dockerfile_path': 'Dockerfile',
+                },
                 "source_config": {
                     "source_init_template": "docker",
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,

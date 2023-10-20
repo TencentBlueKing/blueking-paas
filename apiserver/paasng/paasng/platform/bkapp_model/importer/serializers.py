@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay, Mount, MountOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay, Mount, MountOverlay, ReplicasOverlay
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import field_env_var_key
 
@@ -76,6 +76,18 @@ class MountOverlayInputSLZ(BaseMountFields):
         return MountOverlay(**d)
 
 
+class ReplicasOverlayInputSLZ(serializers.Serializer):
+    """Validate the `replicas` field in envOverlay."""
+
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    process = serializers.CharField()
+    count = serializers.IntegerField()
+
+    def to_internal_value(self, data) -> ReplicasOverlay:
+        d = super().to_internal_value(data)
+        return ReplicasOverlay(**d)
+
+
 class ConfigurationInputSLZ(serializers.Serializer):
     """Validate the `configuration` field."""
 
@@ -85,6 +97,7 @@ class ConfigurationInputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """Validate the `envOverlay` field."""
 
+    replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), required=False)
     envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), required=False)
     mounts = serializers.ListField(child=MountOverlayInputSLZ(), required=False)
 

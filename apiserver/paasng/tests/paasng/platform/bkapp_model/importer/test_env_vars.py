@@ -33,5 +33,6 @@ class Test__import_env_vars:
 
         assert ConfigVar.objects.count() == 3
         assert ConfigVar.objects.filter(is_global=True).count() == 2
-        assert ret.affected_num == 3
-        assert ret.removed_num == 1
+        assert ret.updated_num == 0
+        assert ret.created_num == 3
+        assert ret.deleted_num == 1

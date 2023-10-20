@@ -22,6 +22,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
 from paasng.platform.bkapp_model.importer.mounts import import_mounts
+from paasng.platform.bkapp_model.importer.replicas import import_replicas_overlay
 from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
 
@@ -53,12 +54,17 @@ def import_manifest(module: Module, input_data: Dict):
     if configuration := spec_slz.validated_data.get('configuration', {}):
         env_vars = configuration.get('env', [])
 
-    overlay_mounts = []
+    overlay_replicas, overlay_mounts = [], []
     if env_overlay := spec_slz.validated_data.get('envOverlay', {}):
+        overlay_replicas = env_overlay.get('replicas', [])
         overlay_env_vars = env_overlay.get('envVariables', [])
         overlay_mounts = env_overlay.get('mounts', [])
 
+    # Run importer functions
     if env_vars or overlay_env_vars:
         import_env_vars(module, env_vars, overlay_env_vars)
     if mounts or overlay_mounts:
         import_mounts(module, mounts, overlay_mounts)
+    if overlay_replicas:
+        # NOTE: Must import the processes first to create the ModuleProcessSpec objs
+        import_replicas_overlay(module, overlay_replicas)

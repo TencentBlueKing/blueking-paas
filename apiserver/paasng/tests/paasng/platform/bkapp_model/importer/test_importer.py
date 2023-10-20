@@ -84,3 +84,24 @@ class TestMounts:
 
         import_manifest(bk_module, base_manifest)
         assert Mount.objects.count() == 2
+
+
+class TestReplicasOverlay:
+    def test_invalid_replicas_input(self, bk_module, base_manifest):
+        base_manifest['spec']['envOverlay'] = {
+            'replicas': [
+                {
+                    'envName': 'stag',
+                    'process': 'web',
+                    'replicas': 'not_a_number',
+                }
+            ]
+        }
+        with pytest.raises(ManifestImportError) as e:
+            import_manifest(bk_module, base_manifest)
+
+        assert 'envOverlay.replicas.0.count' in str(e)
+
+    def test_normal(self):
+        # TODO: Add after the processes can be imported.
+        pass

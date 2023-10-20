@@ -22,12 +22,12 @@ from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, 
 from paasng.platform.engine.models.managers import ConfigVarManager
 from paasng.platform.modules.models import Module
 
-from .entities import ImportEnvVarsResult
+from .entities import CommonImportResult
 
 
 def import_env_vars(
     module: Module, env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay]
-) -> ImportEnvVarsResult:
+) -> CommonImportResult:
     """Import environment variables, existing data that is not in the input list may be removed.
 
     :param env_vars: The default variables.
@@ -63,5 +63,5 @@ def import_env_vars(
 
     # Remove other variables
     keys = [var.key for var in config_vars]
-    removed_num = var_mgr.remove_bulk(module, exclude_keys=keys)
-    return ImportEnvVarsResult(affected_num=(ret.create_num + ret.overwrited_num), removed_num=removed_num)
+    deleted_num = var_mgr.remove_bulk(module, exclude_keys=keys)
+    return CommonImportResult(created_num=ret.create_num, updated_num=ret.overwrited_num, deleted_num=deleted_num)

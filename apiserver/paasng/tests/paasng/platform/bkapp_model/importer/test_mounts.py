@@ -29,7 +29,7 @@ from paasng.platform.bkapp_model.importer.mounts import import_mounts
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
-class Test__import_env_vars:
+class Test__import_mounts:
     def test_integrated(self, bk_module):
         create_mount = functools.partial(
             Mount.objects.create,
@@ -63,5 +63,6 @@ class Test__import_env_vars:
             ],
         )
         assert Mount.objects.count() == 2
-        assert ret.affected_num == 2
-        assert ret.removed_num == 3
+        assert ret.created_num == 1
+        assert ret.updated_num == 1
+        assert ret.deleted_num == 3

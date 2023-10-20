@@ -19,24 +19,15 @@ from attrs import define
 
 
 @define
-class ImportEnvVarsResult:
-    """The result of the env vars importing procedure.
+class CommonImportResult:
+    """A common type that representing the result of an importing procedure."""
 
-    :param affected_num: How many objects have been affected.
-    :param removed_num: How many objects have been removed.
-    """
+    created_num: int = 0
+    updated_num: int = 0
+    deleted_num: int = 0
 
-    affected_num: int
-    removed_num: int
-
-
-@define
-class ImportMountsResult:
-    """The result of the mounts importing procedure.
-
-    :param affected_num: How many objects have been affected.
-    :param removed_num: How many objects have been removed.
-    """
-
-    affected_num: int
-    removed_num: int
+    def incr_by_created_flag(self, created: bool):
+        if created:
+            self.created_num += 1
+        else:
+            self.updated_num += 1

@@ -439,22 +439,29 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         build_config = BuildConfig.objects.get_or_create_by_module(module)
 
         info = {
-            "image_repository": generate_image_repository(module),
             "build_method": build_config.build_method,
-            "tag_options": build_config.tag_options,
         }
         if build_config.build_method == RuntimeType.BUILDPACK:
             runtime_manager = ModuleRuntimeManager(module)
             slugbuilder = runtime_manager.get_slug_builder(raise_exception=False)
             buildpacks = runtime_manager.list_buildpacks()
             info.update(
+                image_repository=generate_image_repository(module),
+                tag_options=build_config.tag_options,
                 bp_stack_name=getattr(slugbuilder, "name", None),
                 buildpacks=buildpacks,
             )
-        else:
+        elif build_config.build_method == RuntimeType.DOCKERFILE:
             info.update(
+                image_repository=generate_image_repository(module),
+                tag_options=build_config.tag_options,
                 dockerfile_path=build_config.dockerfile_path,
                 docker_build_args=build_config.docker_build_args,
+            )
+        else:
+            info.update(
+                image_repository=build_config.image_repository,
+                image_credential_name=build_config.image_credential_name,
             )
         return Response(data=ModuleBuildConfigSLZ(info).data)
 
@@ -469,18 +476,14 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         build_config = BuildConfig.objects.get_or_create_by_module(module)
 
         build_method = data["build_method"]
-        if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]:
+        if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE, RuntimeType.CUSTOM_IMAGE]:
             raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
 
         try:
             update_build_config_with_method(
                 build_config,
                 build_method,
-                data.get('bp_stack_name'),
-                data.get('buildpacks'),
-                data.get('dockerfile_path'),
-                data.get('docker_build_args'),
-                data.get('tag_options'),
+                data=data,
             )
         except BPNotFound:
             raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))

@@ -228,8 +228,7 @@ class ModuleInitializer:
         update_build_config_with_method(
             db_instance,
             build_method=cfg.build_method,
-            dockerfile_path=cfg.dockerfile_path,
-            docker_build_args=cfg.docker_build_args or {},
+            data={"dockerfile_path": cfg.dockerfile_path, "docker_build_args": cfg.docker_build_args or {}},
         )
 
     def bind_default_runtime(self):

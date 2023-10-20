@@ -20,6 +20,7 @@ import json
 import logging
 
 import yaml
+from django.db.transaction import atomic
 from django.http.response import HttpResponse
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
@@ -27,12 +28,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.manifest import get_manifest
-from paasng.platform.bkapp_model.serializers import GetManifestInputSLZ
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.serializers import (
+    GetManifestInputSLZ,
+    ModuleProcessSpecSLZ,
+    ModuleProcessSpecsOutputSLZ,
+)
+from paasng.platform.bkapp_model.utils import get_image_info
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +90,85 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             return HttpResponse(response, content_type='application/yaml')
         else:
             return Response(get_manifest(module))
+
+
+class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """API for CRUD ModuleProcessSpec"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(response_serializer=ModuleProcessSpecsOutputSLZ)
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的进程配置"""
+        module = self.get_module_via_path()
+        proc_specs = ModuleProcessSpec.objects.filter(module=module)
+        image_repository, image_credential_name = get_image_info(module)
+
+        images = {proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None}
+        # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
+        allow_set_image = len(images - {image_repository}) >= 1
+
+        proc_specs_data = [
+            {
+                "name": proc_spec.name,
+                "image": proc_spec.image or image_repository,
+                "image_credential_name": proc_spec.image_credential_name or image_credential_name,
+                "command": proc_spec.command,
+                "args": proc_spec.args,
+                "port": proc_spec.port,
+                "env_overlay": {
+                    env_overlay.environment_name: {
+                        "environment_name": env_overlay.environment_name,
+                        "plan_name": env_overlay.plan_name,
+                        "target_replicas": env_overlay.target_replicas,
+                        "autoscaling": env_overlay.autoscaling,
+                        "scaling_config": env_overlay.scaling_config,
+                    }
+                    for env_overlay in proc_spec.env_overlays.all()
+                },
+            }
+            for proc_spec in proc_specs
+        ]
+        return Response(
+            ModuleProcessSpecsOutputSLZ(
+                {"metadata": {"allow_set_image": allow_set_image}, "proc_specs": proc_specs_data}
+            ).data
+        )
+
+    @swagger_auto_schema(request_body=ModuleProcessSpecSLZ(many=True))
+    @atomic
+    def batch_upsert(self, request, code, module_name):
+        """批量更新模块的进程配置"""
+        module = self.get_module_via_path()
+        slz = ModuleProcessSpecSLZ(data=request.data, many=True)
+        slz.is_valid(raise_exception=True)
+        proc_specs = slz.validated_data
+
+        image_repository, image_credential_name = get_image_info(module)
+        images = {
+            proc_spec.image
+            for proc_spec in ModuleProcessSpec.objects.filter(module=module)
+            if proc_spec.image is not None
+        }
+        # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
+        allow_set_image = len(images - {image_repository}) >= 1
+
+        processes = [
+            BkAppProcess(
+                name=proc_spec["name"],
+                command=proc_spec["command"],
+                args=proc_spec["args"],
+                targetPort=proc_spec["port"],
+                image=proc_spec["image"] if allow_set_image else "",
+            )
+            for proc_spec in proc_specs
+        ]
+
+        mgr = ModuleProcessSpecManager(module)
+        # 更新进程配置
+        mgr.sync_form_bkapp(processes)
+        # 更新环境覆盖
+        for proc_spec in proc_specs:
+            if env_overlay := proc_spec.get("env_overlay"):
+                mgr.sync_env_overlay(proc_name=proc_spec["name"], env_overlay=env_overlay)
+        return self.retrieve(request, code, module_name)

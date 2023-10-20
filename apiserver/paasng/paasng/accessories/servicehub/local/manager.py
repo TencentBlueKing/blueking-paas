@@ -374,7 +374,7 @@ class LocalServiceMgr(BaseServiceMgr):
         env_list = []
         for env in module.get_envs():
             if ServiceEngineAppAttachment.objects.filter(
-                engine_app=env.get_engine_app(), service=service, service_instance__isnull=True
+                engine_app=env.get_engine_app(), service__uuid=service.uuid, service_instance__isnull=False
             ).exists():
                 env_list.append(env.environment)
         return env_list

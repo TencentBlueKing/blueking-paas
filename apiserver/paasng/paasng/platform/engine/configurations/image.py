@@ -21,25 +21,25 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import arrow
 from django.conf import settings
 
+from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
 from paas_wl.bk_app.cnative.specs.utils import get_bkapp
-from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.processes.services import refresh_res_reqs
-from paasng.platform.sourcectl.models import RepoBasicAuthHolder
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
-from paasng.platform.smart_app.conf import bksmart_settings
-from paasng.platform.smart_app.utils import SMartImageManager
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.smart_app.conf import bksmart_settings
+from paasng.platform.smart_app.utils import SMartImageManager
+from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 
 if TYPE_CHECKING:
-    from paasng.platform.sourcectl.models import VersionInfo
     from paasng.platform.engine.models import EngineApp
+    from paasng.platform.sourcectl.models import VersionInfo
 
 
 def get_image_repository_template() -> str:

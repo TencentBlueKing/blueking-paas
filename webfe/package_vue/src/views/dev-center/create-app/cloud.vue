@@ -703,7 +703,9 @@ export default {
     async fetchLanguageInfo() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
-        this.languagesData = res.ieod.languages;
+        const regionChoose = Object.keys(res) || [];
+        this.regionChoose = regionChoose[0] || 'ieod';
+        this.languagesData = res[this.regionChoose].languages;
         const languagesKeysData = Object.keys(this.languagesData) || [];
         this.buttonActive = languagesKeysData[0] || 'Python';
         this.languagesList = this.languagesData[this.buttonActive];
@@ -899,7 +901,7 @@ export default {
 
       this.formLoading = true;
       const params = {
-        region: 'ieod',
+        region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
         source_config: {
@@ -1019,7 +1021,7 @@ export default {
         const res = await this.$store.dispatch('cloudApi/getBuildDataInfo', {
           appCode: this.appCode,
           tplTyp: 'normal',
-          region: 'ieod',
+          region: this.regionChoose,
           tplName: this.formData.sourceInitTemplate,
         });
         this.buildDialog.visiable = true;

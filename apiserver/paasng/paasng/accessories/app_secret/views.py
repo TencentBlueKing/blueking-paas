@@ -25,7 +25,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accessories.app_secret.constants import MAX_SECRET_COUNT
+from paasng.accessories.app_secret.constants import MAX_SECRET_COUNT, MIN_SECRET_COUNT
 from paasng.accessories.app_secret.serializers import (
     AppSecretIdSLZ,
     AppSecretInEnvVarSLZ,
@@ -34,18 +34,18 @@ from paasng.accessories.app_secret.serializers import (
     DeployedSecretSLZ,
 )
 from paasng.accessories.app_secret.utilts import get_deployed_secret_list
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.serializers import VerificationCodeSLZ
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.api import BkOauthClient
 from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 from paasng.infras.oauth2.utils import get_app_secret_in_env_var
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,11 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         application = self.get_application()
         client = BkOauthClient()
+
+        secret_list = client.get_app_secret_list(application.code)
+        if len(secret_list) <= MIN_SECRET_COUNT:
+            raise ValidationError(_(f"应用至少有 {MAX_SECRET_COUNT} 个密钥"))
+
         # 检查密钥是否已经被禁用，BKAuth 侧删除密钥并不要求密钥已经是禁用状态，所以需要手动检查
         del_secret = client.get_secret_by_id(application.code, bk_app_secret_id)
         if not del_secret:

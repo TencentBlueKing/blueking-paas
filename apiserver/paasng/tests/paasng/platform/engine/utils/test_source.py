@@ -27,9 +27,9 @@ from django.conf import settings
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
-from paasng.platform.sourcectl.exceptions import DoesNotExistsOnServer
-from paasng.platform.sourcectl.models import SourcePackage
-from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
+from paasng.platform.declarative.constants import CELERY_BEAT_PROCESS, CELERY_PROCESS, WEB_PROCESS
+from paasng.platform.declarative.deployment.controller import DeploymentDescription
+from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.utils.output import ConsoleStream
@@ -41,10 +41,10 @@ from paasng.platform.engine.utils.source import (
     get_processes,
     get_source_package_path,
 )
-from paasng.platform.declarative.constants import CELERY_BEAT_PROCESS, CELERY_PROCESS, WEB_PROCESS
-from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.exceptions import DoesNotExistsOnServer
+from paasng.platform.sourcectl.models import SourcePackage
+from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 
 pytestmark = pytest.mark.django_db
 
@@ -202,14 +202,6 @@ class TestGetProcesses:
         )
         assert handler is not None
         handler.handle_deployment(bk_deployment_full)
-
-        processes = get_processes(deployment=bk_deployment_full)
-        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
-
-    def test_get_from_deploy_config(self, bk_module_full, bk_deployment_full):
-        deploy_config = bk_module_full.get_deploy_config()
-        deploy_config.procfile = {"web": "start web"}
-        deploy_config.save()
 
         processes = get_processes(deployment=bk_deployment_full)
         assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})

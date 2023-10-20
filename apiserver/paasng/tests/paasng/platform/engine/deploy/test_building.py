@@ -22,14 +22,13 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
-from paasng.platform.sourcectl.exceptions import GetAppYamlError, GetProcfileError
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
+from paasng.platform.sourcectl.exceptions import GetAppYamlError, GetProcfileError
 from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 
@@ -57,7 +56,9 @@ class TestNormalApp:
     def test_failed_when_parsing_processes(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
             'paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile'
-        ) as mocked_get_procfile, mock.patch('paasng.platform.engine.utils.output.RedisChannelStream') as mocked_stream:
+        ) as mocked_get_procfile, mock.patch(
+            'paasng.platform.engine.utils.output.RedisChannelStream'
+        ) as mocked_stream:
             mocked_get_procfile.side_effect = GetProcfileError('Invalid Procfile format')
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
             builder = builder_class.from_deployment_id(bk_deployment_full.id)
@@ -165,10 +166,9 @@ class TestCloudNative:
         )
 
     def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full, model_resource):
-        res = BkAppResource(**model_resource.revision.json_value)
         with mock.patch(
-            'paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_bkapp_manifests'
-        ) as mocked_get_bkapp_manifests, mock.patch(
+            'paasng.platform.engine.utils.source.get_metadata_reader', new=mock.MagicMock()
+        ) as reader, mock.patch(
             'paasng.platform.engine.deploy.building.{}.compress_and_upload'.format(builder_class.__name__)
         ), mock.patch(
             'paasng.platform.engine.deploy.building.BuildProcessPoller'
@@ -177,7 +177,7 @@ class TestCloudNative:
         ) as mocked_stream, mock.patch(
             'paasng.platform.engine.deploy.building.{}.launch_build_processes'.format(builder_class.__name__)
         ) as launch_build_processes:
-            mocked_get_bkapp_manifests.return_value = {res.metadata.name: res.to_deployable()}
+            reader().get_app_desc.return_value = {}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
             launch_build_processes.return_value = faked_build_process_id

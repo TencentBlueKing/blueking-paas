@@ -26,16 +26,20 @@ import redis
 from django.utils.encoding import force_text
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accessories.servicehub import exceptions
+from paasng.accessories.servicehub.exceptions import ProvisionInstanceError
+from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.exceptions import DeployShouldAbortError, StepNotInPresetListError
+from paasng.platform.engine.exceptions import (
+    DeployShouldAbortError,
+    HandleAppDescriptionError,
+    StepNotInPresetListError,
+)
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.signals import post_appenv_deploy, post_phase_end
 from paasng.platform.engine.utils.client import EngineDeployClient
 from paasng.platform.engine.utils.output import DeployStream, StreamType, Style, get_default_stream
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.utils.error_message import find_coded_error_message
 
 if TYPE_CHECKING:
@@ -86,7 +90,7 @@ class DeployProcedure:
         # Only some types of exception should be output directly into the stream,
         # others have to be masked as "Unknown error" in order to provide better
         # user experiences.
-        is_known_exc = exc_type in [DeployShouldAbortError, exceptions.ProvisionInstanceError]
+        is_known_exc = exc_type in [DeployShouldAbortError, ProvisionInstanceError, HandleAppDescriptionError]
         if is_known_exc:
             msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
                 title=Style.Title(self.title), reason=Style.Warning(exc_val)

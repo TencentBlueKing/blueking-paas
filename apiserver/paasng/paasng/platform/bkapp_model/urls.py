@@ -31,4 +31,10 @@ urlpatterns = [
         views.BkAppModelManifestsViewset.as_view({'get': 'retrieve'}),
         name='api.bkapp_model.current_manifests',
     ),
+    # 进程配置
+    re_path(
+        make_app_pattern(r'/bkapp_model/process_specs/$', include_envs=False),
+        views.ModuleProcessSpecViewSet.as_view({"get": "retrieve", "post": "batch_upsert"}),
+        name='api.bkapp_model.process_specs',
+    ),
 ]

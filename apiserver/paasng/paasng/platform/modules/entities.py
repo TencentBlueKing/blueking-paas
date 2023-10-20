@@ -16,25 +16,29 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern, re_path
+from typing import Dict, List, Optional
 
-from . import views
+from attrs import define
 
-urlpatterns = [
-    re_path(
-        make_app_pattern(r'/manifest_ext/$', include_envs=True),
-        views.CNativeAppManifestExtViewset.as_view({'get': 'retrieve'}),
-        name='api.cnative.retrieve_manifest_ext',
-    ),
-    re_path(
-        make_app_pattern(r'/bkapp_model/manifests/current/$', include_envs=False),
-        views.BkAppModelManifestsViewset.as_view({'get': 'retrieve'}),
-        name='api.bkapp_model.current_manifests',
-    ),
-    # 进程配置
-    re_path(
-        make_app_pattern(r'/bkapp_model/process_specs/$', include_envs=False),
-        views.ModuleProcessSpecViewSet.as_view({"get": "retrieve", "post": "batch_upsert"}),
-        name='api.bkapp_model.process_specs',
-    ),
-]
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
+
+
+@define
+class BuildConfig:
+    """BuildConfig dataclass, provide similar attribute of modules.models.BuildConfig
+
+    This class is used to keep the response structure of `RegionTemplateViewSet.retrieve`
+    similar to `ModuleBuildConfigViewSet.retrieve`
+    """
+
+    build_method: RuntimeType
+    tag_options: ImageTagOptions
+
+    dockerfile_path: Optional[str] = None
+    docker_build_args: Optional[Dict] = None
+
+    buildpacks: Optional[List[AppBuildPack]] = None
+    buildpack_builder: Optional[AppSlugBuilder] = None
+    buildpack_runner: Optional[AppSlugRunner] = None

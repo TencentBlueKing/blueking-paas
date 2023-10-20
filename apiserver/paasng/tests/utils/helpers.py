@@ -43,6 +43,7 @@ from paasng.platform.bkapp_model.services import initialize_simple
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
 
@@ -100,12 +101,23 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
         module_initializer = ModuleInitializer(module)
         module_initializer.create_engine_apps()
 
+        module_spec = ModuleSpecs(module)
+        if module_spec.source_origin in [
+            SourceOrigin.IMAGE_REGISTRY,
+            SourceOrigin.CNATIVE_IMAGE,
+            SourceOrigin.S_MART,
+        ] or module_spec.app_specs.type_specs in [
+            ApplicationType.ENGINELESS_APP,
+        ]:
+            module.source_init_template = ''
+
         # Set-up the repository data
         if repo_url:
             module.source_origin = SourceOrigin.AUTHORIZED_VCS
             module.source_init_template = settings.DUMMY_TEMPLATE_NAME
-            module.save()
-            module_initializer.initialize_vcs_with_template(repo_type, repo_url)
+
+        module.save()
+        module_initializer.initialize_vcs_with_template(repo_type, repo_url)
 
         module_initializer.initialize_log_config()
 

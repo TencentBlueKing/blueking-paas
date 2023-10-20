@@ -20,174 +20,24 @@ from typing import Dict, Optional
 
 from django.conf import settings
 from django.db.transaction import atomic
-from django.dispatch.dispatcher import Signal
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
-from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueValidator, qs_exists
 
-from paas_wl.infras.cluster.shim import RegionClusterService
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.cnative.specs.models import to_error_string
-from paas_wl.workloads.images.serializers import ImageCredentialSLZ
-from paasng.platform.applications.constants import AppLanguage, ApplicationRole, ApplicationType
-from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
+from paasng.core.region.states import get_region
+from paasng.platform.applications.constants import AppLanguage, ApplicationType
+from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
-from paasng.platform.applications.signals import (
-    application_logo_updated,
-    prepare_change_application_name,
-    prepare_use_application_code,
-    prepare_use_application_name,
-)
+from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.applications.specs import AppTypeSpecs
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
-from paasng.core.region.states import get_region
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
-from paasng.utils.serializers import NickNameField, UserField
-from paasng.utils.validators import (
-    RE_APP_CODE,
-    RE_APP_SEARCH,
-    Base64Validator,
-    DnsSafeNameValidator,
-    ReservedWordValidator,
-)
+from paasng.utils.validators import RE_APP_SEARCH
 
-# Fields and utilities start
-
-
-class ApplicationField(serializers.SlugRelatedField):
-    def get_queryset(self):
-        return Application.objects.filter_by_user(user=self.context["request"].user)
-
-
-class AppUniqueValidator(UniqueValidator):
-    """Similar to the original UniqueValidator with some improvements:
-
-    - the field_name was given directly instead of set by `set_context`
-    - the error message was refined
-    - an extra signal was triggered to do external check on other data sources
-    """
-
-    field_name = ''
-    field_label = ''
-    signal: Signal
-
-    def __init__(self, field_name: Optional[str] = None, *args, **kwargs):
-        if field_name:
-            self.field_name = field_name
-        super().__init__(queryset=Application.default_objects.all(), lookup="exact", *args, **kwargs)
-
-    def __call__(self, value, serializer_field):
-        # Determine the existing instance, if this is an update operation.
-        instance = getattr(serializer_field.parent, 'instance', None)
-        if not isinstance(instance, Application):
-            instance = serializer_field.parent.context.get("application", None)
-
-        queryset = self.queryset
-        queryset = self.filter_queryset(value, queryset, self.field_name)
-        queryset = self.exclude_current_instance(queryset, instance)
-        if qs_exists(queryset):
-            raise ValidationError(self.get_message(value), code='unique')
-
-        # Send signal to external data sources
-        self.signal_external(value, instance=instance)
-
-    def signal_external(self, value: str, instance: Optional[Application]):
-        """Send signal to external datasources, will raise ValidateError when external validation fails"""
-        try:
-            self.signal.send(sender=self.__class__, value=value, instance=instance)
-        except AppFieldValidationError as e:
-            if e.reason == 'duplicated':
-                raise ValidationError(self.get_message(value), code='unique')
-
-    def get_message(self, value) -> str:
-        """Get user-friendly error message"""
-        return _('{} 为 {} 的应用已存在').format(self.field_label, value)
-
-
-class AppIDUniqueValidator(AppUniqueValidator):
-    field_name = 'code'
-    field_label = '应用 ID'
-    signal = prepare_use_application_code
-
-    def __call__(self, value, serializer_field):
-        # Determine the existing instance, if this is an update operation.
-        instance = getattr(serializer_field.parent, 'instance', None)
-
-        if not instance:
-            return super().__call__(value, serializer_field)
-
-        if instance.code != value:
-            # Modifying 'code' field was forbidden at this moment
-            raise ValidationError(_('不支持修改应用 ID'))
-
-
-class AppNameUniqueValidator(AppUniqueValidator):
-    field_name = 'name'
-    field_label = '应用名称'
-    signal = prepare_use_application_name
-
-
-class AppIDField(serializers.RegexField):
-    """Field for validating application ID"""
-
-    def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
-        preset_kwargs = dict(
-            max_length=16,
-            min_length=3,
-            required=True,
-            help_text='应用 ID',
-            validators=[
-                ReservedWordValidator(_("应用 ID")),
-                DnsSafeNameValidator(_("应用 ID")),
-                AppIDUniqueValidator(),
-            ],
-            error_messages={'invalid': _('格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)')},
-        )
-        preset_kwargs.update(kwargs)
-        super().__init__(regex, *args, **preset_kwargs)
-
-
-class AppNameField(NickNameField):
-    """Field for validating application name"""
-
-    def __init__(self, *args, **kwargs):
-        preset_kwargs = dict(max_length=20, help_text='应用名称', validators=[AppNameUniqueValidator()])
-        preset_kwargs.update(kwargs)
-        super().__init__(*args, **preset_kwargs)
-
-
-# Serializers start
-
-
-@i18n
-class AppBasicInfoMixin(serializers.Serializer):
-    region = serializers.ChoiceField(choices=get_region().get_choices())
-    code = AppIDField()
-    name = I18NExtend(AppNameField())
-
-
-class AdvancedCreationParamsMixin(serializers.Serializer):
-    """高级应用创建选项"""
-
-    cluster_name = serializers.CharField(required=False)
-
-    def validate_cluster_name(self, value: str) -> str:
-        # Get region value from parent serializer
-        region = self.parent.initial_data['region']
-        if not RegionClusterService(region).has_cluster(value):
-            raise ValidationError(_('集群名称错误，无法找到名为 {value} 的集群').format(value=value))
-        return value
-
-
-class MarketParamsMixin(serializers.Serializer):
-    """蓝鲸市场相关参数"""
-
-    source_tp_url = serializers.URLField(required=False, allow_blank=True, help_text='第三方访问地址')
+from .fields import ApplicationField, AppNameField
+from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParamsMixin
 
 
 class CreateApplicationV2SLZ(AppBasicInfoMixin):
@@ -247,60 +97,6 @@ class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
         if not code.startswith(prefix):
             raise ValidationError(f"应用ID 必须以 {prefix} 为前缀")
         return code
-
-
-class CloudNativeParamsSLZ(serializers.Serializer):
-    """创建云原生应用的详细参数"""
-
-    image = serializers.CharField(label=_('容器镜像地址'), required=True)
-    command = serializers.ListField(help_text=_('启动命令'), child=serializers.CharField(), required=False, default=list)
-    args = serializers.ListField(help_text=_('命令参数'), child=serializers.CharField(), required=False, default=list)
-    target_port = serializers.IntegerField(label=_('容器端口'), required=False)
-    # 在前端页面调整完成前，先保持默认值为 v1alpha1 以兼容现有逻辑
-    api_version = serializers.CharField(label=_('API版本'), required=False, default=ApiVersion.V1ALPHA1.value)
-
-
-class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
-    """创建云原生架构应用的表单"""
-
-    # [Deprecated] cloud_native_params is deprecated, use param manifest instead
-    cloud_native_params = CloudNativeParamsSLZ(label=_('云原生应用参数'), required=False)
-    advanced_options = AdvancedCreationParamsMixin(required=False)
-
-    source_config = ModuleSourceConfigSLZ(required=False, help_text=_('源码配置'))
-    image_credentials = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
-    manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
-
-    def validate(self, attrs):
-        super().validate(attrs)
-
-        # 兼容旧逻辑，支持仅传 cloud_native_params 即可创建应用
-        if attrs.get('cloud_native_params'):
-            return attrs
-
-        source_cfg = attrs.get('source_config')
-        if not source_cfg:
-            raise ValidationError(_('需要指定 源码配置'))
-
-        if manifest := attrs.get('manifest'):
-            # 检查 source_config 中 source_origin 类型必须为 CNATIVE_IMAGE
-            if source_cfg['source_origin'] != SourceOrigin.CNATIVE_IMAGE:
-                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 CNATIVE_IMAGE'))
-
-            try:
-                bkapp_res = BkAppResource(**manifest)
-            except PDValidationError as e:
-                raise ValidationError(to_error_string(e))
-
-            if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
-                raise ValidationError(_('请使用 BkApp v1alpha2 版本'))
-
-            if bkapp_res.metadata.name != attrs["code"]:
-                raise ValidationError(_("Manifest 中定义的应用模型名称与应用ID不一致"))
-
-            if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
-                raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))
-        return attrs
 
 
 @i18n
@@ -380,35 +176,6 @@ class ApplicationRelationSLZ(serializers.Serializer):
     def to_internal_value(self, data):
         """将属性转换为 validated_data 的方法， 直接将其赋值为 application 来通过验证"""
         return data
-
-
-class RoleField(serializers.Field):
-    """Role field for present role object friendly"""
-
-    def to_representation(self, value):
-        return {'id': value, 'name': ApplicationRole(value).name.lower()}
-
-    def to_internal_value(self, data):
-        try:
-            role_id = data['id']
-        except Exception:
-            raise ValidationError('Incorrect role param. Expected like {role: {"id": 3}}.')
-        try:
-            ApplicationRole(role_id)
-        except Exception:
-            raise ValidationError(_("%s 不是合法选项") % role_id)
-        return role_id
-
-
-class ApplicationMemberSLZ(serializers.Serializer):
-    user = UserField()
-    roles = serializers.ListField(child=RoleField(), help_text='用户角色列表')
-
-
-class ApplicationMemberRoleOnlySLZ(serializers.Serializer):
-    """Serializer for update, only role"""
-
-    role = RoleField()
 
 
 class ApplicationListDetailedSLZ(serializers.Serializer):
@@ -492,9 +259,6 @@ class ApplicationWithMarketSLZ(serializers.Serializer):
     market_config = MarketConfigSLZ(read_only=True)
 
 
-# Minimal serializers
-
-
 class ApplicationMinimalSLZ(serializers.ModelSerializer):
     name = TranslatedCharField()
 
@@ -573,75 +337,6 @@ class ProtectionStatusSLZ(serializers.Serializer):
 
     activated = serializers.BooleanField(help_text='是否激活保护')
     reason = serializers.CharField(help_text='具体原因')
-
-
-class LightAppCreateSLZ(serializers.Serializer):
-    parent_app_code = serializers.CharField(required=True, help_text="父应用ID")
-    app_name = serializers.CharField(required=True, allow_blank=False, max_length=20, help_text="轻应用名称", source="name")
-    app_url = serializers.URLField(required=True, allow_blank=False, help_text="应用链接", source="external_url")
-    developers = serializers.ListField(
-        required=True, min_length=1, child=serializers.CharField(allow_blank=False), help_text="应用开发者用户名"
-    )
-    app_tag = serializers.CharField(
-        required=False,
-        default='Other',
-        help_text=(
-            '应用分类，可选分类： '
-            '"OpsTools"（运维工具），'
-            '"MonitorAlarm"（监控告警），'
-            '"ConfManage"（配置管理），'
-            '"DevTools"（开发工具），'
-            '"EnterpriseIT"（企业IT），'
-            '"OfficeApp"（办公应用），'
-            '"Other"（其它）。'
-            '如果传入空参数或不是上诉分类，则使用 "Other"'
-        ),
-        source="tag",
-    )
-    creator = serializers.CharField(required=True, help_text="创建者")
-    logo = serializers.CharField(required=False, help_text="base64 编码的 logo 文件", validators=[Base64Validator()])
-    introduction = serializers.CharField(required=False, default="-", help_text="应用的简介")
-    width = serializers.IntegerField(required=False, default=None, help_text="应用在桌面打开窗口宽度")
-    height = serializers.IntegerField(required=False, default=None, help_text="应用在桌面打开窗口高度")
-
-
-class LightAppDeleteSLZ(serializers.Serializer):
-    light_app_code = serializers.CharField(required=True, help_text="轻应用ID")
-
-
-class LightAppEditSLZ(serializers.Serializer):
-    light_app_code = serializers.CharField(required=True, help_text="轻应用ID", source="code")
-    app_name = serializers.CharField(
-        required=False, allow_blank=False, max_length=20, help_text="轻应用名称", source="name"
-    )
-    app_url = serializers.URLField(required=False, allow_blank=False, help_text="应用链接", source="external_url")
-    developers = serializers.ListField(
-        required=False, min_length=1, child=serializers.CharField(allow_blank=False), help_text="应用开发者用户名"
-    )
-    app_tag = serializers.CharField(
-        required=False,
-        default='Other',
-        help_text=(
-            '应用分类，可选分类： '
-            '"OpsTools"（运维工具），'
-            '"MonitorAlarm"（监控告警），'
-            '"ConfManage"（配置管理），'
-            '"DevTools"（开发工具），'
-            '"EnterpriseIT"（企业IT），'
-            '"OfficeApp"（办公应用），'
-            '"Other"（其它）。'
-            '如果传入空参数或不是上诉分类，则使用 "Other"'
-        ),
-        source="tag",
-    )
-    logo = serializers.CharField(required=False, help_text="base64 编码的 logo 文件", validators=[Base64Validator()])
-    introduction = serializers.CharField(required=False, default="", help_text="应用的简介")
-    width = serializers.IntegerField(required=False, default=None, help_text="应用在桌面打开窗口宽度")
-    height = serializers.IntegerField(required=False, default=None, help_text="应用在桌面打开窗口高度")
-
-
-class LightAppQuerySLZ(serializers.Serializer):
-    light_app_code = serializers.CharField(required=True, help_text="轻应用ID")
 
 
 class ApplicationLogoSLZ(serializers.ModelSerializer):

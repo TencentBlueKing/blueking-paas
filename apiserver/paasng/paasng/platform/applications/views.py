@@ -531,6 +531,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 source_dir=source_config.get('source_dir', ''),
                 cluster_name=cluster_name,
                 manifest=params.get('manifest'),
+                build_config=serializer.validated_data['build_config'],
             ).source_init_result
 
         https_enabled = self._get_cluster_entrance_https_enabled(

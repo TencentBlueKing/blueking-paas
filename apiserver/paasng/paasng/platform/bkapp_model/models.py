@@ -116,12 +116,25 @@ class ModuleDeployHookManager(models.Manager):
             raise RuntimeError("Only call from module.deploy_hooks")
         return self.instance
 
-    def upsert(self, type_: DeployHookType, proc_command: str) -> 'ModuleDeployHook':
+    def upsert(
+        self,
+        type_: DeployHookType,
+        proc_command: Optional[str] = None,
+        command: Optional[List[str]] = None,
+        args: Optional[List[str]] = None,
+    ) -> 'ModuleDeployHook':
         """upsert a ModuleDeployHook with args, will auto enable it if it is disabled"""
         module = self._get_caller()
-        hook, _ = self.update_or_create(
-            module=module, type=type_, defaults={"proc_command": proc_command, "enabled": True}
-        )
+        if proc_command is not None:
+            hook, _ = self.update_or_create(
+                module=module, type=type_, defaults={"proc_command": proc_command, "enabled": True}
+            )
+        elif command is not None and args is not None:
+            hook, _ = self.update_or_create(
+                module=module, type=type_, defaults={"command": command, "args": args, "enabled": True}
+            )
+        else:
+            raise ValueError("invalid value to upsert ModuleDeployHook")
         return hook
 
     def disable(self, type_: DeployHookType):

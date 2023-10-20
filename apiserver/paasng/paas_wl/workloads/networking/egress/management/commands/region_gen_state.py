@@ -29,8 +29,7 @@ from django.core.management.base import BaseCommand
 
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.utils.basic import get_client_by_cluster_name
-from paas_wl.workloads.networking.egress.cluster_state import generate_state
-from paas_wl.workloads.networking.egress.misc import sync_state_to_nodes
+from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 
 logger = logging.getLogger("commands")
 

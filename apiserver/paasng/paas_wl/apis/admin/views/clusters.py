@@ -47,8 +47,7 @@ from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KSecret
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.networking.egress.cluster_state import generate_state
-from paas_wl.workloads.networking.egress.misc import sync_state_to_nodes
+from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 
 logger = logging.getLogger(__name__)

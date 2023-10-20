@@ -24,7 +24,9 @@ from typing import List
 from django.utils.encoding import force_bytes
 from kubernetes.dynamic.resource import ResourceInstance
 
-from .misc import get_nodes
+from paas_wl.infras.resources.base.kres import KNode
+from paas_wl.infras.resources.utils.basic import EnhancedApiClient
+
 from .models import RegionClusterState
 
 logger = logging.getLogger(__name__)
@@ -98,3 +100,25 @@ def format_nodes_data(nodes: List[dict]) -> List[dict]:
         ip = next((addr["address"] for addr in (addresses or []) if addr.get("type") == "InternalIP"), "")
         results.append({"name": node["metadata"]["name"], "internal_ip_address": ip})
     return results
+
+
+# TODO: Update these two functions to accept `Cluster` argument
+
+
+def get_nodes(client: EnhancedApiClient) -> List[ResourceInstance]:
+    """Return a list a all kubernetes nodes in current cluster"""
+    return KNode(client).ops_label.list({}).items
+
+
+def sync_state_to_nodes(client: EnhancedApiClient, state):
+    """Sync a RegionClusterState object to current cluster, which means:
+
+    - Update the labels of all nodes
+    - Engine apps may use the labels to customize their schedule strategy
+    """
+    labels = state.to_labels()
+    for node_name in state.nodes_name:
+        node = KNode(client).get(node_name)
+        node.metadata.labels = {**node.metadata.get('labels', {}), **labels}
+        logger.debug(f"Patching node object {node_name} with labels {labels}")
+        KNode(client).ops_name.replace_or_patch(node_name, node, update_method="patch")

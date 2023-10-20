@@ -55,13 +55,13 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     EnvVarOverlay,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata
+from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, ReplicasOverlay
 from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.bkapp_model.utils import merge_env_vars
 from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
@@ -187,6 +187,30 @@ class ProcessesManifestConstructor(ManifestConstructor):
         if legacy_processes:
             model_res.metadata.annotations[LEGACY_PROC_IMAGE_ANNO_KEY] = json.dumps(legacy_processes)
         model_res.spec.processes = processes
+
+        # Apply other env-overlay related changes.
+        self.apply_to_replicas_overlay(model_res, module)
+
+    def apply_to_replicas_overlay(self, model_res: BkAppResource, module: Module):
+        """Apply the 'envOverlay.replicas' part."""
+        overlay = model_res.spec.envOverlay
+        if not overlay:
+            overlay = EnvOverlay()
+
+        for proc_spec in ModuleProcessSpec.objects.filter(module=module).order_by("created"):
+            for item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
+                # Only include item that have different replicas value
+                if item.target_replicas != proc_spec.target_replicas:
+                    if overlay.replicas is None:
+                        overlay.replicas = []
+
+                    overlay.replicas.append(
+                        ReplicasOverlay(
+                            envName=item.environment_name, process=proc_spec.name, count=item.target_replicas
+                        )
+                    )
+
+        model_res.spec.envOverlay = overlay
 
     @staticmethod
     def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:

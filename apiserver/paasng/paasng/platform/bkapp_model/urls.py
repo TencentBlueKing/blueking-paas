@@ -33,8 +33,8 @@ urlpatterns = [
     ),
     # 进程配置
     re_path(
-        make_app_pattern(r'/bkapp_model/process_spec/$', include_envs=False),
+        make_app_pattern(r'/bkapp_model/process_specs/$', include_envs=False),
         views.ModuleProcessSpecViewSet.as_view({"get": "retrieve", "post": "batch_upsert"}),
-        name='api.bkapp_model.process_spec',
+        name='api.bkapp_model.process_specs',
     ),
 ]

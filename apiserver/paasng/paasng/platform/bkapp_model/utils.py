@@ -16,11 +16,17 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import copy
-from typing import List
+from typing import List, Optional, Tuple
 
 from blue_krill.data_types.enum import StructuredEnum
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.engine.configurations.image import generate_image_repository
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.helpers import ModuleRuntimeManager
+from paasng.platform.modules.models import BuildConfig, Module
 
 
 class MergeStrategy(str, StructuredEnum):
@@ -49,3 +55,24 @@ def merge_env_vars(x: List[EnvVar], y: List[EnvVar], strategy: MergeStrategy = M
     for name, value in y_vars.items():
         merged.append(EnvVar(name=name, value=value))
     return merged
+
+
+def get_image_info(module: Module) -> Tuple[str, Optional[str]]:
+    """获取模块的镜像仓库和访问凭证名
+
+    :return: Tuple[镜像仓库, Optional[访问凭证名]], 只有仅托管镜像的云原生应用会返回 "访问凭证名"
+    :raises: ValueError 如果模块无法查询到镜像仓库地址
+    """
+    build_cfg = BuildConfig.objects.get_or_create_by_module(module)
+    if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+        if module.application.type == ApplicationType.CLOUD_NATIVE:
+            return build_cfg.image_repository, build_cfg.image_credential_name
+        return module.get_source_obj().get_repo_url() or "", None
+    elif build_cfg.build_method == RuntimeType.DOCKERFILE:
+        return generate_image_repository(module), None
+    elif module.get_source_origin() == SourceOrigin.S_MART:
+        raise ValueError
+    mgr = ModuleRuntimeManager(module)
+    if mgr.is_cnb_runtime:
+        return generate_image_repository(module), None
+    raise ValueError

@@ -56,4 +56,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, default=settings.CONTAINER_PORT)
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
 
-    metadata = ModuleProcessSpecMetadataSLZ(read_only=True, help_text="辅助前端控制特性的自动")
+
+class ModuleProcessSpecsOutputSLZ(serializers.Serializer):
+    proc_specs = ModuleProcessSpecSLZ(many=True, read_only=True)
+    metadata = ModuleProcessSpecMetadataSLZ(read_only=True)

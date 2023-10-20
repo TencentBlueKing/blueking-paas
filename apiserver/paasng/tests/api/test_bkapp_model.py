@@ -50,21 +50,22 @@ class TestModuleProcessSpecViewSet:
         return G(ModuleProcessSpec, module=bk_module, name="worker", command=["celery"])
 
     def test_retrieve(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
-        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_spec/"
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         resp = api_client.get(url)
         data = resp.json()
-        assert len(data) == 2
-        assert data[0]["name"] == "web"
-        assert data[0]["image"] == "example.com/foo"
-        assert data[0]["command"] == ["python"]
-        assert data[0]["args"] == ["-m", "http.server"]
-        assert data[0]["metadata"]["allow_set_image"] is False
+        metadata = data["metadata"]
+        proc_specs = data["proc_specs"]
+        assert metadata["allow_set_image"] is False
+        assert len(proc_specs) == 2
+        assert proc_specs[0]["name"] == "web"
+        assert proc_specs[0]["image"] == "example.com/foo"
+        assert proc_specs[0]["command"] == ["python"]
+        assert proc_specs[0]["args"] == ["-m", "http.server"]
 
-        assert data[1]["name"] == "worker"
-        assert data[1]["image"] == "example.com/foo"
-        assert data[1]["command"] == ["celery"]
-        assert data[1]["args"] is None
-        assert data[1]["metadata"]["allow_set_image"] is False
+        assert proc_specs[1]["name"] == "worker"
+        assert proc_specs[1]["image"] == "example.com/foo"
+        assert proc_specs[1]["command"] == ["celery"]
+        assert proc_specs[1]["args"] is None
 
     @pytest.fixture
     def web_v1alpha1(self, web):
@@ -73,24 +74,26 @@ class TestModuleProcessSpecViewSet:
         return web
 
     def test_retrieve_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):
-        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_spec/"
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         resp = api_client.get(url)
         data = resp.json()
-        assert len(data) == 2
-        assert data[0]["name"] == "web"
-        assert data[0]["image"] == "python:latest"
-        assert data[0]["command"] == ["python"]
-        assert data[0]["args"] == ["-m", "http.server"]
-        assert data[0]["metadata"]["allow_set_image"] is True
+        metadata = data["metadata"]
+        proc_specs = data["proc_specs"]
 
-        assert data[1]["name"] == "worker"
-        assert data[1]["image"] == "example.com/foo"
-        assert data[1]["command"] == ["celery"]
-        assert data[1]["args"] is None
-        assert data[1]["metadata"]["allow_set_image"] is True
+        assert metadata["allow_set_image"] is True
+        assert len(proc_specs) == 2
+        assert proc_specs[0]["name"] == "web"
+        assert proc_specs[0]["image"] == "python:latest"
+        assert proc_specs[0]["command"] == ["python"]
+        assert proc_specs[0]["args"] == ["-m", "http.server"]
+
+        assert proc_specs[1]["name"] == "worker"
+        assert proc_specs[1]["image"] == "example.com/foo"
+        assert proc_specs[1]["command"] == ["celery"]
+        assert proc_specs[1]["args"] is None
 
     def test_save(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
-        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_spec/"
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         request_data = [
             {
                 "name": "web",
@@ -133,29 +136,30 @@ class TestModuleProcessSpecViewSet:
         ]
         resp = api_client.post(url, data=request_data)
         data = resp.json()
+        metadata = data["metadata"]
+        proc_specs = data["proc_specs"]
 
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 2
-        assert len(data) == 2
-        assert data[0]["name"] == "web"
-        assert data[0]["image"] == "example.com/foo"
-        assert data[0]["command"] == ["python", "-m"]
-        assert data[0]["args"] == ["http.server"]
-        assert data[0]["metadata"]["allow_set_image"] is False
-        assert data[0]["env_overlay"]["stag"]["target_replicas"] == 2
+        assert metadata["allow_set_image"] is False
+        assert len(proc_specs) == 2
+        assert proc_specs[0]["name"] == "web"
+        assert proc_specs[0]["image"] == "example.com/foo"
+        assert proc_specs[0]["command"] == ["python", "-m"]
+        assert proc_specs[0]["args"] == ["http.server"]
+        assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
 
-        assert data[1]["name"] == "beat"
-        assert data[1]["image"] == "example.com/foo"
-        assert data[1]["command"] == ["python", "-m"]
-        assert data[1]["args"] == ["celery", "beat"]
-        assert data[1]["metadata"]["allow_set_image"] is False
-        assert data[1]["env_overlay"]["prod"]["scaling_config"] == {
+        assert proc_specs[1]["name"] == "beat"
+        assert proc_specs[1]["image"] == "example.com/foo"
+        assert proc_specs[1]["command"] == ["python", "-m"]
+        assert proc_specs[1]["args"] == ["celery", "beat"]
+        assert proc_specs[1]["env_overlay"]["prod"]["scaling_config"] == {
             "min_replicas": 1,
             "max_replicas": 5,
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
         }
 
     def test_save_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):
-        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_spec/"
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         request_data = [
             {
                 "name": "web",
@@ -167,11 +171,13 @@ class TestModuleProcessSpecViewSet:
         ]
         resp = api_client.post(url, data=request_data)
         data = resp.json()
+        metadata = data["metadata"]
+        proc_specs = data["proc_specs"]
 
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 1
-        assert len(data) == 1
-        assert data[0]["name"] == "web"
-        assert data[0]["image"] == "python:latest"
-        assert data[0]["command"] == ["python", "-m"]
-        assert data[0]["args"] == ["http.server"]
-        assert data[0]["metadata"]["allow_set_image"] is True
+        assert metadata["allow_set_image"] is True
+        assert len(proc_specs) == 1
+        assert proc_specs[0]["name"] == "web"
+        assert proc_specs[0]["image"] == "python:latest"
+        assert proc_specs[0]["command"] == ["python", "-m"]
+        assert proc_specs[0]["args"] == ["http.server"]

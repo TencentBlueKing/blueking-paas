@@ -28,3 +28,15 @@ class ImportEnvVarsResult:
 
     affected_num: int
     removed_num: int
+
+
+@define
+class ImportMountsResult:
+    """The result of the mounts importing procedure.
+
+    :param affected_num: How many objects have been affected.
+    :param removed_num: How many objects have been removed.
+    """
+
+    affected_num: int
+    removed_num: int

@@ -306,6 +306,7 @@ def get_bkapp_resource(module: Module) -> BkAppResource:
         HooksManifestConstructor(),
         BuildConfigManifestConstructor(),
         EnvVarsManifestConstructor(),
+        MountsManifestConstructor(),
     ]
     obj = BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,

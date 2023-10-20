@@ -23,10 +23,10 @@ from django.db import models
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.bk_app.applications.relationship import ModuleAttrFromID
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
-from paas_wl.bk_app.applications.relationship import ModuleAttrFromID
 from paas_wl.utils.models import TimestampedModel
 from paasng.utils.models import make_json_field
 
@@ -132,7 +132,7 @@ class Mount(TimestampedModel):
         unique_together = ('module_id', 'mount_path', 'environment_name')
 
     @cached_property
-    def source(self) -> Union[ConfigMapSource]:
+    def source(self) -> ConfigMapSource:
         if self.source_type == VolumeSourceType.ConfigMap:
             return ConfigMapSource.objects.get_by_mount(self)
         raise ValueError(f'unsupported source type {self.source_type}')

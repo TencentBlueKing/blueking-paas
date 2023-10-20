@@ -18,53 +18,14 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict
 
 import yaml
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
-from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.bkapp_model.importer.mounts import import_mounts
+from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
-from paasng.utils.serializers import field_env_var_key
 
 from .exceptions import ManifestImportError
-
-
-class ConfigurationInputSLZ(serializers.Serializer):
-    """Validate the `configuration` field."""
-
-    class EnvVarInputSLZ(serializers.Serializer):
-        name = field_env_var_key()
-        value = serializers.CharField(allow_blank=False)
-
-        def to_internal_value(self, data) -> EnvVar:
-            # NOTE: Should we define another "EnvVar" type instead of importing from the crd module?
-            d = super().to_internal_value(data)
-            return EnvVar(**d)
-
-    env = serializers.ListField(child=EnvVarInputSLZ())
-
-
-class EnvOverlayInputSLZ(serializers.Serializer):
-    """Validate the `envOverlay` field."""
-
-    class EnvVarOverlayInputSLZ(serializers.Serializer):
-        envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
-        name = field_env_var_key()
-        value = serializers.CharField(allow_blank=False)
-
-        def to_internal_value(self, data) -> EnvVarOverlay:
-            d = super().to_internal_value(data)
-            return EnvVarOverlay(**d)
-
-    envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ())
-
-
-class BkAppSpecInputSLZ(serializers.Serializer):
-    """Validate the `spec` field of BkApp resource."""
-
-    configuration = ConfigurationInputSLZ(required=False)
-    envOverlay = EnvOverlayInputSLZ(required=False)
 
 
 def import_manifest_yaml(module: Module, input_yaml_data: str):
@@ -87,9 +48,17 @@ def import_manifest(module: Module, input_data: Dict):
     except ValidationError as e:
         raise ManifestImportError.from_validation_error(e)
 
-    if configuration := spec_slz.validated_data['configuration']:
+    env_vars, overlay_env_vars = [], []
+    mounts = spec_slz.validated_data.get('mounts', [])
+    if configuration := spec_slz.validated_data.get('configuration', {}):
         env_vars = configuration.get('env', [])
-    if env_overlay := spec_slz.validated_data['envOverlay']:
-        overlay_env_vars = env_overlay.get('envVariables', [])
 
-    import_env_vars(module, env_vars, overlay_env_vars)
+    overlay_mounts = []
+    if env_overlay := spec_slz.validated_data.get('envOverlay', {}):
+        overlay_env_vars = env_overlay.get('envVariables', [])
+        overlay_mounts = env_overlay.get('mounts', [])
+
+    if env_vars or overlay_env_vars:
+        import_env_vars(module, env_vars, overlay_env_vars)
+    if mounts or overlay_mounts:
+        import_mounts(module, mounts, overlay_mounts)

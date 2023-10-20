@@ -16,12 +16,27 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import shlex
 from typing import List, Optional
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import TimestampedModel
-from paasng.platform.engine.constants import ImagePullPolicy
+from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+
+
+def _proxied_field(field_name: str):
+    """a proxy to get env overlay field"""
+
+    def func(self: "ModuleProcessSpec", environment_name: str):
+        try:
+            return getattr(self.env_overlay.get(environment_name=environment_name), field_name)
+        except ObjectDoesNotExist:
+            return getattr(self, field_name)
+
+    return func
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -49,11 +64,40 @@ class ModuleProcessSpec(TimestampedModel):
     )
     image_credential_name = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
 
+    # Global settings
     target_replicas = models.IntegerField('期望副本数', default=1)
-    target_status = models.CharField('期望状态', max_length=32, default="start")
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
     autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
-    scaling_config = models.JSONField('自动扩缩容配置', default={})
+    scaling_config = models.JSONField('自动扩缩容配置', null=True)
 
     class Meta:
         unique_together = ("module", "name")
+
+    def get_proc_command(self) -> str:
+        if self.proc_command:
+            return self.proc_command
+        return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
+
+    get_target_replicas = _proxied_field("target_replicas")
+    get_plan_name = _proxied_field("plan_name")
+    get_autoscaling = _proxied_field("autoscaling")
+    get_scaling_config = _proxied_field("scaling_config")
+
+
+class ProcessSpecEnvOverlay(TimestampedModel):
+    """进程定义中允许按环境覆盖的配置"""
+
+    proc_spec = models.ForeignKey(
+        ModuleProcessSpec, on_delete=models.CASCADE, db_constraint=False, related_name="env_overlay"
+    )
+    environment_name = models.CharField(
+        verbose_name=_('环境名称'), choices=AppEnvName.get_choices(), null=False, max_length=16
+    )
+
+    target_replicas = models.IntegerField('期望副本数', default=1)
+    plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
+    autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
+    scaling_config = models.JSONField('自动扩缩容配置', null=True)
+
+    class Meta:
+        unique_together = ("proc_spec", "environment_name")

@@ -20,7 +20,7 @@ from typing import Callable, Dict, Iterable, List, Tuple, Union
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.models import Module
 
@@ -67,7 +67,7 @@ class ModuleProcessSpecManager:
                 args=process.args,
                 port=process.targetPort,
                 target_replicas=process.replicas,
-                plan_name=process.resQuotaPlan,
+                plan_name=process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
                 # Deprecated: 仅用于 v1alpha1 的云原生应用
                 image=process.image,
                 image_pull_policy=process.imagePullPolicy,
@@ -92,6 +92,9 @@ class ModuleProcessSpecManager:
                 recorder.setattr("target_replicas", process.replicas)
             if process.resQuotaPlan and process_spec.plan_name != process.resQuotaPlan:
                 recorder.setattr("plan_name", process.resQuotaPlan)
+            # 兼容 v1alpha1
+            if process.image and process_spec.image != process.image:
+                recorder.setattr("image", process.image)
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
@@ -194,3 +197,24 @@ class ModuleProcessSpecManager:
                 spec_update_bulks.append(updated)
         if spec_update_bulks:
             ModuleProcessSpec.objects.bulk_update(spec_update_bulks, updated_fields)
+
+    def sync_env_overlay(self, proc_specs: List):
+        """Sync ProcessSpecEnvOverlay from proc_specs list with env_overlay
+
+        :param proc_specs: a list objs represent ModuleProcessSpec, see also ModuleProcessSpecSLZ
+        """
+        for proc_spec_data in proc_specs:
+            if "env_overlay" not in proc_spec_data:
+                continue
+            proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_spec_data["name"])
+            for env_name, overlay in proc_spec_data["env_overlay"].items():
+                ProcessSpecEnvOverlay.objects.update_or_create(
+                    proc_spec=proc_spec,
+                    environment_name=env_name,
+                    defaults={
+                        "target_replicas": overlay.get("target_replicas"),
+                        "plan_name": overlay.get("plan_name"),
+                        "autoscaling": overlay.get("autoscaling"),
+                        "scaling_config": overlay.get("scaling_config"),
+                    },
+                )

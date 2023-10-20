@@ -15,21 +15,37 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import functools
 from unittest import mock
 
 import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.constants import LEGACY_PROC_IMAGE_ANNO_KEY, ApiVersion, ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec, EnvVar, EnvVarOverlay, ObjectMetadata
+from paas_wl.bk_app.cnative.specs.constants import (
+    LEGACY_PROC_IMAGE_ANNO_KEY,
+    ApiVersion,
+    MountEnvName,
+    ResQuotaPlan,
+    VolumeSourceType,
+)
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, VolumeSource
+from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
+    BuiltinAnnotsManifestConstructor,
     EnvVarsManifestConstructor,
+    MountsManifestConstructor,
     ProcessesManifestConstructor,
+    apply_builtin_env_vars,
+    apply_env_annots,
     get_manifest,
 )
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -102,6 +118,19 @@ class TestEnvVarsManifestConstructor:
         ]
 
 
+class TestBuiltinAnnotsManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        app = bk_module.application
+        BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
+
+        annots = blank_resource.metadata.annotations
+        assert annots['bkapp.paas.bk.tencent.com/image-credentials'] == 'true'
+        assert annots['bkapp.paas.bk.tencent.com/module-name'] == bk_module.name
+        assert annots['bkapp.paas.bk.tencent.com/name'] == app.name
+        assert annots['bkapp.paas.bk.tencent.com/region'] == app.region
+        assert annots['bkapp.paas.bk.tencent.com/use-cnb'] == 'false'
+
+
 class TestProcessesManifestConstructor:
     @pytest.mark.parametrize(
         "plan_name, expected",
@@ -167,7 +196,59 @@ class TestProcessesManifestConstructor:
         )
 
 
+class TestMountsManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        create_mount = functools.partial(
+            Mount.objects.create,
+            module_id=bk_module.id,
+            name='nginx',
+            source_type=VolumeSourceType.ConfigMap,
+            source_config=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
+        )
+        # Create 2 mount objects
+        create_mount(mount_path='/etc/conf', environment_name=MountEnvName.GLOBAL.value)
+        create_mount(mount_path='/etc/conf_stag', environment_name=MountEnvName.STAG.value)
+
+        MountsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.mounts == [
+            MountSpec(
+                mountPath='/etc/conf',
+                name='nginx',
+                source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
+            )
+        ]
+        assert blank_resource.spec.envOverlay.mounts == [
+            MountOverlay(
+                envName='stag',
+                mountPath='/etc/conf_stag',
+                name='nginx',
+                source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
+            )
+        ]
+
+
 def test_get_manifest(bk_module):
     manifest = get_manifest(bk_module)
     assert len(manifest) > 0
     assert manifest[0]['kind'] == 'BkApp'
+
+
+def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
+    apply_env_annots(blank_resource, bk_stag_env)
+
+    annots = blank_resource.metadata.annotations
+    assert annots['bkapp.paas.bk.tencent.com/environment'] == 'stag'
+    assert annots['bkapp.paas.bk.tencent.com/wl-app-name'] == bk_stag_env.wl_app.name
+    assert 'bkapp.paas.bk.tencent.com/bkpaas-deploy-id' not in annots
+
+
+def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env, with_wl_apps):
+    apply_env_annots(blank_resource, bk_stag_env, deploy_id='foo-id')
+    assert blank_resource.metadata.annotations['bkapp.paas.bk.tencent.com/bkpaas-deploy-id'] == 'foo-id'
+
+
+def test_apply_builtin_env_vars(blank_resource, bk_stag_env):
+    apply_builtin_env_vars(blank_resource, bk_stag_env)
+    var_names = {item.name for item in blank_resource.spec.configuration.env}
+    for name in {"BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL"}:
+        assert name in var_names

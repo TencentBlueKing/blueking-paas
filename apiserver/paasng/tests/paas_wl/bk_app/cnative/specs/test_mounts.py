@@ -20,9 +20,7 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs import mounts
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount
 from paas_wl.infras.resources.base.kres import KNamespace
@@ -58,34 +56,6 @@ def create_mounts(bk_module):
         name='redis',
         source_type=VolumeSourceType.ConfigMap,
         source_config=VolumeSource(configMap=ConfigMapSourceSpec(name='redis-configmap')),
-    )
-
-
-@pytest.fixture
-def app_resource(bk_stag_env) -> BkAppResource:
-    manifest = {
-        'apiVersion': 'paas.bk.tencent.com/v1alpha2',
-        'kind': 'BkApp',
-        'metadata': {'name': 'bkapp'},
-        'spec': {
-            'mounts': None,
-            'envOverlay': None,
-        },
-    }
-    return BkAppResource(**manifest)
-
-
-def test_inject_to_app_resource(bk_stag_env, app_resource):
-    mounts.inject_to_app_resource(bk_stag_env, app_resource)
-
-    assert len(app_resource.spec.mounts) == 2
-    assert app_resource.spec.mounts[0] == MountSpec(
-        name='nginx', mountPath='/etc/conf', source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap'))
-    )
-    assert app_resource.spec.mounts[1] == MountSpec(
-        name='redis',
-        mountPath='/etc/redis',
-        source=VolumeSource(configMap=ConfigMapSourceSpec(name='redis-configmap')),
     )
 
 

@@ -21,7 +21,18 @@ from typing import TYPE_CHECKING
 from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.publish.market.models import Product
+from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
+from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.iam.helpers import fetch_user_roles
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.engine.constants import DeployConditions, RuntimeType
+from paasng.platform.environments.constants import EnvRoleOperation
+from paasng.platform.environments.exceptions import RoleNotAllowError
+from paasng.platform.environments.utils import env_role_protection_check
+from paasng.platform.modules.models import Module
+from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.exceptions import (
     AccessTokenForbidden,
     BasicAuthError,
@@ -29,16 +40,6 @@ from paasng.platform.sourcectl.exceptions import (
 )
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.sourcectl.version_services import get_version_service
-from paasng.platform.engine.constants import DeployConditions, RuntimeType
-from paasng.platform.applications.constants import AppEnvironment, ApplicationType
-from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
-from paasng.core.core.protections.exceptions import ConditionNotMatched
-from paasng.platform.environments.constants import EnvRoleOperation
-from paasng.platform.environments.exceptions import RoleNotAllowError
-from paasng.platform.environments.utils import env_role_protection_check
-from paasng.platform.modules.models import Module
-from paasng.platform.modules.specs import ModuleSpecs
-from paasng.accessories.publish.market.models import Product
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 if TYPE_CHECKING:
@@ -122,8 +123,7 @@ class ProcfileCondition(DeployCondition):
         if ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE:
             return
 
-        deploy_config = module.get_deploy_config()
-        if not deploy_config.procfile:
+        if not ModuleProcessSpec.objects.filter(module=module).exists():
             raise ConditionNotMatched(_('未完善进程启动命令'), self.action_name)
 
 

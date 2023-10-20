@@ -17,13 +17,13 @@
         type="empty"
         scene="part"
       >
-        <span style="color: #63656E;">{{ $t('暂无钩子命令') }}</span>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
         >
-          {{ $t('钩子命令在 app_desc.yaml 文件中定义。') }}
+          {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
+        <p class="guide-link mt15">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
     <div
@@ -192,8 +192,7 @@
   </paas-content-loader>
 </template>
 
-<script>
-import _ from 'lodash';
+<script>import _ from 'lodash';
 import i18n from '@/language/i18n.js';
 
 export default {
@@ -261,7 +260,7 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
-    isCustomImage () {
+    isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },

@@ -261,19 +261,30 @@ export const PLATFORM_CONFIG = {
 
         // 部署前置命令
         DEPLOY_ORDER: DOCS_URL_PREFIX + '/topics/paas/release_hooks',
+
         //应用进程与Profile
         PROCFILE_DOC: DOCS_URL_PREFIX + '/topics/paas/process_procfile',
+
         //应用描述文件
         APP_DESC_DOC: DOCS_URL_PREFIX + '/topics/paas/app_desc',
+
         // 使用Arm架构的机器如何构建x86平台镜像
         ARCHITECTURE_PLATFORM_IMAGE: DOCS_URL_PREFIX + '/topics/paas/deploy_flow#%E4%BD%BF%E7%94%A8-arm-%E6%9E%B6%E6%9E%84%E7%9A%84%E6%9C%BA%E5%99%A8%E5%A6%82%E4%BD%95%E6%9E%84%E5%BB%BA-x86-%E5%B9%B3%E5%8F%B0%E9%95%9C%E5%83%8F',
 
         // 服务发现配置
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
+        
         // 帮助：如何构建镜像
         BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
+        
         // 代码库 OAuth 授权配置指引
-        OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置'
+        OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
+
+        // 应用进程介绍
+        APP_PROCESS_INTRODUCTION: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/release_hooks.md',
+
+        // 构建阶段钩子
+        BUILD_PHASE_HOOK: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/build_hooks.md'
     },
 
     CONFIG: {

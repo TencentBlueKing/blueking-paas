@@ -17,13 +17,13 @@
         type="empty"
         scene="part"
       >
-        <span style="color: #63656E;">{{ $t('暂无进程') }}</span>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
         >
           {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
+        <p class="guide-link mt15">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
     <div

@@ -309,9 +309,10 @@
         <bk-alert
           type="info">
           <div slot="title">
-            {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
+            {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
             <a
-              target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+              target="_blank"
+              :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
               style="color: #3a84ff">
               {{$t('应用进程介绍')}}
             </a>
@@ -323,11 +324,12 @@
         <bk-alert
           type="info">
           <div slot="title">
-            {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
+            {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
             <a
-              target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+              target="_blank"
+              :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
               style="color: #3a84ff">
-              {{$t('应用进程介绍')}}
+              {{$t('部署阶段钩子')}}
             </a>
           </div>
         </bk-alert>

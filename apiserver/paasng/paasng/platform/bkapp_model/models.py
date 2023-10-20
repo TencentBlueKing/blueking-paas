@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
+from functools import lru_cache
 from typing import List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -27,12 +28,13 @@ from paas_wl.utils.models import TimestampedModel
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 
 
-def _proxied_field(field_name: str):
+def env_overlay_getter_factory(field_name: str):
     """a proxy to get env overlay field"""
 
+    @lru_cache
     def func(self: "ModuleProcessSpec", environment_name: str):
         try:
-            return getattr(self.env_overlay.get(environment_name=environment_name), field_name)
+            return getattr(self.env_overlays.get(environment_name=environment_name), field_name)
         except ObjectDoesNotExist:
             return getattr(self, field_name)
 
@@ -78,17 +80,17 @@ class ModuleProcessSpec(TimestampedModel):
             return self.proc_command
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
 
-    get_target_replicas = _proxied_field("target_replicas")
-    get_plan_name = _proxied_field("plan_name")
-    get_autoscaling = _proxied_field("autoscaling")
-    get_scaling_config = _proxied_field("scaling_config")
+    get_target_replicas = env_overlay_getter_factory("target_replicas")
+    get_plan_name = env_overlay_getter_factory("plan_name")
+    get_autoscaling = env_overlay_getter_factory("autoscaling")
+    get_scaling_config = env_overlay_getter_factory("scaling_config")
 
 
 class ProcessSpecEnvOverlay(TimestampedModel):
     """进程定义中允许按环境覆盖的配置"""
 
     proc_spec = models.ForeignKey(
-        ModuleProcessSpec, on_delete=models.CASCADE, db_constraint=False, related_name="env_overlay"
+        ModuleProcessSpec, on_delete=models.CASCADE, db_constraint=False, related_name="env_overlays"
     )
     environment_name = models.CharField(
         verbose_name=_('环境名称'), choices=AppEnvName.get_choices(), null=False, max_length=16

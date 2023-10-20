@@ -18,8 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
+from typing import Optional, Tuple
 
 import yaml
+from django.db.transaction import atomic
 from django.http.response import HttpResponse
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
@@ -27,12 +29,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.manifest import get_manifest
-from paasng.platform.bkapp_model.serializers import GetManifestInputSLZ
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.serializers import GetManifestInputSLZ, ModuleProcessSpecSLZ
+from paasng.platform.engine.configurations.image import generate_image_repository
+from paasng.platform.engine.constants import AppEnvName, RuntimeType
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.helpers import ModuleRuntimeManager
+from paasng.platform.modules.models import BuildConfig, Module
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +92,94 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             return HttpResponse(response, content_type='application/yaml')
         else:
             return Response(get_manifest(module))
+
+
+class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """API for CRUD ModuleProcessSpec"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(response_serializer=ModuleProcessSpecSLZ(many=True))
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的进程配置"""
+        module = self.get_module_via_path()
+        proc_specs = ModuleProcessSpec.objects.filter(module=module)
+        image_repository, image_credential_name = self.get_image_info(module)
+
+        images = {proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None}
+        # 兼容 v1alpha1
+        allow_set_image = len(images - {image_repository}) >= 1
+
+        data = [
+            {
+                "name": proc_spec.name,
+                "image": proc_spec.image or image_repository,
+                "image_credential_name": proc_spec.image_credential_name or image_credential_name,
+                "command": proc_spec.command,
+                "args": proc_spec.args,
+                "port": proc_spec.port,
+                "env_overlay": {
+                    env_name.value: {
+                        "environment_name": env_name.value,
+                        "plan_name": proc_spec.get_plan_name(environment_name=env_name),
+                        "target_replicas": proc_spec.get_target_replicas(environment_name=env_name),
+                        "autoscaling": proc_spec.get_autoscaling(environment_name=env_name),
+                        "scaling_config": proc_spec.get_scaling_config(environment_name=env_name),
+                    }
+                    for env_name in AppEnvName
+                },
+                "metadata": {
+                    "allow_set_image": allow_set_image,
+                },
+            }
+            for proc_spec in proc_specs
+        ]
+        return Response(ModuleProcessSpecSLZ(data, many=True).data)
+
+    @swagger_auto_schema(request_body=ModuleProcessSpecSLZ(many=True))
+    @atomic
+    def batch_upsert(self, request, code, module_name):
+        """批量更新模块的进程配置"""
+        module = self.get_module_via_path()
+        slz = ModuleProcessSpecSLZ(data=request.data, many=True)
+        slz.is_valid(raise_exception=True)
+        proc_specs = slz.validated_data
+
+        images = set(ModuleProcessSpec.objects.filter(module=module).values_list("image", flat=True))
+        # 兼容 v1alpha1
+        allow_set_image = len(images) >= 2
+
+        processes = [
+            BkAppProcess(
+                name=proc_spec["name"],
+                command=proc_spec["command"],
+                args=proc_spec["args"],
+                targetPort=proc_spec["port"],
+                image=proc_spec["image"] if allow_set_image else None,
+            )
+            for proc_spec in proc_specs
+        ]
+
+        mgr = ModuleProcessSpecManager(module)
+        # 更新进程配置
+        mgr.sync_form_bkapp(processes)
+        # 更新环境覆盖
+        mgr.sync_env_overlay(proc_specs)
+        return self.retrieve(request, code, module_name)
+
+    @staticmethod
+    def get_image_info(module: Module) -> Tuple[str, Optional[str]]:
+        """获取模块的镜像仓库和访问凭证名"""
+        build_cfg = BuildConfig.objects.get_or_create_by_module(module)
+        if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+            if module.application.type == ApplicationType.CLOUD_NATIVE:
+                return build_cfg.image_repository, build_cfg.image_credential_name
+            return module.get_source_obj().get_repo_url() or "", None
+        elif build_cfg.build_method == RuntimeType.DOCKERFILE:
+            return generate_image_repository(module), None
+        elif module.get_source_origin() == SourceOrigin.S_MART:
+            raise ValueError
+        mgr = ModuleRuntimeManager(module)
+        if mgr.is_cnb_runtime:
+            return generate_image_repository(module), None
+        raise ValueError

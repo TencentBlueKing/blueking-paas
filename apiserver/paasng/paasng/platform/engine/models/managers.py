@@ -120,7 +120,11 @@ class ExportedConfigVars(BaseModel):
 class ConfigVarManager:
     @transaction.atomic
     def apply_vars_to_module(self, module: 'Module', config_vars: List[ConfigVar]) -> ApplyResult:
-        """Apply those `config_vars` to the `module`"""
+        """Apply a list of `config_vars` objects to the `module`, these objects may
+        be created or will overwrite the old ones with the same name.
+
+        :returns: A result object that describes the details.
+        """
         create_list = []
         overwrited_list = []
 
@@ -151,6 +155,20 @@ class ConfigVarManager:
             overwrited_num=len(overwrited_list),
             ignore_num=len(config_vars) - len(create_list) - len(overwrited_list),
         )
+
+    @transaction.atomic
+    def remove_bulk(self, module: 'Module', exclude_keys: List[str]) -> int:
+        """Remove a bulk of config vars.
+
+        :param exclude_keys: The keys to exclude from removing.
+        :returns: The number of removed objects.
+        """
+        ret = 0
+        for obj in module.configvar_set.all():
+            if obj.key not in exclude_keys:
+                obj.delete()
+                ret += 1
+        return ret
 
     def clone_vars(self, source: 'Module', dest: 'Module') -> ApplyResult:
         """Clone All Config Vars from `source` Module  to `dest` Module, but ignore all built-in ones."""

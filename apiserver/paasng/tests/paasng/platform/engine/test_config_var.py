@@ -344,6 +344,16 @@ class TestConfigVarManager:
         sorted_valid_new_vars = sorted(valid_new_vars_list, key=lambda x: x['key'])
         assert var_list_in_db == sorted_valid_new_vars
 
+    def test_remove_bulk(self, bk_module, config_var_maker):
+        config_var_maker(key="KEY1", value="foo", environment_name="stag", module=bk_module)
+        config_var_maker(key="KEY2", value="foo", environment_name="prod", module=bk_module)
+        config_var_maker(key="KEY3", value="foo", environment_name="prod", module=bk_module)
+        assert bk_module.configvar_set.count() == 3
+
+        assert ConfigVarManager().remove_bulk(bk_module, exclude_keys=['KEY1', 'KEY4']) == 2
+        assert bk_module.configvar_set.count() == 1
+        assert bk_module.configvar_set.first().key == 'KEY1'
+
 
 class TestConfigVarFormatSLZ:
     @pytest.mark.parametrize(

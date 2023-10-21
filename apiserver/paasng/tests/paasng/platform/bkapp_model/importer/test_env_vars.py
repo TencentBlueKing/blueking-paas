@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,25 +15,23 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern, re_path
+import pytest
 
-from . import views
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
+from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
+from paasng.platform.engine.models.config_var import ConfigVar
 
-urlpatterns = [
-    re_path(
-        make_app_pattern(r'/manifest_ext/$', include_envs=True),
-        views.CNativeAppManifestExtViewset.as_view({'get': 'retrieve'}),
-        name='api.cnative.retrieve_manifest_ext',
-    ),
-    re_path(
-        make_app_pattern(r'/bkapp_model/manifests/current/$', include_envs=False),
-        views.BkAppModelManifestsViewset.as_view({'get': 'retrieve', 'put': 'replace'}),
-        name='api.bkapp_model.current_manifests',
-    ),
-    # 进程配置
-    re_path(
-        make_app_pattern(r'/bkapp_model/process_specs/$', include_envs=False),
-        views.ModuleProcessSpecViewSet.as_view({"get": "retrieve", "post": "batch_upsert"}),
-        name='api.bkapp_model.process_specs',
-    ),
-]
+pytestmark = pytest.mark.django_db
+
+
+class Test__import_env_vars:
+    def test_integrated(self, bk_module):
+        ConfigVar.objects.create(module=bk_module, key='KEY_EXISTING')
+        env_vars = [EnvVar(name='KEY1', value='foo'), EnvVar(name='KEY2', value='foo')]
+        overlay_env_vars = [EnvVarOverlay(envName='stag', name='KEY3', value='foo')]
+        ret = import_env_vars(bk_module, env_vars, overlay_env_vars)
+
+        assert ConfigVar.objects.count() == 3
+        assert ConfigVar.objects.filter(is_global=True).count() == 2
+        assert ret.affected_num == 3
+        assert ret.removed_num == 1

@@ -59,13 +59,17 @@ class TestGetMainProcessServiceName:
                 )
             ]
         )
-        with patch('paas_wl.workloads.networking.ingress.entities.service.AppEntityManager.list_by_app', patch_mgr):
+        with patch(
+            'paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app', patch_mgr
+        ):
             assert get_main_process_service_name(bk_stag_wl_app) == bk_stag_wl_app.name
             assert patch_mgr.called
 
     def test_none(self, bk_stag_wl_app):
         patch_mgr = Mock(return_value=[])
-        with patch('paas_wl.workloads.networking.ingress.entities.service.AppEntityManager.list_by_app', patch_mgr):
+        with patch(
+            'paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app', patch_mgr
+        ):
             with pytest.raises(AppEntityNotFound):
                 assert not get_main_process_service_name(bk_stag_wl_app)
                 assert not patch_mgr.called

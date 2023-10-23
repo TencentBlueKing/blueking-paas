@@ -212,7 +212,7 @@ class TestCreateCloudNativeModule:
 class TestModuleDeployConfigViewSet:
     @pytest.fixture
     def the_hook(self, bk_module):
-        return bk_module.deploy_hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="the-hook")
+        return bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="the-hook")
 
     @pytest.fixture
     def the_procfile(self, bk_module):

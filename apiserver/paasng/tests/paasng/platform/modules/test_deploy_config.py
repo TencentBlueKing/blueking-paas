@@ -32,7 +32,7 @@ class TestDeployConfig:
 
     @pytest.fixture(autouse=True)
     def setup(self, bk_module, command):
-        bk_module.deploy_hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=command)
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=command)
 
     def test_add_hook(self, bk_module, command):
         hook = bk_module.deploy_hooks.get_by_type(type_=DeployHookType.PRE_RELEASE_HOOK)
@@ -42,7 +42,7 @@ class TestDeployConfig:
         assert hook.enabled
 
     def test_disable_hook(self, bk_module, command):
-        bk_module.deploy_hooks.disable(type_=DeployHookType.PRE_RELEASE_HOOK)
+        bk_module.deploy_hooks.disable_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
 
         hook = bk_module.deploy_hooks.get_by_type(type_=DeployHookType.PRE_RELEASE_HOOK)
         assert hook
@@ -52,7 +52,7 @@ class TestDeployConfig:
 
     def test_upsert(self, bk_module):
         new_command = "another " + generate_random_string()
-        bk_module.deploy_hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=new_command)
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=new_command)
         hook = bk_module.deploy_hooks.get_by_type(type_=DeployHookType.PRE_RELEASE_HOOK)
         assert hook
         assert hook.type == DeployHookType.PRE_RELEASE_HOOK

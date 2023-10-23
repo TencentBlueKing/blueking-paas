@@ -305,7 +305,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", required=False)
+    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", required=False, allow_blank=True)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, required=False
     )

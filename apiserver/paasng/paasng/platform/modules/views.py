@@ -557,7 +557,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        module.deploy_hooks.upsert(type_=data["type"], proc_command=data["command"])
+        module.deploy_hooks.enable_hook(type_=data["type"], proc_command=data["command"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(responses={204: openapi_empty_response}, deprecated=True)
@@ -566,7 +566,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
 
         try:
-            module.deploy_hooks.disable(DeployHookType(type_))
+            module.deploy_hooks.disable_hook(DeployHookType(type_))
         except ValueError:
             raise ValidationError(detail={"type": f'“{type_}” 不是合法选项。'}, code="invalid_choice")
         return Response(status=status.HTTP_204_NO_CONTENT)

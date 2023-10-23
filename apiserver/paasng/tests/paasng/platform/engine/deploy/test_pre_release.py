@@ -34,17 +34,17 @@ pytestmark = pytest.mark.django_db
 class TestApplicationPreReleaseExecutor:
     @pytest.fixture()
     def setup_hook(self, bk_module_full):
-        bk_module_full.deploy_hooks.upsert(
+        bk_module_full.deploy_hooks.enable_hook(
             type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=generate_random_string()
         )
 
     @pytest.fixture
     def setup_hook_disable(self, bk_module_full, setup_hook):
-        bk_module_full.deploy_hooks.disable(type_=DeployHookType.PRE_RELEASE_HOOK)
+        bk_module_full.deploy_hooks.disable_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
 
     @pytest.fixture
     def setup_empty_command_hook(self, bk_module_full):
-        bk_module_full.deploy_hooks.upsert(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="")
+        bk_module_full.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="")
 
     @pytest.fixture
     def hook(self, request, bk_module_full):

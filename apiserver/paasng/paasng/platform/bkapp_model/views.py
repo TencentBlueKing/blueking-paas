@@ -183,6 +183,8 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """API for CRUD ModuleDeployHook"""
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     @swagger_auto_schema(response_serializer=ModuleDeployHookSLZ)
     def retrieve(self, request, code, module_name, hook_type):
         """查询模块的钩子命令配置"""
@@ -200,8 +202,11 @@ class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        if proc_command := data.get("proc_command"):
-            module.deploy_hooks.upsert(type_=data["type"], proc_command=proc_command)
+        if data["enabled"]:
+            if proc_command := data.get("proc_command"):
+                module.deploy_hooks.enable_hook(type_=data["type"], proc_command=proc_command)
+            else:
+                module.deploy_hooks.enable_hook(type_=data["type"], command=data["command"], args=data["args"])
         else:
-            module.deploy_hooks.upsert(type_=data["type"], command=data["command"], args=data["args"])
+            module.deploy_hooks.disable_hook(type_=data["type"])
         return Response(ModuleDeployHookSLZ(module.deploy_hooks.get_by_type(data["type"])).data)

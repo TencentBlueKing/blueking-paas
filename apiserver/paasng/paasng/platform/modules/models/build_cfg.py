@@ -38,7 +38,7 @@ class ImageTagOptions:
     # 镜像 Tag 是否带有构建时间
     with_build_time: bool = True
     # 镜像 Tag 是否带有提交ID(hash)
-    with_commit_id: bool = True
+    with_commit_id: bool = False
 
 
 ImageTagOptionsField = make_json_field("ImageTagOptionsField", ImageTagOptions)

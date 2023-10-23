@@ -79,7 +79,7 @@ class TestModuleBuildConfigViewSet:
         assert resp.json() == {
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'bp_stack_name': None,
             'buildpacks': [],
         }
@@ -94,7 +94,7 @@ class TestModuleBuildConfigViewSet:
         assert resp.json() == {
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'bp_stack_name': slugbuilder.name,
             'buildpacks': [
                 {
@@ -118,7 +118,7 @@ class TestModuleBuildConfigViewSet:
         assert resp.json() == {
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'dockerfile',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'dockerfile_path': 'rootfs/Dockerfile',
             'docker_build_args': {'CFLAGS': '-g -Wall', 'GOARCH': 'amd64', 'GO_VERSION': '1.19'},
         }

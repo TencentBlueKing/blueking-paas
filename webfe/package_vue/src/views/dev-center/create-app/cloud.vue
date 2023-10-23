@@ -305,7 +305,7 @@
 
     <!-- 源码&镜像 部署配置内容 -->
     <div class="mt20" v-if="formData.sourceOrigin === 'soundCode' && curStep === 2">
-      <collapseContent :title="$t('进程配置')">
+      <collapseContent :title="$t('进程配置')" collapse-item-name="process" active-name="process">
         <bk-alert
           type="info">
           <div slot="title">

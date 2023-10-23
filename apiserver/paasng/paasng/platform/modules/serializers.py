@@ -297,19 +297,23 @@ class CreateModuleBuildConfigSLZ(serializers.Serializer):
 class ModuleBuildConfigSLZ(serializers.Serializer):
     """模块镜像构建信息"""
 
-    image_repository = serializers.CharField(help_text="镜像仓库", read_only=True)
     build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # buildpack build 相关字段
-    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", allow_null=True, required=False)
-    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), allow_null=True, required=False)
+    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", required=False)
+    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
+    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
-        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
+        child=serializers.CharField(allow_blank=False), allow_empty=True, required=False
     )
+
+    # custom image 相关字段
+    # NOTE: image_repository 同时用于表示从源码构建的部署方式的镜像仓库
+    image_repository = serializers.CharField(help_text="镜像仓库", required=False)
+    image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False)
 
     def validate(self, attrs):
         build_method = RuntimeType(attrs["build_method"])
@@ -320,6 +324,8 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
             missed_params = [
                 k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if attrs.get(k, None) is None
             ]
+        elif build_method == RuntimeType.CUSTOM_IMAGE:
+            missed_params = [k for k in ['image_repository', 'image_credential_name'] if attrs.get(k, None) is None]
         if missed_params:
             raise ValidationError(
                 detail={param: _('This field is required.') for param in missed_params}, code="required"

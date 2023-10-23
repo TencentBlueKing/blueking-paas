@@ -581,6 +581,21 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "cloudAppImageManage",
+                "label": staticI18n.$t("镜像管理"),
+                "matchRouters": [
+                    "cloudAppImageManage",
+                    "cloudAppImageList",
+                    "cloudAppBuildHistory",
+                ],
+                "iconfontName": "jingxiang",
+                "supportModule": true,
+                "destRoute": {
+                  "name": "cloudAppImageManage"
+                },
+                "children": []
+            },
+            {
                 "name": "cloudAppDeployManageStag",
                 "label": staticI18n.$t("部署管理"),
                 "matchRouters": [

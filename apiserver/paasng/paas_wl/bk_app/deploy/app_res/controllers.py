@@ -28,7 +28,7 @@ from django.conf import settings
 from django.utils.timezone import localtime
 from kubernetes.client.rest import ApiException
 
-from paas_wl.workloads.release_controller.hooks.entities import Command, command_kmodel
+from paas_wl.bk_app.processes.entities import Process
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     PodAbsentError,
@@ -48,8 +48,8 @@ from paas_wl.utils.kubestatus import (
     extract_exit_code,
     parse_pod,
 )
-from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
+from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
 
 if TYPE_CHECKING:
     from paas_wl.infras.resources.base.base import EnhancedApiClient

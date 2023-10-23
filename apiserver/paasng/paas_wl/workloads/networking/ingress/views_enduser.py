@@ -22,13 +22,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.workloads.networking.ingress.entities.service import service_kmodel
-from paas_wl.workloads.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
-from paas_wl.workloads.networking.ingress.serializers import ProcIngressSLZ, ProcServiceSLZ
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
+from paas_wl.workloads.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
+from paas_wl.workloads.networking.ingress.serializers import ProcIngressSLZ, ProcServiceSLZ
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 

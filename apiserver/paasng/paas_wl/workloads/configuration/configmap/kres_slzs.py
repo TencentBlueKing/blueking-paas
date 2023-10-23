@@ -16,23 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.base.kres import KConfigMap
-from paas_wl.infras.resources.kube_res.base import (
-    AppEntity,
-    AppEntityDeserializer,
-    AppEntityManager,
-    AppEntitySerializer,
-)
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap
 
 
 class ConfigMapSerializer(AppEntitySerializer['ConfigMap']):
@@ -52,37 +44,8 @@ class ConfigMapSerializer(AppEntitySerializer['ConfigMap']):
 
 class ConfigMapDeserializer(AppEntityDeserializer['ConfigMap']):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ConfigMap':
-        return ConfigMap(
+        return self.entity_type(
             app=app,
             name=kube_data.metadata.name,
             data=kube_data.data,
         )
-
-
-@dataclass
-class ConfigMap(AppEntity):
-    data: str
-
-    class Meta:
-        kres_class = KConfigMap
-        deserializer = ConfigMapDeserializer
-        serializer = ConfigMapSerializer
-
-
-class ConfigMapManager(AppEntityManager[ConfigMap]):
-    def __init__(self):
-        super().__init__(ConfigMap)
-
-    def delete(self, res: ConfigMap, non_grace_period: bool = False):
-        namespace = res.app.namespace
-        config_name = res.name
-
-        try:
-            existed_one = self.get(app=res.app, name=config_name)
-        except AppEntityNotFound:
-            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
-            return
-        return super().delete(existed_one, non_grace_period)
-
-
-configmap_kmodel = ConfigMapManager()

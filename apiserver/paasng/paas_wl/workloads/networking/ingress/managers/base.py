@@ -22,16 +22,16 @@ from typing import Dict, List, Optional, Sequence, Type
 
 from django.conf import settings
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.core.app_structure import has_proc_type
-from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress, ingress_kmodel
-from paas_wl.workloads.networking.ingress.entities.service import service_kmodel
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain, ProcessIngress, ingress_kmodel
+from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
 from paas_wl.workloads.networking.ingress.plugins import get_default_plugins
 from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.workloads.networking.ingress.plugins.ingress import IngressPlugin
 from paas_wl.workloads.networking.ingress.utils import parse_process_type
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
 logger = logging.getLogger(__name__)
 

@@ -31,8 +31,8 @@ from paas_wl.bk_app.applications.models.managers.app_configvar import AppConfigV
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
-from paas_wl.workloads.images.entities import ImageCredentials, build_app_registry_auth, build_dockerconfig
-from paas_wl.workloads.release_controller.models import ContainerRuntimeSpec
+from paas_wl.workloads.images.kres_entities import ImageCredentials
+from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 from paasng.utils.blobstore import make_blob_store
 
@@ -75,7 +75,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             ),
             OUTPUT_IMAGE=output_image,
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
-            DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
+            DOCKER_CONFIG_JSON=b64encode(json.dumps(ImageCredentials.load_from_app(app).build_dockerconfig())),
         )
     elif metadata.get("use_cnb"):
         # build application as image
@@ -87,7 +87,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             ),
             OUTPUT_IMAGE=output_image,
             CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
-            CNB_REGISTRY_AUTH=json.dumps(build_app_registry_auth(ImageCredentials.load_from_app(app))),
+            CNB_REGISTRY_AUTH=json.dumps(ImageCredentials.load_from_app(app).build_app_registry_auth()),
         )
     else:
         # build application as slug

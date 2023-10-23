@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 
 from paas_wl.workloads.networking.entrance.allocator.domains import ModuleEnvDomains
 from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSubpaths
+from paas_wl.workloads.networking.ingress.entities import AutoGenDomain
 from paas_wl.workloads.networking.ingress.managers import assign_custom_hosts, assign_subpaths
-from paas_wl.workloads.networking.ingress.models import AutoGenDomain
 from paas_wl.workloads.networking.ingress.utils import guess_default_service_name
 from paasng.platform.applications.models import ModuleEnvironment
 

@@ -16,19 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Optional
-from uuid import UUID
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
-from paas_wl.bk_app.applications.models.build import Build
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import ImagePullPolicy
 
 
-def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:
-    """Get UUID of the latest build in the given environment
-
-    :return: `None` if no builds can be found
+@dataclass
+class ContainerRuntimeSpec:
+    """The runtime specification of a container which contains image, command and
+    other info. Used for building Command and SlugBuilderTemplate.
     """
-    try:
-        return Build.objects.filter(app=env.wl_app).latest('created').pk
-    except Build.DoesNotExist:
-        return None
+
+    image: str
+    # The actual command for starting the container
+    command: Optional[List[str]] = None
+    args: Optional[List[str]] = None
+    envs: Dict[str, str] = field(default_factory=dict)
+    image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
+    image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)

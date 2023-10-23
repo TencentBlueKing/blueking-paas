@@ -20,22 +20,22 @@ import logging
 from dataclasses import asdict
 from typing import Optional
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.kres import KDeployment
-from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import ProcControllerHub
 from paas_wl.bk_app.processes.entities import Process
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ScaleProcessError
 from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.infras.resources.base.kres import KDeployment
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
+from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
+from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 

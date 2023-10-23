@@ -17,41 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
-from typing import List, Optional
-
-from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 
 
 @dataclass
-class ScalingObjectRef:
-    """自动扩缩容资源引用"""
+class AutoGenDomain:
+    """Domain object for application's auto-generated custom subdomains"""
 
-    api_version: str
-    kind: str
-    name: str
-
-
-@dataclass
-class MetricSpec:
-    """扩缩容指标配置"""
-
-    # 指标来源类型
-    type: ScalingMetricSourceType
-    # 指标名称
-    metric: ScalingMetric
-    # 指标值：百分比 / 绝对数值
-    value: str
-    # 指标来源对象，搭配 Object Type 使用
-    described_object: Optional[ScalingObjectRef] = None
-
-
-@dataclass
-class AutoscalingConfig:
-    """自动扩缩容配置"""
-
-    # 最小副本数量
-    min_replicas: int
-    # 最大副本数量
-    max_replicas: int
-    # 扩缩容指标
-    metrics: List[MetricSpec]
+    host: str
+    https_enabled: bool = False

@@ -23,13 +23,13 @@ import requests
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paas_wl.infras.cluster.utils import get_default_cluster_by_region
-from paas_wl.core.resource import get_process_selector
-from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress
-from paas_wl.workloads.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.bk_app.applications.models import Config, WlApp
+from paas_wl.core.resource import get_process_selector
+from paas_wl.infras.cluster.utils import get_default_cluster_by_region
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KPod
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain, ProcessIngress
+from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, PServicePortPair, service_kmodel
 from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.wl_app import create_wl_release

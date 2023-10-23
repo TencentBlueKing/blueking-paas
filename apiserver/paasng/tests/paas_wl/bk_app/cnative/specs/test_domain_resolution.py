@@ -26,8 +26,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
-def res_without_svc_disc(bk_app, bk_stag_env, bk_user):
-    """A BkAppResource without service discovery config"""
+def bk_app_resource(bk_app, bk_stag_env, bk_user):
     return create_app_resource(bk_app.name, 'nginx:latest')
 
 
@@ -50,12 +49,12 @@ def domain_resolution(bk_app):
     return domain_resolution
 
 
-def test_inject_to_app_resource(bk_stag_env, res_without_svc_disc, domain_resolution):
-    inject_to_app_resource(bk_stag_env, res_without_svc_disc)
+def test_inject_to_app_resource(bk_stag_env, bk_app_resource, domain_resolution):
+    inject_to_app_resource(bk_stag_env, bk_app_resource)
 
-    assert res_without_svc_disc.spec.domainResolution
-    assert res_without_svc_disc.spec.domainResolution.nameservers == ['192.168.1.1', '192.168.1.2']
-    assert res_without_svc_disc.spec.domainResolution.hostAliases == [
+    assert bk_app_resource.spec.domainResolution
+    assert bk_app_resource.spec.domainResolution.nameservers == ['192.168.1.1', '192.168.1.2']
+    assert bk_app_resource.spec.domainResolution.hostAliases == [
         HostAlias(
             ip='bk_app_code_test',
             hostnames=[

@@ -524,6 +524,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Deprecated: 旧镜像应用的「部署配置」API"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    schema = None
 
     @swagger_auto_schema(response_serializer=ModuleDeployConfigSLZ, deprecated=True)
     def retrieve(self, request, *args, **kwargs):

@@ -6,8 +6,8 @@ const now = new Date();
 const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.getDate(), '_', now.getHours(), ':', now.getMinutes(), ':', now.getSeconds()].join(''); // 版本号，eg: 2019-2-25_9:12:52
 
 module.exports = {
-  host: process.env.BK_APP_HOST,  //bk-local中配置
-  port: 6060, //端口号
+  host: process.env.BK_APP_HOST,  // bk-local中配置
+  port: 6060, // 端口号
   publicPath: '/',
   cache: true,
   open: true,
@@ -18,7 +18,7 @@ module.exports = {
     return {
       // dev配置项
       devServer: {
-        https:true,
+        https: !process.env.BK_HTTPS,
       },
     };
   },
@@ -37,6 +37,17 @@ module.exports = {
       }]);
     config.plugin('preTaskPlugin')
       .use(new PreTaskPlugin());
+    config.module
+      .rule('md')
+      .test(/\.md/)
+      .use('vue-loader')
+      .loader('vue-loader')
+      .end()
+      .use('vue-markdown-loader')
+      .loader('vue-markdown-loader/lib/markdown-compiler')
+      .options({
+        raw: true,
+      });
     return config;
   },
 };

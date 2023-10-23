@@ -720,8 +720,11 @@ const router = new Router({
               path: 'build-history',
               component: cloudAppBuildHistory,
               name: 'cloudAppBuildHistory',
+              meta: {
+                history: true,
+              },
             },
-          ]
+          ],
         },
         // 云原生部署管理
         {

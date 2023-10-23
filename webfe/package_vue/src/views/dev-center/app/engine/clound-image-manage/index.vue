@@ -1,11 +1,20 @@
 <template>
   <div class="image-manage">
+    <!-- 部署历史 -->
+    <div class="ps-top-bar" v-if="isDeployHistory">
+      <div class="top-title flex-row align-items-center">
+        <i
+          class="paasng-icon paasng-arrows-left icon-cls-back mr5"
+          @click="goBack"
+        />
+        <h3>{{ $t('构建历史') }}</h3>
+      </div>
+    </div>
     <cloud-app-top-bar
+      v-else
       :title="$t('镜像管理')"
       :active="active"
-      :nav-list="panels"
       :module-id="curModuleId"
-      @change="handleTabChange"
     />
     <div class="app-container middle main">
       <paas-content-loader
@@ -14,7 +23,11 @@
         :offset-top="0"
         class="access-user"
       >
-        <router-view :key="routeIndex" @hide-loading="isLoading = false"></router-view>
+        <router-view
+          :key="routeIndex"
+          @hide-loading="isLoading = false"
+          @top-change="handleChangeTopActive"
+        ></router-view>
       </paas-content-loader>
     </div>
   </div>
@@ -33,27 +46,29 @@ export default {
     return {
       active: 'image',
       routeIndex: 0,
-      panels: [
-        { name: 'image', label: this.$t('镜像管理'), routeName: 'cloudAppImageList' },
-        { name: 'history', label: this.$t('构建历史'), routeName: 'cloudAppBuildHistory' },
-      ],
       isLoading: true,
+      isDeployHistory: false,
     };
   },
+  watch: {
+    $route(route) {
+      this.isDeployHistory = !!route.meta.history;
+    },
+  },
   created() {
-    this.active = this.panels.find(item => item.routeName === this.$route.name).name || 'image';
+    this.isDeployHistory = !!this.$route.history;
   },
   methods: {
-    handleTabChange(name) {
-      this.isLoading = true;
-      this.active = name;
-      const curPanel = this.panels.find(item => item.name === name);
+    goBack() {
       this.$router.push({
-        name: curPanel.routeName,
+        name: 'cloudAppImageList',
         params: {
           id: this.curAppCode,
         },
       });
+    },
+    handleChangeTopActive() {
+      this.isDeployHistory = true;
     },
   },
 };
@@ -67,6 +82,22 @@ export default {
     background: #fff;
     border-radius: 2px;
     box-shadow: 0 2px 4px 0 #1919290d;
+  }
+
+  .top-title {
+    padding-left: 20px;
+    h3 {
+      font-size: 16px;
+      color: #313238;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .icon-cls-back{
+      color: #3A84FF;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
   }
 }
 </style>

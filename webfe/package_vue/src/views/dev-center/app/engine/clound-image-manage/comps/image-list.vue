@@ -2,6 +2,11 @@
   <div class="clund-image-list">
     <section class="top-action-bar">
       <div class="right">
+        <!-- 构建历史 -->
+        <div class="deploy-history flex-row align-items-center" @click="handleDeploymentHistory">
+          <i class="paasng-icon paasng-lishijilu"></i>
+          <p>{{ $t('构建历史') }}</p>
+        </div>
         <bk-input
           class="ml10"
           style="width: 320px"
@@ -290,6 +295,16 @@ export default {
       }
       this.tableEmptyConf.keyword = '';
     },
+
+    // 部署历史
+    handleDeploymentHistory() {
+      this.$router.push({
+        name: 'cloudAppBuildHistory',
+        params: {
+          id: this.curAppCode,
+        },
+      });
+    },
   },
 };
 </script>
@@ -302,6 +317,18 @@ export default {
     .right {
       display: flex;
       flex-direction: row-reverse;
+      align-items: center;
+
+      .deploy-history {
+        cursor: pointer;
+        font-size: 14px;
+        color: #3a84ff;
+        i {
+          transform: translateY(0);
+          margin-left: 12px;
+          margin-right: 5px;
+        }
+      }
     }
   }
 

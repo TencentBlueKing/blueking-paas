@@ -158,6 +158,9 @@ export default {
     },
   },
   created() {
+    if (this.$route.meta.history) {
+      this.$emit('top-change');
+    }
     this.moduleName = this.curModuleId;
     this.getBuildhistoryList();
   },

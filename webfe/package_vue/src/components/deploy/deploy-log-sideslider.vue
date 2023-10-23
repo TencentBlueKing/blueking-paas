@@ -5,7 +5,12 @@
     :quick-close="true"
     @hidden="errorTips = {}"
   >
-    <div slot="header" class="deploy-header">{{ historySideslider.title }}</div>
+    <div
+      slot="header"
+      class="deploy-header"
+    >
+      {{ historySideslider.title }}
+    </div>
     <div
       slot="content"
       v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
@@ -17,7 +22,7 @@
           :list="timeLineList"
           :disabled="true"
           class="mt20 ml15 mr15"
-          style="min-width: 250px;"
+          style="min-width: 250px"
         />
         <div class="paas-log-box">
           <div
@@ -27,7 +32,7 @@
             <div class="fl">
               <span class="paasng-icon paasng-info-circle-shape" />
             </div>
-            <section style="position: relative; margin-left: 50px;">
+            <section style="position: relative; margin-left: 50px">
               <p class="deploy-pending-text">
                 {{ $t('部署失败') }}
               </p>
@@ -50,7 +55,7 @@
           </div>
           <bk-alert
             v-else
-            style="margin: -20px -20px 10px -20px; border-radius: 0;"
+            style="margin: -20px -20px 10px -20px; border-radius: 0"
             type="warning"
             :title="$t('仅展示准备阶段、构建阶段日志')"
           />
@@ -102,7 +107,7 @@ export default {
   mounted() {
     const AU = require('ansi_up');
     // eslint-disable-next-line
-      this.ansiUp = new AU.default
+    this.ansiUp = new AU.default();
   },
 
   methods: {
@@ -183,8 +188,8 @@ export default {
         return '--';
       }
 
-      const start = (new Date(startTime).getTime()) / 1000;
-      const end = (new Date(endTime).getTime()) / 1000;
+      const start = new Date(startTime).getTime() / 1000;
+      const end = new Date(endTime).getTime() / 1000;
       const interval = Math.ceil(end - start);
 
       if (!interval) {
@@ -240,7 +245,9 @@ export default {
         this.historySideslider.title = title;
         this.curDeployLog = row.logDetail;
       } else {
-        this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`;
+        this.historySideslider.title = `${
+          row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')
+        }${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`;
         this.getDeployTimeline(row);
         this.getDeployLog(row);
       }
@@ -264,117 +271,116 @@ export default {
       }
       this.historySideslider.isShow = true;
     },
-
   },
 };
 </script>
 
 <style lang="scss" scoped>
-.deploy-header{
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+.deploy-header {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .deploy-detail {
-    display: flex;
+  display: flex;
+  height: 100%;
+
+  /deep/ .paas-deploy-log-wrapper {
     height: 100%;
+  }
 
-    /deep/ .paas-deploy-log-wrapper {
-        height: 100%;
+  .wrapper {
+    margin: -20px -20px 10px;
+    height: 64px;
+    background: #f5f6fa;
+    line-height: 64px;
+    padding: 0 20px;
+
+    &::after {
+      display: block;
+      clear: both;
+      content: '';
+      font-size: 0;
+      height: 0;
+      visibility: hidden;
     }
 
-    .wrapper {
-        margin: -20px -20px 10px;
-        height: 64px;
-        background: #F5F6FA;
-        line-height: 64px;
-        padding: 0 20px;
-
-        &::after {
-            display: block;
-            clear: both;
-            content: "";
-            font-size: 0;
-            height: 0;
-            visibility: hidden;
-        }
-
-        &.default-box {
-            padding: 11px 12px 11px 20px;
-            height: auto;
-            line-height: 16px;
-            .span {
-                height: 16px;
-            }
-        }
-
-        &.not-deploy {
-            height: 42px;
-            line-height: 42px;
-        }
-
-        &.primary {
-            background: #E1ECFF;
-            color: #979BA5;
-        }
-
-        &.warning {
-            background: #FFF4E2;
-            border-color: #FFDFAC;
-
-            .paasng-icon {
-                color: #fe9f07;
-            }
-        }
-
-        &.danger {
-            background: #FFECEC;
-            color: #979BA5;
-
-            .paasng-icon {
-                color: #eb3635;
-                position: relative;
-                top: 4px;
-                font-size: 32px;
-            }
-        }
-
-        &.success {
-            background: #E7FCFA;
-            color: #979BA5;
-
-            .paasng-icon {
-                position: relative;
-                top: 4px;
-                color: #3fc06d;
-                font-size: 32px;
-            }
-        }
-        .deploy-pending-text {
-            position: relative;
-            top: 5px;
-            font-size: 14px;
-            color: #313238;
-            font-weight: 500;
-            line-height: 32px;
-        }
-        .deploy-text-wrapper {
-            position: relative;
-            top: -5px;
-            line-height: 32px;
-            font-size: 12px;
-            .branch-text,
-            .version-text,
-            .time-text {
-                font-size: 12px;
-                color: #63656e;
-                opacity: .9;
-            }
-            .branch-text,
-            .version-text {
-                margin-right: 30px;
-            }
-        }
+    &.default-box {
+      padding: 11px 12px 11px 20px;
+      height: auto;
+      line-height: 16px;
+      .span {
+        height: 16px;
+      }
     }
+
+    &.not-deploy {
+      height: 42px;
+      line-height: 42px;
+    }
+
+    &.primary {
+      background: #e1ecff;
+      color: #979ba5;
+    }
+
+    &.warning {
+      background: #fff4e2;
+      border-color: #ffdfac;
+
+      .paasng-icon {
+        color: #fe9f07;
+      }
+    }
+
+    &.danger {
+      background: #ffecec;
+      color: #979ba5;
+
+      .paasng-icon {
+        color: #eb3635;
+        position: relative;
+        top: 4px;
+        font-size: 32px;
+      }
+    }
+
+    &.success {
+      background: #e7fcfa;
+      color: #979ba5;
+
+      .paasng-icon {
+        position: relative;
+        top: 4px;
+        color: #3fc06d;
+        font-size: 32px;
+      }
+    }
+    .deploy-pending-text {
+      position: relative;
+      top: 5px;
+      font-size: 14px;
+      color: #313238;
+      font-weight: 500;
+      line-height: 32px;
+    }
+    .deploy-text-wrapper {
+      position: relative;
+      top: -5px;
+      line-height: 32px;
+      font-size: 12px;
+      .branch-text,
+      .version-text,
+      .time-text {
+        font-size: 12px;
+        color: #63656e;
+        opacity: 0.9;
+      }
+      .branch-text,
+      .version-text {
+        margin-right: 30px;
+      }
+    }
+  }
 }
 </style>

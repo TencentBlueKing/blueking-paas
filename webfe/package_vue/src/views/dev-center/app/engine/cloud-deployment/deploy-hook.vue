@@ -23,7 +23,7 @@
         >
           {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
-        <p class="guide-link mt15">{{ $t('查看使用指南') }}</p>
+        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
     <div
@@ -189,13 +189,19 @@
         </bk-button>
       </div>
     </div>
+
+    <user-guide name="hook" ref="userGuideRef" />
   </paas-content-loader>
 </template>
 
 <script>import _ from 'lodash';
 import i18n from '@/language/i18n.js';
+import userGuide from './comps/user-guide/index.vue';
 
 export default {
+  components: {
+    userGuide,
+  },
   props: {
     moduleId: {
       type: String,
@@ -411,6 +417,11 @@ export default {
       this.$refs.commandRef.clearError();
       this.preFormData.command = this.rawData.command;
       this.preFormData.args = this.rawData.args;
+    },
+
+    // 查看指南
+    handleViewGuide() {
+      this.$refs.userGuideRef.showSideslider();
     },
   },
 };

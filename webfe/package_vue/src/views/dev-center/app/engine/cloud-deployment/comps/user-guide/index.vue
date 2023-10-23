@@ -44,6 +44,9 @@ export default {
       width: 100% !important;
       min-width: auto !important;
     }
+    ol {
+      list-style: decimal !important;
+    }
   }
 }
 </style>

@@ -383,6 +383,37 @@ const actions = {
   },
 
   /**
+     * 获取查看云原生YAML内容
+     *
+     * @param {Object} params 请求参数：appCode, moduleId
+     */
+  getAppYamlManiFests({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/manifests/current/?output_format=yaml`;
+    return http.get(url, config);
+  },
+
+
+  /**
+   * 获取云原生hooks
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  getAppReleaseHook({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/pre_release_hook/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 保存云原生hooks
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  saveAppReleaseHook({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/`;
+    return http.post(url, params, config);
+  },
+
+  /**
      * 提交发送云原生模块信息
      *
      * @param {Object} params 请求参数：appCode, moduleId, env

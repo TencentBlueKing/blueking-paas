@@ -45,7 +45,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r'/bkapp_model/deploy_hooks/(?P<hook_type>[^/]+)/$', include_envs=False),
-        views.ModuleDeployHookViewSet.as_view({"get": "retrieve", "put": "toggle"}),
+        views.ModuleDeployHookViewSet.as_view({"get": "retrieve"}),
         name='api.bkapp_model.deploy_hooks.detail',
     ),
 ]

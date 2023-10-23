@@ -21,11 +21,10 @@ from typing import TYPE_CHECKING
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import CommandError
 
-from paas_wl.bk_app.cnative.specs.configurations import EnvVarsReader
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.management.base import BaseAppModelResourceCommand
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paasng.platform.engine.models.managers import ConfigVarManager
+from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook
 from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
 
 
 class Command(BaseAppModelResourceCommand):
-    help = 'Store BkApp Configration.env to databases'
+    help = 'Store BkApp spec.hooks to ModuleDeployHook'
 
     def handle(self, app_code, module_name, region, cluster_name, all_clusters, verbosity, dry_run, **options):
         try:
@@ -65,40 +64,49 @@ class Command(BaseAppModelResourceCommand):
             return
 
         for module, revision in module_bkapp_pairs.values():
-            self.store_envs_to_db(module, revision, verbosity=verbosity, dry_run=dry_run)
+            self.store_hooks_to_db(module, revision, verbosity=verbosity, dry_run=dry_run)
 
-    def store_envs_to_db(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
-        """Store all env var defined at bkapp to db"""
+    def store_hooks_to_db(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
+        """Store spec.hooks defined at bkapp to db"""
         bkapp = BkAppResource(**res.revision.json_value)
-        config_vars = EnvVarsReader(bkapp).read_all(module)
+        hooks = bkapp.spec.hooks
+        if not hooks:
+            if verbosity >= 2:
+                self.stdout.write("missing spec.hooks, skip")
+            return
 
         prefix = "" if not dry_run else "DRY-RUN: "
         self.stdout.write(
             self.style.NOTICE(
-                "{prefix}apply vars to app<{app_code}> module<{module_name}>".format(
+                "{prefix}store spec.build for app<{app_code}> module<{module_name}>".format(
                     prefix=prefix,
                     app_code=module.application.code,
                     module_name=module.name,
                 )
             )
         )
-        # Verbosity level, 2=verbose output
-        if verbosity >= 2:
-            for config_var in config_vars:
+        pre_release_hook = hooks.preRelease
+        for hook_type, hook in zip([DeployHookType.PRE_RELEASE_HOOK], [pre_release_hook]):
+            if not hook:
+                continue
+            # Verbosity level, 2=verbose output
+            if verbosity >= 2:
                 self.stdout.write(
                     self.style.WARNING(
-                        "{prefix}saving for env<{env}> key<{key}>".format(
+                        "{prefix} set hook_type={hook_type}, command={command}, args={args}".format(
                             prefix=prefix,
-                            env=config_var.environment_name,
-                            key=config_var.key,
+                            hook_type=hook_type.value,
+                            command=hook.command,
+                            args=hook.args,
                         )
                     )
                 )
-        if not dry_run:
-            ConfigVarManager().apply_vars_to_module(module, config_vars=config_vars)
-            # clear Configration.env and envOverlay.envVariables
-            bkapp.spec.configuration.env = []
-            if bkapp.spec.envOverlay:
-                bkapp.spec.envOverlay.envVariables = []
-            # save as new revision
-            res.use_resource(bkapp)
+            if not dry_run:
+                ModuleDeployHook.objects.update_or_create(
+                    module=module,
+                    type=hook_type,
+                    defaults={
+                        "command": hook.command,
+                        "args": hook.args,
+                    },
+                )

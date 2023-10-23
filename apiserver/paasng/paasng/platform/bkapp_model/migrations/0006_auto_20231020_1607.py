@@ -35,7 +35,8 @@ def forwards(apps, schema_editor):
             module=module,
             type=DeployHookType.PRE_RELEASE_HOOK,
             defaults={
-                "proc_command": hook.command
+                "proc_command": hook.command,
+                "enabled": hook.enabled,
             }
         )
 

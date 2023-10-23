@@ -301,19 +301,23 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # buildpack build 相关字段
-    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", required=False)
-    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False)
+    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", required=False, allow_null=True)
+    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False, allow_null=True)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", required=False, allow_blank=True)
+    dockerfile_path = serializers.CharField(
+        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
+    )
     docker_build_args = serializers.DictField(
-        child=serializers.CharField(allow_blank=False), allow_empty=True, required=False
+        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )
 
     # custom image 相关字段
     # NOTE: image_repository 同时用于表示从源码构建的部署方式的镜像仓库
-    image_repository = serializers.CharField(help_text="镜像仓库", required=False)
-    image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False)
+    image_repository = serializers.CharField(help_text="镜像仓库", required=False, allow_null=True)
+    image_credential_name = serializers.CharField(
+        help_text="镜像凭证名称", required=False, allow_blank=True, allow_null=True
+    )
 
     def validate(self, attrs):
         build_method = RuntimeType(attrs["build_method"])

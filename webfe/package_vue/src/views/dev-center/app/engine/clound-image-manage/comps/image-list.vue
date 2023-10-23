@@ -53,7 +53,7 @@
           />
           <table-empty
             v-else
-            :explanation="$t('该应用下所有模块都为提供源码在开发者中心构建镜像')"
+            :explanation="$t('目前仅支持管理：提供源码在开发者中心构建的镜像。')"
             empty
           />
         </div>

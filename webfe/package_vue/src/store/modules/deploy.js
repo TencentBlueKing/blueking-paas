@@ -399,7 +399,7 @@ const actions = {
    * @param {Object} params 请求参数：appCode, moduleId
   */
   getAppReleaseHook({}, { appCode, moduleId }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/pre_release_hook/`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/pre-release-hook/`;
     return http.get(url, config);
   },
 
@@ -410,6 +410,26 @@ const actions = {
   */
   saveAppReleaseHook({}, { appCode, moduleId, params }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/`;
+    return http.post(url, params, config);
+  },
+
+  /**
+   * 获取云原生基本信息
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  getAppBuildConfigInfo({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 保存云原生基本信息
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  SaveAppBuildConfigInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
     return http.post(url, params, config);
   },
 

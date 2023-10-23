@@ -281,6 +281,7 @@ export default {
   },
 
   methods: {
+    // 获取hooks信息
     async init() {
       try {
         const res = await this.$store.dispatch('deploy/getAppReleaseHook', {

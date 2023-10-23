@@ -22,42 +22,54 @@ from typing import Any, Dict, List
 
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.cnative.specs.crd import bk_app
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.models.network_config import SvcDiscConfig
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KConfigMap
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
 
-def apply_configmap(env: ModuleEnvironment, bk_app_res: BkAppResource):
-    """Apply the ConfigMap resource that contains the service discovery data to the
-    given environment, the ConfigMap might be deleted if the service discovery config
-    is absent.
+def inject_to_app_resource(env: ModuleEnvironment, app_resource: BkAppResource):
+    """将 SvcDiscConfig 配置注入到 BkAppResource 模型中"""
+    if svc_disc_config_queryset := SvcDiscConfig.objects.filter(application_id=env.application.id):
+        svc_disc_config = svc_disc_config_queryset.first()
+        app_resource.spec.svcDiscovery = bk_app.SvcDiscConfig(bkSaaS=svc_disc_config.bk_saas)
 
-    :param env: The environment to apply the ConfigMap.
-    :param bk_app_res: The BkAppResource object.
-    """
-    svc_disc = bk_app_res.spec.svcDiscovery
-    mgr = ConfigMapManager(env, bk_app_name=bk_app_res.metadata.name)
-    if not (svc_disc and svc_disc.bkSaaS):
-        # TODO: Only remove the configmap if the app previously had a valid svc-discovery
-        # config, don't perform the remove() operation every time.
-        logger.debug('No service discovery config found, remove the ConfigMap if exists')
-        mgr.remove()
-        return
 
-    # Transform the items to get addresses
-    items = [BkSaaSItem(bk_app_code=obj.bkAppCode, module_name=obj.moduleName) for obj in svc_disc.bkSaaS]
-    addrs = BkSaaSAddrDiscoverer().get(items)
+class SvcDiscConfigManager:
+    def __init__(self, env: ModuleEnvironment, bk_app_name: str):
+        self.env = env
+        self.configmap_mgr = ConfigMapManager(env, bk_app_name=bk_app_name)
 
-    # Write the ConfigMap resource for current BkApp
-    logger.info('Writing the service discovery addresses to ConfigMap, bk_app_name: %s', mgr.bk_app_name)
-    mgr.write(addrs)
+    def sync(self):
+        svc_disc_config_queryset = SvcDiscConfig.objects.filter(application_id=self.env.application.id)
+        if svc_disc_config_queryset.exists() and not svc_disc_config_queryset.first().bk_saas:
+            # TODO: Only remove the configmap if the app previously had a valid svc-discovery
+            # config, don't perform the remove() operation every time.
+            logger.debug('No service discovery config found, remove the ConfigMap if exists')
+            self.configmap_mgr.remove()
+            return
+        for svc_disc_config in svc_disc_config_queryset:
+            self._upsert(svc_disc_config)
+
+    def _upsert(self, svc_disc_config: SvcDiscConfig):
+        # Transform the items to get addresses
+        items = [BkSaaSItem(bk_app_code=obj.bkAppCode, module_name=obj.moduleName) for obj in svc_disc_config.bk_saas]
+        addrs = BkSaaSAddrDiscoverer().get(items)
+
+        # Write the ConfigMap resource for current BkApp
+        logger.info(
+            'Writing the service discovery addresses to ConfigMap, bk_app_name: %s', self.configmap_mgr.bk_app_name
+        )
+        # NOTE: 是不是使用 upsert 作为方法名更合适
+        self.configmap_mgr.write(addrs)
 
 
 class ConfigMapManager:

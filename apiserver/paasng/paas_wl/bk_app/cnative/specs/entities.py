@@ -21,7 +21,7 @@ from typing import Dict, Optional
 
 from paas_wl.bk_app.applications.models import Build, WlApp
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.bk_app.cnative.specs import addons, mounts
+from paas_wl.bk_app.cnative.specs import addons, domain_res, mounts, svc_disc
 from paas_wl.bk_app.cnative.specs.configurations import (
     generate_builtin_configurations,
     generate_user_configurations,
@@ -98,6 +98,10 @@ class BkAppManifestProcessor:
 
         # 注入挂载信息
         mounts.inject_to_app_resource(self.env, manifest)
+
+        svc_disc.inject_to_app_resource(self.env, manifest)
+
+        domain_res.inject_to_app_resource(self.env, manifest)
 
         data = manifest.dict()
         # refresh status.conditions

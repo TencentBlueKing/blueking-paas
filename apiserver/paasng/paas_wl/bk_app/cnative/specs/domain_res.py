@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,6 +15,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .app_resource import *  # noqa
-from .mount import *  # noqa
-from .network_config import *  # noqa
+import logging
+
+from paas_wl.bk_app.cnative.specs.crd import bk_app
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.models.network_config import DomainResolution
+from paasng.platform.applications.models import ModuleEnvironment
+
+logger = logging.getLogger(__name__)
+
+
+def inject_to_app_resource(env: ModuleEnvironment, app_resource: BkAppResource):
+    """将 DomainResolution 配置注入到 BkAppResource 模型中"""
+    if domain_res_queryset := DomainResolution.objects.filter(application_id=env.application.id):
+        domain_res = domain_res_queryset.first()
+        app_resource.spec.domainResolution = bk_app.DomainResolution(
+            nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases
+        )

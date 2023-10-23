@@ -21,13 +21,13 @@ from typing import List
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS, HostAlias
+from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaaS
 from paas_wl.utils.models import AuditedModel
 from paasng.utils.models import make_json_field
 
 BkSaaSField = make_json_field("BkSaaSField", List[SvcDiscEntryBkSaaS])
 NameServersField = make_json_field("NameServersField", List[str])
-HostAliasesField = make_json_field("NameServersField", List[HostAlias])
+HostAliasesField = make_json_field("HostAliasesField", List[HostAlias])
 
 
 class SvcDiscConfig(AuditedModel):
@@ -35,7 +35,7 @@ class SvcDiscConfig(AuditedModel):
 
     application_id = models.UUIDField(verbose_name=_('所属应用'), unique=True, null=False)
 
-    bk_saas = BkSaaSField(default=list, help_text="")
+    bk_saas: List[SvcDiscEntryBkSaaS] = BkSaaSField(default=list, help_text="")
 
 
 class DomainResolution(AuditedModel):
@@ -43,5 +43,5 @@ class DomainResolution(AuditedModel):
 
     application_id = models.UUIDField(verbose_name=_('所属应用'), unique=True, null=False)
 
-    nameservers = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
-    host_aliases = HostAliasesField(default=list, help_text="k8s hostAliases")
+    nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
+    host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")

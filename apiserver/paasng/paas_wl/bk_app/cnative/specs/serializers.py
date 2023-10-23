@@ -24,7 +24,6 @@ from rest_framework import serializers
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paasng.platform.applications.models import Application
-from paasng.platform.modules.models import Module
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, Mount
@@ -220,14 +219,15 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     """A service discovery entry that represents an application and an optional module."""
 
     bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20)
-    module_name = serializers.CharField(help_text='被服务发现的应用模块', max_length=20, required=False, allow_null=True)
+    module_name = serializers.CharField(
+        help_text='被服务发现的应用模块', max_length=20, required=False, allow_null=True, allow_blank=True
+    )
 
     def validate(self, attrs):
         """ 校验应用和模块存在，否则抛出异常 """
         # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
         bk_app_code = attrs['bk_app_code']
         module_name = attrs['module_name']
-
         # 判断应用是否存在
         try:
             app = Application.objects.get(code=bk_app_code)
@@ -238,27 +238,46 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
             return attrs
 
         # 判断应用下是否存在模块(name=module_name)
-        try:
-            app.modules.get(name=module_name)
-        except Module.DoesNotExist:
+        if not app.modules.filter(name=module_name).exists():
             raise serializers.ValidationError(_('模块 %s 不存在') % module_name)
 
         return attrs
 
 
 class SvcDiscConfigSLZ(serializers.Serializer):
-    application_id = serializers.UUIDField(help_text='所属应用')
-
     bk_saas = serializers.ListField(help_text='服务发现列表', child=SvcDiscEntryBkSaaSSLZ())
+
+    def to_internal_value(self, data):
+        internal_data = super().to_internal_value(data)
+        bk_saas = internal_data.pop('bk_saas')
+        internal_data['bk_saas'] = [
+            {
+                'bkAppCode': entry_bksaas['bk_app_code'],
+                'moduleName': entry_bksaas['module_name'],
+            }
+            for entry_bksaas in bk_saas
+        ]
+        return internal_data
+
+    def to_representation(self, instance):
+        bk_saas = instance.bk_saas
+        instance.bk_saas = [
+            {
+                'bk_app_code': entry_bksaas.bkAppCode,
+                'module_name': entry_bksaas.moduleName,
+            }
+            for entry_bksaas in bk_saas
+        ]
+        representation_data = super().to_representation(instance)
+
+        return representation_data
 
 
 class HostAliasSLZ(serializers.Serializer):
-    ip = serializers.CharField()
+    ip = serializers.CharField(help_text='ip')
     hostnames = serializers.ListField(help_text='域名列表', child=serializers.CharField())
 
 
 class DomainResolutionSLZ(serializers.Serializer):
-    application_id = serializers.UUIDField(help_text='所属应用')
-
     nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.CharField())
-    hostAliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ())
+    host_aliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ())

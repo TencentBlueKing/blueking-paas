@@ -67,12 +67,12 @@ urlpatterns = [
     ),
     re_path(
         r'api/bkapps/applications/(?P<code>[^/]+)/svc_disc/$',
-        views_enduser.SvcDiscConfigViewSet.as_view({'get': 'retrieve', 'post': 'create'}),
+        views_enduser.SvcDiscConfigViewSet.as_view({'get': 'retrieve', 'post': 'upsert'}),
         name='api.applications.svc_disc',
     ),
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/svc_disc/$',
-        views_enduser.SvcDiscConfigViewSet.as_view({'put': 'update'}),
-        name='api.applications.svc_disc_update',
+        r'api/bkapps/applications/(?P<code>[^/]+)/domain_resolution/$',
+        views_enduser.DomainResolutionViewSet.as_view({'get': 'retrieve', 'post': 'upsert'}),
+        name='api.applications.domain_resolution',
     ),
 ]

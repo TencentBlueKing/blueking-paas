@@ -17,42 +17,79 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig, SvcDiscEntryBkSaaS
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS
+from paas_wl.bk_app.cnative.specs.models import SvcDiscConfig as SvcDiscConfigModel
 from paas_wl.bk_app.cnative.specs.models import create_app_resource
-from paas_wl.bk_app.cnative.specs.svc_disc import ConfigMapManager, apply_configmap
+from paas_wl.bk_app.cnative.specs.svc_disc import ConfigMapManager, SvcDiscConfigManager, inject_to_app_resource
+from paas_wl.infras.resources.base.kres import KNamespace
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestApplyConfigmap:
+class TestSvcDiscConfig:
     @pytest.fixture
     def res_without_svc_disc(self, bk_app, bk_stag_env, bk_user):
         """A BkAppResource without service discovery config"""
         return create_app_resource(bk_app.name, 'nginx:latest')
 
     @pytest.fixture
-    def res_with_svc_disc(self, bk_app, bk_stag_env, bk_user):
-        """A BkAppResource with service discovery config"""
-        resource = create_app_resource(bk_app.name, 'nginx:latest')
-        resource.spec.svcDiscovery = SvcDiscConfig(
-            bkSaaS=[
-                SvcDiscEntryBkSaaS(bkAppCode="foo"),
-                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="backend"),
-            ]
-        )
-        return resource
+    def create_namespace(self, bk_stag_env, with_wl_apps):
+        wl_app = bk_stag_env.wl_app
+        with get_client_by_app(wl_app) as client:
+            body = {
+                'metadata': {'name': wl_app.namespace},
+            }
+            KNamespace(client).create_or_update(
+                bk_stag_env.wl_app.namespace,
+                body=body,
+                update_method='patch',
+            )
+            yield
+            KNamespace(client).delete(bk_stag_env.wl_app.namespace)
 
-    def test_normal(self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc):
-        apply_configmap(bk_stag_env, res_with_svc_disc)
+    @pytest.fixture
+    def svc_disc(self, bk_app):
+        """创建一个 SvcDiscConfig 对象"""
+        svc_disc = SvcDiscConfigModel.objects.create(
+            application_id=bk_app.id,
+            bk_saas=[
+                {
+                    'bkAppCode': 'bk_app_code_test',
+                    'moduleName': 'module_name_test',
+                }
+            ],
+        )
+        return svc_disc
+
+    def test_normal(self, bk_app, bk_stag_env, bk_stag_wl_app, res_without_svc_disc, create_namespace, svc_disc):
+        SvcDiscConfigManager(env=bk_stag_env, bk_app_name=res_without_svc_disc.metadata.name).sync()
+
         mgr = ConfigMapManager(bk_stag_env, bk_app_name=bk_app.name)
         assert mgr.read_data()[mgr.key_bk_saas] != ''
 
-    def test_deletion(self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc, res_without_svc_disc):
-        apply_configmap(bk_stag_env, res_with_svc_disc)
+    def test_deletion(self, bk_app, bk_stag_env, bk_stag_wl_app, res_without_svc_disc, create_namespace, svc_disc):
+        SvcDiscConfigManager(env=bk_stag_env, bk_app_name=res_without_svc_disc.metadata.name).sync()
         mgr = ConfigMapManager(bk_stag_env, bk_app_name=bk_app.name)
         assert mgr.exists()
 
+        svc_disc = SvcDiscConfigModel.objects.get(application_id=bk_app.id)
+        svc_disc.bk_saas = []
+        svc_disc.save()
+        svc_disc.refresh_from_db()
+
         # Remove the service discovery config and apply again
-        apply_configmap(bk_stag_env, res_without_svc_disc)
+        SvcDiscConfigManager(env=bk_stag_env, bk_app_name=res_without_svc_disc.metadata.name).sync()
         mgr = ConfigMapManager(bk_stag_env, bk_app_name=bk_app.name)
         assert not mgr.exists()
+
+    def test_inject_to_app_resource(self, bk_stag_env, res_without_svc_disc, svc_disc):
+        inject_to_app_resource(bk_stag_env, res_without_svc_disc)
+
+        assert res_without_svc_disc.spec.svcDiscovery
+        assert res_without_svc_disc.spec.svcDiscovery.bkSaaS == [
+            SvcDiscEntryBkSaaS(
+                bkAppCode='bk_app_code_test',
+                moduleName='module_name_test',
+            )
+        ]

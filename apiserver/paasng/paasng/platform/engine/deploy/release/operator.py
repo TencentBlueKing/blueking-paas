@@ -135,8 +135,7 @@ def release_by_k8s_operator(
         # NOTE: This action might break running pods that get svc-discovery data by
         # mounting the configmap as file, because some data might be removed in the
         # latest version. We should ask the application developer to handle this properly.
-        svc_disc.apply_configmap(env, app_model_deploy.bk_app_resource)
-
+        svc_disc.SvcDiscConfigManager(env=env, bk_app_name=app_model_deploy.name).sync()
         # 下发待挂载的 volume source
         VolumeSourceManager(env).deploy()
 

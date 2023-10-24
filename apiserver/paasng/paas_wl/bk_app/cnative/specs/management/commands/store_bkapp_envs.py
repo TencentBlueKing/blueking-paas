@@ -64,8 +64,8 @@ class Command(BaseAppModelResourceCommand):
             self.stdout.write(self.style.WARNING("nothing to handle"))
             return
 
-        for module, revision in module_bkapp_pairs.values():
-            self.store_envs_to_db(module, revision, verbosity=verbosity, dry_run=dry_run)
+        for module, res in module_bkapp_pairs.values():
+            self.store_envs_to_db(module, res, verbosity=verbosity, dry_run=dry_run)
 
     def store_envs_to_db(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
         """Store all env var defined at bkapp to db"""

@@ -149,10 +149,12 @@ class BuildConfigManifestConstructor(ManifestConstructor):
 
     def apply_to(self, model_res: BkAppResource, module: Module):
         cfg = BuildConfig.objects.get_or_create_by_module(module)
+        build = model_res.spec.build
+        if not build:
+            build = BkAppBuildConfig()
         if cfg.build_method == RuntimeType.CUSTOM_IMAGE:
-            model_res.spec.build = BkAppBuildConfig(
-                imageCredentialsName=cfg.image_credential_name,
-            )
+            build.imageCredentialsName = cfg.image_credential_name
+        model_res.spec.build = build
 
 
 class ProcessesManifestConstructor(ManifestConstructor):

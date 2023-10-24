@@ -38,4 +38,4 @@ def import_build(module: Module, build: BkAppBuildConfig):
         update_fields.append("image_repository")
 
     cfg.image_credential_name = build.imageCredentialsName
-    cfg.save(update_fields=["image_repository", "image_credential_name", "updated"])
+    cfg.save(update_fields=update_fields)

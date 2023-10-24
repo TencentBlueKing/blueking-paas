@@ -18,8 +18,17 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from rest_framework import serializers
 
-from paas_wl.bk_app.processes.drf_serializers import ScalingConfigSLZ
+from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
+from paas_wl.bk_app.processes.drf_serializers import MetricSpecSLZ
 from paasng.platform.modules.constants import DeployHookType
+
+DEFAULT_METRICS = [
+    {
+        "type": 'Resource',
+        "metric": 'cpuUtilization',
+        "value": '85%',
+    },
+]
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -28,15 +37,30 @@ class GetManifestInputSLZ(serializers.Serializer):
     )
 
 
+class ScalingConfigSLZ(serializers.Serializer):
+    """扩缩容配置"""
+
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数")
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数")
+    metrics = serializers.ListField(
+        child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
+    )
+    policy = serializers.CharField(help_text="扩缩容策略", default=ScalingPolicy.DEFAULT)
+
+
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-环境相关配置"""
+
+    @classmethod
+    def default_scaling_config(cls):
+        return {"min_replicas": 1, "max_replicas": 1, "metrics": DEFAULT_METRICS, "policy": ScalingPolicy.DEFAULT}
 
     environment_name = serializers.CharField(help_text="环境名称")
 
     plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
-    scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False)
+    scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, default=default_scaling_config)
 
 
 class ModuleProcessSpecMetadataSLZ(serializers.Serializer):

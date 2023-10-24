@@ -20,14 +20,12 @@ from typing import Dict
 import yaml
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.bkapp_model.importer.autoscaling import import_autoscaling_overlay
 from paasng.platform.bkapp_model.importer.build import import_build
+from paasng.platform.bkapp_model.importer.env_overlays import import_env_overlays
 from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
 from paasng.platform.bkapp_model.importer.hooks import import_hooks
 from paasng.platform.bkapp_model.importer.mounts import import_mounts
 from paasng.platform.bkapp_model.importer.processes import import_processes
-from paasng.platform.bkapp_model.importer.replicas import import_replicas_overlay
-from paasng.platform.bkapp_model.importer.res_quotas import import_res_quota_overlay
 from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
 
@@ -81,10 +79,4 @@ def import_manifest(module: Module, input_data: Dict):
         import_mounts(module, mounts, overlay_mounts)
 
     # NOTE: Must import the processes first to create the ModuleProcessSpec objs
-    if overlay_replicas:
-        import_replicas_overlay(module, overlay_replicas)
-    if overlay_res_quotas:
-        import_res_quota_overlay(module, overlay_res_quotas)
-    if overlay_autoscaling:
-        import_autoscaling_overlay(module, overlay_autoscaling)
-    # TODO: 何时删除 ProcessSpecEnvOverlay ?
+    import_env_overlays(module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)

@@ -65,9 +65,9 @@ class Command(BaseAppModelResourceCommand):
             self.stdout.write(self.style.WARNING("nothing to handle"))
             return
 
-        for module, revision in module_bkapp_pairs.values():
+        for module, res in module_bkapp_pairs.values():
             try:
-                self.import_bkapp(module, revision, verbosity=verbosity, dry_run=dry_run)
+                self.import_bkapp(module, res, verbosity=verbosity, dry_run=dry_run)
             except Exception:
                 logging.exception("")
 

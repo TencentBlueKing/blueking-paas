@@ -20,18 +20,18 @@
         <div
           class="form-detail mt20 pb20 pl40 border-b" v-if="!isBasePageEdit">
           <bk-form
-            :model="buildData">
+            :model="buildConfig">
             <bk-form-item
               :label="`${$t('托管方式')}：`">
               <span class="form-text">{{ artifactType || '--' }}</span>
             </bk-form-item>
             <bk-form-item
               :label="`${$t('镜像仓库')}：`">
-              <span class="form-text">{{ buildData.image || '--' }}</span>
+              <span class="form-text">{{ buildConfig.image_repository || '--' }}</span>
             </bk-form-item>
             <bk-form-item
               :label="`${$t('镜像凭证')}：`">
-              <span class="form-text">{{ buildData.imageCredentialsName || '--' }}</span>
+              <span class="form-text">{{ buildConfig.image_credential_name || '--' }}</span>
             </bk-form-item>
           </bk-form>
         </div>
@@ -39,7 +39,7 @@
         <div
           class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
           <bk-form
-            :model="buildData"
+            :model="buildConfig"
             :rules="rules"
             ref="baseInfoRef"
           >
@@ -56,7 +56,7 @@
             >
               <bk-input
                 ref="imageRef"
-                v-model="buildData.image"
+                v-model="buildConfig.image_repository"
                 style="width: 450px;"
                 :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
               >
@@ -74,7 +74,7 @@
             <bk-form-item
               :label="`${$t('镜像凭证')}：`">
               <bk-select
-                v-model="buildData.imageCredentialsName"
+                v-model="buildConfig.image_credential_name"
                 style="width: 450px;"
                 searchable
               >
@@ -125,8 +125,7 @@
           </div>
         </div>
         <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
-          <bk-form
-            :model="buildData">
+          <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
               <div class="form-text">{{ deployLimit.stag ? $t('已开启') : $t('未开启') }}</div>
@@ -185,7 +184,8 @@
               <div class="flex-row" v-if="gatewayInfos.stag.node_ip_addresses.length">
                 <div class="ip-address">
                   <div
-                    class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
+                    class="form-text ip-address-text"
+                    v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
                     :key="nodeIpIndex">{{ nodeIp.internal_ip_address }}</div>
 
                 </div>
@@ -206,7 +206,8 @@
               <div class="flex-row" v-if="gatewayInfos.prod.node_ip_addresses.length">
                 <div class="ip-address">
                   <div
-                    class="form-text ip-address-text" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
+                    class="form-text ip-address-text"
+                    v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
                     :key="nodeIpIndex">
                     {{ nodeIp.internal_ip_address }}
                   </div>
@@ -365,10 +366,6 @@ export default {
   data() {
     return {
       isLoading: false,
-      buildData: { image: '' },
-      buildDataBackUp: {},
-      localCloudAppData: {},
-      localCloudAppDataBackUp: {},
       deployLimit: { stag: false, prod: false },
       isDeployLimitEdit: false,
       isBasePageEdit: false,
@@ -405,6 +402,8 @@ export default {
           },
         ],
       },
+      buildConfig: {},
+      buildConfigClone: {},
     };
   },
   computed: {
@@ -412,14 +411,13 @@ export default {
       return this.$store.state.curAppModule;
     },
     isV1alpha2() {
-      return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
+      return this.cloudAppData?.apiVersion?.includes('v1alpha2');
     },
     artifactType() {
-      console.log('this.curAppModule', this.curAppModule);
-      if (this.curAppModule.web_config.build_method === 'custom_image') {
+      if (this.buildConfig.build_method === 'custom_image') {
         return this.$t('仅镜像');
       }
-      if (this.curAppModule.web_config.artifact_type === 'slug') {
+      if (this.buildConfig.build_method === 'slug') {
         return this.$t('仅源码');
       }
       return this.$t('源代码');
@@ -446,32 +444,6 @@ export default {
       return this.$store.state.cloudApi.isModuleInfoEdit;
     },
   },
-  watch: {
-    cloudAppData: {
-      handler(val) {
-        if (val.spec) {
-          this.localCloudAppData = _.cloneDeep(val);
-          this.localCloudAppDataBackUp = _.cloneDeep(val);
-          this.buildData = this.localCloudAppData.spec.build || {};
-          this.buildDataBackUp = _.cloneDeep(this.buildData);   // 取消时需要用原来的数据
-        }
-      },
-      immediate: true,
-      deep: true,
-    },
-
-    buildData: {
-      handler(val) {
-        if (val.image || val.imageCredentialsName) {
-          this.localCloudAppData.spec.build.image = val.image;
-          this.localCloudAppData.spec.build.imageCredentialsName = val.imageCredentialsName;
-          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        }
-      },
-      immediate: true,
-      deep: true,
-    },
-  },
 
   mounted() {
     // 部署限制
@@ -482,6 +454,9 @@ export default {
 
     // 默认为编辑态
     this.isModuleInfoEdit && this.handleEdit('isBasePageEdit');
+
+    // 获取基本信息
+    this.getBaseInfo();
 
     // 出口IP管理
     this.getGatewayInfos('stag');
@@ -494,6 +469,24 @@ export default {
     });
   },
   methods: {
+    // 获取info信息
+    async getBaseInfo() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppBuildConfigInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.buildConfig = { ...res };
+        this.buildConfigClone = _.cloneDeep(this.buildConfig);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
     handleProcessNameEdit() {},
 
     // 编辑
@@ -508,13 +501,12 @@ export default {
     async handleSave() {
       // 基本信息页面保存
       if (this.isBasePageEdit) {
-        const params = { ... this.$store.state.cloudApi.cloudAppData };
         try {
           await this.$refs.baseInfoRef.validate();
-          await this.$store.dispatch('deploy/saveCloudAppInfo', {
+          await this.$store.dispatch('deploy/SaveAppBuildConfigInfo', {
             appCode: this.appCode,
             moduleId: this.curModuleId,
-            params,
+            params: { ...this.buildConfig },
           });
           this.$paasMessage({
             theme: 'success',
@@ -532,9 +524,7 @@ export default {
       this.isDeployLimitEdit = false;
       this.isIpInfoEdit = false;
       if (this.isBasePageEdit) {
-        this.buildData = _.cloneDeep(this.buildDataBackUp);
-        this.localCloudAppData = _.cloneDeep(this.localCloudAppDataBackUp);
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+        this.buildConfig = _.cloneDeep(this.buildConfigClone);
         this.isBasePageEdit = false;
       }
       this.$refs.baseInfoRef?.clearError();
@@ -791,7 +781,7 @@ export default {
     },
 
     handleSetMirrorUrl() {
-      this.$set(this.buildData, 'image', 'mirrors.tencent.com/bkpaas/django-helloworld');
+      this.$set(this.buildConfig, 'image_repository', 'mirrors.tencent.com/bkpaas/django-helloworld');
     },
   },
 };

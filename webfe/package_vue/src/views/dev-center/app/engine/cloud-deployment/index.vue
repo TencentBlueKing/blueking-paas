@@ -105,8 +105,7 @@
 <script>import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
-import { mergeObjects } from '@/common/utils';
-import { cloneDeep, throttle } from 'lodash';
+import { throttle } from 'lodash';
 
 export default {
   components: {
@@ -139,6 +138,7 @@ export default {
       active: 'cloudAppDeployForProcess',
       envValidate: true,
       isTab: true,
+      dialogCloudAppData: [],
     };
   },
   computed: {
@@ -164,10 +164,10 @@ export default {
       return this.$store.state.cloudApi.isPageEdit;
     },
 
-    dialogCloudAppData() {
-      const cloudAppData = cloneDeep(this.storeCloudAppData);
-      return mergeObjects(cloudAppData, this.manifestExt);
-    },
+    // dialogCloudAppData() {
+    //   const cloudAppData = cloneDeep(this.storeCloudAppData);
+    //   return mergeObjects(cloudAppData, this.manifestExt);
+    // },
 
     storeCloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
@@ -308,8 +308,22 @@ export default {
     },
 
     // 查看yaml
-    handleYamlView() {
-      this.deployDialogConfig.visible = true;
+    async handleYamlView() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppYamlManiFests', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.deployDialogConfig.visible = true;
+        this.dialogCloudAppData = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
 
     handleGoBack() {

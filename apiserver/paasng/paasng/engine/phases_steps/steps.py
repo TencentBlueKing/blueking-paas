@@ -46,7 +46,7 @@ def get_sorted_steps(phase: 'DeployPhase') -> List['DeployStep']:
 
     # 如果出现异常, 就直接返回未排序的步骤.
     # 导致异常的可能情况: 未在 DeployStepMeta 定义的步骤无法排序
-    with suppress(IndexError):
+    with suppress(IndexError, ValueError):
         steps.sort(key=lambda x: names.index(x.name))
     return steps
 

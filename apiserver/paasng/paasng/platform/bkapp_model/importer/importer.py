@@ -20,9 +20,14 @@ from typing import Dict
 import yaml
 from rest_framework.exceptions import ValidationError
 
+from paasng.platform.bkapp_model.importer.autoscaling import import_autoscaling_overlay
+from paasng.platform.bkapp_model.importer.build import import_build
 from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
+from paasng.platform.bkapp_model.importer.hooks import import_hooks
 from paasng.platform.bkapp_model.importer.mounts import import_mounts
+from paasng.platform.bkapp_model.importer.processes import import_processes
 from paasng.platform.bkapp_model.importer.replicas import import_replicas_overlay
+from paasng.platform.bkapp_model.importer.res_quotas import import_res_quota_overlay
 from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
 
@@ -49,22 +54,36 @@ def import_manifest(module: Module, input_data: Dict):
     except ValidationError as e:
         raise ManifestImportError.from_validation_error(e)
 
+    validated_data = spec_slz.validated_data
+
     env_vars, overlay_env_vars = [], []
-    mounts = spec_slz.validated_data.get('mounts', [])
-    if configuration := spec_slz.validated_data.get('configuration', {}):
+    mounts = validated_data.get('mounts', [])
+    if configuration := validated_data.get('configuration', {}):
         env_vars = configuration.get('env', [])
 
-    overlay_replicas, overlay_mounts = [], []
-    if env_overlay := spec_slz.validated_data.get('envOverlay', {}):
+    overlay_replicas, overlay_res_quotas, overlay_autoscaling, overlay_mounts = [], [], [], []
+    if env_overlay := validated_data.get('envOverlay', {}):
         overlay_replicas = env_overlay.get('replicas', [])
+        overlay_res_quotas = env_overlay.get('resQuotas', [])
         overlay_env_vars = env_overlay.get('envVariables', [])
+        overlay_autoscaling = env_overlay.get('autoscaling', [])
         overlay_mounts = env_overlay.get('mounts', [])
 
     # Run importer functions
+    import_processes(module, processes=validated_data["processes"])
+    if build := validated_data.get("build"):
+        import_build(module, build)
+    if hooks := validated_data.get("hooks"):
+        import_hooks(module, hooks)
     if env_vars or overlay_env_vars:
         import_env_vars(module, env_vars, overlay_env_vars)
     if mounts or overlay_mounts:
         import_mounts(module, mounts, overlay_mounts)
+
+    # NOTE: Must import the processes first to create the ModuleProcessSpec objs
     if overlay_replicas:
-        # NOTE: Must import the processes first to create the ModuleProcessSpec objs
         import_replicas_overlay(module, overlay_replicas)
+    if overlay_res_quotas:
+        import_res_quota_overlay(module, overlay_res_quotas)
+    if overlay_autoscaling:
+        import_autoscaling_overlay(module, overlay_autoscaling)

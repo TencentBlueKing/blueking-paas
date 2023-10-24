@@ -16,46 +16,55 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List
+from typing import Any, Dict, List
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ReplicasOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
-def import_replicas_overlay(module: Module, items: List[ReplicasOverlay]) -> CommonImportResult:
-    """Import replicas overlay data.
+def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImportResult:
+    """Import processes data.
 
-    :param items: A list of ReplicasOverlay items.
+    :param processes: A list of BkAppProcess items.
     :return: The import result object.
     """
     ret = CommonImportResult()
 
     # Build the index of existing data first to remove data later.
-    # Data structure: {(process name, environment name): pk}
+    # Data structure: {process name: pk}
     existing_index = {}
-    existing_specs = {}
     for proc_spec in ModuleProcessSpec.objects.filter(module=module):
-        existing_specs[proc_spec.name] = proc_spec
-        for overlay_item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
-            existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
+        existing_index[proc_spec.name] = proc_spec.pk
 
     # Update or create data
-    for input_p in items:
-        if not (proc_spec := existing_specs.get(input_p.process)):
-            logger.info('Process spec not found, ignore, name: %s', input_p.process)
-            continue
+    for process in processes:
+        defaults: Dict[str, Any] = {
+            "command": process.command,
+            "args": process.args,
+            "port": process.targetPort,
+            "target_replicas": process.replicas,
+            "plan_name": process.resQuotaPlan,
+        }
+        if autoscaling := process.autoscaling:
+            defaults["autoscaling"] = True
+            defaults["scaling_config"] = autoscaling.dict()
 
-        _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-            proc_spec=proc_spec, environment_name=input_p.envName, defaults={"target_replicas": input_p.count}
-        )
+        # 兼容使用 v1alpha1 支持多镜像的场景
+        if process.image:
+            defaults["image"] = process.image
+        if process.imagePullPolicy:
+            defaults["image_pull_policy"] = process.imagePullPolicy
+        # TODO: image_credential_name
+
+        _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
         ret.incr_by_created_flag(created)
         # Move out from the index
-        existing_index.pop((input_p.process, input_p.envName), None)
+        existing_index.pop(process.name, None)
 
     # Remove existing data that is not touched.
-    ret.deleted_num = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).update(target_replicas=None)
+    ret.deleted_num, _ = ModuleProcessSpec.objects.filter(module=module, id__in=existing_index.values()).delete()
     return ret

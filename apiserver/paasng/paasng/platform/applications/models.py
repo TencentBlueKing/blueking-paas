@@ -27,7 +27,6 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousOperation
 from django.db import models
 from django.db.models import Q, QuerySet
-from django.shortcuts import get_object_or_404
 from pilkit.processors import ResizeToFill
 
 from paasng.accessories.iam.helpers import fetch_role_members
@@ -320,10 +319,10 @@ class Application(OwnerTimestampedModel):
         return self.modules.get(is_default=True)
 
     def get_module(self, module_name: Optional[str]):
-        """Get a module object by given module_name"""
+        """Get a module object by given module_name."""
         if not module_name:
             return self.get_default_module()
-        return get_object_or_404(self.modules, name=module_name)
+        return self.modules.get(name=module_name)
 
     def get_app_envs(self, environment=None):
         """获取所有环境对象(所有模块)"""

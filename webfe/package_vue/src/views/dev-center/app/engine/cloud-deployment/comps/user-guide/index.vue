@@ -6,37 +6,47 @@
     quick-close
   >
     <div slot="content">
-      <div class="markdown-body">
-        <guide-hook v-if="name === 'hook'" />
-        <guide-process v-else />
-      </div>
+      <div class="markdown-body" v-html="markdownContent" />
     </div>
   </bk-sideslider>
 </template>
 
 <script>
-import guideHook from '@/assets/md/guide-hook.md';
-import guideProcess from '@/assets/md/guide-process.md';
+import MarkdownIt from 'markdown-it';
 export default {
-  components: { guideHook, guideProcess },
   props: {
     name: String,
   },
   data() {
     return {
       isShow: false,
+      markdownContent: '',
     };
   },
   methods: {
     showSideslider() {
       this.isShow = true;
+      this.loadMarkdownFile();
+    },
+    loadMarkdownFile() {
+      const md = new MarkdownIt();
+      let markdownContent = '';
+      // 引入md文件
+      if (this.name === 'hook') {
+        markdownContent = require('!!raw-loader!@/assets/md/guide-hook.md').default;
+      } else {
+        markdownContent = require('!!raw-loader!@/assets/md/guide-process.md').default;
+      }
+      const htmlStr = md.render(markdownContent);
+      // 替换a标签属性，使用新标签页打开
+      this.markdownContent = htmlStr.replace(/<a/g, '<a target="_blank"');
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-.markdown-body section {
+.markdown-body {
   padding: 24px;
   /deep/ {
     body,

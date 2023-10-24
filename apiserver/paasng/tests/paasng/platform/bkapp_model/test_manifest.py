@@ -89,6 +89,13 @@ def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
         proc_spec=process_web,
         environment_name='stag',
         target_replicas=10,
+        plan_name='Starter',
+        autoscaling=True,
+        scaling_config={
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "policy": 'default',
+        },
     )
 
 
@@ -192,10 +199,25 @@ class TestProcessesManifestConstructor:
             ],
             "envOverlay": {
                 "replicas": [{'envName': 'stag', 'process': 'web', 'count': 10}],
-                'autoscaling': None,
+                'autoscaling': [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        "minReplicas": 1,
+                        "maxReplicas": 5,
+                        "policy": 'default',
+                    }
+                ],
                 'envVariables': None,
                 'mounts': None,
-                'resQuotas': None,
+                'resQuotas': [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        # The plan name should has been transformed.
+                        "plan": '2C1G',
+                    }
+                ],
             },
         }
 

@@ -45,6 +45,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     ResQuotaPlan,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import (
+    AutoscalingOverlay,
     BkAppAddon,
     BkAppBuildConfig,
     BkAppProcess,
@@ -55,7 +56,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     EnvVarOverlay,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, ReplicasOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, ReplicasOverlay, ResQuotaOverlay
 from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
@@ -189,25 +190,45 @@ class ProcessesManifestConstructor(ManifestConstructor):
         model_res.spec.processes = processes
 
         # Apply other env-overlay related changes.
-        self.apply_to_replicas_overlay(model_res, module)
+        self.apply_to_proc_overlay(model_res, module)
 
-    def apply_to_replicas_overlay(self, model_res: BkAppResource, module: Module):
-        """Apply the 'envOverlay.replicas' part."""
+    def apply_to_proc_overlay(self, model_res: BkAppResource, module: Module):
+        """Apply changes to the sub-fields in the 'envOverlay' field which is related
+        with process, fields list:
+
+        - replicas
+        - autoscaling
+        - resQuotas
+        """
         overlay = model_res.spec.envOverlay
         if not overlay:
             overlay = EnvOverlay()
 
         for proc_spec in ModuleProcessSpec.objects.filter(module=module).order_by("created"):
             for item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
-                # Only include item that have different replicas value
-                if item.target_replicas != proc_spec.target_replicas:
-                    if overlay.replicas is None:
-                        overlay.replicas = []
-
-                    overlay.replicas.append(
+                # Only include item that have different values
+                if item.target_replicas is not None and item.target_replicas != proc_spec.target_replicas:
+                    overlay.append_item(
+                        'replicas',
                         ReplicasOverlay(
                             envName=item.environment_name, process=proc_spec.name, count=item.target_replicas
-                        )
+                        ),
+                    )
+                if item.scaling_config and item.autoscaling and item.scaling_config != proc_spec.scaling_config:
+                    overlay.append_item(
+                        'autoscaling',
+                        AutoscalingOverlay(
+                            envName=item.environment_name, process=proc_spec.name, **item.scaling_config
+                        ),
+                    )
+                if item.plan_name and item.plan_name != proc_spec.plan_name:
+                    overlay.append_item(
+                        'resQuotas',
+                        ResQuotaOverlay(
+                            envName=item.environment_name,
+                            process=proc_spec.name,
+                            plan=self.get_quota_plan(item.plan_name),
+                        ),
                     )
 
         model_res.spec.envOverlay = overlay
@@ -266,9 +287,7 @@ class EnvVarsManifestConstructor(ManifestConstructor):
             overlay = EnvOverlay()
         for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
             for var in ConfigVar.objects.filter(module=module, environment=module.get_envs(env)).order_by('key'):
-                if overlay.envVariables is None:
-                    overlay.envVariables = []
-                overlay.envVariables.append(EnvVarOverlay(envName=env, name=var.key, value=var.value))
+                overlay.append_item('envVariables', EnvVarOverlay(envName=env, name=var.key, value=var.value))
 
         model_res.spec.envOverlay = overlay
 
@@ -298,12 +317,11 @@ class MountsManifestConstructor(ManifestConstructor):
             overlay = EnvOverlay()
         for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
             for config in Mount.objects.filter(module_id=module.pk, environment_name=env):
-                if overlay.mounts is None:
-                    overlay.mounts = []
-                overlay.mounts.append(
+                overlay.append_item(
+                    'mounts',
                     MountOverlay(
                         envName=env, name=config.name, mountPath=config.mount_path, source=config.source_config
-                    )
+                    ),
                 )
 
         model_res.spec.envOverlay = overlay

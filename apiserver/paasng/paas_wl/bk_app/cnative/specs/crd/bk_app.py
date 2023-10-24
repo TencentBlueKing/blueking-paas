@@ -21,7 +21,7 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -168,6 +168,20 @@ class EnvOverlay(BaseModel):
     envVariables: Optional[List[EnvVarOverlay]] = None
     autoscaling: Optional[List[AutoscalingOverlay]] = None
     mounts: Optional[List[MountOverlay]] = None
+
+    def append_item(self, field_name: str, item: Any):
+        """A shortcut method that append an item to the given field."""
+        assert field_name in {
+            'replicas',
+            'resQuotas',
+            'envVariables',
+            'autoscaling',
+            'mounts',
+        }, f"{field_name} invalid"
+
+        if getattr(self, field_name) is None:
+            setattr(self, field_name, [])
+        getattr(self, field_name).append(item)
 
 
 class BkAppBuildConfig(BaseModel):

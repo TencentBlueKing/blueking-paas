@@ -17,13 +17,13 @@
         type="empty"
         scene="part"
       >
-        <span style="color: #63656E;">{{ $t('暂无进程') }}</span>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
         >
           {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
+        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
     <div
@@ -835,14 +835,19 @@
         </bk-form-item>
       </bk-form>
     </bk-dialog>
+    <!-- 指南 -->
+    <user-guide name="process" ref="userGuideRef" />
   </paas-content-loader>
 </template>
 
 <script>import _ from 'lodash';
-import { bus } from '@/common/bus';
 import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
+import userGuide from './comps/user-guide/index.vue';
 
 export default {
+  components: {
+    userGuide,
+  },
   props: {
     moduleId: {
       type: String,
@@ -1878,6 +1883,11 @@ export default {
           message: error.detail || error.message,
         });
       }
+    },
+
+    // 查看指南
+    handleViewGuide() {
+      this.$refs.userGuideRef.showSideslider();
     },
   },
 };

@@ -415,7 +415,7 @@
         </bk-alert>
       </collapseContent>
 
-      <collapseContent :title="$t('钩子命令')" class="mt20">
+      <collapseContent :title="$t('钩子命令')" class="mt20" :fold="false">
         <bk-alert
           type="info">
           <div slot="title">

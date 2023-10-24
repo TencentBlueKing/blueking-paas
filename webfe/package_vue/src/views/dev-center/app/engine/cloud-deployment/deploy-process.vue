@@ -110,7 +110,7 @@
               :label-width="120"
               v-if="isV1alpha2"
             >
-              {{ buildData.image }}
+              {{ formData.image }}
               <i
                 class="paasng-icon paasng-edit-2 image-store-icon"
                 @click="handleToModuleInfo"
@@ -659,7 +659,7 @@
             v-if="isV1alpha2"
             :label="`${$t('镜像仓库')}：`"
           >
-            <span class="form-text">{{ buildData.image || '--' }}</span>
+            <span class="form-text">{{ formData.image || '--' }}</span>
           </bk-form-item>
           <bk-form-item
             v-else-if="isCustomImage && !isV1alpha2"
@@ -1243,32 +1243,32 @@ export default {
     },
   },
   watch: {
-    // cloudAppData: {
-    //   handler(val) {
-    //     this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
+    cloudAppData: {
+      handler(val) {
+        this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
 
-    //     //   if (val.spec) {
-    //     //     this.localCloudAppData = _.cloneDeep(val);
-    //     //     this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
-    //     //     this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
-    //     //     this.buildData = this.localCloudAppData.spec.build || {};
-    //     //     this.processData = val.spec.processes;
-    //     //     this.formData = this.processData[this.btnIndex];
-    //     //     this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
-    //     //     if (this.isCreate) {
-    //     //       // 使用示例镜像，启动命令默认值
-    //     //       if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
-    //     //         this.formData.command = ['bash', '/app/start_web.sh'];
-    //     //       } else {
-    //     //         this.formData.command = [];
-    //     //         this.formData.targetPort = '';
-    //     //       }
-    //     //     }
-    //     //   }
-    //     //   this.panels = _.cloneDeep(this.processData);
-    //   },
-    //   immediate: true,
-    // },
+        //   if (val.spec) {
+        //     this.localCloudAppData = _.cloneDeep(val);
+        //     this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
+        //     this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
+        //     this.buildData = this.localCloudAppData.spec.build || {};
+        //     this.processData = val.spec.processes;
+        //     this.formData = this.processData[this.btnIndex];
+        //     this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+        //     if (this.isCreate) {
+        //       // 使用示例镜像，启动命令默认值
+        //       if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
+        //         this.formData.command = ['bash', '/app/start_web.sh'];
+        //       } else {
+        //         this.formData.command = [];
+        //         this.formData.targetPort = '';
+        //       }
+        //     }
+        //   }
+        //   this.panels = _.cloneDeep(this.processData);
+      },
+      immediate: true,
+    },
     // formData: {
     // handler(val) {
     //   this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
@@ -1641,6 +1641,8 @@ export default {
       this.panels = _.cloneDeep(this.processData);
       this.processNameActive = 'web';
       this.btnIndex = 0;
+      this.$store.commit('cloudApi/updateProcessPageEdit', false);
+      this.$store.commit('cloudApi/updatePageEdit', false);
     },
 
     // 编辑进程名称

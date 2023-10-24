@@ -17,11 +17,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.engine.models.config_var import ConfigVar
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 @pytest.fixture
@@ -53,3 +54,54 @@ class TestEnvVars:
 
         import_manifest(bk_module, base_manifest)
         assert ConfigVar.objects.count() == 2
+
+
+class TestMounts:
+    def test_invalid_mount_path_input(self, bk_module, base_manifest):
+        base_manifest['spec']['mounts'] = [
+            # mountPath must starts with "/"
+            {'name': 'nginx-conf', 'mountPath': '___/etc/nginx', 'source': {'configMap': {'name': 'nginx-conf-cm'}}}
+        ]
+        with pytest.raises(ManifestImportError) as e:
+            import_manifest(bk_module, base_manifest)
+
+        assert 'mounts.0.mountPath' in str(e)
+
+    def test_normal(self, bk_module, base_manifest):
+        base_manifest['spec']['mounts'] = [
+            {'name': 'nginx-conf', 'mountPath': '/etc/nginx', 'source': {'configMap': {'name': 'nginx-conf-cm'}}}
+        ]
+        base_manifest['spec']['envOverlay'] = {
+            'mounts': [
+                {
+                    'envName': 'stag',
+                    'name': 'nginx-conf-stag',
+                    'mountPath': '/etc/nginx_stag',
+                    'source': {'configMap': {'name': 'nginx-conf-cm'}},
+                }
+            ]
+        }
+
+        import_manifest(bk_module, base_manifest)
+        assert Mount.objects.count() == 2
+
+
+class TestReplicasOverlay:
+    def test_invalid_replicas_input(self, bk_module, base_manifest):
+        base_manifest['spec']['envOverlay'] = {
+            'replicas': [
+                {
+                    'envName': 'stag',
+                    'process': 'web',
+                    'replicas': 'not_a_number',
+                }
+            ]
+        }
+        with pytest.raises(ManifestImportError) as e:
+            import_manifest(bk_module, base_manifest)
+
+        assert 'envOverlay.replicas.0.count' in str(e)
+
+    def test_normal(self):
+        # TODO: Add after the processes can be imported.
+        pass

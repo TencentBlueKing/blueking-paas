@@ -21,12 +21,12 @@ from typing import Dict, List, Set
 
 from django.conf import settings
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.ingress.certs.utils import pick_shared_cert, update_or_create_secret_by_cert
-from paas_wl.workloads.networking.ingress.constants import AppSubpathSource
-from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain
-from paas_wl.workloads.networking.ingress.models import AppSubpath
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.workloads.networking.ingress.certs import pick_shared_cert, update_or_create_secret_by_cert
+from paas_wl.workloads.networking.ingress.constants import AppSubpathSource
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain
+from paas_wl.workloads.networking.ingress.models import AppSubpath
 
 from .base import AppIngressMgr
 

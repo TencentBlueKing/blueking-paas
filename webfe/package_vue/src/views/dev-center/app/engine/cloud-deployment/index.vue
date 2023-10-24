@@ -102,8 +102,7 @@
   </div>
 </template>
 
-<script>
-import moduleTopBar from '@/components/paas-module-bar';
+<script>import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
 import { mergeObjects } from '@/common/utils';
@@ -125,7 +124,7 @@ export default {
         visible: false,
         dialogWidth: 1200,
         top: 120,
-        height: 600
+        height: 600,
       },
       manifestExt: {},
       panels: [
@@ -157,7 +156,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.curTabPanels.find((e) => e.name === this.active);
+      const curPenel = this.curTabPanels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -182,7 +181,7 @@ export default {
       if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
-      return this.panels.filter((item) => item.name !== 'cloudAppDeployForBuild');
+      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
     },
 
     // 是否需要保存操作按钮
@@ -196,13 +195,13 @@ export default {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.init();
     },
   },
   created() {
-    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -322,7 +321,7 @@ export default {
       window.addEventListener('resize', throttle(this.handleResizeFun, 100));
     },
 
-    handleResizeFun () {
+    handleResizeFun() {
       if (window.innerWidth < 1366) {
         this.deployDialogConfig.dialogWidth = 800;
         this.deployDialogConfig.top = 80;
@@ -332,7 +331,7 @@ export default {
         this.deployDialogConfig.top = 120;
         this.deployDialogConfig.height = 600;
       }
-    }
+    },
   },
 };
 </script>
@@ -410,5 +409,10 @@ export default {
 <style lang="scss">
 .deploy-dropdown-menu .bk-dropdown-content {
   display: none !important;
+}
+.guide-link {
+  color: #3a84ff;
+  font-size: 12px;
+  cursor: pointer;
 }
 </style>

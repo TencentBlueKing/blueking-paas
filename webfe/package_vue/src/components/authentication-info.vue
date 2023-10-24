@@ -510,7 +510,7 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verification/${status.id}/`;
       this.$http.post(url).then((res) => {
         const curCode = status.bk_app_secret;
-        const curDefaultSec = this.defaultSecret;
+        const curDefaultSec = this.defaultSecret || '';
         const startFlag = curCode.substring(0, 4) === curDefaultSec.substring(0, 4);
         const endFlag = curCode.substring(curCode.length - 4) === curDefaultSec.substring(curDefaultSec.length - 4);
         if (startFlag && endFlag) {
@@ -569,7 +569,7 @@ export default {
         .then(
           (res) => {
             const curCode = this.curViewSecret.bk_app_secret;
-            const curDefaultSec = this.defaultSecret;
+            const curDefaultSec = this.defaultSecret || '';
             const startFlag = curCode.substring(0, 4) === curDefaultSec.substring(0, 4);
             const endFlag = curCode.substring(curCode.length - 4) === curDefaultSec.substring(curDefaultSec.length - 4);
             if (startFlag && endFlag) {
@@ -756,7 +756,7 @@ export default {
     // 点击按钮更换默认密钥
     clickChangeDefault() {
       this.changeDefaultVisible = true;
-      this.curSelect = this.defaultSecret;
+      this.curSelect = this.defaultSecret || '';
     },
     // 更换默认密钥
     changeDefaultsSecret(id) {

@@ -17,13 +17,13 @@
         type="empty"
         scene="part"
       >
-        <span style="color: #63656E;">{{ $t('暂无钩子命令') }}</span>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
         >
-          {{ $t('钩子命令在 app_desc.yaml 文件中定义。') }}
+          {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
+        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
     <div
@@ -189,14 +189,19 @@
         </bk-button>
       </div>
     </div>
+
+    <user-guide name="hook" ref="userGuideRef" />
   </paas-content-loader>
 </template>
 
-<script>
-import _ from 'lodash';
+<script>import _ from 'lodash';
 import i18n from '@/language/i18n.js';
+import userGuide from './comps/user-guide/index.vue';
 
 export default {
+  components: {
+    userGuide,
+  },
   props: {
     moduleId: {
       type: String,
@@ -261,7 +266,7 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
-    isCustomImage () {
+    isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
@@ -412,6 +417,11 @@ export default {
       this.$refs.commandRef.clearError();
       this.preFormData.command = this.rawData.command;
       this.preFormData.args = this.rawData.args;
+    },
+
+    // 查看指南
+    handleViewGuide() {
+      this.$refs.userGuideRef.showSideslider();
     },
   },
 };

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.workloads.configuration.configmap.entities import ConfigMap, configmap_kmodel
+from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, configmap_kmodel
 from paasng.platform.applications.models import ModuleEnvironment
 
 

@@ -60,11 +60,13 @@ class ETLParams:
     :param retain_original_text: 是否保留原始日志字段，即log字段，默认保留true设置即可
     :param separator: 分隔符，当类型为bk_log_delimiter时配置
     :param separator_regexp: 正则表达式，当类型为bk_log_regexp时配置
+    :param retain_extra_json: 是否保留未定义JSON字段, 即未定义的字段会存入 __ext_json 中
     """
 
     retain_original_text: bool = True
     separator: Optional[str] = None
     separator_regexp: Optional[str] = None
+    retain_extra_json: bool = False
 
 
 @define

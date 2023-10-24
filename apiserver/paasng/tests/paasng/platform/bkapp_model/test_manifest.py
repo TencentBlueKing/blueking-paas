@@ -48,7 +48,7 @@ from paasng.platform.bkapp_model.manifest import (
     apply_env_annots,
     get_manifest,
 )
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.models import BuildConfig
@@ -78,6 +78,24 @@ def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
     return G(
         ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000, image=None
+    )
+
+
+@pytest.fixture
+def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
+    """An overlay data for web process"""
+    return G(
+        ProcessSpecEnvOverlay,
+        proc_spec=process_web,
+        environment_name='stag',
+        target_replicas=10,
+        plan_name='Starter',
+        autoscaling=True,
+        scaling_config={
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "policy": 'default',
+        },
     )
 
 
@@ -160,10 +178,10 @@ class TestProcessesManifestConstructor:
         with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
             assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
 
-    def test_integrated(self, bk_module, blank_resource, process_web):
+    def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         assert LEGACY_PROC_IMAGE_ANNO_KEY not in blank_resource.metadata.annotations
-        assert blank_resource.spec.dict(include={"processes"}) == {
+        assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
             "processes": [
                 {
                     "name": "web",
@@ -178,7 +196,29 @@ class TestProcessesManifestConstructor:
                     "image": None,
                     "imagePullPolicy": "IfNotPresent",
                 }
-            ]
+            ],
+            "envOverlay": {
+                "replicas": [{'envName': 'stag', 'process': 'web', 'count': 10}],
+                'autoscaling': [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        "minReplicas": 1,
+                        "maxReplicas": 5,
+                        "policy": 'default',
+                    }
+                ],
+                'envVariables': None,
+                'mounts': None,
+                'resQuotas': [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        # The plan name should has been transformed.
+                        "plan": '2C1G',
+                    }
+                ],
+            },
         }
 
     @pytest.fixture

@@ -92,7 +92,7 @@ class TestBkLogClient:
                                 option={"time_zone": 8, "time_format": "yyyy-MM-dd HH:mm:ss"},
                             ),
                         ],
-                        params=ETLParams(retain_original_text=False),
+                        params=ETLParams(retain_original_text=False, retain_extra_json=True),
                     ),
                 ),
                 {
@@ -103,7 +103,12 @@ class TestBkLogClient:
                     'category_id': 'application_check',
                     'description': '',
                     'etl_config': 'bk_log_json',
-                    'etl_params': {'retain_original_text': False, 'separator': None, 'separator_regexp': None},
+                    'etl_params': {
+                        'retain_original_text': False,
+                        'separator': None,
+                        'separator_regexp': None,
+                        'retain_extra_json': True,
+                    },
                     'fields': [
                         {
                             'field_index': 1,
@@ -150,7 +155,12 @@ class TestBkLogClient:
                     'category_id': 'application_check',
                     'description': 'barbarbarbarbarbarbarbarbarbar',
                     'etl_config': 'bk_log_text',
-                    'etl_params': {'retain_original_text': True, 'separator': None, 'separator_regexp': None},
+                    'etl_params': {
+                        'retain_original_text': True,
+                        'separator': None,
+                        'separator_regexp': None,
+                        'retain_extra_json': False,
+                    },
                     'fields': [],
                 },
             ),
@@ -227,7 +237,7 @@ class TestBkLogClient:
                                 option={"time_zone": 8, "time_format": "yyyy-MM-dd HH:mm:ss"},
                             ),
                         ],
-                        params=ETLParams(retain_original_text=False),
+                        params=ETLParams(retain_original_text=False, retain_extra_json=True),
                     ),
                 ),
                 {
@@ -236,7 +246,12 @@ class TestBkLogClient:
                     'category_id': 'application_check',
                     'description': '',
                     'etl_config': 'bk_log_json',
-                    'etl_params': {'retain_original_text': False, 'separator': None, 'separator_regexp': None},
+                    'etl_params': {
+                        'retain_original_text': False,
+                        'separator': None,
+                        'separator_regexp': None,
+                        'retain_extra_json': True,
+                    },
                     'fields': [
                         {
                             'field_index': 1,
@@ -281,7 +296,12 @@ class TestBkLogClient:
                     'category_id': 'application_check',
                     'description': 'barbarbarbarbarbarbarbarbarbar',
                     'etl_config': 'bk_log_text',
-                    'etl_params': {'retain_original_text': True, 'separator': None, 'separator_regexp': None},
+                    'etl_params': {
+                        'retain_original_text': True,
+                        'separator': None,
+                        'separator_regexp': None,
+                        'retain_extra_json': False,
+                    },
                     'fields': [],
                 },
             ),

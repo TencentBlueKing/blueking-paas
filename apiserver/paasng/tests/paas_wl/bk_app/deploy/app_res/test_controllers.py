@@ -22,14 +22,14 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
-from paas_wl.workloads.release_controller.constants import ImagePullPolicy
-from paas_wl.workloads.release_controller.hooks.entities import Command, command_kmodel
-from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
+from paas_wl.infras.resource_templates.constants import AppAddOnType
+from paas_wl.infras.resource_templates.models import AppAddOnTemplate
 from paas_wl.infras.resources.base.exceptions import PodTimeoutError
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.infras.resource_templates.constants import AppAddOnType
-from paas_wl.infras.resource_templates.models import AppAddOnTemplate
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
+from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

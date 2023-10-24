@@ -19,12 +19,13 @@ to the current version of the project delivered to anyone in the future.
 from contextlib import contextmanager
 from typing import Dict, Iterator, List
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ApiVersion
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base import kres
-from paas_wl.workloads.images.entities import ImageCredentialsManager as _ImageCredentialsManager
-from paas_wl.workloads.images.models import AppUserCredential, ImageCredentialRef
+from paas_wl.workloads.images.entities import ImageCredentialRef
+from paas_wl.workloads.images.kres_entities import ImageCredentialsManager as _ImageCredentialsManager
+from paas_wl.workloads.images.models import AppUserCredential
 from paasng.platform.applications.models import Application
 
 

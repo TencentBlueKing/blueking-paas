@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Optional
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.monitoring.app_monitor import constants
 from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor
-from paas_wl.workloads.networking.ingress.entities.service import PServicePortPair
-from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.workloads.networking.ingress.kres_entities.service import PServicePortPair
 
 
 def build_monitor_port(app: WlApp) -> Optional[PServicePortPair]:

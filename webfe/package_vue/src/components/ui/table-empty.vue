@@ -10,6 +10,13 @@
         class="exception-part-title"
       >
         {{ curTitle }}
+        <p
+          class="mt10"
+          style="font-size: 12px; color: #979ba5"
+          v-if="explanation"
+        >
+          {{ explanation }}
+        </p>
       </div>
       <span v-else />
       <template v-if="curType !== 'empty' && isContentText">
@@ -41,106 +48,108 @@
 </template>
 
 <script>
-    import i18n from '@/language/i18n';
-    export default {
-        props: {
-            keyword: {
-                type: String,
-                default: ''
-            },
-            // 是否为暂无数据
-            empty: {
-                type: Boolean,
-                default: false
-            },
-            // 暂无数据
-            emptyTitle: {
-                type: String,
-                default: i18n.t('暂无数据')
-            },
-            // 是否显示title
-            isEmptyTitle: {
-                type: Boolean,
-                default: true
-            },
-            // 是否为异常
-            abnormal: {
-                type: Boolean,
-                default: false
-            },
-            isContentText: {
-                type: Boolean,
-                default: true
-            }
-        },
-        computed: {
-            curType () {
-                if (this.abnormal) {
-                    return '500';
-                } else if (!this.empty && this.keyword) {
-                    return 'search-empty';
-                } else {
-                    return 'empty';
-                }
-            },
-            curTitle () {
-                if (this.abnormal) {
-                    return this.$t('数据获取异常');
-                } else if (!this.empty && this.keyword) {
-                    return this.$t('搜索结果为空');
-                } else {
-                    return this.emptyTitle;
-                }
-            }
-        },
-        methods: {
-            handlerClearFilter () {
-                this.$emit('clear-filter');
-            },
-            toRefresh () {
-                this.$emit('clear-filter');
-                this.$emit('reacquire');
-            }
-        }
-    };
+import i18n from '@/language/i18n';
+export default {
+  props: {
+    keyword: {
+      type: String,
+      default: '',
+    },
+    // 是否为暂无数据
+    empty: {
+      type: Boolean,
+      default: false,
+    },
+    // 暂无数据
+    emptyTitle: {
+      type: String,
+      default: i18n.t('暂无数据'),
+    },
+    // 是否显示title
+    isEmptyTitle: {
+      type: Boolean,
+      default: true,
+    },
+    // 是否为异常
+    abnormal: {
+      type: Boolean,
+      default: false,
+    },
+    isContentText: {
+      type: Boolean,
+      default: true,
+    },
+    explanation: {
+      type: String,
+      default: '',
+    },
+  },
+  computed: {
+    curType() {
+      if (this.abnormal) {
+        return '500';
+      } if (!this.empty && this.keyword) {
+        return 'search-empty';
+      }
+      return 'empty';
+    },
+    curTitle() {
+      if (this.abnormal) {
+        return this.$t('数据获取异常');
+      } if (!this.empty && this.keyword) {
+        return this.$t('搜索结果为空');
+      }
+      return this.emptyTitle;
+    },
+  },
+  methods: {
+    handlerClearFilter() {
+      this.$emit('clear-filter');
+    },
+    toRefresh() {
+      this.$emit('clear-filter');
+      this.$emit('reacquire');
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
-    .paas-table-serch {
-        max-height: 280px;
-        .search-empty-tips {
-            font-size: 12px;
-            color: #979BA5;
-            .clear-search {
-                cursor: pointer;
-                color: #3a84ff;
-            }
-        }
-        .empty-tips {
-            color: #63656E;
-        }
-        .exception-part-title {
-            color: #63656E;
-            font-size: 14px;
-            margin-bottom: 12px;
-        }
-        .refresh-tips {
-            cursor: pointer;
-            color: #3a84ff;
-        }
+.paas-table-serch {
+  max-height: 280px;
+  .search-empty-tips {
+    font-size: 12px;
+    color: #979ba5;
+    .clear-search {
+      cursor: pointer;
+      color: #3a84ff;
     }
+  }
+  .empty-tips {
+    color: #63656e;
+  }
+  .exception-part-title {
+    color: #63656e;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .refresh-tips {
+    cursor: pointer;
+    color: #3a84ff;
+  }
+}
 </style>
 <style lang="scss">
-  .paas-table-serch .exception-wrap-item .bk-exception-img.part-img {
-      height: 130px;
+.paas-table-serch .exception-wrap-item .bk-exception-img.part-img {
+  height: 130px;
+}
+.bk-table-empty-block {
+  height: 280px;
+  max-height: 280px;
+  display: flex;
+  align-items: center;
+  .bk-table-empty-text {
+    padding: 0;
   }
-  .bk-table-empty-block {
-      height: 280px;
-      max-height: 280px;
-      display: flex;
-      align-items: center;
-      .bk-table-empty-text {
-          padding: 0;
-      }
-  }
+}
 </style>

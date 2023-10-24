@@ -886,7 +886,18 @@ export default {
             plan_name: 'default',
             target_replicas: 1,
             autoscaling: false,
-            scaling_config: null,
+            scaling_config: {
+              min_replicas: 1,
+              max_replicas: 1,
+              metrics: [
+                {
+                  type: 'Resource',
+                  metric: 'cpuUtilization',
+                  value: '85%',
+                },
+              ],
+              policy: 'ScalingPolicy.DEFAULT',
+            },
           },
           stag: {
             environment_name: 'stag',
@@ -925,7 +936,18 @@ export default {
             plan_name: 'default',
             target_replicas: 1,
             autoscaling: false,
-            scaling_config: null,
+            scaling_config: {
+              min_replicas: 1,
+              max_replicas: 1,
+              metrics: [
+                {
+                  type: 'Resource',
+                  metric: 'cpuUtilization',
+                  value: '85%',
+                },
+              ],
+              policy: 'ScalingPolicy.DEFAULT',
+            },
           },
           stag: {
             environment_name: 'stag',
@@ -1407,19 +1429,10 @@ export default {
   methods: {
     async init() {
       try {
-        let res = await this.$store.dispatch('deploy/getAppProcessInfo', {
+        const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        console.log('res', res);
-        res = {
-          proc_specs: [
-            this.formData,
-          ],
-          metadata: {
-            allow_set_image: false,
-          },
-        };
         this.processData = res.proc_specs;
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {

@@ -31,6 +31,10 @@ DEFAULT_METRICS = [
 ]
 
 
+def default_scaling_config():
+    return {"min_replicas": 1, "max_replicas": 1, "metrics": DEFAULT_METRICS, "policy": ScalingPolicy.DEFAULT}
+
+
 class GetManifestInputSLZ(serializers.Serializer):
     output_format = serializers.ChoiceField(
         help_text='The output format', choices=['json', 'yaml'], required=False, default='json'
@@ -50,10 +54,6 @@ class ScalingConfigSLZ(serializers.Serializer):
 
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-环境相关配置"""
-
-    @classmethod
-    def default_scaling_config(cls):
-        return {"min_replicas": 1, "max_replicas": 1, "metrics": DEFAULT_METRICS, "policy": ScalingPolicy.DEFAULT}
 
     environment_name = serializers.CharField(help_text="环境名称")
 
@@ -92,7 +92,9 @@ class ModuleDeployHookSLZ(serializers.Serializer):
 
     type = serializers.ChoiceField(help_text="钩子类型", choices=DeployHookType.get_choices())
 
-    proc_command = serializers.CharField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False)
+    proc_command = serializers.CharField(
+        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False, allow_null=True
+    )
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
     enabled = serializers.BooleanField(allow_null=True, default=False)

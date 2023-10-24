@@ -1216,32 +1216,32 @@ export default {
     },
   },
   watch: {
-    cloudAppData: {
-      handler(val) {
-        this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
+    // cloudAppData: {
+    //   handler(val) {
+    //     this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
 
-        //   if (val.spec) {
-        //     this.localCloudAppData = _.cloneDeep(val);
-        //     this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
-        //     this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
-        //     this.buildData = this.localCloudAppData.spec.build || {};
-        //     this.processData = val.spec.processes;
-        //     this.formData = this.processData[this.btnIndex];
-        //     this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
-        //     if (this.isCreate) {
-        //       // 使用示例镜像，启动命令默认值
-        //       if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
-        //         this.formData.command = ['bash', '/app/start_web.sh'];
-        //       } else {
-        //         this.formData.command = [];
-        //         this.formData.targetPort = '';
-        //       }
-        //     }
-        //   }
-        //   this.panels = _.cloneDeep(this.processData);
-      },
-      immediate: true,
-    },
+    //     //   if (val.spec) {
+    //     //     this.localCloudAppData = _.cloneDeep(val);
+    //     //     this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
+    //     //     this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
+    //     //     this.buildData = this.localCloudAppData.spec.build || {};
+    //     //     this.processData = val.spec.processes;
+    //     //     this.formData = this.processData[this.btnIndex];
+    //     //     this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+    //     //     if (this.isCreate) {
+    //     //       // 使用示例镜像，启动命令默认值
+    //     //       if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
+    //     //         this.formData.command = ['bash', '/app/start_web.sh'];
+    //     //       } else {
+    //     //         this.formData.command = [];
+    //     //         this.formData.targetPort = '';
+    //     //       }
+    //     //     }
+    //     //   }
+    //     //   this.panels = _.cloneDeep(this.processData);
+    //   },
+    //   immediate: true,
+    // },
     // formData: {
     // handler(val) {
     //   this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
@@ -1369,20 +1369,21 @@ export default {
     //   deep: true,
     // },
 
-    isV1alpha2(val) {
-      // v2每个进程不需要 image、imagePullPolicy
-      if (val) {
-        // this.cloudAppData?.spec?.processes.forEach((e) => {
-        //   delete e.image;
-        //   delete e.imagePullPolicy;
-        // });
-        // setTimeout(() => {
-        //   this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        // }, 500);
-      } else {
-        this.getImageCredentialList();
-      }
-    },
+    // isV1alpha2(val) {
+    //   console.log('val', val);
+    //   // v2每个进程不需要 image、imagePullPolicy
+    //   if (val) {
+    //     // this.cloudAppData?.spec?.processes.forEach((e) => {
+    //     //   delete e.image;
+    //     //   delete e.imagePullPolicy;
+    //     // });
+    //     // setTimeout(() => {
+    //     //   this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+    //     // }, 500);
+    //   } else {
+    //     this.getImageCredentialList();
+    //   }
+    // },
   },
   async created() {
     // 非创建应用初始化为查看态
@@ -1396,6 +1397,12 @@ export default {
     this.init();
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
+  },
+  mounted() {
+    this.isV1alpha2 = this.cloudAppData?.apiVersion?.includes('v1alpha2');
+    if (!this.isV1alpha2) {
+      this.getImageCredentialList();
+    }
   },
   methods: {
     async init() {

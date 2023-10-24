@@ -44,8 +44,8 @@ class GetManifestInputSLZ(serializers.Serializer):
 class ScalingConfigSLZ(serializers.Serializer):
     """扩缩容配置"""
 
-    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数")
-    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数")
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数", source="minReplicas")
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数", source="maxReplicas")
     metrics = serializers.ListField(
         child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
     )

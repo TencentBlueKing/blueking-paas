@@ -445,6 +445,16 @@ const actions = {
   },
 
   /**
+   * 保存云原生process进程配置
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  saveAppProcessInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/process_specs/`;
+    return http.post(url, params, config);
+  },
+
+  /**
      * 提交发送云原生模块信息
      *
      * @param {Object} params 请求参数：appCode, moduleId, env

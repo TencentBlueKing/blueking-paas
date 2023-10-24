@@ -338,8 +338,8 @@ export default {
   computed: {
     formatConfigData() {
       return function (tags) {
-        const containerWidth = 420;
-        const tagWidth = 92;
+        const containerWidth = 410;
+        const tagWidth = 90;
         const maxVisibleCount = Math.floor(containerWidth / tagWidth);
         const curTags = Object.keys(tags);
         if (curTags.length <= maxVisibleCount) {
@@ -478,6 +478,7 @@ export default {
         return obj;
       }, {});
       _row.source_config_data = formatConfig;
+      console.log(_row);
       if (this.curType === 'add') {
         const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/`;
         this.$http
@@ -510,6 +511,7 @@ export default {
             this.volumeDefaultSettings.isShow = false;
             this.curType = '';
             this.getVolumeList();
+            console.log(this.volumeFormData);
           })
           .catch(() => {
             this.$paasMessage({
@@ -540,6 +542,7 @@ export default {
       // eslint-disable-next-line no-underscore-dangle
       const _detail = cloneDeep(curTab.content);
       this.active = val;
+      this.isAddFile = false;
       const resultFormatDetail = this.convertToObjectIfPossible(_detail);
       this.$refs.editorRefSlider.setValue(resultFormatDetail);
     },
@@ -578,6 +581,10 @@ export default {
     handleBlurAddInput() {
       if (this.addFileInput.trim() === '') {
         this.isAddFile = false;
+        if (this.volumeFormData.source_config_data.length === 0) {
+          return;
+        }
+        console.log(this.volumeFormData);
         const curTab = this.volumeFormData.source_config_data.find(item => item.name === this.active);
         const curContent = this.convertToObjectIfPossible(curTab.content);
         this.$refs.editorRefSlider.setValue(curContent);
@@ -623,6 +630,7 @@ export default {
     // 编辑文件input失焦
     handleBlurEditInput(label, index) {
       this.$nextTick(() => {
+        console.log(this.$refs);
         Object.keys(this.$refs).forEach((item) => {
           if (this.$refs[item].length === 0) {
             // 检查引用是否为空

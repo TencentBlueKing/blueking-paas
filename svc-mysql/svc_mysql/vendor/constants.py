@@ -26,7 +26,7 @@ class MySQLAuthTypeEnum(IntEnum):
 
 CREATE_USER_FMT = "create user `{db_user}`@`{auth_ip}` identified by '{db_password}';"
 
-GRANT_SQL_FMT = "grant {privileges} on `{db_name}`.* " "to `{db_user}`@`{auth_ip}` ;"
+GRANT_SQL_FMT = "grant {privileges} on `{db_name}`.* " "to `{db_user}`@`{auth_ip}`;"
 
 REVOKE_SQL_FMT = "revoke {privileges} on `{db_name}`.* from `{db_user}`@{auth_ip};"
 

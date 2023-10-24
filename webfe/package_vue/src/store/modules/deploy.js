@@ -388,7 +388,7 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId
      */
   getAppYamlManiFests({}, { appCode, moduleId }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/manifests/current/?output_format=yaml`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/manifests/current/?output_format=json`;
     return http.get(url, config);
   },
 

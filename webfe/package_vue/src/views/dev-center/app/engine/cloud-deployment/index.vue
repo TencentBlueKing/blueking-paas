@@ -138,7 +138,7 @@ export default {
       active: 'cloudAppDeployForProcess',
       envValidate: true,
       isTab: true,
-      dialogCloudAppData: {},
+      dialogCloudAppData: [],
     };
   },
   computed: {

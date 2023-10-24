@@ -632,7 +632,7 @@ export default {
       this.$nextTick(() => {
         console.log(this.$refs);
         Object.keys(this.$refs).forEach((item) => {
-          if (this.$refs[item].length === 0) {
+          if (Array.isArray(this.$refs[item]) && this.$refs[item].length === 0) {
             // 检查引用是否为空
             delete this.$refs[item]; // 删除引用
           }

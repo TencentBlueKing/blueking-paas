@@ -7,18 +7,18 @@
   >
     <div slot="content">
       <div class="markdown-body">
-        <guide-hook v-if="name === 'hook'" />
-        <guide-process v-else />
+        <!-- <guide-hook v-if="name === 'hook'" />
+        <guide-process v-else /> -->
       </div>
     </div>
   </bk-sideslider>
 </template>
 
 <script>
-import guideHook from '@/assets/md/guide-hook.md';
-import guideProcess from '@/assets/md/guide-process.md';
+// import guideHook from '@/assets/md/guide-hook.md';
+// import guideProcess from '@/assets/md/guide-process.md';
 export default {
-  components: { guideHook, guideProcess },
+  // components: { guideHook, guideProcess },
   props: {
     name: String,
   },

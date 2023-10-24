@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Any, Dict, List
 
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -47,7 +48,7 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
             "args": process.args,
             "port": process.targetPort,
             "target_replicas": process.replicas,
-            "plan_name": process.resQuotaPlan,
+            "plan_name": process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
         }
         if autoscaling := process.autoscaling:
             defaults["autoscaling"] = True

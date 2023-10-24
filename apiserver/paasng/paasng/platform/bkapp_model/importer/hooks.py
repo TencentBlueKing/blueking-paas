@@ -19,7 +19,7 @@ import logging
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppHooks
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
-from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook, ModuleProcessSpec
+from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,9 @@ def import_hooks(module: Module, hooks: BkAppHooks) -> CommonImportResult:
             },
         )
         ret.incr_by_created_flag(created)
+        # Move out from the index
+        existing_index.pop(DeployHookType.PRE_RELEASE_HOOK, None)
 
     # Remove existing data that is not touched.
-    ret.deleted_num, _ = ModuleProcessSpec.objects.filter(module=module, id__in=existing_index.values()).delete()
+    ret.deleted_num, _ = ModuleDeployHook.objects.filter(module=module, id__in=existing_index.values()).delete()
     return ret

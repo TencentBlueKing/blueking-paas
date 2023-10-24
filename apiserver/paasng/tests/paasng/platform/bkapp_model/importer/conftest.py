@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,27 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
+import pytest
+from django_dynamic_fixture import G
 
-from moby_distribution.registry.utils import parse_image
-
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppBuildConfig
-from paasng.platform.modules.models import BuildConfig, Module
-
-logger = logging.getLogger(__name__)
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 
-def import_build(module: Module, build: BkAppBuildConfig):
-    """Import build data.
+@pytest.fixture
+def proc_web(bk_module) -> ModuleProcessSpec:
+    return G(ModuleProcessSpec, module=bk_module, name="web", command=["python"], args=["-m", "http.server"])
 
-    :param build: BKApp `spec.build` object.
-    """
-    cfg = BuildConfig.objects.get_or_create_by_module(module)
-    update_fields = ["image_credential_name", "updated"]
-    if build.image:
-        parsed = parse_image(build.image, default_registry="registry.hub.docker.com")
-        cfg.image_repository = f"{parsed.domain}/{parsed.name}"
-        update_fields.append("image_repository")
 
-    cfg.image_credential_name = build.imageCredentialsName
-    cfg.save(update_fields=["image_repository", "image_credential_name", "updated"])
+@pytest.fixture
+def proc_celery(bk_module) -> ModuleProcessSpec:
+    return G(ModuleProcessSpec, module=bk_module, name="worker", command=["celery"])

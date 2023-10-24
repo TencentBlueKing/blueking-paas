@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -18,24 +19,35 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ReplicasOverlay
-from paasng.platform.bkapp_model.importer.replicas import import_replicas_overlay
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.crd.bk_app import ResQuotaOverlay
+from paasng.platform.bkapp_model.importer.res_quotas import import_res_quota_overlay
 from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
 
 pytestmark = pytest.mark.django_db
 
 
-class Test__import_replicas_overlay:
+class Test__import_res_quota_overlay:
     def test_integrated(self, bk_module, proc_web, proc_celery):
-        G(ProcessSpecEnvOverlay, proc_spec=proc_web, environment_name="stag", target_replicas=2)
-        G(ProcessSpecEnvOverlay, proc_spec=proc_celery, environment_name="prod", target_replicas=1)
+        G(
+            ProcessSpecEnvOverlay,
+            proc_spec=proc_web,
+            environment_name="stag",
+            plan_name=ResQuotaPlan.P_DEFAULT,
+        )
+        G(
+            ProcessSpecEnvOverlay,
+            proc_spec=proc_celery,
+            environment_name="prod",
+            plan_name=ResQuotaPlan.P_2C2G,
+        )
         assert ProcessSpecEnvOverlay.objects.count() == 2
 
-        ret = import_replicas_overlay(
+        ret = import_res_quota_overlay(
             bk_module,
             [
-                ReplicasOverlay(envName='prod', process='web', count='2'),
-                ReplicasOverlay(envName='prod', process='worker', count='2'),
+                ResQuotaOverlay(envName="prod", process="web", plan=ResQuotaPlan.P_4C4G),
+                ResQuotaOverlay(envName="prod", process="web", plan=ResQuotaPlan.P_4C4G),
             ],
         )
         assert ProcessSpecEnvOverlay.objects.count() == 3

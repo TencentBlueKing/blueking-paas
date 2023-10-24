@@ -157,8 +157,8 @@ class ProcessInputSLZ(serializers.Serializer):
     # v1alpha1
     image = serializers.CharField(allow_null=True, default=None)
     imagePullPolicy = serializers.CharField(allow_null=True, default=None)
-    cpu = serializers.CharField(allow_null=True, default=None)
-    memory = serializers.CharField(allow_null=True, default=None)
+    cpu = serializers.CharField(required=False)
+    memory = serializers.CharField(required=False)
 
     def to_internal_value(self, data) -> bk_app.BkAppProcess:
         d = super().to_internal_value(data)

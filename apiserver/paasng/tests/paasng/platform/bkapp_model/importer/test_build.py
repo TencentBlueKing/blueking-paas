@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,27 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-
-from moby_distribution.registry.utils import parse_image
+import pytest
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppBuildConfig
-from paasng.platform.modules.models import BuildConfig, Module
+from paasng.platform.bkapp_model.importer.build import import_build
+from paasng.platform.modules.models import BuildConfig
 
-logger = logging.getLogger(__name__)
+pytestmark = pytest.mark.django_db
 
 
-def import_build(module: Module, build: BkAppBuildConfig):
-    """Import build data.
+class Test__import_build:
+    def test_v1alpha1(self, bk_module):
+        import_build(bk_module, BkAppBuildConfig(image="example.com/foo:latest", imageCredentialsName="foo"))
+        cfg = BuildConfig.objects.get(module=bk_module)
+        assert cfg.image_repository == "example.com/foo"
+        assert cfg.image_credential_name == "foo"
 
-    :param build: BKApp `spec.build` object.
-    """
-    cfg = BuildConfig.objects.get_or_create_by_module(module)
-    update_fields = ["image_credential_name", "updated"]
-    if build.image:
-        parsed = parse_image(build.image, default_registry="registry.hub.docker.com")
-        cfg.image_repository = f"{parsed.domain}/{parsed.name}"
-        update_fields.append("image_repository")
-
-    cfg.image_credential_name = build.imageCredentialsName
-    cfg.save(update_fields=["image_repository", "image_credential_name", "updated"])
+    def test_v1alpha2(self, bk_module):
+        import_build(bk_module, BkAppBuildConfig(image="example.com/foo", imageCredentialsName="foo"))
+        cfg = BuildConfig.objects.get(module=bk_module)
+        assert cfg.image_repository == "example.com/foo"
+        assert cfg.image_credential_name == "foo"

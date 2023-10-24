@@ -430,8 +430,8 @@ import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
-import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
-import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
+import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
+import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
 import { TAG_MAP } from '@/common/constants.js';
 export default {
   components: {

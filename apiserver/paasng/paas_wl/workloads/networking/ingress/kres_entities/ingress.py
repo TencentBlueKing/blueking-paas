@@ -26,13 +26,21 @@ from django.conf import settings
 from django.utils.functional import lazy
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.ingress.entities.utils import LegacyNginxRewrittenProvider, NginxRegexRewrittenProvider
-from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base import kres
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
+from paas_wl.infras.resources.kube_res.base import (
+    AppEntity,
+    AppEntityDeserializer,
+    AppEntityManager,
+    AppEntitySerializer,
+)
+from paas_wl.workloads.networking.ingress.kres_entities.utils import (
+    LegacyNginxRewrittenProvider,
+    NginxRegexRewrittenProvider,
+)
 
 ANNOT_SERVER_SNIPPET = 'nginx.ingress.kubernetes.io/server-snippet'
 ANNOT_CONFIGURATION_SNIPPET = 'nginx.ingress.kubernetes.io/configuration-snippet'

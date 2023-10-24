@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import List
 
-from attrs import define
 from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.db.transaction import atomic
@@ -27,10 +26,12 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.bk_app.applications.models import UuidAuditedModel, WlApp
 from paasng.platform.applications.models import Application
 
+from .entities import ImageCredentialRef
+
 
 class AppImageCredentialManager(models.Manager):
     @atomic
-    def flush_from_refs(self, application: Application, wl_app: WlApp, references: List['ImageCredentialRef']):
+    def flush_from_refs(self, application: Application, wl_app: WlApp, references: List[ImageCredentialRef]):
         """flush all AppImageCredentials for given 'wl_app' by the ImageCredentialRefs,
         will delete all outdated/not-used AppImageCredentials"""
         all_images = [ref.image for ref in references]
@@ -77,9 +78,3 @@ class AppUserCredential(UuidAuditedModel):
 
     class Meta:
         unique_together = ('application_id', 'name')
-
-
-@define
-class ImageCredentialRef:
-    image: str
-    credential_name: str

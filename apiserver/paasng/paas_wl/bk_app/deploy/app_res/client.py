@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 
 from django.conf import settings
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import (
     BuildHandler,
     CommandHandler,
@@ -30,15 +31,14 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
     ProcessesHandler,
 )
 from paas_wl.bk_app.monitoring.app_monitor.utils import build_monitor_port
-from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.workloads.release_controller.hooks.entities import Command
+from paas_wl.bk_app.processes.entities import Process
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import set_default_options
 from paas_wl.infras.resources.generation.version import get_mapper_version
-from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
+from paas_wl.workloads.images.kres_entities import ImageCredentials, credentials_kmodel
+from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
+from paas_wl.workloads.release_controller.hooks.kres_entities import Command
 
 if TYPE_CHECKING:
     from paas_wl.infras.resources.base.base import EnhancedApiClient

@@ -19,6 +19,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from paas_wl.bk_app.processes.drf_serializers import ScalingConfigSLZ
+from paasng.platform.modules.constants import DeployHookType
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -60,3 +61,14 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):
     proc_specs = ModuleProcessSpecSLZ(many=True, read_only=True)
     metadata = ModuleProcessSpecMetadataSLZ(read_only=True)
+
+
+class ModuleDeployHookSLZ(serializers.Serializer):
+    """钩子命令"""
+
+    type = serializers.ChoiceField(help_text="钩子类型", choices=DeployHookType.get_choices())
+
+    proc_command = serializers.CharField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False)
+    command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
+    args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
+    enabled = serializers.BooleanField(allow_null=True, default=False)

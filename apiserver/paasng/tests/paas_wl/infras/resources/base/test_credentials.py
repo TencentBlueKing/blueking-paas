@@ -25,7 +25,7 @@ from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import b64decode, b64encode
 from paas_wl.workloads.images import constants
-from paas_wl.workloads.images.entities import credentials_kmodel
+from paas_wl.workloads.images.kres_entities import credentials_kmodel
 from paas_wl.workloads.images.models import AppImageCredential
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

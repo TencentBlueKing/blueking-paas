@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,3 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from dataclasses import dataclass
+
+from paas_wl.infras.resources.base import crd
+from paas_wl.infras.resources.kube_res.base import AppEntity
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
+from paas_wl.workloads.autoscaling.kres_slzs import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
+
+
+@dataclass
+class ProcAutoscaling(AppEntity):
+    """自动伸缩实例定义"""
+
+    spec: AutoscalingConfig
+    target_ref: ScalingObjectRef
+
+    class Meta:
+        kres_class = crd.GPA
+        deserializer = ProcAutoscalingDeserializer
+        serializer = ProcAutoscalingSerializer

@@ -28,6 +28,16 @@ from tests.utils.helpers import generate_random_string
 pytestmark = pytest.mark.django_db
 
 
+_placeholder_response = {
+    "bp_stack_name": None,
+    "buildpacks": None,
+    "dockerfile_path": None,
+    "docker_build_args": None,
+    "image_repository": None,
+    "image_credential_name": None,
+}
+
+
 class TestModuleBuildConfigViewSet:
     @pytest.fixture(autouse=True)
     def setup_settings(self, settings):
@@ -77,9 +87,10 @@ class TestModuleBuildConfigViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.get(url)
         assert resp.json() == {
+            **_placeholder_response,
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'bp_stack_name': None,
             'buildpacks': [],
         }
@@ -92,9 +103,10 @@ class TestModuleBuildConfigViewSet:
 
         resp = api_client.get(url)
         assert resp.json() == {
+            **_placeholder_response,
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'bp_stack_name': slugbuilder.name,
             'buildpacks': [
                 {
@@ -116,9 +128,10 @@ class TestModuleBuildConfigViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.get(url)
         assert resp.json() == {
+            **_placeholder_response,  # type: ignore
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'dockerfile',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'dockerfile_path': 'rootfs/Dockerfile',
             'docker_build_args': {'CFLAGS': '-g -Wall', 'GOARCH': 'amd64', 'GO_VERSION': '1.19'},
         }
@@ -133,6 +146,7 @@ class TestModuleBuildConfigViewSet:
         resp = api_client.get(url)
 
         assert resp.json() == {
+            **_placeholder_response,  # type: ignore
             'image_repository': 'example.com/foo',
             'image_credential_name': 'foo',
             'build_method': 'custom_image',

@@ -19,15 +19,15 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Iterable, List, NamedTuple, Optional
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.exceptions import EmptyAppIngressError
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain
 from paas_wl.workloads.networking.ingress.managers.base import AppIngressMgr
 from paas_wl.workloads.networking.ingress.managers.domain import CustomDomainIngressMgr, SubdomainAppIngressMgr
 from paas_wl.workloads.networking.ingress.managers.subpath import SubPathAppIngressMgr
 from paas_wl.workloads.networking.ingress.models import Domain
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

@@ -165,7 +165,7 @@
             </bk-form-item>
           </bk-form>
         </div>
-        <div style="margin-top: 16px;">
+        <div class="image-pull-strategy-form" style="margin-top: 16px;">
           <bk-form form-type="vertical">
             <bk-form-item
               :label="$t('镜像拉取策略')"
@@ -741,6 +741,12 @@ export default {
   display: flex;
   label {
     white-space: nowrap;
+  }
+}
+.image-pull-strategy-form,
+.image-pull-strategy {
+  /deep/ .bk-radio-text {
+    border-bottom: 1px dashed;
   }
 }
 </style>

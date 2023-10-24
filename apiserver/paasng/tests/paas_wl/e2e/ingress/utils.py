@@ -31,11 +31,11 @@ from kubernetes.client.rest import ApiException
 from kubernetes.utils.create_from_yaml import create_from_yaml_single_item
 from urllib3.util import connection
 
-from paas_wl.workloads.networking.ingress.entities.ingress import ProcessIngress, ingress_kmodel
 from paas_wl.infras.resources.base.base import EnhancedApiClient
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
 from paas_wl.utils.kubestatus import HealthStatusType, check_pod_health_status, parse_pod
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ProcessIngress, ingress_kmodel
 
 
 @define

@@ -24,11 +24,11 @@ from six import ensure_text
 
 from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError, CommandRerunError
 from paas_wl.bk_app.deploy.app_res.utils import K8sScheduler, get_scheduler_client_by_app
-from paas_wl.workloads.release_controller.hooks.entities import Command as CommandKModel
-from paas_wl.workloads.release_controller.hooks.models import Command
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
+from paas_wl.workloads.release_controller.hooks.kres_entities import Command as CommandKModel
+from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.platform.engine.utils.output import DeployStream, Style
 
 logger = logging.getLogger(__name__)

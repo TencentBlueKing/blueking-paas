@@ -41,7 +41,7 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_form_bkapp(self, processes: List['BkAppProcess']):
+    def sync_from_bkapp(self, processes: List['BkAppProcess']):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess
@@ -214,7 +214,7 @@ class ModuleProcessSpecManager:
                 defaults={
                     "target_replicas": overlay.get("target_replicas"),
                     "plan_name": overlay.get("plan_name"),
-                    "autoscaling": overlay.get("autoscaling"),
+                    "autoscaling": overlay.get("autoscaling", False),
                     "scaling_config": overlay.get("scaling_config"),
                 },
             )

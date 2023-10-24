@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, overload
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, TypedDict, overload
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -29,6 +29,7 @@ from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -37,12 +38,44 @@ if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
 
 
+class BuildConfigData(TypedDict):
+    tag_options: Optional[ImageTagOptions]
+
+    # Buildpack 构建
+    bp_stack_name: Optional[str]
+    buildpacks: Optional[List[Dict]]
+
+    # Dockerfile 构建
+    dockerfile_path: Optional[str]
+    docker_build_args: Optional[Dict]
+
+    # 仅镜像
+    image_repository: Optional[str]
+    image_credential_name: Optional[str]
+
+
 def update_build_config_with_method(
     build_config: BuildConfig,
     build_method: RuntimeType,
     data: Dict,
 ):
-    """根据指定的 build_method 更新部分字段"""
+    """根据指定的 build_method 更新部分字段
+
+    :param build_config: BuildConfig db 模型
+    :param build_method: 构建方式
+    :param data: 参数
+
+    :param data.tag_options: Optional[ImageTagOptions]
+
+    :param data.bp_stack_name: str, buildpack 构建方案的基础镜像名， 仅 build_method == BUILDPACK 时需要该字段
+    :param data.buildpacks: List[Dict], 包含构建工具 ID 的字段列表, 仅 build_method == BUILDPACK 时需要该字段
+
+    :param data.dockerfile_path: str, Dockerfile 路径, 仅 build_method == DOCKERFILE 时需要该字段
+    :param data.docker_build_args: Dict[str, str], Docker 构建参数, 仅 build_method == DOCKERFILE 时需要该字段
+
+    :param data.image_repository: 镜像仓库, 仅 build_method == CUSTOM_IMAGE 时需要该字段
+    :param data.image_credential_name: 镜像凭证, 仅 build_method == CUSTOM_IMAGE 时需要该字段
+    """
 
     update_fields = ["build_method", "updated"]
     build_config.build_method = build_method
@@ -52,6 +85,7 @@ def update_build_config_with_method(
 
     # 基于 buildpack 的构建方式
     if build_method == RuntimeType.BUILDPACK:
+        assert data["buildpacks"] is not None
         buildpack_ids = [item["id"] for item in data["buildpacks"]]
         binder = ModuleRuntimeBinder(module=build_config.module)
         binder.bind_bp_stack(data["bp_stack_name"], buildpack_ids)

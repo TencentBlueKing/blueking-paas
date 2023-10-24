@@ -21,13 +21,14 @@ from typing import List, Set
 
 from django.db import transaction
 
-from paas_wl.workloads.networking.ingress.certs.utils import DomainWithCert, update_or_create_secret_by_cert
-from paas_wl.workloads.networking.ingress.constants import AppDomainSource
-from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain
-from paas_wl.workloads.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
-from paas_wl.workloads.networking.ingress.managers.base import AppIngressMgr
-from paas_wl.workloads.networking.ingress.models import AppDomain, AutoGenDomain, Domain
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.workloads.networking.ingress.certs import DomainWithCert, update_or_create_secret_by_cert
+from paas_wl.workloads.networking.ingress.constants import AppDomainSource
+from paas_wl.workloads.networking.ingress.entities import AutoGenDomain
+from paas_wl.workloads.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain
+from paas_wl.workloads.networking.ingress.managers.base import AppIngressMgr
+from paas_wl.workloads.networking.ingress.models import AppDomain, Domain
 
 logger = logging.getLogger(__name__)
 

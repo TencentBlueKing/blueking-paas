@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
                 ('plan_name', models.CharField(help_text='仅存储方案名称', max_length=32)),
                 ('autoscaling', models.BooleanField(default=False, verbose_name='是否启用自动扩缩容')),
                 ('scaling_config', models.JSONField(null=True, verbose_name='自动扩缩容配置')),
-                ('proc_spec', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='env_overlay', to='bkapp_model.moduleprocessspec')),
+                ('proc_spec', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='env_overlays', to='bkapp_model.moduleprocessspec')),
             ],
             options={
                 'unique_together': {('proc_spec', 'environment_name')},

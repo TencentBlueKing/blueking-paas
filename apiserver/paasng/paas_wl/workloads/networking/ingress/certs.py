@@ -22,10 +22,10 @@ from typing import Optional, Tuple
 
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert, Domain
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert, Domain
 
 logger = logging.getLogger(__name__)
 

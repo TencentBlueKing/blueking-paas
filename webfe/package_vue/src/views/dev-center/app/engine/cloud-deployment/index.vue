@@ -80,8 +80,7 @@
   </div>
 </template>
 
-<script>
-import moduleTopBar from '@/components/paas-module-bar';
+<script>import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
 import { mergeObjects } from '@/common/utils';
@@ -390,5 +389,10 @@ export default {
 <style lang="scss">
 .deploy-dropdown-menu .bk-dropdown-content {
   display: none !important;
+}
+.guide-link {
+  color: #3a84ff;
+  font-size: 12px;
+  cursor: pointer;
 }
 </style>

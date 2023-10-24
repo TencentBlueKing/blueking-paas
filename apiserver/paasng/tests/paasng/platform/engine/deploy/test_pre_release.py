@@ -24,6 +24,7 @@ from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreR
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.modules.constants import DeployHookType
+from paasng.platform.modules.models.deploy_config import Hook
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils.helpers import generate_random_string
 
@@ -31,42 +32,43 @@ pytestmark = pytest.mark.django_db
 
 
 class TestApplicationPreReleaseExecutor:
-    @pytest.fixture
-    def deploy_config(self, bk_module_full):
-        return bk_module_full.get_deploy_config()
-
     @pytest.fixture()
-    def setup_hook(self, deploy_config):
-        deploy_config.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, generate_random_string())
-        deploy_config.save()
+    def setup_hook(self, bk_module_full):
+        bk_module_full.deploy_hooks.enable_hook(
+            type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=generate_random_string()
+        )
 
     @pytest.fixture
-    def setup_hook_disable(self, deploy_config, setup_hook):
-        deploy_config.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        deploy_config.save()
+    def setup_hook_disable(self, bk_module_full, setup_hook):
+        bk_module_full.deploy_hooks.disable_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
 
     @pytest.fixture
-    def setup_empty_command_hook(self, deploy_config):
-        deploy_config.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, "")
-        deploy_config.save()
+    def setup_empty_command_hook(self, bk_module_full):
+        bk_module_full.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="")
 
     @pytest.fixture
-    def hook(self, request, deploy_config):
+    def hook(self, request, bk_module_full):
         if request.param:
             request.getfixturevalue(request.param)
-        return deploy_config.hooks.get_hook(DeployHookType.PRE_RELEASE_HOOK)
+        return bk_module_full.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
 
     @pytest.mark.parametrize("hook", ["setup_hook_disable", "setup_empty_command_hook", ""], indirect=["hook"])
     def test_hook_not_found(self, bk_module_full, hook):
         deployment = create_fake_deployment(bk_module_full)
-        if hook and not hook.enabled:
+        if not hook or not hook.enabled:
             assert deployment.get_deploy_hooks().get_hook(DeployHookType.PRE_RELEASE_HOOK) is None
         else:
-            assert deployment.get_deploy_hooks().get_hook(DeployHookType.PRE_RELEASE_HOOK) == hook
+            assert deployment.get_deploy_hooks().get_hook(DeployHookType.PRE_RELEASE_HOOK) == Hook(
+                type=hook.type,
+                command=hook.get_proc_command(),
+                enabled=hook.enabled,
+            )
 
         with mock.patch(
             "paasng.platform.engine.deploy.bg_command.pre_release.ApplicationReleaseMgr"
-        ) as ApplicationReleaseMgr, mock.patch('paasng.platform.engine.utils.output.RedisChannelStream') as mocked_stream:
+        ) as ApplicationReleaseMgr, mock.patch(
+            'paasng.platform.engine.utils.output.RedisChannelStream'
+        ) as mocked_stream:
             attach_all_phases(sender=deployment.app_environment, deployment=deployment)
             ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()
 

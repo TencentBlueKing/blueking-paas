@@ -28,6 +28,16 @@ from tests.utils.helpers import generate_random_string
 pytestmark = pytest.mark.django_db
 
 
+_placeholder_response = {
+    "bp_stack_name": None,
+    "buildpacks": None,
+    "dockerfile_path": None,
+    "docker_build_args": None,
+    "image_repository": None,
+    "image_credential_name": None,
+}
+
+
 class TestModuleBuildConfigViewSet:
     @pytest.fixture(autouse=True)
     def setup_settings(self, settings):
@@ -77,13 +87,12 @@ class TestModuleBuildConfigViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.get(url)
         assert resp.json() == {
+            **_placeholder_response,
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'bp_stack_name': None,
             'buildpacks': [],
-            'dockerfile_path': None,
-            'docker_build_args': None,
         }
 
     def test_retrieve_bp(self, api_client, bk_app, bk_module, slugbuilder, slugrunner, buildpack_x):
@@ -94,9 +103,10 @@ class TestModuleBuildConfigViewSet:
 
         resp = api_client.get(url)
         assert resp.json() == {
+            **_placeholder_response,
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'bp_stack_name': slugbuilder.name,
             'buildpacks': [
                 {
@@ -107,8 +117,6 @@ class TestModuleBuildConfigViewSet:
                     'description': buildpack_x.description,
                 }
             ],
-            'dockerfile_path': None,
-            'docker_build_args': None,
         }
 
     def test_retrieve_docker(self, api_client, bk_app, bk_module):
@@ -120,13 +128,28 @@ class TestModuleBuildConfigViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.get(url)
         assert resp.json() == {
+            **_placeholder_response,  # type: ignore
             'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
             'build_method': 'dockerfile',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': True},
-            'bp_stack_name': None,
-            'buildpacks': None,
+            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
             'dockerfile_path': 'rootfs/Dockerfile',
             'docker_build_args': {'CFLAGS': '-g -Wall', 'GOARCH': 'amd64', 'GO_VERSION': '1.19'},
+        }
+
+    def test_retrieve_custom_image(self, api_client, bk_app, bk_module):
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        cfg.build_method = RuntimeType.CUSTOM_IMAGE
+        cfg.image_repository = "example.com/foo"
+        cfg.image_credential_name = "foo"
+        cfg.save()
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
+        resp = api_client.get(url)
+
+        assert resp.json() == {
+            **_placeholder_response,  # type: ignore
+            'image_repository': 'example.com/foo',
+            'image_credential_name': 'foo',
+            'build_method': 'custom_image',
         }
 
     def test_modify_bp(
@@ -187,6 +210,20 @@ class TestModuleBuildConfigViewSet:
         assert cfg.build_method == RuntimeType.DOCKERFILE
         assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
         assert cfg.docker_build_args == {}
+
+    def test_modify_custom_image(self, api_client, bk_app, bk_module):
+        data = {
+            'build_method': RuntimeType.CUSTOM_IMAGE,
+            'image_repository': 'example.com/bar',
+            'image_credential_name': 'bar',
+        }
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
+        resp = api_client.post(url, data=data)
+        assert resp.status_code == 200
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        assert cfg.build_method == RuntimeType.CUSTOM_IMAGE
+        assert cfg.image_repository == "example.com/bar"
+        assert cfg.image_credential_name == "bar"
 
     @pytest.mark.parametrize(
         "data",

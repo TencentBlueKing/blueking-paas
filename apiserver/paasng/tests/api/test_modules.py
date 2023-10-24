@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from unittest import mock
 
-import cattr
 import pytest
 from django.conf import settings
 
@@ -28,8 +27,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.deploy_config import Hook
+from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -214,11 +212,7 @@ class TestCreateCloudNativeModule:
 class TestModuleDeployConfigViewSet:
     @pytest.fixture
     def the_hook(self, bk_module):
-        deploy_config = bk_module.get_deploy_config()
-        deploy_config.hooks.upsert("pre-release-hook", "the-hook")
-        deploy_config.save()
-
-        return deploy_config.hooks.get_hook("pre-release-hook")
+        return bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="the-hook")
 
     @pytest.fixture
     def the_procfile(self, bk_module):
@@ -229,7 +223,10 @@ class TestModuleDeployConfigViewSet:
         response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/deploy_config/")
 
         assert response.status_code == 200
-        assert response.json() == {"procfile": the_procfile, "hooks": [cattr.unstructure(the_hook)]}
+        assert response.json() == {
+            "procfile": the_procfile,
+            "hooks": [{"type": the_hook.type, "command": the_hook.proc_command, "enabled": the_hook.enabled}],
+        }
 
     @pytest.mark.parametrize(
         "type_, command, success",
@@ -248,9 +245,9 @@ class TestModuleDeployConfigViewSet:
             },
         )
         if success:
-            assert bk_module.get_deploy_config().hooks.get_hook(type_) == Hook(
-                type=type_, command=command, enabled=True
-            )
+            hook = bk_module.deploy_hooks.get_by_type(type_)
+            assert hook.proc_command == command
+            assert hook.enabled
         else:
             assert response.status_code == 400
 
@@ -261,10 +258,9 @@ class TestModuleDeployConfigViewSet:
         )
         assert response.status_code == 204
 
-        deploy_config = bk_module.get_deploy_config()
-        assert deploy_config.hooks.get_hook(the_hook.type) == Hook(
-            type=the_hook.type, command=the_hook.command, enabled=False
-        )
+        hook = bk_module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        assert hook.proc_command == the_hook.proc_command
+        assert not hook.enabled
 
     @pytest.mark.parametrize(
         "procfile, expected_procfile, success",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,42 +15,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from dataclasses import dataclass
-from typing import List, Optional
-
-from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
+from attrs import define
 
 
-@dataclass
-class ScalingObjectRef:
-    """自动扩缩容资源引用"""
+@define
+class ImportEnvVarsResult:
+    """The result of the env vars importing procedure.
 
-    api_version: str
-    kind: str
-    name: str
+    :param affected_num: How many objects have been affected.
+    :param removed_num: How many objects have been removed.
+    """
 
-
-@dataclass
-class MetricSpec:
-    """扩缩容指标配置"""
-
-    # 指标来源类型
-    type: ScalingMetricSourceType
-    # 指标名称
-    metric: ScalingMetric
-    # 指标值：百分比 / 绝对数值
-    value: str
-    # 指标来源对象，搭配 Object Type 使用
-    described_object: Optional[ScalingObjectRef] = None
-
-
-@dataclass
-class AutoscalingConfig:
-    """自动扩缩容配置"""
-
-    # 最小副本数量
-    min_replicas: int
-    # 最大副本数量
-    max_replicas: int
-    # 扩缩容指标
-    metrics: List[MetricSpec]
+    affected_num: int
+    removed_num: int

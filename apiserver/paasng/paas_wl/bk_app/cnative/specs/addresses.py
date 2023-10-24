@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Set
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.constants import DomainGroupSource
 from paas_wl.bk_app.cnative.specs.crd.domain_group_mapping import (
     Domain,
@@ -30,13 +30,18 @@ from paas_wl.bk_app.cnative.specs.crd.domain_group_mapping import (
     ObjectMetadata,
 )
 from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
-from paas_wl.workloads.networking.ingress.certs.utils import DomainWithCert, pick_shared_cert, update_or_create_secret_by_cert
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.workloads.networking.ingress.certs import (
+    DomainWithCert,
+    pick_shared_cert,
+    update_or_create_secret_by_cert,
+)
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource
+from paas_wl.workloads.networking.ingress.entities import AutoGenDomain
 from paas_wl.workloads.networking.ingress.managers.domain import save_subdomains
 from paas_wl.workloads.networking.ingress.managers.subpath import save_subpaths
-from paas_wl.workloads.networking.ingress.models import AppDomain, AppSubpath, AutoGenDomain
+from paas_wl.workloads.networking.ingress.models import AppDomain, AppSubpath
 from paas_wl.workloads.networking.ingress.models import Domain as CustomDomain
-from paas_wl.bk_app.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

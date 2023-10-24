@@ -28,7 +28,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r'/bkapp_model/manifests/current/$', include_envs=False),
-        views.BkAppModelManifestsViewset.as_view({'get': 'retrieve'}),
+        views.BkAppModelManifestsViewset.as_view({'get': 'retrieve', 'put': 'replace'}),
         name='api.bkapp_model.current_manifests',
     ),
     # 进程配置
@@ -36,5 +36,16 @@ urlpatterns = [
         make_app_pattern(r'/bkapp_model/process_specs/$', include_envs=False),
         views.ModuleProcessSpecViewSet.as_view({"get": "retrieve", "post": "batch_upsert"}),
         name='api.bkapp_model.process_specs',
+    ),
+    # 钩子命令
+    re_path(
+        make_app_pattern(r'/bkapp_model/deploy_hooks/$', include_envs=False),
+        views.ModuleDeployHookViewSet.as_view({"post": "upsert"}),
+        name='api.bkapp_model.deploy_hooks',
+    ),
+    re_path(
+        make_app_pattern(r'/bkapp_model/deploy_hooks/(?P<hook_type>[^/]+)/$', include_envs=False),
+        views.ModuleDeployHookViewSet.as_view({"get": "retrieve"}),
+        name='api.bkapp_model.deploy_hooks.detail',
     ),
 ]

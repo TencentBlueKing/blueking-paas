@@ -439,22 +439,29 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         build_config = BuildConfig.objects.get_or_create_by_module(module)
 
         info = {
-            "image_repository": generate_image_repository(module),
             "build_method": build_config.build_method,
-            "tag_options": build_config.tag_options,
         }
         if build_config.build_method == RuntimeType.BUILDPACK:
             runtime_manager = ModuleRuntimeManager(module)
             slugbuilder = runtime_manager.get_slug_builder(raise_exception=False)
             buildpacks = runtime_manager.list_buildpacks()
             info.update(
+                image_repository=generate_image_repository(module),
+                tag_options=build_config.tag_options,
                 bp_stack_name=getattr(slugbuilder, "name", None),
                 buildpacks=buildpacks,
             )
-        else:
+        elif build_config.build_method == RuntimeType.DOCKERFILE:
             info.update(
+                image_repository=generate_image_repository(module),
+                tag_options=build_config.tag_options,
                 dockerfile_path=build_config.dockerfile_path,
                 docker_build_args=build_config.docker_build_args,
+            )
+        else:
+            info.update(
+                image_repository=build_config.image_repository,
+                image_credential_name=build_config.image_credential_name,
             )
         return Response(data=ModuleBuildConfigSLZ(info).data)
 
@@ -469,18 +476,14 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         build_config = BuildConfig.objects.get_or_create_by_module(module)
 
         build_method = data["build_method"]
-        if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]:
+        if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE, RuntimeType.CUSTOM_IMAGE]:
             raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
 
         try:
             update_build_config_with_method(
                 build_config,
                 build_method,
-                data.get('bp_stack_name'),
-                data.get('buildpacks'),
-                data.get('dockerfile_path'),
-                data.get('docker_build_args'),
-                data.get('tag_options'),
+                data=data,
             )
         except BPNotFound:
             raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
@@ -521,17 +524,24 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Deprecated: 旧镜像应用的「部署配置」API"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    schema = None
 
     @swagger_auto_schema(response_serializer=ModuleDeployConfigSLZ, deprecated=True)
     def retrieve(self, request, *args, **kwargs):
         """获取当前模块的部署配置信息"""
         module = self.get_module_via_path()
-        deploy_config = module.get_deploy_config()
 
         return Response(
             ModuleDeployConfigSLZ(
                 {
-                    "hooks": deploy_config.hooks,
+                    "hooks": [
+                        {
+                            "type": hook.type,
+                            "command": hook.proc_command,
+                            "enabled": hook.enabled,
+                        }
+                        for hook in module.deploy_hooks.all()
+                    ],
                     "procfile": {
                         proc.name: proc.get_proc_command() for proc in ModuleProcessSpec.objects.filter(module=module)
                     },
@@ -543,29 +553,23 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def upsert_hook(self, request, *args, **kwargs):
         """更新或创建当前模块的部署配置的钩子"""
         module = self.get_module_via_path()
-        deploy_config = module.get_deploy_config()
 
         slz = ModuleDeployHookSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        deploy_config.hooks.upsert(type_=data["type"], command=data["command"])
-        deploy_config.save(update_fields=["hooks", "updated"])
-
+        module.deploy_hooks.enable_hook(type_=data["type"], proc_command=data["command"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(responses={204: openapi_empty_response}, deprecated=True)
     def disable_hook(self, request, code, module_name, type_: str):
         """禁用当前模块的部署配置的钩子"""
         module = self.get_module_via_path()
-        deploy_config = module.get_deploy_config()
 
         try:
-            deploy_config.hooks.disable(DeployHookType(type_))
-            deploy_config.save(update_fields=["hooks", "updated"])
+            module.deploy_hooks.disable_hook(DeployHookType(type_))
         except ValueError:
             raise ValidationError(detail={"type": f'“{type_}” 不是合法选项。'}, code="invalid_choice")
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

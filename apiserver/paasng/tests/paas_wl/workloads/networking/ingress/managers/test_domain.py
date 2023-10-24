@@ -21,18 +21,23 @@ from unittest.mock import patch
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.workloads.networking.ingress.certs.utils import DomainWithCert
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.workloads.networking.ingress.certs import DomainWithCert
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource
-from paas_wl.workloads.networking.ingress.entities.ingress import ingress_kmodel
-from paas_wl.workloads.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError, ValidCertNotFound
+from paas_wl.workloads.networking.ingress.entities import AutoGenDomain
+from paas_wl.workloads.networking.ingress.exceptions import (
+    DefaultServiceNameRequired,
+    EmptyAppIngressError,
+    ValidCertNotFound,
+)
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 from paas_wl.workloads.networking.ingress.managers.domain import (
     CustomDomainIngressMgr,
     IngressDomainFactory,
     SubdomainAppIngressMgr,
     assign_custom_hosts,
 )
-from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert, AppDomainSharedCert, AutoGenDomain, Domain
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert, AppDomainSharedCert, Domain
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -21,13 +21,13 @@ from typing import List
 import cattr
 import pytest
 
+from paas_wl.bk_app.processes.models import ProcessSpecManager, ProcessTmpl
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource
-from paas_wl.workloads.networking.ingress.entities.ingress import ingress_kmodel
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 from paas_wl.workloads.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
 from paas_wl.workloads.networking.ingress.models import AppDomain
 from paas_wl.workloads.networking.ingress.utils import make_service_name
-from paas_wl.bk_app.processes.models import ProcessSpecManager, ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

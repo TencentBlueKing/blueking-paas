@@ -66,6 +66,9 @@ export default {
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
         'cloudAppEventQuery',
+        'cloudAppImageManage',
+        'cloudAppImageList',
+        'cloudAppBuildHistory',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -125,6 +128,12 @@ export default {
           'cloudAppAnalysis',
           // 事件查询
           'cloudAppEventQuery',
+          // 镜像管理
+          'cloudAppImageManage',
+          // 镜像列表
+          'cloudAppImageList',
+          // 构建历史
+          'cloudAppBuildHistory',
         ],
         developer: [
           // 概览
@@ -179,6 +188,12 @@ export default {
           'cloudAppAnalysis',
           // 事件查询
           'cloudAppEventQuery',
+          // 镜像管理
+          'cloudAppImageManage',
+          // 镜像列表
+          'cloudAppImageList',
+          // 构建历史
+          'cloudAppBuildHistory',
         ],
         operator: [
           // 权限管理
@@ -398,6 +413,9 @@ export default {
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
         'cloudAppEventQuery',
+        'cloudAppImageManage',
+        'cloudAppImageList',
+        'cloudAppBuildHistory',
       ];
 
       this.navTree.forEach((nav) => {

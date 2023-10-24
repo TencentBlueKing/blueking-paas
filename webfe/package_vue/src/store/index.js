@@ -46,6 +46,7 @@ import credential from './modules/credential';
 import overview from './modules/overview';
 import plugin from './modules/plugin';
 import pluginMembers from './modules/plugin-members';
+import imageManage from './modules/image-manage';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -418,6 +419,7 @@ export default new Vuex.Store({
     // 插件开发者中心
     plugin,
     pluginMembers,
+    imageManage,
   },
   state,
   getters,

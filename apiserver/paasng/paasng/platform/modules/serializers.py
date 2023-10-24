@@ -329,7 +329,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
                 k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if attrs.get(k, None) is None
             ]
         elif build_method == RuntimeType.CUSTOM_IMAGE:
-            missed_params = [k for k in ['image_repository', 'image_credential_name'] if attrs.get(k, None) is None]
+            missed_params = [k for k in ['image_repository'] if attrs.get(k, None) is None]
         if missed_params:
             raise ValidationError(
                 detail={param: _('This field is required.') for param in missed_params}, code="required"

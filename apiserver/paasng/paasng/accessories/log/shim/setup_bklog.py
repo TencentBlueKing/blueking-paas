@@ -166,7 +166,7 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     - 创建内置的日志采集项(JSON日志采集和标准输出日志采集)
     """
     module = env.module
-    if module.language == AppLanguage.PYTHON:
+    if AppLanguage(module.language) == AppLanguage.PYTHON:
         json_config = build_python_json_collector_config()
     else:
         json_config = build_normal_json_collector_config()

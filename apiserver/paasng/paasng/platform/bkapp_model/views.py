@@ -172,7 +172,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         mgr = ModuleProcessSpecManager(module)
         # 更新进程配置
-        mgr.sync_form_bkapp(processes)
+        mgr.sync_from_bkapp(processes)
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):

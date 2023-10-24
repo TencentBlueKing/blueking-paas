@@ -71,15 +71,14 @@ class TestGitClient:
             assert command.to_cmd() == ["git", "checkout", "master"]
 
     @pytest.mark.parametrize(
-        "bare, expected",
+        "expected",
         [
-            (False, ['git', 'clone', 'http://username:password@hostname', '.']),
-            (True, ['git', 'clone', '--bare', 'http://username:password@hostname', '.']),
+            ['git', 'clone', 'http://username:password@hostname', '.'],
         ],
     )
-    def test_clone(self, client, bare, expected):
+    def test_clone(self, client, expected):
         with patch.object(client, "run") as mock_run:
-            client.clone("http://username:password@hostname", Path("."), bare=bare)
+            client.clone("http://username:password@hostname", Path("."))
             command = mock_run.call_args[0][0]
 
             assert isinstance(command, GitCloneCommand)
@@ -119,6 +118,23 @@ class TestGitClient:
             command = mock_run.call_args[0][0]
             assert isinstance(command, GitCommand)
             assert command.to_cmd() == ["git", "show-ref"]
+
+    @pytest.mark.parametrize(
+        "cmd_result,expected",
+        [
+            (
+                "0123456789   HEAD\n0123456789 refs/heads/master",
+                [
+                    ('0123456789', 'HEAD'),
+                    ('0123456789', 'refs/heads/master'),
+                ],
+            ),
+        ],
+    )
+    def test_list_remote(self, client, cmd_result, expected):
+        with patch.object(client, "run") as mock_run:
+            mock_run.return_value = cmd_result
+            assert client.list_remote(Path("fake_dir")) == expected
 
     @pytest.mark.parametrize(
         "commits,expected",

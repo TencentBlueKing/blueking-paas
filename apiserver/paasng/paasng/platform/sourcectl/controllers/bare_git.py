@@ -24,7 +24,7 @@ from urllib.parse import quote, urlparse
 from blue_krill.data_types.url import MutableURL
 from django.core.exceptions import ObjectDoesNotExist
 
-from paasng.platform.sourcectl.exceptions import DoesNotExistsOnServer
+from paasng.platform.sourcectl.exceptions import BasicAuthError, DoesNotExistsOnServer
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from paasng.platform.sourcectl.models import RepositoryInstance
     from paasng.platform.modules.models import Module
 
-from paasng.platform.sourcectl.git.client import GitClient, Ref
+from paasng.platform.sourcectl.git.client import GitClient, GitCommandExecutionError, Ref
 
 logger = logging.getLogger(__name__)
 
@@ -73,16 +73,18 @@ class BareGitRepoController:
         """返回当前 RepoController 可以控制的所有仓库列表"""
         raise NotImplementedError
 
-    def touch(self):
+    def touch(self) -> bool:
         """检查仓库权限"""
         with generate_temp_dir() as temp_dir:
             try:
-                # 仅拉取 bare repo，减少 clone 开销
-                self.client.clone(self.repo_url, temp_dir, bare=True, depth=1)
-            except Exception:
-                logger.exception(
-                    "Failed to clone the given git repo, may be a credential error or a network exception"
-                )
+                # 使用 ls-remote 来提速
+                self.client.initialize_empty_remote(self.repo_url, temp_dir)
+                self.client.list_remote(temp_dir)
+            except GitCommandExecutionError as e:
+                if 'authentication failed' in str(e).lower():
+                    raise BasicAuthError('wrong username or password')
+
+                logger.exception("Failed to access the remote git repo, reason unknown.")
                 raise
 
         return True
@@ -95,7 +97,12 @@ class BareGitRepoController:
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """尝试直接从远端获取可选的分支信息"""
         with generate_temp_dir() as temp_dir:
-            self.client.clone(self.repo_url, temp_dir)
+            # Use "blob-less" cloning for faster speed.
+            #
+            # NOTE: We should consider getting branches and tags using the "ls-remote"
+            # command to avoid any form of cloning. But there is still a problem with
+            # "ls-remote": We can't get commit time and message without cloning the repo.
+            self.client.clone_no_blob(self.repo_url, temp_dir)
             return sorted(
                 self.transfer_refs_to_versions(self.client.list_refs(temp_dir)),
                 key=operator.attrgetter("last_update"),

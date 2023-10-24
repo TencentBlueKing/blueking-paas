@@ -42,6 +42,9 @@ class TestGetExposedUrlType:
     def test_non_existent(self):
         assert get_exposed_url_type('foo', 'bar-module') is None
 
+    def test_non_existent_module(self, bk_app):
+        assert get_exposed_url_type(bk_app.code, 'bar-module') is None
+
     def test_normal(self, bk_module):
         bk_module.exposed_url_type = ExposedURLType.SUBPATH.value
         bk_module.save()

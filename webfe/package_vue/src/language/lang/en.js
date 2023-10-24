@@ -798,7 +798,7 @@ export default {
   设置该模块为主模块: 'Make this module the default module',
   代码源: 'Source code',
   修改模块绑定的源码仓库: 'Modify the source code repository bound by the module',
-  '请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录': 'Please enter the subdirectory where the APP is located, and ensure that the Procfile file is in this directory, otherwise the root directory is defaulted',
+  '请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录': 'Please enter the subdirectory where the APP is located, and ensure that the app_desc.yaml file is in this directory, otherwise the root directory is defaulted',
   编辑源码仓库: 'Edit source code warehouse',
   切换源码仓库: 'Switch source repository',
   镜像管理: 'Image management',

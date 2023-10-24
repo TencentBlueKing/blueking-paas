@@ -309,14 +309,13 @@ export default {
 
     // 查看yaml
     async handleYamlView() {
-      this.dialogCloudAppData = {};
       try {
         const res = await this.$store.dispatch('deploy/getAppYamlManiFests', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        console.log('res', res);
         this.deployDialogConfig.visible = true;
+        this.dialogCloudAppData = res;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

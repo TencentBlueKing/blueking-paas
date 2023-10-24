@@ -40,8 +40,8 @@ export default {
     },
     height: {
       type: Number,
-      default: 600
-    }
+      default: 600,
+    },
   },
   data() {
     return {
@@ -91,8 +91,8 @@ export default {
     },
     detail: {
       handler(val) {
-        if (val.spec) {
-          const { processes } = val.spec;
+        if (val) {
+          const { processes } = val;
           const webData = processes.find(e => e.name === 'web');
           if (!webData) {
             this.handleEditorErr('至少需要一个web进程');

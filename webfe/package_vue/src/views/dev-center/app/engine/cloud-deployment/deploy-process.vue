@@ -243,10 +243,10 @@
             <bk-form-item
               :label="$t('容器端口')"
               :label-width="120"
-              :property="'targetPort'"
+              :property="'port'"
             >
               <bk-input
-                v-model="formData.targetPort"
+                v-model="formData.port"
                 style="width: 500px"
                 :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
               />
@@ -307,7 +307,7 @@
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
-                        v-model="extraConfigData.stag.resQuotaPlan.plan"
+                        v-model="formData.env_overlay.stag.plan_name"
                         :disabled="false"
                         style="width: 150px"
                         searchable
@@ -705,7 +705,7 @@
             </span>
           </bk-form-item>
           <bk-form-item :label="`${$t('容器端口')}：`">
-            <span class="form-text">{{ formData.targetPort || '--' }}</span>
+            <span class="form-text">{{ formData.port || '--' }}</span>
           </bk-form-item>
           <bk-form-item :label-width="50">
             <bk-button
@@ -739,7 +739,7 @@
                       :label="`${$t('资源配额方案')}：`"
                       ext-cls="form-first-cls"
                     >
-                      <span class="form-text">{{ extraConfigData[item.value].resQuotaPlan.plan || '--' }}</span>
+                      <span class="form-text">{{ formData.env_overlay[item.value].plan_name || '--' }}</span>
                       <span slot="tip">
                         <i
                           v-if="quotaPlansFlag"
@@ -755,7 +755,7 @@
 
                     <bk-form-item :label="`${$t('扩缩容方式')}：`">
                       <span class="form-text">
-                        {{ extraConfigData[item.value].isAutoscaling ? $t('自动调节') : $t('手动调节') }}
+                        {{formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
                       </span>
                     </bk-form-item>
 
@@ -875,7 +875,7 @@ export default {
         args: [],
         memory: '256Mi',
         cpu: '500m',
-        targetPort: 5000,
+        port: 5000,
       },
       bkappAnnotations: {},
       command: [],
@@ -1146,83 +1146,83 @@ export default {
   },
   watch: {
     cloudAppData: {
-      handler(val) {
-        if (val.spec) {
-          this.localCloudAppData = _.cloneDeep(val);
-          this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
-          this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
-          this.buildData = this.localCloudAppData.spec.build || {};
-          this.processData = val.spec.processes;
-          this.formData = this.processData[this.btnIndex];
-          this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
-          if (this.isCreate) {
-            // 使用示例镜像，启动命令默认值
-            if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
-              this.formData.command = ['bash', '/app/start_web.sh'];
-            } else {
-              this.formData.command = [];
-              this.formData.targetPort = '';
-            }
-          }
-        }
-        this.panels = _.cloneDeep(this.processData);
-      },
-      immediate: true,
+      // handler(val) {
+      //   if (val.spec) {
+      //     this.localCloudAppData = _.cloneDeep(val);
+      //     this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
+      //     this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
+      //     this.buildData = this.localCloudAppData.spec.build || {};
+      //     this.processData = val.spec.processes;
+      //     this.formData = this.processData[this.btnIndex];
+      //     this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+      //     if (this.isCreate) {
+      //       // 使用示例镜像，启动命令默认值
+      //       if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
+      //         this.formData.command = ['bash', '/app/start_web.sh'];
+      //       } else {
+      //         this.formData.command = [];
+      //         this.formData.targetPort = '';
+      //       }
+      //     }
+      //   }
+      //   this.panels = _.cloneDeep(this.processData);
+      // },
+      // immediate: true,
     },
     formData: {
-      handler(val) {
-        this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
-        if (this.localCloudAppData.spec) {
-          val.name = this.processNameActive;
-          if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
-            val.targetPort = Number(val.targetPort);
-          }
+      // handler(val) {
+      //   this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
+      //   if (this.localCloudAppData.spec) {
+      //     val.name = this.processNameActive;
+      //     if (val.port && /^\d+$/.test(val.port)) { // 有值且为数字字符串
+      //       val.port = Number(val.port);
+      //     }
 
-          // 更多配置信息
-          // 资源配额方案
-          this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { plan: 'default' };
-          this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { plan: 'default' };
+      //     // 更多配置信息
+      //     // 资源配额方案
+      //     this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { plan: 'default' };
+      //     this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { plan: 'default' };
 
-          // 扩缩容-自动
-          const autoscalingStag = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'stag');
-          const autoscalingProd = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'prod');
-          this.extraConfigData.stag.isAutoscaling = !!autoscalingStag;
-          this.extraConfigData.prod.isAutoscaling = !!autoscalingProd;
+      //     // 扩缩容-自动
+      //     const autoscalingStag = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'stag');
+      //     const autoscalingProd = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'prod');
+      //     this.extraConfigData.stag.isAutoscaling = !!autoscalingStag;
+      //     this.extraConfigData.prod.isAutoscaling = !!autoscalingProd;
 
-          // 扩缩容-手动
-          const replicasStag = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { count: 1 };
-          const replicasProd = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { count: 1 };
+      //     // 扩缩容-手动
+      //     const replicasStag = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { count: 1 };
+      //     const replicasProd = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { count: 1 };
 
-          // 自动
-          if (!!autoscalingStag) {
-            this.extraConfigData.stag.formAutoscalingData.maxReplicas = autoscalingStag.maxReplicas;
-            this.extraConfigData.stag.formAutoscalingData.minReplicas = autoscalingStag.minReplicas;
-          } else { // 手动
-            this.extraConfigData.stag.formReplicas = replicasStag.count;
-          }
+      //     // 自动
+      //     if (!!autoscalingStag) {
+      //       this.extraConfigData.stag.formAutoscalingData.maxReplicas = autoscalingStag.maxReplicas;
+      //       this.extraConfigData.stag.formAutoscalingData.minReplicas = autoscalingStag.minReplicas;
+      //     } else { // 手动
+      //       this.extraConfigData.stag.formReplicas = replicasStag.count;
+      //     }
 
-          if (!!autoscalingProd) {
-            this.extraConfigData.prod.formAutoscalingData.maxReplicas = autoscalingProd.maxReplicas;
-            this.extraConfigData.prod.formAutoscalingData.minReplicas = autoscalingProd.minReplicas;
-          } else {
-            this.extraConfigData.prod.formReplicas = replicasProd.count;
-          }
+      //     if (!!autoscalingProd) {
+      //       this.extraConfigData.prod.formAutoscalingData.maxReplicas = autoscalingProd.maxReplicas;
+      //       this.extraConfigData.prod.formAutoscalingData.minReplicas = autoscalingProd.minReplicas;
+      //     } else {
+      //       this.extraConfigData.prod.formReplicas = replicasProd.count;
+      //     }
 
-          this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val); // 赋值数据给选中的进程
+      //     this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val); // 赋值数据给选中的进程
 
-          if (val?.image) {
-            this.$refs.formDeploy?.clearError();
-          }
-          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        }
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 500);
-      },
-      immediate: true,
-      deep: true,
+      //     if (val?.image) {
+      //       this.$refs.formDeploy?.clearError();
+      //     }
+      //     this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      //   }
+      //   setTimeout(() => {
+      //     this.isLoading = false;
+      //   }, 500);
+      // },
+      // immediate: true,
+      // deep: true,
     },
-    'formData.targetPort'(value) {
+    'formData.port'(value) {
       if (value === null || value === '') {
         this.isTargetPortErrTips = false;
         return false;
@@ -1320,10 +1320,12 @@ export default {
       this.getAutoScalFlag('stag');
       this.getAutoScalFlag('prod');
     }
+    // this.init();
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
   },
   methods: {
+
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');
     },
@@ -1364,12 +1366,12 @@ export default {
       if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
         this.formData.command = [];
         this.formData.args = [];
-        this.formData.targetPort = 80;
+        this.formData.port = 80;
         return;
       }
       this.formData.command = ['bash', '/app/start_web.sh'];
       this.formData.args = [];
-      this.formData.targetPort = 5000;
+      this.formData.port = 5000;
     },
 
     // 获取凭证列表
@@ -1399,6 +1401,7 @@ export default {
       this.processNameActive = v;
       this.btnIndex = i;
       // tag-input 输入切换问题
+      // eslint-disable-next-line no-plusplus
       this.tagInputIndex++;
     },
 
@@ -1486,7 +1489,7 @@ export default {
             args: [],
             memory: '256Mi',
             cpu: '500m',
-            targetPort: null,
+            port: null,
           };
           if (this.isV1alpha2) {
             delete this.formData.image; // v2不需要image

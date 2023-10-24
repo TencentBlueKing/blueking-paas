@@ -5,7 +5,7 @@
       <div class="header-wrapper mb20">
         <span :class="['build-title', { 'edit': isCodeSourceEdit }]">{{$t('源码信息')}}</span>
         <div
-          class="edit-container" 
+          class="edit-container"
           v-if="!isCodeSourceEdit"
           @click="handleEdit"
         >
@@ -45,7 +45,8 @@
           <label class="form-label">
             {{ $t('代码源') }}
           </label>
-          <div v-for="(item, index) in sourceControlTypes" :key="index"
+          <div
+            v-for="(item, index) in sourceControlTypes" :key="index"
             :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }, { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
             @click="changeSourceControl(item.value)">
             <img :src="'/static/images/' + item.imgSrc + '.png'">
@@ -80,9 +81,10 @@
               </label>
               <div class="form-group-flex">
                 <p>
-                  <bk-input v-model="sourceControlChangeForm.sourceDir" class="source-dir"
+                  <bk-input
+                    v-model="sourceControlChangeForm.sourceDir" class="source-dir"
                     :class="isSourceDirInvalid ? 'error' : ''"
-                    :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')" />
+                    :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')" />
                   <ul v-if="isSourceDirInvalid" class="parsley-errors-list">
                     <li class="parsley-pattern">
                       {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
@@ -130,490 +132,484 @@
   </div>
 </template>
 
-<script>
-  import gitExtend from '@/components/ui/git-extend';
-  import repoInfo from '@/components/ui/repo-info.vue';
-  import codeInspection from './code-inspection.vue';
-  import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
-  import appBaseMixin from '@/mixins/app-base-mixin';
-  import dayjs from 'dayjs'
-  import _ from 'lodash';
+<script>import gitExtend from '@/components/ui/git-extend';
+import repoInfo from '@/components/ui/repo-info.vue';
+import codeInspection from './code-inspection.vue';
+import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import dayjs from 'dayjs';
+import _ from 'lodash';
 
-  export default {
-    components: {
-      codeInspection,
-      gitExtend,
-      repoInfo
+export default {
+  components: {
+    codeInspection,
+    gitExtend,
+    repoInfo,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isCodeSourceEdit: false,
+      sourceCodeData: {},
+      defaultSettings: {
+        isShow: false,
+        title: this.$t('代码检查'),
+      },
+      // 代码检查
+      codeDetails: {},
+      switchLoading: false,
+      // 编辑态数据
+      sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
+      // 当前代码源
+      sourceControlType: this.GLOBAL.DEFAULT_SOURCE_CONTROL,
+      sourceControlTypes: DEFAULT_APP_SOURCE_CONTROL_TYPES,
+      sourceDirVal: '',
+      sourceDirError: false,
+      sourceDirTip: {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
+        placements: ['right'],
+      },
+      // 配置
+      sourceControlChangeForm: {
+        sourceRepoUrl: '',
+        // 部署目录
+        sourceDir: '',
+      },
+      gitExtendConfig: {
+        // 蓝鲸 gitlab
+        bk_gitlab: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('bk_gitlab'),
+          repoList: [],
+          selectedRepoUrl: '',
+          sourceDir: '',
+          authDocs: '',
+        },
+        // 工蜂
+        tc_git: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('tc_git'),
+          repoList: [],
+          selectedRepoUrl: '',
+          sourceDir: '',
+          authDocs: '',
+        },
+        // github
+        github: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('github'),
+          repoList: [],
+          selectedRepoUrl: '',
+          sourceDir: '',
+          authDocs: '',
+        },
+        // gitee
+        gitee: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('gitee'),
+          repoList: [],
+          selectedRepoUrl: '',
+          sourceDir: '',
+          authDocs: '',
+        },
+        // SVN 代码库
+        bare_svn: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          selectedRepoUrl: '',
+          authInfo: {
+            account: '',
+            password: '',
+          },
+          sourceDir: '',
+        },
+        // Git 代码库
+        bare_git: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          selectedRepoUrl: '',
+          authInfo: {
+            account: '',
+            password: '',
+          },
+          sourceDir: '',
+        },
+      },
+    };
+  },
+
+  computed: {
+    curSourceControl() {
+      const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
+      return match;
     },
-    mixins: [appBaseMixin],
-    data() {
-      return {
-        isCodeSourceEdit: false,
-        sourceCodeData: {},
-        defaultSettings: {
-          isShow: false,
-          title: this.$t('代码检查')
-        },
-        // 代码检查
-        codeDetails: {},
-        switchLoading: false,
-        // 编辑态数据
-        sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
-        // 当前代码源
-        sourceControlType: this.GLOBAL.DEFAULT_SOURCE_CONTROL,
-        sourceControlTypes: DEFAULT_APP_SOURCE_CONTROL_TYPES,
-        sourceDirVal: '',
-        sourceDirError: false,
-        sourceDirTip: {
-          theme: 'light',
-          allowHtml: true,
-          content: this.$t('提示信息'),
-          html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
-          placements: ['right']
-        },
-        // 配置
-        sourceControlChangeForm: {
-          sourceRepoUrl: '',
-          // 部署目录
-          sourceDir: ''
-        },
-        gitExtendConfig: {
-          // 蓝鲸 gitlab
-          bk_gitlab: {
-            isAuth: true,
-            isLoading: false,
-            alertText: '',
-            authAddress: undefined,
-            fetchMethod: this.generateFetchRepoListMethod('bk_gitlab'),
-            repoList: [],
-            selectedRepoUrl: '',
-            sourceDir: '',
-            authDocs: ''
-          },
-          // 工蜂
-          tc_git: {
-            isAuth: true,
-            isLoading: false,
-            alertText: '',
-            authAddress: undefined,
-            fetchMethod: this.generateFetchRepoListMethod('tc_git'),
-            repoList: [],
-            selectedRepoUrl: '',
-            sourceDir: '',
-            authDocs: ''
-          },
-          // github
-          github: {
-            isAuth: true,
-            isLoading: false,
-            alertText: '',
-            authAddress: undefined,
-            fetchMethod: this.generateFetchRepoListMethod('github'),
-            repoList: [],
-            selectedRepoUrl: '',
-            sourceDir: '',
-            authDocs: ''
-          },
-          // gitee
-          gitee: {
-            isAuth: true,
-            isLoading: false,
-            alertText: '',
-            authAddress: undefined,
-            fetchMethod: this.generateFetchRepoListMethod('gitee'),
-            repoList: [],
-            selectedRepoUrl: '',
-            sourceDir: '',
-            authDocs: ''
-          },
-          // SVN 代码库
-          bare_svn: {
-            isAuth: true,
-            isLoading: false,
-            alertText: '',
-            authAddress: undefined,
-            selectedRepoUrl: '',
-            authInfo: {
-              account: '',
-              password: ''
-            },
-            sourceDir: ''
-          },
-          // Git 代码库
-          bare_git: {
-            isAuth: true,
-            isLoading: false,
-            alertText: '',
-            authAddress: undefined,
-            selectedRepoUrl: '',
-            authInfo: {
-              account: '',
-              password: ''
-            },
-            sourceDir: ''
+    // 部署目录校验
+    isSourceDirInvalid() {
+      if (this.sourceControlChangeForm.sourceDir === '') {
+        return false;
+      }
+      return !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(this.sourceControlChangeForm.sourceDir);
+    },
+    sourceControlDisabled() {
+      return this.curAppModule.repo && this.curAppModule.repo.type !== 'bk_svn';
+    },
+    // 代码检查无数据为未部署
+    isDeploy() {
+      return Object.keys(this.codeDetails).length;
+    },
+  },
+
+  created() {
+    this.init();
+  },
+
+  methods: {
+    async init() {
+      // 获取模块基本信息
+      this.fetchModuleInfo();
+      // 获取代码源列表
+      await this.fetchAccountAllowSourceControlType();
+
+      // 获取代码检查详情
+      this.getCodeInspection();
+
+      const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
+      // 初始化 repo List
+      for (const key in this.gitExtendConfig) {
+        const config = this.gitExtendConfig[key];
+        sourceControlTypes.includes(key) && config.fetchMethod && config.fetchMethod();
+      }
+    },
+
+    // 获取代码源列表
+    async fetchAccountAllowSourceControlType() {
+      try {
+        const sourceControlTypes = await this.$store.dispatch('fetchAccountAllowSourceControlType', {});
+        // 代码源列表
+        this.sourceControlTypes = sourceControlTypes;
+        // bare_svn 单独处理
+        this.sourceControlTypes = this.sourceControlTypes.map((e) => {
+          e.imgSrc = e.value;
+          if (e.value === 'bare_svn') {
+            e.imgSrc = 'bk_svn';
           }
+          return e;
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 代码检查
+    async getCodeInspection() {
+      try {
+        const details = await this.$store.dispatch('deploy/getCodeInspection', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        if (Object.keys(details).length) {
+          details.lastAnalysisTime = dayjs(details.lastAnalysisTime).format('YYYY-MM-DD HH:mm:ss');
+          for (const key in details) {
+            if (key.endsWith('Score') && !Number.isInteger(details[key])) {
+              // 保留两位小数
+              details[key] = details[key]?.toFixed(2);
+            }
+          }
+          this.codeDetails = details;
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 获取对应的RepoList
+    generateFetchRepoListMethod(sourceControlType) {
+      // 根据不同的 sourceControlType 生成对应的 fetchRepoList 方法
+      return async () => {
+        const config = this.gitExtendConfig[sourceControlType];
+        try {
+          config.isLoading = true;
+          const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
+          config.repoList = resp.results.map((repo, index) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.isAuth = true;
+        } catch (e) {
+          const resp = e.response;
+          config.isAuth = false;
+          if (resp.status === 403 && resp.data.result) {
+            config.authAddress = resp.data.address;
+            config.authDocs = resp.data.auth_docs;
+          }
+        } finally {
+          config.isLoading = false;
         }
       };
     },
 
-    computed: {
-      curSourceControl() {
-        const match = this.sourceControlTypes.find(item => {
-          return item.value === this.sourceControlType;
-        });
-        return match;
-      },
-      // 部署目录校验
-      isSourceDirInvalid() {
-        if (this.sourceControlChangeForm.sourceDir === '') {
-          return false;
+    // 切换代码源
+    changeSourceControl(sourceControlType) {
+      // bk svn禁止切换
+      if (sourceControlType === 'bk_svn' && this.sourceControlDisabled) {
+        return;
+      }
+      // 高亮切换
+      this.sourceControlType = sourceControlType;
+      // 当前代码源配置
+      const config = this.gitExtendConfig[sourceControlType];
+
+      if (!this.curAppModule.repo) {
+        this.sourceControlChangeForm.sourceRepoUrl = '';
+        this.sourceControlChangeForm.sourceDir = '';
+      } else {
+        if (sourceControlType === this.curAppModule.repo.type) {
+          if (config) {
+            // 设置 selectedRepoUrl 仓库地址
+            config.selectedRepoUrl = this.curAppModule.repo.trunk_url;
+          }
+          this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
+          this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
         } else {
-          return !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(this.sourceControlChangeForm.sourceDir);
+          this.sourceControlChangeForm.sourceRepoUrl = this.gitExtendConfig[sourceControlType].sourceDir;
+          this.sourceControlChangeForm.sourceDir = '';
         }
-      },
-      sourceControlDisabled() {
-        return this.curAppModule.repo && this.curAppModule.repo.type !== 'bk_svn';
-      },
-      // 代码检查无数据为未部署
-      isDeploy() {
-        return Object.keys(this.codeDetails).length;
       }
     },
 
-    created() {
-      this.init();
+    // 取消重置
+    resetSourceType() {
+      // repo 为空重置当前状态
+      if (!this.curAppModule.repo) {
+        this.sourceControlType = this.GLOBAL.DEFAULT_SOURCE_CONTROL;
+        this.gitExtendConfig[this.sourceControlType].selectedRepoUrl = '';
+        this.sourceControlChangeForm.sourceRepoUrl = '';
+        this.sourceControlChangeForm.sourceDir = '';
+        return;
+      }
+      if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+        this.sourceControlType = this.curAppModule.repo.type;
+        this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
+        this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
+
+        if (this.curAppModule.repo.type !== 'bk_svn') {
+          const match = this.gitExtendConfig[this.sourceControlType];
+          match.selectedRepoUrl = this.curAppModule.repo.trunk_url || '';
+          match.sourceDir = this.curAppModule.repo.source_dir || '';
+          if (match.authInfo) {
+            match.authInfo.account = this.curAppModule.repo_auth_info.username;
+            match.authInfo.password = '';
+          }
+        }
+      }
     },
 
-    methods: {
-      async init() {
-        // 获取模块基本信息
-        this.fetchModuleInfo();
-        // 获取代码源列表
-        await this.fetchAccountAllowSourceControlType();
+    handleRepoInfoChange(data) {
+      const match = this.gitExtendConfig[this.sourceControlType];
 
-        // 获取代码检查详情
-        this.getCodeInspection();
+      this.sourceControlChangeForm.sourceRepoUrl = data.url;
+      this.sourceControlChangeForm.sourceDir = data.sourceDir;
 
-        const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
-        // 初始化 repo List
-        for (const key in this.gitExtendConfig) {
-          const config = this.gitExtendConfig[key];
-          sourceControlTypes.includes(key) && config.fetchMethod && config.fetchMethod();
-        }
-      },
+      match.selectedRepoUrl = data.url;
+      match.authInfo = {
+        account: data.account,
+        password: data.password,
+      };
+      match.sourceDir = data.sourceDir;
+    },
 
-      // 获取代码源列表
-      async fetchAccountAllowSourceControlType() {
-        try {
-          const sourceControlTypes = await this.$store.dispatch('fetchAccountAllowSourceControlType', {})
-          // 代码源列表
-          this.sourceControlTypes = sourceControlTypes;
-          // bare_svn 单独处理
-          this.sourceControlTypes = this.sourceControlTypes.map(e => {
-            e.imgSrc = e.value;
-            if (e.value === 'bare_svn') {
-              e.imgSrc = 'bk_svn';
-            }
-            return e;
-          });
-        } catch (e) {
-          this.$paasMessage({
-            theme: 'error',
-            message: e.message || e.detail || this.$t('接口异常'),
-          });
-        }
-      },
-
-      // 代码检查
-      async getCodeInspection() {
-        try {
-          const details = await this.$store.dispatch('deploy/getCodeInspection', {
-            appCode: this.appCode,
-            moduleId: this.curModuleId,
-          });
-          if (Object.keys(details).length) {
-            details.lastAnalysisTime = dayjs(details.lastAnalysisTime).format('YYYY-MM-DD HH:mm:ss');
-            for (const key in details) {
-              if (key.endsWith('Score') && !Number.isInteger(details[key])) {
-                // 保留两位小数
-                details[key] = details[key]?.toFixed(2);
-              }
-            }
-            this.codeDetails = details;
-          }
-        } catch (e) {
-          this.$paasMessage({
-            theme: 'error',
-            message: e.message || e.detail || this.$t('接口异常'),
-          });
-        }
-      },
-
-      // 获取对应的RepoList
-      generateFetchRepoListMethod(sourceControlType) {
-        // 根据不同的 sourceControlType 生成对应的 fetchRepoList 方法
-        return async () => {
-          const config = this.gitExtendConfig[sourceControlType];
-          try {
-            config.isLoading = true;
-            const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-            config.repoList = resp.results.map((repo, index) => {
-              return { name: repo.fullname, id: repo.http_url_to_repo };
+    sureSwitch() {
+      const config = this.gitExtendConfig[this.sourceControlType];
+      let sourceRepoUrl = config.selectedRepoUrl;
+      switch (this.sourceControlType) {
+        case 'bk_gitlab':
+        case 'github':
+        case 'gitee':
+        case 'tc_git':
+          if (!sourceRepoUrl) {
+            this.$paasMessage({
+              theme: 'error',
+              message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号'),
             });
-            config.isAuth = true;
-          } catch (e) {
-            const resp = e.response;
-            config.isAuth = false;
-            if (resp.status === 403 && resp.data.result) {
-              config.authAddress = resp.data.address;
-              config.authDocs = resp.data.auth_docs;
-            }
-          } finally {
-            config.isLoading = false;
+            return;
           }
+          break;
+        case 'bare_svn':
+        case 'bare_git':
+          const repoData = this.$refs.repoInfo.getData();
+          if (!repoData.url) {
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('请输入源代码地址'),
+            });
+            return;
+          }
+          if (!repoData.account) {
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('请输入账号'),
+            });
+            return;
+          }
+          if (!repoData.password) {
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('请输入密码'),
+            });
+            return;
+          }
+
+          break;
+        case 'bk_svn':
+        default:
+          sourceRepoUrl = undefined;
+          break;
+      }
+      // 发送请求
+      this.sureSwitchRepo();
+    },
+
+    // 切换代码源仓库
+    async sureSwitchRepo() {
+      if (this.switchLoading) {
+        return false;
+      }
+
+      const config = this.gitExtendConfig[this.sourceControlType];
+
+      try {
+        this.switchLoading = true;
+        const params = {
+          appCode: this.appCode,
+          modelName: this.curModuleId,
+          data: {
+            source_control_type: this.sourceControlType,
+            source_repo_url: this.sourceControlChangeForm.sourceRepoUrl || config.selectedRepoUrl,
+            source_dir: this.sourceControlChangeForm.sourceDir,
+          },
         };
-      },
 
-      // 切换代码源
-      changeSourceControl(sourceControlType) {
-        // bk svn禁止切换
-        if (sourceControlType === 'bk_svn' && this.sourceControlDisabled) {
-          return;
-        }
-        // 高亮切换
-        this.sourceControlType = sourceControlType;
-        // 当前代码源配置
-        const config = this.gitExtendConfig[sourceControlType];
-
-        if (!this.curAppModule.repo) {
-          this.sourceControlChangeForm.sourceRepoUrl = '';
-          this.sourceControlChangeForm.sourceDir = '';
-        } else {
-          if (sourceControlType === this.curAppModule.repo.type) {
-            if (config) {
-              // 设置 selectedRepoUrl 仓库地址
-              config.selectedRepoUrl = this.curAppModule.repo.trunk_url;
-            }
-            this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
-            this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
-          } else {
-            this.sourceControlChangeForm.sourceRepoUrl = this.gitExtendConfig[sourceControlType].sourceDir;
-            this.sourceControlChangeForm.sourceDir = '';
-          }
-        }
-      },
-
-      // 取消重置
-      resetSourceType() {
-        // repo 为空重置当前状态
-        if (!this.curAppModule.repo) {
-          this.sourceControlType = this.GLOBAL.DEFAULT_SOURCE_CONTROL;
-          this.gitExtendConfig[this.sourceControlType].selectedRepoUrl = '';
-          this.sourceControlChangeForm.sourceRepoUrl = '';
-          this.sourceControlChangeForm.sourceDir = '';
-          return;
-        }
-        if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
-          this.sourceControlType = this.curAppModule.repo.type;
-          this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
-          this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
-
-          if (this.curAppModule.repo.type !== 'bk_svn') {
-            const match = this.gitExtendConfig[this.sourceControlType];
-            match.selectedRepoUrl = this.curAppModule.repo.trunk_url || '';
-            match.sourceDir = this.curAppModule.repo.source_dir || '';
-            if (match.authInfo) {
-              match.authInfo.account = this.curAppModule.repo_auth_info.username;
-              match.authInfo.password = '';
-            }
-          }
-        }
-      },
-
-      handleRepoInfoChange(data) {
-        const match = this.gitExtendConfig[this.sourceControlType];
-
-        this.sourceControlChangeForm.sourceRepoUrl = data.url;
-        this.sourceControlChangeForm.sourceDir = data.sourceDir;
-
-        match.selectedRepoUrl = data.url;
-        match.authInfo = {
-          account: data.account,
-          password: data.password
-        };
-        match.sourceDir = data.sourceDir;
-      },
-
-      sureSwitch() {
-        const config = this.gitExtendConfig[this.sourceControlType];
-        let sourceRepoUrl = config.selectedRepoUrl;
-        switch (this.sourceControlType) {
-          case 'bk_gitlab':
-          case 'github':
-          case 'gitee':
-          case 'tc_git':
-            if (!sourceRepoUrl) {
-              this.$paasMessage({
-                theme: 'error',
-                message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号')
-              });
-              return;
-            }
-            break;
-          case 'bare_svn':
-          case 'bare_git':
-            const repoData = this.$refs.repoInfo.getData();
-            if (!repoData.url) {
-              this.$paasMessage({
-                theme: 'error',
-                message: this.$t('请输入源代码地址')
-              });
-              return;
-            }
-            if (!repoData.account) {
-              this.$paasMessage({
-                theme: 'error',
-                message: this.$t('请输入账号')
-              });
-              return;
-            }
-            if (!repoData.password) {
-              this.$paasMessage({
-                theme: 'error',
-                message: this.$t('请输入密码')
-              });
-              return;
-            }
-
-            break;
-          case 'bk_svn':
-          default:
-            sourceRepoUrl = undefined;
-            break;
-        }
-        // 发送请求
-        this.sureSwitchRepo();
-      },
-
-      // 切换代码源仓库
-      async sureSwitchRepo() {
-        if (this.switchLoading) {
-          return false;
-        }
-
-        const config = this.gitExtendConfig[this.sourceControlType];
-
-        try {
-          this.switchLoading = true;
-          const params = {
-            appCode: this.appCode,
-            modelName: this.curModuleId,
-            data: {
-              source_control_type: this.sourceControlType,
-              source_repo_url: this.sourceControlChangeForm.sourceRepoUrl || config.selectedRepoUrl,
-              source_dir: this.sourceControlChangeForm.sourceDir
-            }
+        if (config && config.authInfo) {
+          params.data.source_repo_auth_info = {
+            username: config.authInfo.account,
+            password: config.authInfo.password,
           };
+        }
 
-          if (config && config.authInfo) {
-            params.data.source_repo_auth_info = {
-              username: config.authInfo.account,
-              password: config.authInfo.password
-            };
-          }
+        if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
+          params.data.source_control_type = 'tc_docker';
+          params.data.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
+          params.data.source_repo_auth_info = {
+            username: '',
+            password: '',
+          };
+        }
 
-          if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
-            params.data.source_control_type = 'tc_docker';
-            params.data.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
-            params.data.source_repo_auth_info = {
-              username: '',
-              password: ''
-            };
-          }
-
-          const res = await this.$store.dispatch('module/switchRepo', params);
-          if (res.repo_type === 'tc_docker') {
-            this.$paasMessage({
-              theme: 'success',
-              message: res.message
+        const res = await this.$store.dispatch('module/switchRepo', params);
+        if (res.repo_type === 'tc_docker') {
+          this.$paasMessage({
+            theme: 'success',
+            message: res.message,
+          });
+        } else {
+          if (this.sourceControlType === 'bk_svn') {
+            ['bare_git', 'tc_git'].forEach((item) => {
+              this.gitExtendConfig[item].selectedRepoUrl = '';
             });
           } else {
-            if (this.sourceControlType === 'bk_svn') {
-              ['bare_git', 'tc_git'].forEach(item => {
-                this.gitExtendConfig[item].selectedRepoUrl = '';
-              });
+            if (this.sourceControlType === 'bk_gitlab') {
+              this.gitExtendConfig.tc_git.selectedRepoUrl = '';
             } else {
-              if (this.sourceControlType === 'bk_gitlab') {
-                this.gitExtendConfig['tc_git'].selectedRepoUrl = '';
-              } else {
-                this.gitExtendConfig['bk_gitlab'].selectedRepoUrl = '';
-              }
-            }
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('切换源码仓库成功')
-            });
-          }
-          await this.fetchModuleInfo();
-          this.isCodeSourceEdit = false;
-        } catch (e) {
-          this.$paasMessage({
-            theme: 'error',
-            message: e.message || e.detail || this.$t('接口异常'),
-          });
-        } finally {
-          this.switchLoading = false;
-        }
-      },
-
-      // 获取当前应用基本信息
-      async fetchModuleInfo() {
-        try {
-          await this.$store.dispatch('getAppInfo', {
-            appCode: this.appCode,
-            moduleId: this.curModuleId,
-          });
-
-          if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
-            const repo = this.curAppModule.repo;
-            if (repo) {
-              this.sourceControlType = repo.type;
-              this.sourceControlChangeForm.sourceRepoUrl = repo.trunk_url;
-              this.sourceControlChangeForm.sourceDir = repo.source_dir;
-              if (repo.type !== 'bk_svn' && this.gitExtendConfig[repo.type]) {
-                this.gitExtendConfig[repo.type].selectedRepoUrl = repo.trunk_url;
-                this.gitExtendConfig[repo.type].sourceDir = repo.source_dir || '';
-              }
-              if (['bare_svn', 'bare_git'].includes(repo.type)) {
-                this.gitExtendConfig[repo.type].authInfo.account = this.curAppModule.repo_auth_info.username;
-                this.gitExtendConfig[repo.type].authInfo.password = '';
-                this.gitExtendConfig[repo.type].sourceDir = repo.source_dir || '';
-              }
+              this.gitExtendConfig.bk_gitlab.selectedRepoUrl = '';
             }
           }
-        } catch (res) {
           this.$paasMessage({
-            theme: 'error',
-            message: e.message || e.detail || this.$t('接口异常'),
+            theme: 'success',
+            message: this.$t('切换源码仓库成功'),
           });
         }
-      },
-
-      handleEdit() {
-        this.isCodeSourceEdit = true;
-      },
-
-      // 重置
-      handleCancel() {
-        this.resetSourceType();
+        await this.fetchModuleInfo();
         this.isCodeSourceEdit = false;
-      },
-
-      handleToggleSideslider() {
-        this.defaultSettings.isShow = true;
-      },
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.switchLoading = false;
+      }
     },
-  };
+
+    // 获取当前应用基本信息
+    async fetchModuleInfo() {
+      try {
+        await this.$store.dispatch('getAppInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+
+        if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+          const { repo } = this.curAppModule;
+          if (repo) {
+            this.sourceControlType = repo.type;
+            this.sourceControlChangeForm.sourceRepoUrl = repo.trunk_url;
+            this.sourceControlChangeForm.sourceDir = repo.source_dir;
+            if (repo.type !== 'bk_svn' && this.gitExtendConfig[repo.type]) {
+              this.gitExtendConfig[repo.type].selectedRepoUrl = repo.trunk_url;
+              this.gitExtendConfig[repo.type].sourceDir = repo.source_dir || '';
+            }
+            if (['bare_svn', 'bare_git'].includes(repo.type)) {
+              this.gitExtendConfig[repo.type].authInfo.account = this.curAppModule.repo_auth_info.username;
+              this.gitExtendConfig[repo.type].authInfo.password = '';
+              this.gitExtendConfig[repo.type].sourceDir = repo.source_dir || '';
+            }
+          }
+        }
+      } catch (res) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    handleEdit() {
+      this.isCodeSourceEdit = true;
+    },
+
+    // 重置
+    handleCancel() {
+      this.resetSourceType();
+      this.isCodeSourceEdit = false;
+    },
+
+    handleToggleSideslider() {
+      this.defaultSettings.isShow = true;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -653,7 +649,7 @@
     .form-group {
       display: flex;
     }
-    
+
     .code-detail .code-link {
       color: #3A84FF;
     }
@@ -671,7 +667,7 @@
   .source-code-info.code-source {
     width: 100%;
   }
-  
+
   .source-code-info .content {
     display: flex;
 

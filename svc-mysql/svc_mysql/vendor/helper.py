@@ -144,10 +144,9 @@ class MySQLAuthorizer(MySQLEngine):
                     db_name=db_name,
                     db_user=user,
                     auth_ip=auth_ip,
-                    db_password=password,
                     privileges=privileges,
                 )
-                logger.info(f"Mysql 正在执行 `{grant_sql.replace(password, '******')}`...")
+                logger.info(f"Mysql 正在执行 `{grant_sql}`...")
                 cursor.execute(grant_sql)
             logger.info("Mysql 正在执行 `flush privileges;`")
             cursor.execute("flush privileges;")

@@ -420,7 +420,8 @@ class MarketEntranceSLZ(serializers.Serializer):
                 # 不再允许前端修改 prefer_https, 如需限制 http 访问, 需要在后台操作
                 # 当 prefer_https 为 None 时, 优先使用集群的配置(https_enabled)
                 instance.prefer_https = None
-                update_fields.extend(["prefer_https"])
+                instance.custom_domain_url = None
+                update_fields.extend(["prefer_https", "custom_domain_url"])
         instance.source_url_type = source_url_type
         instance.save(update_fields=update_fields)
         return instance

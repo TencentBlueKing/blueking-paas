@@ -60,7 +60,9 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
-    scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, default=default_scaling_config)
+    scaling_config = ScalingConfigSLZ(
+        help_text="自动扩缩容配置", required=False, default=default_scaling_config, allow_null=True
+    )
 
 
 class ModuleProcessSpecMetadataSLZ(serializers.Serializer):

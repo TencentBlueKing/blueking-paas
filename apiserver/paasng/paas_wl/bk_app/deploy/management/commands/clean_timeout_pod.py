@@ -40,7 +40,7 @@ class Command(BaseCommand):
             timeout_count = 0
             # normally, there is only one slug instance
             for pod in pods.items:
-                timedelta = now - arrow.get(pod.status.startTime).datetime
+                timedelta = now - arrow.get(pod.metadata.creationTimestamp).datetime
                 if timedelta.total_seconds() > timeout:
                     # do delete operation
                     print(f"{pod.metadata.name} had started more than one hour, going to delete it")

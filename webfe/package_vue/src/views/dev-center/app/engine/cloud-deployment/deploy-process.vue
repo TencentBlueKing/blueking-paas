@@ -1162,6 +1162,7 @@ export default {
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+          this.getImageCredentialList();
           if (this.isCreate) {
             // 使用示例镜像，启动命令默认值
             if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {

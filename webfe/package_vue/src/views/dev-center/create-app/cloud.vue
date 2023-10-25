@@ -290,7 +290,7 @@
                 :label="$t('Dockerfile 路径')"
                 :property="'dockerfile_path'"
                 error-display-type="normal"
-                ext-cls="form-item-cls mt20"
+                ext-cls="form-dockerfile-cls mt20"
               >
                 <div class="flex-row align-items-center code-depot">
                   <bk-input

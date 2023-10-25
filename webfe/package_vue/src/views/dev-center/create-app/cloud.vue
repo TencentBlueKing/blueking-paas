@@ -1041,6 +1041,9 @@ export default {
         this.dockerfileData.buildParams.forEach((item) => {
           dockerBuild[item.name] = item.value;
         });
+        if (this.dockerfileData.dockerfilePath === '') {
+          this.dockerfileData.dockerfilePath = null;
+        }
         params.build_config = {
           build_method: 'dockerfile',
           dockerfile_path: this.dockerfileData.dockerfilePath,

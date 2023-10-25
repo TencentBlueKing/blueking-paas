@@ -31,7 +31,7 @@
             <div>
               <span>{{ row.name || '--' }}</span>
               <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
-              <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div>
+              <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <img
                   v-if="row.isExpand"
@@ -451,8 +451,7 @@
   </div>
 </template>
 
-<script>
-import moment from 'moment';
+<script>import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';

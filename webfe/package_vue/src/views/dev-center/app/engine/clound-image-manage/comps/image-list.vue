@@ -76,7 +76,7 @@
                     <span class="form-text">{{ row.detail.image_info.tag || '--' }}</span>
                   </bk-form-item>
                   <bk-form-item :label="`${$t('大小')}：`">
-                    <span class="form-text">{{ row.detail.image_info.size || '--' }}</span>
+                    <span class="form-text">{{ row.detail.image_info.size + 'B' || '--' }}</span>
                   </bk-form-item>
                   <bk-form-item :label="`${$t('更新时间')}：`">
                     <span class="form-text">{{ row.detail.image_info.updated || '--' }}</span>
@@ -120,7 +120,7 @@
           :show-overflow-tooltip="true"
         />
         <bk-table-column
-          :label="$t('大小（MB）')"
+          :label="$t('大小（B）')"
           prop="size"
           sortable
         />

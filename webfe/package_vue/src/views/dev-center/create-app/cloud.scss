@@ -165,3 +165,10 @@
 .add-build-params {
   margin-left: 100px;
 }
+
+.form-dockerfile-cls {
+  transform: translateX(-19px);
+  /deep/ .bk-label {
+    width: 119px !important;
+  }
+}

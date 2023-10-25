@@ -2363,6 +2363,6 @@ export default {
   大小: 'Size',
   部署记录: 'Deployment record',
   部署到: 'Deploy to',
-  '大小（MB）': 'Size(MB)',
+  '大小（B）': 'Size(B)',
   目前仅支持基于源码构建的镜像: 'Currently only images built based on source code are supported',
 };

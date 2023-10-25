@@ -386,7 +386,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def create(self, request, code, module_name):
         application = self.get_application()
         module = self.get_module_via_path()
-        slz = UpsertMountSLZ(data=request.data)
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -419,15 +419,16 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        slz = UpsertMountSLZ(data=request.data)
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
         # 更新 Mount
+        mount_instance.name = validated_data['name']
         mount_instance.environment_name = validated_data['environment_name']
         mount_instance.mount_path = validated_data['mount_path']
         try:
-            mount_instance.save(update_fields=['environment_name', 'mount_path'])
+            mount_instance.save(update_fields=['name', 'environment_name', 'mount_path'])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 

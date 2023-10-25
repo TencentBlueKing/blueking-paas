@@ -1028,7 +1028,6 @@ export default {
           {
             validator: (v) => {
               const minReplicas = Number(v);
-              console.log('v', v);
               const maxReplicas = Number(this.formData.env_overlay.stag.scaling_config.max_replicas);
               return minReplicas <= maxReplicas;
             },
@@ -1442,11 +1441,8 @@ export default {
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
-          console.log('this.formData', this.formData);
           this.panels = _.cloneDeep(this.processData);
         }
-        // this.preFormData = { ...res };
-        // this.rawData = _.cloneDeep(this.preFormData);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

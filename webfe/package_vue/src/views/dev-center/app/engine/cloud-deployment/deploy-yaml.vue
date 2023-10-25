@@ -11,6 +11,7 @@
         ref="editorRef"
         key="editor"
         v-model="detail"
+        :readonly="true"
         v-bkloading="{ isLoading, opacity: 1, color: '#1a1a1a' }"
         :height="fullScreen ? clientHeight : height"
         @error="handleEditorErr"
@@ -26,7 +27,7 @@
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import ResourceEditor from './comps/deploy-resource-editor';
 import EditorStatus from './comps/deploy-resource-editor/editor-status';
-import _ from 'lodash';
+// import _ from 'lodash';
 export default {
   components: {
     ResourceEditor,
@@ -62,6 +63,7 @@ export default {
     cloudAppData: {
       handler(val) {
         if (val.length) {
+          console.log(11111, val);
           this.$nextTick(() => {
             setTimeout(() => {
               this.detail = val[0];
@@ -98,12 +100,12 @@ export default {
     detail: {
       handler(val) {
         if (val && Object.keys(val).length) {
-          // const webData = val.spec.processes.find(e => e.name === 'web');
-          // if (!webData) {
-          //   this.handleEditorErr('至少需要一个web进程');
-          // } else {
-          //   this.handleEditorErr();
-          // }
+          const webData = val.spec.processes.find(e => e.name === 'web');
+          if (!webData) {
+            this.handleEditorErr('至少需要一个web进程');
+          } else {
+            this.handleEditorErr();
+          }
           setTimeout(() => {
             this.screenIsLoading = false;
           }, 500);

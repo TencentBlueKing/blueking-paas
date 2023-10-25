@@ -161,7 +161,12 @@
                   <i class="icon paasng-icon paasng-plus-circle-shape" />&emsp;{{ $t('添加文件') }}
                 </div>
                 <div class="addFileInput" v-else>
-                  <bk-input :placeholder="$t('请输入')" v-model="addFileInput" @blur="handleBlurAddInput"></bk-input>
+                  <bk-input
+                    :placeholder="$t('请输入')"
+                    v-model="addFileInput"
+                    :right-icon="'icon paasng-icon paasng-correct'"
+                    @right-icon-click="handlerAddConfirm"
+                  ></bk-input>
                 </div>
               </div>
               <bk-tab
@@ -193,7 +198,12 @@
                       </div>
                     </div>
                     <div class="editInput" :ref="`editInput${panel.label}`">
-                      <bk-input v-model="panel.label" @blur="handleBlurEditInput(panel.label, index)"> </bk-input>
+                      <bk-input
+                        v-model="panel.label"
+                        :right-icon="'icon paasng-icon paasng-correct'"
+                        @right-icon-click="handlerEditConfirm(panel.label, index)"
+                      >
+                      </bk-input>
                     </div>
                   </template>
                 </bk-tab-panel>
@@ -333,6 +343,7 @@ export default {
         { value: 'prod', text: this.$t('仅生产环境') },
       ],
       envEnums: ENV_ENUM,
+      curTabDom: null,
     };
   },
   computed: {
@@ -545,6 +556,10 @@ export default {
       this.isAddFile = false;
       const resultFormatDetail = this.convertToObjectIfPossible(_detail);
       this.$refs.editorRefSlider.setValue(resultFormatDetail);
+      this.volumeFormData.source_config_data.forEach((item) => {
+        this.$refs[`editInput${item.label}`][0].style.display = 'none';
+        this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
+      });
     },
     // 转换数据格式
     convertToObjectIfPossible(value) {
@@ -576,8 +591,15 @@ export default {
         this.$refs[`editInput${item.label}`][0].style.display = 'none';
         this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
       });
+      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
+      const tabActiveDom = document.querySelector('.tab-container .active');
+      if (!tabActiveDom) {
+        return;
+      }
+      this.curTabDom = tabActiveDom;
+      tabActiveDom.classList.remove('active');
+      ulDom.classList.remove('bk-tab-label-list-has-bar');
     },
-    // 添加文件input失焦
     handleBlurAddInput() {
       if (this.addFileInput.trim() === '') {
         this.isAddFile = false;
@@ -618,6 +640,15 @@ export default {
       this.isAddFile = false;
       this.volumeFormData.source_config_data.unshift(addFileContent);
     },
+    // 添加确认
+    handlerAddConfirm() {
+      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
+      if (this.curTabDom) {
+        ulDom.classList.add('bk-tab-label-list-has-bar');
+        this.curTabDom.classList.add('active');
+      }
+      this.handleBlurAddInput();
+    },
     // 编辑文件内容的tab
     fileEdit(label) {
       this.isAddFile = false;
@@ -626,8 +657,13 @@ export default {
       this.$refs.editorRefSlider.setValue(curContent);
       this.$refs[`editInput${label}`][0].style.display = 'block';
       this.$refs[`labelContainer${label}`][0].style.display = 'none';
+      const hideTab = this.volumeFormData.source_config_data.filter(item => item.label !== label);
+      hideTab.forEach((item) => {
+        this.$refs[`editInput${item.label}`][0].style.display = 'none';
+        this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
+      });
+      console.log(hideTab);
     },
-    // 编辑文件input失焦
     handleBlurEditInput(label, index) {
       this.$nextTick(() => {
         console.log(this.$refs);
@@ -659,6 +695,10 @@ export default {
       }
       this.$refs[`editInput${label}`][0].style.display = 'none';
       this.$refs[`labelContainer${label}`][0].style.display = 'flex';
+    },
+    // 编辑确认
+    handlerEditConfirm(label, index) {
+      this.handleBlurEditInput(label, index);
     },
     // 删除文件内容的tab
     fileDelete(label) {
@@ -719,6 +759,11 @@ export default {
             line-height: 50px;
             padding: 0 12px;
             cursor: pointer;
+            .addFileInput {
+              /deep/ .paasng-correct {
+                font-size: 24px;
+              }
+            }
           }
           .tab-container {
             background-color: #f5f7fa;
@@ -750,6 +795,9 @@ export default {
                     }
                     .editInput {
                       display: none;
+                      .paasng-correct {
+                        font-size: 24px;
+                      }
                     }
                   }
                 }

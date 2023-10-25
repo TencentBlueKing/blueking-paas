@@ -27,7 +27,7 @@
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import ResourceEditor from './comps/deploy-resource-editor';
 import EditorStatus from './comps/deploy-resource-editor/editor-status';
-import _ from 'lodash';
+// import _ from 'lodash';
 export default {
   components: {
     ResourceEditor,

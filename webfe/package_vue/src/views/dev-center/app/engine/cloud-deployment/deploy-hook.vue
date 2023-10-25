@@ -405,6 +405,9 @@ export default {
       this.$refs.commandRef.clearError();
       this.preFormData.command = this.rawData.command;
       this.preFormData.args = this.rawData.args;
+      this.preFormData.enabled = this.rawData.enabled;
+      this.$store.commit('cloudApi/updatePageEdit', false);
+      this.$store.commit('cloudApi/updateHookPageEdit', false);
     },
 
     // 查看指南

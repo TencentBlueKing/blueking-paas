@@ -305,13 +305,14 @@
 
     <!-- 源码&镜像 部署配置内容 -->
     <div class="mt20" v-if="formData.sourceOrigin === 'soundCode' && curStep === 2">
-      <collapseContent :title="$t('进程配置')">
+      <collapseContent :title="$t('进程配置')" collapse-item-name="process" active-name="process">
         <bk-alert
           type="info">
           <div slot="title">
-            {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
+            {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
             <a
-              target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+              target="_blank"
+              :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
               style="color: #3a84ff">
               {{$t('应用进程介绍')}}
             </a>
@@ -323,11 +324,12 @@
         <bk-alert
           type="info">
           <div slot="title">
-            {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
+            {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
             <a
-              target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+              target="_blank"
+              :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
               style="color: #3a84ff">
-              {{$t('应用进程介绍')}}
+              {{$t('部署阶段钩子')}}
             </a>
           </div>
         </bk-alert>
@@ -703,7 +705,9 @@ export default {
     async fetchLanguageInfo() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
-        this.languagesData = res.ieod.languages;
+        const regionChoose = Object.keys(res) || [];
+        this.regionChoose = regionChoose[0] || 'ieod';
+        this.languagesData = res[this.regionChoose].languages;
         const languagesKeysData = Object.keys(this.languagesData) || [];
         this.buttonActive = languagesKeysData[0] || 'Python';
         this.languagesList = this.languagesData[this.buttonActive];
@@ -899,7 +903,7 @@ export default {
 
       this.formLoading = true;
       const params = {
-        region: 'ieod',
+        region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
         source_config: {
@@ -1019,7 +1023,7 @@ export default {
         const res = await this.$store.dispatch('cloudApi/getBuildDataInfo', {
           appCode: this.appCode,
           tplTyp: 'normal',
-          region: 'ieod',
+          region: this.regionChoose,
           tplName: this.formData.sourceInitTemplate,
         });
         this.buildDialog.visiable = true;

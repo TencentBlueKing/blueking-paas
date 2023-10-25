@@ -15,24 +15,50 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import functools
 from unittest import mock
 
 import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.constants import LEGACY_PROC_IMAGE_ANNO_KEY, ApiVersion, ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec, EnvVar, EnvVarOverlay, ObjectMetadata
+from paas_wl.bk_app.cnative.specs.constants import (
+    LEGACY_PROC_IMAGE_ANNO_KEY,
+    ApiVersion,
+    MountEnvName,
+    ResQuotaPlan,
+    VolumeSourceType,
+)
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay, HostAlias
+from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS, VolumeSource
+from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
+    BuiltinAnnotsManifestConstructor,
+    DomainResolutionManifestConstructor,
     EnvVarsManifestConstructor,
+    MountsManifestConstructor,
     ProcessesManifestConstructor,
+    SvcDiscoveryManifestConstructor,
+    apply_builtin_env_vars,
+    apply_env_annots,
     get_manifest,
 )
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import (
+    DomainResolution,
+    ModuleProcessSpec,
+    ProcessSpecEnvOverlay,
+    SvcDiscConfig,
+)
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.models import BuildConfig
@@ -62,6 +88,24 @@ def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
     return G(
         ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000, image=None
+    )
+
+
+@pytest.fixture
+def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
+    """An overlay data for web process"""
+    return G(
+        ProcessSpecEnvOverlay,
+        proc_spec=process_web,
+        environment_name='stag',
+        target_replicas=10,
+        plan_name='Starter',
+        autoscaling=True,
+        scaling_config={
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "policy": 'default',
+        },
     )
 
 
@@ -102,6 +146,19 @@ class TestEnvVarsManifestConstructor:
         ]
 
 
+class TestBuiltinAnnotsManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        app = bk_module.application
+        BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
+
+        annots = blank_resource.metadata.annotations
+        assert annots['bkapp.paas.bk.tencent.com/image-credentials'] == 'true'
+        assert annots['bkapp.paas.bk.tencent.com/module-name'] == bk_module.name
+        assert annots['bkapp.paas.bk.tencent.com/name'] == app.name
+        assert annots['bkapp.paas.bk.tencent.com/region'] == app.region
+        assert annots['bkapp.paas.bk.tencent.com/use-cnb'] == 'false'
+
+
 class TestProcessesManifestConstructor:
     @pytest.mark.parametrize(
         "plan_name, expected",
@@ -109,7 +166,8 @@ class TestProcessesManifestConstructor:
             ("", ResQuotaPlan.P_DEFAULT),
             (settings.DEFAULT_PROC_SPEC_PLAN, ResQuotaPlan.P_2C1G),
             (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_2C2G),
-            (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_4C4G),
+            # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
+            (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_2C4G),
         ],
     )
     def test_get_quota_plan(self, plan_name, expected):
@@ -130,10 +188,10 @@ class TestProcessesManifestConstructor:
         with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
             assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
 
-    def test_integrated(self, bk_module, blank_resource, process_web):
+    def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         assert LEGACY_PROC_IMAGE_ANNO_KEY not in blank_resource.metadata.annotations
-        assert blank_resource.spec.dict(include={"processes"}) == {
+        assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
             "processes": [
                 {
                     "name": "web",
@@ -148,7 +206,29 @@ class TestProcessesManifestConstructor:
                     "image": None,
                     "imagePullPolicy": "IfNotPresent",
                 }
-            ]
+            ],
+            "envOverlay": {
+                "replicas": [{'envName': 'stag', 'process': 'web', 'count': 10}],
+                'autoscaling': [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        "minReplicas": 1,
+                        "maxReplicas": 5,
+                        "policy": 'default',
+                    }
+                ],
+                'envVariables': None,
+                'mounts': None,
+                'resQuotas': [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        # The plan name should has been transformed.
+                        "plan": '2C1G',
+                    }
+                ],
+            },
         }
 
     @pytest.fixture
@@ -166,7 +246,112 @@ class TestProcessesManifestConstructor:
         )
 
 
+class TestMountsManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        create_mount = functools.partial(
+            Mount.objects.create,
+            module_id=bk_module.id,
+            name='nginx',
+            source_type=VolumeSourceType.ConfigMap,
+            source_config=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
+        )
+        # Create 2 mount objects
+        create_mount(mount_path='/etc/conf', environment_name=MountEnvName.GLOBAL.value)
+        create_mount(mount_path='/etc/conf_stag', environment_name=MountEnvName.STAG.value)
+
+        MountsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.mounts == [
+            MountSpec(
+                mountPath='/etc/conf',
+                name='nginx',
+                source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
+            )
+        ]
+        assert blank_resource.spec.envOverlay.mounts == [
+            MountOverlay(
+                envName='stag',
+                mountPath='/etc/conf_stag',
+                name='nginx',
+                source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
+            )
+        ]
+
+
+class TestSvcDiscoveryManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        create_svc_disc = functools.partial(SvcDiscConfig.objects.create, application_id=bk_module.application.id)
+        # Create svc_disc object
+        create_svc_disc(
+            bk_saas=[
+                {
+                    'bkAppCode': 'bk_app_code_test',
+                    'moduleName': 'module_name_test',
+                }
+            ]
+        )
+
+        SvcDiscoveryManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.svcDiscovery == SvcDiscConfigSpec(
+            bkSaaS=[SvcDiscEntryBkSaaS(bkAppCode='bk_app_code_test', moduleName='module_name_test')],
+        )
+
+
+class TestDomainResolutionManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        create_domain_resolution = functools.partial(
+            DomainResolution.objects.create, application_id=bk_module.application.id
+        )
+        # Create domain_resolution object
+        create_domain_resolution(
+            nameservers=['192.168.1.3', '192.168.1.4'],
+            host_aliases=[
+                {
+                    'ip': '1.1.1.1',
+                    'hostnames': [
+                        'bk_app_code_test',
+                        'bk_app_code_test_z',
+                    ],
+                }
+            ],
+        )
+
+        DomainResolutionManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.domainResolution == DomainResolutionSpec(
+            nameservers=['192.168.1.3', '192.168.1.4'],
+            hostAliases=[
+                HostAlias(
+                    ip='1.1.1.1',
+                    hostnames=[
+                        'bk_app_code_test',
+                        'bk_app_code_test_z',
+                    ],
+                )
+            ],
+        )
+
+
 def test_get_manifest(bk_module):
     manifest = get_manifest(bk_module)
     assert len(manifest) > 0
     assert manifest[0]['kind'] == 'BkApp'
+
+
+def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
+    apply_env_annots(blank_resource, bk_stag_env)
+
+    annots = blank_resource.metadata.annotations
+    assert annots['bkapp.paas.bk.tencent.com/environment'] == 'stag'
+    assert annots['bkapp.paas.bk.tencent.com/wl-app-name'] == bk_stag_env.wl_app.name
+    assert 'bkapp.paas.bk.tencent.com/bkpaas-deploy-id' not in annots
+
+
+def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env, with_wl_apps):
+    apply_env_annots(blank_resource, bk_stag_env, deploy_id='foo-id')
+    assert blank_resource.metadata.annotations['bkapp.paas.bk.tencent.com/bkpaas-deploy-id'] == 'foo-id'
+
+
+def test_apply_builtin_env_vars(blank_resource, bk_stag_env):
+    apply_builtin_env_vars(blank_resource, bk_stag_env)
+    var_names = {item.name for item in blank_resource.spec.configuration.env}
+    for name in {"BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL"}:
+        assert name in var_names

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource
-from paas_wl.workloads.networking.ingress.entities.ingress import ingress_kmodel
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 from paas_wl.workloads.networking.ingress.managers.domain import CustomDomainIngressMgr, SubdomainAppIngressMgr
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert, AppDomainSharedCert, Domain
 

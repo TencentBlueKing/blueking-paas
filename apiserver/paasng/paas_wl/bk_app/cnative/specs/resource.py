@@ -22,16 +22,22 @@ from typing import Dict, Optional
 from attrs import define
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager, save_addresses
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion, ConditionStatus, DeployStatus, MResConditionType, MResPhaseType
+from paas_wl.bk_app.cnative.specs.constants import (
+    ApiVersion,
+    ConditionStatus,
+    DeployStatus,
+    MResConditionType,
+    MResPhaseType,
+)
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
-from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base import crd
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.images.entities import ImageCredentials
+from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

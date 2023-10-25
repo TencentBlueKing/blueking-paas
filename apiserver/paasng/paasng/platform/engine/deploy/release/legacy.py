@@ -33,7 +33,6 @@ from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.engine.configurations.building import get_processes_by_build
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
@@ -61,7 +60,6 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure('更新进程配置'):
-            ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(self.deployment.get_processes())
             # Turn the processes into the corresponding type in paas_wl module
             procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
             ProcessManager(self.engine_app.env).sync_processes_specs(procs)

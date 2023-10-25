@@ -23,7 +23,6 @@ from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
-from paasng.platform.applications.models import Application
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, Mount
@@ -168,10 +167,19 @@ class UpsertMountSLZ(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        # 在这里根据 source_type 验证 source_config_data
+        environment_name = attrs["environment_name"]
+        name = attrs["name"]
+
+        # 检查当前 module_id 下,相同环境中是否存在具有相同 name 的 mount
+        module_id = self.context['module_id']
+        if Mount.objects.filter(
+            module_id=module_id, name=name, environment_name__in=[environment_name, MountEnvName.GLOBAL.value]
+        ).exists():
+            raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
+
+        # 根据 source_type 验证 source_config_data
         source_type = attrs["source_type"]
         source_config_data = attrs["source_config_data"]
-
         if source_type == VolumeSourceType.ConfigMap.value:
             if not source_config_data:
                 raise serializers.ValidationError(_("挂载卷内容不可为空"))
@@ -213,71 +221,3 @@ class MountSLZ(serializers.ModelSerializer):
 class QueryMountsSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)
-
-
-class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
-    """A service discovery entry that represents an application and an optional module."""
-
-    bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20)
-    module_name = serializers.CharField(
-        help_text='被服务发现的应用模块', max_length=20, required=False, allow_null=True, allow_blank=True
-    )
-
-    def validate(self, attrs):
-        """ 校验应用和模块存在，否则抛出异常 """
-        # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
-        bk_app_code = attrs['bk_app_code']
-        module_name = attrs['module_name']
-        # 判断应用是否存在
-        try:
-            app = Application.objects.get(code=bk_app_code)
-        except Application.DoesNotExist:
-            raise serializers.ValidationError(_('应用 %s 不存在') % bk_app_code)
-
-        if not module_name:
-            return attrs
-
-        # 判断应用下是否存在模块(name=module_name)
-        if not app.modules.filter(name=module_name).exists():
-            raise serializers.ValidationError(_('模块 %s 不存在') % module_name)
-
-        return attrs
-
-
-class SvcDiscConfigSLZ(serializers.Serializer):
-    bk_saas = serializers.ListField(help_text='服务发现列表', child=SvcDiscEntryBkSaaSSLZ())
-
-    def to_internal_value(self, data):
-        internal_data = super().to_internal_value(data)
-        bk_saas = internal_data.pop('bk_saas')
-        internal_data['bk_saas'] = [
-            {
-                'bkAppCode': entry_bksaas['bk_app_code'],
-                'moduleName': entry_bksaas['module_name'],
-            }
-            for entry_bksaas in bk_saas
-        ]
-        return internal_data
-
-    def to_representation(self, instance):
-        bk_saas = instance.bk_saas
-        instance.bk_saas = [
-            {
-                'bk_app_code': entry_bksaas.bkAppCode,
-                'module_name': entry_bksaas.moduleName,
-            }
-            for entry_bksaas in bk_saas
-        ]
-        representation_data = super().to_representation(instance)
-
-        return representation_data
-
-
-class HostAliasSLZ(serializers.Serializer):
-    ip = serializers.CharField(help_text='ip')
-    hostnames = serializers.ListField(help_text='域名列表', child=serializers.CharField())
-
-
-class DomainResolutionSLZ(serializers.Serializer):
-    nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.CharField())
-    host_aliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ())

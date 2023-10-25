@@ -21,24 +21,29 @@ set -eo pipefail
 
 call_steps() {
     steps="$*"
-    pids=""
-    
-    for i in ${steps}; do
-        "${i}" &
-        pids+="$! "
+    commands=("$@")
+    pids=()
+
+    for index in ${!commands[*]}; do
+        command=${commands[$index]}
+        echo "Starting job $(($index+1)) with command: ${command}"
+        ${command} &
+        pids+=("$!")
     done
-    
+
     code=0
-    for job in ${pids}; do
-        if wait "${job}"; then
-            echo "Job ${job} success"
+    for index in ${!pids[*]}; do
+        job=${pids[$index]}
+        command=${commands[$index]}
+        if wait ${job}; then
+            echo "Job $(($index+1)) with command: ${command} successfully completed"
         else
             code=1
-            echo "Process ${job} failed"
+            echo "Process $(($index+1)) with command: ${command} failed"
         fi
     done
-    
-    return "${code}"
+
+    return ${code}
 }
 
 ensure-apigw() {

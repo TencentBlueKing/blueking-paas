@@ -15,10 +15,113 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+
+from paas_wl.bk_app.processes.drf_serializers import ScalingConfigSLZ
+from paasng.platform.modules.constants import DeployHookType, ModuleName
+from paasng.platform.modules.models.module import Module
 
 
 class GetManifestInputSLZ(serializers.Serializer):
     output_format = serializers.ChoiceField(
         help_text='The output format', choices=['json', 'yaml'], required=False, default='json'
     )
+
+
+class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
+    """进程配置-环境相关配置"""
+
+    environment_name = serializers.CharField(help_text="环境名称")
+
+    plan_name = serializers.CharField(help_text="资源配额方案", required=False)
+    target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
+    autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
+    scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False)
+
+
+class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
+    """特性开关"""
+
+    allow_set_image = serializers.BooleanField(default=False, help_text="是否允许编辑 image 字段")
+
+
+class ModuleProcessSpecSLZ(serializers.Serializer):
+    """进程配置"""
+
+    name = serializers.CharField(help_text="进程名称")
+
+    image = serializers.CharField(help_text="镜像仓库/镜像地址", allow_null=True, required=False)
+    image_credential_name = serializers.CharField(help_text="镜像凭证", allow_null=True, required=False)
+    command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
+    args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
+    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, default=settings.CONTAINER_PORT)
+    env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
+
+
+class ModuleProcessSpecsOutputSLZ(serializers.Serializer):
+    proc_specs = ModuleProcessSpecSLZ(many=True, read_only=True)
+    metadata = ModuleProcessSpecMetadataSLZ(read_only=True)
+
+
+class ModuleDeployHookSLZ(serializers.Serializer):
+    """钩子命令"""
+
+    type = serializers.ChoiceField(help_text="钩子类型", choices=DeployHookType.get_choices())
+
+    proc_command = serializers.CharField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False)
+    command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
+    args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
+    enabled = serializers.BooleanField(allow_null=True, default=False)
+
+
+class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
+    """A service discovery entry that represents an application and an optional module."""
+
+    bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20)
+    module_name = serializers.CharField(help_text='被服务发现的应用模块', max_length=20, default=ModuleName.DEFAULT.value)
+
+    def validate(self, attrs):
+        """ 校验应用和模块存在，否则抛出异常 """
+        # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
+        # 判断应用或者模块是否存在
+        if not Module.objects.filter(application__code=attrs['bkAppCode'], name=attrs['moduleName']).exists():
+            raise serializers.ValidationError(_('应用或模块不存在'))
+
+        return attrs
+
+    def to_internal_value(self, data):
+        internal_data = super().to_internal_value(data)
+
+        bk_app_code = internal_data.pop('bk_app_code')
+        module_name = internal_data.pop('module_name')
+
+        internal_data['bkAppCode'] = bk_app_code
+        internal_data['moduleName'] = module_name
+        return internal_data
+
+    def to_representation(self, instance):
+        bk_app_code = instance.bkAppCode
+        module_name = instance.moduleName
+        instance = {
+            'bk_app_code': bk_app_code,
+            'module_name': module_name,
+        }
+        representation_data = super().to_representation(instance)
+
+        return representation_data
+
+
+class SvcDiscConfigSLZ(serializers.Serializer):
+    bk_saas = serializers.ListField(help_text='服务发现列表', child=SvcDiscEntryBkSaaSSLZ())
+
+
+class HostAliasSLZ(serializers.Serializer):
+    ip = serializers.IPAddressField(help_text='ip')
+    hostnames = serializers.ListField(help_text='域名列表', child=serializers.CharField())
+
+
+class DomainResolutionSLZ(serializers.Serializer):
+    nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.IPAddressField())
+    host_aliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ())

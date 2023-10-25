@@ -18,12 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from paas_wl.core.app_structure import get_structure
-from paas_wl.core.resource import CNativeBkAppNameGenerator
-from paas_wl.workloads.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.core.app_structure import get_structure
+from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 
 logger = logging.getLogger(__name__)
 

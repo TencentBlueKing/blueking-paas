@@ -1,7 +1,7 @@
 import pytest
 
+from paas_wl.bk_app.applications.api import get_latest_build_id
 from paas_wl.bk_app.applications.models.build import Build
-from paas_wl.workloads.release_controller.api import get_latest_build_id
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

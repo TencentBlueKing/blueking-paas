@@ -84,8 +84,8 @@ export default {
       this.$router.push({
         name: 'cloudAppDeployManageProd',
         params: {
-          id: this.appCode
-        }
+          id: this.appCode,
+        },
       });
     },
   },

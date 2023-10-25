@@ -73,6 +73,11 @@ import { PLATFORM_CONFIG } from '../static/json/paas_static.js';
 // 表头配置
 import { renderHeader } from '@/common/utils';
 
+// markdown样式
+import 'github-markdown-css';
+// 代码高亮
+import 'highlight.js/styles/github.css';
+
 window.$ = $;
 
 Vue.config.devtools = true;

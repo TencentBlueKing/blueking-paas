@@ -45,9 +45,7 @@ from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
 from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
-    DomainResolution,
     Mount,
-    SvcDiscConfig,
     to_error_string,
     update_app_resource,
 )
@@ -61,13 +59,11 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     DeployDetailSerializer,
     DeployPrepResultSLZ,
     DeploySerializer,
-    DomainResolutionSLZ,
     MountSLZ,
     MresStatusSLZ,
     QueryDeploysSerializer,
     QueryMountsSLZ,
     ResQuotaPlanSLZ,
-    SvcDiscConfigSLZ,
     UpsertMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
@@ -466,59 +462,3 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class SvcDiscConfigViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
-
-    @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
-    def retrieve(self, request, code):
-        application = self.get_application()
-
-        svc_disc = get_object_or_404(SvcDiscConfig, application_id=application.id)
-        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
-    def upsert(self, request, code):
-        application = self.get_application()
-
-        slz = SvcDiscConfigSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        validated_data = slz.validated_data
-
-        svc_disc, _ = SvcDiscConfig.objects.update_or_create(
-            application_id=application.id,
-            defaults={
-                'bk_saas': validated_data['bk_saas'],
-            },
-        )
-        svc_disc.refresh_from_db()
-        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
-
-
-class DomainResolutionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
-
-    @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
-    def retrieve(self, request, code):
-        application = self.get_application()
-
-        domain_res = get_object_or_404(DomainResolution, application_id=application.id)
-        return Response(DomainResolutionSLZ(domain_res).data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
-    def upsert(self, request, code):
-        application = self.get_application()
-
-        slz = DomainResolutionSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        validated_data = slz.validated_data
-
-        domain_res, _ = DomainResolution.objects.update_or_create(
-            application_id=application.id,
-            defaults={
-                'nameservers': validated_data['nameservers'],
-                'host_aliases': validated_data['host_aliases'],
-            },
-        )
-        return Response(DomainResolutionSLZ(domain_res).data, status=status.HTTP_200_OK)

@@ -20,18 +20,16 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import QuerySet
 
-from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.bk_app.applications.models import Config
 from paas_wl.bk_app.cnative.specs.configurations import EnvVarsReader
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paas_wl.bk_app.applications.models import Config
-from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models.config_var import ConfigVar
-from paasng.platform.engine.models.managers import ConfigVarManager
+from paas_wl.infras.cluster.shim import RegionClusterService
+from paasng.core.region.models import get_all_regions
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.models.managers import ConfigVarManager
 from paasng.platform.modules.models import Module
-from paasng.core.region.models import get_all_regions
 
 
 class Command(BaseCommand):
@@ -93,18 +91,7 @@ class Command(BaseCommand):
         """Store all env var defined at bkapp to db"""
         config_vars = []
         bkapp = BkAppResource(**res.revision.json_value)
-        for env_name in AppEnvName.get_values():
-            module_env = module.get_envs(env_name)
-            for env in EnvVarsReader(bkapp).read_all(env_name):
-                config_vars.append(
-                    ConfigVar(
-                        module=module,
-                        environment=module_env,
-                        key=env.name,
-                        value=env.value,
-                        description="auto created from BkApp",
-                    )
-                )
+        config_vars = EnvVarsReader(bkapp).read_all(module)
 
         if not dry_run:
             self.stdout.write(

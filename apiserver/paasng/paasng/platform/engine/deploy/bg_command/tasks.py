@@ -23,10 +23,11 @@ from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
 from paas_wl.bk_app.deploy.actions.exec import AppCommandExecutor
-from paas_wl.workloads.release_controller.hooks.models import Command, CommandTemplate
-from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream
-from paasng.platform.applications.models import ModuleEnvironment
+from paas_wl.workloads.release_controller.hooks.entities import CommandTemplate
+from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream
 
 logger = logging.getLogger(__name__)
 

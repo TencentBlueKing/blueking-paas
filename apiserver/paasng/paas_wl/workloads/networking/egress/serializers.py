@@ -20,7 +20,7 @@ from rest_framework import serializers
 
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 
-from .models import format_nodes_data
+from .cluster_state import format_nodes_data
 
 
 class RegionClusterStateSLZ(serializers.ModelSerializer):

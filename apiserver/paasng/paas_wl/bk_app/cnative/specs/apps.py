@@ -23,6 +23,6 @@ class SpecsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'paas_wl.bk_app.cnative.specs'
 
-    def read(self):
+    def ready(self):
         # Install signal handlers
         from . import handlers  # noqa: F401

@@ -12,6 +12,7 @@
     <!-- 新增密钥 -->
     <div class="addSecret">
       <bk-popconfirm
+        ext-cls="addSecretPop"
         width="240"
         trigger="click"
         placement="bottom-start"
@@ -35,12 +36,14 @@
     <!-- 密钥列表 -->
     <div class="secrectList">
       <bk-table :data="appSecretList" size="medium">
-        <bk-table-column :label="$t('应用 ID （bk_app_code）')" prop="bk_app_code" width="190"></bk-table-column>
+        <bk-table-column :label="$t('应用 ID (bk_app_code)')" prop="bk_app_code" width="190"></bk-table-column>
         <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" width="315">
           <template slot-scope="props">
-            <span>{{ props.row.bk_app_secret }}&nbsp;</span>
+            <span>
+              {{ appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret }}&nbsp;
+            </span>
             <span
-              v-if="isView(props.row.bk_app_secret)"
+              v-if="isView(props.row.bk_app_secret) && (!togeFlag || !isDefault(props.row.bk_app_secret))"
               v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
               class="paasng-icon paasng-eye-slash icon-color"
               style="cursor: pointer"
@@ -51,7 +54,9 @@
               class="paasng-icon paasng-general-copy icon-color copy"
               style="cursor: pointer"
               @click="copySecretText"
-              :data-clipboard-text="props.row.bk_app_secret"
+              :data-clipboard-text="
+                appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret
+              "
             />
           </template>
         </bk-table-column>
@@ -95,14 +100,14 @@
         <label class="title-label"> BKPAAS_APP_SECRET：&emsp;</label>
         <span class="defaultext"> {{ appSecret ? appSecret : defaultSecret }}&nbsp; </span>
         <span
-          v-if="!appSecret"
+          v-if="!appSecret && !togeDefaultFlag"
           v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
           class="paasng-icon paasng-eye-slash icon-color"
           style="cursor: pointer"
           @click="onSecretToggle"
         />
         <span
-          v-if="appSecret"
+          v-else
           class="paasng-icon paasng-general-copy icon-color copy"
           style="cursor: pointer"
           @click="copySecretText"
@@ -112,7 +117,7 @@
 
       <!-- 已部署密钥概览 -->
       <div class="deployedSecret" v-if="!isSameSecrect">
-        <div class="info mb">{{ $t('已部署密钥概览：') }}</div>
+        <div class="info mb">{{ $t('密钥使用情况概览（仅包含已部署环境）') }}</div>
         <bk-table :data="DeployedSecret" border>
           <bk-table-column :label="$t('模块')" prop="module" width="160"></bk-table-column>
           <bk-table-column :label="$t('环境')" class-name="table-colum-cls" width="200">
@@ -189,26 +194,18 @@
       header-position="left"
       @confirm="confirmDisabled"
     >
-      {{ $t('禁用此密钥后，蓝鲸云 API 将拒绝此密钥的所有请求。禁用后，预计 15 分钟内生效。') }}
+      {{ $t('禁用此密钥后，蓝鲸云 API 将拒绝此密钥的所有请求。操作预计在 15 分钟内生效。') }}
     </bk-dialog>
 
     <!-- 删除密钥对话框 -->
-    <bk-dialog
-      width="475"
-      v-model="deleteVisible"
-      :mask-close="false"
-      :title="$t('删除密钥')"
-      header-position="left"
-      @confirm="confirmDeleteSecret"
-      @cancel="cancelDelete"
-    >
+    <bk-dialog width="475" v-model="deleteVisible" :mask-close="false" :title="$t('删除密钥')" header-position="left">
       <bk-alert type="error" :title="$t('删除此密钥后无法再恢复，蓝鲸云 API 将永久拒绝此密钥的所有请求。')"></bk-alert>
       <bk-form :label-width="427" form-type="vertical" :model="deleteFormData">
         <bk-form-item>
           {{ $t('请完整输入') }} &nbsp;
-          <span style="color: #ff56f5">
+          <code>
             {{ curAppInfo.application.code }}
-          </span>
+          </code>
           &nbsp;{{ $t('来确认删除密钥！') }}
           <bk-input
             :placeholder="curAppInfo.application.code"
@@ -217,6 +214,14 @@
           />
         </bk-form-item>
       </bk-form>
+      <template slot="footer">
+        <bk-button theme="primary" :disabled="!deletSecretValidated" @click="confirmDeleteSecret">
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button class="ml10" theme="default" @click="cancelDelete">
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
     </bk-dialog>
 
     <!-- 更换默认密钥对话框 -->
@@ -288,13 +293,15 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      togeFlag: false,
+      togeDefaultFlag: false,
       verifyVisible: false,
       appSecretVerificationCode: '',
       appSecretTimer: 0,
       appSecret: null,
       appSecretList: [],
       addTooltipsConfig: {
-        content: this.$t('密钥已达到上限，应用仅允许有 2 个密钥'),
+        content: this.$t('密钥数已达到上限，应用仅允许有 2 个密钥'),
         placement: 'right',
         theme: 'light',
       },
@@ -317,6 +324,7 @@ export default {
       originDeployedSecret: [],
       optionSecretList: [],
       viewStatus: {},
+      curViewSecret: {},
     };
   },
   computed: {
@@ -358,6 +366,9 @@ export default {
         return startFlag && endFlag;
       };
     },
+    deletSecretValidated() {
+      return this.curAppInfo.application.code === this.deleteFormData.verifyText;
+    },
   },
   watch: {
     'curAppInfo.application.code': {
@@ -383,6 +394,7 @@ export default {
           (res) => {
             console.log('res--appSecret', res);
             this.appSecret = res.app_secret;
+            this.togeFlag = true;
           },
           () => {
             this.$paasMessage({
@@ -478,6 +490,7 @@ export default {
     },
     // 获取单个密钥详情
     getSecretDetail(status) {
+      this.curViewSecret = status;
       if (this.userFeature.VERIFICATION_CODE) {
         this.viewStatus = status;
         this.sendMsg()
@@ -496,6 +509,14 @@ export default {
       }
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verification/${status.id}/`;
       this.$http.post(url).then((res) => {
+        const curCode = status.bk_app_secret;
+        const curDefaultSec = this.defaultSecret || '';
+        const startFlag = curCode.substring(0, 4) === curDefaultSec.substring(0, 4);
+        const endFlag = curCode.substring(curCode.length - 4) === curDefaultSec.substring(curDefaultSec.length - 4);
+        if (startFlag && endFlag) {
+          this.togeDefaultFlag = startFlag && endFlag;
+          this.appSecret = res.bk_app_secret;
+        }
         this.appSecretList.forEach((item) => {
           if (item.id === status.id) {
             // eslint-disable-next-line no-param-reassign
@@ -510,6 +531,10 @@ export default {
       // eslint-disable-next-line no-undef
       const clipboard = new Clipboard('.copy');
       clipboard.on('success', () => {
+        this.$paasMessage({
+          theme: 'primary',
+          message: this.$t('复制成功'),
+        });
         clipboard.destroy();
       });
       clipboard.on('error', () => {
@@ -543,6 +568,14 @@ export default {
         .post(url, form)
         .then(
           (res) => {
+            const curCode = this.curViewSecret.bk_app_secret;
+            const curDefaultSec = this.defaultSecret || '';
+            const startFlag = curCode.substring(0, 4) === curDefaultSec.substring(0, 4);
+            const endFlag = curCode.substring(curCode.length - 4) === curDefaultSec.substring(curDefaultSec.length - 4);
+            if (startFlag && endFlag) {
+              this.togeDefaultFlag = startFlag && endFlag;
+              this.appSecret = res.bk_app_secret;
+            }
             this.appSecretList.forEach((item) => {
               if (item.id === this.viewStatus.id) {
                 // eslint-disable-next-line no-param-reassign
@@ -649,7 +682,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secrets/${this.curSecret.id}/`;
       this.$http
         .delete(url)
-        .then(() => {})
+        .then(() => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('删除成功'),
+          });
+        })
         .catch((err) => {
           this.$paasMessage({
             theme: 'error',
@@ -659,11 +697,13 @@ export default {
         .finally(() => {
           this.getSecretList();
           this.deleteFormData.verifyText = '';
+          this.deleteVisible = false;
         });
     },
     // 取消删除
     cancelDelete() {
       this.deleteFormData.verifyText = '';
+      this.deleteVisible = false;
     },
     // 获取环境变量默认密钥
     getDefaultSecret() {
@@ -716,14 +756,19 @@ export default {
     // 点击按钮更换默认密钥
     clickChangeDefault() {
       this.changeDefaultVisible = true;
-      this.curSelect = this.defaultSecret;
+      this.curSelect = this.defaultSecret || '';
     },
     // 更换默认密钥
     changeDefaultsSecret(id) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/default_secret/`;
       this.$http
         .post(url, { id })
-        .then(() => {})
+        .then(() => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('默认密钥更换成功'),
+          });
+        })
         .catch((err) => {
           this.$paasMessage({
             theme: 'error',
@@ -739,33 +784,58 @@ export default {
       const cur = this.optionSecretList.find(item => item.bk_app_secret === this.curSelect);
       this.changeDefaultsSecret(cur.id);
       this.appSecret = null;
+      this.togeFlag = false;
+      this.togeDefaultFlag = false;
     },
     // 部署更新密钥
     handleDeploy(item) {
-      const appRouterInfo =        item.environment === 'stag'
-        ? {
-          name: 'appDeploy',
-          params: {
-            id: this.curAppInfo.application.code,
-            moduleId: item.module,
-          },
-        }
-        : {
-          name: 'appDeployForProd',
-          params: {
-            id: this.curAppInfo.application.code,
-            moduleId: item.module,
-          },
-          query: {
-            focus: 'prod',
-          },
+      const isEnvStag = item.environment === 'stag';
+      const params = {
+        id: this.curAppInfo.application.code,
+        moduleId: item.module,
+      };
+      if (this.curAppInfo.application.type === 'cloud_native') {
+        const cloudStag = {
+          name: 'cloudAppDeployManageStag',
+          params,
         };
+        const cloudProd = {
+          name: 'cloudAppDeployManageProd',
+          params,
+        };
+        const cloudRouterInfo = isEnvStag ? cloudStag : cloudProd;
+        this.$router.push(cloudRouterInfo);
+        return;
+      }
+      const appStag = {
+        name: 'appDeploy',
+        params,
+      };
+      const appProd = {
+        name: 'appDeployForProd',
+        params,
+        query: {
+          focus: 'prod',
+        },
+      };
+      const appRouterInfo = isEnvStag ? appStag : appProd;
+
       this.$router.push(appRouterInfo);
     },
   },
 };
 </script>
-
+<style lang="scss">
+.addSecretPop {
+  .bk-tooltip-content {
+    .popconfirm-operate {
+      .default-operate-button {
+        margin-left: 12px !important;
+      }
+    }
+  }
+}
+</style>
 <style lang="scss" scoped>
 .basic-info-item {
   margin-bottom: 35px;
@@ -1143,17 +1213,20 @@ export default {
 .secret-icon {
   transform: translate(4px, -4px);
 }
-.bk-tooltip-content {
-  .bk-popconfirm-content {
-    padding: 4px;
-    .popconfirm-content {
-      .add-content-text {
-        color: #63656e;
-        margin-bottom: 15px;
+.addSecretPop {
+  .bk-tooltip-content {
+    .bk-popconfirm-content {
+      padding: 4px;
+      .popconfirm-content {
+        .add-content-text {
+          color: #63656e;
+          margin-bottom: 15px;
+        }
       }
     }
   }
 }
+
 .bk-form-vertical {
   margin-top: 16px;
 }

@@ -31,6 +31,7 @@ Examples:
 """
 from django.core.management.base import BaseCommand
 
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.converter import BkAppResourceConverter
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
@@ -57,22 +58,30 @@ class Command(BaseCommand):
 
         for res in resources:
             bkapp_res = BkAppResource(**res.revision.json_value)
-            print(f"will try convert BkApp {bkapp_res.metadata.name}")
+            self.stdout.write(self.style.NOTICE(f"will try convert BkApp {bkapp_res.metadata.name}"))
 
         if dry_run:
-            print("============ dry run ============")
+            self.stdout.write(self.style.NOTICE("============ dry run ============"))
             return
 
         for res in resources:
             bkapp_res = BkAppResource(**res.revision.json_value)
+            if bkapp_res.apiVersion == ApiVersion.V1ALPHA2:
+                self.stdout.write(
+                    self.style.NOTICE("{bkapp_res.metadata.name} version is {ApiVersion.V1ALPHA2}, skip")
+                )
+                continue
+
             bkapp_res, converted, upgrade_version = BkAppResourceConverter(bkapp_res).convert()
             res.use_resource(bkapp_res)
 
             bkapp_name = bkapp_res.metadata.name
             if converted:
-                print(f"BkApp {bkapp_name} converted")
+                self.stdout.write(self.style.SUCCESS(f"BkApp {bkapp_name} converted"))
             if not upgrade_version:
-                print(f"BkApp {bkapp_name} still in v1alpha1 version due to use multi-images")
+                self.stdout.write(
+                    self.style.WARNING(f"BkApp {bkapp_name} still in v1alpha1 version due to use multi-images")
+                )
 
     def _validate_params(self, app_code: str, module_name: str, all_bkapp: bool):
         if not all_bkapp and not (app_code and module_name):

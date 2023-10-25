@@ -18,14 +18,13 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
-from typing import Optional, Type
+from typing import Optional
 
 from django.db import IntegrityError
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus
-from paas_wl.bk_app.cnative.specs.entities import BkAppManifestProcessor
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
@@ -33,21 +32,14 @@ from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError
-from paasng.platform.engine.models.phases import DeployPhaseTypes
+from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.workflow import DeployStep
 
 logger = logging.getLogger(__name__)
-
-# Try to load the access control module
-ApplicationAccessControlSwitch: Optional[Type]
-try:
-    from paasng.security.access_control.models import ApplicationAccessControlSwitch  # type: ignore
-except ImportError:
-    logger.info('access control only supported in te edition, skip import')
-    ApplicationAccessControlSwitch = None
 
 
 class BkAppReleaseMgr(DeployStep):
@@ -58,11 +50,6 @@ class BkAppReleaseMgr(DeployStep):
 
     def start(self):
         build = Build.objects.get(pk=self.deployment.build_id)
-        # TODO: 增加步骤 "更新进程配置"
-        # with self.procedure('更新进程配置'):
-        #     # Turn the processes into the corresponding type in paas_wl module
-        #     procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
-        #     ProcessManager(self.engine_app.env).sync_processes_specs(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
@@ -112,6 +99,9 @@ def release_by_k8s_operator(
     # Add current timestamp in name to avoid conflicts
     default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
 
+    # The resource payload of the revision object won't be send to the operator directly,
+    # the platform will construct a bk-app model for deploying instead. So the model
+    # deploy object created below only can be treated as a deploy history record.
     try:
         app_model_deploy = AppModelDeploy.objects.create(
             application_id=application.id,
@@ -127,6 +117,12 @@ def release_by_k8s_operator(
         raise
 
     try:
+        bkapp_res = get_bkapp_resource_for_deploy(
+            env,
+            deploy_id=str(app_model_deploy.id),
+            force_image=build.image if build else None,
+        )
+
         # 下发 k8s 资源前需要确保命名空间存在
         ensure_namespace(env)
 
@@ -135,18 +131,14 @@ def release_by_k8s_operator(
         # NOTE: This action might break running pods that get svc-discovery data by
         # mounting the configmap as file, because some data might be removed in the
         # latest version. We should ask the application developer to handle this properly.
-        svc_disc.SvcDiscConfigManager(env=env, bk_app_name=app_model_deploy.name).sync()
+        #
+        # TODO: There is no way to set svc-disc related spec currently.
+        svc_disc.apply_configmap(env, bkapp_res)
+
         # 下发待挂载的 volume source
         VolumeSourceManager(env).deploy()
 
-        if ApplicationAccessControlSwitch is not None:
-            acl_enabled = ApplicationAccessControlSwitch.objects.is_enabled(application)
-        else:
-            acl_enabled = False
-
-        deployed_manifest = apply_bkapp_to_k8s(
-            env, BkAppManifestProcessor(app_model_deploy).build_manifest(build=build, acl_enabled=acl_enabled)
-        )
+        deployed_manifest = apply_bkapp_to_k8s(env, bkapp_res.to_deployable())
 
         # 下发日志采集配置
         ensure_bk_log_if_need(env)

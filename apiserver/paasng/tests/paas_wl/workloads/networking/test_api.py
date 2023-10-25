@@ -1,6 +1,6 @@
 import pytest
 
-from paas_wl.workloads.networking.api import sync_proc_ingresses
+from paas_wl.workloads.networking.sync import sync_proc_ingresses
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -97,6 +97,10 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
     process = serializers.CharField()
     plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices())
 
+    def to_internal_value(self, data) -> bk_app.ResQuotaOverlay:
+        d = super().to_internal_value(data)
+        return bk_app.ResQuotaOverlay(**d)
+
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
     """Base fields for validating AutoscalingSpec."""
@@ -111,6 +115,10 @@ class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
     process = serializers.CharField()
+
+    def to_internal_value(self, data) -> bk_app.AutoscalingOverlay:
+        d = super().to_internal_value(data)
+        return bk_app.AutoscalingOverlay(**d)
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
@@ -132,11 +140,11 @@ class ConfigurationInputSLZ(serializers.Serializer):
 class BuildInputSLZ(serializers.Serializer):
     """Validate the `build` field."""
 
-    image = serializers.CharField(allow_null=True, default=None)
+    image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
     imagePullPolicy = serializers.ChoiceField(
         choices=ImagePullPolicy.get_choices(), default=ImagePullPolicy.IF_NOT_PRESENT
     )
-    imageCredentialsName = serializers.CharField(allow_null=True, default=None)
+    imageCredentialsName = serializers.CharField(allow_null=True, default=None, allow_blank=True)
 
     def to_internal_value(self, data) -> bk_app.BkAppBuildConfig:
         d = super().to_internal_value(data)
@@ -155,8 +163,8 @@ class ProcessInputSLZ(serializers.Serializer):
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
 
     # v1alpha1
-    image = serializers.CharField(allow_null=True, default=None)
-    imagePullPolicy = serializers.CharField(allow_null=True, default=None)
+    image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
+    imagePullPolicy = serializers.ChoiceField(choices=ImagePullPolicy.get_choices(), allow_null=True, default=None)
     cpu = serializers.CharField(required=False)
     memory = serializers.CharField(required=False)
 

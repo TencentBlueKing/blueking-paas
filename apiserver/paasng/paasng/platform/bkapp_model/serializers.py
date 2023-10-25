@@ -19,8 +19,8 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ScalingPolicyczycz
-from paas_wl.bk_app.processes.drf_serializers import MetricSpecSLZ, ScalingConfigSLZ
+from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
+from paas_wl.bk_app.processes.drf_serializers import MetricSpecSLZ
 from paasng.platform.modules.constants import DeployHookType, ModuleName
 from paasng.platform.modules.models.module import Module
 

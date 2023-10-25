@@ -16,16 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import TYPE_CHECKING
 
+import yaml
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import CommandError
 
-from paas_wl.bk_app.cnative.specs.configurations import EnvVarsReader
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.management.base import BaseAppModelResourceCommand
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paasng.platform.engine.models.managers import ConfigVarManager
+from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
 
 class Command(BaseAppModelResourceCommand):
-    help = 'Store BkApp Configration.env to databases'
+    help = 'Store BkApp Specs to databases'
 
     def handle(self, app_code, module_name, region, cluster_name, all_clusters, verbosity, dry_run, **options):
         try:
@@ -65,17 +66,20 @@ class Command(BaseAppModelResourceCommand):
             return
 
         for module, res in module_bkapp_pairs.values():
-            self.store_envs_to_db(module, res, verbosity=verbosity, dry_run=dry_run)
+            try:
+                self.import_bkapp(module, res, verbosity=verbosity, dry_run=dry_run)
+            except Exception:
+                logging.exception("")
 
-    def store_envs_to_db(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
-        """Store all env var defined at bkapp to db"""
+    def import_bkapp(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
+        """import bkapp manifest"""
         bkapp = BkAppResource(**res.revision.json_value)
-        config_vars = EnvVarsReader(bkapp).read_all(module)
+        input_data = bkapp.to_deployable()
 
         prefix = "" if not dry_run else "DRY-RUN: "
         self.stdout.write(
             self.style.NOTICE(
-                "{prefix}apply vars to app<{app_code}> module<{module_name}>".format(
+                "{prefix}import manifest to app<{app_code}> module<{module_name}>".format(
                     prefix=prefix,
                     app_code=module.application.code,
                     module_name=module.name,
@@ -84,21 +88,13 @@ class Command(BaseAppModelResourceCommand):
         )
         # Verbosity level, 2=verbose output
         if verbosity >= 2:
-            for config_var in config_vars:
-                self.stdout.write(
-                    self.style.WARNING(
-                        "{prefix}saving for env<{env}> key<{key}>".format(
-                            prefix=prefix,
-                            env=config_var.environment_name,
-                            key=config_var.key,
-                        )
+            self.stdout.write(
+                self.style.WARNING(
+                    "{prefix}Manifest START: \n{manifest}\n{prefix}Manifest END".format(
+                        prefix=prefix,
+                        manifest=yaml.safe_dump(input_data, indent=2, allow_unicode=True),
                     )
                 )
+            )
         if not dry_run:
-            ConfigVarManager().apply_vars_to_module(module, config_vars=config_vars)
-            # clear Configration.env and envOverlay.envVariables
-            bkapp.spec.configuration.env = []
-            if bkapp.spec.envOverlay:
-                bkapp.spec.envOverlay.envVariables = []
-            # save as new revision
-            res.use_resource(bkapp)
+            import_manifest(module, input_data)

@@ -503,6 +503,9 @@ export default {
       if (this.isBasePageEdit) {
         try {
           await this.$refs.baseInfoRef.validate();
+          if (this.buildConfig.image_credential_name === '') {
+            this.buildConfig.image_credential_name = null;
+          }
           await this.$store.dispatch('deploy/SaveAppBuildConfigInfo', {
             appCode: this.appCode,
             moduleId: this.curModuleId,

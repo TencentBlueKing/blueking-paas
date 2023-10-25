@@ -584,8 +584,8 @@ import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
 import collapseContent from './comps/collapse-content.vue';
-import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
-import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
+import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
+import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
 
 export default {
   components: {

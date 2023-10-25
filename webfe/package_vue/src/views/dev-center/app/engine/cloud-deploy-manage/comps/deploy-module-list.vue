@@ -263,7 +263,7 @@ export default {
 
   watch: {
     modelName(value) {
-      if (value === '全部模块') {
+      if (value === '全部模块' || value === '') {
         this.deploymentInfoData = this.deploymentInfoDataBackUp;
       } else {
         this.deploymentInfoData = this.deploymentInfoDataBackUp
@@ -403,6 +403,11 @@ export default {
         });
         this.$nextTick(() => {
           this.$set(this, 'deploymentInfoData', res.data);
+          console.log('modelName', this.modelName);
+          if (this.modelName && this.modelName !== '全部模块') {
+            this.deploymentInfoData = this.deploymentInfoData
+              .filter(module => module.module_name === this.modelName);
+          }
         });
         this.rvData = {
           rvInst: res.rv_inst,

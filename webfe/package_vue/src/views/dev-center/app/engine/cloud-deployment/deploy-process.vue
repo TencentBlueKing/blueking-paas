@@ -110,7 +110,7 @@
               :label-width="120"
               v-if="isV1alpha2"
             >
-              {{ formData.image }}
+              {{ formData.image || '--' }}
               <i
                 class="paasng-icon paasng-edit-2 image-store-icon"
                 @click="handleToModuleInfo"
@@ -177,7 +177,6 @@
                 ext-cls="select-custom"
                 ext-popover-cls="select-popover-custom"
                 searchable
-                @change="handleImageChange"
               >
                 <bk-option
                   v-for="option in imageCredentialList"
@@ -669,11 +668,11 @@
           </bk-form-item>
           <bk-form-item :label="`${$t('镜像凭证')}：`">
             <span class="form-text">
-              {{ isV1alpha2 ? buildData.imageCredentialsName : bkappAnnotations[imageCrdlAnnoKey] || '--' }}
+              {{ isV1alpha2 ? formData.image_credential_name : bkappAnnotations[imageCrdlAnnoKey] || '--' }}
             </span>
           </bk-form-item>
           <bk-form-item :label="`${$t('启动命令')}：`">
-            <span v-if="formData.command.length">
+            <span v-if="formData.command && formData.command.length">
               <bk-tag
                 v-for="item in formData.command"
                 :key="item"
@@ -689,7 +688,7 @@
             </span>
           </bk-form-item>
           <bk-form-item :label="`${$t('命令参数')}：`">
-            <span v-if="formData.args.length">
+            <span v-if="formData.args && formData.args.length">
               <bk-tag
                 v-for="item in formData.args"
                 :key="item"
@@ -726,7 +725,6 @@
             v-if="ifopen"
           >
             <bk-form-item :label="`${$t('配置环境')}：`">
-              <!-- <span class="form-text">{{ ENV_ENUM[envName] || '--' }}</span> -->
               <div class="flex-row env-detail">
                 <div
                   v-for="item in envsData"
@@ -841,7 +839,7 @@
 </template>
 
 <script>import _ from 'lodash';
-import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
+import { RESQUOTADATA } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 
 export default {
@@ -873,56 +871,7 @@ export default {
       processNameActive: 'web', // 选中的进程名
       btnIndex: 0,
       panelActive: 0,
-      formData: {
-        name: 'web',
-        image: null,
-        image_credential_name: null,
-        command: [
-          'python',
-        ],
-        args: [
-          '-m',
-          'uvicorn',
-        ],
-        port: 5000,
-        env_overlay: {
-          prod: {
-            environment_name: 'prod',
-            plan_name: 'default',
-            target_replicas: 1,
-            autoscaling: false,
-            scaling_config: {
-              min_replicas: 1,
-              max_replicas: 1,
-              metrics: [
-                {
-                  type: 'Resource',
-                  metric: 'cpuUtilization',
-                  value: '85%',
-                },
-              ],
-              policy: 'ScalingPolicy.DEFAULT',
-            },
-          },
-          stag: {
-            environment_name: 'stag',
-            plan_name: 'default',
-            target_replicas: 0,
-            autoscaling: true,
-            scaling_config: {
-              min_replicas: 3,
-              max_replicas: 4,
-              metrics: [
-                {
-                  type: 'Resource',
-                  metric: 'cpuUtilization',
-                  value: '70%',
-                },
-              ],
-            },
-          },
-        },
-      },
+      formData: {},
       formDataBackUp: {
         name: 'web',
         image: null,
@@ -966,7 +915,7 @@ export default {
                 {
                   type: 'Resource',
                   metric: 'cpuUtilization',
-                  value: '70%',
+                  value: '85%',
                 },
               ],
             },
@@ -974,15 +923,10 @@ export default {
         },
       },
       bkappAnnotations: {},
-      command: [],
-      args: [],
       allowCreate: true,
       hasDeleteIcon: true,
       processData: [],
       processDataBackUp: [],
-      localCloudAppData: {},
-      localCloudAppDataBackUp: {},
-      hooks: null,
       isLoading: true,
       rules: {
         image: [
@@ -1129,7 +1073,6 @@ export default {
         { value: 'prod', label: this.$t('生产环境') },
       ],
       resQuotaData: RESQUOTADATA,
-      btnMouseIndex: '',
       processDialog: {
         loading: false,
         visiable: false,
@@ -1137,33 +1080,10 @@ export default {
         name: '',
         index: '',
       },
-      envOverlayData: { replicas: [] },
-      envName: 'stag',
-      ENV_ENUM,
-      localProcessNameActive: '',
-      buildData: {},
       quotaPlansFlag: false,
       triggerMethodData: ['CPU 使用率'],
       cpuLabel: 'CPU 使用率',
-      cpuValue: '70%',
-      extraConfigData: {
-        stag: {
-          resQuotaPlan: {},
-          isAutoscaling: false,
-          formAutoscalingData: { minReplicas: '', maxReplicas: '', policy: 'default' },
-          formReplicas: 1,
-          limit: {},
-          request: {},
-        },
-        prod: {
-          resQuotaPlan: {},
-          isAutoscaling: false,
-          formAutoscalingData: { minReplicas: '', maxReplicas: '', policy: 'default' },
-          formReplicas: 1,
-          limit: {},
-          request: {},
-        },
-      },
+      cpuValue: '85%',
       autoScalDisableConfig: {
         prod: {},
         stag: {},
@@ -1192,9 +1112,6 @@ export default {
     imageCrdlAnnoKey() {
       if (this.isV1alpha2) return '';
       return `bkapp.paas.bk.tencent.com/image-credentials.${this.processNameActive}`;
-    },
-    imageLocalCrdlAnnoKey() {
-      return `bkapp.paas.bk.tencent.com/image-credentials.${this.localProcessNameActive}`;
     },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.processPageEdit;
@@ -1245,171 +1162,9 @@ export default {
     cloudAppData: {
       handler(val) {
         this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
-
-        //   if (val.spec) {
-        //     this.localCloudAppData = _.cloneDeep(val);
-        //     this.localCloudAppDataBackUp = _.cloneDeep(this.localCloudAppData);
-        //     this.envOverlayData = this.localCloudAppData.spec.envOverlay || {};
-        //     this.buildData = this.localCloudAppData.spec.build || {};
-        //     this.processData = val.spec.processes;
-        //     this.formData = this.processData[this.btnIndex];
-        //     this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
-        //     if (this.isCreate) {
-        //       // 使用示例镜像，启动命令默认值
-        //       if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
-        //         this.formData.command = ['bash', '/app/start_web.sh'];
-        //       } else {
-        //         this.formData.command = [];
-        //         this.formData.targetPort = '';
-        //       }
-        //     }
-        //   }
-        //   this.panels = _.cloneDeep(this.processData);
       },
       immediate: true,
     },
-    // formData: {
-    // handler(val) {
-    //   this.envOverlayData = this.localCloudAppData?.spec?.envOverlay || {};
-    //   if (this.localCloudAppData.spec) {
-    //     val.name = this.processNameActive;
-    //     if (val.port && /^\d+$/.test(val.port)) { // 有值且为数字字符串
-    //       val.port = Number(val.port);
-    //     }
-
-    //     // 更多配置信息
-    //     // 资源配额方案
-    //     this.extraConfigData.stag.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { plan: 'default' };
-    //     this.extraConfigData.prod.resQuotaPlan = (this.envOverlayData?.resQuotas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { plan: 'default' };
-
-    //     // 扩缩容-自动
-    //     const autoscalingStag = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'stag');
-    //     const autoscalingProd = (this.envOverlayData?.autoscaling || []).find(e => e.process === this.processNameActive && e.envName === 'prod');
-    //     this.extraConfigData.stag.isAutoscaling = !!autoscalingStag;
-    //     this.extraConfigData.prod.isAutoscaling = !!autoscalingProd;
-
-    //     // 扩缩容-手动
-    //     const replicasStag = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'stag') || { count: 1 };
-    //     const replicasProd = (this.envOverlayData?.replicas || []).find(e => e.process === this.processNameActive && e.envName === 'prod') || { count: 1 };
-
-    //     // 自动
-    //     if (!!autoscalingStag) {
-    //       this.extraConfigData.stag.formAutoscalingData.maxReplicas = autoscalingStag.maxReplicas;
-    //       this.extraConfigData.stag.formAutoscalingData.minReplicas = autoscalingStag.minReplicas;
-    //     } else { // 手动
-    //       this.extraConfigData.stag.formReplicas = replicasStag.count;
-    //     }
-
-    //     if (!!autoscalingProd) {
-    //       this.extraConfigData.prod.formAutoscalingData.maxReplicas = autoscalingProd.maxReplicas;
-    //       this.extraConfigData.prod.formAutoscalingData.minReplicas = autoscalingProd.minReplicas;
-    //     } else {
-    //       this.extraConfigData.prod.formReplicas = replicasProd.count;
-    //     }
-
-    //     this.$set(this.localCloudAppData.spec.processes, this.btnIndex, val); // 赋值数据给选中的进程
-
-    //     if (val?.image) {
-    //       this.$refs.formDeploy?.clearError();
-    //     }
-    //     this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-    //   }
-    //   setTimeout(() => {
-    //     this.isLoading = false;
-    //   }, 500);
-    // },
-    // immediate: true,
-    // deep: true,
-    // },
-    // 'formData.port'(value) {
-    //   if (value === null || value === '') {
-    //     this.isTargetPortErrTips = false;
-    //     return false;
-    //   }
-    //   if (value) {
-    //     if (isNaN(Number(value))) {
-    //       this.isTargetPortErrTips = true;
-    //       this.targetPortErrTips = this.$t('只能输入数字');
-    //     } else {
-    //       if (!(value >= 1 && value <= 65535)) {
-    //         this.isTargetPortErrTips = true;
-    //         this.targetPortErrTips = this.$t('端口有效范围1-65535');
-    //       } else {
-    //         this.isTargetPortErrTips = false;
-    //       }
-    //     }
-    //   }
-    // },
-
-    // 'extraConfigData.stag': {
-    //   handler(val) {
-    //     this.envName = 'stag';
-    //     if (Object.keys(this.localCloudAppData).length) {
-    //       this.handleExtraConfig(); // 处理额外的配置
-    //     }
-
-    //     // 扩缩容
-    //     if (val?.formAutoscalingData?.maxReplicas >= val?.formAutoscalingData?.minReplicas) {
-    //       this.$refs.formStagEnv?.clearError();
-    //     }
-
-    //     if (val?.formAutoscalingData?.minReplicas <= val?.formAutoscalingData?.maxReplicas) {
-    //       this.$refs.formStagEnv?.clearError();
-    //     }
-    //   },
-    //   deep: true,
-    // },
-    // 'extraConfigData.prod': {
-    //   handler(val) {
-    //     this.envName = 'prod';
-    //     if (Object.keys(this.localCloudAppData).length) {
-    //       this.handleExtraConfig(); // 处理额外的配置
-    //     }
-
-    //     // 扩缩容
-    //     if (val?.formAutoscalingData?.maxReplicas >= val?.formAutoscalingData?.minReplicas) {
-    //       this.$refs.formProdEnv?.clearError();
-    //     }
-
-    //     if (val?.formAutoscalingData?.minReplicas <= val?.formAutoscalingData?.maxReplicas) {
-    //       this.$refs.formProdEnv?.clearError();
-    //     }
-    //   },
-    //   deep: true,
-    // },
-
-    // 'extraConfigData.stag.resQuotaPlan.plan'() {
-    //   this.getQuotaPlans('stag');
-    // },
-
-    // 'extraConfigData.prod.resQuotaPlan.plan'() {
-    //   this.getQuotaPlans('prod');
-    // },
-
-    // panels: {
-    //   handler(val) {
-    //     if (!val.length) return;
-    //     const isDisabled = val[this.panelActive].isEdit;
-    //     bus.$emit('release-disabled', isDisabled);
-    //   },
-    //   deep: true,
-    // },
-
-    // isV1alpha2(val) {
-    //   console.log('val', val);
-    //   // v2每个进程不需要 image、imagePullPolicy
-    //   if (val) {
-    //     // this.cloudAppData?.spec?.processes.forEach((e) => {
-    //     //   delete e.image;
-    //     //   delete e.imagePullPolicy;
-    //     // });
-    //     // setTimeout(() => {
-    //     //   this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-    //     // }, 500);
-    //   } else {
-    //     this.getImageCredentialList();
-    //   }
-    // },
   },
   async created() {
     // 非创建应用初始化为查看态
@@ -1524,7 +1279,6 @@ export default {
     handleBtnGroupClick(v, i) {
       // 选中的进程信息
       this.formData = this.processData[i];
-      this.localProcessNameActive = v; // 点击的tab名，编辑数据时需要用到
       this.processNameActive = v;
       this.btnIndex = i;
       // tag-input 输入切换问题
@@ -1576,35 +1330,6 @@ export default {
             }
           });
           this.processData[this.btnIndex].name = this.processDialog.name; // 需要更新cloudAppData
-
-          // // 需要更新外层envOverlay中的自动调节数据
-          // (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).map((e) => {
-          //   if (e.process === this.localProcessNameActive) {
-          //     e.process = this.processDialog.name;
-          //   }
-          //   return e;
-          // });
-
-          // // 需要更新外层envOverlay中配额数据
-          // (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).map((e) => {
-          //   if (e.process === this.localProcessNameActive) {
-          //     e.process = this.processDialog.name;
-          //   }
-          //   return e;
-          // });
-
-          // // 需要更新外层envOverlay中副本数量
-          // (this.localCloudAppData.spec?.envOverlay?.replicas || []).map((e) => {
-          //   if (e.process === this.localProcessNameActive) {
-          //     e.process = this.processDialog.name;
-          //   }
-          //   return e;
-          // });
-
-          // this.bkappAnnotations[this.imageCrdlAnnoKey] = this.bkappAnnotations[this.imageLocalCrdlAnnoKey]; // 旧的bkappAnnotations数据需要赋值给新的
-          // delete this.bkappAnnotations[this.imageLocalCrdlAnnoKey];
-
-          // // this.handleBtnGroupClick(this.processDialog.name);
         } else {
           // 新增进程
           this.panels.push({ name: this.processDialog.name });
@@ -1616,6 +1341,7 @@ export default {
           }
           this.processData.push(this.formData);
         }
+        console.log('this.processData', this.processData);
         this.processDialog.visiable = false;
       } catch (error) {
         console.log('error', error);
@@ -1653,175 +1379,17 @@ export default {
       this.processData.splice(i, 1);
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
-
-      // 过滤外层envOverlay中的自动调节数据
-      // this.localCloudAppData.spec.envOverlay.autoscaling = (this.localCloudAppData.spec.envOverlay.autoscaling || []).filter(e => e.process !== this.processNameActive);
-
-      // // 过滤外层envOverlay中配额数据
-      // this.localCloudAppData.spec.envOverlay.resQuotas = (this.localCloudAppData.spec.envOverlay.resQuotas || []).filter(e => e.process !== this.processNameActive);
-
-      // // 过滤外层envOverlay中副本数量
-      // this.localCloudAppData.spec.envOverlay.replicas = (this.localCloudAppData.spec.envOverlay?.replicas || []).filter(e => e.process !== this.processNameActive);
-
-      // this.processData = this.localCloudAppData.spec.processes;
       this.panels = _.cloneDeep(this.processData);
-
-      // // 手动删除镜像凭证
-      // delete this.localCloudAppData.metadata.annotations[this.imageCrdlAnnoKey];
-      // this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
 
       this.processNameActive = 'web';
       this.btnIndex = 0;
-    },
-
-    // 过滤当前进程当前环境envOverlay中autoscaling
-    handleFilterAutoscalingData(data, process) {
-      if (this.extraConfigData[this.envName].isAutoscaling) {
-        // 自动调节 需要过滤手动调节相关数据
-        this.localCloudAppData.spec.envOverlay.replicas = (data?.replicas || []).filter(e => !(e.process === process && e.envName === this.envName));
-      } else {
-        // 手动调节 需要过滤自动调节相关数据
-        this.localCloudAppData.spec.envOverlay.autoscaling = (data?.autoscaling || []).filter(e => !(e.process === process && e.envName === this.envName));
-      }
-    },
-
-    // 处理资源配额相关
-    handleExtraConfig() {
-      // 副本数量相关数据
-      const replicasData = {
-        envName: this.envName,
-        process: this.processNameActive,
-        count: this.extraConfigData[this.envName].formReplicas,
-      };
-      // // 资源配置相关数据
-      const resQuotaPlanData = {
-        envName: this.envName,
-        process: this.processNameActive,
-        plan: this.extraConfigData[this.envName].resQuotaPlan.plan,
-      };
-      if (!this.localCloudAppData?.spec?.envOverlay) {
-        this.localCloudAppData.spec.envOverlay = {};
-      }
-
-      const resQuotasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).filter(e => e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) || [];
-
-      const resQuotasFilterData = (this.localCloudAppData.spec?.envOverlay?.resQuotas || []).filter(e => e.process !== resQuotaPlanData.process || e.envName !== resQuotaPlanData.envName) || [];
-
-      if (!resQuotasWithProcessEnv.length) {
-        // 没有resQuotas时
-        if (!this.localCloudAppData.spec.envOverlay.resQuotas) {
-          this.localCloudAppData.spec.envOverlay.resQuotas = [];
-        }
-        this.localCloudAppData.spec.envOverlay.resQuotas.push(resQuotaPlanData);
-      } else {
-        resQuotasWithProcessEnv.forEach((e) => {
-          if (e.process === resQuotaPlanData.process && e.envName === resQuotaPlanData.envName) {
-            e.plan = resQuotaPlanData.plan;
-          }
-        });
-        this.localCloudAppData.spec.envOverlay.resQuotas = [...resQuotasFilterData, ...resQuotasWithProcessEnv];
-      }
-
-      if (replicasData.count) {
-        // 副本数量
-        const replicasWithProcessEnv = (this.localCloudAppData.spec?.envOverlay?.replicas || []).filter(e => e.process === replicasData.process && e.envName === replicasData.envName) || [];
-
-        const replicasFilterData = (this.localCloudAppData.spec?.envOverlay?.replicas || []).filter(e => e.process !== replicasData.process || e.envName !== replicasData.envName) || [];
-        if (!replicasWithProcessEnv.length) {
-          if (!this.localCloudAppData.spec.envOverlay.replicas) {
-            this.localCloudAppData.spec.envOverlay.replicas = [];
-          }
-          this.localCloudAppData.spec.envOverlay.replicas.push(replicasData);
-        } else {
-          replicasWithProcessEnv.forEach((e) => {
-            if (e.process === replicasData.process && e.envName === replicasData.envName) {
-              e.count = replicasData.count;
-            }
-          });
-          this.localCloudAppData.spec.envOverlay.replicas = [...replicasFilterData, ...replicasWithProcessEnv];
-        }
-      }
-
-      // 自动调节
-      if (this.extraConfigData[this.envName].isAutoscaling) {
-        const { minReplicas } = this.extraConfigData[this.envName].formAutoscalingData;
-        const { maxReplicas } = this.extraConfigData[this.envName].formAutoscalingData;
-        // 自动调节相关数据
-        const autoscalingData = {
-          envName: this.envName,
-          process: this.processNameActive,
-          policy: 'default',
-          minReplicas: minReplicas ? Number(minReplicas) : 1,
-          maxReplicas: maxReplicas ? Number(maxReplicas) : '',
-        };
-        const autoscalingWithProcessEnv =          (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).filter(e => e.process === autoscalingData.process && e.envName === autoscalingData.envName) || [];
-
-        const autoscalingFilterData = (this.localCloudAppData.spec?.envOverlay?.autoscaling || []).filter(e => e.process !== autoscalingData.process || e.envName !== autoscalingData.envName) || [];
-
-        // 没有autoscaling时
-        if (!autoscalingWithProcessEnv.length) {
-          if (!this.localCloudAppData.spec.envOverlay.autoscaling) {
-            this.localCloudAppData.spec.envOverlay.autoscaling = [];
-          }
-          this.localCloudAppData.spec.envOverlay.autoscaling.push(autoscalingData);
-        } else {
-          // 有autoscaling数据
-          autoscalingWithProcessEnv.forEach((e) => {
-            if (e.process === autoscalingData.process && e.envName === autoscalingData.envName) {
-              e.minReplicas = autoscalingData.minReplicas;
-              e.maxReplicas = autoscalingData.maxReplicas;
-            }
-          });
-          this.localCloudAppData.spec.envOverlay.autoscaling = [...autoscalingFilterData, ...autoscalingWithProcessEnv];
-        }
-
-        // // replicas做一次备份
-        // if (this.localCloudAppData.spec.processes[this.btnIndex].replicas) {
-        //   this.formDataBackUp.replicas = this.localCloudAppData.spec.processes[this.btnIndex].replicas;
-        // }
-        // // 需要删除手动调节相关信息
-        // delete this.localCloudAppData.spec.processes[this.btnIndex].replicas;
-        // 过滤当前进程当前环境envOverlay中replicas
-        const { envOverlay } = this.localCloudAppData.spec;
-        this.handleFilterAutoscalingData(envOverlay, this.processNameActive); // 传入envOverlay、当前进程名
-      } else {
-        // // 手动调节
-        // // autoscaling做一次备份
-        // if (this.localCloudAppData.spec.processes[this.btnIndex].autoscaling) {
-        //   this.formDataBackUp.autoscaling = this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
-        // }
-        // // 需要删除当前进程base中的autoscaling
-        // delete this.localCloudAppData.spec.processes[this.btnIndex].autoscaling;
-        // 过滤当前进程当前环境envOverlay中autoscaling
-        const { envOverlay } = this.localCloudAppData.spec;
-        // // eslint-disable-next-line max-len
-        this.handleFilterAutoscalingData(envOverlay, this.processNameActive); // 传入envOverlay、当前进程名
-      }
-
-      // 将最大值最小值改为数字类型
-      // (this.localCloudAppData.spec?.processes || []).forEach((e) => {
-      //   if (e.autoscaling) {
-      //     e.autoscaling.minReplicas = e.autoscaling.minReplicas ? Number(e.autoscaling.minReplicas) : '';
-      //     e.autoscaling.maxReplicas = e.autoscaling.maxReplicas ? Number(e.autoscaling.maxReplicas) : '';
-      //   }
-      // });
-
-      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-    },
-
-    // 镜像选择
-    handleImageChange() {
-      if (this.bkappAnnotations[this.imageCrdlAnnoKey]) {
-        this.$set(this.localCloudAppData.metadata, 'annotations', this.bkappAnnotations);
-        this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-      }
     },
 
     async getQuotaPlans(env) {
       try {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        const data = res.find(e => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
+        const data = res.find(e => e.name === 'default');
         this.resQuotaData = res.map(item => item.name);
         this.resQuotaConfig[env].limit = data.limit;
         this.resQuotaConfig[env].request = data.request;
@@ -1875,6 +1443,7 @@ export default {
         });
         this.$store.commit('cloudApi/updateProcessPageEdit', false);
         this.$store.commit('cloudApi/updatePageEdit', false);
+        this.init();
       } catch (error) {
         this.$paasMessage({
           theme: 'error',

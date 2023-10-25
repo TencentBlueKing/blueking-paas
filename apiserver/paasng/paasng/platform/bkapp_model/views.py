@@ -44,6 +44,7 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
+    default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 
@@ -131,7 +132,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                         "plan_name": env_overlay.plan_name,
                         "target_replicas": env_overlay.target_replicas,
                         "autoscaling": env_overlay.autoscaling,
-                        "scaling_config": env_overlay.scaling_config,
+                        "scaling_config": env_overlay.scaling_config or default_scaling_config(),
                     }
                     for env_overlay in proc_spec.env_overlays.all()
                 },

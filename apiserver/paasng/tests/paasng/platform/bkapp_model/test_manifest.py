@@ -38,6 +38,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS, VolumeSource
 from paas_wl.bk_app.cnative.specs.models import Mount
+from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
@@ -171,6 +172,7 @@ class TestProcessesManifestConstructor:
         ],
     )
     def test_get_quota_plan(self, plan_name, expected):
+        initialize_default_proc_spec_plans()
         assert ProcessesManifestConstructor().get_quota_plan(plan_name) == expected
 
     @pytest.mark.parametrize(
@@ -189,6 +191,7 @@ class TestProcessesManifestConstructor:
             assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
 
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
+        initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         assert LEGACY_PROC_IMAGE_ANNO_KEY not in blank_resource.metadata.annotations
         assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
@@ -224,8 +227,8 @@ class TestProcessesManifestConstructor:
                     {
                         "envName": "stag",
                         "process": "web",
-                        # The plan name should has been transformed.
-                        "plan": '2C1G',
+                        # The plan name should have been transformed.
+                        "plan": "2C1G",
                     }
                 ],
             },

@@ -88,14 +88,17 @@
                 <div
                   class="content"
                   :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                  v-bk-tooltips="instance.state_message || instance.state"
                 >
                   <div
                     class="dot"
                     :class="instance.state"
                   >
                   </div>
-                  <span v-dashed="10">{{ instance.state || '--' }}</span>
+                  <span
+                    v-dashed="{disabled: instance.state === 'Running'}"
+                    v-bk-tooltips="instance.state_message || ''">
+                    {{ instance.state || '--' }}
+                  </span>
                 </div>
               </div>
             </div>

@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from contextlib import suppress
 from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
@@ -298,6 +299,17 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    def _validate_registry_permission(self, registry_service: DockerRegistryController):
+        """Validates the registry permission by attempting to touch it.
+
+        :raise: error_codes.INVALID_CREDENTIALS: If the credentials are invalid or the repository is unreachable.
+        """
+        with suppress(Exception):
+            # bkrepo 的 docker 仓库，镜像凭证没有填写正确时，.touch() 时会抛出异常
+            if registry_service.touch():
+                return
+            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
     def list_tags(self, request, code, module_name):
         """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
@@ -333,13 +345,12 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             username, password = credential.username, credential.password
 
         endpoint, slash, repo = repository.partition("/")
-        version_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
+        registry_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
 
-        if not version_service.touch():
-            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+        self._validate_registry_permission(registry_service)
 
         try:
-            alternative_versions = AlternativeVersionSLZ(version_service.list_alternative_versions(), many=True).data
+            alternative_versions = AlternativeVersionSLZ(registry_service.list_alternative_versions(), many=True).data
         except Exception:
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag

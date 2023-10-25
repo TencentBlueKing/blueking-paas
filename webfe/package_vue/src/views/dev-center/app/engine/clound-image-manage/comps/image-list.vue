@@ -75,8 +75,8 @@
                   <bk-form-item :label="`${$t('镜像 tag')}：`">
                     <span class="form-text">{{ row.detail.image_info.tag || '--' }}</span>
                   </bk-form-item>
-                  <bk-form-item :label="`${$t('大小')}：`">
-                    <span class="form-text">{{ row.detail.image_info.size + 'B' || '--' }}</span>
+                  <bk-form-item :label="`${$t('大小（B）')}：`">
+                    <span class="form-text">{{ row.detail.image_info.size || '--' }}</span>
                   </bk-form-item>
                   <bk-form-item :label="`${$t('更新时间')}：`">
                     <span class="form-text">{{ row.detail.image_info.updated || '--' }}</span>

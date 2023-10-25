@@ -48,12 +48,14 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     AutoscalingOverlay,
     BkAppAddon,
     BkAppBuildConfig,
+    BkAppHooks,
     BkAppProcess,
     BkAppResource,
     BkAppSpec,
     EnvOverlay,
     EnvVar,
     EnvVarOverlay,
+    Hook,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, ReplicasOverlay, ResQuotaOverlay
@@ -67,8 +69,9 @@ from paasng.platform.bkapp_model.utils import merge_env_vars
 from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.modules.models import Module
+from paasng.platform.modules.models import BuildConfig, Module
 
 logger = logging.getLogger(__name__)
 
@@ -145,8 +148,13 @@ class BuildConfigManifestConstructor(ManifestConstructor):
     """Construct the build config."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        # TODO
-        pass
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        build = model_res.spec.build
+        if not build:
+            build = BkAppBuildConfig()
+        if cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+            build.imageCredentialsName = cfg.image_credential_name
+        model_res.spec.build = build
 
 
 class ProcessesManifestConstructor(ManifestConstructor):
@@ -296,8 +304,16 @@ class HooksManifestConstructor(ManifestConstructor):
     """Construct the hooks part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        # TODO
-        pass
+        hooks = model_res.spec.hooks
+        if not hooks:
+            hooks = BkAppHooks()
+        pre_release_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        if pre_release_hook:
+            hooks.preRelease = Hook(
+                command=pre_release_hook.command,
+                args=pre_release_hook.args,
+            )
+        model_res.spec.hooks = hooks
 
 
 class MountsManifestConstructor(ManifestConstructor):

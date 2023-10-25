@@ -18,14 +18,38 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from rest_framework import serializers
 
-from paas_wl.bk_app.processes.drf_serializers import ScalingConfigSLZ
+from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
+from paas_wl.bk_app.processes.drf_serializers import MetricSpecSLZ
 from paasng.platform.modules.constants import DeployHookType
+
+DEFAULT_METRICS = [
+    {
+        "type": 'Resource',
+        "metric": 'cpuUtilization',
+        "value": '85%',
+    },
+]
+
+
+def default_scaling_config():
+    return {"minReplicas": 1, "maxReplicas": 1, "metrics": DEFAULT_METRICS, "policy": ScalingPolicy.DEFAULT}
 
 
 class GetManifestInputSLZ(serializers.Serializer):
     output_format = serializers.ChoiceField(
         help_text='The output format', choices=['json', 'yaml'], required=False, default='json'
     )
+
+
+class ScalingConfigSLZ(serializers.Serializer):
+    """扩缩容配置"""
+
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数", source="minReplicas")
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数", source="maxReplicas")
+    metrics = serializers.ListField(
+        child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
+    )
+    policy = serializers.CharField(help_text="扩缩容策略", default=ScalingPolicy.DEFAULT)
 
 
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
@@ -36,7 +60,7 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
-    scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False)
+    scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
 
 
 class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
@@ -68,7 +92,9 @@ class ModuleDeployHookSLZ(serializers.Serializer):
 
     type = serializers.ChoiceField(help_text="钩子类型", choices=DeployHookType.get_choices())
 
-    proc_command = serializers.CharField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False)
+    proc_command = serializers.CharField(
+        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False, allow_null=True
+    )
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
     enabled = serializers.BooleanField(allow_null=True, default=False)

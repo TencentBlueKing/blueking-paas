@@ -902,7 +902,7 @@ export default {
             trigger: 'blur change',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9_]+$/,
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9._-]+$/,
             message: this.$t('请输入包含标签(tag)的镜像地址'),
             trigger: 'blur',
           },
@@ -1162,6 +1162,7 @@ export default {
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+          this.getImageCredentialList();
           if (this.isCreate) {
             // 使用示例镜像，启动命令默认值
             if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {

@@ -74,6 +74,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
 
@@ -314,19 +315,27 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
         application = self.get_application()
         module = self.get_module_via_path()
-        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
-        bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        try:
-            repository = ImageParser(bkapp).get_repository()
-        except ValueError as e:
-            raise error_codes.INVALID_MRES.f(str(e))
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        if cfg.image_repository:
+            repository = cfg.image_repository
+            credential_name = cfg.image_credential_name
+        else:
+            # TODO: 数据迁移后删除以下代码
+            model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
+            bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        assert bkapp.spec.build
-        if repository != bkapp.spec.build.image:
-            logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+            try:
+                repository = ImageParser(bkapp).get_repository()
+            except ValueError as e:
+                raise error_codes.INVALID_MRES.f(str(e))
 
-        credential_name = bkapp.spec.build.imageCredentialsName
+            assert bkapp.spec.build
+            if repository != bkapp.spec.build.image:
+                logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+
+            credential_name = bkapp.spec.build.imageCredentialsName
+
         username, password = "", ""
         if credential_name:
             try:

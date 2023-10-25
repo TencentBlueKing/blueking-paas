@@ -198,7 +198,7 @@
     <bk-sideslider
       :is-show.sync="isShowSideslider"
       :title="$t('部署日志')"
-      :width="820"
+      :width="920"
       :quick-close="true"
       :before-close="handleCloseProcessWatch"
     >

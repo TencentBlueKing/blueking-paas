@@ -282,11 +282,6 @@ export default {
       rules: {
         prefix: [
           {
-            required: true,
-            message: this.$t('必填项'),
-            trigger: 'blur',
-          },
-          {
             regex: /^[a-zA-Z0-9]{0,24}$/,
             message: this.$t('只能包含字母、数字，长度小于 24 个字符'),
             trigger: 'blur',
@@ -507,6 +502,10 @@ export default {
           dockerBuild[item.name] = item.value;
         });
         data.docker_build_args = dockerBuild;
+      }
+
+      if (data.tag_options.prefix === '') {
+        data.tag_options.prefix = null;
       }
 
       return data;

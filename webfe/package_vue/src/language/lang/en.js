@@ -2365,4 +2365,5 @@ export default {
   部署到: 'Deploy to',
   '大小（B）': 'Size(B)',
   目前仅支持基于源码构建的镜像: 'Currently only images built based on source code are supported',
+  '钩子命令在构建目录下的 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file in the build directory.',
 };

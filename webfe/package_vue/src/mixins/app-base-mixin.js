@@ -37,7 +37,8 @@ export default {
       return this.$store.state.curAppInfo;
     },
     curAppModuleList() {
-      return this.$store.state.curAppModuleList;
+      // 根据name的英文字母排序
+      return (this.$store.state.curAppModuleList || []).sort((a, b) => a.name.localeCompare(b.name));
     },
     curAppModule() {
       return this.$store.state.curAppModule;

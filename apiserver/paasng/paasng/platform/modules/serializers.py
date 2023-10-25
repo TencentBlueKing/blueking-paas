@@ -315,9 +315,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     # custom image 相关字段
     # NOTE: image_repository 同时用于表示从源码构建的部署方式的镜像仓库
     image_repository = serializers.CharField(help_text="镜像仓库", required=False, allow_null=True)
-    image_credential_name = serializers.CharField(
-        help_text="镜像凭证名称", required=False, allow_blank=True, allow_null=True
-    )
+    image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False, allow_null=True)
 
     def validate(self, attrs):
         build_method = RuntimeType(attrs["build_method"])
@@ -325,9 +323,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
         if build_method == RuntimeType.BUILDPACK:
             missed_params = [k for k in ['tag_options', 'buildpacks', 'bp_stack_name'] if attrs.get(k, None) is None]
         elif build_method == RuntimeType.DOCKERFILE:
-            missed_params = [
-                k for k in ['tag_options', 'dockerfile_path', 'docker_build_args'] if attrs.get(k, None) is None
-            ]
+            missed_params = [k for k in ['tag_options', 'docker_build_args'] if attrs.get(k, None) is None]
         elif build_method == RuntimeType.CUSTOM_IMAGE:
             missed_params = [k for k in ['image_repository'] if attrs.get(k, None) is None]
         if missed_params:

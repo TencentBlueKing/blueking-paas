@@ -34,7 +34,7 @@ def base_manifest(bk_app):
         'metadata': {'name': bk_app.code},
         'spec': {
             'build': {'image': 'nginx:latest'},
-            'processes': [{'name': 'web'}],
+            'processes': [{'name': 'web', 'replicas': 1, 'resQuotaPlan': 'default'}],
         },
     }
 

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ReplicasOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import AutoscalingOverlay
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.modules.models import Module
@@ -26,10 +26,10 @@ from paasng.platform.modules.models import Module
 logger = logging.getLogger(__name__)
 
 
-def import_replicas_overlay(module: Module, items: List[ReplicasOverlay]) -> CommonImportResult:
-    """Import replicas overlay data.
+def import_autoscaling_overlay(module: Module, items: List[AutoscalingOverlay]) -> CommonImportResult:
+    """Import autoscaling overlay data.
 
-    :param items: A list of ReplicasOverlay items.
+    :param items: A list of AutoscalingOverlay items.
     :return: The import result object.
     """
     ret = CommonImportResult()
@@ -50,12 +50,21 @@ def import_replicas_overlay(module: Module, items: List[ReplicasOverlay]) -> Com
             continue
 
         _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-            proc_spec=proc_spec, environment_name=input_p.envName, defaults={"target_replicas": input_p.count}
+            proc_spec=proc_spec,
+            environment_name=input_p.envName,
+            defaults={
+                "autoscaling": True,
+                "scaling_config": {
+                    "minReplicas": input_p.minReplicas,
+                    "maxReplicas": input_p.maxReplicas,
+                    "policy": input_p.policy,
+                },
+            },
         )
         ret.incr_by_created_flag(created)
         # Move out from the index
         existing_index.pop((input_p.process, input_p.envName), None)
 
     # Remove existing data that is not touched.
-    ret.deleted_num = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).update(target_replicas=None)
+    ret.deleted_num = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).update(autoscaling=False)
     return ret

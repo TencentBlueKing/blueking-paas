@@ -668,7 +668,7 @@
           </bk-form-item>
           <bk-form-item :label="`${$t('镜像凭证')}：`">
             <span class="form-text">
-              {{ isV1alpha2 ? formData.image_credential_name : bkappAnnotations[imageCrdlAnnoKey] || '--' }}
+              {{ formData.image_credential_name }}
             </span>
           </bk-form-item>
           <bk-form-item :label="`${$t('启动命令')}：`">
@@ -839,7 +839,7 @@
 </template>
 
 <script>import _ from 'lodash';
-import { RESQUOTADATA } from '@/common/constants';
+import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 
 export default {
@@ -876,51 +876,10 @@ export default {
         name: 'web',
         image: null,
         image_credential_name: null,
-        command: [
-          'python',
-        ],
-        args: [
-          '-m',
-          'uvicorn',
-        ],
+        command: [],
+        args: [],
         port: 5000,
-        env_overlay: {
-          prod: {
-            environment_name: 'prod',
-            plan_name: 'default',
-            target_replicas: 1,
-            autoscaling: false,
-            scaling_config: {
-              min_replicas: 1,
-              max_replicas: 1,
-              metrics: [
-                {
-                  type: 'Resource',
-                  metric: 'cpuUtilization',
-                  value: '85%',
-                },
-              ],
-              policy: 'ScalingPolicy.DEFAULT',
-            },
-          },
-          stag: {
-            environment_name: 'stag',
-            plan_name: 'default',
-            target_replicas: 0,
-            autoscaling: true,
-            scaling_config: {
-              min_replicas: 3,
-              max_replicas: 4,
-              metrics: [
-                {
-                  type: 'Resource',
-                  metric: 'cpuUtilization',
-                  value: '85%',
-                },
-              ],
-            },
-          },
-        },
+        env_overlay: ENV_OVERLAY,
       },
       bkappAnnotations: {},
       allowCreate: true,
@@ -971,6 +930,8 @@ export default {
           },
           {
             validator: (v) => {
+              console.log('this.$refs.formDeploy1', this.$refs.formDeploy);
+              this.$refs.formDeploy?.clearError();
               const minReplicas = Number(v);
               const maxReplicas = Number(this.formData.env_overlay.stag.scaling_config.max_replicas);
               return minReplicas <= maxReplicas;
@@ -1109,10 +1070,6 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
-    imageCrdlAnnoKey() {
-      if (this.isV1alpha2) return '';
-      return `bkapp.paas.bk.tencent.com/image-credentials.${this.processNameActive}`;
-    },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.processPageEdit;
     },
@@ -1165,6 +1122,10 @@ export default {
       },
       immediate: true,
     },
+    'formData.env_overlay.stag.scaling_config.max_replicas'() {
+      console.log(11111, this.$refs.formDeploy?.clearError());
+      this.$refs.formDeploy?.clearError();
+    },
   },
   async created() {
     // 非创建应用初始化为查看态
@@ -1196,6 +1157,9 @@ export default {
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
+          if (!Object.keys(this.formData.env_overlay).length) {
+            this.formData.env_overlay = ENV_OVERLAY;
+          }
           this.panels = _.cloneDeep(this.processData);
         }
       } catch (e) {
@@ -1334,11 +1298,13 @@ export default {
           // 新增进程
           this.panels.push({ name: this.processDialog.name });
           this.btnIndex = this.panels.length - 1;
+          // isV1alpha2 共享image、image_credential_name
+          if (this.isV1alpha2) {
+            this.formDataBackUp.image = this.formData.image;
+            this.formDataBackUp.image_credential_name = this.formData.image_credential_name;
+          }
           this.formData = _.cloneDeep(this.formDataBackUp);
           this.formData.name = this.processDialog.name;
-          if (this.isV1alpha2) {
-            delete this.formData.image; // v2不需要image
-          }
           this.processData.push(this.formData);
         }
         console.log('this.processData', this.processData);

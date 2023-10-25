@@ -80,7 +80,7 @@ export default {
 
   watch: {
     moduleValue(value) {
-      if (value === '全部模块') {
+      if (value === '全部模块' || value === '') {
         this.showModuleList = this.moduleInfoList;
       } else {
         this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);

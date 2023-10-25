@@ -17,13 +17,13 @@
         type="empty"
         scene="part"
       >
-        <span style="color: #63656E;">{{ $t('暂无进程') }}</span>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
         >
           {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
+        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
     <div
@@ -835,14 +835,21 @@
         </bk-form-item>
       </bk-form>
     </bk-dialog>
+
+    <!-- 指南 -->
+    <user-guide name="process" ref="userGuideRef" />
   </paas-content-loader>
 </template>
 
 <script>import _ from 'lodash';
 import { bus } from '@/common/bus';
 import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
+import userGuide from './comps/user-guide/index.vue';
 
 export default {
+  components: {
+    userGuide,
+  },
   props: {
     moduleId: {
       type: String,
@@ -895,7 +902,7 @@ export default {
             trigger: 'blur change',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9_]+$/,
+            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*:[a-zA-Z0-9._-]+$/,
             message: this.$t('请输入包含标签(tag)的镜像地址'),
             trigger: 'blur',
           },
@@ -1155,6 +1162,7 @@ export default {
           this.processData = val.spec.processes;
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
+          this.getImageCredentialList();
           if (this.isCreate) {
             // 使用示例镜像，启动命令默认值
             if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
@@ -1736,6 +1744,11 @@ export default {
     handleToModuleInfo() {
       this.$store.commit('cloudApi/updateModuleInfoEdit', true);
       this.$emit('tab-change', 'moduleInfo');
+    },
+
+    // 查看指南
+    handleViewGuide() {
+      this.$refs.userGuideRef.showSideslider();
     },
   },
 };

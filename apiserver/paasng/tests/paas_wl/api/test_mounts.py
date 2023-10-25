@@ -67,8 +67,9 @@ def mounts(bk_app, bk_module):
 
 @pytest.fixture(autouse=True, scope="class")
 def mock_volume_source_manager():
-    with patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None), patch(
-            "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):
+    with patch(
+        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None
+    ), patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):
         yield
 
 
@@ -152,6 +153,14 @@ class TestVolumeMountViewSet:
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
             },
+            {
+                # 创建相同环境下重名的 Mount
+                "environment_name": "stag",
+                "source_config_data": {"configmap_x": "configmap_z_data", "configmap_z": "configmap_z_data"},
+                "mount_path": "/path",
+                "name": "mount-configmap",
+                "source_type": "ConfigMap",
+            },
         ],
     )
     def test_create_error(self, api_client, bk_app, bk_module, mount, request_body_error):
@@ -170,7 +179,7 @@ class TestVolumeMountViewSet:
         mount_updated = Mount.objects.get(pk=mount.pk)
 
         assert response.status_code == 200
-        assert mount_updated.name == mount.name
+        assert mount_updated.name == 'mount-configmap-updated'
         assert mount_updated.source.data == {"configmap_z": "configmap_z_data_updated"}
         assert mount_updated.source.environment_name == "stag"
 

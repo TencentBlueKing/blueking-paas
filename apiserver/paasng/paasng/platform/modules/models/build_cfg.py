@@ -38,7 +38,7 @@ class ImageTagOptions:
     # 镜像 Tag 是否带有构建时间
     with_build_time: bool = True
     # 镜像 Tag 是否带有提交ID(hash)
-    with_commit_id: bool = True
+    with_commit_id: bool = False
 
 
 ImageTagOptionsField = make_json_field("ImageTagOptionsField", ImageTagOptions)
@@ -70,6 +70,12 @@ class BuildConfig(UuidAuditedModel):
         max_length=512, null=True, help_text=_("Dockerfile文件路径, 必须保证 Dockerfile 在构建目录下, 填写时无需包含构建目录")
     )
     docker_build_args = DockerBuildArgsField(default=dict)
+
+    # custom image 相关配置
+    # Note: 如需要支持将镜像推送到外部仓库时, 可复用 image_repository 字段
+    image_repository = models.TextField(verbose_name=_("镜像仓库"), null=True)
+    image = models.TextField(verbose_name=_("镜像地址"), null=True)
+    image_credential_name = models.CharField(verbose_name=_("镜像凭证名称"), null=True, max_length=32)
 
     # Image Tag Policy
     tag_options: ImageTagOptions = ImageTagOptionsField(default=ImageTagOptions)

@@ -17,12 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from copy import deepcopy
 from typing import Dict, Optional
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, update_app_resource
-from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import OperationTypes, RuntimeType
 from paasng.platform.engine.deploy.building import start_build, start_build_error_callback
 from paasng.platform.engine.deploy.image_release import release_without_build
@@ -30,11 +29,12 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.signals import pre_appenv_deploy
 from paasng.platform.engine.utils.source import get_source_dir
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
+from paasng.platform.modules.models.deploy_config import Hook, HookList
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.version_services import get_version_service
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,14 @@ def initialize_deployment(
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         bkapp_revision_id = model_resource.revision.id
 
-    deploy_config = module.get_deploy_config()
+    hooks = HookList(
+        Hook(
+            type=hook.type,
+            command=hook.proc_command,
+            enabled=hook.enabled,
+        )
+        for hook in module.deploy_hooks.all()
+    )
     deployment = Deployment.objects.create(
         region=module.region,
         operator=operator,
@@ -86,7 +93,7 @@ def initialize_deployment(
             **(advanced_options or {}),
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
         ),
-        hooks=deepcopy(deploy_config.hooks),
+        hooks=hooks,
         bkapp_revision_id=bkapp_revision_id,
     )
     deployment.refresh_from_db()

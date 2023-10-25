@@ -20,7 +20,7 @@ from typing import Callable, Dict, Iterable, List, Tuple, Union
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.models import Module
 
@@ -41,7 +41,7 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_form_bkapp(self, processes: List['BkAppProcess']):
+    def sync_from_bkapp(self, processes: List['BkAppProcess']):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess
@@ -67,9 +67,10 @@ class ModuleProcessSpecManager:
                 args=process.args,
                 port=process.targetPort,
                 target_replicas=process.replicas,
-                plan_name=process.resQuotaPlan,
-                # Deprecated: 仅用于 v1alpha1 的云原生应用
-                image=process.image,
+                plan_name=process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
+                # Deprecated: 仅用于 v1alpha1 的云原生应用, 特别地当 process.image 等于空字符串时, 设置字段为空
+                # TODO: 设计一种更好的从 v1alpha1 升级到 v1alpha2 的方式
+                image=process.image or None,
                 image_pull_policy=process.imagePullPolicy,
                 # TODO: set image_credential_name
                 # image_credential_name=""
@@ -92,6 +93,10 @@ class ModuleProcessSpecManager:
                 recorder.setattr("target_replicas", process.replicas)
             if process.resQuotaPlan and process_spec.plan_name != process.resQuotaPlan:
                 recorder.setattr("plan_name", process.resQuotaPlan)
+            # 兼容 v1alpha1, 特别地当 process.image 等于空字符串时, 设置字段为空
+            # TODO: 设计一种更好的从 v1alpha1 升级到 v1alpha2 的方式
+            if process.image is not None and process_spec.image != process.image:
+                recorder.setattr("image", process.image or None)
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
@@ -194,3 +199,22 @@ class ModuleProcessSpecManager:
                 spec_update_bulks.append(updated)
         if spec_update_bulks:
             ModuleProcessSpec.objects.bulk_update(spec_update_bulks, updated_fields)
+
+    def sync_env_overlay(self, proc_name: str, env_overlay: Dict[str, Dict]):
+        """Sync ProcessSpecEnvOverlay with env_overlay
+
+        :param proc_name: process name to set env_overlay
+        :param env_overlay: env_overlay data
+        """
+        proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
+        for env_name, overlay in env_overlay.items():
+            ProcessSpecEnvOverlay.objects.update_or_create(
+                proc_spec=proc_spec,
+                environment_name=env_name,
+                defaults={
+                    "target_replicas": overlay.get("target_replicas"),
+                    "plan_name": overlay.get("plan_name"),
+                    "autoscaling": overlay.get("autoscaling", False),
+                    "scaling_config": overlay.get("scaling_config"),
+                },
+            )

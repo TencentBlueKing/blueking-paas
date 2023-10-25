@@ -18,8 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from copy import deepcopy
 
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.deployment import AdvancedOptions
+from paasng.platform.modules.models.deploy_config import Hook, HookList
 
 
 def create_fake_deployment(module, app_environment='prod', operator=None, **kwargs):
@@ -32,7 +34,14 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
     application = module.application
     operator = operator or application.owner
 
-    deploy_config = module.get_deploy_config()
+    hooks = HookList(
+        Hook(
+            type=hook.type,
+            command=hook.proc_command,
+            enabled=hook.enabled,
+        )
+        for hook in module.deploy_hooks.all()
+    )
     return Deployment.objects.create(
         region=application.region,
         operator=operator,
@@ -43,8 +52,14 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
         source_version_type='trunk',
         source_version_name='trunk',
         advanced_options=AdvancedOptions(),
-        procfile=deploy_config.procfile.copy(),
-        processes={k: {"name": k, "command": v} for k, v in deploy_config.procfile.items()},
-        hooks=deepcopy(deploy_config.hooks),
+        procfile={
+            proc_spec.name: proc_spec.get_proc_command()
+            for proc_spec in ModuleProcessSpec.objects.filter(module=module)
+        },
+        processes={
+            proc_spec.name: {"name": proc_spec.name, "command": proc_spec.get_proc_command()}
+            for proc_spec in ModuleProcessSpec.objects.filter(module=module)
+        },
+        hooks=deepcopy(hooks),
         **kwargs
     )

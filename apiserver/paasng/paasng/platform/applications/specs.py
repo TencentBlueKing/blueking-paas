@@ -28,9 +28,9 @@ from typing import Any, Dict, Type
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
+from paasng.core.region.models import get_region
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
-from paasng.core.region.models import get_region
 
 from .constants import ApplicationType
 from .models import Application
@@ -188,4 +188,4 @@ class CloudNativeTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.CLOUD_NATIVE
     engine_enabled = True
     can_create_extra_modules = True
-    require_templated_source = True
+    require_templated_source = False

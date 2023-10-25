@@ -25,7 +25,8 @@ from django_dynamic_fixture import G
 from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ApiVersion
 from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential, ImageCredentialRef
+from paas_wl.workloads.images.entities import ImageCredentialRef
+from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

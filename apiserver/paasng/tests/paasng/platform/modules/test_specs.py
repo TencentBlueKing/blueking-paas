@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
 
@@ -49,7 +49,9 @@ class TestModuleSpecs:
         bk_module.save(update_fields=["source_origin"])
         bk_app.type = type_
         bk_app.save(update_fields=['type'])
-        assert ModuleSpecs(bk_module).templated_source_enabled == (factor_1 and factor_2)
+        assert ModuleSpecs(bk_module).templated_source_enabled == (
+            (factor_1 or (bool(bk_module.source_init_template))) and factor_2
+        )
 
     @pytest.mark.parametrize(
         "source_origin, runtime_type, has_template_code, deploy_via_package",

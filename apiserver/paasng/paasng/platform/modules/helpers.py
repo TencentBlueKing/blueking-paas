@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, overload
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, TypedDict, overload
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -38,38 +38,69 @@ if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
 
 
+class BuildConfigData(TypedDict):
+    tag_options: Optional[ImageTagOptions]
+
+    # Buildpack 构建
+    bp_stack_name: Optional[str]
+    buildpacks: Optional[List[Dict]]
+
+    # Dockerfile 构建
+    dockerfile_path: Optional[str]
+    docker_build_args: Optional[Dict]
+
+    # 仅镜像
+    image_repository: Optional[str]
+    image_credential_name: Optional[str]
+
+
 def update_build_config_with_method(
     build_config: BuildConfig,
     build_method: RuntimeType,
-    bp_stack_name: Optional[str] = None,
-    buildpacks: Optional[List[Dict[str, Any]]] = None,
-    dockerfile_path: Optional[str] = None,
-    docker_build_args: Optional[Dict[str, str]] = None,
-    tag_options: Optional[ImageTagOptions] = None,
+    data: Dict,
 ):
-    """根据指定的 build_method 更新部分字段"""
+    """根据指定的 build_method 更新部分字段
+
+    :param build_config: BuildConfig db 模型
+    :param build_method: 构建方式
+    :param data: 参数
+
+    :param data.tag_options: Optional[ImageTagOptions]
+
+    :param data.bp_stack_name: str, buildpack 构建方案的基础镜像名， 仅 build_method == BUILDPACK 时需要该字段
+    :param data.buildpacks: List[Dict], 包含构建工具 ID 的字段列表, 仅 build_method == BUILDPACK 时需要该字段
+
+    :param data.dockerfile_path: str, Dockerfile 路径, 仅 build_method == DOCKERFILE 时需要该字段
+    :param data.docker_build_args: Dict[str, str], Docker 构建参数, 仅 build_method == DOCKERFILE 时需要该字段
+
+    :param data.image_repository: 镜像仓库, 仅 build_method == CUSTOM_IMAGE 时需要该字段
+    :param data.image_credential_name: 镜像凭证, 仅 build_method == CUSTOM_IMAGE 时需要该字段
+    """
 
     update_fields = ["build_method", "updated"]
     build_config.build_method = build_method
-    if tag_options:
+    if tag_options := data.get("tag_options"):
         build_config.tag_options = tag_options
         update_fields.extend(["tag_options"])
 
     # 基于 buildpack 的构建方式
     if build_method == RuntimeType.BUILDPACK:
-        assert buildpacks is not None
-        assert bp_stack_name is not None
-        buildpack_ids = [item["id"] for item in buildpacks]
+        assert data["buildpacks"] is not None
+        buildpack_ids = [item["id"] for item in data["buildpacks"]]
         binder = ModuleRuntimeBinder(module=build_config.module)
-        binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+        binder.bind_bp_stack(data["bp_stack_name"], buildpack_ids)
 
     # 基于 Dockerfile 的构建方式
     elif build_method == RuntimeType.DOCKERFILE:
-        assert dockerfile_path is not None
-        assert docker_build_args is not None
-        build_config.dockerfile_path = dockerfile_path
-        build_config.docker_build_args = docker_build_args
+        build_config.dockerfile_path = data["dockerfile_path"]
+        build_config.docker_build_args = data["docker_build_args"]
         update_fields.extend(["dockerfile_path", "docker_build_args"])
+
+    # 仅托管镜像
+    elif build_method == RuntimeType.CUSTOM_IMAGE:
+        build_config.image_repository = data["image_repository"]
+        build_config.image_credential_name = data["image_credential_name"]
+        update_fields.extend(["image_repository", "image_credential_name"])
 
     build_config.save(update_fields=update_fields)
 

@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from contextlib import suppress
 from urllib.parse import quote
 
 from bkpaas_auth.models import user_id_encoder
@@ -75,6 +76,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
 
@@ -314,24 +316,43 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    def _validate_registry_permission(self, registry_service: DockerRegistryController):
+        """Validates the registry permission by attempting to touch it.
+
+        :raise: error_codes.INVALID_CREDENTIALS: If the credentials are invalid or the repository is unreachable.
+        """
+        with suppress(Exception):
+            # bkrepo 的 docker 仓库，镜像凭证没有填写正确时，.touch() 时会抛出异常
+            if registry_service.touch():
+                return
+            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
     def list_tags(self, request, code, module_name):
         """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
         application = self.get_application()
         module = self.get_module_via_path()
-        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
-        bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        try:
-            repository = ImageParser(bkapp).get_repository()
-        except ValueError as e:
-            raise error_codes.INVALID_MRES.f(str(e))
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        if cfg.image_repository:
+            repository = cfg.image_repository
+            credential_name = cfg.image_credential_name
+        else:
+            # TODO: 数据迁移后删除以下代码
+            model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
+            bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        assert bkapp.spec.build
-        if repository != bkapp.spec.build.image:
-            logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+            try:
+                repository = ImageParser(bkapp).get_repository()
+            except ValueError as e:
+                raise error_codes.INVALID_MRES.f(str(e))
 
-        credential_name = bkapp.spec.build.imageCredentialsName
+            assert bkapp.spec.build
+            if repository != bkapp.spec.build.image:
+                logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+
+            credential_name = bkapp.spec.build.imageCredentialsName
+
         username, password = "", ""
         if credential_name:
             try:
@@ -341,13 +362,12 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             username, password = credential.username, credential.password
 
         endpoint, slash, repo = repository.partition("/")
-        version_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
+        registry_service = DockerRegistryController(endpoint=endpoint, repo=repo, username=username, password=password)
 
-        if not version_service.touch():
-            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+        self._validate_registry_permission(registry_service)
 
         try:
-            alternative_versions = AlternativeVersionSLZ(version_service.list_alternative_versions(), many=True).data
+            alternative_versions = AlternativeVersionSLZ(registry_service.list_alternative_versions(), many=True).data
         except Exception:
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag
@@ -403,7 +423,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def create(self, request, code, module_name):
         application = self.get_application()
         module = self.get_module_via_path()
-        slz = UpsertMountSLZ(data=request.data)
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -436,15 +456,16 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        slz = UpsertMountSLZ(data=request.data)
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
         # 更新 Mount
+        mount_instance.name = validated_data['name']
         mount_instance.environment_name = validated_data['environment_name']
         mount_instance.mount_path = validated_data['mount_path']
         try:
-            mount_instance.save(update_fields=['environment_name', 'mount_path'])
+            mount_instance.save(update_fields=['name', 'environment_name', 'mount_path'])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 

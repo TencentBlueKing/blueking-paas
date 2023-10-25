@@ -178,10 +178,19 @@ class UpsertMountSLZ(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        # 在这里根据 source_type 验证 source_config_data
+        environment_name = attrs["environment_name"]
+        name = attrs["name"]
+
+        # 检查当前 module_id 下,相同环境中是否存在具有相同 name 的 mount
+        module_id = self.context['module_id']
+        if Mount.objects.filter(
+            module_id=module_id, name=name, environment_name__in=[environment_name, MountEnvName.GLOBAL.value]
+        ).exists():
+            raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
+
+        # 根据 source_type 验证 source_config_data
         source_type = attrs["source_type"]
         source_config_data = attrs["source_config_data"]
-
         if source_type == VolumeSourceType.ConfigMap.value:
             if not source_config_data:
                 raise serializers.ValidationError(_("挂载卷内容不可为空"))

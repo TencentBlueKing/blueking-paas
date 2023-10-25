@@ -24,13 +24,13 @@ from typing import TYPE_CHECKING, Optional, Sequence
 
 from django.conf import settings
 
-from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paasng.utils.configs import RegionAwareConfig
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.networking.ingress.entities.ingress import PIngressDomain
+    from paas_wl.workloads.networking.ingress.kres_entities.ingress import PIngressDomain
 
 logger = logging.getLogger(__name__)
 

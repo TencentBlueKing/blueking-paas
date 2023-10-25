@@ -9,12 +9,13 @@
       :mask-close="false"
       :loading="deployAppDialog.isLoading"
       :auto-close="false"
+      :ok-text="`${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境') }`"
       @confirm="handleConfirmValidate"
       @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
       <div v-if="isV1alpha2">
-        <div class="code-depot mb10" v-if="deploymentInfoBackUp.repo_url">
+        <div class="code-depot mb15" v-if="deploymentInfoBackUp.repo_url">
           <span class="pr20">
             {{ deploymentInfoBackUp.build_method === 'dockerfile' ?
               $t('代码仓库') : $t('镜像仓库') }}
@@ -164,12 +165,33 @@
             </bk-form-item>
           </bk-form>
         </div>
+        <div class="image-pull-strategy-form" style="margin-top: 16px;">
+          <bk-form form-type="vertical">
+            <bk-form-item
+              :label="$t('镜像拉取策略')"
+              :property="'tagValue'"
+              :error-display-type="'normal'"
+            >
+              <bk-radio-group v-model="imagePullStrategy">
+                <bk-radio :value="'IfNotPresent'" v-bk-tooltips="ifNotPresentTooltipsConfig">IfNotPresent</bk-radio>
+                <bk-radio :value="'Always'" v-bk-tooltips="alwaysTooltipsConfig">Always</bk-radio>
+              </bk-radio-group>
+            </bk-form-item>
+          </bk-form>
+        </div>
       </div>
       <div v-else class="v1-container">
         <div>{{$t('请确认模块下进程对应的镜像地址')}}</div>
         <div class="mt10" v-for="item in processesData" :key="item.name">
           <span class="name">{{ item.name }}：</span>
           <span class="value">{{ item.image }}</span>
+        </div>
+        <div class="image-pull-strategy">
+          <label>{{ $t('镜像拉取策略') }}：</label>
+          <bk-radio-group v-model="imagePullStrategy">
+            <bk-radio :value="'IfNotPresent'" v-bk-tooltips="ifNotPresentTooltipsConfig">IfNotPresent</bk-radio>
+            <bk-radio :value="'Always'" v-bk-tooltips="alwaysTooltipsConfig">Always</bk-radio>
+          </bk-radio-group>
         </div>
       </div>
     </bk-dialog>
@@ -267,6 +289,15 @@ export default {
       customImageTagList: [],
       errorTips: '',
       branchErrorTips: '',
+      imagePullStrategy: 'IfNotPresent',
+      alwaysTooltipsConfig: {
+        content: this.$t('总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项'),
+        placements: ['bottom-start'],
+      },
+      ifNotPresentTooltipsConfig: {
+        content: this.$t('如果本地不存在指定的镜像，才会从远程仓库拉取'),
+        placements: ['bottom-start'],
+      },
     };
   },
   computed: {
@@ -500,10 +531,11 @@ export default {
       try {
         this.deployAppDialog.isLoading = true;
         let params = {};
+        // V1alpha1与V1alpha2都添加镜像拉取策略
+        const advancedOptions = {
+          image_pull_policy: this.imagePullStrategy,
+        };
         if (this.isV1alpha2) {
-          const advancedOptions = {
-            image_pull_policy: 'IfNotPresent',
-          };
           // 如果是镜像则需要传构建产物ID, 镜像列表接口里的 `id` 字段
           if (this.buttonActive === 'image') {
             advancedOptions.build_id = this.tagData.tagValue;
@@ -525,6 +557,7 @@ export default {
             params = {
               version_type: 'image',
               version_name: this.tagData.tagValue,
+              advanced_options: advancedOptions,
             };
             this.deploymentInfoBackUp.version_info.version_name = this.tagData.tagValue;
           }
@@ -533,6 +566,7 @@ export default {
           params = {
             version_type: 'manifest',
             version_name: 'manifest',
+            advanced_options: advancedOptions,
             manifest: this.cloudAppData,
           };
         }
@@ -701,5 +735,18 @@ export default {
 .error-text{
   font-size: 12px;
   color: #ea3636;
+}
+.image-pull-strategy {
+  margin-top: 10px;
+  display: flex;
+  label {
+    white-space: nowrap;
+  }
+}
+.image-pull-strategy-form,
+.image-pull-strategy {
+  /deep/ .bk-radio-text {
+    border-bottom: 1px dashed;
+  }
 }
 </style>

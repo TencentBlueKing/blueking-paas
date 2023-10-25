@@ -16,7 +16,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.workloads.networking.egress.misc import ClusterEgressIps, get_cluster_egress_ips
+from paas_wl.workloads.networking.egress.egress_ips import ClusterEgressIps, get_cluster_egress_ips
 
 
 def get_cluster_egress_info(cluster_name: str) -> ClusterEgressIps:

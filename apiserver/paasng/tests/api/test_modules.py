@@ -19,18 +19,17 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from unittest import mock
 
-import cattr
 import pytest
 from django.conf import settings
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.deploy_config import Hook
-from paasng.platform.modules.models.module import Module
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.modules.constants import DeployHookType, SourceOrigin
+from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
@@ -129,6 +128,9 @@ class TestCreateCloudNativeModule:
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
+                "build_config": {
+                    "build_method": "custom_image",
+                },
                 "manifest": {
                     "apiVersion": "paas.bk.tencent.com/v1alpha2",
                     "kind": "BkApp",
@@ -166,6 +168,9 @@ class TestCreateCloudNativeModule:
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
                 "name": f'uta-{random_suffix}',
+                "build_config": {
+                    "build_method": "buildpack",
+                },
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -186,6 +191,10 @@ class TestCreateCloudNativeModule:
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
                 "name": f'uta-{random_suffix}',
+                "build_config": {
+                    "build_method": "dockerfile",
+                    'dockerfile_path': 'Dockerfile',
+                },
                 "source_config": {
                     "source_init_template": "docker",
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -203,24 +212,21 @@ class TestCreateCloudNativeModule:
 class TestModuleDeployConfigViewSet:
     @pytest.fixture
     def the_hook(self, bk_module):
-        deploy_config = bk_module.get_deploy_config()
-        deploy_config.hooks.upsert("pre-release-hook", "the-hook")
-        deploy_config.save()
-
-        return deploy_config.hooks.get_hook("pre-release-hook")
+        return bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="the-hook")
 
     @pytest.fixture
     def the_procfile(self, bk_module):
-        deploy_config = bk_module.get_deploy_config()
-        deploy_config.procfile = {"web": "python -m http.server"}
-        deploy_config.save()
+        ModuleProcessSpec.objects.update_or_create(module=bk_module, name="web", proc_command="python -m http.server")
         return [{"name": "web", "command": "python -m http.server"}]
 
     def test_retrieve(self, api_client, bk_app, bk_module, the_procfile, the_hook):
         response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/deploy_config/")
 
         assert response.status_code == 200
-        assert response.json() == {"procfile": the_procfile, "hooks": [cattr.unstructure(the_hook)]}
+        assert response.json() == {
+            "procfile": the_procfile,
+            "hooks": [{"type": the_hook.type, "command": the_hook.proc_command, "enabled": the_hook.enabled}],
+        }
 
     @pytest.mark.parametrize(
         "type_, command, success",
@@ -239,9 +245,9 @@ class TestModuleDeployConfigViewSet:
             },
         )
         if success:
-            assert bk_module.get_deploy_config().hooks.get_hook(type_) == Hook(
-                type=type_, command=command, enabled=True
-            )
+            hook = bk_module.deploy_hooks.get_by_type(type_)
+            assert hook.proc_command == command
+            assert hook.enabled
         else:
             assert response.status_code == 400
 
@@ -252,10 +258,9 @@ class TestModuleDeployConfigViewSet:
         )
         assert response.status_code == 204
 
-        deploy_config = bk_module.get_deploy_config()
-        assert deploy_config.hooks.get_hook(the_hook.type) == Hook(
-            type=the_hook.type, command=the_hook.command, enabled=False
-        )
+        hook = bk_module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        assert hook.proc_command == the_hook.proc_command
+        assert not hook.enabled
 
     @pytest.mark.parametrize(
         "procfile, expected_procfile, success",
@@ -282,8 +287,9 @@ class TestModuleDeployConfigViewSet:
         else:
             assert response.status_code == 400
 
-        deploy_config = bk_module.get_deploy_config()
-        assert deploy_config.procfile == expected_procfile
+        assert {
+            proc.name: proc.get_proc_command() for proc in ModuleProcessSpec.objects.filter(module=bk_module)
+        } == expected_procfile
 
 
 class TestModuleDeletion:

@@ -28,11 +28,11 @@ from typing import Iterable, List, Sequence
 import cryptography.x509
 from django.core.management.base import BaseCommand
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.ingress.certs.utils import pick_shared_cert, update_or_create_secret_by_cert
+from paas_wl.workloads.networking.ingress.certs import pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath
-from paas_wl.bk_app.applications.models import WlApp
 
 
 class Command(BaseCommand):

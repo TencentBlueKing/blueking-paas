@@ -72,12 +72,12 @@
               :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
               :repo-list="gitExtendConfig[sourceControlType].repoList"
               :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
+              @change="changeSelectedRepoUrl"
             />
-            <!-- 部署目录 -->
+            <!-- 构建目录 -->
             <div class="form-group-dir" style="margin-top: 10px;">
               <label class="form-label optional">
-                {{ $t('部署目录') }}
-                <i v-bk-tooltips="sourceDirTip" class="paasng-icon paasng-info-circle" />
+                {{ $t('构建目录') }}
               </label>
               <div class="form-group-flex">
                 <p>
@@ -165,13 +165,6 @@ export default {
       sourceControlTypes: DEFAULT_APP_SOURCE_CONTROL_TYPES,
       sourceDirVal: '',
       sourceDirError: false,
-      sourceDirTip: {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
-        placements: ['right'],
-      },
       // 配置
       sourceControlChangeForm: {
         sourceRepoUrl: '',
@@ -438,6 +431,10 @@ export default {
         password: data.password,
       };
       match.sourceDir = data.sourceDir;
+    },
+
+    changeSelectedRepoUrl(url) {
+      this.sourceControlChangeForm.sourceRepoUrl = url;
     },
 
     sureSwitch() {

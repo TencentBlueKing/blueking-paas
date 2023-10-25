@@ -144,7 +144,7 @@
             </div>
 
             <bk-form
-              class="mt10"
+              class="mt10 image-manage-cls"
               ref="validate2"
               :model="mirrorData"
               :rules="mirrorRules"
@@ -339,9 +339,9 @@
               <!-- Git 相关额外代码 start -->
               <template v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
                 <git-extend
+                  class="module-code-repo"
                   ref="extend"
                   :key="sourceControlType"
-                  :label-width="110"
                   :git-control-type="sourceControlType"
                   :is-auth="gitExtendConfig[sourceControlType].isAuth"
                   :is-loading="gitExtendConfig[sourceControlType].isLoading"
@@ -356,12 +356,8 @@
                   class="form-group-dir"
                   style="margin-top: 10px;"
                 >
-                  <label class="form-label mr10">
-                    {{ $t('部署目录') }}
-                    <i
-                      v-bk-tooltips="sourceDirTip"
-                      class="paasng-icon paasng-info-circle"
-                    />
+                  <label class="form-label mr10 pr8">
+                    {{ $t('构建目录') }}
                   </label>
                   <div class="form-group-flex">
                     <p>
@@ -399,10 +395,10 @@
             <!-- Dockerfile 构建 -->
             <template v-if="formData.buildMethod === 'dockerfile'">
               <div
-                class="form-group-dir"
+                class="form-group-dir dockerfile-cls"
                 style="margin-top: 10px;"
               >
-                <label class="form-label mr10">
+                <label class="form-label mr10 pr8">
                   {{ $t('Dockerfile 路径') }}
                 </label>
                 <div class="form-group-flex">
@@ -419,7 +415,7 @@
                 :model="dockerfileData"
                 form-type="vertical"
                 ext-cls="build-params-form">
-                <div class="form-label">
+                <div class="form-label pr8">
                   {{$t('构建参数')}}
                 </div>
                 <div class="form-value-wrapper mt10">
@@ -477,9 +473,10 @@
               <bk-alert
                 type="info">
                 <div slot="title">
-                  {{ $t('进程名和启动命令在构建目录下的 bkapp.yaml 文件中定义。') }}
+                  {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                   <a
-                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+                    target="_blank"
+                    :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
                     style="color: #3a84ff">
                     {{$t('应用进程介绍')}}
                   </a>
@@ -491,11 +488,12 @@
               <bk-alert
                 type="info">
                 <div slot="title">
-                  {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
+                  {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                   <a
-                    target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
+                    target="_blank"
+                    :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
                     style="color: #3a84ff">
-                    {{$t('应用进程介绍')}}
+                    {{$t('部署阶段钩子')}}
                   </a>
                 </div>
               </bk-alert>
@@ -662,13 +660,6 @@ export default {
       curLanguages: {},
       sourceDirVal: '',
       sourceDirError: false,
-      sourceDirTip: {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
-        placements: ['right'],
-      },
       defaultlangName: DEFAULR_LANG_NAME,
       structureType: 'soundCode',
       imageCredentialsData: {
@@ -1339,6 +1330,25 @@ export default {
     color: #3a84ff;
     font-size: 18px;
     transform: translateY(0px);
+  }
+}
+.module-code-repo {
+  /deep/ .bk-form .bk-label {
+    padding-right: 18px;
+  }
+}
+.dockerfile-cls{
+  transform: translateX(-15px);
+  .form-label {
+    width: 105px;
+  }
+}
+.pr8 {
+  padding-right: 8px;
+}
+.image-manage-cls {
+  /deep/ .bk-label {
+    padding-right: 18px !important;
   }
 }
 </style>

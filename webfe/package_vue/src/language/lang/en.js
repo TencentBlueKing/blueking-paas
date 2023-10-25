@@ -2364,5 +2364,5 @@ export default {
   部署记录: 'Deployment record',
   部署到: 'Deploy to',
   '大小（MB）': 'Size(MB)',
-  '目前仅支持管理：提供源码在开发者中心构建的镜像。': 'Currently only management is supported: providing source code for mirroring built in the Developer Center.',
+  目前仅支持基于源码构建的镜像: 'Currently only images built based on source code are supported',
 };

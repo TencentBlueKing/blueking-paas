@@ -165,6 +165,7 @@
     <section v-if="curStep === 1">
       <template v-if="formData.sourceOrigin === 'soundCode'">
         <bk-form
+          v-if="formData.buildMethod === 'buildpack'"
           ref="formModuleRef"
           :model="formData"
           :rules="rules"

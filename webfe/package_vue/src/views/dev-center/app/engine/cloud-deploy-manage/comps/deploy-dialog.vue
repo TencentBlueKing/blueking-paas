@@ -293,6 +293,7 @@ export default {
       alwaysTooltipsConfig: {
         content: this.$t('总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项'),
         placements: ['bottom-start'],
+        width: 300,
       },
       ifNotPresentTooltipsConfig: {
         content: this.$t('如果本地不存在指定的镜像，才会从远程仓库拉取'),

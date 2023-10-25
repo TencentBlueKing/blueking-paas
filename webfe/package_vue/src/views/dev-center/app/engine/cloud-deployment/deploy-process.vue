@@ -876,13 +876,8 @@ export default {
         name: 'web',
         image: null,
         image_credential_name: null,
-        command: [
-          'python',
-        ],
-        args: [
-          '-m',
-          'uvicorn',
-        ],
+        command: [],
+        args: [],
         port: 5000,
         env_overlay: {
           prod: {
@@ -892,7 +887,7 @@ export default {
             autoscaling: false,
             scaling_config: {
               min_replicas: 1,
-              max_replicas: 1,
+              max_replicas: 2,
               metrics: [
                 {
                   type: 'Resource',
@@ -906,11 +901,11 @@ export default {
           stag: {
             environment_name: 'stag',
             plan_name: 'default',
-            target_replicas: 0,
-            autoscaling: true,
+            target_replicas: 1,
+            autoscaling: false,
             scaling_config: {
-              min_replicas: 3,
-              max_replicas: 4,
+              min_replicas: 1,
+              max_replicas: 2,
               metrics: [
                 {
                   type: 'Resource',
@@ -1334,11 +1329,13 @@ export default {
           // 新增进程
           this.panels.push({ name: this.processDialog.name });
           this.btnIndex = this.panels.length - 1;
+          // isV1alpha2 共享image、image_credential_name
+          if (this.isV1alpha2) {
+            this.formDataBackUp.image = this.formData.image;
+            this.formDataBackUp.image_credential_name = this.formData.image_credential_name;
+          }
           this.formData = _.cloneDeep(this.formDataBackUp);
           this.formData.name = this.processDialog.name;
-          if (this.isV1alpha2) {
-            delete this.formData.image; // v2不需要image
-          }
           this.processData.push(this.formData);
         }
         console.log('this.processData', this.processData);

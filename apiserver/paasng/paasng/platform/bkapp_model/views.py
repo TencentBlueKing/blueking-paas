@@ -128,7 +128,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                         "environment_name": env_overlay.environment_name,
                         "plan_name": env_overlay.plan_name,
                         "target_replicas": env_overlay.target_replicas,
-                        "autoscaling": env_overlay.autoscaling,
+                        "autoscaling": bool(env_overlay.autoscaling),
                         "scaling_config": env_overlay.scaling_config or default_scaling_config(),
                     }
                     for env_overlay in proc_spec.env_overlays.all()

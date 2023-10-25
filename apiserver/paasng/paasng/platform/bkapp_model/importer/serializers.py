@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
+from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import field_env_var_key
@@ -95,7 +95,7 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
     process = serializers.CharField()
-    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices())
+    plan = serializers.CharField()
 
     def to_internal_value(self, data) -> bk_app.ResQuotaOverlay:
         d = super().to_internal_value(data)
@@ -105,8 +105,8 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 class AutoscalingSpecInputSLZ(serializers.Serializer):
     """Base fields for validating AutoscalingSpec."""
 
-    min_replicas = serializers.IntegerField(required=True, min_value=1)
-    max_replicas = serializers.IntegerField(required=True, min_value=1)
+    minReplicas = serializers.IntegerField(required=True, min_value=1)
+    maxReplicas = serializers.IntegerField(required=True, min_value=1)
     policy = serializers.ChoiceField(default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices())
 
 

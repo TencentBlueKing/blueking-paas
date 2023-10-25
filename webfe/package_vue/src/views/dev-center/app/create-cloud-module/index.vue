@@ -209,7 +209,7 @@
           </div>
 
           <div
-            v-if="sourceOrigin !== GLOBAL.APP_TYPES.CNATIVE_IMAGE && curStep === 1"
+            v-if="isShowAppTemplate"
             class="create-item"
           >
             <!-- 代码库 -->
@@ -487,7 +487,7 @@
               </bk-alert>
             </collapseContent>
 
-            <collapseContent :title="$t('钩子命令')" class="mt20">
+            <collapseContent :title="$t('钩子命令')" class="mt20" :fold="false">
               <bk-alert
                 type="info">
                 <div slot="title">
@@ -783,9 +783,11 @@ export default {
       const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
       return match;
     },
-
     createCloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
+    },
+    isShowAppTemplate() {
+      return this.sourceOrigin !== this.GLOBAL.APP_TYPES.CNATIVE_IMAGE && this.curStep === 1 && this.formData.buildMethod === 'buildpack';
     },
   },
   watch: {

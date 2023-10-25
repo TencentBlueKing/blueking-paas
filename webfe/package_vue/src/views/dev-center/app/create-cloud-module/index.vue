@@ -491,7 +491,7 @@
               <bk-alert
                 type="info">
                 <div slot="title">
-                  {{ $t('钩子命令的 bkapp.yaml 文件中定义。') }}
+                  {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义') }}
                   <a
                     target="_blank" :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/bkapp'"
                     style="color: #3a84ff">

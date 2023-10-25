@@ -46,10 +46,11 @@
         </bk-form-item>
       </template>
 
+      <!-- 普通应用 -->
       <bk-form-item
-        v-if="deploymentIsShow"
+        v-if="deploymentIsShow && !isCloudCreated"
         :class="{ 'mt15': !edited }"
-        :label="$t('部署目录')"
+        :label="$t(sourceDirLabel)"
         :desc="sourceDirTip"
         :property="'sourceDir'"
         :rules="rules.sourceDir"
@@ -104,6 +105,26 @@
           ******
         </p>
       </bk-form-item>
+
+      <!-- 云原生应用 -->
+      <bk-form-item
+        v-if="deploymentIsShow && isCloudCreated"
+        :class="[{ 'mt15': !edited }]"
+        :label="$t(sourceDirLabel)"
+        :property="'sourceDir'"
+        :rules="rules.sourceDir"
+        :error-display-type="'normal'"
+      >
+        <bk-input
+          v-if="edited"
+          ref="sourceDir"
+          class="form-input-width"
+          v-model="info.sourceDir"
+        />
+        <p v-else>
+          {{ info.sourceDir }}
+        </p>
+      </bk-form-item>
     </bk-form>
   </div>
 </template>
@@ -133,6 +154,14 @@
     deploymentIsShow: {
       type: Boolean,
       default: true,
+    },
+    sourceDirLabel: {
+      type: String,
+      default: '部署目录',
+    },
+    isCloudCreated: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

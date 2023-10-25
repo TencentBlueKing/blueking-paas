@@ -156,6 +156,13 @@ class TestModuleProcessSpecViewSet:
             "min_replicas": 1,
             "max_replicas": 5,
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            "policy": "default",
+        }
+        assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config("prod") == {
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            "policy": "default",
         }
 
     def test_save_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):

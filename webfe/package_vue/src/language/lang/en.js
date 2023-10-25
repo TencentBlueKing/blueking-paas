@@ -2363,6 +2363,7 @@ export default {
   大小: 'Size',
   部署记录: 'Deployment record',
   部署到: 'Deploy to',
-  '大小（MB）': 'Size(MB)',
-  '目前仅支持管理：提供源码在开发者中心构建的镜像。': 'Currently only management is supported: providing source code for mirroring built in the Developer Center.',
+  '大小（B）': 'Size(B)',
+  目前仅支持基于源码构建的镜像: 'Currently only images built based on source code are supported',
+  '钩子命令在构建目录下的 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file in the build directory.',
 };

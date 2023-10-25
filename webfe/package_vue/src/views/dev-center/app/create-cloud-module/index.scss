@@ -115,7 +115,7 @@ p.app-name {
   line-height: 32px;
   font-size: 14px;
   padding-top: 10px;
-  width: 100px;
+  width: 90px;
   text-align: right;
   &.template {
     line-height: 48px;
@@ -205,7 +205,7 @@ p.app-name {
     color: #63656e;
     font-weight: 400;
     text-align: right;
-    width: 100px;
+    width: 90px;
     &::after {
       height: 8px;
       line-height: 1;
@@ -303,7 +303,7 @@ p.app-name {
       font-weight: 400;
       text-align: right;
       margin-right: 10px;
-      width: 100px;
+      width: 90px;
     }
     .code-type-cls {
       top: 8px;
@@ -547,10 +547,11 @@ input::-webkit-input-placeholder {
     line-height: 32px;
     font-size: 14px;
     padding-top: 10px;
-    width: 100px;
+    width: 115px;
     text-align: right;
     margin-right: 10px;
     font-weight: 400;
+    padding-right: 8px;
   }
   &-item {
     width: 145px;
@@ -577,7 +578,7 @@ input::-webkit-input-placeholder {
 }
 
 .en-label.wrap .form-label {
-  width: 100px;
+  width: 90px;
 }
 
 .form-group-dir {
@@ -693,7 +694,7 @@ input::-webkit-input-placeholder {
   display: flex;
 
   .form-label {
-    width: 100px;
+    width: 90px;
     line-height: 32px;
     margin-right: 10px;
     text-align: right;
@@ -765,5 +766,5 @@ input::-webkit-input-placeholder {
 }
 
 .add-build-params {
-  margin-left: 100px;
+  margin-left: 98px;
 }

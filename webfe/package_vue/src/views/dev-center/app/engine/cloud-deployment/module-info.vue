@@ -410,9 +410,6 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
-    isV1alpha2() {
-      return this.cloudAppData?.apiVersion?.includes('v1alpha2');
-    },
     artifactType() {
       if (this.buildConfig.build_method === 'custom_image') {
         return this.$t('仅镜像');

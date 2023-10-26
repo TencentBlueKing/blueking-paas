@@ -30,7 +30,12 @@
               <span class="form-text">{{curAppModule.repo?.display_name || '--'}}</span>
             </bk-form-item>
             <bk-form-item :label="`${$t('代码仓库')}：`">
-              <span class="form-text code-link">{{curAppModule.repo?.repo_url || '--'}}</span>
+              <a
+                class="form-text code-link"
+                :href="curAppModule.repo?.repo_url"
+                target="_blank">
+                {{curAppModule.repo?.repo_url || '--'}}
+              </a>
             </bk-form-item>
             <bk-form-item :label="`${$t('构建目录')}：`">
               <span class="form-text">{{curAppModule.repo?.source_dir || '--'}}</span>

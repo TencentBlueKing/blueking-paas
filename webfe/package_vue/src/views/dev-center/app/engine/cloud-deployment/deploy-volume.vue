@@ -212,6 +212,7 @@
                 <resource-editor
                   ref="editorRefSlider"
                   key="editor"
+                  :readonly="isReadonly"
                   v-model="sliderEditordetail"
                   v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
                   :height="fullScreen ? clientHeight : fileSliderConfig.height"
@@ -248,6 +249,7 @@ export default {
   props: {},
   data() {
     return {
+      isReadonly: true,
       sliderEditordetail: '',
       isEdit: false,
       detail: {},
@@ -401,7 +403,8 @@ export default {
       };
       this.volumeDefaultSettings.isShow = true;
       this.$nextTick(() => {
-        this.$refs.editorRefSlider.setValue('');
+        this.$refs.editorRefSlider.setValue('   ');
+        this.$refs.editorRefSlider?.setReadonly(true);
       });
     },
     // 获取挂载卷list
@@ -489,7 +492,6 @@ export default {
         return obj;
       }, {});
       _row.source_config_data = formatConfig;
-      console.log(_row);
       if (this.curType === 'add') {
         const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/`;
         this.$http
@@ -524,10 +526,10 @@ export default {
             this.getVolumeList();
             console.log(this.volumeFormData);
           })
-          .catch(() => {
+          .catch((err) => {
             this.$paasMessage({
               theme: 'error',
-              message: this.$t('修改失败'),
+              message: err.message || err.detail || this.$t('修改失败'),
             });
           });
       }
@@ -539,6 +541,7 @@ export default {
     },
     // tab切换
     tabChange(val) {
+      this.$refs.editorRefSlider?.setReadonly(true);
       if (val === '') {
         this.$refs.editorRefSlider.setValue('');
         return;
@@ -550,6 +553,10 @@ export default {
         this.$refs.editorRefSlider.setValue(curContent);
         return;
       }
+      // const tabListDom = document.querySelectorAll('.tab-container .bk-tab-label-item');
+      // console.log(tabListDom);
+      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
+      ulDom.classList.add('bk-tab-label-list-has-bar');
       // eslint-disable-next-line no-underscore-dangle
       const _detail = cloneDeep(curTab.content);
       this.active = val;
@@ -584,8 +591,9 @@ export default {
     },
     // 添加文件
     addFile() {
+      this.$refs.editorRefSlider?.setReadonly(false);
       this.isAddFile = true;
-      this.$refs.editorRefSlider?.setValue('');
+      this.$refs.editorRefSlider?.setValue('   ');
       this.addFileInput = '';
       this.volumeFormData.source_config_data.forEach((item) => {
         this.$refs[`editInput${item.label}`][0].style.display = 'none';
@@ -601,12 +609,17 @@ export default {
       ulDom.classList.remove('bk-tab-label-list-has-bar');
     },
     handleBlurAddInput() {
+      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
       if (this.addFileInput.trim() === '') {
         this.isAddFile = false;
+        this.$refs.editorRefSlider?.setReadonly(true);
+        if (this.curTabDom) {
+          ulDom.classList.add('bk-tab-label-list-has-bar');
+          this.curTabDom.classList.add('active');
+        }
         if (this.volumeFormData.source_config_data.length === 0) {
           return;
         }
-        console.log(this.volumeFormData);
         const curTab = this.volumeFormData.source_config_data.find(item => item.name === this.active);
         const curContent = this.convertToObjectIfPossible(curTab.content);
         this.$refs.editorRefSlider.setValue(curContent);
@@ -639,14 +652,14 @@ export default {
       };
       this.isAddFile = false;
       this.volumeFormData.source_config_data.unshift(addFileContent);
-    },
-    // 添加确认
-    handlerAddConfirm() {
-      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
       if (this.curTabDom) {
         ulDom.classList.add('bk-tab-label-list-has-bar');
         this.curTabDom.classList.add('active');
       }
+      this.$refs.editorRefSlider?.setReadonly(true);
+    },
+    // 添加确认
+    handlerAddConfirm() {
       this.handleBlurAddInput();
     },
     // 编辑文件内容的tab
@@ -662,11 +675,10 @@ export default {
         this.$refs[`editInput${item.label}`][0].style.display = 'none';
         this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
       });
-      console.log(hideTab);
+      this.$refs.editorRefSlider?.setReadonly(false);
     },
     handleBlurEditInput(label, index) {
       this.$nextTick(() => {
-        console.log(this.$refs);
         Object.keys(this.$refs).forEach((item) => {
           if (Array.isArray(this.$refs[item]) && this.$refs[item].length === 0) {
             // 检查引用是否为空
@@ -693,6 +705,7 @@ export default {
         });
         return;
       }
+      this.$refs.editorRefSlider?.setReadonly(true);
       this.$refs[`editInput${label}`][0].style.display = 'none';
       this.$refs[`labelContainer${label}`][0].style.display = 'flex';
     },
@@ -797,6 +810,7 @@ export default {
                       display: none;
                       .paasng-correct {
                         font-size: 24px;
+                        cursor: pointer;
                       }
                     }
                   }

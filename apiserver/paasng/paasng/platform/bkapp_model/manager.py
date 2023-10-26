@@ -93,10 +93,14 @@ class ModuleProcessSpecManager:
                 recorder.setattr("target_replicas", process.replicas)
             if process.resQuotaPlan and process_spec.plan_name != process.resQuotaPlan:
                 recorder.setattr("plan_name", process.resQuotaPlan)
+            if process_spec.port != process.targetPort:
+                recorder.setattr("port", process.targetPort)
             # 兼容 v1alpha1, 特别地当 process.image 等于空字符串时, 设置字段为空
             # TODO: 设计一种更好的从 v1alpha1 升级到 v1alpha2 的方式
             if process.image is not None and process_spec.image != process.image:
                 recorder.setattr("image", process.image or None)
+            if process.name in image_credential_names:
+                recorder.setattr("image_credential_name", image_credential_names[process.name])
             return recorder.changed, process_spec
 
         self.bulk_update_procs(

@@ -163,11 +163,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         image_credential_names = (
             {}
             if not allow_multiple_image
-            else {
-                proc_spec.name: proc_spec.get("image_credential_name", None)
-                for proc_spec in proc_specs
-                if proc_spec.get("image_credential_name", None)
-            }
+            else {proc_spec["name"]: proc_spec.get("image_credential_name", None) for proc_spec in proc_specs}
         )
 
         processes = [

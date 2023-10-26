@@ -78,15 +78,14 @@
         <bk-table
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
-          v-if="envVarList.length"
-          class="table-cls mt20"
+          class="variable-table-cls mt20"
         >
           <!-- 新建环境变量 -->
           <template slot="append" v-if="!isPageEdit">
             <div class="add-wrapper">
               <span class="add-single-variable" @click.self="handleEnvTableListData('add')">
                 <i class="paasng-icon paasng-plus-thick" />
-                {{ $t('新建变量') }}
+                {{ $t('新增环境变量') }}
               </span>
             </div>
           </template>
@@ -273,12 +272,6 @@
             </template>
           </bk-table-column>
         </bk-table>
-        <div
-          v-else
-          class="ps-no-result"
-        >
-          <table-empty empty />
-        </div>
 
         <div
           class="env-btn-wrapper"
@@ -751,9 +744,14 @@ export default {
         });
 
         await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
+        // 操作对应tips
+        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '新建' : '删除';
+        if (this.envVarList.length === this.envLocalVarList.length) {
+          tipsType = '修改';
+        }
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('修改环境变量成功'),
+          message: this.$t(`${tipsType}环境变量成功`),
         });
         this.envVarList.forEach((v) => {
           this.$set(v, 'isEdit', false);
@@ -1701,6 +1699,11 @@ a.is-disabled {
       margin-right: 3px;
       transform: translateY(0px);
     }
+  }
+}
+.variable-table-cls {
+  /deep/ .bk-table-empty-block {
+    display: none;
   }
 }
 </style>

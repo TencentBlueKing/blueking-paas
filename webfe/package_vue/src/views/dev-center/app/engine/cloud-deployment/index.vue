@@ -9,7 +9,6 @@
       :first-module-name="firstTabActiveName"
     />
     <paas-content-loader
-      :is-loading="isLoading"
       :placeholder="loaderPlaceholder"
       :offset-top="30"
       class="app-container middle overview"
@@ -52,10 +51,8 @@
           <router-view
             :ref="routerRefs"
             :key="renderIndex"
-            :cloud-app-data="cloudAppData"
             :save-loading="buttonLoading"
             :is-component-btn="!isFooterActionBtn"
-            @save="handleSave"
             @cancel="handleCancel"
             @hide-tab="isTab = false"
             @tab-change="handleGoPage"
@@ -115,9 +112,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      isLoading: true,
       renderIndex: 0,
-      cloudAppData: {},
       buttonLoading: false,
       deployDialogConfig: {
         visible: false,
@@ -169,15 +164,6 @@ export default {
       return this.$store.state.cloudApi.isPageEdit;
     },
 
-    // dialogCloudAppData() {
-    //   const cloudAppData = cloneDeep(this.storeCloudAppData);
-    //   return mergeObjects(cloudAppData, this.manifestExt);
-    // },
-
-    storeCloudAppData() {
-      return this.$store.state.cloudApi.cloudAppData;
-    },
-
     firstTabActiveName() {
       return this.curTabPanels[0].name;
     },
@@ -202,7 +188,6 @@ export default {
       this.renderIndex++;
       this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
-      this.init();
     },
   },
   created() {
@@ -214,51 +199,13 @@ export default {
         name: this.firstTabActiveName,
       });
     }
-    this.init();
   },
   mounted() {
     this.handleWindowResize();
     this.handleResizeFun();
   },
   methods: {
-    async init() {
-      try {
-        const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.cloudAppData = res.manifest;
-        this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
-        this.getManifestExt();
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    async getManifestExt() {
-      try {
-        const res = await this.$store.dispatch('deploy/getManifestExt', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          // 增强服务不分环境，目前指定为prod
-          env: 'prod',
-        });
-        this.manifestExt = res;
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
-      }
-    },
-
     handleGoPage(routeName) {
-      this.cloudAppData = this.storeCloudAppData;
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.$router.push({
         name: routeName,
@@ -270,45 +217,6 @@ export default {
       this.$store.commit('cloudApi/updatePageEdit', false);
       if (this.$refs[this.routerRefs]?.handleCancel) {
         this.$refs[this.routerRefs]?.handleCancel();
-      }
-    },
-
-    // 保存
-    async handleSave() {
-      try {
-        // 环境变量保存
-        if (this.$refs[this.routerRefs]?.saveEnvData) {
-          this.$refs[this.routerRefs]?.saveEnvData();
-          return;
-        }
-        // 处理进程配置、钩子命令数据
-        if (this.$refs[this.routerRefs]?.handleProcessData) {
-          const res = await this.$refs[this.routerRefs]?.handleProcessData();
-          if (!res) return;
-        }
-        const data = this.storeCloudAppData;
-        data.spec.processes = data.spec.processes.map((process) => {
-          // 过滤空值容器端口
-          const { targetPort, ...processValue } = process;
-          return targetPort === '' || targetPort === null ? processValue : process;
-        });
-        const params = { ...data };
-        await this.$store.dispatch('deploy/saveCloudAppInfo', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          params,
-        });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('操作成功'),
-        });
-        this.$store.commit('cloudApi/updatePageEdit', false);
-      } catch (e) {
-        console.log(e);
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
       }
     },
 
@@ -346,9 +254,9 @@ export default {
         this.deployDialogConfig.top = 80;
         this.deployDialogConfig.height = 400;
       } else {
-        this.deployDialogConfig.dialogWidth = 1200;
+        this.deployDialogConfig.dialogWidth = 1100;
         this.deployDialogConfig.top = 120;
-        this.deployDialogConfig.height = 600;
+        this.deployDialogConfig.height = 520;
       }
     },
   },

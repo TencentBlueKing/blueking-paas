@@ -207,10 +207,6 @@ export default {
       type: String,
       default: '',
     },
-    cloudAppData: {
-      type: Object,
-      default: {},
-    },
     isCreate: {
       type: Boolean,
       default: false,

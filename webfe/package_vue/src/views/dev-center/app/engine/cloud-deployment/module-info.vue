@@ -357,12 +357,6 @@ import moment from 'moment';
 import _ from 'lodash';
 export default {
   mixins: [appBaseMixin],
-  props: {
-    cloudAppData: {
-      type: Object,
-      default: {},
-    },
-  },
   data() {
     return {
       isLoading: false,
@@ -409,9 +403,6 @@ export default {
   computed: {
     curAppModule() {
       return this.$store.state.curAppModule;
-    },
-    isV1alpha2() {
-      return this.cloudAppData?.apiVersion?.includes('v1alpha2');
     },
     artifactType() {
       if (this.buildConfig.build_method === 'custom_image') {

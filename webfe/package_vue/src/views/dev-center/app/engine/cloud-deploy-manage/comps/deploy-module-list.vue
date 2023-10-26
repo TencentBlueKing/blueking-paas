@@ -171,7 +171,6 @@
       :show.sync="isShowDialog"
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
-      :cloud-app-data="cloudAppData"
       :rv-data="rvData"
       @refresh="handleRefresh">
     </deploy-dialog>
@@ -241,7 +240,6 @@ export default {
       curDeploymentInfoItem: {},      // 当前弹窗的部署信息
       isWatchOfflineing: false,   // 下架中
       isWatctDeploying: false,
-      cloudAppData: {},
       isShowSideslider: false,
       initPage: false,       // 第一次进入页面
       rvData: {},
@@ -317,7 +315,9 @@ export default {
     handleDeploy(payload, index) {
       this.curDeploymentInfoItem = payload;
       this.curDeployItemIndex = index;
-      this.getCloudAppYaml();
+      this.$nextTick(() => {
+        this.isShowDialog = true;
+      });
     },
 
     // 部署侧边栏
@@ -332,27 +332,6 @@ export default {
     handleOfflineApp(payload) {
       this.curDeploymentInfoItem = payload || {};
       this.offlineAppDialog.visiable = true;
-    },
-
-    // 获取云原生yaml
-    async getCloudAppYaml() {
-      try {
-        this.yamlLoading = true;
-        const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.cloudAppData = res.manifest;
-        this.isShowDialog = true;
-        console.log('this.cloudAppData', this.cloudAppData);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.yamlLoading = false;
-      }
     },
 
 

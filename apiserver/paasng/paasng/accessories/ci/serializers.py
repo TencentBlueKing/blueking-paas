@@ -21,6 +21,7 @@ from rest_framework import serializers
 from paasng.accessories.ci.constants import CIBackend
 from paasng.accessories.ci.exceptions import NotSupportedCIBackend
 from paasng.accessories.ci.managers import get_ci_manager_cls_by_backend
+from paasng.accessories.ci.models import CIAtomJob
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.serializers import DeploymentSLZ
 
@@ -40,7 +41,7 @@ class CIAtomJobSerializer(serializers.Serializer):
     repo_info = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
 
-    def get_detail(self, obj) -> dict:
+    def get_detail(self, obj: CIAtomJob) -> dict:
         """get detail"""
         try:
             manager = get_ci_manager_cls_by_backend(obj.backend)
@@ -50,20 +51,19 @@ class CIAtomJobSerializer(serializers.Serializer):
 
         return {"url": manager.make_job_detail(obj)}
 
-    def get_repo_info(self, obj) -> dict:
+    def get_repo_info(self, obj: CIAtomJob) -> dict:
         """Get deployment's repo info as dict"""
-        version_type, version_name = obj.deployment.source_version_type, obj.deployment.source_version_name
-        # Backward compatibility
-        if not (version_type and version_name):
-            version_name = obj.deployment.source_location.split('/')[-1]
-            version_type = 'trunk' if version_name == 'trunk' else obj.deployment.source_location.split('/')[-2]
+        version_info = obj.deployment.get_version_info()
+        revision = version_info.revision
+        version_type = version_info.version_type
+        version_name = version_info.version_name
 
         return {
             'source_type': obj.deployment.source_type,
             'type': version_type,
             'name': version_name,
             'url': obj.deployment.source_location,
-            'revision': obj.deployment.source_revision,
+            'revision': revision,
             'comment': obj.deployment.source_comment,
         }
 

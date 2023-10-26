@@ -42,6 +42,11 @@ urlpatterns = [
         name='api.mres.deployments.singular',
     ),
     re_path(
+        make_app_pattern(r'/mres/revisions/(?P<revision_id>[\d]+)/$'),
+        views_enduser.MresVersionViewSet.as_view({'get': 'retrieve'}),
+        name='api.mres.revision.singular',
+    ),
+    re_path(
         make_app_pattern(r'/mres/status/$'),
         views_enduser.MresStatusViewSet.as_view({'get': 'retrieve'}),
         name='api.mres.status',

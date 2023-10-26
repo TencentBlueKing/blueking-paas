@@ -522,8 +522,8 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter
-              (item => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
+              const flag = this.envVarList.filter(item => item.key === this.curItem.key
+              && item.environment_name === this.curItem.environment_name);
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {

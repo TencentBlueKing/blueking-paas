@@ -886,7 +886,7 @@ export default {
       hasDeleteIcon: true,
       processData: [],
       processDataBackUp: [],
-      isLoading: true,
+      isLoading: false,
       rules: {
         image: [
           {
@@ -1113,6 +1113,7 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
+    // 镜像
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
@@ -1134,7 +1135,10 @@ export default {
       this.getAutoScalFlag('stag');
       this.getAutoScalFlag('prod');
     }
-    this.init();
+    // 镜像需要调用进程配置
+    if (this.isCustomImage) {
+      this.init();
+    }
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
   },
@@ -1147,6 +1151,7 @@ export default {
   methods: {
     async init() {
       try {
+        this.isLoading = true;
         const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,

@@ -346,9 +346,9 @@ export default {
         this.deployDialogConfig.top = 80;
         this.deployDialogConfig.height = 400;
       } else {
-        this.deployDialogConfig.dialogWidth = 1200;
+        this.deployDialogConfig.dialogWidth = 1100;
         this.deployDialogConfig.top = 120;
-        this.deployDialogConfig.height = 600;
+        this.deployDialogConfig.height = 520;
       }
     },
   },

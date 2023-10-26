@@ -38,7 +38,8 @@ from paas_wl.infras.resources.base.exceptions import (
     ResourceDuplicate,
     ResourceMissing,
 )
-from paas_wl.infras.resources.base.kres import KNamespace, KPod
+from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod
+from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import (
@@ -52,6 +53,7 @@ from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
 
 if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models import WlApp
     from paas_wl.infras.resources.base.base import EnhancedApiClient
     from paas_wl.infras.resources.generation.mapper import MapperPack
     from paasng.platform.engine.configurations.building import SlugBuilderTemplate
@@ -87,12 +89,16 @@ class ProcessesHandler(ResourceHandlerBase):
         self.mapper_version.replica_set(process=process).delete_collection()
         self.mapper_version.pod(process=process).delete_individual()
 
-    def scale(self, process: Process):
-        """focus on deployment replicas"""
-        try:
-            self.process_manager.update(process, "patch", mapper_version=self.mapper_version)
-        except AppEntityNotFound:
-            self.process_manager.create(process, mapper_version=self.mapper_version)
+    def scale(self, app: 'WlApp', process_type: str, replicas: int):
+        """Scale a process's replicas to given value.
+
+        :param app: The application object.
+        :param process_type: The type of process, such as "web".
+        :param replicas: The replicas value, such as 2.
+        """
+        patch_body = {'spec': {'replicas': replicas}}
+        res_name = get_proc_deployment_name(app, process_type)
+        KDeployment(self.client).patch(res_name, namespace=app.namespace, body=patch_body)
 
 
 class NamespacesHandler(ResourceHandlerBase):

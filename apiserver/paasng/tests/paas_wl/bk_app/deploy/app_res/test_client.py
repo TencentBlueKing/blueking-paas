@@ -96,33 +96,31 @@ class TestClientProcess:
             proc_ingress = ki.save.call_args_list[0][0][0]
             assert proc_ingress.name == f"{RG}-{wl_app.name}"
 
-    def test_scale_processes(self, scheduler_client, worker_process):
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
+    def test_scale_process(self, scheduler_client, wl_app):
+        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.patch') as kp, patch(
             'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
         ) as ks:
-            worker_process.replicas = 3
-            scheduler_client.scale_processes([worker_process])
+            scheduler_client.scale_process(wl_app, 'worker', 3)
 
             # Test service patch was performed
             assert ks.get.called
             assert not ks.create.called
 
             # Test deployment patch was performed
-            assert kd.called
-            args, kwargs = kd.call_args_list[0]
+            assert kp.called
+            args, kwargs = kp.call_args_list[0]
             assert kwargs.get('body')['spec']['replicas'] == 3
-            assert kwargs.get('update_method') == 'patch'
 
-    def test_shutdown_processes(self, scheduler_client, worker_process):
+    def test_shutdown_process(self, scheduler_client, wl_app):
         DSpec = make_dataclass('Dspec', [('replicas', int)])
         DBody = make_dataclass('DBody', [('spec', DSpec)])
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
+        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.patch') as kp, patch(
             'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
         ) as ks, patch('paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel') as ki, patch(
             'paas_wl.infras.resources.base.kres.NameBasedOperations.get', kg
         ):
-            scheduler_client.shutdown_processes([worker_process])
+            scheduler_client.shutdown_process(wl_app, 'worker')
 
             # 测试: 不删除 Service
             assert not ks.delete_by_name.called
@@ -131,15 +129,15 @@ class TestClientProcess:
             assert not ki.delete_by_name.called
 
             # Check deployment resource
-            assert kd.called
-            args, kwargs = kd.call_args_list[0]
+            assert kp.called
+            args, kwargs = kp.call_args_list[0]
             assert kwargs['body']['spec']['replicas'] == 0
 
     def test_shutdown_web_processes(self, wl_app, scheduler_client, web_process):
         DSpec = make_dataclass('Dspec', [('replicas', int)])
         DBody = make_dataclass('DBody', [('spec', DSpec)])
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
+        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.patch') as kp, patch(
             'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
         ) as ks, patch('paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel') as ki, patch(
             'paas_wl.infras.resources.base.kres.NameBasedOperations.get', kg
@@ -149,7 +147,7 @@ class TestClientProcess:
             faked_ingress.configure_mock(service_name=f'{RG}-{wl_app.name}-web')
             ki.get.return_value = faked_ingress
 
-            scheduler_client.shutdown_processes([web_process])
+            scheduler_client.shutdown_process(wl_app, 'web')
 
             # 测试: 不删除 Service
             assert not ks.delete_by_name.called
@@ -158,8 +156,8 @@ class TestClientProcess:
             assert not ki.delete_by_name.called
 
             # Check deployment resource
-            assert kd.called
-            args, kwargs = kd.call_args_list[0]
+            assert kp.called
+            args, kwargs = kp.call_args_list[0]
             assert kwargs['body']['spec']['replicas'] == 0
 
 

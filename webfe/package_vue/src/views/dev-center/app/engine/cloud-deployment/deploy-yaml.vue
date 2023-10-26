@@ -70,28 +70,6 @@ export default {
               this.$refs.editorRef?.setValue(val[0]);
             }, 500);
           });
-          // val.forEach((element) => {
-          //   if (typeof element.isEdit === 'boolean') { // false 也需要删除
-          //     delete element.isEdit;
-          //   }
-          // });
-          // val.spec.configuration.env.forEach((element) => {
-          //   if (element.envName) { // envName 删除
-          //     delete element.envName;
-          //   }
-          //   if (element.isAdd) {
-          //     delete element.isAdd;
-          //   }
-          // });
-          // this.localCloudAppData = _.cloneDeep(val);
-          // if (Object.keys(val).length) {
-          //   this.$nextTick(() => {
-          //     setTimeout(() => {
-          //       this.detail = val;
-          //       this.$refs.editorRef?.setValue(val);
-          //     }, 500);
-          //   });
-          // }
         }
       },
       immediate: true,

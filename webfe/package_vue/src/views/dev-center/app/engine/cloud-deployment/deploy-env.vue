@@ -522,7 +522,8 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter((item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
+              const flag = this.envVarList.filter
+              (item => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
@@ -580,7 +581,6 @@ export default {
         { value: 'stag', text: this.$t('预发布环境') },
         { value: 'prod', text: this.$t('生产环境') },
       ],
-      localCloudAppData: {},
       curSortKey: '-created',
       exportDialog: {
         visiable: false,
@@ -617,7 +617,7 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
   watch: {},
@@ -826,7 +826,7 @@ export default {
     // 选中环境
     handleEnvChange(curItem) {
       this.curItem = curItem;
-      const flag = this.envVarList.filter((item) => item.name === this.curItem.name && item.envName === this.curItem.envName);
+      const flag = this.envVarList.filter(item => item.name === this.curItem.name && item.envName === this.curItem.envName);
       if (flag.length <= 1) {
         // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {
@@ -863,7 +863,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportDialog.isLoading = false;
@@ -965,7 +965,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -989,7 +989,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -1065,7 +1065,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.importFileDialog.loading = false;

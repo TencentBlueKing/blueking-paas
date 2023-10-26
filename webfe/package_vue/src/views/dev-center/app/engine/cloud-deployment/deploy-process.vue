@@ -108,7 +108,7 @@
             <bk-form-item
               :label="$t('镜像仓库')"
               :label-width="120"
-              v-if="isV1alpha2"
+              v-if="!allowMultipleImage"
             >
               {{ formData.image || '--' }}
               <i
@@ -123,7 +123,7 @@
               :label-width="120"
               :property="'image'"
               :rules="rules.image"
-              v-else-if="isCustomImage && !isV1alpha2"
+              v-else-if="isCustomImage && allowMultipleImage"
             >
               <bk-input
                 ref="mirrorUrl"
@@ -158,14 +158,14 @@
             <bk-form-item
               :label="$t('镜像凭证')"
               :label-width="120"
-              v-if="isV1alpha2"
+              v-if="!allowMultipleImage"
             >
               {{ formData.image_credential_name || '--' }}
             </bk-form-item>
 
             <!-- 镜像凭证 -->
             <bk-form-item
-              v-if="panels[panelActive] && !isV1alpha2"
+              v-if="panels[panelActive] && allowMultipleImage"
               :label="$t('镜像凭证')"
               :label-width="120"
               :property="'command'"
@@ -655,13 +655,13 @@
         <bk-form :model="formData">
           <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
           <bk-form-item
-            v-if="isV1alpha2"
+            v-if="!allowMultipleImage"
             :label="`${$t('镜像仓库')}：`"
           >
             <span class="form-text">{{ formData.image || '--' }}</span>
           </bk-form-item>
           <bk-form-item
-            v-else-if="isCustomImage && !isV1alpha2"
+            v-else-if="isCustomImage && allowMultipleImage"
             :label="`${$t('镜像地址')}：`"
           >
             <span class="form-text">{{ formData.image || '--' }}</span>
@@ -850,10 +850,6 @@ export default {
     moduleId: {
       type: String,
       default: '',
-    },
-    cloudAppData: {
-      type: Object,
-      default: {},
     },
     isCreate: {
       type: Boolean,
@@ -1062,7 +1058,7 @@ export default {
           request: {},
         },
       },
-      isV1alpha2: null,
+      allowMultipleImage: false,
     };
   },
   computed: {
@@ -1118,14 +1114,6 @@ export default {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
-  watch: {
-    cloudAppData: {
-      handler(val) {
-        this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
-      },
-      immediate: true,
-    },
-  },
   async created() {
     // 非创建应用初始化为查看态
     if (!this.isCreate) {
@@ -1143,10 +1131,6 @@ export default {
     this.getQuotaPlans('prod');
   },
   mounted() {
-    this.isV1alpha2 = this.cloudAppData?.apiVersion?.includes('v1alpha2');
-    if (!this.isV1alpha2) {
-      this.getImageCredentialList();
-    }
   },
   methods: {
     async init() {
@@ -1157,9 +1141,14 @@ export default {
           moduleId: this.curModuleId,
         });
         this.processData = res.proc_specs;
+        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
+        if (!this.allowMultipleImage) {
+          this.getImageCredentialList();
+        }
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
+          this.formData.image_credential_name = this.formData.image_credential_name || null;
           if (!Object.keys(this.formData.env_overlay).length) {
             this.formData.env_overlay = ENV_OVERLAY;
           }
@@ -1296,13 +1285,13 @@ export default {
               e.name = this.processDialog.name;
             }
           });
-          this.processData[this.btnIndex].name = this.processDialog.name; // 需要更新cloudAppData
+          this.processData[this.btnIndex].name = this.processDialog.name;
         } else {
           // 新增进程
           this.panels.push({ name: this.processDialog.name });
           this.btnIndex = this.panels.length - 1;
-          // isV1alpha2 共享image、image_credential_name
-          if (this.isV1alpha2) {
+          // this.allowMultipleImage 共享image、image_credential_name
+          if (!this.allowMultipleImage) {
             this.formDataBackUp.image = this.formData.image;
             this.formDataBackUp.image_credential_name = this.formData.image_credential_name;
           }
@@ -1310,7 +1299,6 @@ export default {
           this.formData.name = this.processDialog.name;
           this.processData.push(this.formData);
         }
-        console.log('this.processData', this.processData);
         this.processDialog.visiable = false;
       } catch (error) {
         console.log('error', error);

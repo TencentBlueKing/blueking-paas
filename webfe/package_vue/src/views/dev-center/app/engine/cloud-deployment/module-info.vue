@@ -357,12 +357,6 @@ import moment from 'moment';
 import _ from 'lodash';
 export default {
   mixins: [appBaseMixin],
-  props: {
-    cloudAppData: {
-      type: Object,
-      default: {},
-    },
-  },
   data() {
     return {
       isLoading: false,

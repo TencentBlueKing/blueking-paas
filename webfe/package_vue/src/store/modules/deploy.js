@@ -373,16 +373,6 @@ const actions = {
   },
 
   /**
-     * 获取云原生模块信息
-     *
-     * @param {Object} params 请求参数：appCode, moduleId
-     */
-  getCloudAppYaml({}, { appCode, moduleId }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
-    return http.get(url, config);
-  },
-
-  /**
      * 获取查看云原生YAML内容
      *
      * @param {Object} params 请求参数：appCode, moduleId

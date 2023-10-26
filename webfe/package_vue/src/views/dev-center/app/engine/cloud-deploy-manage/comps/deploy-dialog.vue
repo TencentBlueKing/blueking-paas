@@ -185,8 +185,8 @@
         </div>
       </div>
       <div class="v1-container">
-        <div class="image-pull-strategy">
-          <label>{{ $t('镜像拉取策略') }}：</label>
+        <div class="image-pull-strategy" :class="(isSourceCodeBuild || !allowMultipleImage) ? '' : 'flex-row'">
+          <label>{{ $t('镜像拉取策略') }}<span v-if="!isSourceCodeBuild && allowMultipleImage">：</span></label>
           <bk-radio-group v-model="imagePullStrategy">
             <bk-radio :value="'IfNotPresent'" v-bk-tooltips="ifNotPresentTooltipsConfig">IfNotPresent</bk-radio>
             <bk-radio :value="'Always'" v-bk-tooltips="alwaysTooltipsConfig">Always</bk-radio>
@@ -754,7 +754,6 @@ export default {
 }
 .image-pull-strategy {
   margin-top: 10px;
-  display: flex;
   label {
     white-space: nowrap;
   }

@@ -122,20 +122,19 @@ class DeploymentSLZ(serializers.ModelSerializer):
             'bkapp_revision_id',
         ]
 
-    def get_repo_info(self, obj):
+    def get_repo_info(self, obj: Deployment) -> dict:
         """Get deployment's repo info as dict"""
-        version_type, version_name = obj.source_version_type, obj.source_version_name
-        # Backward compatibility
-        if not (version_type and version_name):
-            version_name = obj.source_location.split('/')[-1]
-            version_type = 'trunk' if version_name == 'trunk' else obj.source_location.split('/')[-2]
+        version_info = obj.get_version_info()
+        revision = version_info.revision
+        version_type = version_info.version_type
+        version_name = version_info.version_name
 
         return {
             'source_type': obj.source_type,
             'type': version_type,
             'name': version_name,
             'url': obj.source_location,
-            'revision': obj.source_revision,
+            'revision': revision,
             'comment': obj.source_comment,
         }
 
@@ -402,20 +401,19 @@ class OfflineOperationSLZ(serializers.ModelSerializer):
         model = OfflineOperation
         fields = ['id', 'status', 'operator', 'created', 'log', 'err_detail']
 
-    def get_repo_info(self, obj):
+    def get_repo_info(self, obj: OfflineOperation) -> dict:
         """Get deployment's repo info as dict"""
-        version_type, version_name = obj.source_version_type, obj.source_version_name
-        # Backward compatibility
-        if not (version_type and version_name):
-            version_name = obj.source_location.split('/')[-1]
-            version_type = 'trunk' if version_name == 'trunk' else obj.source_location.split('/')[-2]
+        version_info = obj.get_version_info()
+        revision = version_info.revision
+        version_type = version_info.version_type
+        version_name = version_info.version_name
 
         return {
             'source_type': obj.source_type,
             'type': version_type,
             'name': version_name,
             'url': obj.source_location,
-            'revision': obj.source_revision,
+            'revision': revision,
             'comment': obj.source_comment,
         }
 

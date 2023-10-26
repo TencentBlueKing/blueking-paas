@@ -44,10 +44,7 @@ def import_hooks(module: Module, hooks: BkAppHooks) -> CommonImportResult:
         _, created = ModuleDeployHook.objects.update_or_create(
             module=module,
             type=DeployHookType.PRE_RELEASE_HOOK,
-            defaults={
-                "command": pre_release_hook.command,
-                "args": pre_release_hook.args,
-            },
+            defaults={"command": pre_release_hook.command, "args": pre_release_hook.args, "enabled": True},
         )
         ret.incr_by_created_flag(created)
         # Move out from the index

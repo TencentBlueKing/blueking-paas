@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
+from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import field_env_var_key
@@ -95,14 +95,18 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
     process = serializers.CharField()
-    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices())
+    plan = serializers.CharField()
+
+    def to_internal_value(self, data) -> bk_app.ResQuotaOverlay:
+        d = super().to_internal_value(data)
+        return bk_app.ResQuotaOverlay(**d)
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
     """Base fields for validating AutoscalingSpec."""
 
-    min_replicas = serializers.IntegerField(required=True, min_value=1)
-    max_replicas = serializers.IntegerField(required=True, min_value=1)
+    minReplicas = serializers.IntegerField(required=True, min_value=1)
+    maxReplicas = serializers.IntegerField(required=True, min_value=1)
     policy = serializers.ChoiceField(default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices())
 
 
@@ -111,6 +115,10 @@ class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
     process = serializers.CharField()
+
+    def to_internal_value(self, data) -> bk_app.AutoscalingOverlay:
+        d = super().to_internal_value(data)
+        return bk_app.AutoscalingOverlay(**d)
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
@@ -132,11 +140,11 @@ class ConfigurationInputSLZ(serializers.Serializer):
 class BuildInputSLZ(serializers.Serializer):
     """Validate the `build` field."""
 
-    image = serializers.CharField(allow_null=True, default=None)
+    image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
     imagePullPolicy = serializers.ChoiceField(
         choices=ImagePullPolicy.get_choices(), default=ImagePullPolicy.IF_NOT_PRESENT
     )
-    imageCredentialsName = serializers.CharField(allow_null=True, default=None)
+    imageCredentialsName = serializers.CharField(allow_null=True, default=None, allow_blank=True)
 
     def to_internal_value(self, data) -> bk_app.BkAppBuildConfig:
         d = super().to_internal_value(data)
@@ -155,8 +163,8 @@ class ProcessInputSLZ(serializers.Serializer):
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
 
     # v1alpha1
-    image = serializers.CharField(allow_null=True, default=None)
-    imagePullPolicy = serializers.CharField(allow_null=True, default=None)
+    image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
+    imagePullPolicy = serializers.ChoiceField(choices=ImagePullPolicy.get_choices(), allow_null=True, default=None)
     cpu = serializers.CharField(required=False)
     memory = serializers.CharField(required=False)
 

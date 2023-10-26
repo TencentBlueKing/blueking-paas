@@ -7,7 +7,10 @@
     class="deploy-action-box"
   >
     <div class="module-info-container">
-      <div class="base-info-container" v-if="curAppModule?.web_config?.runtime_type === 'custom_image'">
+      <div
+        class="base-info-container"
+        v-if="isCustomImage && !allowMultipleImage"
+      >
         <div class="flex-row align-items-center">
           <span class="base-info-title">
             {{ $t('基本信息-title') }}
@@ -398,6 +401,7 @@ export default {
       },
       buildConfig: {},
       buildConfigClone: {},
+      allowMultipleImage: false,
     };
   },
   computed: {
@@ -434,6 +438,10 @@ export default {
     isModuleInfoEdit() {
       return this.$store.state.cloudApi.isModuleInfoEdit;
     },
+
+    isCustomImage() {
+      return this.curAppModule?.web_config?.runtime_type === 'custom_image';
+    },
   },
 
   mounted() {
@@ -458,8 +466,30 @@ export default {
       // 关闭基本信息编辑态
       this.$store.commit('cloudApi/updateModuleInfoEdit', false);
     });
+
+    // 镜像需要调用进程配置
+    if (this.isCustomImage) {
+      this.init();
+    }
   },
   methods: {
+    async init() {
+      try {
+        this.isLoading = true;
+        const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
     // 获取info信息
     async getBaseInfo() {
       try {

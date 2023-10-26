@@ -1142,7 +1142,7 @@ export default {
         });
         this.processData = res.proc_specs;
         this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
-        if (!this.allowMultipleImage) {
+        if (this.allowMultipleImage) {
           this.getImageCredentialList();
         }
         this.processDataBackUp = _.cloneDeep(this.processData);

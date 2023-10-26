@@ -104,7 +104,7 @@ class ConfigVar(TimestampedModel):
             other.key,
             other.value,
             other.description,
-            self.environment_name,
+            other.environment_name,
         )
 
     def clone_to(self, module: 'Module') -> 'ConfigVar':

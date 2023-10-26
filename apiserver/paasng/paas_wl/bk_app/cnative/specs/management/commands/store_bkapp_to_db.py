@@ -19,14 +19,13 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import TYPE_CHECKING
 
-import yaml
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import CommandError
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.management.base import BaseAppModelResourceCommand
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paasng.platform.bkapp_model.importer.importer import import_manifest
+from paasng.platform.bkapp_model.importer.importer import import_manifest_yaml
 from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:
@@ -74,7 +73,7 @@ class Command(BaseAppModelResourceCommand):
     def import_bkapp(self, module: Module, res: AppModelResource, verbosity: int, dry_run: bool = True):
         """import bkapp manifest"""
         bkapp = BkAppResource(**res.revision.json_value)
-        input_data = bkapp.to_deployable()
+        input_data = bkapp.json(exclude_none=True, indent=2, ensure_ascii=False)
 
         prefix = "" if not dry_run else "DRY-RUN: "
         self.stdout.write(
@@ -92,9 +91,9 @@ class Command(BaseAppModelResourceCommand):
                 self.style.WARNING(
                     "{prefix}Manifest START: \n{manifest}\n{prefix}Manifest END".format(
                         prefix=prefix,
-                        manifest=yaml.safe_dump(input_data, indent=2, allow_unicode=True),
+                        manifest=input_data,
                     )
                 )
             )
         if not dry_run:
-            import_manifest(module, input_data)
+            import_manifest_yaml(module=module, input_yaml_data=input_data)

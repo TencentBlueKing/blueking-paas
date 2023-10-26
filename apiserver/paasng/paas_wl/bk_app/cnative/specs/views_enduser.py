@@ -46,6 +46,7 @@ from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
 from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
+    AppModelRevision,
     Mount,
     to_error_string,
     update_app_resource,
@@ -56,6 +57,7 @@ from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PL
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelResourceSerializer,
+    AppModelRevisionSerializer,
     CreateDeploySerializer,
     DeployDetailSerializer,
     DeployPrepResultSLZ,
@@ -248,6 +250,21 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return AppModelDeploy.objects.filter(
             application_id=application.id, module_id=module.id, environment_name=self.kwargs["environment"]
         )
+
+
+class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """应用资源版本相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(responses={"200": AppModelRevisionSerializer})
+    def retrieve(self, request, code, module_name, environment, revision_id):
+        """获取某个部署版本的详细信息"""
+        try:
+            revision = AppModelRevision.objects.get(pk=revision_id)
+        except AppModelRevision.DoesNotExist:
+            raise error_codes.GET_DEPLOYMENT_FAILED.f(f"app model revision id {revision_id} not found")
+        return Response(AppModelRevisionSerializer(revision).data)
 
 
 class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):

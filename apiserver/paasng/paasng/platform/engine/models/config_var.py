@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
+# 需要设置 environment(外键) 而非 environment_id, model_to_dict 只认 environment
 CONFIG_VAR_INPUT_FIELDS = ['is_global', 'environment', 'key', 'value', 'description']
 
 

@@ -236,10 +236,6 @@ export default {
       type: Object,
       default: () => {},
     },
-    cloudAppData: {
-      type: Object,
-      default: () => {},
-    },
     rvData: {
       type: Object,
       default: () => ({}),
@@ -334,11 +330,6 @@ export default {
       return '';
     },
 
-    // 是否是v2版本
-    isV1alpha2() {
-      return this.cloudAppData?.apiVersion?.includes('v1alpha2');
-    },
-
     // 为源码构建
     isSourceCodeBuild() {
       return this.deploymentInfoBackUp.build_method !== 'custom_image';
@@ -359,6 +350,7 @@ export default {
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
         // 仅镜像部署不需要获取分支数据
+        console.log('this.deploymentInfoBackUp.build_method', this.deploymentInfoBackUp.build_method);
         if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches();   // 获取分支数据
         } else {
@@ -369,6 +361,7 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
+      console.log('this.deploymentInfoBackUp', this.deploymentInfoBackUp);
     },
   },
   methods: {
@@ -590,7 +583,6 @@ export default {
               version_type: 'manifest',
               version_name: 'manifest',
               advanced_options: advancedOptions,
-              manifest: this.cloudAppData,
             };
           }
         }

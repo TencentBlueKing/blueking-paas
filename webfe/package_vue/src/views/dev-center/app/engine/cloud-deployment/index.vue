@@ -160,6 +160,11 @@ export default {
       return curPenel ? curPenel.ref : 'process';
     },
 
+    curAppModuleList() {
+      // 根据name的英文字母排序
+      return (this.$store.state.curAppModuleList || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },

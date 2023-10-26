@@ -172,14 +172,14 @@ class TestVolumeMountViewSet:
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id}/"
         body = MountSLZ(mount).data
         body["source_config_data"] = {"configmap_z": "configmap_z_data_updated"}
-        body["name"] = "mount-configmap-updated"
+        body["name"] = mount.name
         body["environment_name"] = "stag"
 
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount.pk)
 
         assert response.status_code == 200
-        assert mount_updated.name == 'mount-configmap-updated'
+        assert mount_updated.name == mount.name
         assert mount_updated.source.data == {"configmap_z": "configmap_z_data_updated"}
         assert mount_updated.source.environment_name == "stag"
 

@@ -41,13 +41,15 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_from_bkapp(self, processes: List['BkAppProcess']):
+    def sync_from_bkapp(self, processes: List['BkAppProcess'], image_credential_names: Dict[str, str]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
+        :param image_credential_names: extra image credential name dict
         """
+        image_credential_names = image_credential_names or {}
         processes_map: Dict[str, 'BkAppProcess'] = {process.name: process for process in processes}
 
         # delete outdated procs, which are removed from bkapp
@@ -72,8 +74,7 @@ class ModuleProcessSpecManager:
                 # TODO: 设计一种更好的从 v1alpha1 升级到 v1alpha2 的方式
                 image=process.image or None,
                 image_pull_policy=process.imagePullPolicy,
-                # TODO: set image_credential_name
-                # image_credential_name=""
+                image_credential_name=image_credential_names.get(process.name, None),
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)

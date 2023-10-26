@@ -376,7 +376,8 @@
             v-if="exportDialog.count"
             style="line-height: 20px"
           >
-            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }}
+            {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
           </p>
           <p v-else>【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}</p>
         </div>
@@ -826,7 +827,8 @@ export default {
     // 选中环境
     handleEnvChange(curItem) {
       this.curItem = curItem;
-      const flag = this.envVarList.filter(item => item.name === this.curItem.name && item.envName === this.curItem.envName);
+      const flag = this.envVarList.filter(item => item.name === this.curItem.name
+      && item.envName === this.curItem.envName);
       if (flag.length <= 1) {
         // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {

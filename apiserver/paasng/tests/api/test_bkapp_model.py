@@ -172,8 +172,8 @@ class TestModuleProcessSpecViewSet:
                 "name": "web",
                 "image": "python:v1",
                 "image_credential_name": "foo",
-                "command": ["python", "-m"],
-                "args": ["http.server"],
+                "command": ["python", "-m", "http.server"],
+                "args": None,
                 "port": 4999,
             }
         ]
@@ -188,6 +188,6 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "python:v1"
         assert proc_specs[0]["image_credential_name"] == "foo"
-        assert proc_specs[0]["command"] == ["python", "-m"]
-        assert proc_specs[0]["args"] == ["http.server"]
+        assert proc_specs[0]["command"] == ["python", "-m", "http.server"]
+        assert proc_specs[0]["args"] is None
         assert proc_specs[0]["port"] == 4999

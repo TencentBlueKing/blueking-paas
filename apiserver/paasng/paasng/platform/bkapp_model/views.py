@@ -121,8 +121,8 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "name": proc_spec.name,
                 "image": proc_spec.image or image_repository,
                 "image_credential_name": proc_spec.image_credential_name or image_credential_name,
-                "command": proc_spec.command,
-                "args": proc_spec.args,
+                "command": proc_spec.command or [],
+                "args": proc_spec.args or [],
                 "port": proc_spec.port,
                 "env_overlay": {
                     environment_name.value: {

@@ -482,8 +482,7 @@
   </div>
 </template>
 
-<script>
-import _ from 'lodash';
+<script>import _ from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
@@ -522,7 +521,7 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter((item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
+              const flag = this.envVarList.filter(item => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
@@ -617,10 +616,9 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
-  watch: {},
   created() {
     this.init();
   },
@@ -661,7 +659,11 @@ export default {
         }
         return p;
       }, []);
-      console.log('flag', flag);
+      // 仅一条数据也可删除
+      if (this.envVarList.length === 0) {
+        this.save();
+        return;
+      }
       if (flag.length) {
         // 有数据时
         for (let index = 0; index < flag.length; index++) {
@@ -692,11 +694,20 @@ export default {
     // 保存
     async save() {
       try {
-        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: this.envVarList });
+        const params = _.cloneDeep(this.envVarList);
+
+        // 保存环境变，无需传递 is_global
+        params.forEach((v) => {
+          delete v.is_global;
+        });
+
+        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('添加环境变量成功'),
         });
+        // 更新本地数据
+        this.envLocalVarList = _.cloneDeep(this.envVarList);
         this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (error) {
         const errorMsg = error.message;
@@ -826,7 +837,7 @@ export default {
     // 选中环境
     handleEnvChange(curItem) {
       this.curItem = curItem;
-      const flag = this.envVarList.filter((item) => item.name === this.curItem.name && item.envName === this.curItem.envName);
+      const flag = this.envVarList.filter(item => item.name === this.curItem.name && item.envName === this.curItem.envName);
       if (flag.length <= 1) {
         // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {
@@ -863,7 +874,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportDialog.isLoading = false;
@@ -965,7 +976,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -989,7 +1000,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -1065,7 +1076,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.importFileDialog.loading = false;

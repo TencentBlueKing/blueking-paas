@@ -308,7 +308,7 @@ class HooksManifestConstructor(ManifestConstructor):
         if not hooks:
             hooks = BkAppHooks()
         pre_release_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
-        if pre_release_hook:
+        if pre_release_hook and pre_release_hook.enabled:
             hooks.preRelease = Hook(
                 command=pre_release_hook.command,
                 args=pre_release_hook.args,

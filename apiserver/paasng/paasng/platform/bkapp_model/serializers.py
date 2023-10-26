@@ -66,7 +66,7 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
 class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
     """特性开关"""
 
-    allow_set_image = serializers.BooleanField(default=False, help_text="是否允许编辑 image 字段")
+    allow_multiple_image = serializers.BooleanField(default=False, help_text="是否允许使用多个不同镜像")
 
 
 class ModuleProcessSpecSLZ(serializers.Serializer):

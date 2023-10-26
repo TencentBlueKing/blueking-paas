@@ -380,7 +380,6 @@ export default {
     },
     getVersionValue() {
       return function (name, data) {
-        console.log('data', name, data);
         const versionData = data.find(e => e.name === name) || {};
         return versionData.value;
       };

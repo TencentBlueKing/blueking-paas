@@ -119,6 +119,7 @@ class DeploymentSLZ(serializers.ModelSerializer):
             'build_int_requested_at',
             'release_int_requested_at',
             'has_requested_int',
+            'bkapp_revision_id',
         ]
 
     def get_repo_info(self, obj: Deployment) -> dict:

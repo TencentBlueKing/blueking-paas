@@ -263,7 +263,7 @@ class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             revision = AppModelRevision.objects.get(pk=revision_id)
         except AppModelRevision.DoesNotExist:
-            raise error_codes.GET_DEPLOYMENT_FAILED.f(f"id=`{revision_id}` not found.")
+            raise error_codes.GET_DEPLOYMENT_FAILED.f(f"app model revision id {revision_id} not found")
         return Response(AppModelRevisionSerializer(revision).data)
 
 

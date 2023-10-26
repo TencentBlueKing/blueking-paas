@@ -49,7 +49,6 @@ class ModuleProcessSpecManager:
                           where 'replicas' and 'plan' is optional
         :param image_credential_names: extra image credential name dict
         """
-        image_credential_names = image_credential_names or {}
         processes_map: Dict[str, 'BkAppProcess'] = {process.name: process for process in processes}
 
         # delete outdated procs, which are removed from bkapp

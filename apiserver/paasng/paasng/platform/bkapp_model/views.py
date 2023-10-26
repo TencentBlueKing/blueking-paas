@@ -164,9 +164,9 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             {}
             if not allow_multiple_image
             else {
-                proc_spec.name: proc_spec.image_credential_name
+                proc_spec.name: proc_spec.get("image_credential_name", None)
                 for proc_spec in proc_specs
-                if proc_spec.image_credential_name
+                if proc_spec.get("image_credential_name", None)
             }
         )
 
@@ -175,7 +175,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                targetPort=proc_spec["port"],
+                targetPort=proc_spec.get("port", None),
                 image=proc_spec["image"] if allow_multiple_image else "",
             )
             for proc_spec in proc_specs

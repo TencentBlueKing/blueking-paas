@@ -77,7 +77,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     image_credential_name = serializers.CharField(help_text="镜像凭证", allow_null=True, required=False)
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
-    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, allow_null=True)
+    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False)
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
 
 

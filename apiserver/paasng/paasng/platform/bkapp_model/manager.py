@@ -106,7 +106,16 @@ class ModuleProcessSpecManager:
         self.bulk_update_procs(
             proc_updator=process_spec_updator,
             updating_procs=updating_procs,
-            updated_fields=["command", "args", "target_replicas", "plan_name", "updated"],
+            updated_fields=[
+                "command",
+                "args",
+                "target_replicas",
+                "plan_name",
+                "port",
+                "image",
+                "image_credential_name",
+                "updated",
+            ],
         )
         # update spec objects end
 

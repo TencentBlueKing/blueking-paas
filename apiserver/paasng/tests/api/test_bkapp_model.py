@@ -170,10 +170,11 @@ class TestModuleProcessSpecViewSet:
         request_data = [
             {
                 "name": "web",
-                "image": "python:latest",
+                "image": "python:v1",
+                "image_credential_name": "foo",
                 "command": ["python", "-m"],
                 "args": ["http.server"],
-                "port": 5000,
+                "port": 4999,
             }
         ]
         resp = api_client.post(url, data=request_data)
@@ -185,6 +186,8 @@ class TestModuleProcessSpecViewSet:
         assert metadata["allow_multiple_image"] is True
         assert len(proc_specs) == 1
         assert proc_specs[0]["name"] == "web"
-        assert proc_specs[0]["image"] == "python:latest"
+        assert proc_specs[0]["image"] == "python:v1"
+        assert proc_specs[0]["image_credential_name"] == "foo"
         assert proc_specs[0]["command"] == ["python", "-m"]
         assert proc_specs[0]["args"] == ["http.server"]
+        assert proc_specs[0]["port"] == 4999

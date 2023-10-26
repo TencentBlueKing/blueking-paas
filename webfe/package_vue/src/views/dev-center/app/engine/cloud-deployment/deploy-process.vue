@@ -930,8 +930,7 @@ export default {
           },
           {
             validator: (v) => {
-              console.log('this.$refs.formDeploy1', this.$refs.formDeploy);
-              this.$refs.formDeploy?.clearError();
+              this.$refs?.formStagEnv?.clearError();
               const minReplicas = Number(v);
               const maxReplicas = Number(this.formData.env_overlay.stag.scaling_config.max_replicas);
               return minReplicas <= maxReplicas;
@@ -953,6 +952,7 @@ export default {
           },
           {
             validator: (v) => {
+              this.$refs?.formStagEnv?.clearError();
               const maxReplicas = Number(v);
               const minReplicas = Number(this.formData.env_overlay.stag.scaling_config.min_replicas);
               return maxReplicas >= minReplicas;
@@ -974,6 +974,7 @@ export default {
           },
           {
             validator: (v) => {
+              this.$refs?.formProdEnv?.clearError();
               const minReplicas = Number(v);
               const maxReplicas = Number(this.formData.env_overlay.prod.scaling_config.max_replicas);
               return minReplicas <= maxReplicas;
@@ -995,6 +996,7 @@ export default {
           },
           {
             validator: (v) => {
+              this.$refs?.formProdEnv?.clearError();
               const maxReplicas = Number(v);
               const minReplicas = Number(this.formData.env_overlay.prod.scaling_config.min_replicas);
               return maxReplicas >= minReplicas;
@@ -1121,10 +1123,6 @@ export default {
         this.isV1alpha2 = val?.apiVersion?.includes('v1alpha2');
       },
       immediate: true,
-    },
-    'formData.env_overlay.stag.scaling_config.max_replicas'() {
-      console.log(11111, this.$refs.formDeploy?.clearError());
-      this.$refs.formDeploy?.clearError();
     },
   },
   async created() {
@@ -1397,6 +1395,9 @@ export default {
 
     // 保存
     async handleSave() {
+      await this.$refs?.formStagEnv?.validate();
+      await this.$refs?.formProdEnv?.validate();
+      await this.$refs?.formDeploy?.validate();
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,

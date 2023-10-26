@@ -121,7 +121,7 @@
                   class="construction-manner"
                 >
                   <bk-radio :value="'buildpack'">
-                    {{ $t('构建目录') }}
+                    {{ $t('蓝鲸 Buildpack') }}
                   </bk-radio>
                   <bk-radio :value="'dockerfile'">
                     {{ $t('Dockerfile 构建') }}

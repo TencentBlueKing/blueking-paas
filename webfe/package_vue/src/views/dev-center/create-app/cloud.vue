@@ -82,7 +82,7 @@
             class="construction-manner"
           >
             <bk-radio :value="'buildpack'">
-              {{ $t('构建目录') }}
+              {{ $t('蓝鲸 Buildpack') }}
             </bk-radio>
             <bk-radio :value="'dockerfile'">
               {{ $t('Dockerfile 构建') }}
@@ -844,7 +844,6 @@ export default {
           }
           return e;
         });
-        console.log('this.sourceControlTypes', this.sourceControlTypes);
         const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {

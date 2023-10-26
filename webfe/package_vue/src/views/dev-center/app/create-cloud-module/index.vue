@@ -388,6 +388,8 @@
                 ref="repoInfo"
                 :key="sourceControlType"
                 :type="sourceControlType"
+                :source-dir-label="'构建目录'"
+                :is-cloud-created="true"
               />
               <!-- 用户自定义git、svn账号信息 end -->
             </template>
@@ -396,6 +398,7 @@
             <template v-if="formData.buildMethod === 'dockerfile'">
               <div
                 class="form-group-dir dockerfile-cls"
+                :class="{ 'repo-dockerfile': curSourceControl && curSourceControl.auth_method === 'basic' }"
                 style="margin-top: 10px;"
               >
                 <label class="form-label mr10 pr8">
@@ -415,7 +418,10 @@
                 :model="dockerfileData"
                 form-type="vertical"
                 ext-cls="build-params-form">
-                <div class="form-label pr8">
+                <div
+                  class="form-label pr8"
+                  :class="{ 'params-dockerfile': curSourceControl && curSourceControl.auth_method === 'basic' }"
+                >
                   {{$t('构建参数')}}
                 </div>
                 <div class="form-value-wrapper mt10">
@@ -1098,6 +1104,9 @@ export default {
         this.dockerfileData.buildParams.forEach((item) => {
           dockerBuild[item.name] = item.value;
         });
+        if (this.dockerfileData.dockerfilePath === '') {
+          this.dockerfileData.dockerfilePath = null;
+        }
         params.build_config = {
           build_method: 'dockerfile',
           dockerfile_path: this.dockerfileData.dockerfilePath,
@@ -1342,6 +1351,12 @@ export default {
   .form-label {
     width: 105px;
   }
+  &.repo-dockerfile label{
+    transform: translateX(-6px);
+  }
+}
+.params-dockerfile {
+  transform: translateX(-6px);
 }
 .pr8 {
   padding-right: 8px;

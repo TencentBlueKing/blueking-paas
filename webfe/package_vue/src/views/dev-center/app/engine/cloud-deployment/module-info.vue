@@ -813,6 +813,7 @@ export default {
       background: #FAFBFD;
       border-radius: 0 2px 2px 0;
       cursor: pointer;
+      line-height: 30px !important;
     }
 
     .border-b{

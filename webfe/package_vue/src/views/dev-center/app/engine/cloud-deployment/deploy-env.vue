@@ -483,8 +483,7 @@
   </div>
 </template>
 
-<script>
-import _ from 'lodash';
+<script>import _ from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
@@ -621,7 +620,6 @@ export default {
       return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
-  watch: {},
   created() {
     this.init();
   },
@@ -662,7 +660,11 @@ export default {
         }
         return p;
       }, []);
-      console.log('flag', flag);
+      // 仅一条数据也可删除
+      if (this.envVarList.length === 0) {
+        this.save();
+        return;
+      }
       if (flag.length) {
         // 有数据时
         for (let index = 0; index < flag.length; index++) {
@@ -693,11 +695,20 @@ export default {
     // 保存
     async save() {
       try {
-        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: this.envVarList });
+        const params = _.cloneDeep(this.envVarList);
+
+        // 保存环境变，无需传递 is_global
+        params.forEach((v) => {
+          delete v.is_global;
+        });
+
+        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('添加环境变量成功'),
         });
+        // 更新本地数据
+        this.envLocalVarList = _.cloneDeep(this.envVarList);
         this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (error) {
         const errorMsg = error.message;

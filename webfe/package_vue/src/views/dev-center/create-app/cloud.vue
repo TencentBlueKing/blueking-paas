@@ -283,78 +283,6 @@
                 />
               </div>
             </bk-form-item>
-
-            <!-- Dockerfile 构建 -->
-            <template v-if="formData.buildMethod === 'dockerfile'">
-              <bk-form-item
-                :label="$t('Dockerfile 路径')"
-                :property="'dockerfile_path'"
-                error-display-type="normal"
-                ext-cls="form-dockerfile-cls mt20"
-              >
-                <div class="flex-row align-items-center code-depot">
-                  <bk-input
-                    v-model="dockerfileData.dockerfilePath"
-                    class="form-input-width"
-                    :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
-                  />
-                </div>
-              </bk-form-item>
-
-              <bk-form
-                :model="dockerfileData"
-                form-type="vertical"
-                ext-cls="build-params-form">
-                <div class="form-label">
-                  {{$t('构建参数')}}
-                </div>
-                <div class="form-value-wrapper">
-                  <bk-button
-                    v-if="!dockerfileData.buildParams.length"
-                    :text="true"
-                    title="primary"
-                    @click="addBuildParams">
-                    <i class="paasng-icon paasng-plus-thick" />
-                    {{ $t('新建构建参数') }}
-                  </bk-button>
-                  <template v-if="dockerfileData.buildParams.length">
-                    <div class="build-params-header">
-                      <div class="name">{{$t('参数名')}}</div>
-                      <div class="value">{{$t('参数值')}}</div>
-                    </div>
-                    <div
-                      v-for="(item, index) in dockerfileData.buildParams"
-                      class="build-params-item"
-                      :key="index">
-                      <bk-form :ref="`name-${index}`" :model="item">
-                        <bk-form-item :rules="rules.buildParams" :property="'name'">
-                          <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
-                        </bk-form-item>
-                      </bk-form>
-                      <span class="equal">=</span>
-                      <bk-form :ref="`value-${index}`" :model="item">
-                        <bk-form-item :rules="rules.buildParams" :property="'value'">
-                          <bk-input v-model="item.value"></bk-input>
-                        </bk-form-item>
-                      </bk-form>
-                      <i
-                        class="paasng-icon paasng-minus-circle-shape"
-                        @click="removeBuildParams(index)"
-                      ></i>
-                    </div>
-                  </template>
-                </div>
-              </bk-form>
-              <bk-button
-                v-if="dockerfileData.buildParams.length"
-                ext-cls="add-build-params"
-                :text="true"
-                title="primary"
-                @click="addBuildParams">
-                <i class="paasng-icon paasng-plus-thick" />
-                {{ $t('新建构建参数') }}
-              </bk-button>
-            </template>
           </section>
 
           <section v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
@@ -362,8 +290,82 @@
               ref="repoInfo"
               :key="sourceControlTypeItem"
               :type="sourceControlTypeItem"
+              :source-dir-label="'构建目录'"
+              :is-cloud-created="true"
             />
           </section>
+
+          <!-- Dockerfile 构建 -->
+          <template v-if="formData.buildMethod === 'dockerfile'">
+            <bk-form-item
+              :label="$t('Dockerfile 路径')"
+              :property="'dockerfile_path'"
+              error-display-type="normal"
+              ext-cls="form-dockerfile-cls mt20"
+            >
+              <div class="flex-row align-items-center code-depot">
+                <bk-input
+                  v-model="dockerfileData.dockerfilePath"
+                  class="form-input-width"
+                  :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                />
+              </div>
+            </bk-form-item>
+
+            <bk-form
+              :model="dockerfileData"
+              form-type="vertical"
+              ext-cls="build-params-form">
+              <div class="form-label">
+                {{$t('构建参数')}}
+              </div>
+              <div class="form-value-wrapper">
+                <bk-button
+                  v-if="!dockerfileData.buildParams.length"
+                  :text="true"
+                  title="primary"
+                  @click="addBuildParams">
+                  <i class="paasng-icon paasng-plus-thick" />
+                  {{ $t('新建构建参数') }}
+                </bk-button>
+                <template v-if="dockerfileData.buildParams.length">
+                  <div class="build-params-header">
+                    <div class="name">{{$t('参数名')}}</div>
+                    <div class="value">{{$t('参数值')}}</div>
+                  </div>
+                  <div
+                    v-for="(item, index) in dockerfileData.buildParams"
+                    class="build-params-item"
+                    :key="index">
+                    <bk-form :ref="`name-${index}`" :model="item">
+                      <bk-form-item :rules="rules.buildParams" :property="'name'">
+                        <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
+                      </bk-form-item>
+                    </bk-form>
+                    <span class="equal">=</span>
+                    <bk-form :ref="`value-${index}`" :model="item">
+                      <bk-form-item :rules="rules.buildParams" :property="'value'">
+                        <bk-input v-model="item.value"></bk-input>
+                      </bk-form-item>
+                    </bk-form>
+                    <i
+                      class="paasng-icon paasng-minus-circle-shape"
+                      @click="removeBuildParams(index)"
+                    ></i>
+                  </div>
+                </template>
+              </div>
+            </bk-form>
+            <bk-button
+              v-if="dockerfileData.buildParams.length"
+              ext-cls="add-build-params"
+              :text="true"
+              title="primary"
+              @click="addBuildParams">
+              <i class="paasng-icon paasng-plus-thick" />
+              {{ $t('新建构建参数') }}
+            </bk-button>
+          </template>
         </bk-form>
       </template>
 
@@ -842,7 +844,6 @@ export default {
           }
           return e;
         });
-        console.log('this.sourceControlTypes', this.sourceControlTypes);
         const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
@@ -1039,6 +1040,9 @@ export default {
         this.dockerfileData.buildParams.forEach((item) => {
           dockerBuild[item.name] = item.value;
         });
+        if (this.dockerfileData.dockerfilePath === '') {
+          this.dockerfileData.dockerfilePath = null;
+        }
         params.build_config = {
           build_method: 'dockerfile',
           dockerfile_path: this.dockerfileData.dockerfilePath,

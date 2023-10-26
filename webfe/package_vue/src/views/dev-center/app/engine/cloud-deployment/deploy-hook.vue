@@ -388,6 +388,7 @@ export default {
         });
         this.$store.commit('cloudApi/updateHookPageEdit', false);
         this.$store.commit('cloudApi/updatePageEdit', false);
+        this.init();
       } catch (error) {
         this.$paasMessage({
           theme: 'error',
@@ -398,10 +399,7 @@ export default {
 
     // 数据还原
     handleCancel() {
-      this.$refs.commandRef.clearError();
-      this.preFormData.command = this.rawData.command;
-      this.preFormData.args = this.rawData.args;
-      this.preFormData.enabled = this.rawData.enabled;
+      this.init();
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
     },

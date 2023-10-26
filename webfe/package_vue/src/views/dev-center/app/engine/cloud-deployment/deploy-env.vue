@@ -287,7 +287,7 @@
           <bk-button
             class="pl20 pr20"
             :theme="'primary'"
-            @click="$emit('save')"
+            @click="saveEnvData"
           >
             {{ $t('保存') }}
           </bk-button>

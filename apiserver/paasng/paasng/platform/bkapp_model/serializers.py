@@ -15,7 +15,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf import settings
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
@@ -78,7 +77,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     image_credential_name = serializers.CharField(help_text="镜像凭证", allow_null=True, required=False)
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
-    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, default=settings.CONTAINER_PORT)
+    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, allow_null=True)
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
 
 

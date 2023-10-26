@@ -74,11 +74,8 @@
             <template slot-scope="{row}">
               <span v-if="row.isStartUp && row.specifications && row.specifications.length">
                 <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
-                  <span v-if="item.name === 'version'">
+                  <span>
                     {{ $t(item.display_name) }} {{getVersionValue(item.name, row.specificationsData)}}
-                  </span>
-                  <span v-else>
-                    {{ $t(item.display_name) }} {{ $t(item.recommended_value) }}
                   </span>
                 </bk-tag>
               </span>

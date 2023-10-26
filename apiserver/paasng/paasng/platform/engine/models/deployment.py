@@ -251,7 +251,11 @@ class Deployment(OperationVersionBase):
 
     @property
     def version_info(self):
-        """Deprecated: use get_version_info instead"""
+        """Deprecated
+        TODO:
+        - 获取源码版本的 version_info 替换成 get_version_info()
+        - 获取镜像版本的 version_info 需要增加新的函数
+        """
         return VersionInfo(self.source_revision, self.source_version_name, self.source_version_type)
 
     def get_deploy_hooks(self) -> HookList:

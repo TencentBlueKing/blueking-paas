@@ -668,7 +668,7 @@
           </bk-form-item>
           <bk-form-item :label="`${$t('镜像凭证')}：`">
             <span class="form-text">
-              {{ formData.image_credential_name }}
+              {{ formData.image_credential_name || '--' }}
             </span>
           </bk-form-item>
           <bk-form-item :label="`${$t('启动命令')}：`">

@@ -112,6 +112,7 @@
             >
               {{ buildData.image }}
               <i
+                v-if="!isCreate"
                 class="paasng-icon paasng-edit-2 image-store-icon"
                 @click="handleToModuleInfo"
               />

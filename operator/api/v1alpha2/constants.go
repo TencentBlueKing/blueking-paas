@@ -125,6 +125,7 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 	ResQuotaPlan1C512M,
 	ResQuotaPlan2C1G,
 	ResQuotaPlan2C2G,
+	ResQuotaPlan2C4G,
 	ResQuotaPlan4C1G,
 	ResQuotaPlan4C2G,
 	ResQuotaPlan4C4G,

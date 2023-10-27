@@ -98,9 +98,9 @@ class ProcessSpecEnvOverlay(TimestampedModel):
         verbose_name=_('环境名称'), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
 
-    target_replicas = models.IntegerField('期望副本数', default=1)
-    plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
-    autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
+    target_replicas = models.IntegerField('期望副本数', null=True)
+    plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
+    autoscaling = models.BooleanField('是否启用自动扩缩容', null=True)
     scaling_config = models.JSONField('自动扩缩容配置', null=True)
 
     class Meta:

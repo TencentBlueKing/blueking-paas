@@ -25,7 +25,7 @@ from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceTyp
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 
 from .constants import DeployStatus
-from .models import AppModelDeploy, Mount
+from .models import AppModelDeploy, AppModelRevision, Mount
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,17 @@ class DeployDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppModelDeploy
         exclude = ('module_id',)
+
+
+class AppModelRevisionSerializer(serializers.ModelSerializer):
+    """Serializer for representing detailed AppModelDeploy object"""
+
+    manifest = serializers.JSONField(label=_('BkApp 配置信息'), source='json_value')
+    deployed_manifest = serializers.JSONField(label=_('已部署的配置信息'), source='deployed_value')
+
+    class Meta:
+        model = AppModelRevision
+        exclude = ('module_id', 'yaml_value')
 
 
 class DeploySerializer(serializers.ModelSerializer):

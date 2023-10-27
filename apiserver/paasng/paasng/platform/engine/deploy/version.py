@@ -22,12 +22,12 @@ from typing import Optional, Tuple
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
 from paas_wl.bk_app.cnative.specs.models import AppModelRevision
-from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.modules.models import BuildConfig
+from paasng.platform.sourcectl.models import VersionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -53,5 +53,5 @@ def get_env_deployed_version_info(env: ModuleEnvironment) -> Tuple[RuntimeType, 
         res = BkAppResource(**bkapp_revision.json_value)
         version_info = VersionInfo(revision="", version_name=ImageParser(res).get_tag() or "--", version_type="tag")
     else:
-        version_info = deployment.version_info
+        version_info = deployment.get_version_info()
     return build_config.build_method, version_info

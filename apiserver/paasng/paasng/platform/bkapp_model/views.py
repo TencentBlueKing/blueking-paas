@@ -41,6 +41,7 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleDeployHookSLZ,
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
+    default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 
@@ -112,7 +113,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         images = {proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None}
         # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
-        allow_set_image = len(images - {image_repository}) >= 1
+        allow_multiple_image = len(images - {image_repository}) >= 1
 
         proc_specs_data = [
             {
@@ -127,8 +128,8 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                         "environment_name": env_overlay.environment_name,
                         "plan_name": env_overlay.plan_name,
                         "target_replicas": env_overlay.target_replicas,
-                        "autoscaling": env_overlay.autoscaling,
-                        "scaling_config": env_overlay.scaling_config,
+                        "autoscaling": bool(env_overlay.autoscaling),
+                        "scaling_config": env_overlay.scaling_config or default_scaling_config(),
                     }
                     for env_overlay in proc_spec.env_overlays.all()
                 },
@@ -137,7 +138,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ]
         return Response(
             ModuleProcessSpecsOutputSLZ(
-                {"metadata": {"allow_set_image": allow_set_image}, "proc_specs": proc_specs_data}
+                {"metadata": {"allow_multiple_image": allow_multiple_image}, "proc_specs": proc_specs_data}
             ).data
         )
 
@@ -157,7 +158,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if proc_spec.image is not None
         }
         # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
-        allow_set_image = len(images - {image_repository}) >= 1
+        allow_multiple_image = len(images - {image_repository}) >= 1
 
         processes = [
             BkAppProcess(
@@ -165,7 +166,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 command=proc_spec["command"],
                 args=proc_spec["args"],
                 targetPort=proc_spec["port"],
-                image=proc_spec["image"] if allow_set_image else "",
+                image=proc_spec["image"] if allow_multiple_image else "",
             )
             for proc_spec in proc_specs
         ]

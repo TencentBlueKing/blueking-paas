@@ -28,19 +28,19 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
 from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses
-from paasng.platform.applications.serializers import ApplicationField, AppNameField
-from paasng.platform.modules.models import Module
 from paasng.accessories.publish.market.constant import AppState, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
 from paasng.accessories.publish.market.signals import product_contact_updated, product_create_or_update_by_operator
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
+from paasng.platform.applications.serializers import ApplicationField, AppNameField
+from paasng.platform.modules.models import Module
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import RichTextField
 
 
 class AppLogoField(serializers.ImageField):
     def to_internal_value(self, logo):
-        if logo.size >= 2 ** 21:
+        if logo.size >= 2**21:
             raise ValidationError(_('文件太大, 大小不能超过2M'))
 
         if not re.match(r'^.+\.\w+$', logo.name):
@@ -420,7 +420,8 @@ class MarketEntranceSLZ(serializers.Serializer):
                 # 不再允许前端修改 prefer_https, 如需限制 http 访问, 需要在后台操作
                 # 当 prefer_https 为 None 时, 优先使用集群的配置(https_enabled)
                 instance.prefer_https = None
-                update_fields.extend(["prefer_https"])
+                instance.custom_domain_url = None
+                update_fields.extend(["prefer_https", "custom_domain_url"])
         instance.source_url_type = source_url_type
         instance.save(update_fields=update_fields)
         return instance

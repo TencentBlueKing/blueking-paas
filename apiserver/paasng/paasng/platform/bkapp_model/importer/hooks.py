@@ -16,46 +16,40 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ReplicasOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppHooks
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
-def import_replicas_overlay(module: Module, items: List[ReplicasOverlay]) -> CommonImportResult:
-    """Import replicas overlay data.
+def import_hooks(module: Module, hooks: BkAppHooks) -> CommonImportResult:
+    """Import hooks data.
 
-    :param items: A list of ReplicasOverlay items.
+    :param hooks: A BkAppHooks object.
     :return: The import result object.
     """
     ret = CommonImportResult()
 
     # Build the index of existing data first to remove data later.
-    # Data structure: {(process name, environment name): pk}
+    # Data structure: {hook type: pk}
     existing_index = {}
-    existing_specs = {}
-    for proc_spec in ModuleProcessSpec.objects.filter(module=module):
-        existing_specs[proc_spec.name] = proc_spec
-        for overlay_item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
-            existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
+    for hook in ModuleDeployHook.objects.filter(module=module):
+        existing_index[hook.type] = hook.pk
 
     # Update or create data
-    for input_p in items:
-        if not (proc_spec := existing_specs.get(input_p.process)):
-            logger.info('Process spec not found, ignore, name: %s', input_p.process)
-            continue
-
-        _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-            proc_spec=proc_spec, environment_name=input_p.envName, defaults={"target_replicas": input_p.count}
+    if pre_release_hook := hooks.preRelease:
+        _, created = ModuleDeployHook.objects.update_or_create(
+            module=module,
+            type=DeployHookType.PRE_RELEASE_HOOK,
+            defaults={"command": pre_release_hook.command, "args": pre_release_hook.args, "enabled": True},
         )
         ret.incr_by_created_flag(created)
         # Move out from the index
-        existing_index.pop((input_p.process, input_p.envName), None)
+        existing_index.pop(DeployHookType.PRE_RELEASE_HOOK, None)
 
     # Remove existing data that is not touched.
-    ret.deleted_num = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).update(target_replicas=None)
+    ret.deleted_num, _ = ModuleDeployHook.objects.filter(module=module, id__in=existing_index.values()).delete()
     return ret

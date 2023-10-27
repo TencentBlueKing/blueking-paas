@@ -46,6 +46,7 @@ from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
 from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
+    AppModelRevision,
     Mount,
     to_error_string,
     update_app_resource,
@@ -56,6 +57,7 @@ from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PL
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelResourceSerializer,
+    AppModelRevisionSerializer,
     CreateDeploySerializer,
     DeployDetailSerializer,
     DeployPrepResultSLZ,
@@ -74,6 +76,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
 
@@ -249,6 +252,21 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
 
 
+class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """应用资源版本相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(responses={"200": AppModelRevisionSerializer})
+    def retrieve(self, request, code, module_name, environment, revision_id):
+        """获取某个部署版本的详细信息"""
+        try:
+            revision = AppModelRevision.objects.get(pk=revision_id)
+        except AppModelRevision.DoesNotExist:
+            raise error_codes.GET_DEPLOYMENT_FAILED.f(f"app model revision id {revision_id} not found")
+        return Response(AppModelRevisionSerializer(revision).data)
+
+
 class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """应用模型资源状态相关视图"""
 
@@ -314,19 +332,27 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         """列举 bkapp 声明的镜像仓库中的所有 tag, 仅支持 v1alpha2 版本的云原生应用"""
         application = self.get_application()
         module = self.get_module_via_path()
-        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
-        bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        try:
-            repository = ImageParser(bkapp).get_repository()
-        except ValueError as e:
-            raise error_codes.INVALID_MRES.f(str(e))
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        if cfg.image_repository:
+            repository = cfg.image_repository
+            credential_name = cfg.image_credential_name
+        else:
+            # TODO: 数据迁移后删除以下代码
+            model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
+            bkapp = BkAppResource(**model_resource.revision.json_value)
 
-        assert bkapp.spec.build
-        if repository != bkapp.spec.build.image:
-            logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+            try:
+                repository = ImageParser(bkapp).get_repository()
+            except ValueError as e:
+                raise error_codes.INVALID_MRES.f(str(e))
 
-        credential_name = bkapp.spec.build.imageCredentialsName
+            assert bkapp.spec.build
+            if repository != bkapp.spec.build.image:
+                logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
+
+            credential_name = bkapp.spec.build.imageCredentialsName
+
         username, password = "", ""
         if credential_name:
             try:

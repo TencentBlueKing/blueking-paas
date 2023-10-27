@@ -23,6 +23,7 @@ from django.utils import timezone
 
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
+from paasng.platform.sourcectl.models import VersionInfo
 
 from .base import OperationVersionBase
 
@@ -107,3 +108,13 @@ class OfflineOperation(OperationVersionBase):
         if self.app_environment.is_offlined is False:
             self.app_environment.is_offlined = True
             self.app_environment.save(update_fields=['is_offlined'])
+
+    def get_version_info(self) -> VersionInfo:
+        """获取源码的版本信息"""
+        version_type = self.source_version_type
+        version_name = self.source_version_name
+        # Backward compatibility
+        if not (version_type and version_name):
+            version_name = self.source_location.split('/')[-1]
+            version_type = 'trunk' if version_name == 'trunk' else self.source_location.split('/')[-2]
+        return VersionInfo(self.source_revision, version_name, version_type)

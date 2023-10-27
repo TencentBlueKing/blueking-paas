@@ -55,7 +55,7 @@ class TestModuleProcessSpecViewSet:
         data = resp.json()
         metadata = data["metadata"]
         proc_specs = data["proc_specs"]
-        assert metadata["allow_set_image"] is False
+        assert metadata["allow_multiple_image"] is False
         assert len(proc_specs) == 2
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "example.com/foo"
@@ -80,7 +80,7 @@ class TestModuleProcessSpecViewSet:
         metadata = data["metadata"]
         proc_specs = data["proc_specs"]
 
-        assert metadata["allow_set_image"] is True
+        assert metadata["allow_multiple_image"] is True
         assert len(proc_specs) == 2
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "python:latest"
@@ -140,7 +140,7 @@ class TestModuleProcessSpecViewSet:
         proc_specs = data["proc_specs"]
 
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 2
-        assert metadata["allow_set_image"] is False
+        assert metadata["allow_multiple_image"] is False
         assert len(proc_specs) == 2
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "example.com/foo"
@@ -156,6 +156,13 @@ class TestModuleProcessSpecViewSet:
             "min_replicas": 1,
             "max_replicas": 5,
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            "policy": "default",
+        }
+        assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config("prod") == {
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            "policy": "default",
         }
 
     def test_save_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):
@@ -175,7 +182,7 @@ class TestModuleProcessSpecViewSet:
         proc_specs = data["proc_specs"]
 
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 1
-        assert metadata["allow_set_image"] is True
+        assert metadata["allow_multiple_image"] is True
         assert len(proc_specs) == 1
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "python:latest"

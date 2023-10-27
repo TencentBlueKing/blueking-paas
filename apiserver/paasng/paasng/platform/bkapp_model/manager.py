@@ -41,12 +41,13 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_from_bkapp(self, processes: List['BkAppProcess']):
+    def sync_from_bkapp(self, processes: List['BkAppProcess'], image_credential_names: Dict[str, str]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
+        :param image_credential_names: extra image credential name dict
         """
         processes_map: Dict[str, 'BkAppProcess'] = {process.name: process for process in processes}
 
@@ -72,8 +73,7 @@ class ModuleProcessSpecManager:
                 # TODO: 设计一种更好的从 v1alpha1 升级到 v1alpha2 的方式
                 image=process.image or None,
                 image_pull_policy=process.imagePullPolicy,
-                # TODO: set image_credential_name
-                # image_credential_name=""
+                image_credential_name=image_credential_names.get(process.name, None),
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -93,16 +93,29 @@ class ModuleProcessSpecManager:
                 recorder.setattr("target_replicas", process.replicas)
             if process.resQuotaPlan and process_spec.plan_name != process.resQuotaPlan:
                 recorder.setattr("plan_name", process.resQuotaPlan)
+            if process_spec.port != process.targetPort:
+                recorder.setattr("port", process.targetPort)
             # 兼容 v1alpha1, 特别地当 process.image 等于空字符串时, 设置字段为空
             # TODO: 设计一种更好的从 v1alpha1 升级到 v1alpha2 的方式
             if process.image is not None and process_spec.image != process.image:
                 recorder.setattr("image", process.image or None)
+            if process.name in image_credential_names:
+                recorder.setattr("image_credential_name", image_credential_names[process.name])
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
             proc_updator=process_spec_updator,
             updating_procs=updating_procs,
-            updated_fields=["command", "args", "target_replicas", "plan_name", "updated"],
+            updated_fields=[
+                "command",
+                "args",
+                "target_replicas",
+                "plan_name",
+                "port",
+                "image",
+                "image_credential_name",
+                "updated",
+            ],
         )
         # update spec objects end
 

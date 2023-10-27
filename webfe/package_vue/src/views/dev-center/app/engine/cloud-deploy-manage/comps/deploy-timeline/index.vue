@@ -209,7 +209,7 @@ export default {
 
     editNodeStatus(name, status, content) {
       const isMainStage = ['build', 'release', 'preparation'].includes(name);
-      console.log('this.list', this.list, name, status);
+      // console.log('this.list', this.list, name, status);
       const curNode = this.list.find(item => item.name === name);
       if (curNode) {
         curNode.status = status;

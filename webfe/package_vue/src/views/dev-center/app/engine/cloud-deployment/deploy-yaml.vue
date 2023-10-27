@@ -11,6 +11,7 @@
         ref="editorRef"
         key="editor"
         v-model="detail"
+        :readonly="true"
         v-bkloading="{ isLoading, opacity: 1, color: '#1a1a1a' }"
         :height="fullScreen ? clientHeight : height"
         @error="handleEditorErr"
@@ -21,9 +22,8 @@
 </template>
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
-import ResourceEditor from './comps/deploy-resource-editor';
-import EditorStatus from './comps/deploy-resource-editor/editor-status';
-import _ from 'lodash';
+import ResourceEditor from '@/components/deploy-resource-editor';
+import EditorStatus from '@/components/deploy-resource-editor/editor-status';
 export default {
   components: {
     ResourceEditor,
@@ -32,8 +32,8 @@ export default {
   mixins: [appBaseMixin],
   props: {
     cloudAppData: {
-      type: Object,
-      default: {},
+      type: Array,
+      default: [],
     },
     height: {
       type: Number,
@@ -57,31 +57,14 @@ export default {
   watch: {
     cloudAppData: {
       handler(val) {
-        if (val.spec) {
-          val.spec.processes.forEach((element) => {
-            if (typeof element.isEdit === 'boolean') {
-              // false 也需要删除
-              delete element.isEdit;
-            }
+        if (val.length) {
+          console.log(11111, val);
+          this.$nextTick(() => {
+            setTimeout(() => {
+              this.detail = val[0];
+              this.$refs.editorRef?.setValue(val[0]);
+            }, 500);
           });
-          val.spec.configuration.env.forEach((element) => {
-            if (element.envName) {
-              // envName 删除
-              delete element.envName;
-            }
-            if (element.isAdd) {
-              delete element.isAdd;
-            }
-          });
-          this.localCloudAppData = _.cloneDeep(val);
-          if (Object.keys(val).length) {
-            this.$nextTick(() => {
-              setTimeout(() => {
-                this.detail = val;
-                this.$refs.editorRef?.setValue(val);
-              }, 500);
-            });
-          }
         }
       },
       immediate: true,
@@ -89,17 +72,16 @@ export default {
     },
     detail: {
       handler(val) {
-        if (val.spec) {
-          const { processes } = val.spec;
-          const webData = processes.find(e => e.name === 'web');
+        if (val && Object.keys(val).length) {
+          const webData = val.spec.processes.find(e => e.name === 'web');
           if (!webData) {
             this.handleEditorErr('至少需要一个web进程');
           } else {
             this.handleEditorErr();
-            setTimeout(() => {
-              this.screenIsLoading = false;
-            }, 500);
           }
+          setTimeout(() => {
+            this.screenIsLoading = false;
+          }, 500);
         }
       },
       immediate: true,

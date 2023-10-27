@@ -9,7 +9,6 @@
       :first-module-name="firstTabActiveName"
     />
     <paas-content-loader
-      :is-loading="isLoading"
       :placeholder="loaderPlaceholder"
       :offset-top="30"
       class="app-container middle overview"
@@ -33,10 +32,8 @@
           <router-view
             :ref="routerRefs"
             :key="renderIndex"
-            :cloud-app-data="cloudAppData"
             :save-loading="buttonLoading"
             :is-component-btn="!isFooterActionBtn"
-            @save="handleSave"
             @cancel="handleCancel"
             @hide-tab="isTab = false"
             @tab-change="handleGoPage"
@@ -83,8 +80,7 @@
 <script>import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
-import { mergeObjects } from '@/common/utils';
-import { cloneDeep, throttle } from 'lodash';
+import { throttle } from 'lodash';
 
 export default {
   components: {
@@ -94,9 +90,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      isLoading: true,
       renderIndex: 0,
-      cloudAppData: {},
       buttonLoading: false,
       deployDialogConfig: {
         visible: false,
@@ -118,6 +112,7 @@ export default {
       active: 'cloudAppDeployForProcess',
       envValidate: true,
       isTab: true,
+      dialogCloudAppData: [],
     };
   },
   computed: {
@@ -139,17 +134,13 @@ export default {
       return curPenel ? curPenel.ref : 'process';
     },
 
+    curAppModuleList() {
+      // 根据name的英文字母排序
+      return (this.$store.state.curAppModuleList || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
-    },
-
-    dialogCloudAppData() {
-      const cloudAppData = cloneDeep(this.storeCloudAppData);
-      return mergeObjects(cloudAppData, this.manifestExt);
-    },
-
-    storeCloudAppData() {
-      return this.$store.state.cloudApi.cloudAppData;
     },
 
     firstTabActiveName() {
@@ -177,7 +168,6 @@ export default {
       this.renderIndex++;
       this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
-      this.init();
     },
   },
   created() {
@@ -189,51 +179,13 @@ export default {
         name: this.firstTabActiveName,
       });
     }
-    this.init();
   },
   mounted() {
     this.handleWindowResize();
     this.handleResizeFun();
   },
   methods: {
-    async init() {
-      try {
-        const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.cloudAppData = res.manifest;
-        this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
-        this.getManifestExt();
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    async getManifestExt() {
-      try {
-        const res = await this.$store.dispatch('deploy/getManifestExt', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          // 增强服务不分环境，目前指定为prod
-          env: 'prod',
-        });
-        this.manifestExt = res;
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
-      }
-    },
-
     handleGoPage(routeName) {
-      this.cloudAppData = this.storeCloudAppData;
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.$router.push({
         name: routeName,
@@ -248,48 +200,23 @@ export default {
       }
     },
 
-    // 保存
-    async handleSave() {
+    // 查看yaml
+    async handleYamlView() {
       try {
-        // 环境变量保存
-        if (this.$refs[this.routerRefs]?.saveEnvData) {
-          this.$refs[this.routerRefs]?.saveEnvData();
-          return;
-        }
-        // 处理进程配置、钩子命令数据
-        if (this.$refs[this.routerRefs]?.handleProcessData) {
-          const res = await this.$refs[this.routerRefs]?.handleProcessData();
-          if (!res) return;
-        }
-        const data = this.storeCloudAppData;
-        data.spec.processes = data.spec.processes.map((process) => {
-          // 过滤空值容器端口
-          const { targetPort, ...processValue } = process;
-          return targetPort === '' || targetPort === null ? processValue : process;
-        });
-        const params = { ...data };
-        await this.$store.dispatch('deploy/saveCloudAppInfo', {
+        const res = await this.$store.dispatch('deploy/getAppYamlManiFests', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
-          params,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('操作成功'),
-        });
-        this.$store.commit('cloudApi/updatePageEdit', false);
+        this.deployDialogConfig.visible = true;
+        this.dialogCloudAppData = res;
       } catch (e) {
-        console.log(e);
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message,
         });
+      } finally {
+        this.isLoading = false;
       }
-    },
-
-    // 查看yaml
-    handleYamlView() {
-      this.deployDialogConfig.visible = true;
     },
 
     handleGoBack() {
@@ -307,9 +234,9 @@ export default {
         this.deployDialogConfig.top = 80;
         this.deployDialogConfig.height = 400;
       } else {
-        this.deployDialogConfig.dialogWidth = 1200;
+        this.deployDialogConfig.dialogWidth = 1100;
         this.deployDialogConfig.top = 120;
-        this.deployDialogConfig.height = 600;
+        this.deployDialogConfig.height = 520;
       }
     },
   },

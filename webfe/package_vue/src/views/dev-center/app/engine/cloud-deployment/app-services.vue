@@ -74,7 +74,9 @@
             <template slot-scope="{row}">
               <span v-if="row.isStartUp && row.specifications && row.specifications.length">
                 <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
-                  {{ $t(item.display_name) }} {{ $t(item.recommended_value) }}
+                  <span>
+                    {{ $t(item.display_name) }} {{getVersionValue(item.name, row.specificationsData)}}
+                  </span>
                 </bk-tag>
               </span>
               <span v-else>--</span>
@@ -373,6 +375,12 @@ export default {
       });
       return marked(this.serviceMarkdown, { sanitize: true });
     },
+    getVersionValue() {
+      return function (name, data) {
+        const versionData = data.find(e => e.name === name) || {};
+        return versionData.value;
+      };
+    },
   },
   watch: {
     curAppCode() {
@@ -397,6 +405,7 @@ export default {
         // 新增一个字段isStartUp true代表是启动状态 false代表停止状态
         // 改造bound数据
         res.bound = (res.bound || []).reduce((p, v) => {
+          v.specificationsData = v.specifications;
           p.push({ ...v, ...v.service, type: 'bound', isStartUp: true });
           return p;
         }, []);
@@ -786,6 +795,7 @@ export default {
         border-bottom: 1px solid #eaecef;
         padding: 0;
         padding-bottom: 10px;
+        padding-top: 10px;
         margin-top: 24px;
         margin-bottom: 16px;
         font-weight: 600;

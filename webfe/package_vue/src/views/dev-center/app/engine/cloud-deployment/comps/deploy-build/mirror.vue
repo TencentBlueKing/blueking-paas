@@ -107,15 +107,15 @@
                   :value="item.id"
                   v-for="item in constructMethod"
                   :key="item.id"
-                  >{{ $t(item.name) }}
+                >{{ $t(item.name) }}
                 </bk-radio>
               </bk-radio-group>
             </bk-form-item>
             <template v-if="mirrorData.build_method === 'buildpack'">
               <bk-form-item
-              :label="$t('基础镜像')"
-              :property="'bp_stack_name'"
-              :rules="rules.bp_stack_name">
+                :label="$t('基础镜像')"
+                :property="'bp_stack_name'"
+                :rules="rules.bp_stack_name">
                 <bk-select
                   :disabled="false"
                   v-model="mirrorData.bp_stack_name"
@@ -150,9 +150,11 @@
             <template v-else>
               <bk-form-item
                 :label="$t('Dockerfile 路径')"
-                :property="'dockerfile_path'"
-                :rules="rules.dockerfilePath">
-                <bk-input v-model="mirrorData.dockerfile_path"></bk-input>
+                :property="'dockerfile_path'">
+                <bk-input
+                  v-model="mirrorData.dockerfile_path"
+                  :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                ></bk-input>
               </bk-form-item>
 
               <!-- 构建参数 -->
@@ -235,10 +237,9 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from "@/mixins/app-base-mixin";
-import { TAG_MAP } from "@/common/constants.js";
-import { cloneDeep } from "lodash";
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
+import { TAG_MAP } from '@/common/constants.js';
+import { cloneDeep } from 'lodash';
 
 export default {
   mixins: [appBaseMixin],
@@ -253,7 +254,7 @@ export default {
           with_build_time: false,
           with_commit_id: false,
         },
-        docker_build_args: {}
+        docker_build_args: {},
       },
       // 构建方式
       constructMethod: [
@@ -281,11 +282,6 @@ export default {
       rules: {
         prefix: [
           {
-            required: true,
-            message: this.$t('必填项'),
-            trigger: 'blur',
-          },
-          {
             regex: /^[a-zA-Z0-9]{0,24}$/,
             message: this.$t('只能包含字母、数字，长度小于 24 个字符'),
             trigger: 'blur',
@@ -305,13 +301,6 @@ export default {
             trigger: 'blur',
           },
         ],
-        dockerfilePath: [
-          {
-            required: true,
-            message: this.$t('必填项'),
-            trigger: 'blur',
-          },
-        ],
         buildParams: [
           {
             required: true,
@@ -319,7 +308,7 @@ export default {
             trigger: 'blur',
           },
         ],
-      }
+      },
     };
   },
   computed: {
@@ -338,15 +327,11 @@ export default {
     },
     // 构建工具
     buildpacksList() {
-      const buildpacks = this.mirrorData.buildpacks.map(
-        (item) => `${item.display_name || item.name} (${item.description || '--'})`
-      );
+      const buildpacks = this.mirrorData.buildpacks.map(item => `${item.display_name || item.name} (${item.description || '--'})`);
       return buildpacks;
     },
     baseImageText() {
-      const result = this.baseImageList.find(
-        (item) => item.image === this.mirrorData.bp_stack_name
-      );
+      const result = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
       if (result) {
         return result.name || result.image;
       }
@@ -438,17 +423,17 @@ export default {
     // 设置当前基础镜像构建工具
     setTools() {
       // 筛选当前镜像构建工具列表
-      const curTools = this.baseImageList.find((item) => item.image === this.mirrorData.bp_stack_name);
+      const curTools = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
       this.sourceToolList = curTools?.buildpacks || [];
 
       // 当已选工具项
       if (this.mirrorData.buildpacks) {
-        this.targetToolList = this.mirrorData.buildpacks.map((tool) => tool.id);
+        this.targetToolList = this.mirrorData.buildpacks.map(tool => tool.id);
       }
     },
 
     // 保存校验
-    async handleSave () {
+    async handleSave() {
       try {
         await this.$refs.mirrorInfoRef?.validate();
         // 构建参数校验
@@ -466,9 +451,9 @@ export default {
       for (const index in this.buildParams) {
         try {
           await this.$refs[`name-${index}`][0]?.validate()
-          .finally(async ()=> {
-            await this.$refs[`value-${index}`][0]?.validate();
-          })
+            .finally(async () => {
+              await this.$refs[`value-${index}`][0]?.validate();
+            });
         } catch (error) {
           flag = false;
         }
@@ -507,18 +492,20 @@ export default {
 
       if (data.build_method === 'buildpack') {
         // 构建工具
-        data['buildpacks'] = this.sourceToolList.filter((tool) => {
-          return this.targetToolValues.includes(tool.id);
-        });
+        data.buildpacks = this.sourceToolList.filter(tool => this.targetToolValues.includes(tool.id));
       } else {
-        data['bp_stack_name'] = null;
+        data.bp_stack_name = null;
 
         // 构建参数
         const dockerBuild = {};
         this.buildParams.forEach((item) => {
           dockerBuild[item.name] = item.value;
         });
-        data['docker_build_args'] = dockerBuild;
+        data.docker_build_args = dockerBuild;
+      }
+
+      if (data.tag_options.prefix === '') {
+        data.tag_options.prefix = null;
       }
 
       return data;

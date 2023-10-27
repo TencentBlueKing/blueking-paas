@@ -92,5 +92,29 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/batch/`;
       return http.post(url, data);
     },
+
+    /**
+     * 新增单个环境变量
+     */
+    createdEnvVariable({ }, { appCode, moduleId, data }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/`;
+      return http.post(url, data);
+    },
+
+    /**
+     * 修改单个环境变量
+     */
+    updateEnvVariable({ }, { appCode, moduleId, varId, data }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/${varId}/`;
+      return http.put(url, data);
+    },
+
+    /**
+     * 删除单个环境变量
+     */
+    deleteEnvVariable({ }, { appCode, moduleId, varId }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/${varId}/`;
+      return http.delete(url, {});
+    },
   },
 };

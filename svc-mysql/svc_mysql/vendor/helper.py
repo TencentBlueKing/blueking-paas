@@ -131,14 +131,22 @@ class MySQLAuthorizer(MySQLEngine):
 
         with self.db.cursor() as cursor:
             for auth_ip in self.client_hosts:
-                sql = constants.GRANT_SQL_FMT.format(
-                    db_name=db_name,
+                # 在 MySQL 8.0 版本中，`identified by` 语法已被弃用，需要分 2 步来完成
+                create_user_sql = constants.CREATE_USER_FMT.format(
                     db_user=user,
                     auth_ip=auth_ip,
                     db_password=password,
+                )
+                logger.info(f"Mysql 正在执行 `{create_user_sql.replace(password, '******')}`...")
+                cursor.execute(create_user_sql)
+
+                grant_sql = constants.GRANT_SQL_FMT.format(
+                    db_name=db_name,
+                    db_user=user,
+                    auth_ip=auth_ip,
                     privileges=privileges,
                 )
-                logger.info(f"Mysql 正在执行 `{sql.replace(password, '******')}`...")
-                cursor.execute(sql)
+                logger.info(f"Mysql 正在执行 `{grant_sql}`...")
+                cursor.execute(grant_sql)
             logger.info("Mysql 正在执行 `flush privileges;`")
             cursor.execute("flush privileges;")

@@ -20,73 +20,75 @@
             </span>
           </span>
         </bk-alert>
-        <div class="flex-row align-items-center justify-content-between mt20">
-          <div>
-            <bk-dropdown-menu
-              ref="largeDropdown"
-              trigger="click"
-              ext-cls="env-export-wrapper"
-            >
-              <bk-button
-                slot="dropdown-trigger"
-                class="mr10"
-              >
-                {{ $t('批量导入') }}
-              </bk-button>
-              <ul
-                slot="dropdown-content"
-                class="bk-dropdown-list"
-              >
-                <li>
-                  <a
-                    href="javascript:;"
-                    style="margin: 0"
-                    :class="addedModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
-                    @click="handleCloneFromModule"
-                  >
-                    {{ $t('从模块导入') }}
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="javascript:;"
-                    style="margin: 0"
-                    :class="!canModifyEnvVariable ? 'is-disabled' : ''"
-                    @click="handleImportFromFile"
-                  >
-                    {{ $t('从文件导入') }}
-                  </a>
-                </li>
-              </ul>
-            </bk-dropdown-menu>
+        <div class="flex-row align-items-center mt20">
+          <bk-dropdown-menu
+            ref="largeDropdown"
+            trigger="click"
+            ext-cls="env-export-wrapper"
+          >
             <bk-button
-              :theme="'default'"
-              :outline="true"
-              class="export-btn-cls"
-              @click="handleExportToFile"
+              slot="dropdown-trigger"
+              class="mr10"
             >
-              {{ $t('批量导出') }}
+              {{ $t('批量导入') }}
             </bk-button>
-          </div>
-          <div>
-            <bk-button
-              v-if="!isPageEdit"
-              class="fr"
-              theme="primary"
-              title="编辑"
-              :outline="true"
-              @click="handleEditClick"
+            <ul
+              slot="dropdown-content"
+              class="bk-dropdown-list"
             >
-              {{ $t('编辑') }}
-            </bk-button>
-          </div>
+              <li>
+                <a
+                  href="javascript:;"
+                  style="margin: 0"
+                  :class="addedModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
+                  @click="handleCloneFromModule"
+                >
+                  {{ $t('从模块导入') }}
+                </a>
+              </li>
+              <li>
+                <a
+                  href="javascript:;"
+                  style="margin: 0"
+                  :class="!canModifyEnvVariable ? 'is-disabled' : ''"
+                  @click="handleImportFromFile"
+                >
+                  {{ $t('从文件导入') }}
+                </a>
+              </li>
+            </ul>
+          </bk-dropdown-menu>
+          <bk-button
+            :theme="'default'"
+            :outline="true"
+            class="export-btn-cls mr10"
+            @click="handleExportToFile"
+          >
+            {{ $t('批量导出') }}
+          </bk-button>
+          <bk-button
+            :theme="'default'"
+            class="export-btn-cls"
+            :outline="true"
+            @click="handleEditClick"
+          >
+            {{ $t('批量编辑') }}
+          </bk-button>
         </div>
         <bk-table
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
-          v-if="envVarList.length"
-          class="table-cls mt20"
+          class="variable-table-cls mt20"
         >
+          <!-- 新建环境变量 -->
+          <template slot="append" v-if="!isPageEdit">
+            <div class="add-wrapper">
+              <span class="add-single-variable" @click.self="handleEnvTableListData('add')">
+                <i class="paasng-icon paasng-plus-thick" />
+                {{ $t('新增环境变量') }}
+              </span>
+            </div>
+          </template>
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
@@ -94,7 +96,7 @@
           >
             <template slot-scope="{ row, $index }">
               <div
-                v-if="isPageEdit"
+                v-if="isPageEdit || row.isEdit"
                 class="table-colum-cls"
               >
                 <bk-form
@@ -127,7 +129,7 @@
             class-name="table-colum-module-cls"
           >
             <template slot-scope="{ row, $index }">
-              <div v-if="isPageEdit">
+              <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   :label-width="0"
                   form-type="inline"
@@ -162,7 +164,7 @@
             prop="environment_name"
           >
             <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
+              <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   form-type="inline"
                   class="env-from-cls"
@@ -193,7 +195,7 @@
             class-name="table-colum-module-cls"
           >
             <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
+              <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   form-type="inline"
                   :ref="`envRefDescription`"
@@ -219,9 +221,9 @@
             :label="$t('操作')"
             width="100"
             class-name="table-colum-module-cls"
-            v-if="isPageEdit"
           >
-            <template slot-scope="{ $index }">
+            <template slot-scope="{ $index, row }">
+              <!-- 批量编辑 -->
               <div
                 v-if="isPageEdit"
                 class="env-table-icon"
@@ -236,15 +238,40 @@
                   @click="handleEnvTableListData('reduce', $index)"
                 ></i>
               </div>
+              <!-- 单个编辑 -->
+              <div v-else>
+                <template v-if="!row.isEdit">
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit($index)">
+                    {{ $t('编辑') }}
+                  </bk-button>
+                  <bk-popconfirm
+                    trigger="click"
+                    :ext-cls="'asadsadsads'"
+                    width="288"
+                    @confirm="handleSingleDelete($index)"
+                  >
+                    <div slot="content">
+                      <div class="demo-custom">
+                        <div class="content-text">{{ $t('确认删除该环境变量？') }}</div>
+                      </div>
+                    </div>
+                    <bk-button :text="true" title="primary">
+                      {{ $t('删除') }}
+                    </bk-button>
+                  </bk-popconfirm>
+                </template>
+                <template v-else>
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave($index)">
+                    {{ $t('保存') }}
+                  </bk-button>
+                  <bk-button :text="true" title="primary" @click="handleSingleCancel($index)">
+                    {{ $t('取消') }}
+                  </bk-button>
+                </template>
+              </div>
             </template>
           </bk-table-column>
         </bk-table>
-        <div
-          v-else
-          class="ps-no-result"
-        >
-          <table-empty empty />
-        </div>
 
         <div
           class="env-btn-wrapper"
@@ -253,7 +280,7 @@
           <bk-button
             class="pl20 pr20"
             :theme="'primary'"
-            @click="$emit('save')"
+            @click="saveEnvData"
           >
             {{ $t('保存') }}
           </bk-button>
@@ -527,7 +554,7 @@ export default {
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
-                  this.$refs[`envRefKey${i}`].clearError();
+                  this.$refs[`envRefKey${i}`] && this.$refs[`envRefKey${i}`].clearError();
                 });
               }
               return flag.length <= 1;
@@ -632,6 +659,10 @@ export default {
       this.isTableLoading = true;
       this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
         this.envVarList = [...response];
+        // 添加自定义属性
+        this.envVarList.forEach((v) => {
+          this.$set(v, 'isEdit', false);
+        });
         this.envLocalVarList = _.cloneDeep(this.envVarList);
       }, (errRes) => {
         const errorMsg = errRes.message;
@@ -648,7 +679,6 @@ export default {
     // 处理input事件
     handleInputEvent(rowItem, rowIndex) {
       this.curItem = rowItem;
-      console.log('this.curItem', this.curItem, rowIndex);
     },
 
     async saveEnvData() {
@@ -668,7 +698,6 @@ export default {
       if (flag.length) {
         // 有数据时
         for (let index = 0; index < flag.length; index++) {
-          console.log(index);
           try {
             await this.$refs[`envRefKey${flag[index].i}`].validate();
             await this.$refs[`envRefValue${flag[index].i}`].validate();
@@ -692,6 +721,17 @@ export default {
       }
     },
 
+    // 单条环境变量校验
+    async singleValidate(i) {
+      try {
+        await this.$refs[`envRefKey${i}`].validate();
+        await this.$refs[`envRefValue${i}`].validate();
+        this.save();
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
     // 保存
     async save() {
       try {
@@ -700,12 +740,21 @@ export default {
         // 保存环境变，无需传递 is_global
         params.forEach((v) => {
           delete v.is_global;
+          delete v.isEdit;
         });
 
         await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
+        // 操作对应tips
+        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '新建' : '删除';
+        if (this.envVarList.length === this.envLocalVarList.length) {
+          tipsType = '修改';
+        }
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('添加环境变量成功'),
+          message: this.$t(`${tipsType}环境变量成功`),
+        });
+        this.envVarList.forEach((v) => {
+          this.$set(v, 'isEdit', false);
         });
         // 更新本地数据
         this.envLocalVarList = _.cloneDeep(this.envVarList);
@@ -829,6 +878,7 @@ export default {
           value: '',
           environment_name: 'stag',
           description: '',
+          isEdit: true,
         });
       } else {
         this.envVarList.splice(i, 1);
@@ -1129,6 +1179,31 @@ export default {
           h('span', { class: 'header-required' }, '*'),
         ],
       );
+    },
+
+    // 单个环境编辑
+    handleSingleEdit(index) {
+      this.envVarList[index].isEdit = true;
+    },
+
+    // 删除单个环境变量
+    handleSingleDelete(index) {
+      this.envVarList.splice(index, 1);
+      this.save();
+    },
+
+    // 单个环境编辑保存
+    handleSingleSave(index) {
+      this.singleValidate(index);
+    },
+
+    // 单个环境编辑取消
+    handleSingleCancel(index) {
+      this.envVarList[index].isEdit = false;
+      // 添加数据未保存，点击取消直接删除
+      if (!this.envLocalVarList[index]) {
+        this.envVarList.splice(index, 1);
+      }
     },
   },
 };
@@ -1609,5 +1684,26 @@ a.is-disabled {
 }
 .env-btn-wrapper {
   margin-top: 24px;
+}
+.add-wrapper {
+  height: 42px;
+  .add-single-variable {
+    display: inline-block;
+    height: 42px;
+    line-height: 42px;
+    padding: 0 15px;
+    color: #3a84ff;
+    cursor: pointer;
+    i {
+      font-size: 16px;
+      margin-right: 3px;
+      transform: translateY(0px);
+    }
+  }
+}
+.variable-table-cls {
+  /deep/ .bk-table-empty-block {
+    display: none;
+  }
 }
 </style>

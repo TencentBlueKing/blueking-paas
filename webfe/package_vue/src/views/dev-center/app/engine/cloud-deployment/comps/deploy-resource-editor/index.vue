@@ -34,6 +34,7 @@ export default defineComponent({
       delete: 0,
     });
     let editor = null;
+    const blurTimer = ref(null);
 
     const handleIgnoreKeys = (data) => {
       const cloneData = JSON.parse(JSON.stringify(data));
@@ -83,9 +84,16 @@ export default defineComponent({
 
     // 非只读模式时，建议手动调用setValue方法，watch在双向绑定时会让编辑器抖动
     watch(value, () => {
+      console.log(15545);
+      clearTimeout(blurTimer.value);
+      blurTimer.value = setTimeout(() => {
+        editor.onDidBlurEditorText(() => {
+          // console.log(editor.getValue());
+          ctx.emit('blur', '失焦触发');
+        });
+      }, 200);
+
       if (readonly.value && yaml.value !== getValue()) {
-        const readonlyFlag = editor.getOption(monaco.editor.EditorOption.readOnly);
-        if (!readonlyFlag) return;
         setValue(yaml.value);
       }
     });
@@ -216,8 +224,8 @@ export default defineComponent({
           });
         }
         const editor = getEditor();
-        if (value === '') return;
-        if (value === '   ') return editor.setValue(value.trim());
+        // if (value === '') return;
+        // if (value === '   ') return editor.setValue(value.trim());
         if (editor) return editor.setValue(value);
       } catch (err) {
         editorErr.value = err.message || String(err);
@@ -234,10 +242,6 @@ export default defineComponent({
       });
     };
 
-    const setReadonly = (flag) => {
-      editor.updateOptions({ readOnly: flag });
-    };
-
     return {
       diffStat,
       editorRef,
@@ -249,7 +253,6 @@ export default defineComponent({
       getValue,
       setValue,
       handleSetDiffStat,
-      setReadonly,
     };
   },
 });

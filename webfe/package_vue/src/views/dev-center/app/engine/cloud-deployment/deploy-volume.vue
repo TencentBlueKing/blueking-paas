@@ -73,7 +73,7 @@
               <bk-button class="mr10" theme="primary" text @click="editVolume('edit', props.row)">
                 {{ $t('编辑') }}
               </bk-button>
-              <bk-button class="mr10" theme="primary" text @click="deleteVolume(props.row)">
+              <bk-button class="mr10" theme="primary" text @click="handleDelete(props.row)">
                 {{ $t('删除') }}</bk-button
               >
             </template>
@@ -109,7 +109,7 @@
       ext-cls="volume-slider"
     >
       <div slot="header">
-        {{ $t('新增/编辑挂载券') }}&emsp;
+        {{ $t('新增/编辑挂载卷') }}&emsp;
         <span style="color: #979ba5; font-size: 14px" v-if="curType === 'edit'">{{ volumeFormData.name }}</span>
       </div>
       <div slot="content">
@@ -135,7 +135,10 @@
               :property="'mount_path'"
               :rules="rules.mount_path"
             >
-              <bk-input v-model="volumeFormData.mount_path" :placeholder="$t('请输入')"></bk-input>
+              <bk-input
+                v-model="volumeFormData.mount_path"
+                :placeholder="$t('请输入以斜杆(/)开头，且不包含空字符串的路径')"
+              ></bk-input>
             </bk-form-item>
             <bk-form-item
               :label="$t('生效环境')"
@@ -212,11 +215,11 @@
                 <resource-editor
                   ref="editorRefSlider"
                   key="editor"
-                  :readonly="isReadonly"
                   v-model="sliderEditordetail"
                   v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
                   :height="fullScreen ? clientHeight : fileSliderConfig.height"
                   @error="handleEditorErr"
+                  @blur="handleEditorBlur"
                 />
                 <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
               </div>
@@ -249,7 +252,6 @@ export default {
   props: {},
   data() {
     return {
-      isReadonly: true,
       sliderEditordetail: '',
       isEdit: false,
       detail: {},
@@ -304,18 +306,15 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^\/.*\/$/,
-            message: this.$t('目录格式不对'),
+            regex: /^\/([^/\0]+(\/)?)*$/,
+            message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径'),
             trigger: 'blur',
           },
           {
             validator: () => {
               const flag = this.volumeList.some(item => item.mount_path === this.volumeFormData.mount_path
                   && item.environment_name === this.volumeFormData.environment_name);
-              if (flag) {
-                return false;
-              }
-              return true;
+              return !flag;
             },
             message: () => this.$t('同环境和路径挂载卷已存在'),
             trigger: 'blur change',
@@ -380,6 +379,10 @@ export default {
     this.init();
   },
   methods: {
+    //
+    handleEditorBlur(val) {
+      console.log(val);
+    },
     handleEditorErr(err) {
       // 捕获编辑器错误提示
       this.editorErr.type = 'content'; // 编辑内容错误
@@ -403,8 +406,7 @@ export default {
       };
       this.volumeDefaultSettings.isShow = true;
       this.$nextTick(() => {
-        this.$refs.editorRefSlider.setValue('   ');
-        this.$refs.editorRefSlider?.setReadonly(true);
+        this.$refs.editorRefSlider.setValue('');
       });
     },
     // 获取挂载卷list
@@ -438,7 +440,7 @@ export default {
         this.$refs.editorRefSlider.setValue(editContent);
       });
     },
-    // 删除挂载券
+    // 确认删除挂载券
     deleteVolume(row) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/${row.id}`;
       this.$http
@@ -458,6 +460,15 @@ export default {
         .finally(() => {
           this.getVolumeList();
         });
+    },
+    // 删除挂载卷
+    handleDelete(row) {
+      this.$bkInfo({
+        title: this.$t('确认删除挂载卷：') + row.name,
+        confirmFn: () => {
+          this.deleteVolume(row);
+        },
+      });
     },
     // 点击标签
     handleTag(row, item) {
@@ -541,7 +552,6 @@ export default {
     },
     // tab切换
     tabChange(val) {
-      this.$refs.editorRefSlider?.setReadonly(true);
       if (val === '') {
         this.$refs.editorRefSlider.setValue('');
         return;
@@ -591,9 +601,8 @@ export default {
     },
     // 添加文件
     addFile() {
-      this.$refs.editorRefSlider?.setReadonly(false);
       this.isAddFile = true;
-      this.$refs.editorRefSlider?.setValue('   ');
+      this.$refs.editorRefSlider?.setValue('');
       this.addFileInput = '';
       this.volumeFormData.source_config_data.forEach((item) => {
         this.$refs[`editInput${item.label}`][0].style.display = 'none';
@@ -612,7 +621,6 @@ export default {
       const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
       if (this.addFileInput.trim() === '') {
         this.isAddFile = false;
-        this.$refs.editorRefSlider?.setReadonly(true);
         if (this.curTabDom) {
           ulDom.classList.add('bk-tab-label-list-has-bar');
           this.curTabDom.classList.add('active');
@@ -634,13 +642,13 @@ export default {
         });
         return;
       }
-      if (this.$refs.editorRefSlider?.getValue() === '') {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('文件内容不能为空'),
-        });
-        return;
-      }
+      // if (this.$refs.editorRefSlider?.getValue() === '') {
+      //   this.$paasMessage({
+      //     theme: 'error',
+      //     message: this.$t('文件内容不能为空'),
+      //   });
+      //   return;
+      // }
       this.active = this.addFileInput;
       const isObj = JSON.stringify(this.sliderEditordetail) === '{}';
       const curContent = this.$refs.editorRefSlider?.getValue();
@@ -656,7 +664,6 @@ export default {
         ulDom.classList.add('bk-tab-label-list-has-bar');
         this.curTabDom.classList.add('active');
       }
-      this.$refs.editorRefSlider?.setReadonly(true);
     },
     // 添加确认
     handlerAddConfirm() {
@@ -675,7 +682,6 @@ export default {
         this.$refs[`editInput${item.label}`][0].style.display = 'none';
         this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
       });
-      this.$refs.editorRefSlider?.setReadonly(false);
     },
     handleBlurEditInput(label, index) {
       this.$nextTick(() => {
@@ -705,7 +711,6 @@ export default {
         });
         return;
       }
-      this.$refs.editorRefSlider?.setReadonly(true);
       this.$refs[`editInput${label}`][0].style.display = 'none';
       this.$refs[`labelContainer${label}`][0].style.display = 'flex';
     },
@@ -716,7 +721,6 @@ export default {
     // 删除文件内容的tab
     fileDelete(label) {
       this.isAddFile = false;
-      this.$refs.editorRefSlider?.setReadonly(true);
       this.active = this.volumeFormData.source_config_data[0].label;
       const curContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
       this.$refs.editorRefSlider.setValue(curContent);
@@ -734,7 +738,7 @@ export default {
         this.curTabDom.classList.add('active');
       }
       if (this.volumeFormData.source_config_data.length === 0) {
-        this.$refs.editorRefSlider.setValue('   ');
+        this.$refs.editorRefSlider.setValue('');
       }
     },
   },

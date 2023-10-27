@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import shlex
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from attrs import define
 from django.db import models
 from django.utils import timezone
 
@@ -31,20 +30,6 @@ from paas_wl.utils.models import UuidAuditedModel
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models.build import Build
     from paas_wl.bk_app.applications.models.config import Config
-
-
-@define
-class CommandTemplate:
-    """This class declare command which can be used to execute
-
-    :param command: 启动指令
-    :param type: 指令类型
-    :param build_id: 构建版本 id
-    """
-
-    command: str
-    type: CommandType
-    build_id: str
 
 
 class CommandManager(models.Manager):

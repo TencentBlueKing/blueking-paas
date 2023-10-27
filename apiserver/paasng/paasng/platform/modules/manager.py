@@ -45,6 +45,7 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
+from paasng.platform.bkapp_model.importer.importer import import_manifest_yaml
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -228,8 +229,7 @@ class ModuleInitializer:
         update_build_config_with_method(
             db_instance,
             build_method=cfg.build_method,
-            dockerfile_path=cfg.dockerfile_path,
-            docker_build_args=cfg.docker_build_args or {},
+            data={"dockerfile_path": cfg.dockerfile_path, "docker_build_args": cfg.docker_build_args or {}},
         )
 
     def bind_default_runtime(self):
@@ -272,13 +272,13 @@ class ModuleInitializer:
             manifest['metadata']['name'] = res_name
             resource = BkAppResource(**manifest)
 
-        app = self.application
         AppModelResource.objects.create_from_resource(
-            region=app.region,
-            application_id=app.id,
+            region=self.application.region,
+            application_id=self.application.id,
             module_id=self.module.id,
             resource=resource,
         )
+        import_manifest_yaml(module=self.module, input_yaml_data=resource.json(exclude_none=True))
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""

@@ -21,8 +21,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.bk_app.applications.models.build import Build
-from paas_wl.workloads.release_controller.models import ContainerRuntimeSpec
 from paas_wl.infras.resources.kube_res.base import Schedule
+from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
 

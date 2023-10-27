@@ -23,8 +23,6 @@ import json
 import pytest
 
 from paas_wl.infras.cluster.models import Cluster, Domain, IngressConfig
-from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.entrance.preallocated import (
     _default_preallocated_urls,
     get_exposed_url_type,
@@ -32,6 +30,8 @@ from paasng.accessories.publish.entrance.preallocated import (
     get_preallocated_url,
     get_preallocated_urls,
 )
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.helpers import override_region_configs
 from tests.utils.mocks.engine import mock_cluster_service
 
@@ -41,6 +41,9 @@ pytestmark = pytest.mark.django_db
 class TestGetExposedUrlType:
     def test_non_existent(self):
         assert get_exposed_url_type('foo', 'bar-module') is None
+
+    def test_non_existent_module(self, bk_app):
+        assert get_exposed_url_type(bk_app.code, 'bar-module') is None
 
     def test_normal(self, bk_module):
         bk_module.exposed_url_type = ExposedURLType.SUBPATH.value

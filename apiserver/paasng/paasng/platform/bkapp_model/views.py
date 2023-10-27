@@ -38,10 +38,13 @@ from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.bkapp_model.serializers import (
     GetManifestInputSLZ,
+    ModuleDeployHookSLZ,
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
+    default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
+from paasng.platform.engine.constants import AppEnvName
 
 logger = logging.getLogger(__name__)
 
@@ -111,32 +114,32 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         images = {proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None}
         # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
-        allow_set_image = len(images - {image_repository}) >= 1
+        allow_multiple_image = len(images - {image_repository}) >= 1
 
         proc_specs_data = [
             {
                 "name": proc_spec.name,
                 "image": proc_spec.image or image_repository,
                 "image_credential_name": proc_spec.image_credential_name or image_credential_name,
-                "command": proc_spec.command,
-                "args": proc_spec.args,
+                "command": proc_spec.command or [],
+                "args": proc_spec.args or [],
                 "port": proc_spec.port,
                 "env_overlay": {
-                    env_overlay.environment_name: {
-                        "environment_name": env_overlay.environment_name,
-                        "plan_name": env_overlay.plan_name,
-                        "target_replicas": env_overlay.target_replicas,
-                        "autoscaling": env_overlay.autoscaling,
-                        "scaling_config": env_overlay.scaling_config,
+                    environment_name.value: {
+                        "environment_name": environment_name.value,
+                        "plan_name": proc_spec.get_plan_name(environment_name),
+                        "target_replicas": proc_spec.get_target_replicas(environment_name),
+                        "autoscaling": bool(proc_spec.get_autoscaling(environment_name)),
+                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config(),
                     }
-                    for env_overlay in proc_spec.env_overlays.all()
+                    for environment_name in AppEnvName
                 },
             }
             for proc_spec in proc_specs
         ]
         return Response(
             ModuleProcessSpecsOutputSLZ(
-                {"metadata": {"allow_set_image": allow_set_image}, "proc_specs": proc_specs_data}
+                {"metadata": {"allow_multiple_image": allow_multiple_image}, "proc_specs": proc_specs_data}
             ).data
         )
 
@@ -156,24 +159,61 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if proc_spec.image is not None
         }
         # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
-        allow_set_image = len(images - {image_repository}) >= 1
+        allow_multiple_image = len(images - {image_repository}) >= 1
+        image_credential_names = (
+            {}
+            if not allow_multiple_image
+            else {proc_spec["name"]: proc_spec.get("image_credential_name", None) for proc_spec in proc_specs}
+        )
 
         processes = [
             BkAppProcess(
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                targetPort=proc_spec["port"],
-                image=proc_spec["image"] if allow_set_image else "",
+                targetPort=proc_spec.get("port", None),
+                image=proc_spec["image"] if allow_multiple_image else "",
             )
             for proc_spec in proc_specs
         ]
 
         mgr = ModuleProcessSpecManager(module)
         # 更新进程配置
-        mgr.sync_form_bkapp(processes)
+        mgr.sync_from_bkapp(processes, image_credential_names)
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 mgr.sync_env_overlay(proc_name=proc_spec["name"], env_overlay=env_overlay)
         return self.retrieve(request, code, module_name)
+
+
+class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """API for CRUD ModuleDeployHook"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(response_serializer=ModuleDeployHookSLZ)
+    def retrieve(self, request, code, module_name, hook_type):
+        """查询模块的钩子命令配置"""
+        module = self.get_module_via_path()
+        hook = module.deploy_hooks.get_by_type(hook_type)
+        if not hook:
+            return Response(ModuleDeployHookSLZ({"type": hook_type, "enabled": False}).data)
+        return Response(ModuleDeployHookSLZ(hook).data)
+
+    @swagger_auto_schema(response_serializer=ModuleDeployHookSLZ, request_body=ModuleDeployHookSLZ)
+    def upsert(self, request, code, module_name):
+        """更新/创建模块的钩子命令配置"""
+        module = self.get_module_via_path()
+        slz = ModuleDeployHookSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        if data["enabled"]:
+            if proc_command := data.get("proc_command"):
+                module.deploy_hooks.enable_hook(type_=data["type"], proc_command=proc_command)
+            else:
+                module.deploy_hooks.enable_hook(type_=data["type"], command=data["command"], args=data["args"])
+        else:
+            module.deploy_hooks.disable_hook(type_=data["type"])
+        return Response(ModuleDeployHookSLZ(module.deploy_hooks.get_by_type(data["type"])).data)

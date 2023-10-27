@@ -26,6 +26,8 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import TimestampedModel
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+from paasng.platform.modules.constants import DeployHookType
+from paasng.platform.modules.models import Module
 
 
 def env_overlay_getter_factory(field_name: str):
@@ -96,10 +98,90 @@ class ProcessSpecEnvOverlay(TimestampedModel):
         verbose_name=_('环境名称'), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
 
-    target_replicas = models.IntegerField('期望副本数', default=1)
-    plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
-    autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
+    target_replicas = models.IntegerField('期望副本数', null=True)
+    plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
+    autoscaling = models.BooleanField('是否启用自动扩缩容', null=True)
     scaling_config = models.JSONField('自动扩缩容配置', null=True)
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
+
+
+class ModuleDeployHookManager(models.Manager):
+    """ModuleDeployHook RelatedManager, should be used by `module.deploy_hooks`"""
+
+    def _get_caller(self) -> Module:
+        if not hasattr(self, "instance"):
+            raise RuntimeError("Can only call method from RelatedManager.")
+
+        if not isinstance(self.instance, Module):
+            raise RuntimeError("Can only call from module.deploy_hooks")
+        return self.instance
+
+    def enable_hook(
+        self,
+        type_: DeployHookType,
+        proc_command: Optional[str] = None,
+        command: Optional[List[str]] = None,
+        args: Optional[List[str]] = None,
+    ) -> 'ModuleDeployHook':
+        """upsert a ModuleDeployHook with args, will auto enable it if it is disabled
+
+        :param type_: 钩子类型
+        :param proc_command: 进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一
+        :param command: 容器执行命令
+        :param args: 命令参数
+        """
+        module = self._get_caller()
+        if proc_command is not None:
+            hook, _ = self.update_or_create(
+                module=module, type=type_, defaults={"proc_command": proc_command, "enabled": True}
+            )
+        elif not (command is None and args is None):
+            hook, _ = self.update_or_create(
+                module=module, type=type_, defaults={"command": command, "args": args, "enabled": True}
+            )
+        else:
+            raise ValueError("invalid value to upsert ModuleDeployHook")
+        return hook
+
+    def disable_hook(self, type_: DeployHookType) -> 'ModuleDeployHook':
+        """disable a ModuleDeployHook by type
+
+        :raise ObjectDoesNotExist: if hook not found
+        """
+        module = self._get_caller()
+        hook, _ = self.update_or_create(module=module, type=type_, defaults={"enabled": False})
+        return hook
+
+    def get_by_type(self, type_: DeployHookType) -> Optional['ModuleDeployHook']:
+        """get hook by type, return None if not found"""
+        module = self._get_caller()
+        try:
+            return self.get(module=module, type=type_)
+        except ObjectDoesNotExist:
+            return None
+
+
+class ModuleDeployHook(TimestampedModel):
+    """钩子命令"""
+
+    module = models.ForeignKey(
+        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name="deploy_hooks"
+    )
+    type = models.CharField(help_text="钩子类型", max_length=20, choices=DeployHookType.get_choices())
+
+    proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
+    command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
+    args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
+    enabled = models.BooleanField(help_text="是否已开启", default=False)
+
+    objects = ModuleDeployHookManager()
+
+    class Meta:
+        unique_together = ("module", "type")
+
+    def get_proc_command(self) -> str:
+        if self.proc_command is not None:
+            return self.proc_command
+        return shlex.join(self.command or []) + " " + shlex.join(self.args or [])

@@ -78,6 +78,7 @@ import PluginBaseInfoLoading from './loading/plugin-base-info.vue';
 import EventListLoading from './loading/event-list.vue';
 import BuildConfigLoading from './loading/clound-build-config.vue';
 import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
+import ImageManageLoading from './loading/image-manage.vue';
 export default {
   components: {
     ByUserLoading,
@@ -138,6 +139,7 @@ export default {
     EventListLoading,
     BuildConfigLoading,
     DeployModuleInfoLoading,
+    ImageManageLoading,
   },
   props: {
     isLoading: {
@@ -168,7 +170,7 @@ export default {
     },
     isTransition: {
       type: Boolean,
-      default: true
+      default: true,
     },
   },
   data() {

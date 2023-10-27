@@ -26,12 +26,12 @@ from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
-from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
-from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
+from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
 
 logger = logging.getLogger(__name__)
@@ -229,8 +229,33 @@ class Deployment(OperationVersionBase):
             logger.warning("failed to get complete status from deployment<%s>", self.pk)
             return None
 
+    def get_version_info(self) -> VersionInfo:
+        """获取源码的版本信息, 对于发布 "已构建镜像" 的部署操作, 获取构建该镜像时的版本信息
+
+        :raise ValueError: 当无法获取到版本信息时抛此异常
+        """
+        if self.source_version_type != "image":
+            version_type = self.source_version_type
+            version_name = self.source_version_name
+            # Backward compatibility
+            if not (version_type and version_name):
+                version_name = self.source_location.split('/')[-1]
+                version_type = 'trunk' if version_name == 'trunk' else self.source_location.split('/')[-2]
+            return VersionInfo(self.source_revision, version_name, version_type)
+
+        # 查询第一个引用 build_id 的 Deployment
+        ref = Deployment.objects.filter(build_id=self.build_id).exclude(id=self.id).order_by("created").first()
+        if not ref or ref.source_version_type == "image":
+            raise ValueError("unknown version info")
+        return ref.get_version_info()
+
     @property
     def version_info(self):
+        """Deprecated
+        TODO:
+        - 获取源码版本的 version_info 替换成 get_version_info()
+        - 获取镜像版本的 version_info 需要增加新的函数
+        """
         return VersionInfo(self.source_revision, self.source_version_name, self.source_version_type)
 
     def get_deploy_hooks(self) -> HookList:

@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.workloads.release_controller.hooks.entities import Command as CommandKModel
+from paas_wl.workloads.release_controller.hooks.kres_entities import Command as CommandKModel
 from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
 

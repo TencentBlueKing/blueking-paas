@@ -23,17 +23,6 @@ import cattr
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
 
-from paasng.infras.bk_log.constatns import ETLType, FieldType
-from paasng.infras.bk_log.definitions import (
-    AppLogCollectorConfig,
-    CustomCollectorConfig,
-    ETLConfig,
-    ETLField,
-    StorageConfig,
-)
-from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
@@ -44,6 +33,18 @@ from paasng.accessories.log.models import (
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
 from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
+from paasng.infras.bk_log.constatns import ETLType, FieldType
+from paasng.infras.bk_log.definitions import (
+    AppLogCollectorConfig,
+    CustomCollectorConfig,
+    ETLConfig,
+    ETLField,
+    ETLParams,
+    StorageConfig,
+)
+from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
@@ -165,7 +166,7 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     - 创建内置的日志采集项(JSON日志采集和标准输出日志采集)
     """
     module = env.module
-    if module.language == AppLanguage.PYTHON:
+    if AppLanguage(module.language) == AppLanguage.PYTHON:
         json_config = build_python_json_collector_config()
     else:
         json_config = build_normal_json_collector_config()
@@ -234,6 +235,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
 
         etl_config = ETLConfig(
             type=collector_config.etl_type,
+            params=ETLParams(retain_extra_json=True),
             fields=[
                 ETLField(
                     field_index=1,

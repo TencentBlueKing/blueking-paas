@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,3 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pytest
+from django_dynamic_fixture import G
+
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+
+
+@pytest.fixture
+def proc_web(bk_module) -> ModuleProcessSpec:
+    return G(ModuleProcessSpec, module=bk_module, name="web", command=["python"], args=["-m", "http.server"])
+
+
+@pytest.fixture
+def proc_celery(bk_module) -> ModuleProcessSpec:
+    return G(ModuleProcessSpec, module=bk_module, name="worker", command=["celery"])

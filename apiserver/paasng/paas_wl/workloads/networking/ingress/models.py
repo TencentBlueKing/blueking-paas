@@ -17,27 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import re
-from dataclasses import dataclass
 
 from blue_krill.models.fields import EncryptField
 from django.core.validators import RegexValidator
 from django.db import models
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromID
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
-
-
-@dataclass
-class AutoGenDomain:
-    """Domain object for application's auto-generated custom subdomains"""
-
-    host: str
-    https_enabled: bool = False
+from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
 
 
 class AppDomain(AuditedModel):

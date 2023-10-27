@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.workloads.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, PServicePortPair, service_kmodel
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

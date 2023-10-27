@@ -29,7 +29,8 @@ if TYPE_CHECKING:
 
 ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
-CONFIG_VAR_INPUT_FIELDS = ['is_global', 'environment_id', 'key', 'value', 'description']
+# 需要设置 environment(外键) 而非 environment_id, model_to_dict 只认 environment
+CONFIG_VAR_INPUT_FIELDS = ['is_global', 'environment', 'key', 'value', 'description']
 
 
 def get_config_vars(module: 'Module', env_name: str) -> Dict[str, str]:
@@ -104,7 +105,7 @@ class ConfigVar(TimestampedModel):
             other.key,
             other.value,
             other.description,
-            self.environment_name,
+            other.environment_name,
         )
 
     def clone_to(self, module: 'Module') -> 'ConfigVar':

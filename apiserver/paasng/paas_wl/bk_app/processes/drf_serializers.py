@@ -35,7 +35,7 @@ from paas_wl.bk_app.processes.entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.infras.resources.kube_res.base import WatchEvent
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.platform.engine.constants import JobStatus, RuntimeType
 from paasng.platform.engine.models import Deployment, OfflineOperation

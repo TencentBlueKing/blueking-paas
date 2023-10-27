@@ -24,18 +24,18 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.workloads.release_controller.api import get_latest_build_id
+from paas_wl.bk_app.applications.api import get_latest_build_id
 from paas_wl.bk_app.processes.shim import ProcessManager
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.accessories.publish.entrance.preallocated import get_preallocated_url
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.release.legacy import release_by_engine
 from paasng.platform.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL
 from paasng.platform.engine.serializers import DeploymentSLZ, GetReleasedInfoSLZ, OfflineOperationSLZ
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
-from paasng.platform.applications.constants import AppFeatureFlag
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
-from paasng.accessories.publish.entrance.preallocated import get_preallocated_url
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
 

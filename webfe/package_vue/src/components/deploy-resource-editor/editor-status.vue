@@ -5,35 +5,35 @@
   </div>
 </template>
 <script>
-    import { computed, defineComponent, toRefs } from 'vue';
+import { computed, defineComponent, toRefs } from 'vue';
 
-    export default defineComponent({
-        name: 'EditorStatus',
-        props: {
-            theme: {
-                type: String,
-                default: 'error'
-            },
-            message: {
-                type: String,
-                default: ''
-            }
-        },
-        setup (props) {
-            const { theme } = toRefs(props);
-            const icon = computed(() => {
-                const iconMap = {
-                    error: 'close-circle-shape',
-                    default: 'info-circle-shape'
-                };
-                return iconMap[theme.value] || 'info-circle-shape';
-            });
-
-            return {
-                icon
-            };
-        }
+export default defineComponent({
+  name: 'EditorStatus',
+  props: {
+    theme: {
+      type: String,
+      default: 'error',
+    },
+    message: {
+      type: String,
+      default: '',
+    },
+  },
+  setup(props) {
+    const { theme } = toRefs(props);
+    const icon = computed(() => {
+      const iconMap = {
+        error: 'close-circle-shape',
+        default: 'info-circle-shape',
+      };
+      return iconMap[theme.value] || 'info-circle-shape';
     });
+
+    return {
+      icon,
+    };
+  },
+});
 </script>
 <style lang="scss" scoped>
 .editor-status {

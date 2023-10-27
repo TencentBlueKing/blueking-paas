@@ -373,13 +373,75 @@ const actions = {
   },
 
   /**
-     * 获取云原生模块信息
+     * 获取查看云原生YAML内容
      *
      * @param {Object} params 请求参数：appCode, moduleId
      */
-  getCloudAppYaml({}, { appCode, moduleId }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
+  getAppYamlManiFests({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/manifests/current/?output_format=json`;
     return http.get(url, config);
+  },
+
+
+  /**
+   * 获取云原生hooks
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  getAppReleaseHook({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/pre-release-hook/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 保存云原生hooks
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  saveAppReleaseHook({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/deploy_hooks/`;
+    return http.post(url, params, config);
+  },
+
+  /**
+   * 获取云原生基本信息
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  getAppBuildConfigInfo({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 保存云原生基本信息
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  SaveAppBuildConfigInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/build_config/`;
+    return http.post(url, params, config);
+  },
+
+
+  /**
+   * 获取云原生process进程配置
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  getAppProcessInfo({}, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/process_specs/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 保存云原生process进程配置
+   *
+   * @param {Object} params 请求参数：appCode, moduleId
+  */
+  saveAppProcessInfo({}, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/bkapp_model/process_specs/`;
+    return http.post(url, params, config);
   },
 
   /**
@@ -523,6 +585,15 @@ const actions = {
    */
   getCustomImageTagData({}, { appCode, moduleId }, config = { globalError: false }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/image_tags/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 获取某个部署版本的详细信息
+   * @param {Object} params 请求参数：appCode, moduleId, environment, revisionId
+   */
+  getDeployVersionDetails({}, { appCode, moduleId, environment, revisionId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${environment}/mres/revisions/${revisionId}/`;
     return http.get(url, {}, config);
   },
 };

@@ -35,6 +35,12 @@ export default {
   getters: {},
   mutations: {
     updateCloudAppData(state, data) {
+      if (data?.spec?.build) {
+        // eslint-disable-next-line no-param-reassign
+        data.spec.build.image = data.spec.build.image || null;
+        // eslint-disable-next-line no-param-reassign
+        data.spec.build.imageCredentialsName = data.spec.build.imageCredentialsName || null;
+      }
       state.cloudAppData = data;
     },
     updatePageEdit(state, data) {

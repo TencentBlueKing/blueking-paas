@@ -281,10 +281,10 @@ export const PLATFORM_CONFIG = {
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
         // 应用进程介绍
-        APP_PROCESS_INTRODUCTION: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/release_hooks.md',
+        APP_PROCESS_INTRODUCTION: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/process_procfile.md',
 
         // 构建阶段钩子
-        BUILD_PHASE_HOOK: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/build_hooks.md'
+        BUILD_PHASE_HOOK: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/release_hooks.md'
     },
 
     CONFIG: {

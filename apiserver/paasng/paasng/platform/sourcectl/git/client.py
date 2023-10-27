@@ -158,31 +158,15 @@ class GitClient:
         )
         return self.run(command)
 
-    def initialize_empty_remote(self, url: Union[str, MutableURL], path: Path, remote: str = 'origin') -> str:
-        """将一个本地空目录设置为 Git 仓库，并设置其 remote URL。主要用来调用 list_remote
-        访问远程信息，可以避免克隆整个仓库。
-
-        :param url: 仓库地址
-        :param path: 存储路径
-        :param remote: 远端名称，默认为 origin
-        :return: 命令执行结果
-        """
-        cmd = GitCommand(git_filepath=self._git_filepath, command="init", cwd=str(path))
-        self.run(cmd)
-
-        cmd = GitCommand(
-            git_filepath=self._git_filepath, command="remote", args=["add", remote, str(url)], cwd=str(path)
-        )
-        return self.run(cmd)
-
-    def list_remote(self, path: Path, remote: str = 'origin') -> List[Tuple[str, str]]:
-        """通过 ls-remote 命令，获取远端的 branch 与 tag 等信息。该命令不依赖 clone。
+    def list_remote(self, url: Union[str, MutableURL]) -> List[Tuple[str, str]]:
+        """通过 ls-remote 命令，直接获取远端仓库的 branch 与 tag 等信息。该命令不依赖本地文件系统。
 
         :param path: 项目路径
         :param remote: 远端名称，默认为 origin
         :return: 命令执行结果，包含 (commit_id, ref) 的列表
         """
-        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=['origin'], cwd=str(path))
+        # The "cwd" is pointless for running this command, always use current dir.
+        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
         output = self.run(command)
         results = []
         for line in output.splitlines():

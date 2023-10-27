@@ -134,7 +134,7 @@ class TestGitClient:
     def test_list_remote(self, client, cmd_result, expected):
         with patch.object(client, "run") as mock_run:
             mock_run.return_value = cmd_result
-            assert client.list_remote(Path("fake_dir")) == expected
+            assert client.list_remote('http://example.com/foo.git') == expected
 
     @pytest.mark.parametrize(
         "commits,expected",

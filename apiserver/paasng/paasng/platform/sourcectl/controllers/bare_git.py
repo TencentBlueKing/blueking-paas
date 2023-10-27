@@ -75,18 +75,18 @@ class BareGitRepoController:
 
     def touch(self) -> bool:
         """检查仓库权限"""
-        with generate_temp_dir() as temp_dir:
-            try:
-                # 使用 ls-remote 来提速
-                self.client.initialize_empty_remote(self.repo_url, temp_dir)
-                self.client.list_remote(temp_dir)
-            except GitCommandExecutionError as e:
-                if 'authentication failed' in str(e).lower():
-                    raise BasicAuthError('wrong username or password')
+        try:
+            # 使用 ls-remote 来提速
+            self.client.list_remote(self.repo_url)
+        except GitCommandExecutionError as e:
+            if 'authentication failed' in str(e).lower():
+                raise BasicAuthError('wrong username or password')
 
-                logger.exception("Failed to access the remote git repo, reason unknown.")
-                raise
-
+            logger.exception("Failed to access the remote git repo, command error.")
+            raise
+        except Exception:
+            logger.exception("Failed to access the remote git repo, reason unknown.")
+            raise
         return True
 
     def export(self, local_path, version_info: VersionInfo):

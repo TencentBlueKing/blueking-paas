@@ -795,6 +795,7 @@ export default {
         border-bottom: 1px solid #eaecef;
         padding: 0;
         padding-bottom: 10px;
+        padding-top: 10px;
         margin-top: 24px;
         margin-bottom: 16px;
         font-weight: 600;

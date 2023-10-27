@@ -251,7 +251,7 @@
                     @confirm="handleSingleDelete($index)"
                   >
                     <div slot="content">
-                      <div class="demo-custom">
+                      <div class="demo-custom mb10">
                         <div class="content-text">{{ $t('确认删除该环境变量？') }}</div>
                       </div>
                     </div>

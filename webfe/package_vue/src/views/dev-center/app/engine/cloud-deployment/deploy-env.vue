@@ -677,7 +677,7 @@ export default {
         });
     },
     // 处理input事件
-    handleInputEvent(rowItem, rowIndex) {
+    handleInputEvent(rowItem) {
       this.curItem = rowItem;
     },
 

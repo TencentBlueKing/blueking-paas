@@ -666,7 +666,6 @@ export default {
       handler(value) {
         this.deployData = value;
         // this.handleDeployInstanceData();
-        console.log('this.deployData', this.deployData);
         this.formatProcesses(this.deployData);
       },
       immediate: true,
@@ -786,7 +785,6 @@ export default {
           autoscaling: processInfo.autoscaling,
           type,
         };
-
         this.updateProcessStatus(process);
 
         // 日期转换

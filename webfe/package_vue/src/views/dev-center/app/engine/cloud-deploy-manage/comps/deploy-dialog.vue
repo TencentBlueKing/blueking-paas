@@ -16,7 +16,7 @@
     >
       <!-- 源码逻辑 -->
       <div v-if="isSourceCodeBuild">
-        <div class="code-depot mb15" v-if="deploymentInfoBackUp.repo_url">
+        <div class="code-depot mb10" v-if="deploymentInfoBackUp.repo_url">
           <span class="pr20">
             {{ deploymentInfoBackUp.build_method === 'dockerfile' ?
               $t('代码仓库') : $t('镜像仓库') }}

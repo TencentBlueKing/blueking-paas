@@ -135,7 +135,7 @@
               :property="'mount_path'"
               :rules="rules.mount_path"
             >
-              <bk-input v-model="volumeFormData.mount_path" :placeholder="$t('请输入')"></bk-input>
+              <bk-input v-model="volumeFormData.mount_path" :placeholder="$t('请输入以斜杆(/)开头，且不包含空字符串的路径')"></bk-input>
             </bk-form-item>
             <bk-form-item
               :label="$t('生效环境')"
@@ -304,8 +304,8 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^\/.*\/$/,
-            message: this.$t('目录格式不对'),
+            regex: /^\/([^/\0]+(\/)?)*$/,
+            message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径'),
             trigger: 'blur',
           },
           {

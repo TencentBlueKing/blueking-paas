@@ -753,7 +753,7 @@ export default {
   color: #ea3636;
 }
 .image-pull-strategy {
-  margin-top: 10px;
+  margin-top: 20px;
   label {
     white-space: nowrap;
   }

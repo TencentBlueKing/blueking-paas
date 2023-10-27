@@ -28,8 +28,8 @@ export default defineComponent({
     ignoreKeys: { type: [Array, String], default: () => '' },
   },
   setup(props, ctx) {
-    const { value, diffEditor, width, height, original, language,
-      theme, options, readonly, ignoreKeys } = toRefs(props);
+    // eslint-disable-next-line max-len
+    const { value, diffEditor, width, height, original, language, theme, options, readonly, ignoreKeys } = toRefs(props);
     const editorRef = ref(null);
     const editorErr = ref('');
     // diff统计

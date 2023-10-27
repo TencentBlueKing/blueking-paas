@@ -587,6 +587,15 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/image_tags/`;
     return http.get(url, {}, config);
   },
+
+  /**
+   * 获取某个部署版本的详细信息
+   * @param {Object} params 请求参数：appCode, moduleId, environment, revisionId
+   */
+  getDeployVersionDetails({}, { appCode, moduleId, environment, revisionId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${environment}/mres/revisions/${revisionId}/`;
+    return http.get(url, {}, config);
+  },
 };
 
 export default {

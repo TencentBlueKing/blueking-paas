@@ -185,6 +185,7 @@
               </div>
               <div class="operate-process-wrapper mr15">
                 <bk-popconfirm
+                  v-bk-tooltips="$t('停止进程')"
                   v-if="row.targetStatus === 'start'"
                   :content="$t('确认停止该进程？')"
                   width="288"
@@ -199,6 +200,7 @@
                 </bk-popconfirm>
                 <div v-else>
                   <bk-popconfirm
+                    v-bk-tooltips="$t('启动进程')"
                     :content="$t('确认启动该进程？')"
                     width="288"
                     trigger="click"

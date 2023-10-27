@@ -53,8 +53,8 @@ class ConfigMapManager(AppEntityManager[ConfigMap]):
             return
         return super().delete(existed_one, non_grace_period)
 
-    def upsert(self, res: ConfigMap) -> ConfigMap:
-        """Create or Update a new ConfigMap"""
+    def create_or_replace(self, res: ConfigMap) -> ConfigMap:
+        """Create or Replace a new ConfigMap"""
         namespace = self._get_namespace(res.app)
         try:
             existed = self.get(app=res.app, name=res.name)

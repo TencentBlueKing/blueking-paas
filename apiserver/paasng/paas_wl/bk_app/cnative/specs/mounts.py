@@ -36,7 +36,9 @@ class VolumeSourceManager:
 
     def _upsert(self, mount: Mount):
         if mount.source_type == VolumeSourceType.ConfigMap:
-            configmap_kmodel.upsert(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.data))
+            configmap_kmodel.create_or_replace(
+                ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.data)
+            )
 
     def delete_source_config(self, mount: Mount):
         if mount.source_type == VolumeSourceType.ConfigMap:

@@ -1114,6 +1114,16 @@ export default {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
+  watch: {
+    formData: {
+      handler(c) {
+        this.formData.port = c.prot || null;
+        this.formData.image_credential_name = c.image_credential_name || null;
+      },
+      deep: true,
+    },
+
+  },
   async created() {
     // 非创建应用初始化为查看态
     if (!this.isCreate) {
@@ -1148,7 +1158,6 @@ export default {
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
-          this.formData.image_credential_name = this.formData.image_credential_name || null;
           if (!Object.keys(this.formData.env_overlay).length) {
             this.formData.env_overlay = ENV_OVERLAY;
           }

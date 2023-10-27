@@ -123,9 +123,9 @@
                   <bk-radio :value="'buildpack'">
                     {{ $t('蓝鲸 Buildpack') }}
                   </bk-radio>
-                  <bk-radio :value="'dockerfile'">
+                  <!-- <bk-radio :value="'dockerfile'">
                     {{ $t('Dockerfile 构建') }}
-                  </bk-radio>
+                  </bk-radio> -->
                 </bk-radio-group>
               </div>
             </div>

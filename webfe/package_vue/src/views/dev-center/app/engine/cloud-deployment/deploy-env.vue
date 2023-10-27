@@ -83,7 +83,7 @@
           <!-- 新建环境变量 -->
           <template slot="append" v-if="!isPageEdit">
             <div class="add-wrapper">
-              <span class="add-single-variable" @click.self="handleEnvTableListData('add')">
+              <span class="add-single-variable" @click.self="handleAddSingleVariable()">
                 <i class="paasng-icon paasng-plus-thick" />
                 {{ $t('新增环境变量') }}
               </span>
@@ -722,13 +722,67 @@ export default {
     },
 
     // 单条环境变量校验
-    async singleValidate(i) {
+    async singleValidate(i, type) {
       try {
         await this.$refs[`envRefKey${i}`].validate();
         await this.$refs[`envRefValue${i}`].validate();
-        this.save();
+        const data = _.cloneDeep(this.envVarList[i]);
+        // 单条新建编辑操作
+        type === 'add' ? this.createdEnvVariable(data, i) : this.updateEnvVariable(data, i);
       } catch (error) {
         console.error(error);
+      }
+    },
+
+    // 新增加单个环境变量
+    async createdEnvVariable(data, i) {
+      // 删除冗余数据
+      delete data.isEdit;
+      try {
+        await this.$store.dispatch('envVar/createdEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('添加环境变量成功'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('添加环境变量失败')}，${e.message}`,
+        });
+      } finally {
+        this.envVarList[i].isEdit = false;
+        // 更新数据
+        this.getEnvVarList();
+      }
+    },
+
+    // 修改加单个环境变量
+    async updateEnvVariable(data, i) {
+      // 删除冗余数据
+      delete data.isEdit;
+      try {
+        await this.$store.dispatch('envVar/updateEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          varId: data.id,
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('修改环境变量成功'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('修改环境变量失败')}，${e.message}`,
+        });
+      } finally {
+        this.envVarList[i].isEdit = false;
+        this.getEnvVarList();
       }
     },
 
@@ -1187,14 +1241,49 @@ export default {
     },
 
     // 删除单个环境变量
-    handleSingleDelete(index) {
-      this.envVarList.splice(index, 1);
-      this.save();
+    async handleSingleDelete(index) {
+      const [deleteEnvVarData] = this.envVarList.splice(index, 1);
+      const varId = deleteEnvVarData.id;
+      try {
+        await this.$store.dispatch('envVar/deleteEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          varId,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除环境变量成功'),
+        });
+        this.getEnvVarList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('删除环境变量失败')}，${e.message}`,
+        });
+      }
     },
 
     // 单个环境编辑保存
     handleSingleSave(index) {
-      this.singleValidate(index);
+      if (!this.envLocalVarList[index]) { // 新建
+        this.singleValidate(index, 'add');
+      } else { // 编辑
+        this.singleValidate(index, 'update');
+      }
+    },
+
+    // 新建环境变量模板
+    handleAddSingleVariable() {
+      const curEnvVarLength = this.envVarList.length + 1;
+      if ((curEnvVarLength - this.envLocalVarList.length) <= 1) {
+        this.envVarList.push({
+          key: '',
+          value: '',
+          environment_name: 'stag',
+          description: '',
+          isEdit: true,
+        });
+      }
     },
 
     // 单个环境编辑取消
@@ -1203,6 +1292,12 @@ export default {
       // 添加数据未保存，点击取消直接删除
       if (!this.envLocalVarList[index]) {
         this.envVarList.splice(index, 1);
+      } else {
+        // 编辑还原
+        this.envVarList[index].key = this.envLocalVarList[index].key;
+        this.envVarList[index].value = this.envLocalVarList[index].value;
+        this.envVarList[index].description = this.envLocalVarList[index].description;
+        this.envVarList[index].environment_name = this.envLocalVarList[index].environment_name;
       }
     },
   },

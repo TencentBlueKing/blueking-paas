@@ -156,12 +156,15 @@
           show-overflow-tooltip
         />
         <bk-table-column
-          width="115"
+          width="150"
           :label="$t('操作')"
         >
           <template slot-scope="{ row }">
-            <bk-button :text="true" @click="handleShowLogSideslider(row)">
+            <bk-button :text="true" class="mr10" @click="handleShowLogSideslider(row)">
               {{$t('部署日志')}}
+            </bk-button>
+            <bk-button :text="true" @click="handleShowYamlSideslider(row)">
+              {{$t('查看 YAML')}}
             </bk-button>
           </template>
         </bk-table-column>
@@ -172,14 +175,36 @@
     <deploy-log-sideslider
       ref="logSidesliderRef"
       :app-code="appCode"
-      :module-id="curModuleId"
+      :module-id="moduleValue"
     />
+
+    <!-- 查看YAML -->
+    <bk-sideslider
+      :is-show.sync="yamlSidesliderConfig.isShow"
+      :width="900"
+      :quick-close="true"
+    >
+      <div slot="header">{{ $t('查看 YAML') }}</div>
+      <div class="yaml-wrapper" slot="content">
+        <resource-editor
+          ref="editorRef"
+          key="editor"
+          v-model="yamlData"
+          :readonly="true"
+          v-bkloading="{ isLoading: isYamlLoading, opacity: 1, color: '#1a1a1a' }"
+          :height="height"
+          :width="900"
+          @error="handleEditorErr"
+        />
+      </div>
+    </bk-sideslider>
   </div>
 </template>
 
 <script>
 import user from '@/components/user';
 import deployLogSideslider from '@/components/deploy/deploy-log-sideslider.vue';
+import ResourceEditor from '@/components/deploy-resource-editor';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { DEPLOY_STATUS } from '@/common/constants';
 import { clearFilter } from '@/common/utils';
@@ -189,6 +214,7 @@ export default {
   components: {
     user,
     deployLogSideslider,
+    ResourceEditor,
   },
   mixins: [appBaseMixin],
   data() {
@@ -212,6 +238,12 @@ export default {
       logSidesliderData: {},
       moduleValue: 'default',
       filterEnv: [],
+      yamlSidesliderConfig: {
+        isShow: false,
+      },
+      height: window.innerHeight - 60,
+      yamlData: {},
+      isYamlLoading: false,
     };
   },
 
@@ -436,6 +468,42 @@ export default {
       this.$refs.logSidesliderRef?.handleShowLog(row);
     },
 
+    /**
+     * 查看侧栏
+     */
+    handleShowYamlSideslider(row) {
+      // this.$refs.logSidesliderRef?.handleShowLog(row);
+      this.yamlSidesliderConfig.isShow = true;
+      console.log('row', row, this.curModuleId);
+      this.getDeployVersionDetails(row);
+    },
+
+    // 获取某个部署版本的详细信息
+    async getDeployVersionDetails(data) {
+      this.isYamlLoading = true;
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployVersionDetails', {
+          appCode: this.appCode,
+          moduleId: this.moduleValue,
+          environment: data.environment,
+          revisionId: data.deployment.bkapp_revision_id,
+        });
+        this.yamlData = res.manifest;
+      } catch (error) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isYamlLoading = false;
+      }
+    },
+
+    handleEditorErr(err) { // 捕获编辑器错误提示
+      this.editorErr.type = 'content'; // 编辑内容错误
+      this.editorErr.message = err;
+    },
+
     handleClearFilter() {
       this.personnelSelectorList = [];
       // 手动清空表头筛选
@@ -463,7 +531,7 @@ export default {
   padding: 24px;
   box-shadow: 0 2px 4px 0 #1919290d;
   border-radius: 2px;
-  
+
   .branch-popover-cls {
     max-width: 100%;
     /deep/ .bk-tooltip-ref {
@@ -516,6 +584,11 @@ export default {
       background: #3FC06D;
       border: 3px solid #daefe4;
     }
+  }
+}
+.yaml-wrapper {
+  /deep/ .resource-editor {
+    border-radius: 0;
   }
 }
 </style>

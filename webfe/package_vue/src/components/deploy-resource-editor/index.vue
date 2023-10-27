@@ -22,14 +22,14 @@ export default defineComponent({
     height: { type: [String, Number], default: '100%' },
     original: { type: [String, Object], default: () => ({}) }, // 只有在diff模式下有效
     language: { type: String, default: 'yaml' },
-    theme: { type: String, default: 'ps-theme' },
+    theme: { type: String, default: 'bcs-theme' },
     readonly: { type: Boolean, default: false },
     options: { type: Object, default: () => ({}) },
     ignoreKeys: { type: [Array, String], default: () => '' },
   },
   setup(props, ctx) {
-    const { value, diffEditor, width, height, original, language,
-      theme, options, readonly, ignoreKeys } = toRefs(props);
+    // eslint-disable-next-line max-len
+    const { value, diffEditor, width, height, original, language, theme, options, readonly, ignoreKeys } = toRefs(props);
     const editorRef = ref(null);
     const editorErr = ref('');
     // diff统计
@@ -124,7 +124,7 @@ export default defineComponent({
     const initMonaco = () => {
       if (!editorRef.value) return;
 
-      monaco.editor.defineTheme('ps-theme', BcsEditorTheme);
+      monaco.editor.defineTheme('bcs-theme', BcsEditorTheme);
       const opt = {
         value: yaml.value,
         language: language.value,

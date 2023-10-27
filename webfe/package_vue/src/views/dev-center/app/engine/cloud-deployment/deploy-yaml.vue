@@ -25,9 +25,8 @@
   </paas-content-loader>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
-import ResourceEditor from './comps/deploy-resource-editor';
-import EditorStatus from './comps/deploy-resource-editor/editor-status';
-// import _ from 'lodash';
+import ResourceEditor from '@/components/deploy-resource-editor';
+import EditorStatus from '@/components/deploy-resource-editor/editor-status';
 export default {
   components: {
     ResourceEditor,

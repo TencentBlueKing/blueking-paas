@@ -2362,4 +2362,5 @@ export default {
   '钩子命令在构建目录下的 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file in the build directory.',
   '确认删除该环境变量？': 'Are you sure to delete this environment variable?',
   新增环境变量: 'New env variables',
+  '请创建成功后，到“模块配置”页面开启自动调节扩缩容。': 'After successful creation, go to the "Module Configuration" page to enable automatic adjustment of expansion and contraction.',
 };

@@ -348,13 +348,13 @@
                         >
                           {{ $t('手动调节') }}
                         </bk-radio-button>
+                        <!-- 创建应用、模块禁用自动调节 -->
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
-                          :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
+                          :disabled="isCreate"
                           v-bk-tooltips="{
-                            content: $t('该环境暂不支持自动扩缩容'),
-                            disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
+                            content: $t('请创建成功后，到“模块配置”页面开启自动调节扩缩容。'),
                           }"
                         >
                           {{ $t('自动调节') }}
@@ -525,13 +525,13 @@
                         >
                           {{ $t('手动调节') }}
                         </bk-radio-button>
+                        <!-- 创建应用、模块禁用自动调节 -->
                         <bk-radio-button
                           class="radio-cls"
                           :value="true"
-                          :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
+                          :disabled="isCreate"
                           v-bk-tooltips="{
-                            content: $t('该环境暂不支持自动扩缩容'),
-                            disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
+                            content: $t('请创建成功后，到“模块配置”页面开启自动调节扩缩容。'),
                           }"
                         >
                           {{ $t('自动调节') }}
@@ -1083,10 +1083,6 @@ export default {
           request: {},
         },
       },
-      autoScalDisableConfig: {
-        prod: {},
-        stag: {},
-      },
       tagInputIndex: 0,
     };
   },
@@ -1320,13 +1316,11 @@ export default {
     },
   },
   async created() {
+    console.log('created---', this.isCreate);
     // 非创建应用初始化为查看态
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
-      // 扩缩容FeatureFlag
-      this.getAutoScalFlag('stag');
-      this.getAutoScalFlag('prod');
     }
     await this.getQuotaPlans('stag');
     this.getQuotaPlans('prod');
@@ -1718,25 +1712,6 @@ export default {
         });
       } finally {
         this.quotaPlansFlag = false;
-      }
-    },
-
-    /**
-     * 获取扩缩容featureflag
-     */
-    async getAutoScalFlag(env) {
-      try {
-        const res = await this.$store.dispatch('deploy/getAutoScalFlagWithEnv', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          env,
-        });
-        this.autoScalDisableConfig[env] = res;
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
-        });
       }
     },
 

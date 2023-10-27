@@ -13,7 +13,7 @@ import logFilterVue from '../../../log/comps/log-filter.vue';
 export default defineComponent({
   name: 'ResourceEditor',
   props: {
-    value: { type: [String, Object, Number], default: () => ({}) },
+    value: { type: [String, Object], default: () => ({}) },
     diffEditor: { type: Boolean, default: false }, // 是否使用diff模式
     width: { type: [String, Number], default: '100%' },
     height: { type: [String, Number], default: '100%' },

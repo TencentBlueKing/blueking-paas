@@ -716,12 +716,26 @@ export default {
     // 删除文件内容的tab
     fileDelete(label) {
       this.isAddFile = false;
+      this.$refs.editorRefSlider?.setReadonly(true);
       this.active = this.volumeFormData.source_config_data[0].label;
       const curContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
       this.$refs.editorRefSlider.setValue(curContent);
       const volumeFile = this.volumeFormData.source_config_data;
       const curConfigData = volumeFile.filter(item => item.label !== label);
       this.volumeFormData.source_config_data = curConfigData;
+      this.volumeFormData.source_config_data.forEach((item) => {
+        this.$refs[`editInput${item.label}`][0].style.display = 'none';
+        this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
+      });
+      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
+      ulDom.classList.add('bk-tab-label-list-has-bar');
+      if (this.curTabDom) {
+        ulDom.classList.add('bk-tab-label-list-has-bar');
+        this.curTabDom.classList.add('active');
+      }
+      if (this.volumeFormData.source_config_data.length === 0) {
+        this.$refs.editorRefSlider.setValue('   ');
+      }
     },
   },
 };

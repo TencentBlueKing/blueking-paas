@@ -22,7 +22,7 @@ export default defineComponent({
     height: { type: [String, Number], default: '100%' },
     original: { type: [String, Object], default: () => ({}) }, // 只有在diff模式下有效
     language: { type: String, default: 'yaml' },
-    theme: { type: String, default: 'bcs-theme' },
+    theme: { type: String, default: 'ps-theme' },
     readonly: { type: Boolean, default: false },
     options: { type: Object, default: () => ({}) },
     ignoreKeys: { type: [Array, String], default: () => '' },
@@ -124,7 +124,7 @@ export default defineComponent({
     const initMonaco = () => {
       if (!editorRef.value) return;
 
-      monaco.editor.defineTheme('bcs-theme', BcsEditorTheme);
+      monaco.editor.defineTheme('ps-theme', BcsEditorTheme);
       const opt = {
         value: yaml.value,
         language: language.value,

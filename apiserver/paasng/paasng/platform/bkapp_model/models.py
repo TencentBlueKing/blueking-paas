@@ -185,3 +185,13 @@ class ModuleDeployHook(TimestampedModel):
         if self.proc_command is not None:
             return self.proc_command
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
+
+    def get_command(self) -> List[str]:
+        if self.proc_command is not None:
+            return [shlex.split(self.proc_command)[0]]
+        return self.command or []
+
+    def get_args(self) -> List[str]:
+        if self.proc_command is not None:
+            return shlex.split(self.proc_command)[1:]
+        return self.args or []

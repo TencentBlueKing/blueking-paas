@@ -30,7 +30,7 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
@@ -273,8 +273,10 @@ class ApplicationBuilder(BaseBuilder):
 
         with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
-            ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
             self.deployment.update_fields(processes=processes)
+            # 保存应用描述文件记录的信息到 DB - Processes/Hooks
+            ModuleProcessSpecManager(module).sync_from_desc(list(processes.values()))
+            sync_hooks(module, self.deployment.get_deploy_hooks())
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -363,7 +365,7 @@ class DockerBuilder(BaseBuilder):
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         relative_source_dir = self.deployment.get_source_dir()
-        module = self.deployment.app_environment.module
+        module: Module = self.deployment.app_environment.module
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
@@ -372,8 +374,10 @@ class DockerBuilder(BaseBuilder):
 
         with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
-            ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(list(processes.values()))
             self.deployment.update_fields(processes=processes)
+            # 保存应用描述文件记录的信息到 DB - Processes/Hooks
+            ModuleProcessSpecManager(module).sync_from_desc(list(processes.values()))
+            sync_hooks(module, self.deployment.get_deploy_hooks())
 
         bkapp_revision_id = None
         if is_cnative_app:

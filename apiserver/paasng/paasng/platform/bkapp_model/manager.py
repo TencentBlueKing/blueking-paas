@@ -23,6 +23,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.models import Module
+from paasng.platform.modules.models.deploy_config import HookList
 
 PROC_DEFAULT_REPLICAS = 1
 
@@ -231,3 +232,21 @@ class ModuleProcessSpecManager:
                     "scaling_config": overlay.get("scaling_config"),
                 },
             )
+
+
+def sync_hooks(module: Module, hooks: HookList):
+    """sync HookList to ModuleDeployHook"""
+    # Build the index of existing data first to remove data later.
+    # Data structure: {hook type: pk}
+    existing_index = {}
+    for hook in module.deploy_hooks.all():
+        existing_index[hook.type] = hook.pk
+
+    for hook in hooks:
+        if hook.enabled:
+            module.deploy_hooks.enable_hook(type_=hook.type, proc_command=hook.command)
+            # Move out from the index
+            existing_index.pop(hook.type, None)
+
+    # Remove existing data that is not touched.
+    module.deploy_hooks.filter(id__in=existing_index.values()).delete()

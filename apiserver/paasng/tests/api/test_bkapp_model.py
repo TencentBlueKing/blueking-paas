@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
 
@@ -93,6 +93,18 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["args"] == []
 
     def test_save(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
+        G(
+            ProcessSpecEnvOverlay,
+            proc_spec=web,
+            environment_name="stag",
+            autoscaling=True,
+            scaling_config={
+                "minReplicas": 1,
+                "maxReplicas": 5,
+                "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            },
+        )
+        assert web.get_autoscaling("stag")
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         request_data = [
             {
@@ -107,6 +119,7 @@ class TestModuleProcessSpecViewSet:
                         "environment_name": "stag",
                         "plan_name": "default",
                         "target_replicas": 2,
+                        "autoscaling": False,
                     }
                 },
             },
@@ -147,6 +160,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["command"] == ["python", "-m"]
         assert proc_specs[0]["args"] == ["http.server"]
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
+        assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
 
         assert proc_specs[1]["name"] == "beat"
         assert proc_specs[1]["image"] == "example.com/foo"

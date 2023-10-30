@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
-from functools import lru_cache
 from typing import List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -33,7 +32,6 @@ from paasng.platform.modules.models import Module
 def env_overlay_getter_factory(field_name: str):
     """a proxy to get env overlay field"""
 
-    @lru_cache
     def func(self: "ModuleProcessSpec", environment_name: str):
         try:
             return getattr(self.env_overlays.get(environment_name=environment_name), field_name)

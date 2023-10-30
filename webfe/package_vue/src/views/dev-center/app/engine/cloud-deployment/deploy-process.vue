@@ -1117,8 +1117,8 @@ export default {
   watch: {
     formData: {
       handler(c) {
-        this.formData.port = c.prot || null;
-        this.formData.image_credential_name = c.image_credential_name || null;
+        if (!this.formData.port) this.formData.port = null;
+        if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
       },
       deep: true,
     },

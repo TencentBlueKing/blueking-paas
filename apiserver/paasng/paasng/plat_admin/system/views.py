@@ -133,7 +133,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         limit = paginator.get_limit(request)
 
         keyword = data.get('keyword')
-        exclude_inactive_apps = data.get('exclude_inactive_apps', False)
+        exclude_inactive_apps = data.get('exclude_inactive_apps')
         applications = query_uni_apps_by_keyword(keyword, offset, limit, exclude_inactive_apps)
 
         # Paginate results

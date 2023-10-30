@@ -1116,7 +1116,7 @@ export default {
   },
   watch: {
     formData: {
-      handler(c) {
+      handler() {
         if (!this.formData.port) this.formData.port = null;
         if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
       },

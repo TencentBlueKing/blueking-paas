@@ -70,7 +70,7 @@
           </bk-table-column>
           <bk-table-column :label="$t('操作')">
             <template slot-scope="props">
-              <bk-button class="mr10" theme="primary" text @click="handleEditVolume('edit', props.row)">
+              <bk-button class="mr10" theme="primary" text @click="handleEditVolume(props.row)">
                 {{ $t('编辑') }}
               </bk-button>
               <bk-button class="mr10" theme="primary" text @click="handleDelete(props.row)">
@@ -110,7 +110,7 @@
     >
       <div slot="header">
         {{ $t('新增/编辑挂载卷') }}&emsp;
-        <span style="color: #979ba5; font-size: 14px" v-if="curType === 'edit'">
+        <span style="color: #979ba5; font-size: 14px">
           {{ volumeFormData.name }}
         </span>
       </div>
@@ -184,15 +184,6 @@
                       <i class="icon paasng-icon paasng-icon-close" />
                     </div>
                   </div>
-                  <div class="label-item flex-row justify-content-between active">
-                    <div class="label-text flex-1">
-                      1
-                    </div>
-                    <div class="label-icon flex-row align-items-center">
-                      <i class="paasng-icon paasng-edit2" />&nbsp;
-                      <i class="icon paasng-icon paasng-icon-close" />
-                    </div>
-                  </div>
                 </div>
                 <div class="editor flex-1">
                   <resource-editor
@@ -250,7 +241,6 @@ export default {
       // 编辑器上面
       addFileInput: '',
       isAddFile: false,
-      curType: '',
       volumeList: [],
       fileDialogConfig: {
         visiable: false,
@@ -316,7 +306,7 @@ export default {
         name: '',
         mount_path: '',
         environment_name: 'stag',
-        source_config_data: [],
+        source_config_data: {},
         source_type: 'ConfigMap',
       },
       envSelectList: [
@@ -374,8 +364,7 @@ export default {
       this.getVolumeList();
     },
     // 新增挂载
-    handleCreate(type) {
-      this.curType = type;
+    handleCreate() {
       this.isAddFile = false;
       this.active = '';
       this.volumeFormData = {
@@ -386,9 +375,6 @@ export default {
         source_type: 'ConfigMap',
       };
       this.volumeDefaultSettings.isShow = true;
-      this.$nextTick(() => {
-        this.$refs.editorRefSlider.setValue('');
-      });
     },
     // 获取挂载卷list
     getVolumeList() {
@@ -403,23 +389,9 @@ export default {
         });
     },
     // 编辑挂载券
-    handleEditVolume(type, row) {
-      this.isAddFile = false;
-      this.curType = type;
-      // eslint-disable-next-line no-underscore-dangle
-      const _row = cloneDeep(row);
-      _row.source_config_data = Object.entries(_row.source_config_data).map(([key, value]) => ({
-        name: key,
-        label: key,
-        content: value,
-      }));
-      this.volumeFormData = _row;
+    handleEditVolume(row) {
+      this.volumeFormData = row;
       this.volumeDefaultSettings.isShow = true;
-      this.active = this.volumeFormData.source_config_data[0].label;
-      const editContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
-      this.$nextTick(() => {
-        this.$refs.editorRefSlider.setValue(editContent);
-      });
     },
     // 确认删除挂载券
     deleteVolume(row) {
@@ -474,7 +446,14 @@ export default {
       return row[property] === value;
     },
     // 确定新增或编辑挂载券
-    handleConfirmVolume() {},
+    async handleConfirmVolume() {
+      try {
+        const res = await this.$store.dispatch('deploy/createVolumeData', { data: this.volumeFormData });
+        console.log('res', res);
+      } catch (error) {
+
+      }
+    },
     // 取消新增或编辑挂载券
     handleCancelVolume() {
       this.volumeDefaultSettings.isShow = false;

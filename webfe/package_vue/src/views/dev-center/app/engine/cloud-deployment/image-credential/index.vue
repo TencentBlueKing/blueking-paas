@@ -21,7 +21,9 @@
             {{ $t('新建镜像凭证') }}
           </div>
         </div>
+        <div class="credential-tips">{{ $t('私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。') }}</div>
         <bk-table
+          v-if="credentialList.length"
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
           :data="credentialList"
           size="small"
@@ -322,6 +324,13 @@ export default {
     i{
       padding-right: 3px;
     }
+  }
+
+  .credential-tips {
+    padding: 0 15px;
+    margin-top: 8px;
+    color: #979BA5;
+    font-size: 12px;
   }
 }
 .mirror-table-cls {

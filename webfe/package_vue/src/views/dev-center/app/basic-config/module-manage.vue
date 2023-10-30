@@ -359,7 +359,7 @@
             {{ $t('部署限制') }}
           </div>
           <div class="info">
-            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
+            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
           <div class="content no-border">
             <table class="ps-table ps-table-border mt20">

@@ -129,7 +129,7 @@
 
           <div class="info flex-row align-items-center pl20">
             <bk-icon type="info-circle" class="mr5" v-if="!isDeployLimitEdit" />
-            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
+            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
         </div>
         <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">

@@ -1119,7 +1119,6 @@ export default {
       handler(c) {
         if (!this.formData.port) this.formData.port = null;
         if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
-        console.log(c, this.formData.port);
       },
       deep: true,
     },

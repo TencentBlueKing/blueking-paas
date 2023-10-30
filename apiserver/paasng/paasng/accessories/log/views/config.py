@@ -18,19 +18,20 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from paasng.infras.bk_log.client import make_bk_log_client
-from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.serializers import BkLogCustomCollectorConfigSLZ, ModuleCustomCollectorConfigSLZ
 from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.bk_log.client import make_bk_log_client
+from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -111,3 +112,10 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         return Response(
             data=ModuleCustomCollectorConfigSLZ(collector_config, context=self.get_serializer_context()).data
         )
+
+    @swagger_auto_schema(tags=["日志采集"])
+    def destroy(self, request, code, module_name, name_en):
+        module = self.get_module_via_path()
+        cfg = get_object_or_404(CustomCollectorConfig, module=module, name_en=name_en)
+        cfg.delete()
+        return Response()

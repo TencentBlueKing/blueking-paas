@@ -310,8 +310,8 @@ class HooksManifestConstructor(ManifestConstructor):
         pre_release_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
         if pre_release_hook and pre_release_hook.enabled:
             hooks.preRelease = Hook(
-                command=pre_release_hook.command,
-                args=pre_release_hook.args,
+                command=pre_release_hook.get_command(),
+                args=pre_release_hook.get_args(),
             )
         model_res.spec.hooks = hooks
 

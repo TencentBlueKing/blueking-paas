@@ -29,7 +29,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     ResQuotaPlan,
     VolumeSourceType,
 )
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppHooks, BkAppResource, BkAppSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
@@ -43,6 +43,7 @@ from paasng.platform.bkapp_model.manifest import (
     AddonsManifestConstructor,
     BuiltinAnnotsManifestConstructor,
     EnvVarsManifestConstructor,
+    HooksManifestConstructor,
     MountsManifestConstructor,
     ProcessesManifestConstructor,
     apply_builtin_env_vars,
@@ -52,6 +53,7 @@ from paasng.platform.bkapp_model.manifest import (
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
 
@@ -268,6 +270,37 @@ class TestMountsManifestConstructor:
                 source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
             )
         ]
+
+
+class TestHooksManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, command=["python"], args=["hook.py"])
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks(
+            preRelease={
+                "command": ["python"],
+                "args": ["hook.py"],
+            }
+        )
+
+    def test_proc_command(self, bk_module, blank_resource):
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="python hook.py")
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks(
+            preRelease={
+                "command": ["python"],
+                "args": ["hook.py"],
+            }
+        )
+
+    def test_not_found(self, bk_module, blank_resource):
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks()
+
+    def test_empty_command(self, bk_module, blank_resource):
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, args=["hook.py"])
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks(preRelease={"args": ["hook.py"]})
 
 
 def test_get_manifest(bk_module):

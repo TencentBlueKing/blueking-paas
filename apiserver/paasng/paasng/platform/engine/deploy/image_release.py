@@ -29,7 +29,7 @@ from paas_wl.bk_app.processes.shim import ProcessManager, ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
@@ -68,7 +68,8 @@ class ImageReleaseMgr(DeployStep):
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 
-        is_smart_app = self.module_environment.module.get_source_origin() == SourceOrigin.S_MART
+        module = self.module_environment.module
+        is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure('更新进程配置', phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id
@@ -80,7 +81,8 @@ class ImageReleaseMgr(DeployStep):
                 if not deployment:
                     raise DeployShouldAbortError("failed to get processes")
                 processes = deployment.get_processes()
-                ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(processes=processes)
+                # 保存应用描述文件记录的信息到 DB - Processes/Hooks
+                sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
             else:
                 # advanced_options.build_id 为空有 2 种可能情况
                 # 1. s-mart 应用
@@ -89,7 +91,8 @@ class ImageReleaseMgr(DeployStep):
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
                     self.try_handle_app_description()
                     processes = list(get_processes(deployment=self.deployment).values())
-                    ModuleProcessSpecManager(self.module_environment.module).sync_from_desc(processes=processes)
+                    # 保存应用描述文件记录的信息到 DB - Processes/Hooks
+                    sync_to_bkapp_model(module=module, processes=processes, hooks=self.deployment.get_deploy_hooks())
                 else:
                     processes = [
                         ProcessTmpl(
@@ -98,7 +101,7 @@ class ImageReleaseMgr(DeployStep):
                             replicas=proc_spec.target_replicas,
                             plan=proc_spec.plan_name,
                         )
-                        for proc_spec in ModuleProcessSpec.objects.filter(module=self.module_environment.module)
+                        for proc_spec in ModuleProcessSpec.objects.filter(module=module)
                     ]
 
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)

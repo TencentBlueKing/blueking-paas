@@ -25,14 +25,13 @@ from paas_wl.bk_app.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import ProcControllerHub
-from paas_wl.bk_app.processes.entities import Process
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ScaleProcessError
-from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KDeployment
+from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
@@ -67,7 +66,7 @@ class AppProcessesController:
         proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
 
         try:
-            self.client.scale_processes([self._prepare_process(proc_spec.name)])
+            self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
         except Exception as e:
             raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
@@ -82,7 +81,7 @@ class AppProcessesController:
         proc_spec.save(update_fields=['target_status', 'updated'])
 
         try:
-            self.client.shutdown_processes([self._prepare_process(proc_spec.name)])
+            self.client.shutdown_process(self.app, proc_spec.name)
         except Exception as e:
             raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
@@ -126,7 +125,7 @@ class AppProcessesController:
         proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
 
         try:
-            self.client.scale_processes([self._prepare_process(proc_spec.name)])
+            self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
         except Exception as e:
             raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
@@ -153,14 +152,6 @@ class AppProcessesController:
 
         self.client.disable_autoscaling(scaling)
 
-    def _prepare_process(self, name: str) -> Process:
-        """Create Process object by name, reads properties from different sources:
-
-        1. replicas: defined in Model `ProcessSpec`
-        2. command: defined in `WlApp.structure`
-        """
-        return AppProcessManager(app=self.app).assemble_process(name)
-
     def _get_spec(self, proc_type: str) -> ProcessSpec:
         try:
             return ProcessSpec.objects.get(engine_app_id=self.app.uuid, name=proc_type)
@@ -177,7 +168,7 @@ class AppProcessesController:
         target_ref = ScalingObjectRef(
             api_version=kres_client.get_preferred_version(),
             kind=kres_client.kind,
-            name=self._prepare_process(proc_type).name,
+            name=get_proc_deployment_name(self.app, proc_type),
         )
 
         return ProcAutoscaling(self.app, proc_type, scaling_config, target_ref)  # type: ignore

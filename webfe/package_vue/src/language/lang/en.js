@@ -2363,4 +2363,5 @@ export default {
   '确认删除该环境变量？': 'Are you sure to delete this environment variable?',
   新增环境变量: 'New env variables',
   '请创建成功后，到“模块配置”页面开启自动调节扩缩容。': 'After successful creation, go to the "Module Configuration" page to enable automatic adjustment of expansion and contraction.',
+  新建镜像凭证: 'New image credential',
 };

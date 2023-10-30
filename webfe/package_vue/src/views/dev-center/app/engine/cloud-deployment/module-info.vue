@@ -111,6 +111,11 @@
         </div>
       </div>
 
+      <!-- 镜像凭证 -->
+      <div class="mirror-credentials-container">
+        <image-credential :list="credentialList"></image-credential>
+      </div>
+
       <!-- 部署限制 -->
       <div class="base-info-container">
         <div class="flex-row align-items-center mt20">
@@ -356,9 +361,13 @@
   </paas-content-loader>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
+import imageCredential from './image-credential';
 import moment from 'moment';
 import _ from 'lodash';
 export default {
+  components: {
+    imageCredential,
+  },
   mixins: [appBaseMixin],
   data() {
     return {

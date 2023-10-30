@@ -245,6 +245,13 @@ class ProcessesManifestConstructor(ManifestConstructor):
     def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
         """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
         try:
+            return ResQuotaPlan(spec_plan_name)
+        except ValueError:
+            logger.debug(
+                "unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name
+            )
+
+        try:
             spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
         except ProcessSpecPlan.DoesNotExist:
             return ResQuotaPlan.P_DEFAULT

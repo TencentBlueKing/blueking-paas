@@ -161,6 +161,7 @@ class TestProcessesManifestConstructor:
             (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_2C2G),
             # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
             (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_2C4G),
+            (ResQuotaPlan.P_2C1G, ResQuotaPlan.P_2C1G),
         ],
     )
     def test_get_quota_plan(self, plan_name, expected):

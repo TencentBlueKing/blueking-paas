@@ -29,7 +29,6 @@ from paas_wl.bk_app.processes.shim import ProcessManager, ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
@@ -39,6 +38,7 @@ from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.signals import post_phase_end, pre_phase_start
+from paasng.platform.engine.utils.bkapp_model import sync_to_bkapp_model
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep
@@ -82,8 +82,7 @@ class ImageReleaseMgr(DeployStep):
                     raise DeployShouldAbortError("failed to get processes")
                 processes = deployment.get_processes()
                 # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-                ModuleProcessSpecManager(module).sync_from_desc(processes=processes)
-                sync_hooks(module, deployment.get_deploy_hooks())
+                sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
             else:
                 # advanced_options.build_id 为空有 2 种可能情况
                 # 1. s-mart 应用
@@ -93,8 +92,7 @@ class ImageReleaseMgr(DeployStep):
                     self.try_handle_app_description()
                     processes = list(get_processes(deployment=self.deployment).values())
                     # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-                    ModuleProcessSpecManager(module).sync_from_desc(processes=processes)
-                    sync_hooks(module, self.deployment.get_deploy_hooks())
+                    sync_to_bkapp_model(module=module, processes=processes, hooks=self.deployment.get_deploy_hooks())
                 else:
                     processes = [
                         ProcessTmpl(

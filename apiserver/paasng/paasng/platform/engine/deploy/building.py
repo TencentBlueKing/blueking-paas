@@ -30,7 +30,6 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
@@ -46,6 +45,7 @@ from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line
 from paasng.platform.engine.signals import post_phase_end, pre_appenv_build, pre_phase_start
+from paasng.platform.engine.utils.bkapp_model import sync_to_bkapp_model
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import (
     check_source_package,
@@ -275,8 +275,7 @@ class ApplicationBuilder(BaseBuilder):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
             self.deployment.update_fields(processes=processes)
             # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-            ModuleProcessSpecManager(module).sync_from_desc(list(processes.values()))
-            sync_hooks(module, self.deployment.get_deploy_hooks())
+            sync_to_bkapp_model(module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks())
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -376,8 +375,7 @@ class DockerBuilder(BaseBuilder):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
             self.deployment.update_fields(processes=processes)
             # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-            ModuleProcessSpecManager(module).sync_from_desc(list(processes.values()))
-            sync_hooks(module, self.deployment.get_deploy_hooks())
+            sync_to_bkapp_model(module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks())
 
         bkapp_revision_id = None
         if is_cnative_app:

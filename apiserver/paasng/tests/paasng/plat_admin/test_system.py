@@ -56,6 +56,17 @@ class TestQueryDefaultApps:
         assert item.name == bk_app.name
         assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, 'should use default logo by default'
 
+    def test_include_inactive_apps(self, bk_app):
+        bk_app.is_active = False
+        bk_app.save()
+
+        active_apps = query_default_apps_by_ids(ids=[bk_app.code])
+        all_apps = query_default_apps_by_ids(ids=[bk_app.code], include_inactive_apps=True)
+        item = all_apps[bk_app.code]
+        assert not active_apps
+        assert item.name == bk_app.name
+        assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, 'should use default logo by default'
+
 
 class TestQueryLegacyApps:
     """TestCases for querying apps in legacy platform"""

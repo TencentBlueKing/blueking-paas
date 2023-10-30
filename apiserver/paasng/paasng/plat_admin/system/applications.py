@@ -109,9 +109,9 @@ def get_simple_app_by_legacy_app(app: LApplication) -> Optional[UniSimpleApp]:
     return simple_app
 
 
-def query_uni_apps_by_ids(ids: List[str]) -> Dict[str, UniSimpleApp]:
+def query_uni_apps_by_ids(ids: List[str], include_inactive_apps: bool = False) -> Dict[str, UniSimpleApp]:
     """Query universal applications by app ids, it will combine the results of both default and legacy platforms"""
-    results = query_default_apps_by_ids(ids)
+    results = query_default_apps_by_ids(ids=ids, include_inactive_apps=include_inactive_apps)
 
     # Only query missing app ids on legacy platform
     missing_ids = set(ids) - set(results)
@@ -120,9 +120,11 @@ def query_uni_apps_by_ids(ids: List[str]) -> Dict[str, UniSimpleApp]:
     return results
 
 
-def query_default_apps_by_ids(ids: Collection[str]) -> Dict[str, UniSimpleApp]:
+def query_default_apps_by_ids(ids: Collection[str], include_inactive_apps: bool = False) -> Dict[str, UniSimpleApp]:
     """Query applications by application ids, returns universal model"""
-    apps = Application.objects.filter(code__in=ids, is_active=True).select_related('product')
+    apps = Application.objects.filter(code__in=ids).select_related('product')
+    if not include_inactive_apps:
+        apps = apps.filter(is_active=True)
 
     results = {}
     for app in apps:
@@ -179,12 +181,15 @@ class UniMinimalApp:
     name: str
 
 
-def query_uni_apps_by_keyword(keyword: str, offset: int, limit: int) -> List[UniMinimalApp]:
+def query_uni_apps_by_keyword(
+    keyword: str, offset: int, limit: int, exclude_inactive_apps: bool = False
+) -> List[UniMinimalApp]:
     """Query application basic info by keywords (APP ID, APP Name)
 
     :param keyword: APP ID or APP Name
     :param offset: the offset of the query
     :param limit: the limit of the query
+    :param exclude_inactive_apps: whether to exclude inactive apps
     """
     # 应用名称的字段需要根据请求语言来确定
     language = get_language()
@@ -192,6 +197,8 @@ def query_uni_apps_by_keyword(keyword: str, offset: int, limit: int) -> List[Uni
 
     # 蓝鲸统一的规范，默认排序为字母顺序，而不是按最近创建时间排序
     default_apps = Application.objects.all().order_by('code')
+    if exclude_inactive_apps:
+        default_apps = default_apps.filter(is_active=True)
     if keyword:
         default_apps = default_apps.filter(Q(code__icontains=keyword) | Q(name__icontains=keyword))
 

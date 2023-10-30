@@ -30,6 +30,7 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
@@ -45,7 +46,6 @@ from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line
 from paasng.platform.engine.signals import post_phase_end, pre_appenv_build, pre_phase_start
-from paasng.platform.engine.utils.bkapp_model import sync_to_bkapp_model
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import (
     check_source_package,

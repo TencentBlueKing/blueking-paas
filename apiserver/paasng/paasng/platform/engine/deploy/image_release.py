@@ -29,6 +29,7 @@ from paas_wl.bk_app.processes.shim import ProcessManager, ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
@@ -38,7 +39,6 @@ from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.signals import post_phase_end, pre_phase_start
-from paasng.platform.engine.utils.bkapp_model import sync_to_bkapp_model
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep

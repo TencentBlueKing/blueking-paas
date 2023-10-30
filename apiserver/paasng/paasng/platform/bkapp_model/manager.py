@@ -250,3 +250,12 @@ def sync_hooks(module: Module, hooks: HookList):
 
     # Remove existing data that is not touched.
     module.deploy_hooks.filter(id__in=existing_index.values()).delete()
+
+
+def sync_to_bkapp_model(module, processes: List[ProcessTmpl], hooks: HookList):
+    """保存应用描述文件记录的信息到 bkapp_models
+    - Processes
+    - Hooks
+    """
+    ModuleProcessSpecManager(module).sync_from_desc(processes=processes)
+    sync_hooks(module, hooks)

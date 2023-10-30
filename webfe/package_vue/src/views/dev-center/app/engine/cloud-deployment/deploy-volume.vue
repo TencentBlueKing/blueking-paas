@@ -70,7 +70,7 @@
           </bk-table-column>
           <bk-table-column :label="$t('操作')">
             <template slot-scope="props">
-              <bk-button class="mr10" theme="primary" text @click="editVolume('edit', props.row)">
+              <bk-button class="mr10" theme="primary" text @click="handleEditVolume('edit', props.row)">
                 {{ $t('编辑') }}
               </bk-button>
               <bk-button class="mr10" theme="primary" text @click="handleDelete(props.row)">
@@ -110,7 +110,9 @@
     >
       <div slot="header">
         {{ $t('新增/编辑挂载卷') }}&emsp;
-        <span style="color: #979ba5; font-size: 14px" v-if="curType === 'edit'">{{ volumeFormData.name }}</span>
+        <span style="color: #979ba5; font-size: 14px" v-if="curType === 'edit'">
+          {{ volumeFormData.name }}
+        </span>
       </div>
       <div slot="content">
         <div class="slider-volume-content">
@@ -159,75 +161,59 @@
               :property="'source_config_data'"
               ext-cls="volume-file-content"
             >
-              <div class="addFile">
-                <div class="addFileText" v-if="!isAddFile" @click="addFile">
-                  <i class="icon paasng-icon paasng-plus-circle-shape" />&emsp;{{ $t('添加文件') }}
-                  {{ test}}
-                </div>
-                <div class="addFileInput" v-else>
-                  <bk-input
-                    :placeholder="$t('请输入')"
-                    v-model="addFileInput"
-                    @blur="handlerAddConfirm"
-                  ></bk-input>
-                </div>
-              </div>
-              <bk-tab
-                class="tab-container"
-                tab-position="right"
-                label-width="400"
-                :active.sync="active"
-                @tab-change="tabChange"
-              >
-                <bk-tab-panel
-                  v-for="(panel, index) in volumeFormData.source_config_data"
-                  :label="panel.label"
-                  :name="panel.name"
-                  :key="`${panel.name}and${index}`"
-                >
-                  <template slot="label">
-                    <div
-                      class="label-container"
-                      @mouseenter="handleEnter(panel.label)"
-                      @mouseleave="handleLeave(panel.label)"
-                    >
-                      <div class="label-text">
-                        {{ panel.label }}
-                      </div>
-                      <div class="label-icon">
-                        <i class="paasng-icon paasng-edit2" @click="fileEdit(panel.label)" />&nbsp;
-                        <i class="icon paasng-icon paasng-icon-close" @click="fileDelete(panel.label)" />
-                      </div>
+              <div class="file-container flex-row">
+                <div class="label-container">
+                  <div class="addFile">
+                    <div class="addFileText" v-if="!isAddFile" @click="handleAddFile">
+                      <i class="icon paasng-icon paasng-plus-circle-shape" />&emsp;{{ $t('添加文件') }}
                     </div>
-                    <div class="editInput">
+                    <div class="addFileInput" v-else>
                       <bk-input
-                        v-model="panel.label"
-                        @blur="handleInputBlur(panel.label, index)"
-                      >
-                      </bk-input>
+                        :placeholder="$t('请输入')"
+                        v-model="addFileInput"
+                        @blur="handlerAddConfirm"
+                      ></bk-input>
                     </div>
-                  </template>
-                </bk-tab-panel>
-              </bk-tab>
-              <div class="editor">
-                <resource-editor
-                  ref="editorRefSlider"
-                  key="editor"
-                  v-model="sliderEditordetail"
-                  v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
-                  :height="fullScreen ? clientHeight : fileSliderConfig.height"
-                  @error="handleEditorErr"
-                  @blur="handleEditorBlur"
-                />
-                <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
+                  </div>
+                  <div class="label-item flex-row justify-content-between">
+                    <div class="label-text flex-1">
+                      1
+                    </div>
+                    <div class="label-icon flex-row align-items-center">
+                      <i class="paasng-icon paasng-edit2" />&nbsp;
+                      <i class="icon paasng-icon paasng-icon-close" />
+                    </div>
+                  </div>
+                  <div class="label-item flex-row justify-content-between active">
+                    <div class="label-text flex-1">
+                      1
+                    </div>
+                    <div class="label-icon flex-row align-items-center">
+                      <i class="paasng-icon paasng-edit2" />&nbsp;
+                      <i class="icon paasng-icon paasng-icon-close" />
+                    </div>
+                  </div>
+                </div>
+                <div class="editor flex-1">
+                  <resource-editor
+                    ref="editorRefSlider"
+                    key="editor"
+                    v-model="sliderEditordetail"
+                    v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
+                    :height="fullScreen ? clientHeight : fileSliderConfig.height"
+                    @error="handleEditorErr"
+                    @blur="handleEditorBlur"
+                  />
+                  <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
+                </div>
               </div>
             </bk-form-item>
           </bk-form>
         </div>
       </div>
       <div slot="footer">
-        <bk-button style="margin-left: 30px" theme="primary" @click="confirmVolume()">{{ $t('确定') }} </bk-button>
-        <bk-button theme="default" @click="cancelVolume()">{{ $t('取消') }}</bk-button>
+        <bk-button style="margin-left: 30px" theme="primary" @click="handleConfirmVolume()">{{ $t('确定') }} </bk-button>
+        <bk-button theme="default" @click="handleCancelVolume()">{{ $t('取消') }}</bk-button>
       </div>
     </bk-sideslider>
   </div>
@@ -333,17 +319,13 @@ export default {
         source_config_data: [],
         source_type: 'ConfigMap',
       },
-      active: '',
-      currentPosition: 'left',
-      editTabIndex: 9,
       envSelectList: [
         { value: '_global_', text: this.$t('所有环境') },
         { value: 'stag', text: this.$t('仅预发布环境') },
         { value: 'prod', text: this.$t('仅生产环境') },
       ],
       envEnums: ENV_ENUM,
-      curTabDom: null,
-      test: '1111',
+      activeIndex: '',
     };
   },
   computed: {
@@ -421,7 +403,7 @@ export default {
         });
     },
     // 编辑挂载券
-    editVolume(type, row) {
+    handleEditVolume(type, row) {
       this.isAddFile = false;
       this.curType = type;
       // eslint-disable-next-line no-underscore-dangle
@@ -492,90 +474,11 @@ export default {
       return row[property] === value;
     },
     // 确定新增或编辑挂载券
-    confirmVolume() {
-      // eslint-disable-next-line no-underscore-dangle
-      const _row = cloneDeep(this.volumeFormData);
-      const testConfigData = _row.source_config_data;
-      const formatConfig = testConfigData.reduce((obj, item) => {
-        // eslint-disable-next-line no-param-reassign
-        obj[item.label] = item.content;
-        return obj;
-      }, {});
-      _row.source_config_data = formatConfig;
-      if (this.curType === 'add') {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/`;
-        this.$http
-          .post(url, _row)
-          .then(() => {
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('创建成功'),
-            });
-            this.volumeDefaultSettings.isShow = false;
-            this.curType = '';
-            this.getVolumeList();
-          })
-          .catch((err) => {
-            this.$paasMessage({
-              theme: 'error',
-              message: err.message || err.detail || this.$t('创建失败'),
-            });
-          });
-      } else if (this.curType === 'edit') {
-        const curVolumId = this.volumeFormData.id;
-        const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/${curVolumId}`;
-        this.$http
-          .put(url, _row)
-          .then(() => {
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('修改成功'),
-            });
-            this.volumeDefaultSettings.isShow = false;
-            this.curType = '';
-            this.getVolumeList();
-            console.log(this.volumeFormData);
-          })
-          .catch((err) => {
-            this.$paasMessage({
-              theme: 'error',
-              message: err.message || err.detail || this.$t('修改失败'),
-            });
-          });
-      }
-    },
+    handleConfirmVolume() {},
     // 取消新增或编辑挂载券
-    cancelVolume() {
+    handleCancelVolume() {
       this.volumeDefaultSettings.isShow = false;
       this.curType = '';
-    },
-    // tab切换
-    tabChange(val) {
-      if (val === '') {
-        this.$refs.editorRefSlider.setValue('');
-        return;
-      }
-      const curTab = this.volumeFormData.source_config_data.find(item => item.name === val);
-      if (curTab === undefined) {
-        this.active = this.volumeFormData.source_config_data[0].label;
-        const curContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
-        this.$refs.editorRefSlider.setValue(curContent);
-        return;
-      }
-      // const tabListDom = document.querySelectorAll('.tab-container .bk-tab-label-item');
-      // console.log(tabListDom);
-      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
-      ulDom.classList.add('bk-tab-label-list-has-bar');
-      // eslint-disable-next-line no-underscore-dangle
-      const _detail = cloneDeep(curTab.content);
-      this.active = val;
-      this.isAddFile = false;
-      const resultFormatDetail = this.convertToObjectIfPossible(_detail);
-      this.$refs.editorRefSlider.setValue(resultFormatDetail);
-      this.volumeFormData.source_config_data.forEach((item) => {
-        this.$refs[`editInput${item.label}`][0].style.display = 'none';
-        this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
-      });
     },
     // 转换数据格式
     convertToObjectIfPossible(value) {
@@ -590,146 +493,14 @@ export default {
       }
       return value;
     },
-    // 鼠标进入tab
-    handleEnter() {
-      // this.$refs[`labelIcon${label}`][0].style.display = 'block';
-    },
-    // 鼠标离开tab
-    handleLeave() {
-      // this.$refs[`labelIcon${label}`][0].style.display = 'none';
-    },
     // 添加文件
-    addFile() {
+    handleAddFile() {
       this.isAddFile = true;
       this.$refs.editorRefSlider?.setValue('');
       this.addFileInput = '';
-      // this.volumeFormData.source_config_data.forEach((item) => {
-      //   this.$refs[`editInput${item.label}`][0].style.display = 'none';
-      //   this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
-      // });
-      // const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
-      // const tabActiveDom = document.querySelector('.tab-container .active');
-      // if (!tabActiveDom) {
-      //   return;
-      // }
-      // this.curTabDom = tabActiveDom;
-      // tabActiveDom.classList.remove('active');
-      // ulDom.classList.remove('bk-tab-label-list-has-bar');
-    },
-    handleBlurAddInput() {
-      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
-      if (this.addFileInput.trim() === '') {
-        this.isAddFile = false;
-        if (this.curTabDom) {
-          ulDom.classList.add('bk-tab-label-list-has-bar');
-          this.curTabDom.classList.add('active');
-        }
-        if (this.volumeFormData.source_config_data.length === 0) {
-          return;
-        }
-        const curTab = this.volumeFormData.source_config_data.find(item => item.name === this.active);
-        const curContent = this.convertToObjectIfPossible(curTab.content);
-        this.$refs.editorRefSlider.setValue(curContent);
-        return;
-      }
-      const fileName = this.volumeFormData.source_config_data;
-      const flag = fileName.some(item => item.label === this.addFileInput);
-      if (flag) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('文件同名，请重新编辑'),
-        });
-        return;
-      }
-      // if (this.$refs.editorRefSlider?.getValue() === '') {
-      //   this.$paasMessage({
-      //     theme: 'error',
-      //     message: this.$t('文件内容不能为空'),
-      //   });
-      //   return;
-      // }
-      this.active = this.addFileInput;
-      const isObj = JSON.stringify(this.sliderEditordetail) === '{}';
-      const curContent = this.$refs.editorRefSlider?.getValue();
-      const content = isObj ? curContent : JSON.stringify(this.sliderEditordetail);
-      const addFileContent = {
-        name: this.addFileInput,
-        label: this.addFileInput,
-        content,
-      };
-      this.isAddFile = false;
-      this.volumeFormData.source_config_data.unshift(addFileContent);
-      if (this.curTabDom) {
-        ulDom.classList.add('bk-tab-label-list-has-bar');
-        this.curTabDom.classList.add('active');
-      }
     },
     // 添加确认
     handlerAddConfirm() {
-      this.handleBlurAddInput();
-    },
-    // 编辑文件内容的tab
-    fileEdit(label) {
-      console.log('label', label);
-      this.isAddFile = false;
-    },
-    handleBlurEditInput(label, index) {
-      this.$nextTick(() => {
-        Object.keys(this.$refs).forEach((item) => {
-          if (Array.isArray(this.$refs[item]) && this.$refs[item].length === 0) {
-            // 检查引用是否为空
-            delete this.$refs[item]; // 删除引用
-          }
-        });
-      });
-      if (label.trim() === '') {
-        return;
-      }
-      const volumeData = this.volumeFormData.source_config_data;
-      const fileName = cloneDeep(volumeData);
-      const curTab = volumeData.find(item => item.label === label);
-      this.active = curTab.name;
-      const isObj = JSON.stringify(this.sliderEditordetail) === '{}';
-      const curContent = this.$refs.editorRefSlider?.getValue();
-      curTab.content = isObj ? curContent : JSON.stringify(this.sliderEditordetail);
-      fileName.splice(index, 1);
-      const flag = fileName.some(item => item.label === label);
-      if (flag) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('文件同名，请重新编辑'),
-        });
-        return;
-      }
-      this.$refs[`editInput${label}`][0].style.display = 'none';
-      this.$refs[`labelContainer${label}`][0].style.display = 'flex';
-    },
-    // 编辑确认
-    handlerEditConfirm(label, index) {
-      this.handleBlurEditInput(label, index);
-    },
-    // 删除文件内容的tab
-    fileDelete(label) {
-      this.isAddFile = false;
-      this.active = this.volumeFormData.source_config_data[0].label;
-      const curContent = this.convertToObjectIfPossible(this.volumeFormData.source_config_data[0].content);
-      this.$refs.editorRefSlider.setValue(curContent);
-      const volumeFile = this.volumeFormData.source_config_data;
-      const curConfigData = volumeFile.filter(item => item.label !== label);
-      this.volumeFormData.source_config_data = curConfigData;
-      this.volumeFormData.source_config_data.forEach((item) => {
-        this.$refs[`editInput${item.label}`][0].style.display = 'none';
-        this.$refs[`labelContainer${item.label}`][0].style.display = 'flex';
-      });
-      const ulDom = document.querySelector('.tab-container .bk-tab-label-list ');
-      ulDom.classList.add('bk-tab-label-list-has-bar');
-      if (this.curTabDom) {
-        ulDom.classList.add('bk-tab-label-list-has-bar');
-        this.curTabDom.classList.add('active');
-      }
-      if (this.volumeFormData.source_config_data.length === 0) {
-        this.$refs.editorRefSlider.setValue('');
-      }
     },
 
     handleInputBlur() {
@@ -776,81 +547,50 @@ export default {
         }
         .bk-form-content {
           position: relative;
-          background-color: #f5f7fa;
-          .addFile {
+          .file-container{
             background-color: #f5f7fa;
-            color: #3a84ff;
-            width: 200px;
-            height: 50px;
-            line-height: 50px;
-            padding: 0 12px;
-            cursor: pointer;
-            .addFileInput {
-              /deep/ .paasng-correct {
-                font-size: 24px;
-              }
-            }
-          }
-          .tab-container {
-            background-color: #f5f7fa;
-            min-height: 300px !important;
-            /deep/ .bk-tab-header {
-              order: 1;
-              background-color: #f5f7fa;
-              padding: 0;
-              .bk-tab-label-wrapper {
-                .bk-tab-label-item {
-                  width: 200px;
-                  border: none;
-                  .bk-tab-label {
-                    width: 100%;
-                    .label-container {
-                      width: 100%;
-                      display: flex;
-                      justify-content: space-between;
-                      .label-icon {
-                        display: none;
-                        .paasng-edit2 {
-                          cursor: pointer;
-                        }
-                        .paasng-icon-close {
-                          cursor: pointer;
-                          font-size: 20px;
-                        }
-                      }
-                    }
-                    .editInput {
-                      display: none;
-                      .paasng-correct {
-                        font-size: 24px;
-                        cursor: pointer;
-                      }
-                    }
-                  }
+            .label-container{
+              width: 200px;
+              .addFile {
+                color: #3a84ff;
+                height: 40px;
+                line-height: 40px;
+                cursor: pointer;
+                .addFileText{
+                  // padding: 0 24px;
                 }
-                .active {
-                  background-color: #fff;
+                .addFileInput {
                 }
               }
-              .bk-tab-label-wrapper::after {
-                border: none;
+              .label-item{
+                color: #63656E;
+                height: 40px;
+                line-height: 40px;
+                padding: 0 20px;
+                cursor: pointer;
+                .label-text{
+                  padding-left: 4px;
+                }
+                .paasng-icon-close {
+                  cursor: pointer;
+                  font-size: 24px;
+                }
+                &:hover{
+                  background: #F0F1F5;
+                }
+              }
+              .label-item.active{
+                color: #3a84ff;
+                border-left: 4px solid #3A84FF;
+                background: #fff;
+                .label-text{
+                  padding-left: 0px;
+                }
               }
             }
-            /deep/ .bk-tab-section {
-              padding: 0;
+            .editor {
+              flex: 1;
             }
-            /deep/ .bk-tab-header::before {
-              height: 0;
-            }
-            /deep/ .bk-tab-header::after {
-              height: 0;
-            }
-          }
-          .editor {
-            width: 663px;
-            position: absolute;
-            top: 0px;
-            left: 200px;
           }
         }
       }

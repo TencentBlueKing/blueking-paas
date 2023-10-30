@@ -24,7 +24,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Generator, List, Optional, Union
+from typing import Dict, Generator, List, Optional, Tuple, Union
 
 from blue_krill.data_types.url import MutableURL
 from django.utils.encoding import force_text
@@ -100,7 +100,6 @@ class GitCloneCommand(GitCommand):
 class GitClient:
     """Git 客户端"""
 
-    VERSION_REGEX = re.compile(r"refs/(?P<type>(remotes/origin|tags))/(?P<name>[{}\w.\-_/]+)")
     COMMIT_INFO_REGEX = re.compile(r"(?P<ts>(\d+))/(?P<msg>[\S\s]*)", re.M)
     META_GIT_DIR = ".git"
     _git_filepath = "git"
@@ -115,22 +114,18 @@ class GitClient:
         self,
         url: Union[str, MutableURL],
         path: Path,
-        bare: bool = False,
         envs: Optional[dict] = None,
         depth: Optional[int] = None,
         branch: Optional[str] = None,
     ) -> str:
-        """
-        克隆仓库
+        """克隆仓库
+
         :param url: 仓库地址
         :param path: 存储路径
-        :param bare: 是否空仓库
         :param envs: 环境变量
         :return: 返回 clone 结果
         """
         args = []
-        if bare:
-            args.append("--bare")
         if depth is not None:
             args.extend(["--depth", str(depth)])
         if branch is not None:
@@ -146,20 +141,57 @@ class GitClient:
         )
         return self.run(command)
 
+    def clone_no_blob(self, url: Union[str, MutableURL], path: Path) -> str:
+        """克隆仓库，但忽略所有的文件内容，仅下载 trees, commit 元信息。速度比普通 clone 更快。
+
+        :param url: 仓库地址
+        :param path: 存储路径
+        :return: 返回 clone 命令执行结果
+        """
+        args = ['--filter=blob:none', '--no-checkout']
+        command = GitCloneCommand(
+            git_filepath=self._git_filepath,
+            repository=MutableURL(url),
+            target_directory=".",
+            args=args,
+            cwd=str(path),
+        )
+        return self.run(command)
+
+    def list_remote(self, url: Union[str, MutableURL]) -> List[Tuple[str, str]]:
+        """通过 ls-remote 命令，直接获取远端仓库的 branch 与 tag 等信息。该命令不依赖本地文件系统。
+
+        :param path: 项目路径
+        :param remote: 远端名称，默认为 origin
+        :return: 命令执行结果，包含 (commit_id, ref) 的列表
+        """
+        # The "cwd" is pointless for running this command, always use current dir.
+        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
+        output = self.run(command)
+        results = []
+        for line in output.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+
+            commit_id, ref_name = line.split(None)
+            results.append((commit_id, ref_name))
+        return results
+
     def list_refs(self, path: Path) -> Generator[Ref, None, None]:
-        """获取所有分支和标签"""
+        """获取所有分支和标签。
+
+        :param path: Git 仓库所在的路径。
+        """
         command = GitCommand(git_filepath=self._git_filepath, command="show-ref", cwd=str(path))
         output = self.run(command)
         for line in output.splitlines():
             if not line:
                 continue
 
-            commit_id, ref = line.split(" ")
-            if not self._validate_ref(ref):
-                continue
-
-            matched = re.match(self.VERSION_REGEX, ref)
-            if not matched:
+            commit_id, ref = line.strip().split(None)
+            parsed_obj = self.parse_ref(ref)
+            if not parsed_obj:
                 continue
 
             try:
@@ -170,8 +202,8 @@ class GitClient:
 
             yield Ref(
                 commit_id=commit_id,
-                type="branch" if matched.groupdict()["type"] == "remotes/origin" else "tag",
-                name=matched.groupdict()["name"],
+                type=parsed_obj[0],
+                name=parsed_obj[1],
                 commit_time=commit_info["time"],
                 message=commit_info["message"],
             )
@@ -232,15 +264,24 @@ class GitClient:
         return {"time": datetime.fromtimestamp(int(matched.groupdict()["ts"])), "message": matched.groupdict()["msg"]}
 
     @staticmethod
-    def _validate_ref(ref: str) -> bool:
-        """验证 ref 是否有效"""
-        if ref in ["refs/stash", "refs/remotes/origin/HEAD"]:
-            return False
+    def parse_ref(ref: str) -> Optional[Tuple[str, str]]:
+        """解析 ref 字符串，获取分支与标签。
 
-        if ref.startswith('refs/heads'):
-            return False
+        :return: 包含类型（branch/tag）与值的元组。
+        """
+        prefixes = [
+            ('tag', 'refs/tags/'),
+            ('branch', 'refs/remotes/origin/'),
+        ]
+        # Ignore HEAD as branch
+        invalid_values = {'HEAD'}
 
-        return True
+        for type_, prefix in prefixes:
+            if ref.startswith(prefix):
+                value = ref[len(prefix) :]
+                if value not in invalid_values:
+                    return type_, value
+        return None
 
     def run(self, command: GitCommand, success_code: int = 0) -> str:
         """

@@ -20,11 +20,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
-from paas_wl.infras.resources.generation.version import get_mapper_version
+from paas_wl.infras.resources.generation.version import get_mapper_version, get_proc_deployment_name
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.command import get_command_name
-from paas_wl.bk_app.processes.managers import AppProcessManager
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -108,3 +108,7 @@ class TestGeneration:
     def test_v2_name(self, process, v2_mapper):
         assert v2_mapper.pod(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"
         assert v2_mapper.deployment(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"
+
+
+def test_get_proc_deployment_name(wl_app):
+    assert get_proc_deployment_name(wl_app, 'web') != ''

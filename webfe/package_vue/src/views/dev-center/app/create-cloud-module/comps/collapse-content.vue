@@ -11,7 +11,7 @@
     >
       <i
         class="paasng-icon paasng-bold"
-        :class="isFold ? 'paasng-right-shape' : 'paasng-down-shape'"
+        :class="isFold ? 'paasng-down-shape' : 'paasng-right-shape'"
       />
       <span class="pl10 item-title">{{title}}</span>
       <div slot="content">
@@ -33,12 +33,16 @@ export default {
     },
     activeName: {
       type: String,
-      default: ''
+      default: '',
     },
     collapseItemName: {
       type: String,
-      default: ''
-    }
+      default: '',
+    },
+    fold: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
@@ -46,9 +50,17 @@ export default {
       active: '',
     };
   },
-  created () {
+  watch: {
+    fold: {
+      handler(v) {
+        this.isFold = v;
+      },
+      immediate: true,
+    },
+  },
+  created() {
     // 未传高亮 activeName， 默认不高亮
-    this.active = this.activeName || ('' + new Date());
+    this.active = this.activeName || (`${new Date()}`);
   },
   methods: {
     handlerClick() {

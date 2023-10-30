@@ -21,13 +21,11 @@ from pathlib import Path
 import yaml
 from django.utils.functional import cached_property
 
-from paas_wl.bk_app.cnative.specs.models import AppModelRevision, BkAppResource
-from paas_wl.bk_app.cnative.specs.procs import parse_procfile
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.exceptions import SkipPatchCode
 from paasng.platform.engine.models import Deployment
-from paasng.platform.declarative.models import DeploymentDescription
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 
@@ -58,12 +56,10 @@ class SourceCodePatcherWithDBDriver:
             # dockerfile 类型的构建方式不需要注入 procfile
             raise SkipPatchCode("Dockerfile-type builds do not require a Procfile")
 
-        revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
-        res = BkAppResource(**revision.json_value)
-        procfile = parse_procfile(res)
+        procfile = self.deploy_description.get_procfile()
 
         # 云原生应用即使 Procfile 已存在, 也直接覆盖
-        # 因为云原生应用的进程信息只能根据 bkapp.yaml 定义
+        # 因为云原生应用的进程信息只能根据 app_desc.yaml 定义
         key = self._make_key("Procfile")
         key.parent.mkdir(parents=True, exist_ok=True)
         key.write_text(yaml.safe_dump(procfile))

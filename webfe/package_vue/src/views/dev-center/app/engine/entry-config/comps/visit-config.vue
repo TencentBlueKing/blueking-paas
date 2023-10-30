@@ -57,38 +57,41 @@
         </bk-table-column>
         <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls">
           <template slot-scope="{ row, $index }">
-            <div
-              v-for="(item, i) in row.envsData" :key="item"
-              :style="{height: `${46 * row.envs[item].length}px`}"
-              class="cell-container flex-column justify-content-center"
-              @mouseenter="handleEnvMouseEnter($index, i, row, item)"
-              @mouseleave="handleEnvMouseLeave">
+            <div v-for="(item, i) in row.envsData" :key="item">
               <div
-                class="env-container"
-              >
-                <div class="text-container">
-                  <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
-                  <div
-                    :class="['ml15', 'mr15', { 'text': configIpTip }]"
-                    v-if="tableIndex === $index && envIndex === i && row.envs[item]"
-                    v-bk-tooltips="isIpConsistent ? { disabled: true } : configIpTip">{{ $t(entryEnv[item]) }}</div>
-                  <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
-                  <span
-                    class="btn-container"
-                    v-bk-tooltips="{content: $t(row.envs[item][0].is_running ? '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
-                    v-if="rowIndex === $index && row.envs[item]">
-                    <i
-                      class="paasng-icon paasng-plus-thick"
-                      :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''" />
-                    <bk-button
-                      :disabled="!row.envs[item][0].is_running"
-                      text theme="primary"
-                      @click="handleAdd($index, i, row, item)">
-                      {{ $t('添加') }}
-                    </bk-button>
-                  </span>
+                v-if="row.envs[item].length"
+                :style="{height: `${46 * row.envs[item].length}px`}"
+                class="cell-container flex-column justify-content-center"
+                @mouseenter="handleEnvMouseEnter($index, i, row, item)"
+                @mouseleave="handleEnvMouseLeave">
+                <div
+                  class="env-container"
+                >
+                  <div class="text-container">
+                    <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
+                    <div
+                      :class="['ml15', 'mr15', { 'text': configIpTip }]"
+                      v-if="tableIndex === $index && envIndex === i && row.envs[item]"
+                      v-bk-tooltips="isIpConsistent ? { disabled: true } : configIpTip">{{ $t(entryEnv[item]) }}</div>
+                    <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
+                    <span
+                      class="btn-container"
+                      v-bk-tooltips="{content: $t(row.envs[item][0].is_running ?
+                        '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
+                      v-if="rowIndex === $index && row.envs[item]">
+                      <i
+                        class="paasng-icon paasng-plus-thick"
+                        :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''" />
+                      <bk-button
+                        :disabled="!row.envs[item][0].is_running"
+                        text theme="primary"
+                        @click="handleAdd($index, i, row, item)">
+                        {{ $t('添加') }}
+                      </bk-button>
+                    </span>
+                  </div>
+                  <div v-if="i !== row.envsData.length - 1" class="line"></div>
                 </div>
-                <div v-if="i !== row.envsData.length - 1" class="line"></div>
               </div>
             </div>
           </template>
@@ -576,6 +579,7 @@ export default {
         (res) => {
           this.curIngressIpConfigs = res;
           this.defaultItem = res[0] || { frontend_ingress_ip: '暂无ip地址信息' };
+          // eslint-disable-next-line no-plusplus
           this.tipIndex++;
           // 判断ip是否一致
           const firstIp = this.defaultItem?.frontend_ingress_ip || '';

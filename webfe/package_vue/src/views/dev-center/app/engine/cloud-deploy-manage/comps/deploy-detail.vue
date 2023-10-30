@@ -191,10 +191,8 @@
                   width="288"
                   trigger="click"
                   @confirm="handleUpdateProcess">
-                  <div class="round-wrapper">
-                    <div
-                      class="square-icon"
-                      @click="handleProcessOperation(row)">
+                  <div class="round-wrapper" @click="handleProcessOperation(row)">
+                    <div class="square-icon">
                     </div>
                   </div>
                 </bk-popconfirm>

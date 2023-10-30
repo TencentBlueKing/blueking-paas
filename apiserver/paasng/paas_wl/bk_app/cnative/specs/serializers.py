@@ -181,18 +181,10 @@ class UpsertMountSLZ(serializers.Serializer):
         environment_name = attrs["environment_name"]
         name = attrs["name"]
 
-        # 检查当前 module_id 下,相同环境中是否存在具有相同 name 的 mount
-        module_id = self.context['module_id']
-        filtered_mounts = Mount.objects.filter(
-            module_id=module_id, name=name, environment_name__in=[environment_name, MountEnvName.GLOBAL.value]
+        # 校验同模块下否存在同名挂载卷
+        self._validate_duplicate_name(
+            environment_name, self.context['module_id'], name, self.context.get('mount_id', None)
         )
-        # 重名挂载卷不包括自己
-        mount_id = self.context.get('mount_id', None)
-        if mount_id is not None:
-            filtered_mounts = filtered_mounts.exclude(id=mount_id)
-
-        if filtered_mounts.exists():
-            raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
 
         # 根据 source_type 验证 source_config_data
         source_type = attrs["source_type"]
@@ -201,6 +193,16 @@ class UpsertMountSLZ(serializers.Serializer):
             if not source_config_data:
                 raise serializers.ValidationError(_("挂载卷内容不可为空"))
         return attrs
+
+    def _validate_duplicate_name(self, environment_name: str, module_id: str, name: str, mount_id: str):
+        if (
+            Mount.objects.filter(
+                module_id=module_id, name=name, environment_name__in=[environment_name, MountEnvName.GLOBAL.value]
+            )
+            .exclude(id=mount_id)
+            .exists()
+        ):
+            raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
 
     def validate_source_config_data(self, value):
         for key in value.keys():

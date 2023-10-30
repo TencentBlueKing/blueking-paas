@@ -53,19 +53,5 @@ class ConfigMapManager(AppEntityManager[ConfigMap]):
             return
         return super().delete(existed_one, non_grace_period)
 
-    def create_or_replace(self, res: ConfigMap) -> ConfigMap:
-        """Create or Replace a new ConfigMap"""
-        namespace = self._get_namespace(res.app)
-        try:
-            existed = self.get(app=res.app, name=res.name)
-            res._kube_data = existed._kube_data
-        except AppEntityNotFound:
-            logger.info(f"{res.Meta.kres_class.kind}<%s/%s> does not exist, will create one", namespace, res.name)
-            self.save(res)
-            return res
-
-        self.update(res, update_method='replace')
-        return res
-
 
 configmap_kmodel = ConfigMapManager()

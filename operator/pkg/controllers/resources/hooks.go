@@ -29,6 +29,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
 const (
@@ -139,8 +140,8 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 				Containers: []corev1.Container{
 					{
 						Image:           image,
-						Command:         command,
-						Args:            args,
+						Command:         kubetypes.ReplaceCommandEnvVariables(command),
+						Args:            kubetypes.ReplaceCommandEnvVariables(args),
 						Env:             GetAppEnvs(bkapp),
 						Name:            "hook",
 						ImagePullPolicy: pullPolicy,

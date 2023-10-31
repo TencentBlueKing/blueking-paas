@@ -204,7 +204,7 @@ const (
 	// ResQuotaPlan2C2G means 2 cpu & 2Gi memory
 	ResQuotaPlan2C2G ResQuotaPlan = "2C2G"
 
-	// ResQuotaPlan2C2G means 2 cpu & 4Gi memory
+	// ResQuotaPlan2C4G means 2 cpu & 4Gi memory
 	ResQuotaPlan2C4G ResQuotaPlan = "2C4G"
 
 	// ResQuotaPlan4C1G means 4 cpu & 1Gi memory

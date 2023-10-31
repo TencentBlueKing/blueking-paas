@@ -128,6 +128,10 @@ class RuntimeImageInfo:
             if self.application.type == ApplicationType.CLOUD_NATIVE:
                 image_tag = special_tag or version_info.version_name
                 repository = self.module.build_config.image_repository
+                if not repository:
+                    # v1alpha1 版本的云原生应用未存储 image_repository 字段
+                    # 此处返回空字符串表示不覆盖 manifest 的 image 信息
+                    return ""
                 return f"{repository}:{image_tag}"
             repo_url = self.module.get_source_obj().get_repo_url()
             reference = version_info.revision

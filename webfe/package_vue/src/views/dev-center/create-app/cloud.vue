@@ -370,6 +370,7 @@
       </template>
 
       <bk-form
+        v-if="isAdvancedOptions"
         ref="formSourceRef"
         :model="formData"
         :rules="rules"
@@ -757,6 +758,9 @@ export default {
     },
     userFeature() {
       return this.$store.state.userFeature;
+    },
+    isAdvancedOptions() {
+      return this.$store.state.createApp.isAdvancedOptions;
     },
   },
   watch: {

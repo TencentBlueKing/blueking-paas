@@ -25,7 +25,7 @@
                 <div
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
                   :class="['module-name-wrapper', { 'link': deploymentInfo.exposed_url }]"
-                  v-bk-tooltips="{ content: $t('点击访问'), disabled: !deploymentInfo.exposed_url }"
+                  v-bk-tooltips="{ content: $t('访问模块'), disabled: !deploymentInfo.exposed_url, distance: -3 }"
                 >
                   <span class="name">{{deploymentInfo.module_name}}</span>
                   <div
@@ -123,6 +123,7 @@
                 :theme="'default'"
                 ext-cls="module-config-btn"
                 size="small"
+                v-bk-tooltips="$t('模块配置')"
                 @click="handleToModuleConfig(deploymentInfo.module_name)">
                 <i class="paasng-icon paasng-configuration-line"></i>
               </bk-button>
@@ -645,7 +646,7 @@ export default {
 .module-name-wrapper {
   display: flex;
   align-items: center;
-  line-height: 40px;
+  height: 40px;
   padding: 0 5px;
 
   &.link {

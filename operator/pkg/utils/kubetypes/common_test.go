@@ -57,4 +57,6 @@ var _ = DescribeTable("Test ReplaceCommandEnvVariables",
 	Entry("no var", []string{"/start.sh"}, []string{"/start.sh"}),
 	Entry("var format-1", []string{"start", "-p", "$PORT"}, []string{"start", "-p", "$(PORT)"}),
 	Entry("var format-2", []string{"start", "-l", "http://${HOST}/"}, []string{"start", "-l", "http://$(HOST)/"}),
+	Entry("near variables", []string{"$FOO$BAR"}, []string{"$(FOO)$(BAR)"}),
+	Entry("escaped dollar symbol", []string{"echo", "dollar: \\$not_var"}, []string{"echo", "dollar: \\$not_var"}),
 )

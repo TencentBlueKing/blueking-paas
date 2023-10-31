@@ -21,6 +21,7 @@ package kubetypes
 import (
 	"encoding/json"
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -69,7 +70,12 @@ var varPattern = regexp.MustCompile(`\$\{?([a-zA-Z_][a-zA-Z_0-9]*)\}?`)
 func ReplaceCommandEnvVariables(input []string) []string {
 	var output []string
 	for _, s := range input {
-		output = append(output, varPattern.ReplaceAllString(s, "$$($1)"))
+		// When the "dollar" character has been escaped, ignore it by replacing
+		s = strings.Replace(s, "\\$", "\uFFFF", -1)
+		s = varPattern.ReplaceAllString(s, "$$($1)")
+		// Restore the escaped "dollar" character
+		s = strings.Replace(s, "\uFFFF", "\\$", -1)
+		output = append(output, s)
 	}
 	return output
 }

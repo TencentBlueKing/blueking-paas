@@ -135,13 +135,14 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				Name:       "web",
 				Replicas:   paasv1alpha2.ReplicasOne,
 				Command:    []string{"/bin/sh"},
-				Args:       []string{"-c", "echo hi"},
+				Args:       []string{"start", "-l", "example.com:$PORT"},
 				TargetPort: 8081,
 			}}
 
 			c := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
 			Expect(len(c.Command)).To(Equal(1))
-			Expect(len(c.Args)).To(Equal(2))
+			By("Check the env variables in the args have been replaced")
+			Expect(c.Args).To(Equal([]string{"start", "-l", "example.com:$(PORT)"}))
 			Expect(c.Ports).To(Equal([]corev1.ContainerPort{{ContainerPort: 8081}}))
 		})
 	})

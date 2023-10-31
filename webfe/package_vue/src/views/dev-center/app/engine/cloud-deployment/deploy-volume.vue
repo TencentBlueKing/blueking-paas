@@ -169,6 +169,7 @@
                     </div>
                     <div class="addFileInput" v-else>
                       <bk-input
+                        ref="addFileInputRef"
                         :placeholder="$t('请输入')"
                         v-model="addFileInput"
                         @blur="handlerAddConfirm"
@@ -178,14 +179,16 @@
                   <div
                     class="label-container flex-row justify-content-between"
                     v-for="(item, index) in volumeFormData.sourceConfigArrData"
-                    :key="item.value"
+                    :key="index"
                     @mouseenter="hoverKey = item.value"
                     @mouseleave="hoverKey = ''"
                     :class="[activeIndex === index ? 'active' : '', item.isEdit ? 'is-edit' : '']">
                     <div class="label-item flex-row justify-content-between align-items-center" v-if="item.isEdit">
                       <bk-input
+                        ref="editFileInputRef"
                         :placeholder="$t('请输入')"
                         v-model="item.value"
+                        @blur="handleBlur(item)"
                       ></bk-input>
                     </div>
                     <div
@@ -196,7 +199,7 @@
                       </div>
                       <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
                         <i class="paasng-icon paasng-edit2" @click="handleEditLabel(item)" />
-                        <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(index)" />
+                        <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(item.value, index)" />
                       </div>
                     </div>
                   </div>
@@ -218,8 +221,8 @@
           </bk-form>
         </div>
       </div>
-      <div slot="footer">
-        <bk-button style="margin-left: 30px" theme="primary" @click="handleConfirmVolume()">{{ $t('确定') }} </bk-button>
+      <div slot="footer" class="ml30">
+        <bk-button class="mr10" theme="primary" @click="handleConfirmVolume">{{ $t('确定') }} </bk-button>
         <bk-button theme="default" @click="handleCancelVolume()">{{ $t('取消') }}</bk-button>
       </div>
     </bk-sideslider>
@@ -335,6 +338,7 @@ export default {
       envEnums: ENV_ENUM,
       activeIndex: 0,
       hoverKey: '',
+      curValue: '',
     };
   },
   computed: {
@@ -375,18 +379,22 @@ export default {
             });
             return p;
           }, []);
+        // 初始化值
+        const initkey = this.volumeFormData.sourceConfigArrData[0].value;
+        const initValue = this.volumeFormData.source_config_data[initkey];
+        this.handleSetEditValue(initValue);
       }
     },
-    'volumeFormData.sourceConfigArrData': {
-      handler(v) {
-        (v || []).forEach((e) => {
-          if (!this.volumeFormData.source_config_data[e.value]) {
-            this.volumeFormData.source_config_data[e.value] = '';
-          }
-        });
-      },
-      deep: true,
-    },
+    // 'volumeFormData.sourceConfigArrData': {
+    //   handler(v) {
+    //     (v || []).forEach((e) => {
+    //       if (!this.volumeFormData.source_config_data[e.value]) {
+    //         this.volumeFormData.source_config_data[e.value] = '';
+    //       }
+    //     });
+    //   },
+    //   deep: true,
+    // },
   },
   mounted() {
     this.init();
@@ -492,10 +500,30 @@ export default {
     // 确定新增或编辑挂载券
     async handleConfirmVolume() {
       try {
-        const res = await this.$store.dispatch('deploy/createVolumeData', { data: this.volumeFormData });
-        console.log('res', res);
+        const fetchUrl = this.volumeFormData.id ? 'deploy/updateVolumeData' : 'deploy/createVolumeData';
+        const param = {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data: this.volumeFormData,
+        };
+        // 更新
+        if (this.volumeFormData.id) {
+          param.id = this.volumeFormData.id;
+        }
+        await this.$store.dispatch(
+          fetchUrl,
+          param,
+        );
+        this.volumeDefaultSettings.isShow = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.volumeFormData.id ? this.$t('更新成功') : this.$t('新增成功'),
+        });
       } catch (error) {
-
+        this.$paasMessage({
+          theme: 'error',
+          message: error.detail,
+        });
       }
     },
     // 取消新增或编辑挂载券
@@ -521,24 +549,32 @@ export default {
       this.isAddFile = true;
       this.$refs.editorRefSlider?.setValue('');
       this.addFileInput = '';
+      this.$nextTick(() => {
+        this.$refs.addFileInputRef.focus();
+      });
     },
     // 添加确认
     handlerAddConfirm() {
       this.volumeFormData.sourceConfigArrData.unshift({ value: this.addFileInput, isEdit: false });
+      this.volumeFormData.source_config_data[this.addFileInput] = '';
       this.isAddFile = false;
       this.activeIndex = 0;
     },
-
-    handleInputBlur() {
-      console.log(1);
-      this.test = '2222';
+    // 文件名失焦
+    handleBlur(item) {
+      item.isEdit = false;
+      // 将之前的key对应的数据赋值给新的key并删除旧的key
+      this.volumeFormData.source_config_data[item.value] = this.volumeFormData.source_config_data[this.curValue];
+      delete this.volumeFormData.source_config_data[this.curValue];
+      console.log('this.volumeFormData.source_config_data', this.volumeFormData.source_config_data);
     },
 
     // 点击label
     handleClickLabelItem(i, key) {
       this.activeIndex = i;
       this.volumeFormData.sourceConfigArrData.forEach(e => e.isEdit = false);
-      // this.sliderEditordetail = { key: this.volumeFormData.source_config_data[key] };
+      // 设置值
+      this.handleSetEditValue(this.volumeFormData.source_config_data[key]);
       // 判断是否是json字符串
       const isJsonStr = isJsonString(this.volumeFormData.source_config_data[key]);
       this.sliderEditordetail = isJsonStr
@@ -547,16 +583,31 @@ export default {
     },
 
     // 删除一条左边的lable数据
-    handleDeleteLabel(i) {
+    handleDeleteLabel(k, i) {
       this.volumeFormData.sourceConfigArrData.splice(i, 1);
+      delete this.volumeFormData.source_config_data[k];
     },
     // 编辑左边的lable数据
     handleEditLabel(item) {
       this.volumeFormData.sourceConfigArrData.forEach(e => e.isEdit = false);
       setTimeout(() => {
         item.isEdit = true;
+        this.$nextTick(() => {
+          this.$refs.editFileInputRef[0].focus();
+        });
       }, 10);
-      console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData);
+      // 当前编辑的文件名
+      this.curValue = cloneDeep(item.value);
+      console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData, this.curValue);
+    },
+
+    // 设置编辑器中的值
+    handleSetEditValue(value) {
+      // 判断是否是json字符串
+      const isJsonStr = isJsonString(value);
+      this.sliderEditordetail = isJsonStr
+        ? JSON.parse(value) : value;
+      this.$refs.editorRefSlider?.setValue(this.sliderEditordetail);
     },
   },
 };

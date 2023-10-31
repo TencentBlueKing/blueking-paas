@@ -27,9 +27,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.manager import AlertRuleManager
@@ -52,7 +52,15 @@ from .serializer import (
     EventRecordMetricsQuerySLZ,
     EventRecordMetricsResultSLZ,
 )
-from .serializers import AlertRuleSLZ, AlertSLZ, ListAlertRulesSLZ, ListAlertsSLZ, SupportedAlertSLZ
+from .serializers import (
+    AlarmStrategiesSLZ,
+    AlertRuleSLZ,
+    AlertsSLZ,
+    ListAlarmStrategiesSLZ,
+    ListAlertRulesSLZ,
+    ListAlertsSLZ,
+    SupportedAlertSLZ,
+)
 
 
 class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
@@ -235,7 +243,7 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
-    @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
+    @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertsSLZ()})
     def list(self, request, code):
         """查询告警"""
         serializer = ListAlertsSLZ(data=request.data, context={'app_code': code})
@@ -246,5 +254,21 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         except BKMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
-        serializer = AlertSLZ(alerts, many=True)
+        serializer = AlertsSLZ(alerts)
+        return Response(serializer.data)
+
+
+class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
+    @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategiesSLZ()})
+    def list(self, request, code):
+        """查询告警"""
+        serializer = ListAlarmStrategiesSLZ(data=request.data, context={'app_code': code})
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            alarm_strategies = make_bk_monitor_client().query_alarm_strategies(serializer.validated_data)
+        except BKMonitorGatewayServiceError as e:
+            raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
+
+        serializer = AlarmStrategiesSLZ(alarm_strategies)
         return Response(serializer.data)

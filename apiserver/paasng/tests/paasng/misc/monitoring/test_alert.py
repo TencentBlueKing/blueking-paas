@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from filelock import FileLock
 
-from paasng.infras.bkmonitorv3.params import QueryAlertsParams
+from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 fn = Path(__file__).parent / ".random"
@@ -51,6 +51,8 @@ AppQueryAlertsParams = partial(
     QueryAlertsParams, app_code=FAKE_APP_CODE, start_time=datetime.now(), end_time=datetime.now()
 )
 
+AppQueryAlarmStrategiesParams = partial(QueryAlarmStrategiesParams, app_code=FAKE_APP_CODE)
+
 
 class TestQueryAlertsParams:
     @pytest.mark.parametrize(
@@ -58,25 +60,58 @@ class TestQueryAlertsParams:
         [
             (
                 AppQueryAlertsParams(),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_*)',
+                f'labels:(PAAS_BUILTIN AND {FAKE_APP_CODE})',
             ),
             (
                 AppQueryAlertsParams(environment='stag'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*stag_*)',
+                f'labels:(PAAS_BUILTIN AND {FAKE_APP_CODE} AND stag)',
             ),
             (
                 AppQueryAlertsParams(environment='stag', alert_code='high_cpu_usage'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*stag_high_cpu_usage)',
+                f'labels:(PAAS_BUILTIN AND {FAKE_APP_CODE} AND stag AND high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(alert_code='high_cpu_usage'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_high_cpu_usage)',
+                f'labels:(PAAS_BUILTIN AND {FAKE_APP_CODE} AND high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_*) AND alert_name:*{SEARCH_KEYWORD}*',
+                f'labels:(PAAS_BUILTIN AND {FAKE_APP_CODE}) AND alert_name:{SEARCH_KEYWORD}',
             ),
         ],
     )
     def test_to_dict(self, query_params, expected_query_string):
         assert query_params.to_dict()['query_string'] == expected_query_string
+
+
+class TestQueryAlarmStrategiesParams:
+    @pytest.mark.parametrize(
+        'query_params, expected_query_string',
+        [
+            (
+                AppQueryAlarmStrategiesParams(),
+                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', FAKE_APP_CODE]}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(environment='stag'),
+                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', FAKE_APP_CODE, 'stag']}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(environment='stag', alert_code='high_cpu_usage'),
+                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', FAKE_APP_CODE, 'stag', 'high_cpu_usage']}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(alert_code='high_cpu_usage'),
+                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', FAKE_APP_CODE, 'high_cpu_usage']}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(keyword=SEARCH_KEYWORD),
+                [
+                    {'key': 'alert_name', 'value': SEARCH_KEYWORD},
+                    {'key': 'label_name', 'value': ['PAAS_BUILTIN', FAKE_APP_CODE]},
+                ],
+            ),
+        ],
+    )
+    def test_to_dict(self, query_params, expected_query_string):
+        assert query_params.to_dict()['conditions'] == expected_query_string

@@ -812,6 +812,10 @@ export default {
     // localSourceOrigin () {
     //     this.sceneInitTemplate = [];
     // }
+    // 高级选项
+    isShowAdvancedOptions(value) {
+      this.$store.commit('createApp/updateAdvancedOptions', value);
+    },
   },
   created() {
     this.fetchAdvancedOptions();

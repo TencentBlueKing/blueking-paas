@@ -63,15 +63,8 @@
                 style="width: 450px;"
                 :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
               >
-
-                <template slot="append">
-                  <div
-                    class="group-text form-text-append"
-                    @click="handleSetMirrorUrl"
-                  >{{$t('使用示例镜像')}}</div>
-                </template>
               </bk-input>
-              <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+              <p slot="tip" class="input-tips">{{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}</p>
             </bk-form-item>
 
             <bk-form-item
@@ -111,6 +104,11 @@
         </div>
       </div>
 
+      <!-- 镜像凭证 -->
+      <div class="mirror-credentials-container">
+        <image-credential :list="credentialList"></image-credential>
+      </div>
+
       <!-- 部署限制 -->
       <div class="base-info-container">
         <div class="flex-row align-items-center mt20">
@@ -124,7 +122,7 @@
 
           <div class="info flex-row align-items-center pl20">
             <bk-icon type="info-circle" class="mr5" v-if="!isDeployLimitEdit" />
-            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
+            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
         </div>
         <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
@@ -356,9 +354,13 @@
   </paas-content-loader>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
+import imageCredential from './image-credential';
 import moment from 'moment';
 import _ from 'lodash';
 export default {
+  components: {
+    imageCredential,
+  },
   mixins: [appBaseMixin],
   data() {
     return {
@@ -802,10 +804,6 @@ export default {
         document.getSelection().addRange(selected);
       }
       this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
-    },
-
-    handleSetMirrorUrl() {
-      this.$set(this.buildConfig, 'image_repository', 'mirrors.tencent.com/bkpaas/django-helloworld');
     },
   },
 };

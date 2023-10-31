@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Custom exceptions for processes module"""
+from paas_wl.infras.resources.kube_res.exceptions import DeserializeError
 
 
 class ProcessOperationTooOften(Exception):
@@ -29,3 +30,7 @@ class ProcessNotFound(Exception):
 
 class ScaleProcessError(Exception):
     """Unable to scale process due to internal errors"""
+
+
+class UnknownProcessTypeError(DeserializeError):
+    """Unable to detect process type form Deployment/Pod"""

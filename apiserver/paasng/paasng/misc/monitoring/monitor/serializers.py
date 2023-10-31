@@ -128,7 +128,7 @@ class AlarmStrategyDetailSLZ(serializers.Serializer):
     name = serializers.CharField(help_text='策略名称')
     is_enabled = serializers.BooleanField(help_text='是否启用')
     labels = serializers.ListField(child=serializers.CharField())
-    notice_group_ids = serializers.ListField(help_text='通知组列表')
+    notice_group_ids = serializers.ListField(help_text='通知组 id 列表')
     detects = serializers.ListField(help_text='检测列表', child=TriggerConfigSLZ())
     items = serializers.ListField(help_text='检测项列表', child=AlgorithmsSLZ())
 

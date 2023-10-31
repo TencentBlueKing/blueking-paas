@@ -261,7 +261,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategiesSLZ()})
     def list(self, request, code):
-        """查询告警"""
+        """查询告警策略"""
         serializer = ListAlarmStrategiesSLZ(data=request.data, context={'app_code': code})
         serializer.is_valid(raise_exception=True)
 

@@ -109,16 +109,12 @@ class QueryAlarmStrategiesParams:
 
     def to_dict(self) -> Dict:
         """组装成 search_alarm_strategy_without_biz 接口需要的参数"""
-        d = {
+        return {
             'bk_biz_ids': [settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')],
             'page_size': self.page_size,
             'page': self.page,
-            # 按照 ID 降序
-            'ordering': ['-id'],
             'conditions': self._build_conditions(),
         }
-
-        return d
 
     def _build_conditions(self) -> List:
         """构建 conditions 参数. 具体参数参考 search_alarm_strategy_without_biz 接口文档"""

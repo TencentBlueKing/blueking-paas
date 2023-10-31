@@ -398,7 +398,7 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-down-shape:before {
 	content: "\e17b";
 }
-.paasng-download:before {
+.paasng-import:before {
 	content: "\e17d";
 }
 .paasng-edit:before {

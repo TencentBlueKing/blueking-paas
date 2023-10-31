@@ -2365,4 +2365,5 @@ export default {
   '请创建成功后，到“模块配置”页面开启自动调节扩缩容。': 'After successful creation, go to the "Module Configuration" page to enable automatic adjustment of expansion and contraction.',
   新建镜像凭证: 'New image credential',
   '私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。': 'Private images need to provide image credentials to pull the image. After the image credentials are added, all modules under the application can be used.',
+  '一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。': 'A module can only configure one image warehouse, and all processes in "Process Configuration" will use this image.',
 };

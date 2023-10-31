@@ -63,15 +63,8 @@
                 style="width: 450px;"
                 :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
               >
-
-                <template slot="append">
-                  <div
-                    class="group-text form-text-append"
-                    @click="handleSetMirrorUrl"
-                  >{{$t('使用示例镜像')}}</div>
-                </template>
               </bk-input>
-              <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+              <p slot="tip" class="input-tips">{{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}</p>
             </bk-form-item>
 
             <bk-form-item
@@ -811,10 +804,6 @@ export default {
         document.getSelection().addRange(selected);
       }
       this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
-    },
-
-    handleSetMirrorUrl() {
-      this.$set(this.buildConfig, 'image_repository', 'mirrors.tencent.com/bkpaas/django-helloworld');
     },
   },
 };

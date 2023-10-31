@@ -81,8 +81,8 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
             generate_bkapp_name(env),
             namespace=wl_app.namespace,
             body=manifest,
-            update_method='patch',
-            content_type='application/merge-patch+json',
+            update_method='replace',
+            auto_add_version=True,
         )
 
     # Deploy other dependencies

@@ -1,6 +1,10 @@
 <!-- 资源视图yaml代码编辑器组件 -->
 <template>
-  <div ref="editorRef" class="resource-editor" :style="style" />
+  <div
+    ref="editorRef"
+    class="resource-editor"
+    :style="style"
+  />
 </template>
 <script>
 /* eslint-disable no-unused-expressions */
@@ -12,7 +16,7 @@ import BcsEditorTheme from './theme.json';
 export default defineComponent({
   name: 'ResourceEditor',
   props: {
-    value: { type: [String, Object], default: () => ({}) },
+    value: { type: [String, Object, Array], default: () => ({}) },
     diffEditor: { type: Boolean, default: false }, // 是否使用diff模式
     width: { type: [String, Number], default: '100%' },
     height: { type: [String, Number], default: '100%' },
@@ -24,8 +28,8 @@ export default defineComponent({
     ignoreKeys: { type: [Array, String], default: () => '' },
   },
   setup(props, ctx) {
-    const { value, diffEditor, width, height, original, language,
-      theme, options, readonly, ignoreKeys } = toRefs(props);
+    // eslint-disable-next-line max-len
+    const { value, diffEditor, width, height, original, language, theme, options, readonly, ignoreKeys } = toRefs(props);
     const editorRef = ref(null);
     const editorErr = ref('');
     // diff统计
@@ -34,7 +38,6 @@ export default defineComponent({
       delete: 0,
     });
     let editor = null;
-    const blurTimer = ref(null);
 
     const handleIgnoreKeys = (data) => {
       const cloneData = JSON.parse(JSON.stringify(data));
@@ -42,11 +45,11 @@ export default defineComponent({
       keys.forEach((key) => {
         const props = key.split('.');
         props.reduce((pre, prop, index) => {
-          if (props && index === props.length - 1 && pre) {
+          if (props && index === (props.length - 1) && pre) {
             delete pre[prop];
           }
 
-          if (pre && prop in pre) {
+          if (pre && (prop in pre)) {
             return pre[prop];
           }
 
@@ -74,25 +77,12 @@ export default defineComponent({
       height: typeof height.value === 'number' ? `${height.value}px` : height.value,
     }));
 
-    watch(
-      options,
-      (opt) => {
-        editor && editor.updateOptions(opt);
-      },
-      { deep: true },
-    );
+    watch(options, (opt) => {
+      editor && editor.updateOptions(opt);
+    }, { deep: true });
 
     // 非只读模式时，建议手动调用setValue方法，watch在双向绑定时会让编辑器抖动
     watch(value, () => {
-      console.log(15545);
-      clearTimeout(blurTimer.value);
-      blurTimer.value = setTimeout(() => {
-        editor.onDidBlurEditorText(() => {
-          // console.log(editor.getValue());
-          ctx.emit('blur', '失焦触发');
-        });
-      }, 200);
-
       if (readonly.value && yaml.value !== getValue()) {
         setValue(yaml.value);
       }
@@ -189,11 +179,11 @@ export default defineComponent({
       };
       const changes = editor.getLineChanges() || [];
       changes.forEach((item) => {
-        if (item.originalEndLineNumber >= item.originalStartLineNumber && item.originalEndLineNumber > 0) {
+        if ((item.originalEndLineNumber >= item.originalStartLineNumber) && item.originalEndLineNumber > 0) {
           diffStat.value.delete += item.originalEndLineNumber - item.originalStartLineNumber + 1;
         }
 
-        if (item.modifiedEndLineNumber >= item.modifiedStartLineNumber && item.modifiedEndLineNumber > 0) {
+        if ((item.modifiedEndLineNumber >= item.modifiedStartLineNumber) && item.modifiedEndLineNumber > 0) {
           diffStat.value.insert += item.modifiedEndLineNumber - item.modifiedStartLineNumber + 1;
         }
       });
@@ -224,8 +214,6 @@ export default defineComponent({
           });
         }
         const editor = getEditor();
-        // if (value === '') return;
-        // if (value === '   ') return editor.setValue(value.trim());
         if (editor) return editor.setValue(value);
       } catch (err) {
         editorErr.value = err.message || String(err);
@@ -259,10 +247,11 @@ export default defineComponent({
 </script>
 <style scoped>
 .resource-editor {
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
-  background: #1a1a1a;
-  padding: 10px 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    background: #1a1a1a;
+    padding: 10px 0;
+    overflow: hidden;
 }
 </style>

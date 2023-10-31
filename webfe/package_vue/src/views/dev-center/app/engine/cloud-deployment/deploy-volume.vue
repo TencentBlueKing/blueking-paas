@@ -35,12 +35,12 @@
             <template slot-scope="{ row, $index }">
               <div class="tag-container">
                 <bk-tag
-                  v-for="item in visibleTags(row.source_config_data)"
-                  :key="item"
+                  v-for="(item, key) in row.source_config_data"
+                  :key="key"
                   class="activeTag"
-                  @click="handleTag(row.source_config_data, item)"
+                  @click="handleTag(row.source_config_data, key)"
                 >
-                  {{ item }}
+                  {{ key }}
                 </bk-tag>
                 <div
                   id="tooltipContent"
@@ -165,7 +165,7 @@
                 <div class="label-container">
                   <div class="addFile">
                     <div class="addFileText" v-if="!isAddFile" @click="handleAddFile">
-                      <i class="icon paasng-icon paasng-plus-circle-shape" />&emsp;{{ $t('添加文件') }}
+                      <i class="icon paasng-icon paasng-plus-circle-shape pr10" />{{ $t('添加文件') }}
                     </div>
                     <div class="addFileInput" v-else>
                       <bk-input
@@ -175,13 +175,29 @@
                       ></bk-input>
                     </div>
                   </div>
-                  <div class="label-item flex-row justify-content-between">
-                    <div class="label-text flex-1">
-                      1
+                  <div
+                    class="label-container flex-row justify-content-between"
+                    v-for="(item, index) in volumeFormData.sourceConfigArrData"
+                    :key="item.value"
+                    @mouseenter="hoverKey = item.value"
+                    @mouseleave="hoverKey = ''"
+                    :class="[activeIndex === index ? 'active' : '', item.isEdit ? 'is-edit' : '']">
+                    <div class="label-item flex-row justify-content-between align-items-center" v-if="item.isEdit">
+                      <bk-input
+                        :placeholder="$t('请输入')"
+                        v-model="item.value"
+                      ></bk-input>
                     </div>
-                    <div class="label-icon flex-row align-items-center">
-                      <i class="paasng-icon paasng-edit2" />&nbsp;
-                      <i class="icon paasng-icon paasng-icon-close" />
+                    <div
+                      class="label-item flex-row justify-content-between"
+                      @click.stop="handleClickLabelItem(index, item.value)" v-else>
+                      <div class="label-text flex-1">
+                        {{item.value}}
+                      </div>
+                      <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
+                        <i class="paasng-icon paasng-edit2" @click="handleEditLabel(item)" />
+                        <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(index)" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -217,6 +233,7 @@ import ResourceEditor from './comps/deploy-resource-editor';
 import EditorStatus from './comps/deploy-resource-editor/editor-status';
 // import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
+import { isJsonString } from '@/common/utils';
 
 export default {
   components: {
@@ -308,6 +325,7 @@ export default {
         environment_name: 'stag',
         source_config_data: {},
         source_type: 'ConfigMap',
+        sourceConfigArrData: [],
       },
       envSelectList: [
         { value: '_global_', text: this.$t('所有环境') },
@@ -315,7 +333,8 @@ export default {
         { value: 'prod', text: this.$t('仅生产环境') },
       ],
       envEnums: ENV_ENUM,
-      activeIndex: '',
+      activeIndex: 0,
+      hoverKey: '',
     };
   },
   computed: {
@@ -345,7 +364,30 @@ export default {
       };
     },
   },
-  watch: {},
+  watch: {
+    'volumeDefaultSettings.isShow'(v) {
+      if (v) {
+        this.volumeFormData.sourceConfigArrData = (Object.keys(this.volumeFormData.source_config_data) || [])
+          .reduce((p, v) => {
+            p.push({
+              value: v,
+              isEdit: false,
+            });
+            return p;
+          }, []);
+      }
+    },
+    'volumeFormData.sourceConfigArrData': {
+      handler(v) {
+        (v || []).forEach((e) => {
+          if (!this.volumeFormData.source_config_data[e.value]) {
+            this.volumeFormData.source_config_data[e.value] = '';
+          }
+        });
+      },
+      deep: true,
+    },
+  },
   mounted() {
     this.init();
   },
@@ -371,7 +413,7 @@ export default {
         name: '',
         mount_path: '',
         environment_name: 'stag',
-        source_config_data: [],
+        source_config_data: {},
         source_type: 'ConfigMap',
       };
       this.volumeDefaultSettings.isShow = true;
@@ -391,7 +433,9 @@ export default {
     // 编辑挂载券
     handleEditVolume(row) {
       this.volumeFormData = row;
+      this.$set(this.volumeFormData, 'sourceConfigArrData', []);
       this.volumeDefaultSettings.isShow = true;
+      console.log('this.volumeFormData', this.volumeFormData);
     },
     // 确认删除挂载券
     deleteVolume(row) {
@@ -480,11 +524,39 @@ export default {
     },
     // 添加确认
     handlerAddConfirm() {
+      this.volumeFormData.sourceConfigArrData.unshift({ value: this.addFileInput, isEdit: false });
+      this.isAddFile = false;
+      this.activeIndex = 0;
     },
 
     handleInputBlur() {
       console.log(1);
       this.test = '2222';
+    },
+
+    // 点击label
+    handleClickLabelItem(i, key) {
+      this.activeIndex = i;
+      this.volumeFormData.sourceConfigArrData.forEach(e => e.isEdit = false);
+      // this.sliderEditordetail = { key: this.volumeFormData.source_config_data[key] };
+      // 判断是否是json字符串
+      const isJsonStr = isJsonString(this.volumeFormData.source_config_data[key]);
+      this.sliderEditordetail = isJsonStr
+        ? JSON.parse(this.volumeFormData.source_config_data[key]) : this.volumeFormData.source_config_data[key];
+      this.$refs.editorRefSlider?.setValue(this.sliderEditordetail);
+    },
+
+    // 删除一条左边的lable数据
+    handleDeleteLabel(i) {
+      this.volumeFormData.sourceConfigArrData.splice(i, 1);
+    },
+    // 编辑左边的lable数据
+    handleEditLabel(item) {
+      this.volumeFormData.sourceConfigArrData.forEach(e => e.isEdit = false);
+      setTimeout(() => {
+        item.isEdit = true;
+      }, 10);
+      console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData);
     },
   },
 };
@@ -536,17 +608,21 @@ export default {
                 line-height: 40px;
                 cursor: pointer;
                 .addFileText{
-                  // padding: 0 24px;
+                  padding: 0 24px;
                 }
                 .addFileInput {
+                  padding: 0 12px;
                 }
               }
-              .label-item{
+              .label-container{
                 color: #63656E;
                 height: 40px;
                 line-height: 40px;
                 padding: 0 20px;
                 cursor: pointer;
+                .label-item{
+                  width: 100%;
+                }
                 .label-text{
                   padding-left: 4px;
                 }
@@ -558,13 +634,16 @@ export default {
                   background: #F0F1F5;
                 }
               }
-              .label-item.active{
+              .label-container.active{
                 color: #3a84ff;
                 border-left: 4px solid #3A84FF;
                 background: #fff;
                 .label-text{
                   padding-left: 0px;
                 }
+              }
+              .is-edit{
+                padding: 0 12px;
               }
             }
             .editor {

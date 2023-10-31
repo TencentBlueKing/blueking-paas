@@ -17,21 +17,29 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
-from paas_wl.bk_app.monitoring.bklog.constants import BkLogConfigType
-from paas_wl.bk_app.monitoring.bklog.entities import BkAppLogConfig, bklog_config_kmodel
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.cnative.specs.constants import MODULE_NAME_ANNO_KEY
+from paas_wl.bk_app.monitoring.bklog.constants import BkLogConfigType
+from paas_wl.bk_app.monitoring.bklog.entities import BkAppLogConfig, LabelSelector, bklog_config_kmodel
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log.models import CustomCollectorConfig
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 def build_bklog_config_crd(wl_app: WlApp, custom_collector_config: CustomCollectorConfig) -> BkAppLogConfig:
+    metadata = get_metadata(wl_app)
     return BkAppLogConfig(
         app=wl_app,
         name=custom_collector_config.name_en.replace("_", "-"),
         data_id=custom_collector_config.bk_data_id,
         paths=custom_collector_config.log_paths,
         ext_meta={},
+        label_selector=LabelSelector(
+            matchLabels={
+                MODULE_NAME_ANNO_KEY: metadata.module_name,
+            },
+        ),
         config_type=BkLogConfigType.CONTAINER_LOG
         if custom_collector_config.log_type == "json"
         else BkLogConfigType.STD_LOG,

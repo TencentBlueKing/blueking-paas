@@ -56,8 +56,8 @@ def bklog_manifest(wl_app) -> Dict[str, Any]:
             "allContainer": False,
             "workloadType": "Deployment",
             "labelSelector": {
-                "match_expressions": [{"key": "bkapp.paas.bk.tencent.com/code", "operator": "Exists", "values": None}],
-                "match_labels": {},
+                "matchExpressions": [{"key": "bkapp.paas.bk.tencent.com/code", "operator": "Exists", "values": None}],
+                "matchLabels": {},
             },
             "dataId": 123,
             "encoding": "utf-8",
@@ -79,7 +79,7 @@ class TestBKLogConfigSerializer:
             data_id=123,
             paths=["/", "/foo"],
             label_selector=cattrs.structure(
-                {"match_expressions": [{"key": "bkapp.paas.bk.tencent.com/code", "operator": "Exists"}]}, LabelSelector
+                {"matchExpressions": [{"key": "bkapp.paas.bk.tencent.com/code", "operator": "Exists"}]}, LabelSelector
             ),
         )
         assert slz.serialize(obj) == bklog_manifest

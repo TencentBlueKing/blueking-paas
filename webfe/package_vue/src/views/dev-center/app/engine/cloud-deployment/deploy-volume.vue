@@ -86,13 +86,12 @@
       v-model="fileDialogConfig.visiable"
       :width="fileDialogConfig.dialogWidth"
       theme="primary"
-      :mask-close="false"
       header-position="left"
       :title="$t('文件内容详情')"
       :show-footer="false"
     >
       <resource-editor
-        ref="editorRefDialog"
+        ref="resourceEditorRef"
         key="editor"
         v-model="detail"
         v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
@@ -109,8 +108,8 @@
       ext-cls="volume-slider"
     >
       <div slot="header">
-        {{ $t('新增/编辑挂载卷') }}&emsp;
-        <span style="color: #979ba5; font-size: 14px">
+        {{ $t('新增/编辑挂载卷') }}
+        <span class="header-sub-name pl5">
           {{ volumeFormData.name }}
         </span>
       </div>
@@ -222,7 +221,9 @@
         </div>
       </div>
       <div slot="footer" class="ml30">
-        <bk-button class="mr10" theme="primary" @click="handleConfirmVolume">{{ $t('确定') }} </bk-button>
+        <bk-button class="mr10" theme="primary" @click="handleConfirmVolume" :loading="addLoading">
+          {{ $t('确定') }}
+        </bk-button>
         <bk-button theme="default" @click="handleCancelVolume()">{{ $t('取消') }}</bk-button>
       </div>
     </bk-sideslider>
@@ -339,6 +340,7 @@ export default {
       activeIndex: 0,
       hoverKey: '',
       curValue: '',
+      addLoading: false,
     };
   },
   computed: {
@@ -371,6 +373,9 @@ export default {
   watch: {
     'volumeDefaultSettings.isShow'(v) {
       if (v) {
+        this.sliderEditordetail = '';
+        this.isAddFile = false;
+        this.curValue = '';
         this.volumeFormData.sourceConfigArrData = (Object.keys(this.volumeFormData.source_config_data) || [])
           .reduce((p, v) => {
             p.push({
@@ -379,31 +384,33 @@ export default {
             });
             return p;
           }, []);
-        // 初始化值
-        const initkey = this.volumeFormData.sourceConfigArrData[0].value;
-        const initValue = this.volumeFormData.source_config_data[initkey];
-        this.handleSetEditValue(initValue);
+        // 重置数据
+        this.resetData();
       }
     },
-    sliderEditordetail(value) {
-      console.log('value', value);
+    // 监听编辑器的值
+    sliderEditordetail() {
+      this.$nextTick(() => {
+        if (!this.curValue) return;
+        // 取值放入source_config_data中
+        const editValue = this.$refs.editorRefSlider?.getValue();
+        this.volumeFormData.source_config_data[this.curValue] = editValue;
+      });
     },
-    // 'volumeFormData.sourceConfigArrData': {
-    //   handler(v) {
-    //     (v || []).forEach((e) => {
-    //       if (!this.volumeFormData.source_config_data[e.value]) {
-    //         this.volumeFormData.source_config_data[e.value] = '';
-    //       }
-    //     });
-    //   },
-    //   deep: true,
-    // },
   },
   mounted() {
     this.init();
   },
   methods: {
-    //
+    // 重置数据
+    resetData() {
+      if (!this.volumeFormData.sourceConfigArrData.length) return;
+      console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData);
+      this.curValue = this.volumeFormData.sourceConfigArrData[0].value || '';
+      const initValue = this.volumeFormData.source_config_data[this.curValue];
+      this.activeIndex = 0;
+      this.handleSetEditValue(initValue);
+    },
     handleEditorBlur(val) {
       console.log(val);
     },
@@ -418,8 +425,6 @@ export default {
     },
     // 新增挂载
     handleCreate() {
-      this.isAddFile = false;
-      this.active = '';
       this.volumeFormData = {
         name: '',
         mount_path: '',
@@ -443,10 +448,9 @@ export default {
     },
     // 编辑挂载券
     handleEditVolume(row) {
-      this.volumeFormData = row;
+      this.volumeFormData = cloneDeep(row);
       this.$set(this.volumeFormData, 'sourceConfigArrData', []);
       this.volumeDefaultSettings.isShow = true;
-      console.log('this.volumeFormData', this.volumeFormData);
     },
     // 确认删除挂载券
     deleteVolume(row) {
@@ -493,7 +497,7 @@ export default {
       // eslint-disable-next-line no-underscore-dangle
       const _detail = cloneDeep(this.detail);
       const resultFormatDetail = this.convertToObjectIfPossible(_detail);
-      this.$refs.editorRefDialog?.setValue(resultFormatDetail);
+      this.$refs.resourceEditorRef?.setValue(resultFormatDetail);
     },
     // 筛选生效环境
     sourceFilterMethod(value, row, column) {
@@ -503,6 +507,7 @@ export default {
     // 确定新增或编辑挂载券
     async handleConfirmVolume() {
       try {
+        this.addLoading = true;
         const fetchUrl = this.volumeFormData.id ? 'deploy/updateVolumeData' : 'deploy/createVolumeData';
         const param = {
           appCode: this.appCode,
@@ -522,17 +527,19 @@ export default {
           theme: 'success',
           message: this.volumeFormData.id ? this.$t('更新成功') : this.$t('新增成功'),
         });
+        this.getVolumeList();
       } catch (error) {
         this.$paasMessage({
           theme: 'error',
           message: error.detail,
         });
+      } finally {
+        this.addLoading = false;
       }
     },
     // 取消新增或编辑挂载券
     handleCancelVolume() {
       this.volumeDefaultSettings.isShow = false;
-      this.curType = '';
     },
     // 转换数据格式
     convertToObjectIfPossible(value) {
@@ -550,7 +557,6 @@ export default {
     // 添加文件
     handleAddFile() {
       this.isAddFile = true;
-      this.$refs.editorRefSlider?.setValue('');
       this.addFileInput = '';
       this.$nextTick(() => {
         this.$refs.addFileInputRef.focus();
@@ -558,22 +564,37 @@ export default {
     },
     // 添加确认
     handlerAddConfirm() {
+      // 没有内容时 return
+      if (!this.addFileInput) {
+        this.isAddFile = false;
+        return;
+      };
       this.volumeFormData.sourceConfigArrData.unshift({ value: this.addFileInput, isEdit: false });
-      this.volumeFormData.source_config_data[this.addFileInput] = '';
+      // 选中第一条
       this.isAddFile = false;
       this.activeIndex = 0;
+      this.curValue = this.addFileInput;
+      this.sliderEditordetail = '';
+      this.$nextTick(() => {
+        this.$refs.editorRefSlider?.setValue('');
+      });
     },
     // 文件名失焦
     handleBlur(item) {
       item.isEdit = false;
       // 将之前的key对应的数据赋值给新的key并删除旧的key
       this.volumeFormData.source_config_data[item.value] = this.volumeFormData.source_config_data[this.curValue];
+      console.log('this.curValue', this.curValue, item.value);
       delete this.volumeFormData.source_config_data[this.curValue];
+      this.curValue = item.value; // 失焦时需要更新curValue的值, 编辑右边yaml时有用到
+      console.log('this.curValue2', this.curValue, item.value);
       console.log('this.volumeFormData.source_config_data', this.volumeFormData.source_config_data);
     },
 
     // 点击label
     handleClickLabelItem(i, key) {
+      // 当前点击的文件名
+      this.curValue = cloneDeep(key);
       this.activeIndex = i;
       this.volumeFormData.sourceConfigArrData.forEach(e => e.isEdit = false);
       // 设置值
@@ -589,6 +610,10 @@ export default {
     handleDeleteLabel(k, i) {
       this.volumeFormData.sourceConfigArrData.splice(i, 1);
       delete this.volumeFormData.source_config_data[k];
+      console.log(this.volumeFormData.source_config_data);
+      setTimeout(() => {
+        this.resetData();
+      }, 10);
     },
     // 编辑左边的lable数据
     handleEditLabel(item) {
@@ -600,7 +625,9 @@ export default {
         });
       }, 10);
       // 当前编辑的文件名
-      this.curValue = cloneDeep(item.value);
+      this.$nextTick(() => {
+        this.curValue = item.value;
+      });
       console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData, this.curValue);
     },
 
@@ -640,6 +667,11 @@ export default {
 }
 .activeTag:hover {
   color: #3a84ff;
+}
+
+.header-sub-name{
+  color: #979ba5 !important;
+  font-size: 14px;
 }
 
 .bk-sideslider {

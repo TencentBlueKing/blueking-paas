@@ -84,21 +84,19 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 			bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
 		)
 		if preReleaseHook != nil {
-			// 检测上一个版本的 PreReleaseHook 是否仍在运行
-			if preReleaseHook.Progressing() {
+			if preReleaseHook.Failed() {
+				// 删除上一个版本中失败的 hook pod
+				if err = r.Client.Delete(ctx, preReleaseHook.Pod); err != nil {
+					return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
+				}
+				newRevision += 1
+			} else if preReleaseHook.Progressing() {
 				if _, err = CheckAndUpdatePreReleaseHookStatus(
 					ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
 				); err != nil {
 					return r.Result.withError(err)
 				}
 				return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
-			}
-			if preReleaseHook.Failed() {
-				// 删除上一个版本中失败的 hook pod
-				if err = r.Client.Delete(ctx, preReleaseHook.Pod); err != nil {
-					return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
-				}
-				newRevision += 1
 			}
 			// TODO 清理成功执行的 hook pod
 		}

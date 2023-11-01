@@ -164,6 +164,19 @@ def rename_log_fields(raw_log: Dict[str, Any]):
     return raw_log
 
 
+def build_filed_matcher(pattern: str):
+    """构造字段过滤器"""
+    re_matcher = re.compile(pattern)
+
+    def match(field: str) -> bool:
+        # 保留字段, 永远返回 True
+        if field in RESERVED_FIELDS:
+            return True
+        return bool(re_matcher.fullmatch(field))
+
+    return match
+
+
 def clean_logs(
     logs: List[Hit],
     search_params: ElasticSearchParams,
@@ -171,7 +184,7 @@ def clean_logs(
     """从 ES 日志中转换成扁平化的 FlattenLog, 方便后续对日志字段的提取"""
     cleaned: List[FlattenLog] = []
 
-    matcher = re.compile(search_params.filedMatcher) if search_params.filedMatcher else None
+    matcher = build_filed_matcher(search_params.filedMatcher) if search_params.filedMatcher is not None else None
     for log in logs:
         raw = flatten_structure(log.to_dict(), None)
         raw = rename_log_fields(raw)
@@ -186,7 +199,7 @@ def clean_logs(
                 ),
                 message=field_extractor_factory(search_params.messageField)(raw),
                 # 如果设置了白名单, 则过滤白名单以外的字段(避免日志详情中太多字段)
-                raw={k: v for k, v in raw.items() if matcher.fullmatch(k)} if matcher is not None else raw,
+                raw={k: v for k, v in raw.items() if matcher(k)} if matcher is not None else raw,
             )
         )
     return cleaned

@@ -136,9 +136,10 @@ class TestModuleStructuredLogAPIView:
                 # # 高亮
                 "message": "[bk-mark]???[/bk-mark]",
                 "detail": {
-                    "@timestamp": 1,
+                    # 不在白名单内的字段, 不返回
+                    # "@timestamp": 1,
+                    # "one.two.three": "four",
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "one.two.three": "four",
                     "region": bk_app.region,
                     "app_code": bk_app.code,
                     "module_name": "default",

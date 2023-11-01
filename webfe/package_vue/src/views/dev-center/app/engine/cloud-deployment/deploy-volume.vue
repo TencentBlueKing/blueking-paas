@@ -397,7 +397,7 @@ export default {
         if (!this.curValue) return;
         // 取值放入source_config_data中
         const editValue = this.$refs.editorRefSlider?.getValue();
-        this.volumeFormData.source_config_data[this.curValue] = editValue;
+        this.$set(this.volumeFormData.source_config_data, this.curValue, editValue);
       });
     },
   },

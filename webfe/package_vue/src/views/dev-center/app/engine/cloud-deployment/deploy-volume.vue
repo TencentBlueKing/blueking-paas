@@ -35,12 +35,12 @@
             <template slot-scope="{ row, $index }">
               <div class="tag-container">
                 <bk-tag
-                  v-for="(item, key) in row.source_config_data"
-                  :key="key"
+                  v-for="item in visibleTags(row.source_config_data)"
+                  :key="item"
                   class="activeTag"
-                  @click="handleTag(row.source_config_data, key)"
+                  @click="handleTag(row.source_config_data, item)"
                 >
-                  {{ key }}
+                  {{ item }}
                 </bk-tag>
                 <div
                   id="tooltipContent"

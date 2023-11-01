@@ -100,6 +100,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 				}
 				newRevision += 1
 			}
+			// TODO 清理成功执行的 hook pod
 		}
 	}
 

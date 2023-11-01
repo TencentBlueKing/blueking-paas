@@ -31,7 +31,7 @@ export default {
      * 查询日志采集规则列表
      */
     getLogCollectionRuleList({}, { appCode, moduleId }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector/`;
       return http.get(url);
     },
 
@@ -39,15 +39,15 @@ export default {
      * 获取采集规则
      */
     getCollectionRules({}, { appCode, moduleId }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector-metadata`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector-metadata/`;
       return http.get(url);
     },
 
     /**
      * 新建、编辑采集规则
      */
-    createCollectionRule({}, { appCode, moduleId, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector`;
+    editorCollectionRule({}, { appCode, moduleId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector/`;
       return http.post(url, data, config);
     },
 
@@ -55,7 +55,7 @@ export default {
      * 删除采集规则
      */
     deleteCollectionRule({}, { appCode, moduleId, name }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector/${name}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector/${name}/`;
       return http.delete(url, {}, config);
     },
   },

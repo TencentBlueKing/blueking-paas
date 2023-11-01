@@ -264,7 +264,7 @@ export default {
     },
 
     // 新增/编辑采集信息
-    async createCollectionRule() {
+    async editorCollectionRule() {
       const paths = this.formData.logPaths.map(v => v.value);
       const collector = this.collectionRules.find(v => v.collector_config_id === this.formData.ruleId);
       const params = {
@@ -275,7 +275,7 @@ export default {
       };
       console.log('params', params);
       try {
-        await this.$store.dispatch('observability/createCollectionRule', {
+        await this.$store.dispatch('observability/editorCollectionRule', {
           // appCode: this.appCode,
           // moduleId: this.curModuleId,
           appCode: 'test-fastapi',
@@ -385,7 +385,7 @@ export default {
     // 确定、表单校验
     hanleConfirm() {
       this.$refs.validateForm.validate().then(() => {
-        this.createCollectionRule();
+        this.editorCollectionRule();
       }, (validator) => {
         console.error(validator.content);
       });

@@ -34,8 +34,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
 
-var revisionLog = logf.Log.WithName("reconcilers")
-
 const defaultRevision int64 = 1
 
 // NewRevisionReconciler will return a RevisionReconciler with given k8s client
@@ -57,7 +55,6 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 
 	// Generation 未变化说明 BkApp 的定义未被修改, 此时的调和循环不会触发新的 hooks
 	if !isNewRevision(bkapp) {
-		revisionLog.Info("BkApp is unchanged", "name", bkapp.Name)
 		log.V(2).Info(
 			"BkApp is unchanged, this reconciliation loop will never update bkapp revision",
 			"ObservedGeneration",
@@ -67,14 +64,6 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 		)
 		return r.Result
 	}
-
-	revisionLog.Info(
-		"new revision requested",
-		bkapp.Generation,
-		bkapp.Status.ObservedGeneration,
-		bkapp.Status.DeployId,
-		bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey],
-	)
 
 	allDeploys := appsv1.DeploymentList{}
 	err = r.Client.List(
@@ -125,13 +114,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 		log.Error(err, "unable to update app revision")
 		return r.Result.withError(err)
 	}
-	revisionLog.Info(
-		"Status success",
-		bkapp.Generation,
-		bkapp.Status.ObservedGeneration,
-		bkapp.Status.DeployId,
-		bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey],
-	)
+
 	return r.Result
 }
 

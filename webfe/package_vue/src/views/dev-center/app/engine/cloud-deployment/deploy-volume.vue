@@ -187,7 +187,7 @@
                         ref="editFileInputRef"
                         :placeholder="$t('请输入')"
                         v-model="item.value"
-                        @blur="handleBlur(item)"
+                        @blur="handleBlur(item, index)"
                       ></bk-input>
                     </div>
                     <div
@@ -404,7 +404,6 @@ export default {
     // 重置数据
     resetData() {
       if (!this.volumeFormData.sourceConfigArrData.length) return;
-      console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData);
       this.curValue = this.volumeFormData.sourceConfigArrData[0].value || '';
       const initValue = this.volumeFormData.source_config_data[this.curValue];
       this.activeIndex = 0;
@@ -572,7 +571,7 @@ export default {
           theme: 'error',
           message: this.$t('文件名重复'),
         });
-        this.isAddFile = false;
+        // this.isAddFile = false;
         return;
       }
       this.volumeFormData.sourceConfigArrData.unshift({ value: this.addFileInput, isEdit: false });
@@ -586,15 +585,26 @@ export default {
       });
     },
     // 文件名失焦
-    handleBlur(item) {
+    handleBlur(item, index) {
+      const sourceConfigArrData = cloneDeep(this.volumeFormData.sourceConfigArrData);
+      sourceConfigArrData.splice(index, 1);
+      const isValueRepeat = sourceConfigArrData.find(e => e.value === item.value);
+      if (isValueRepeat) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('文件名重复'),
+        });
+        item.value = this.curValue;
+        return;
+      }
       item.isEdit = false;
       // 将之前的key对应的数据赋值给新的key并删除旧的key
       this.volumeFormData.source_config_data[item.value] = this.volumeFormData.source_config_data[this.curValue];
       console.log('this.curValue', this.curValue, item.value);
-      delete this.volumeFormData.source_config_data[this.curValue];
+      if (item.value !== this.curValue) {
+        delete this.volumeFormData.source_config_data[this.curValue];
+      }
       this.curValue = item.value; // 失焦时需要更新curValue的值, 编辑右边yaml时有用到
-      console.log('this.curValue2', this.curValue, item.value);
-      console.log('this.volumeFormData.source_config_data', this.volumeFormData.source_config_data);
     },
 
     // 点击label
@@ -627,6 +637,7 @@ export default {
       setTimeout(() => {
         item.isEdit = true;
         this.$nextTick(() => {
+          console.log('itemitemitemitem', item);
           this.$refs.editFileInputRef[0].focus();
         });
       }, 10);

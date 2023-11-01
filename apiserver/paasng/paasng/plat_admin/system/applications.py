@@ -212,7 +212,9 @@ def query_uni_apps_by_keyword(
         return apps_list
 
     with legacy_db.session_scope() as session:
-        legacy_apps = AppAdaptor(session=session).get_by_keyword(keyword, include_inactive_apps)
+        legacy_apps = AppAdaptor(session=session).get_by_keyword(
+            keyword=keyword, include_inactive_apps=include_inactive_apps
+        )
     apps_list.extend([UniMinimalApp(code=app['code'], name=app[name_field]) for app in legacy_apps])
 
     return apps_list

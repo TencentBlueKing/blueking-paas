@@ -124,7 +124,7 @@ class AddonCredentialsSLZ(serializers.Serializer):
 
 class SearchApplicationSLZ(serializers.Serializer):
     keyword = serializers.CharField(default="", allow_blank=False, help_text="应用ID、应用名称")
-    exclude_inactive_apps = serializers.BooleanField(default=False, help_text="是否排除已下架的应用")
+    include_inactive_apps = serializers.BooleanField(default=True, help_text="是否查询已下架的应用")
 
 
 class MinimalAppSLZ(serializers.Serializer):

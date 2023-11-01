@@ -211,7 +211,6 @@
                     v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
                     :height="fullScreen ? clientHeight : fileSliderConfig.height"
                     @error="handleEditorErr"
-                    @blur="handleEditorBlur"
                   />
                   <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
                 </div>
@@ -411,9 +410,6 @@ export default {
       this.activeIndex = 0;
       this.handleSetEditValue(initValue);
     },
-    handleEditorBlur(val) {
-      console.log(val);
-    },
     handleEditorErr(err) {
       // 捕获编辑器错误提示
       this.editorErr.type = 'content'; // 编辑内容错误
@@ -569,6 +565,15 @@ export default {
         this.isAddFile = false;
         return;
       };
+      const isValueRepeat = this.volumeFormData.sourceConfigArrData.find(e => e.value === this.addFileInput);
+      // 有相同名称的文件名
+      if (isValueRepeat) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('文件名重复'),
+        });
+        return;
+      }
       this.volumeFormData.sourceConfigArrData.unshift({ value: this.addFileInput, isEdit: false });
       // 选中第一条
       this.isAddFile = false;

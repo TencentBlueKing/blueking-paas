@@ -289,6 +289,7 @@ export function mergeObjects(obj1, obj2) {
       if (obj1.hasOwnProperty(prop) && typeof obj1[prop] === 'object' && typeof obj2[prop] === 'object') {
         mergeObjects(obj1[prop], obj2[prop]);
       } else {
+        // eslint-disable-next-line no-param-reassign
         obj1[prop] = obj2[prop];
       }
     }
@@ -301,7 +302,7 @@ export function mergeObjects(obj1, obj2) {
  *
  * @param {str} 字符串
  *
- * @return {obj1} true or false
+ * @return {boolean} true or false
  */
 export function isJsonString(str) {
   try {

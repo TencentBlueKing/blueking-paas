@@ -195,6 +195,10 @@
                       @click.stop="handleClickLabelItem(index, item.value)" v-else>
                       <div class="label-text flex-1">
                         {{item.value}}
+                        <i
+                          v-if="!volumeFormData.source_config_data[item.value]"
+                          class="icon paasng-icon paasng-paas-remind-fill tips-icon"
+                          v-bk-tooltips="$t('文件内容不可为空')"></i>
                       </div>
                       <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
                         <i class="paasng-icon paasng-edit2" @click="handleEditLabel(item)" />
@@ -729,6 +733,9 @@ export default {
                 }
                 .label-text{
                   padding-left: 4px;
+                  .tips-icon{
+                    color: #ea3636;
+                  }
                 }
                 .paasng-icon-close {
                   cursor: pointer;

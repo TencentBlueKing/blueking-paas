@@ -71,6 +71,7 @@ export default {
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
         'imageCredential',
+        'observabilityConfig',
         'moduleInfo',
         'appServices',
         'appServiceInnerShared',
@@ -149,6 +150,8 @@ export default {
           'cloudAppImageList',
           // 构建历史
           'cloudAppBuildHistory',
+          // 模块配置-可观测性配置
+          'observabilityConfig',
         ],
         developer: [
           // 概览
@@ -207,6 +210,8 @@ export default {
           'cloudAppImageList',
           // 构建历史
           'cloudAppBuildHistory',
+          // 模块配置-可观测性配置
+          'observabilityConfig',
         ],
         operator: [
           // 权限管理
@@ -411,6 +416,7 @@ export default {
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
         'imageCredential',
+        'observabilityConfig',
         'moduleInfo',
         'appServices',
         'appServiceInnerShared',

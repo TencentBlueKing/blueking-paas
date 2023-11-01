@@ -14,7 +14,7 @@
             {{ $t('可以通过挂载文件的方式，向容器中注入配置信息。') }}
           </span>
         </bk-alert>
-        <bk-button theme="primary" class="mb15 mt20" @click="handleCreate('add')">
+        <bk-button theme="primary" class="mb15 mt20" @click="handleCreate">
           <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增挂载') }}
         </bk-button>
         <bk-table :data="volumeList" size="small" :outer-border="false" :header-border="false">
@@ -426,6 +426,7 @@ export default {
         environment_name: 'stag',
         source_config_data: {},
         source_type: 'ConfigMap',
+        sourceConfigArrData: [],
       };
       this.volumeDefaultSettings.isShow = true;
     },
@@ -571,6 +572,7 @@ export default {
           theme: 'error',
           message: this.$t('文件名重复'),
         });
+        // this.$refs.addFileInputRef.focus();
         // this.isAddFile = false;
         return;
       }
@@ -637,8 +639,7 @@ export default {
       setTimeout(() => {
         item.isEdit = true;
         this.$nextTick(() => {
-          console.log('itemitemitemitem', item);
-          this.$refs.editFileInputRef[0].focus();
+          this.$refs?.editFileInputRef[0].focus();
         });
       }, 10);
       // 当前编辑的文件名

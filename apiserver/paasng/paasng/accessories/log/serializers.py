@@ -24,8 +24,8 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import get_attribute
 
-from paasng.infras.bk_log.constatns import BkLogType
 from paasng.accessories.log.constants import LogTimeChoices
+from paasng.infras.bk_log.constatns import BkLogType
 from paasng.utils.es_log.time_range import SmartTimeRange
 
 
@@ -180,6 +180,13 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
             if not PurePosixPath(path).is_absolute():
                 raise ValidationError(_("日志采集路径必须是绝对路径"))
         return paths
+
+
+class BkLogCustomCollectMetadataQuerySLZ(serializers.Serializer):
+    all = serializers.BooleanField(
+        help_text="是否需要所有采集项",
+        default=False,
+    )
 
 
 class BkLogCustomCollectorConfigSLZ(serializers.Serializer):

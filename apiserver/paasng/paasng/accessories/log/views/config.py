@@ -25,7 +25,11 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.log.models import CustomCollectorConfig
-from paasng.accessories.log.serializers import BkLogCustomCollectorConfigSLZ, ModuleCustomCollectorConfigSLZ
+from paasng.accessories.log.serializers import (
+    BkLogCustomCollectMetadataQuerySLZ,
+    BkLogCustomCollectorConfigSLZ,
+    ModuleCustomCollectorConfigSLZ,
+)
 from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bk_log.client import make_bk_log_client
@@ -57,13 +61,23 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
             ],
         }
 
-    @swagger_auto_schema(response_serializer=BkLogCustomCollectorConfigSLZ(many=True), tags=["日志采集"])
+    @swagger_auto_schema(
+        query_serializer=BkLogCustomCollectMetadataQuerySLZ,
+        response_serializer=BkLogCustomCollectorConfigSLZ(many=True),
+        tags=["日志采集"],
+    )
     def list_metadata(self, request, code, module_name):
         """查询在日志平台已创建的自定义上报配置"""
         module = self.get_module_via_path()
+        slz = BkLogCustomCollectMetadataQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
         cfgs = make_bk_log_client().list_custom_collector_config(biz_or_space_id=monitor_space.iam_resource_id)
-
+        existed_id = set(
+            CustomCollectorConfig.objects.filter(module=module).values_list("collector_config_id", flat=True)
+        )
+        if not slz.validated_data.get("all", False):
+            cfgs = [cfg for cfg in cfgs if cfg.id not in existed_id]
         return Response(
             data=BkLogCustomCollectorConfigSLZ(cfgs, many=True, context=self.get_serializer_context()).data
         )

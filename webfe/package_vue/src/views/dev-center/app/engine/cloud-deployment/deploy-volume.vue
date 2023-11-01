@@ -385,6 +385,9 @@ export default {
         this.handleSetEditValue(initValue);
       }
     },
+    sliderEditordetail(value) {
+      console.log('value', value);
+    },
     // 'volumeFormData.sourceConfigArrData': {
     //   handler(v) {
     //     (v || []).forEach((e) => {

@@ -229,7 +229,7 @@ func genGroupKindMgrOpts(groupKind schema.GroupKind, ctrlCfg *cfg.ControllerConf
 		MaxConcurrentReconciles: concurrency,
 		RateLimiter: workqueue.NewMaxOfRateLimiter(
 			// 首次重试延迟 1s，后续指数级翻倍，最高延迟 300s
-			workqueue.NewItemExponentialFailureRateLimiter(time.Second, 5*time.Minute),
+			workqueue.NewItemExponentialFailureRateLimiter(time.Second, 2*time.Minute),
 			// 10 qps, 100 bucket size.  This is only for retry speed, and it's only the overall factor (not per item)
 			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),

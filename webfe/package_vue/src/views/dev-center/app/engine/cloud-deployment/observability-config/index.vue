@@ -15,7 +15,7 @@
         @click="handleAddCollectionRule"
       >
         <i class="paasng-icon paasng-plus mr5" />
-        {{ $t('新建采集规则') }}
+        {{ $t('新增采集规则') }}
       </bk-button>
       <bk-table
         v-bkloading="{ isLoading: isTableLoading }"
@@ -31,13 +31,20 @@
         <bk-table-column
           :label="$t('采集规则名称')"
           prop="name_en"
+          :show-overflow-tooltip="true"
         ></bk-table-column>
-        <bk-table-column :label="$t('采集对象')">
+        <bk-table-column
+          :label="$t('采集对象')"
+          :show-overflow-tooltip="true"
+        >
           <template slot-scope="{ row }">
             {{ row.log_type === 'stdout' ? $t('标准输出') : $t('容器内文件') }}
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('日志采集路径')">
+        <bk-table-column
+          :label="$t('日志采集路径')"
+          :show-overflow-tooltip="true"
+        >
           <template slot-scope="{ row }">
             <div v-if="row.log_paths.length">{{ row.log_paths.join('; ') }}</div>
             <span v-else>--</span>
@@ -102,10 +109,12 @@
         <bk-form-item
           :label="$t('采集规则')"
           :required="true"
+          :rules="rules.rule"
           :property="'ruleId'"
           :error-display-type="'normal'"
         >
-          <bk-select v-model="formData.ruleId">
+          <!-- 编辑禁用 -->
+          <bk-select v-model="formData.ruleId" :disabled="!collectionRulesConfig.isCreate">
             <bk-option
               v-for="option in collectionRules"
               :key="option.collector_config_id"
@@ -117,12 +126,14 @@
         <bk-form-item
           :label="$t('采集对象')"
           :required="true"
+          :rules="rules.object"
           :property="'logType'"
           :error-display-type="'normal'"
         >
           <bk-radio-group v-model="formData.logType">
-            <bk-radio :value="'json'">{{ $t('容器内文件') }}</bk-radio>
-            <bk-radio :value="'stdout'">{{ $t('标准输出') }}</bk-radio>
+            <!-- 编辑状态，禁止切换采集对象 -->
+            <bk-radio :value="'json'" :disabled="isDisabledRadio('json')">{{ $t('容器内文件') }}</bk-radio>
+            <bk-radio :value="'stdout'" :disabled="isDisabledRadio('stdout')">{{ $t('标准输出') }}</bk-radio>
           </bk-radio-group>
         </bk-form-item>
         <!-- 日志采集路径 -->
@@ -156,8 +167,7 @@
   </div>
 </template>
 
-<script>
-import i18n from '@/language/i18n.js';
+<script>import i18n from '@/language/i18n.js';
 import alarmStrategy from './alarm-strategy.vue';
 export default {
   components: { alarmStrategy },
@@ -175,10 +185,12 @@ export default {
       collectionRulesConfig: {
         visible: false,
         headerPosition: 'left',
+        isCreate: true,
       },
       // 采集规则数据
       formData: {
         ruleId: '',
+        // 新建默认
         logType: 'json',
         logPaths: [
           {
@@ -191,6 +203,13 @@ export default {
           {
             required: true,
             message: this.$t('请选择采集规则'),
+            trigger: 'blur',
+          },
+        ],
+        object: [
+          {
+            required: true,
+            message: this.$t('请选择采集对象'),
             trigger: 'blur',
           },
         ],
@@ -233,8 +252,6 @@ export default {
           moduleId: 'default',
         });
         this.logCollectionList = list;
-        // 列表总数设置
-        this.pagination.count = list.length;
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -325,19 +342,23 @@ export default {
     handleAddCollectionRule() {
       this.getCollectionRules();
       this.collectionRulesConfig.visible = true;
+      this.collectionRulesConfig.isCreate = true;
     },
 
     // 编辑采集规则
     handleCollectionRuleEdit(data) {
-      console.log('data', data);
+      // 采集路径
       const paths = data.log_paths.map(v => ({ value: v }));
       if (!paths.length) {
         paths.push({ value: '' });
       }
+      // 采集规则列表
+      this.collectionRules = [{ ...data }];
       this.formData.ruleId = data.collector_config_id;
       this.formData.logType = data.log_type;
       this.formData.logPaths = paths;
-      this.handleAddCollectionRule();
+      this.collectionRulesConfig.visible = true;
+      this.collectionRulesConfig.isCreate = false;
     },
 
     // 添加采集路径
@@ -415,6 +436,14 @@ export default {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
     },
+
+    // 禁用当前采集对象选项
+    isDisabledRadio(type) {
+      if (!this.collectionRulesConfig.isCreate) { // 编辑
+        return !(this.formData.logType === type);
+      }
+      return false;
+    },
   },
 };
 </script>
@@ -465,11 +494,11 @@ export default {
 .mb16 {
   margin-bottom: 16px;
 }
-// .collection-rules-cls {
-//   /deep/ .bk-table-row-last td {
-//     border-bottom: none !important;
-//   }
-// }
+.collection-rules-cls {
+  /deep/ .bk-table-row-last td {
+    border-bottom: none !important;
+  }
+}
 .hide-path-cls {
   /deep/ .bk-label {
     display: none;

@@ -21,11 +21,12 @@
     >
       <bk-table-column
         :label="$t('策略名')"
-        prop="name_en"
+        prop="name"
       ></bk-table-column>
       <bk-table-column :label="$t('标签')">
         <template slot-scope="{ row }">
-          {{ row.log_type === 'stdout' ? $t('标准输出') : $t('容器内文件') }}
+          <!-- 循环 -->
+          {{ row.labels }}
         </template>
       </bk-table-column>
       <bk-table-column
@@ -42,11 +43,11 @@
       ></bk-table-column>
       <bk-table-column
         :label="$t('通知组')"
-        prop="name_en"
+        prop="notice_group_ids"
       ></bk-table-column>
       <bk-table-column
         :label="$t('是否启用')"
-        prop="name_en"
+        prop="is_enabled"
       ></bk-table-column>
     </bk-table>
   </div>

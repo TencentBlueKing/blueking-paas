@@ -572,6 +572,7 @@ export default {
           theme: 'error',
           message: this.$t('文件名重复'),
         });
+        this.isAddFile = false;
         return;
       }
       this.volumeFormData.sourceConfigArrData.unshift({ value: this.addFileInput, isEdit: false });

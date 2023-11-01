@@ -73,10 +73,9 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		case current.Succeeded():
 			return r.Result
 		default:
-			// 主动延迟调和, 否则会产生大量无效的重复调和请求, 直到触发调和队列的流控被延迟调和
 			return r.Result.withError(
 				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),
-			).requeue(time.Minute * 2)
+			)
 		}
 	}
 

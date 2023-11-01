@@ -243,6 +243,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
     @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertsSLZ()})
     def list(self, request, code):
         """查询告警"""
@@ -259,6 +261,8 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
     @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategiesSLZ()})
     def list(self, request, code):
         """查询告警策略"""

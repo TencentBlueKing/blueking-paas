@@ -104,9 +104,11 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 				}
 				return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
 			}
-			// 上一个版本的 hook 失败不应该阻止调和循环，revision 需要自增以跳过失败的版本
 			if preReleaseHook.Failed() {
-				revisionLog.Info("pre hook failed", "name", bkapp.Name)
+				// 删除上一个版本中失败的 hook pod
+				if err = r.Client.Delete(ctx, preReleaseHook.Pod); err != nil {
+					return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
+				}
 				newRevision += 1
 			}
 		}

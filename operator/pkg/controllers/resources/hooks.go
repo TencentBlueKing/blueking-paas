@@ -35,9 +35,6 @@ import (
 const (
 	// HookExecuteTimeoutThreshold Hook执行超时时间阈值
 	HookExecuteTimeoutThreshold = time.Minute * 15
-
-	// HookExecuteFailedTimeoutThreshold 失败 Hook 的超时时间阈值
-	HookExecuteFailedTimeoutThreshold = time.Minute * 2
 )
 
 var (
@@ -78,12 +75,6 @@ func (i *HookInstance) Failed() bool {
 // Timeout 根据参数 timeout 判断 Pod 是否执行超时
 func (i *HookInstance) Timeout(timeout time.Duration) bool {
 	return i.Progressing() && i.Status != nil && !i.Status.StartTime.IsZero() &&
-		i.Status.StartTime.Add(timeout).Before(time.Now())
-}
-
-// FailedUntilTimeout 判断 Pod 在 timeout 之前是否执行失败
-func (i *HookInstance) FailedUntilTimeout(timeout time.Duration) bool {
-	return i.Failed() && i.Status != nil && !i.Status.StartTime.IsZero() &&
 		i.Status.StartTime.Add(timeout).Before(time.Now())
 }
 

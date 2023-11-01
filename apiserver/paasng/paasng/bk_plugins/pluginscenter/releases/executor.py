@@ -23,6 +23,7 @@ from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.models import PluginRelease
 from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controller
 from paasng.bk_plugins.pluginscenter.tasks import poll_stage_status
+from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 
 
 class PluginReleaseExecutor:
@@ -30,6 +31,16 @@ class PluginReleaseExecutor:
 
     def __init__(self, release: PluginRelease):
         self.release = release
+
+    def initial(self, operator: str):
+        """初始化版本发布并执行第一个发布阶段"""
+        self.release.initial_stage_set()
+
+        release_api.create_release(
+            pd=self.release.plugin.pd, instance=self.release.plugin, version=self.release, operator=operator
+        )
+
+        self.execute_current_stage(operator=operator)
 
     def enter_next_stage(self, operator: str):
         """进入下一个发布阶段: 切换 release.current_stage 至 next_stage 并执行
@@ -74,6 +85,8 @@ class PluginReleaseExecutor:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段"))
 
         init_stage_controller(current_stage).execute(operator)
+        current_stage.operator = operator
+        current_stage.save(update_fields=["operator"])
         current_stage.refresh_from_db()
         # 设置步骤状态为 Pending, 避免被重复执行
         if current_stage.status == constants.PluginReleaseStatus.INITIAL:

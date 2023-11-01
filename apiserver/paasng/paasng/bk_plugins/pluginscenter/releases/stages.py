@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Type, Union
 
 import cattrs
+import jinja2
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
@@ -26,7 +27,7 @@ from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.bk_devops import definitions as devops_definitions
 from paasng.bk_plugins.pluginscenter.bk_devops.client import PipelineController
 from paasng.bk_plugins.pluginscenter.bk_devops.constants import PipelineBuildStatus
-from paasng.bk_plugins.pluginscenter.definitions import find_stage_by_id
+from paasng.bk_plugins.pluginscenter.definitions import ReleaseStageDefinition, find_stage_by_id
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
 from paasng.bk_plugins.pluginscenter.models import PluginReleaseStage
@@ -197,13 +198,33 @@ class PipelineStage(BaseStageController):
         )
         current_stage = self.stage
         try:
-            build = self.ctl.start_build(pipeline=pipeline, start_params={})
+            build = self.ctl.start_build(pipeline=pipeline, start_params=self.build_pipeline_params(stage_definition))
             current_stage.status = constants.PluginReleaseStatus.PENDING
             current_stage.pipeline_detail = cattrs.unstructure(build)
             current_stage.save(update_fields=["status", "pipeline_detail"])
         except Exception as e:
             current_stage.update_status(constants.PluginReleaseStatus.FAILED, fail_message=str(e))
             raise
+
+    def build_pipeline_params(self, stage_definition: ReleaseStageDefinition) -> Dict[str, str]:
+        """渲染流水线插件参数"""
+        if not stage_definition.pipelineParams:
+            return {}
+        context = {
+            "pd_id": self.pd.identifier,
+            "plugin_id": self.plugin.id,
+            "release_id": self.release.id,
+            "version": self.release.version,
+            "comment": self.release.comment,
+            "source_location": self.release.source_location,
+            "source_version_type": self.release.source_version_type,
+            "source_version_name": self.release.source_version_name,
+            "source_hash": self.release.source_hash,
+        }
+        pipeline_params = {
+            key: jinja2.Template(value).render(context) for key, value in stage_definition.pipelineParams.items()
+        }
+        return pipeline_params
 
 
 class SubPageStage(BaseStageController):

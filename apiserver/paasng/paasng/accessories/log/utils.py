@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import operator
+import re
 from functools import reduce
 from itertools import chain
 from operator import and_
@@ -169,6 +170,8 @@ def clean_logs(
 ) -> List[FlattenLog]:
     """从 ES 日志中转换成扁平化的 FlattenLog, 方便后续对日志字段的提取"""
     cleaned: List[FlattenLog] = []
+
+    matcher = re.compile(search_params.filedMatcher) if search_params.filedMatcher else None
     for log in logs:
         raw = flatten_structure(log.to_dict(), None)
         raw = rename_log_fields(raw)
@@ -182,7 +185,8 @@ def clean_logs(
                     field_extractor_factory(search_params.timeField)(raw), search_params.timeFormat
                 ),
                 message=field_extractor_factory(search_params.messageField)(raw),
-                raw=raw,
+                # 如果设置了白名单, 则过滤白名单以外的字段(避免日志详情中太多字段)
+                raw={k: v for k, v in raw.items() if matcher.fullmatch(k)} if matcher is not None else raw,
             )
         )
     return cleaned

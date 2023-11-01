@@ -139,7 +139,7 @@ def update_or_create_es_search_config(
         builtinFilters={},
         builtinExcludes={},
         filedMatcher="message|levelname|pathname|funcName|otelSpanID"
-        "|otelServiceName|otelTraceID|environment|process_id|stream",
+        r"|otelServiceName|otelTraceID|environment|process_id|stream|__ext_json\..*",
     )
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,
@@ -160,12 +160,8 @@ def update_or_create_es_search_config(
     config.save()
 
 
-def setup_default_bk_log_model(env: ModuleEnvironment):
-    """初始化蓝鲸日志平台采集方案的数据库模型
-
-    - 创建内置的日志采集项(JSON日志采集和标准输出日志采集)
-    """
-    module = env.module
+def setup_bk_log_custom_collector(module: Module):
+    """初始化内置的日志采集项(JSON日志采集和标准输出日志采集)"""
     if AppLanguage(module.language) == AppLanguage.PYTHON:
         json_config = build_python_json_collector_config()
     else:
@@ -186,6 +182,19 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
         log_paths=stdout_config.log_paths,
         log_type=stdout_config.log_type,
     )
+    return json_config, stdout_config
+
+
+def setup_default_bk_log_model(env: ModuleEnvironment):
+    """初始化蓝鲸日志平台采集方案的数据库模型
+
+    - 创建内置的日志采集项(JSON日志采集和标准输出日志采集)
+    - 初始化日志查询配置
+        - 结构化日志查询 JSON日志采集项
+        - 标准输出日志查询 标准输出日志采集项
+        - 访问日志查询 ELK
+    """
+    json_config, stdout_config = setup_bk_log_custom_collector(env.module)
 
     # 绑定日志查询的配置
     # TODO: 日志平台支持存储将日志内容本身存储为 json 后, 修改成类似于 json.message 的字段

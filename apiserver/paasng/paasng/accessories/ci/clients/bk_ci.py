@@ -81,7 +81,7 @@ class BkCIClient:
 
         return resp.get('data')
 
-    def get_codecc_taskinfo_by_buildid(self, build_id: str):
+    def get_codecc_taskinfo_by_build_id(self, build_id: str):
         """[应用态]根据codeccBuildId查询buildId映射"""
         try:
             resp = self.client.app_codecc_build_id_mapping(data={"codeccbuildId": build_id})

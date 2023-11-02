@@ -128,6 +128,7 @@ export default defineComponent({
   name: 'EditorStatus',
   props: {
     appCode: {
+      // eslint-disable-next-line vue/require-prop-type-constructor
       type: String | Number,
     },
     title: {
@@ -222,7 +223,6 @@ export default defineComponent({
     };
 
     const submitRemoveModule = async () => {
-      3;
       try {
         await store.dispatch('module/deleteModule', {
           appCode: props.appCode,

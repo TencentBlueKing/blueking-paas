@@ -25,8 +25,6 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.bk_plugins.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod, PluginRole
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
@@ -41,6 +39,8 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag
 from tests.utils.helpers import generate_random_string
 
 
@@ -53,20 +53,25 @@ def pd():
     log_params = {"indexPattern": "", "termTemplate": {}}
     pd: PluginDefinition = G(
         PluginDefinition,
-        **{
-            "identifier": generate_random_string(),
-            to_attribute("name"): generate_random_string(),
-            "administrator": [],
-            "approval_config": {},
-            "release_revision": {"revisionType": "master", "versionNo": "automatic"},
-            "release_stages": [{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
-            "log_config": {
-                "backendType": "es",
-                "stdout": log_params,
-                "json": log_params,
-                "ingress": log_params,
+        identifier=generate_random_string(),
+        administrator=[],
+        approval_config={},
+        release_revision={
+            "revisionType": "master",
+            "versionNo": "automatic",
+            "api": {
+                "create": make_api_resource("create-release"),
+                "update": make_api_resource("update-release-{ version_id }"),
             },
         },
+        release_stages=[{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
+        log_config={
+            "backendType": "es",
+            "stdout": log_params,
+            "json": log_params,
+            "ingress": log_params,
+        },
+        **{to_attribute("name"): generate_random_string()},
     )
     pd.market_info_definition = G(
         PluginMarketInfoDefinition,

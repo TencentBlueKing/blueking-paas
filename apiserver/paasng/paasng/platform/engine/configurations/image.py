@@ -22,9 +22,6 @@ import arrow
 from django.conf import settings
 
 from paas_wl.bk_app.applications.models import Build
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
-from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.utils import get_bkapp
 from paas_wl.bk_app.processes.services import refresh_res_reqs
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import RuntimeType
@@ -109,7 +106,7 @@ class RuntimeImageInfo:
 
     def __init__(self, engine_app: 'EngineApp'):
         self.engine_app = engine_app
-        self.module = engine_app.env.module
+        self.module: Module = engine_app.env.module
         self.application = self.module.application
         self.module_spec = ModuleSpecs(self.module)
 
@@ -130,13 +127,11 @@ class RuntimeImageInfo:
         if self.type == RuntimeType.CUSTOM_IMAGE:
             if self.application.type == ApplicationType.CLOUD_NATIVE:
                 image_tag = special_tag or version_info.version_name
-                manifest = get_bkapp(self.application, self.module)
-                if manifest.apiVersion != ApiVersion.V1ALPHA2:
-                    # 由于 v1alpha1 版本的云原生应用并不能保证只有一个 image, 所以目前不支持覆盖 v1alpha1 应用的镜像信息
+                repository = self.module.build_config.image_repository
+                if not repository:
+                    # v1alpha1 版本的云原生应用未存储 image_repository 字段
                     # 此处返回空字符串表示不覆盖 manifest 的 image 信息
                     return ""
-                repository = ImageParser(manifest).get_repository()
-                assert manifest.spec.build
                 return f"{repository}:{image_tag}"
             repo_url = self.module.get_source_obj().get_repo_url()
             reference = version_info.revision

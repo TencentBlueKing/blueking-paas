@@ -39,6 +39,11 @@ CALLBACK_DATA = {
 }
 
 
+@pytest.fixture(autouse=True)
+def thirdparty_client(thirdparty_client):
+    yield thirdparty_client
+
+
 class TestArchived:
     @pytest.fixture
     def plugin(self, plugin):

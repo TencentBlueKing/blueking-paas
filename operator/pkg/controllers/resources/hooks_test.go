@@ -63,7 +63,7 @@ var _ = Describe("HookUtils", func() {
 				Hooks: &paasv1alpha2.AppHooks{
 					PreRelease: &paasv1alpha2.Hook{
 						Command: []string{"/bin/bash"},
-						Args:    []string{"-c", "echo foo;"},
+						Args:    []string{"-c", "echo foo $VAR_1;"},
 					},
 				},
 				Configuration: paasv1alpha2.AppConfig{},
@@ -98,7 +98,8 @@ var _ = Describe("HookUtils", func() {
 			Expect(len(hook.Pod.Spec.Containers)).To(Equal(1))
 			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.Build.Image))
 			Expect(hook.Pod.Spec.Containers[0].Command).To(Equal(bkapp.Spec.Hooks.PreRelease.Command))
-			Expect(hook.Pod.Spec.Containers[0].Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
+			By("Check the env variables in the args have been replaced")
+			Expect(hook.Pod.Spec.Containers[0].Args).To(Equal([]string{"-c", "echo foo $(VAR_1);"}))
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(0))
 			// 容器资源配额
 			hookRes := hook.Pod.Spec.Containers[0].Resources
@@ -130,6 +131,7 @@ var _ = Describe("HookUtils", func() {
 
 		It("test build pre-release hook for cnb runtime image", func() {
 			bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
+			bkapp.Spec.Hooks.PreRelease.Args = []string{"-c", "echo foo"}
 			hook := BuildPreReleaseHook(bkapp, nil)
 			c := hook.Pod.Spec.Containers[0]
 			By("test prepend 'launcher' to Command")

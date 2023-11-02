@@ -30,9 +30,9 @@ from django.db import models
 from pilkit.processors import ResizeToFill
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.bk_plugins.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
+from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
 logger = logging.getLogger(__name__)
@@ -248,6 +248,7 @@ class PluginReleaseStage(AuditedModel):
     pipeline_detail = models.JSONField(
         verbose_name="流水线构建详情", default=None, null=True, help_text="该字段仅 invoke_method = pipeline 时可用"
     )
+    operator = models.CharField(verbose_name="操作人", max_length=32, null=True)
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
 

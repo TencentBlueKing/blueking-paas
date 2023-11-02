@@ -21,7 +21,30 @@
           </span>
         </bk-alert>
         <div class="flex-row align-items-center justify-content-between mt20">
-          <div>
+          <div class="left-filter">
+            <ul class="filter-action-list" v-if="!isBatchEdit">
+              <li
+                @click="handleFilterEnv('all')"
+                :class="{ 'active': activeEnvValue === 'all' }"
+              >{{ $t('全部') }}</li>
+              <li
+                v-for="item in envSelectList"
+                :key="item.value"
+                @click="handleFilterEnv(item.value)"
+                :class="{ 'active': activeEnvValue === item.value }"
+              >{{ item.text }}</li>
+            </ul>
+          </div>
+          <div class="right flex-row align-items-center">
+            <bk-button
+              v-if="!isBatchEdit"
+              :theme="'default'"
+              class="export-btn-cls mr10"
+              :outline="true"
+              @click="handleEditClick"
+            >
+              {{ $t('批量编辑') }}
+            </bk-button>
             <bk-dropdown-menu
               ref="largeDropdown"
               trigger="click"
@@ -31,7 +54,8 @@
                 slot="dropdown-trigger"
                 class="mr10"
               >
-                {{ $t('批量导入') }}
+                <i class="paasng-icon paasng-upload mr6"></i>
+                {{ $t('导入') }}
               </bk-button>
               <ul
                 slot="dropdown-content"
@@ -65,28 +89,25 @@
               class="export-btn-cls"
               @click="handleExportToFile"
             >
-              {{ $t('批量导出') }}
-            </bk-button>
-          </div>
-          <div>
-            <bk-button
-              v-if="!isPageEdit"
-              class="fr"
-              theme="primary"
-              title="编辑"
-              :outline="true"
-              @click="handleEditClick"
-            >
-              {{ $t('编辑') }}
+              <i class="paasng-icon paasng-import mr6"></i>
+              {{ $t('导出') }}
             </bk-button>
           </div>
         </div>
         <bk-table
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
-          v-if="envVarList.length"
-          class="table-cls mt20"
+          class="variable-table-cls mt20"
         >
+          <!-- 新建环境变量 -->
+          <template slot="append" v-if="!isPageEdit">
+            <div class="add-wrapper">
+              <span class="add-single-variable" @click.self="handleAddSingleVariable()">
+                <i class="paasng-icon paasng-plus-thick" />
+                {{ $t('新增环境变量') }}
+              </span>
+            </div>
+          </template>
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
@@ -94,7 +115,7 @@
           >
             <template slot-scope="{ row, $index }">
               <div
-                v-if="isPageEdit"
+                v-if="isPageEdit || row.isEdit"
                 class="table-colum-cls"
               >
                 <bk-form
@@ -127,7 +148,7 @@
             class-name="table-colum-module-cls"
           >
             <template slot-scope="{ row, $index }">
-              <div v-if="isPageEdit">
+              <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   :label-width="0"
                   form-type="inline"
@@ -156,13 +177,10 @@
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
-            :filters="envSelectList"
-            :filter-method="sourceFilterMethod"
-            :filter-multiple="false"
             prop="environment_name"
           >
             <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
+              <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   form-type="inline"
                   class="env-from-cls"
@@ -193,7 +211,7 @@
             class-name="table-colum-module-cls"
           >
             <template slot-scope="{ row }">
-              <div v-if="isPageEdit">
+              <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   form-type="inline"
                   :ref="`envRefDescription`"
@@ -219,9 +237,9 @@
             :label="$t('操作')"
             width="100"
             class-name="table-colum-module-cls"
-            v-if="isPageEdit"
           >
-            <template slot-scope="{ $index }">
+            <template slot-scope="{ $index, row }">
+              <!-- 批量编辑 -->
               <div
                 v-if="isPageEdit"
                 class="env-table-icon"
@@ -236,15 +254,40 @@
                   @click="handleEnvTableListData('reduce', $index)"
                 ></i>
               </div>
+              <!-- 单个编辑 -->
+              <div v-else>
+                <template v-if="!row.isEdit">
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit($index)">
+                    {{ $t('编辑') }}
+                  </bk-button>
+                  <bk-popconfirm
+                    trigger="click"
+                    :ext-cls="'asadsadsads'"
+                    width="288"
+                    @confirm="handleSingleDelete($index)"
+                  >
+                    <div slot="content">
+                      <div class="demo-custom mb10">
+                        <div class="content-text">{{ $t('确认删除该环境变量？') }}</div>
+                      </div>
+                    </div>
+                    <bk-button :text="true" title="primary">
+                      {{ $t('删除') }}
+                    </bk-button>
+                  </bk-popconfirm>
+                </template>
+                <template v-else>
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave($index)">
+                    {{ $t('保存') }}
+                  </bk-button>
+                  <bk-button :text="true" title="primary" @click="handleSingleCancel($index)">
+                    {{ $t('取消') }}
+                  </bk-button>
+                </template>
+              </div>
             </template>
           </bk-table-column>
         </bk-table>
-        <div
-          v-else
-          class="ps-no-result"
-        >
-          <table-empty empty />
-        </div>
 
         <div
           class="env-btn-wrapper"
@@ -253,7 +296,7 @@
           <bk-button
             class="pl20 pr20"
             :theme="'primary'"
-            @click="$emit('save')"
+            @click="saveEnvData"
           >
             {{ $t('保存') }}
           </bk-button>
@@ -376,7 +419,8 @@
             v-if="exportDialog.count"
             style="line-height: 20px"
           >
-            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }}
+            {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
           </p>
           <p v-else>【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}</p>
         </div>
@@ -482,8 +526,7 @@
   </div>
 </template>
 
-<script>
-import _ from 'lodash';
+<script>import _ from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
@@ -522,11 +565,12 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter((item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name);
+              const flag = this.envVarList.filter(item => item.key === this.curItem.key
+              && item.environment_name === this.curItem.environment_name);
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
-                  this.$refs[`envRefKey${i}`].clearError();
+                  this.$refs[`envRefKey${i}`] && this.$refs[`envRefKey${i}`].clearError();
                 });
               }
               return flag.length <= 1;
@@ -580,7 +624,6 @@ export default {
         { value: 'stag', text: this.$t('预发布环境') },
         { value: 'prod', text: this.$t('生产环境') },
       ],
-      localCloudAppData: {},
       curSortKey: '-created',
       exportDialog: {
         visiable: false,
@@ -601,6 +644,8 @@ export default {
       curFile: {},
       isFileTypeError: false,
       envEnums: ENV_ENUM,
+      isBatchEdit: false,
+      activeEnvValue: 'all',
     };
   },
   computed: {
@@ -617,10 +662,9 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
     },
   },
-  watch: {},
   created() {
     this.init();
   },
@@ -633,7 +677,12 @@ export default {
       this.isTableLoading = true;
       this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
         this.envVarList = [...response];
+        // 添加自定义属性
+        this.envVarList.forEach((v) => {
+          this.$set(v, 'isEdit', false);
+        });
         this.envLocalVarList = _.cloneDeep(this.envVarList);
+        this.handleFilterEnv(this.activeEnvValue);
       }, (errRes) => {
         const errorMsg = errRes.message;
         this.$paasMessage({
@@ -647,9 +696,8 @@ export default {
         });
     },
     // 处理input事件
-    handleInputEvent(rowItem, rowIndex) {
+    handleInputEvent(rowItem) {
       this.curItem = rowItem;
-      console.log('this.curItem', this.curItem, rowIndex);
     },
 
     async saveEnvData() {
@@ -661,11 +709,14 @@ export default {
         }
         return p;
       }, []);
-      console.log('flag', flag);
+      // 仅一条数据也可删除
+      if (this.envVarList.length === 0) {
+        this.save();
+        return;
+      }
       if (flag.length) {
         // 有数据时
         for (let index = 0; index < flag.length; index++) {
-          console.log(index);
           try {
             await this.$refs[`envRefKey${flag[index].i}`].validate();
             await this.$refs[`envRefValue${flag[index].i}`].validate();
@@ -689,14 +740,98 @@ export default {
       }
     },
 
-    // 保存
-    async save() {
+    // 单条环境变量校验
+    async singleValidate(i, type) {
       try {
-        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: this.envVarList });
+        await this.$refs[`envRefKey${i}`].validate();
+        await this.$refs[`envRefValue${i}`].validate();
+        const data = _.cloneDeep(this.envVarList[i]);
+        // 单条新建编辑操作
+        type === 'add' ? this.createdEnvVariable(data, i) : this.updateEnvVariable(data, i);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
+    // 新增加单个环境变量
+    async createdEnvVariable(data, i) {
+      // 删除冗余数据
+      delete data.isEdit;
+      delete data.isAdd;
+      try {
+        await this.$store.dispatch('envVar/createdEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data,
+        });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('添加环境变量成功'),
         });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('添加环境变量失败')}，${e.message}`,
+        });
+      } finally {
+        this.envVarList[i].isEdit = false;
+        // 更新数据
+        this.getEnvVarList();
+      }
+    },
+
+    // 修改加单个环境变量
+    async updateEnvVariable(data, i) {
+      // 删除冗余数据
+      delete data.isEdit;
+      try {
+        await this.$store.dispatch('envVar/updateEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          varId: data.id,
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('修改环境变量成功'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('修改环境变量失败')}，${e.message}`,
+        });
+      } finally {
+        this.envVarList[i].isEdit = false;
+        this.getEnvVarList();
+      }
+    },
+
+    // 保存
+    async save() {
+      try {
+        const params = _.cloneDeep(this.envVarList);
+
+        // 保存环境变，无需传递 is_global
+        params.forEach((v) => {
+          delete v.is_global;
+          delete v.isEdit;
+        });
+
+        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
+        // 操作对应tips
+        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '新建' : '删除';
+        if (this.envVarList.length === this.envLocalVarList.length) {
+          tipsType = '修改';
+        }
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t(`${tipsType}环境变量成功`),
+        });
+        this.envVarList.forEach((v) => {
+          this.$set(v, 'isEdit', false);
+        });
+        // 更新本地数据
+        this.envLocalVarList = _.cloneDeep(this.envVarList);
         this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (error) {
         const errorMsg = error.message;
@@ -705,6 +840,7 @@ export default {
           message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
         });
       }
+      this.isBatchEdit = false;
     },
 
     handleShoEnvDialog() {
@@ -806,6 +942,9 @@ export default {
           description: '',
         });
       }
+      // 批量编辑展示所有环境变量
+      this.handleFilterEnv('all');
+      this.isBatchEdit = true;
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
 
@@ -817,6 +956,7 @@ export default {
           value: '',
           environment_name: 'stag',
           description: '',
+          isEdit: true,
         });
       } else {
         this.envVarList.splice(i, 1);
@@ -826,7 +966,8 @@ export default {
     // 选中环境
     handleEnvChange(curItem) {
       this.curItem = curItem;
-      const flag = this.envVarList.filter((item) => item.name === this.curItem.name && item.envName === this.curItem.envName);
+      const flag = this.envVarList.filter(item => item.name === this.curItem.name
+      && item.envName === this.curItem.envName);
       if (flag.length <= 1) {
         // 如果符合要求需要清除错误
         this.envVarList.forEach((e, i) => {
@@ -863,7 +1004,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportDialog.isLoading = false;
@@ -965,7 +1106,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.exportLoading = false;
@@ -989,7 +1130,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        }
+        },
       );
     },
 
@@ -1065,7 +1206,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          }
+          },
         )
         .finally(() => {
           this.importFileDialog.loading = false;
@@ -1087,6 +1228,7 @@ export default {
     // 取消
     handleCancel() {
       this.envVarList = _.cloneDeep(this.envLocalVarList);
+      this.isBatchEdit = false;
     },
 
     sourceFilterMethod(value, row, column) {
@@ -1116,6 +1258,84 @@ export default {
           h('span', { class: 'header-required' }, '*'),
         ],
       );
+    },
+
+    // 单个环境编辑
+    handleSingleEdit(index) {
+      this.envVarList[index].isEdit = true;
+    },
+
+    // 删除单个环境变量
+    async handleSingleDelete(index) {
+      const [deleteEnvVarData] = this.envVarList.splice(index, 1);
+      const varId = deleteEnvVarData.id;
+      try {
+        await this.$store.dispatch('envVar/deleteEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          varId,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除环境变量成功'),
+        });
+        this.getEnvVarList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('删除环境变量失败')}，${e.message}`,
+        });
+      }
+    },
+
+    // 单个环境编辑保存
+    handleSingleSave(index) {
+      if (this.envVarList[index].isAdd) { // 新建
+        this.singleValidate(index, 'add');
+      } else { // 编辑
+        this.singleValidate(index, 'update');
+      }
+    },
+
+    // 新建环境变量模板
+    handleAddSingleVariable() {
+      const curEnvVarLength = this.envVarList.length + 1;
+      if ((curEnvVarLength - this.envLocalVarList.length) <= 1) {
+        this.envVarList.push({
+          key: '',
+          value: '',
+          environment_name: 'stag',
+          description: '',
+          isEdit: true,
+          isAdd: true,
+        });
+      }
+    },
+
+    // 单个环境编辑取消
+    handleSingleCancel(index) {
+      this.envVarList[index].isEdit = false;
+      // 添加数据未保存，点击取消直接删除
+      if (!this.envLocalVarList[index]) {
+        this.envVarList.splice(index, 1);
+      } else {
+        // 编辑还原
+        this.envVarList[index].key = this.envLocalVarList[index].key;
+        this.envVarList[index].value = this.envLocalVarList[index].value;
+        this.envVarList[index].description = this.envLocalVarList[index].description;
+        this.envVarList[index].environment_name = this.envLocalVarList[index].environment_name;
+      }
+    },
+
+    // 过滤环境
+    handleFilterEnv(value) {
+      this.activeEnvValue = value;
+      // 过滤
+      if (value === 'all') {
+        this.envVarList = _.cloneDeep(this.envLocalVarList);
+        return;
+      }
+      this.envVarList = this.envLocalVarList.filter(v => v.environment_name === value);
     },
   },
 };
@@ -1596,5 +1816,84 @@ a.is-disabled {
 }
 .env-btn-wrapper {
   margin-top: 24px;
+}
+.add-wrapper {
+  height: 42px;
+  .add-single-variable {
+    display: inline-block;
+    height: 42px;
+    line-height: 42px;
+    padding: 0 15px;
+    color: #3a84ff;
+    cursor: pointer;
+    i {
+      font-size: 16px;
+      margin-right: 3px;
+      transform: translateY(0px);
+    }
+  }
+}
+.variable-table-cls {
+  /deep/ .bk-table-empty-block {
+    display: none;
+  }
+}
+.mr6 {
+  margin-right: 6px;
+}
+.right {
+  .paasng-upload,
+  .paasng-download {
+    font-size: 12px;
+  }
+}
+.filter-action-list {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 4px;
+  border-radius: 2px;
+  background: #F0F1F5;
+
+  li {
+    position: relative;
+    user-select: none;
+    height: 100%;
+    line-height: 24px;
+    font-size: 12px;
+    color: #63656E;
+    padding: 0 15px;
+    cursor: pointer;
+
+
+    &::before {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      display: block;
+      width: 1px;
+      height: 12px;
+      margin-top: -6px;
+      background: #DCDEE5;
+      content: "";
+    }
+    &:first-child::before {
+      height: 0;
+    }
+
+    &.active {
+      color: #3a84ff;
+      background: #fff;
+      border-radius: 2px;
+
+      &::before {
+        background: #fff;
+      }
+
+      & + li::before {
+        height: 0;
+      }
+    }
+  }
 }
 </style>

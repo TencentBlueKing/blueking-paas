@@ -30,9 +30,16 @@
       >
         <bk-table-column
           :label="$t('采集规则名称')"
-          prop="name_en"
           :show-overflow-tooltip="true"
-        ></bk-table-column>
+        >
+          <div
+            slot-scope="{ row }"
+            class="strategy-name"
+            @click="handleToLink(row)"
+          >
+            {{ row.name_en }}
+          </div>
+        </bk-table-column>
         <bk-table-column
           :label="$t('采集对象')"
           :show-overflow-tooltip="true"
@@ -444,6 +451,10 @@ export default {
       }
       return false;
     },
+
+    handleToLink(row) {
+      window.open(row.url, '_blank');
+    },
   },
 };
 </script>
@@ -468,6 +479,11 @@ export default {
       color: #3a84ff;
       cursor: pointer;
     }
+  }
+
+  .strategy-name {
+    cursor: pointer;
+    color: #3a84ff;
   }
 
   .collection-rules {

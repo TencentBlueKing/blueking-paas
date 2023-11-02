@@ -107,7 +107,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels:      objLabels,
-						Annotations: annotations,
+						Annotations: map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID},
 					},
 					Spec: corev1.PodSpec{
 						DNSConfig:        buildDNSConfig(app),

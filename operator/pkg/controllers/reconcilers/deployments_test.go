@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -98,6 +97,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 				UpdatedReplicas: 1,
 			},
 		}
+		fakeDeploy.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = resources.ComputeDeploymentHash(&fakeDeploy)
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
@@ -178,8 +178,9 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			current := fakeDeploy.DeepCopy()
 			client := builder.WithObjects(bkapp, current).Build()
 
-			// Increase the replicas
-			current.Spec.Replicas = lo.ToPtr(*current.Spec.Replicas + 1)
+			// Increase the replicas and update the content hash
+			*current.Spec.Replicas = *current.Spec.Replicas + 1
+			current.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = resources.ComputeDeploymentHash(current)
 			Expect(NewDeploymentReconciler(client).deploy(ctx, current)).NotTo(HaveOccurred())
 
 			// Check the deployment resource has been updated

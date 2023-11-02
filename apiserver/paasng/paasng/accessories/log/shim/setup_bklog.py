@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
+from typing import Union
 
 import cattr
 from django.conf import settings
@@ -162,7 +163,14 @@ def update_or_create_es_search_config(
 
 def setup_bk_log_custom_collector(module: Module):
     """初始化内置的日志采集项(JSON日志采集和标准输出日志采集)"""
-    if AppLanguage(module.language) == AppLanguage.PYTHON:
+    language: Union[AppLanguage, str]
+    try:
+        language = AppLanguage(module.language)
+    except ValueError:
+        # Dockerfile 等无语言设置的应用
+        language = ""
+
+    if language == AppLanguage.PYTHON:
         json_config = build_python_json_collector_config()
     else:
         json_config = build_normal_json_collector_config()

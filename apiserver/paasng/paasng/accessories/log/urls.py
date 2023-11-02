@@ -131,7 +131,7 @@ urlpatterns += [
     ),
     re_path(
         make_app_pattern(r"/log/custom-collector-metadata/$", include_envs=False),
-        config.CustomCollectorConfigViewSet.as_view({"get": "list_metadata"}),
+        config.CustomCollectorConfigViewSet.as_view({"get": "get_metadata"}),
     ),
 ]
 

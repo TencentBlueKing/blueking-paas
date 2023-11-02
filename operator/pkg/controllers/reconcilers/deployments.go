@@ -34,7 +34,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
-	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
 
 // NewDeploymentReconciler will return a DeploymentReconciler with given k8s client
@@ -107,21 +106,21 @@ func (r *DeploymentReconciler) deploy(ctx context.Context, deploy *appsv1.Deploy
 	return UpsertObject(ctx, r.Client, deploy, r.updateHandler)
 }
 
-// updateHandler Deployment 更新策略: 当集群中存在的 Deployment 与期望的 Deployment 的版本 Hash 不一致时, 更新
+// updateHandler Deployment 更新策略: 除非在注解中指定了 `bkapp.paas.bk.tencent.com/deployment-skip-update`
+// （执行测试代码时会用到）, 否则总是更新
 func (r *DeploymentReconciler) updateHandler(
 	ctx context.Context,
 	cli client.Client,
 	current *appsv1.Deployment,
 	want *appsv1.Deployment,
 ) error {
-	currentRevision, _ := revision.GetRevision(current)
-	wantRevision, _ := revision.GetRevision(want)
-	if currentRevision != wantRevision {
-		if err := cli.Update(ctx, want); err != nil {
-			return errors.Wrapf(
-				err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
-			)
-		}
+	if current.Annotations[paasv1alpha2.DeploySkipUpdateAnnoKey] == "true" {
+		return nil
+	}
+	if err := cli.Update(ctx, want); err != nil {
+		return errors.Wrapf(
+			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+		)
 	}
 	return nil
 }
@@ -132,7 +131,6 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 	if err != nil {
 		return err
 	}
-
 	if len(current) == 0 {
 		// TODO: Phase 应该是应用下架、休眠？
 		bkapp.Status.Phase = paasv1alpha2.AppFailed

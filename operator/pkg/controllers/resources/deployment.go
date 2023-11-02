@@ -47,12 +47,12 @@ var log = logf.Log.WithName("controllers-resources")
 
 // GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
 func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
-	newRevision := int64(0)
-	if rev := app.Status.Revision; rev != nil {
-		newRevision = rev.Revision
+	deployID := app.Status.DeployId
+	if deployID == "" {
+		deployID = "1"
 	}
 
-	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
+	annotations := map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID}
 	envs := GetAppEnvs(app)
 	volMountMap := GetVolumeMountMap(app)
 	replicasGetter := NewReplicasGetter(app)

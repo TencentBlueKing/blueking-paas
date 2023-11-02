@@ -586,7 +586,6 @@ export default {
     },
     // 文件名失焦
     handleBlur(item, index) {
-      console.log('item', item, index);
       const sourceConfigArrData = cloneDeep(this.volumeFormData.sourceConfigArrData);
       sourceConfigArrData.splice(index, 1);
       const isValueRepeat = sourceConfigArrData.find(e => e.value === item.value);
@@ -601,7 +600,6 @@ export default {
       item.isEdit = false;
       // 将之前的key对应的数据赋值给新的key并删除旧的key
       this.volumeFormData.source_config_data[item.value] = this.volumeFormData.source_config_data[this.curValue];
-      console.log('this.curValue', this.curValue, item.value);
       if (item.value !== this.curValue) {
         delete this.volumeFormData.source_config_data[this.curValue];
       }
@@ -615,7 +613,6 @@ export default {
           this.$refs.addFileInputRef.blur();
         });
       } else {
-        console.log('this.$refs?.editFileInputRef', this.$refs?.editFileInputRef);
         this.$nextTick(() => {
           this.$refs?.editFileInputRef[0].blur();
         });
@@ -641,7 +638,6 @@ export default {
     handleDeleteLabel(k, i) {
       this.volumeFormData.sourceConfigArrData.splice(i, 1);
       delete this.volumeFormData.source_config_data[k];
-      console.log(this.volumeFormData.source_config_data);
       setTimeout(() => {
         this.resetData();
       }, 10);
@@ -659,7 +655,6 @@ export default {
       this.$nextTick(() => {
         this.curValue = item.value;
       });
-      console.log('this.volumeFormData.sourceConfigArrData', this.volumeFormData.sourceConfigArrData, this.curValue);
     },
 
     // 设置编辑器中的值

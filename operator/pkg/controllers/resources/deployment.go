@@ -19,6 +19,8 @@
 package resources
 
 import (
+	"fmt"
+	"hash/fnv"
 	"strconv"
 
 	"github.com/samber/lo"
@@ -26,11 +28,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/rand"
+
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
+	"bk.tencent.com/paas-app-operator/pkg/utils/hash"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
@@ -122,6 +127,9 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 				log.Error(err, "Failed to inject mounts info to process", proc.Name)
 			}
 		}
+
+		// Calculate a hash value for the deployment and set it as the annotation
+		deployment.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = ComputeDeploymentHash(deployment)
 		deployList = append(deployList, deployment)
 	}
 	return deployList
@@ -203,4 +211,11 @@ func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
 		return results
 	}
 	return nil
+}
+
+// ComputeDeploymentHash computes the hash value for the deployment object
+func ComputeDeploymentHash(obj *appsv1.Deployment) string {
+	deployHasher := fnv.New32a()
+	hash.DeepHashObject(deployHasher, obj)
+	return rand.SafeEncodeString(fmt.Sprint(deployHasher.Sum32()))
 }

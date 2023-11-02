@@ -94,6 +94,8 @@ const (
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"
 	// DeploySkipUpdateAnnoKey 注解表示当前的进程 Deployment 资源应跳过更新
 	DeploySkipUpdateAnnoKey = "bkapp.paas.bk.tencent.com/deployment-skip-update"
+	// DeployContentHashAnnoKey 注解保存由 Operator 生成的配置内容哈希值
+	DeployContentHashAnnoKey = "bkapp.paas.bk.tencent.com/deployment-content-hash"
 )
 
 const (

@@ -934,7 +934,6 @@ export default {
     }
 
     .port-config{
-      width: calc(100vw - 326px);
       overflow-x: auto;
     }
 

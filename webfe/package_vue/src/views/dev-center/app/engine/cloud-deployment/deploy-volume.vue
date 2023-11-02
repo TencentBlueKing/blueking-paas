@@ -647,7 +647,7 @@ export default {
       // 判断是否是json字符串
       const isJsonStr = isJsonString(value);
       this.sliderEditordetail = isJsonStr
-        ? JSON.parse(value) : value;
+        ? JSON.stringify(JSON.parse(value)) : value;
       this.$refs.editorRefSlider?.setValue(this.sliderEditordetail);
     },
   },

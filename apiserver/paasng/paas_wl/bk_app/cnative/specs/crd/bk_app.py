@@ -68,13 +68,13 @@ class BkAppProcess(BaseModel):
     autoscaling: Optional[AutoscalingSpec] = None
 
     # Deprecated: use resQuotaPlan instead in v1alpha2
-    cpu: str = DEFAULT_PROC_CPU
+    cpu: Optional[str] = None
     # Deprecated: use resQuotaPlan instead in v1alpha2
-    memory: str = DEFAULT_PROC_MEM
+    memory: Optional[str] = None
     # Deprecated: use spec.build.image instead in v1alpha2
     image: Optional[str] = None
     # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
-    imagePullPolicy: Optional[str] = ImagePullPolicy.IF_NOT_PRESENT
+    imagePullPolicy: Optional[str] = None
 
 
 class Hook(BaseModel):

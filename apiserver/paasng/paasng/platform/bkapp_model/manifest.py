@@ -266,7 +266,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
                 return quota_plan
-        return quota_plan_memory[-1][0]
+        return quota_plan_memory[-1][1]
 
     @staticmethod
     def get_command_and_args(module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:

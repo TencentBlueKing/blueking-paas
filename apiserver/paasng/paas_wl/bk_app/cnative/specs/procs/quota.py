@@ -91,9 +91,6 @@ class ResourceQuotaReader:
         if self.res.apiVersion == ApiVersion.V1ALPHA2:
             return self.from_v1alpha2_bkapp()
 
-        if self.res.apiVersion == ApiVersion.V1ALPHA1:
-            return self.from_v1alpha1_bkapp()
-
         raise ValueError(f"Unsupported api version: {self.res.apiVersion}")
 
     def from_v1alpha2_bkapp(self) -> Dict[str, ResourceQuota]:
@@ -107,6 +104,3 @@ class ResourceQuotaReader:
         return {
             p.name: PLAN_TO_LIMIT_QUOTA_MAP[p.resQuotaPlan or ResQuotaPlan.P_DEFAULT] for p in self.res.spec.processes
         }
-
-    def from_v1alpha1_bkapp(self) -> Dict[str, ResourceQuota]:
-        return {p.name: ResourceQuota(cpu=p.cpu, memory=p.memory) for p in self.res.spec.processes}

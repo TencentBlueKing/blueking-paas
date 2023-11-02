@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -47,7 +47,7 @@ class FieldSchema(BaseModel):
     title: str = Field(default="", description="字段标题")
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
-    default: Optional[str] = Field(description="默认值")
+    default: Optional[Any] = Field(description="默认值")
     maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
     uiValidator: Optional[List] = Field(alias="ui:validator")

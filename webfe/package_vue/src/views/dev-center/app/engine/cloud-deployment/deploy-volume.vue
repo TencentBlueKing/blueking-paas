@@ -108,7 +108,7 @@
       ext-cls="volume-slider"
     >
       <div slot="header">
-        {{ $t('新增/编辑挂载卷') }}
+        {{volumeFormData.id ? $t('编辑') : $t('新增')}}{{ $t('挂载卷') }}
         <span class="header-sub-name pl5">
           {{ volumeFormData.name }}
         </span>

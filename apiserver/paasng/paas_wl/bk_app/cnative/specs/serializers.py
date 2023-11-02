@@ -190,8 +190,8 @@ class UpsertMountSLZ(serializers.Serializer):
             environment_name__in=[environment_name, MountEnvName.GLOBAL.value],
         )
         # 传入了 mount_instance 表示更新操作，否则表示创建操作。更新操作时候，排除被更新 mount 对象
-        if (mount_instance := self.context.get('mount_instance', None)) and mount_instance:
-            filtered_mounts = filtered_mounts.exclude(id=mount_instance.id)
+        if mount_id := self.context.get('mount_id', None):
+            filtered_mounts = filtered_mounts.exclude(id=mount_id)
 
         if filtered_mounts.exists():
             raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))

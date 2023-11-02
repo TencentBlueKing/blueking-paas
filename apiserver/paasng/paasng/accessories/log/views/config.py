@@ -26,8 +26,8 @@ from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.serializers import (
+    BkLogCustomCollectMetadataOutputSLZ,
     BkLogCustomCollectMetadataQuerySLZ,
-    BkLogCustomCollectorConfigSLZ,
     ModuleCustomCollectorConfigSLZ,
 )
 from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
@@ -51,6 +51,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         Extra context provided to the serializer class.
         """
         module = self.get_module_via_path()
+        monitor_space, _ = get_or_create_bk_monitor_space(module.application)
         return {
             'request': self.request,
             'format': self.format_kwarg,
@@ -59,15 +60,16 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
                 build_custom_collector_config_name(module, type="json"),
                 build_custom_collector_config_name(module, type="stdout"),
             ],
+            "space_uid": monitor_space.space_uid,
         }
 
     @swagger_auto_schema(
         query_serializer=BkLogCustomCollectMetadataQuerySLZ,
-        response_serializer=BkLogCustomCollectorConfigSLZ(many=True),
+        response_serializer=BkLogCustomCollectMetadataOutputSLZ,
         tags=["日志采集"],
     )
-    def list_metadata(self, request, code, module_name):
-        """查询在日志平台已创建的自定义上报配置"""
+    def get_metadata(self, request, code, module_name):
+        """查询在日志平台已创建的自定义上报配置以及日志平台的访问地址"""
         module = self.get_module_via_path()
         slz = BkLogCustomCollectMetadataQuerySLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
@@ -79,7 +81,12 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         if not slz.validated_data.get("all", False):
             cfgs = [cfg for cfg in cfgs if cfg.id not in existed_id]
         return Response(
-            data=BkLogCustomCollectorConfigSLZ(cfgs, many=True, context=self.get_serializer_context()).data
+            data=BkLogCustomCollectMetadataOutputSLZ(
+                {
+                    "options": cfgs,
+                },
+                context=self.get_serializer_context(),
+            ).data
         )
 
     @swagger_auto_schema(response_serializer=ModuleCustomCollectorConfigSLZ(many=True), tags=["日志采集"])

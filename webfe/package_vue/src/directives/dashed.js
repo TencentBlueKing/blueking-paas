@@ -17,11 +17,12 @@
  */
 
 const dashed = {
-  bind (el, { value, modifiers }) {
-    const width = value || '';
-    el.classList.add(`v-text-toolips-dashed${width}`);
-    el.style.paddingBottom = '3px';
-  }
+  bind(el, { value }) {
+    el.style.borderBottom = '1px dashed #666';
+    if (value && value.disabled) {
+      el.style.borderBottom = '0';
+    }
+  },
 };
 
 export default dashed;

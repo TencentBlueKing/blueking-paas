@@ -20,6 +20,8 @@ package kubetypes
 
 import (
 	"encoding/json"
+	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -57,4 +59,23 @@ func SetJsonAnnotation(obj client.Object, key string, data interface{}) error {
 	annots[key] = string(dataStr)
 	obj.SetAnnotations(annots)
 	return nil
+}
+
+// The pattern that finds env variables(in BASH format)
+var varPattern = regexp.MustCompile(`\$\{?([a-zA-Z_][a-zA-Z_0-9]*)\}?`)
+
+// ReplaceCommandEnvVariables finds the environment variables in the command and args
+// fields of the container spec, replace $FOO and ${FOO} with $(FOO) to make it works.
+// See also: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#use-environment-variables-to-define-arguments
+func ReplaceCommandEnvVariables(input []string) []string {
+	var output []string
+	for _, s := range input {
+		// When the "dollar" character has been escaped, ignore it by replacing
+		s = strings.Replace(s, "\\$", "\uFFFF", -1)
+		s = varPattern.ReplaceAllString(s, "$$($1)")
+		// Restore the escaped "dollar" character
+		s = strings.Replace(s, "\uFFFF", "\\$", -1)
+		output = append(output, s)
+	}
+	return output
 }

@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from django.conf import settings
 
+from paas_wl.infras.resources.generation.mapper import MapperProcConfig
 from paas_wl.infras.resources.generation.v1 import V1Mapper
 from paas_wl.infras.resources.generation.v2 import V2Mapper
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -82,3 +83,14 @@ def get_latest_mapper_version(init_kwargs: Optional[dict] = None):
     """获取最新的 mapper version"""
     target = list(AVAILABLE_GENERATIONS.keys())[-1]
     return AVAILABLE_GENERATIONS[target](**init_kwargs or {})
+
+
+def get_proc_deployment_name(app: 'WlApp', process_type: str) -> str:
+    """A shortcut function which gets the name of deployment resource for the given
+    app and process_type.
+    """
+    mapper_version = AppResVerManager(app).curr_version
+    # Only "app" and "type" are important for getting resource name, other fields
+    # not related so fake values are used.
+    proc_config = MapperProcConfig(app=app, type=process_type, version=1, command_name='')
+    return mapper_version.deployment(process=proc_config).name

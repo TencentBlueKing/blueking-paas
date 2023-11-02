@@ -665,7 +665,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).To(HaveOccurred())
 	})
-	
+
 	It("Create BkApp with EnvOverLay.Autoscaling", func() {
 		bkapp := buildApp(paasv1alpha1.AppSpec{
 			Processes: []paasv1alpha1.Process{

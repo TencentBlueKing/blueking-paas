@@ -74,6 +74,7 @@ class RepoAccessCondition(DeployCondition):
 
     def validate(self):
         try:
+            # TODO: We should also check the return value.
             get_version_service(self.env.module, operator=self.user.pk).touch()
         except UserNotBindedToSourceProviderError as e:
             if not e.project:

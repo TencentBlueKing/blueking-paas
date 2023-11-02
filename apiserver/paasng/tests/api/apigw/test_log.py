@@ -201,10 +201,11 @@ class TestLegacySysStructuredLogAPIView:
                 # 高亮
                 'message': '[bk-mark]???[/bk-mark]',
                 'detail': {
-                    '@timestamp': 1,
+                    # 不在白名单内的字段, 不返回
+                    # "@timestamp": 1,
+                    # "one.two.three": "four",
                     # 扁平化
                     'json.message': '[bk-mark]???[/bk-mark]',
-                    'one.two.three': 'four',
                     'region': 'default',
                     'app_code': bk_app.code,
                     'module_name': bk_module.name,
@@ -307,9 +308,10 @@ class TestSysBkPluginLogsViewset:
                 'timestamp': 1,
                 'message': '[bk-mark]???[/bk-mark]',
                 'raw': {
-                    '@timestamp': 1,
+                    # 不在白名单内的字段, 不返回
+                    # "@timestamp": 1,
+                    # "one.two.three": "four",
                     'json.message': '[bk-mark]???[/bk-mark]',
-                    'one.two.three': 'four',
                     'region': bk_plugin_app.region,
                     'app_code': bk_plugin_app.code,
                     'environment': 'stag',
@@ -320,9 +322,10 @@ class TestSysBkPluginLogsViewset:
                     'ts': '1970-01-01 08:00:01',
                 },
                 'detail': {
-                    '@timestamp': 1,
+                    # 不在白名单内的字段, 不返回
+                    # "@timestamp": 1,
+                    # "one.two.three": "four",
                     'json.message': '[bk-mark]???[/bk-mark]',
-                    'one.two.three': 'four',
                     'region': bk_plugin_app.region,
                     'app_code': bk_plugin_app.code,
                     'environment': 'stag',

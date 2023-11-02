@@ -61,13 +61,13 @@
         >
           <bk-switcher
             v-if="isPageEdit"
-            v-model="preFormData.loaclEnabled"
+            v-model="preFormData.enabled"
             theme="primary"
             @change="switcherChange"
           />
         </bk-form-item>
         <bk-form-item
-          v-if="preFormData.loaclEnabled"
+          v-if="preFormData.enabled"
           :label="$t('启动命令')"
           :required="true"
           :rules="rules.command"
@@ -91,7 +91,7 @@
           </span>
         </bk-form-item>
         <bk-form-item
-          v-if="preFormData.loaclEnabled"
+          v-if="preFormData.enabled"
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
           style="width: 510px; position: relative;"
@@ -121,14 +121,14 @@
           style="position: relative;"
         >
           <bk-tag
-            :key="preFormData.loaclEnabled ? $t('已启用') : $t('未启用')"
-            :theme="preFormData.loaclEnabled ? 'info' : ''"
+            :key="preFormData.enabled ? $t('已启用') : $t('未启用')"
+            :theme="preFormData.enabled ? 'info' : ''"
           >
-            {{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}
+            {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
           </bk-tag>
         </bk-form-item>
         <bk-form-item
-          v-if="preFormData.loaclEnabled"
+          v-if="preFormData.enabled"
           :label="`${$t('启动命令')}：`"
           style="position: relative;"
         >
@@ -148,7 +148,7 @@
           </div>
         </bk-form-item>
         <bk-form-item
-          v-if="preFormData.loaclEnabled"
+          v-if="preFormData.enabled"
           :label="`${$t('命令参数')}：`"
           class="pt20 hook-form-cls"
           style="position: relative;"
@@ -183,7 +183,7 @@
         </bk-button>
         <bk-button
           class="pl20 pr20 ml20"
-          @click="$emit('cancel')"
+          @click="handleCancel"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -207,10 +207,6 @@ export default {
       type: String,
       default: '',
     },
-    cloudAppData: {
-      type: Object,
-      default: {},
-    },
     isCreate: {
       type: Boolean,
       default: false,
@@ -230,16 +226,14 @@ export default {
     return {
       panels: [],
       preFormData: {
-        loaclEnabled: false,
+        enabled: false,
         command: [],
         args: [],
       },
       allowCreate: true,
       hasDeleteIcon: true,
       isLoading: true,
-      localCloudAppData: {},
       hooks: null,
-      processData: [],
       cloudInfoTip: i18n.t('web进程的容器镜像地址'),
       rawData: {},
       rules: {
@@ -269,43 +263,11 @@ export default {
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
-  },
-
-  watch: {
-    cloudAppData: {
-      handler(val) {
-        if (val.spec) {
-          this.localCloudAppData = _.cloneDeep(val);
-          this.processData = val.spec.processes;
-          this.hooks = val.spec.hooks;
-          this.preFormData.loaclEnabled = !!this.hooks;
-          if (this.preFormData.loaclEnabled) {
-            this.preFormData.command = (this.hooks && this.hooks.preRelease.command) || [];
-            this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
-          }
-          this.formData = this.processData[this.panelActive];
-          this.rawData = _.cloneDeep(this.preFormData);
-        }
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 500);
-      },
-      immediate: true,
-      // deep: true
+    appCode() {
+      return this.$route.params.id;
     },
-    preFormData: {
-      handler(val) {
-        if (this.localCloudAppData.spec) {
-          let hooks = { preRelease: { command: val.command, args: val.args } };
-          if (!this.preFormData.loaclEnabled) {
-            hooks = null;
-          }
-          this.$set(this.localCloudAppData.spec, 'hooks', hooks);
-          this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
-        }
-      },
-      immediate: true,
-      deep: true,
+    curModuleId() {
+      return this.curAppModule?.name;
     },
   },
 
@@ -315,19 +277,35 @@ export default {
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
     }
+
+    this.init();
   },
 
   methods: {
-    switcherChange(value) {
-      this.$set(this.preFormData, 'loaclEnabled', value);
-      if (!this.preFormData.loaclEnabled) {
-        this.$set(this.localCloudAppData.spec, 'hooks', null);
-      } else {
-        // 重新设置一遍数据
-        this.localCloudAppData = this.$store.state.cloudApi.cloudAppData;
-        this.$set(this.localCloudAppData.spec, 'hooks', { preRelease: { command: this.preRelease?.command || [], args: this.preRelease?.args || [] } });
+    // 获取hooks信息
+    async init() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppReleaseHook', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.preFormData = { ...res };
+        this.rawData = _.cloneDeep(this.preFormData);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
       }
-      this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+    },
+    switcherChange(value) {
+      this.$set(this.preFormData, 'enabled', value);
+      if (!this.preFormData.enabled) {
+        this.preFormData.command = [];
+        this.preFormData.args = [];
+      }
     },
 
     trimStr(str) {
@@ -394,29 +372,36 @@ export default {
     },
 
     // 保存
-    handleSave() {
+    async handleSave() {
       if (this.$refs.commandRef) {
-        this.$refs.commandRef.validate().then(
-          () => {
-            this.$emit('save');
-            this.$nextTick(() => {
-              this.rawData = _.cloneDeep(this.preFormData);
-            });
-          },
-          (err) => {
-            console.error(err);
-          },
-        );
-      } else {
-        this.$emit('save');
+        await this.$refs.commandRef.validate();
+      }
+      try {
+        await this.$store.dispatch('deploy/saveAppReleaseHook', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          params: { ...this.preFormData },
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('保存成功！'),
+        });
+        this.$store.commit('cloudApi/updateHookPageEdit', false);
+        this.$store.commit('cloudApi/updatePageEdit', false);
+        this.init();
+      } catch (error) {
+        this.$paasMessage({
+          theme: 'error',
+          message: error.detail || error.message,
+        });
       }
     },
 
     // 数据还原
     handleCancel() {
-      this.$refs.commandRef.clearError();
-      this.preFormData.command = this.rawData.command;
-      this.preFormData.args = this.rawData.args;
+      this.init();
+      this.$store.commit('cloudApi/updatePageEdit', false);
+      this.$store.commit('cloudApi/updateHookPageEdit', false);
     },
 
     // 查看指南

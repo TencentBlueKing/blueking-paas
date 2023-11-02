@@ -108,9 +108,9 @@ export default defineComponent({
       editor && editor.layout();
     });
 
-    watch(editorErr, (err) => {
-      ctx.emit('error', err);
-    });
+    // watch(editorErr, (err) => {
+    //   ctx.emit('error', err);
+    // });
 
     onMounted(() => {
       initMonaco();
@@ -158,16 +158,7 @@ export default defineComponent({
       } else {
         editor.onDidChangeModelContent((event) => {
           const yamlValue = getValue();
-          try {
-            let emitValue = {};
-            const tmpObj = yamljs.load(yamlValue);
-            emitValue = typeof tmpObj === 'object' ? tmpObj : {};
-            editorErr.value = '';
-
-            emitChange(emitValue, event);
-          } catch (err) {
-            editorErr.value = err.message || String(err);
-          }
+          emitChange(yamlValue, event);
         });
       }
     };

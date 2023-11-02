@@ -264,7 +264,7 @@
                     trigger="click"
                     :ext-cls="'asadsadsads'"
                     width="288"
-                    @confirm="handleSingleDelete($index)"
+                    @confirm="handleSingleDelete(row)"
                   >
                     <div slot="content">
                       <div class="demo-custom mb10">
@@ -594,7 +594,6 @@ export default {
         description: [
           {
             validator: (value) => {
-              console.log(value);
               if (!value) {
                 return true;
               }
@@ -1092,7 +1091,6 @@ export default {
 
     handleExportToFile() {
       this.exportLoading = true;
-      console.log('this.curSortKey', this.curSortKey);
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
       this.$http
         .get(url)
@@ -1266,8 +1264,8 @@ export default {
     },
 
     // 删除单个环境变量
-    async handleSingleDelete(index) {
-      const [deleteEnvVarData] = this.envVarList.splice(index, 1);
+    async handleSingleDelete(row) {
+      const deleteEnvVarData = this.envVarList.find(v => v.id === row.id);
       const varId = deleteEnvVarData.id;
       try {
         await this.$store.dispatch('envVar/deleteEnvVariable', {

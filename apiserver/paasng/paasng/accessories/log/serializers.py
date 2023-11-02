@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from pathlib import PurePosixPath
 from typing import List
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -172,6 +173,7 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
     log_paths = serializers.ListField(child=serializers.CharField(help_text="日志文件的绝对路径，可使用 通配符"), default=list)
     log_type = serializers.ChoiceField(help_text="日志类型", choices=BkLogType.get_choices())
     is_builtin = serializers.SerializerMethodField(help_text="是否平台内置采集项")
+    url = serializers.SerializerMethodField(help_text="日志平台链接")
 
     get_is_builtin = get_is_builtin
 
@@ -181,12 +183,12 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
                 raise ValidationError(_("日志采集路径必须是绝对路径"))
         return paths
 
-
-class BkLogCustomCollectMetadataQuerySLZ(serializers.Serializer):
-    all = serializers.BooleanField(
-        help_text="是否需要所有采集项",
-        default=False,
-    )
+    def get_url(self, obj):
+        return "{bk_log_url}/#/retrieve/{collector_config_id}?spaceUid={space_uid}".format(
+            bk_log_url=settings.BK_LOG_URL,
+            collector_config_id=obj.collector_config_id,
+            space_uid=self.context["space_uid"],
+        )
 
 
 class BkLogCustomCollectorConfigSLZ(serializers.Serializer):
@@ -197,3 +199,23 @@ class BkLogCustomCollectorConfigSLZ(serializers.Serializer):
     is_builtin = serializers.SerializerMethodField(help_text="是否平台内置采集项")
 
     get_is_builtin = get_is_builtin
+
+
+class BkLogCustomCollectMetadataQuerySLZ(serializers.Serializer):
+    all = serializers.BooleanField(
+        help_text="是否需要所有采集项",
+        default=False,
+    )
+
+
+class BkLogCustomCollectMetadataOutputSLZ(serializers.Serializer):
+    """日志采集配置额外数据"""
+
+    options = BkLogCustomCollectorConfigSLZ(many=True, help_text="采集规则可选项")
+    url = serializers.SerializerMethodField(help_text="日志平台创建自定义采集项规则")
+
+    def get_url(self, value):
+        return "{bk_log_url}/#/manage/custom-report/list?spaceUid={space_uid}".format(
+            bk_log_url=settings.BK_LOG_URL,
+            space_uid=self.context["space_uid"],
+        )

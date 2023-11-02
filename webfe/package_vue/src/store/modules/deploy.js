@@ -596,6 +596,24 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${environment}/mres/revisions/${revisionId}/`;
     return http.get(url, {}, config);
   },
+
+  /**
+   * 新建挂载卷
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  createVolumeData({}, { appCode, moduleId, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/`;
+    return http.post(url, data, config);
+  },
+
+  /**
+   * 更新挂载卷
+   * @param {Object} params 请求参数：appCode, moduleId
+   */
+  updateVolumeData({}, { appCode, moduleId, id, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}`;
+    return http.put(url, data, config);
+  },
 };
 
 export default {

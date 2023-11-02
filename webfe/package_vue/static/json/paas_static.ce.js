@@ -672,6 +672,7 @@ export const PAAS_STATIC_CONFIG = {
                             "cloudAppDeployForBuild",
                             "cloudAppDeployForProcess",
                             "cloudAppDeployForEnv",
+                            "cloudAppDeployForVolume",
                             "cloudAppDeployForYaml",
                             "cloudAppDeployForHook",
                             "cloudAppDeployForResource",

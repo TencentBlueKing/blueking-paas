@@ -4,7 +4,7 @@
       <h4>{{ $t('日志采集') }}</h4>
       <p class="tips">
         {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加') }}
-        <span class="customize">{{ $t('自定义日志采集规则') }}</span>
+        <a :href="customCollectorData.url" target="_blank">{{ $t('自定义日志采集规则') }}</a>
       </p>
     </div>
     <!-- 采集规则 -->
@@ -182,6 +182,7 @@ export default {
     return {
       isTableLoading: false,
       logCollectionList: [],
+      customCollectorData: {},
       pagination: {
         // 页面
         current: 1,
@@ -240,12 +241,16 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
     curModuleId() {
       return this.curAppModule?.name;
     },
   },
   created() {
     this.getLogCollectionRuleList();
+    this.getCustomLogCollectionRule();
   },
   methods: {
     // 获取日志采集规则列表
@@ -341,6 +346,24 @@ export default {
         this.$bkMessage({
           theme: 'error',
           message: `${this.$t('删除失败：')} ${e.detail}`,
+        });
+      }
+    },
+
+    // 获取自定义日志采集规则
+    async getCustomLogCollectionRule() {
+      try {
+        const res = await this.$store.dispatch('observability/getCustomLogCollectionRule', {
+          // appCode: this.appCode,
+          // moduleId: this.curModuleId,
+          appCode: 'test-fastapi',
+          moduleId: 'default',
+        });
+        this.customCollectorData = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -474,10 +497,6 @@ export default {
       padding: 0;
       margin-right: 16px;
       font-weight: 400;
-    }
-    .customize {
-      color: #3a84ff;
-      cursor: pointer;
     }
   }
 

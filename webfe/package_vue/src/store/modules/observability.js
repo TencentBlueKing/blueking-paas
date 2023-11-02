@@ -58,5 +58,13 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector/${name}/`;
       return http.delete(url, {}, config);
     },
+
+    /**
+     * 获取自定义日志采集规则
+     */
+    getCustomLogCollectionRule({}, { appCode, moduleId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector-metadata/`;
+      return http.get(url, {}, config);
+    },
   },
 };

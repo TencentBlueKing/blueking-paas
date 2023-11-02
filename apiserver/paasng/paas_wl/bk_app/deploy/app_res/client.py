@@ -199,7 +199,7 @@ class K8sScheduler:
     def ensure_image_credentials_secret(self, app: WlApp):
         """确保应用镜像的访问凭证存在"""
         credentials = ImageCredentials.load_from_app(app)
-        self.credential_handler.upsert(credentials)
+        self.credential_handler.upsert(credentials, update_method='patch')
 
     ###################
     # autoscaling API #

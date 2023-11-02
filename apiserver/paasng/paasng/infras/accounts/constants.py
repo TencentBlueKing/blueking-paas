@@ -92,7 +92,7 @@ class AccountFeatureFlag(ChoicesEnum):
             ALLOW_CREATE_CLOUD_NATIVE_APP: settings.IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT,
             ENABLE_TC_DOCKER: False,
             ALLOW_PLUGIN_CENTER: settings.IS_ALLOW_PLUGIN_CENTER,
-            ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE: False,
+            ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE: True,
         }
     )
 

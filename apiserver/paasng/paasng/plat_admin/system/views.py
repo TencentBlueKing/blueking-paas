@@ -74,7 +74,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         data = serializer.validated_data
         include_deploy_info = data['include_deploy_info']
 
-        results = query_uni_apps_by_ids(data['id'])
+        results = query_uni_apps_by_ids(ids=data['id'], include_inactive_apps=data['include_inactive_apps'])
         json_apps: List[Union[None, Dict]] = []
         for app_id in data['id']:
             app = results.get(app_id)
@@ -133,7 +133,8 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         limit = paginator.get_limit(request)
 
         keyword = data.get('keyword')
-        applications = query_uni_apps_by_keyword(keyword, offset, limit)
+        include_inactive_apps = data.get('include_inactive_apps')
+        applications = query_uni_apps_by_keyword(keyword, offset, limit, include_inactive_apps)
 
         # Paginate results
         applications = paginator.paginate_queryset(applications, request, self)

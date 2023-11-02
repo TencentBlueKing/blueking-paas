@@ -328,7 +328,7 @@
                         v-model="sourceDirVal"
                         class="source-dir"
                         :class="sourceDirError ? 'error' : ''"
-                        :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
+                        :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
                         @blur="validSourceDir"
                       />
                       <ul
@@ -404,523 +404,519 @@
 </template>
 
 <script>
-    // eslint-disable-next-line
+// eslint-disable-next-line
     import { Parsley, ParsleyUI } from 'parsleyjs'
-    import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
-    import '@/common/parsley_locale';
-    import _ from 'lodash';
-    import gitExtend from '@/components/ui/git-extend.vue';
-    import repoInfo from '@/components/ui/repo-info.vue';
-    import appPreloadMixin from '@/mixins/app-preload';
+import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
+import '@/common/parsley_locale';
+import _ from 'lodash';
+import gitExtend from '@/components/ui/git-extend.vue';
+import repoInfo from '@/components/ui/repo-info.vue';
+import appPreloadMixin from '@/mixins/app-preload';
 
-    export default {
-        components: {
-            gitExtend,
-            repoInfo
+export default {
+  components: {
+    gitExtend,
+    repoInfo,
+  },
+  mixins: [appPreloadMixin],
+  data() {
+    return {
+      formLoading: false,
+      globalErrorMessage: '',
+      language: 'Python',
+      sourceInitTemplate: '',
+      sourceControlType: this.GLOBAL.DEFAULT_SOURCE_CONTROL,
+      gitExtendConfig: {
+        bk_gitlab: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('bk_gitlab'),
+          repoList: [],
+          selectedRepoUrl: '',
+          authDocs: '',
         },
-        mixins: [appPreloadMixin],
-        data () {
-            return {
-                formLoading: false,
-                globalErrorMessage: '',
-                language: 'Python',
-                sourceInitTemplate: '',
-                sourceControlType: this.GLOBAL.DEFAULT_SOURCE_CONTROL,
-                gitExtendConfig: {
-                    bk_gitlab: {
-                        isAuth: true,
-                        isLoading: false,
-                        alertText: '',
-                        authAddress: undefined,
-                        fetchMethod: this.generateFetchRepoListMethod('bk_gitlab'),
-                        repoList: [],
-                        selectedRepoUrl: '',
-                        authDocs: ''
-                    },
-                    tc_git: {
-                        isAuth: true,
-                        isLoading: false,
-                        alertText: '',
-                        authAddress: undefined,
-                        fetchMethod: this.generateFetchRepoListMethod('tc_git'),
-                        repoList: [],
-                        selectedRepoUrl: '',
-                        authDocs: ''
-                    },
-                    github: {
-                        isAuth: true,
-                        isLoading: false,
-                        alertText: '',
-                        authAddress: undefined,
-                        fetchMethod: this.generateFetchRepoListMethod('github'),
-                        repoList: [],
-                        selectedRepoUrl: '',
-                        authDocs: ''
-                    },
-                    gitee: {
-                        isAuth: true,
-                        isLoading: false,
-                        alertText: '',
-                        authAddress: undefined,
-                        fetchMethod: this.generateFetchRepoListMethod('gitee'),
-                        repoList: [],
-                        selectedRepoUrl: '',
-                        authDocs: ''
-                    }
-                },
-                // For rendering template
-                languages: {},
-                language_images_map: APP_LANGUAGES_IMAGE,
-                sourceControlTypes: DEFAULT_APP_SOURCE_CONTROL_TYPES,
-                langTransitionName: '',
-                allRegionsSpecs: {},
-                canCreateModule: true,
-
-                supportPlusValue: true,
-                isOpenSupportPlus: 'yes',
-                regionsServices: {},
-
-                sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
-                localSourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
-                curLanguages: {},
-                sourceDirVal: '',
-                sourceDirError: false,
-                sourceDirTip: {
-                    theme: 'light',
-                    allowHtml: true,
-                    content: this.$t('提示信息'),
-                    html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
-                    placements: ['right']
-                },
-                defaultlangName: DEFAULR_LANG_NAME,
-                structureType: 'soundCode',
-                mirrorData: {
-                    type: 'public',
-                    url: ''
-                },
-                mirrorRules: {
-                    url: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            validator: function (val) {
-                                return !val.includes(':');
-                            },
-                            message: '镜像地址中不能包含版本(tag)信息',
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                lessCodeCorrectRules: false
-            };
+        tc_git: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('tc_git'),
+          repoList: [],
+          selectedRepoUrl: '',
+          authDocs: '',
         },
-        computed: {
-            region () {
-                return this.curAppInfo.application.region;
-            },
-            isShowRegionsService () {
-                return Object.keys(this.regionsServices).length > 0;
-            },
-            establishStyle () {
-                if (this.curLanguages && this.language && this.curLanguages[this.language]) {
-                    const len = this.curLanguages[this.language].length;
-                    const lanItemHeight = 50;
-                    if (!len) {
-                        return {
-                            height: '208px'
-                        };
-                    }
-                    return {
-                        height: `${(len + 1) * lanItemHeight}px`
-                    };
-                }
-                return {
-                    height: '208px'
-                };
-            },
-            curUserFeature () {
-                return this.$store.state.userFeature;
-            },
-            curSourceControl () {
-                const match = this.sourceControlTypes.find(item => {
-                    return item.value === this.sourceControlType;
-                });
-                return match;
-            }
+        github: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('github'),
+          repoList: [],
+          selectedRepoUrl: '',
+          authDocs: '',
         },
-        watch: {
-            sourceInitTemplate () {
-                this.fetchRegionsServices();
-            },
-            structureType (value) {
-                if (value === 'mirror') {
-                    this.sourceOrigin = 4;
-                } else if (value === 'soundCode') {
-                    this.handleCodeTypeChange(1);
-                }
-            },
-            sourceOrigin (value) {
-                this.lessCodeCorrectRules = false;
-                if (value === 2) {
-                    this.lessCodeCorrectRules = !/^[a-z]+$/.test(this.curAppInfo.application.code);
-                }
-            }
+        gitee: {
+          isAuth: true,
+          isLoading: false,
+          alertText: '',
+          authAddress: undefined,
+          fetchMethod: this.generateFetchRepoListMethod('gitee'),
+          repoList: [],
+          selectedRepoUrl: '',
+          authDocs: '',
         },
-        async created () {
-            await this.fetchRegion();
+      },
+      // For rendering template
+      languages: {},
+      language_images_map: APP_LANGUAGES_IMAGE,
+      sourceControlTypes: DEFAULT_APP_SOURCE_CONTROL_TYPES,
+      langTransitionName: '',
+      allRegionsSpecs: {},
+      canCreateModule: true,
 
-            if (!this.canCreateModule) {
-                this.loading = false;
-                return;
-            }
-            await this.getLanguageByRegion();
-            await this.getCodeTypes();
-            this.sourceInitTemplate = this.languages[this.language][0].name;
-            this.fetchRegionsServices();
-            switch (this.sourceControlType) {
-                case 'bk_gitlab':
-                case 'tc_git':
-                    for (const key in this.gitExtendConfig) {
-                        // 初始化 repo List
-                        const config = this.gitExtendConfig[key];
-                        config.fetchMethod();
-                    }
-                    break;
-                default:
-                    break;
-            }
-        },
-        mounted () {
-            this.form = $('#form-create-app').parsley();
-            this.$form = this.form.$element;
+      supportPlusValue: true,
+      isOpenSupportPlus: 'yes',
+      regionsServices: {},
 
-            // Auto clearn ServerError message for field
-            this.form.on('form:validated', (target) => {
-                target.fields.forEach(field => {
-                    field.removeError('serverError');
-                });
-            });
-            window.Parsley.on('field:error', function () {
-                // 防止出现多条错误提示
-                this.$element.parsley().removeError('serverError');
-            });
-        },
-        methods: {
-            handleCodeTypeChange (payload) {
-                this.localSourceOrigin = payload;
-                if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP) {
-                    this.sourceOrigin = payload;
-                    this.curLanguages = _.cloneDeep(this.languages);
-                    this.language = 'Python';
-                } else {
-                    if (payload === 2) {
-                        this.curLanguages = _.cloneDeep({
-                            'NodeJS': [this.languages['NodeJS'][0]]
-                        });
-                        this.language = 'NodeJS';
-                        this.sourceOrigin = payload;
-                    }
-                }
-                this.sourceInitTemplate = this.curLanguages[this.language][0].name;
+      sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
+      localSourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
+      curLanguages: {},
+      sourceDirVal: '',
+      sourceDirError: false,
+      sourceDirTip: {
+        theme: 'light',
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
+        placements: ['right'],
+      },
+      defaultlangName: DEFAULR_LANG_NAME,
+      structureType: 'soundCode',
+      mirrorData: {
+        type: 'public',
+        url: '',
+      },
+      mirrorRules: {
+        url: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+          {
+            validator(val) {
+              return !val.includes(':');
             },
+            message: '镜像地址中不能包含版本(tag)信息',
+            trigger: 'blur',
+          },
+        ],
+      },
+      lessCodeCorrectRules: false,
+    };
+  },
+  computed: {
+    region() {
+      return this.curAppInfo.application.region;
+    },
+    isShowRegionsService() {
+      return Object.keys(this.regionsServices).length > 0;
+    },
+    establishStyle() {
+      if (this.curLanguages && this.language && this.curLanguages[this.language]) {
+        const len = this.curLanguages[this.language].length;
+        const lanItemHeight = 50;
+        if (!len) {
+          return {
+            height: '208px',
+          };
+        }
+        return {
+          height: `${(len + 1) * lanItemHeight}px`,
+        };
+      }
+      return {
+        height: '208px',
+      };
+    },
+    curUserFeature() {
+      return this.$store.state.userFeature;
+    },
+    curSourceControl() {
+      const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
+      return match;
+    },
+  },
+  watch: {
+    sourceInitTemplate() {
+      this.fetchRegionsServices();
+    },
+    structureType(value) {
+      if (value === 'mirror') {
+        this.sourceOrigin = 4;
+      } else if (value === 'soundCode') {
+        this.handleCodeTypeChange(1);
+      }
+    },
+    sourceOrigin(value) {
+      this.lessCodeCorrectRules = false;
+      if (value === 2) {
+        this.lessCodeCorrectRules = !/^[a-z]+$/.test(this.curAppInfo.application.code);
+      }
+    },
+  },
+  async created() {
+    await this.fetchRegion();
 
-            async fetchRegion () {
-                try {
-                    await this.$store.dispatch('fetchRegionInfo', this.region);
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
-            },
+    if (!this.canCreateModule) {
+      this.loading = false;
+      return;
+    }
+    await this.getLanguageByRegion();
+    await this.getCodeTypes();
+    this.sourceInitTemplate = this.languages[this.language][0].name;
+    this.fetchRegionsServices();
+    switch (this.sourceControlType) {
+      case 'bk_gitlab':
+      case 'tc_git':
+        for (const key in this.gitExtendConfig) {
+          // 初始化 repo List
+          const config = this.gitExtendConfig[key];
+          config.fetchMethod();
+        }
+        break;
+      default:
+        break;
+    }
+  },
+  mounted() {
+    this.form = $('#form-create-app').parsley();
+    this.$form = this.form.$element;
 
-            async fetchRegionsServices () {
-                try {
-                    const res = await this.$store.dispatch('createApp/getRegionsServices', {
-                        region: this.region,
-                        language: this.sourceInitTemplate
-                    });
-                    this.regionsServices = JSON.parse(JSON.stringify(res.result));
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
-            },
+    // Auto clearn ServerError message for field
+    this.form.on('form:validated', (target) => {
+      target.fields.forEach((field) => {
+        field.removeError('serverError');
+      });
+    });
+    window.Parsley.on('field:error', function () {
+      // 防止出现多条错误提示
+      this.$element.parsley().removeError('serverError');
+    });
+  },
+  methods: {
+    handleCodeTypeChange(payload) {
+      this.localSourceOrigin = payload;
+      if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP) {
+        this.sourceOrigin = payload;
+        this.curLanguages = _.cloneDeep(this.languages);
+        this.language = 'Python';
+      } else {
+        if (payload === 2) {
+          this.curLanguages = _.cloneDeep({
+            NodeJS: [this.languages.NodeJS[0]],
+          });
+          this.language = 'NodeJS';
+          this.sourceOrigin = payload;
+        }
+      }
+      this.sourceInitTemplate = this.curLanguages[this.language][0].name;
+    },
 
-            /**
+    async fetchRegion() {
+      try {
+        await this.$store.dispatch('fetchRegionInfo', this.region);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    async fetchRegionsServices() {
+      try {
+        const res = await this.$store.dispatch('createApp/getRegionsServices', {
+          region: this.region,
+          language: this.sourceInitTemplate,
+        });
+        this.regionsServices = JSON.parse(JSON.stringify(res.result));
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    /**
              * 获取代码库类型
              */
-            async getCodeTypes () {
-                try {
-                    const res = await this.$store.dispatch('module/getCodeTypes');
-                    this.sourceControlTypes = res.results;
+    async getCodeTypes() {
+      try {
+        const res = await this.$store.dispatch('module/getCodeTypes');
+        this.sourceControlTypes = res.results;
 
-                    this.sourceControlTypes = this.sourceControlTypes.map(e => {
-                        e.imgSrc = e.value;
-                        if (e.value === 'bare_svn') {
-                            e.imgSrc = 'bk_svn';
-                        }
-                        return e;
-                    });
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || res.message || this.$t('接口异常')
-                    });
-                }
-            },
+        this.sourceControlTypes = this.sourceControlTypes.map((e) => {
+          e.imgSrc = e.value;
+          if (e.value === 'bare_svn') {
+            e.imgSrc = 'bk_svn';
+          }
+          return e;
+        });
+      } catch (res) {
+        this.$paasMessage({
+          theme: 'error',
+          message: res.detail || res.message || this.$t('接口异常'),
+        });
+      }
+    },
 
-            /**
+    /**
              * 根据应用类型获取支持的语言（内部、混合云...）
              * @return {[type]} [description]
              */
-            async getLanguageByRegion () {
-                try {
-                    const res = await this.$store.dispatch('module/getLanguageInfo');
-                    this.allRegionsSpecs = res;
+    async getLanguageByRegion() {
+      try {
+        const res = await this.$store.dispatch('module/getLanguageInfo');
+        this.allRegionsSpecs = res;
 
-                    if (!_.has(this.allRegionsSpecs, this.region)) {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: this.$t('版本配置未找到，您没有创建模块权限。')
-                        });
-                        return;
-                    }
-                    this.languages = this.allRegionsSpecs[this.region].languages;
-                    this.curLanguages = _.cloneDeep(this.languages);
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || res.message || this.$t('接口异常')
-                    });
-                }
-            },
+        if (!_.has(this.allRegionsSpecs, this.region)) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('版本配置未找到，您没有创建模块权限。'),
+          });
+          return;
+        }
+        this.languages = this.allRegionsSpecs[this.region].languages;
+        this.curLanguages = _.cloneDeep(this.languages);
+      } catch (res) {
+        this.$paasMessage({
+          theme: 'error',
+          message: res.detail || res.message || this.$t('接口异常'),
+        });
+      }
+    },
 
-            /**
+    /**
              * 根据不同的 sourceControlType 生成对应的 fetchRepoList 方法
              * @param {String} sourceControlType 代码库类型
              */
-            generateFetchRepoListMethod (sourceControlType) {
-                return async () => {
-                    const config = this.gitExtendConfig[sourceControlType];
-                    try {
-                        config.isLoading = true;
-                        const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-                        config.repoList = resp.results.map((repo, index) => {
-                            return { name: repo.fullname, id: repo.http_url_to_repo };
-                        });
-                        config.isAuth = true;
-                    } catch (e) {
-                        const resp = e.response;
-                        config.isAuth = false;
-                        if (resp.status === 403 && resp.data.result) {
-                            config.authAddress = resp.data.address;
-                            config.authDocs = resp.data.auth_docs;
-                        }
-                    } finally {
-                        config.isLoading = false;
-                    }
-                };
-            },
+    generateFetchRepoListMethod(sourceControlType) {
+      return async () => {
+        const config = this.gitExtendConfig[sourceControlType];
+        try {
+          config.isLoading = true;
+          const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
+          config.repoList = resp.results.map((repo, index) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.isAuth = true;
+        } catch (e) {
+          const resp = e.response;
+          config.isAuth = false;
+          if (resp.status === 403 && resp.data.result) {
+            config.authAddress = resp.data.address;
+            config.authDocs = resp.data.auth_docs;
+          }
+        } finally {
+          config.isLoading = false;
+        }
+      };
+    },
 
-            /**
+    /**
              * 选择开发语言回调
              * @param {String} language 开发语言
              */
-            changeLanguage (language) {
-                const fromLanguage = this.language;
-                this.language = language;
-                // Select the first choice of selected language
-                this.sourceInitTemplate = this.languages[this.language][0].name;
+    changeLanguage(language) {
+      const fromLanguage = this.language;
+      this.language = language;
+      // Select the first choice of selected language
+      this.sourceInitTemplate = this.languages[this.language][0].name;
 
-                // Detect animate direction
-                const languageList = [];
-                for (const key in this.languages) {
-                    this.languages[key].forEach(lang => {
-                        languageList.push(lang.language);
-                    });
-                }
-                if (languageList.indexOf(fromLanguage) > languageList.indexOf(language)) {
-                    this.langTransitionName = 'lang-card-to-right';
-                } else {
-                    this.langTransitionName = 'lang-card-to-left';
-                }
-            },
+      // Detect animate direction
+      const languageList = [];
+      for (const key in this.languages) {
+        this.languages[key].forEach((lang) => {
+          languageList.push(lang.language);
+        });
+      }
+      if (languageList.indexOf(fromLanguage) > languageList.indexOf(language)) {
+        this.langTransitionName = 'lang-card-to-right';
+      } else {
+        this.langTransitionName = 'lang-card-to-left';
+      }
+    },
 
-            /**
+    /**
              * 选择代码库回调
              * @param {String} sourceControlType 代码库
              */
-            changeSourceControl (item) {
-                this.sourceControlType = item.value;
-                this.sourceDirError = false;
-                this.sourceDirVal = '';
-                // 请求下拉数据
-                switch (this.sourceControlType) {
-                    case 'bk_gitlab':
-                    case 'tc_git':
-                        const config = this.gitExtendConfig[this.sourceControlType];
-                        config.fetchMethod();
-                        break;
-                    default:
-                        break;
-                }
-            },
+    changeSourceControl(item) {
+      this.sourceControlType = item.value;
+      this.sourceDirError = false;
+      this.sourceDirVal = '';
+      // 请求下拉数据
+      switch (this.sourceControlType) {
+        case 'bk_gitlab':
+        case 'tc_git':
+          const config = this.gitExtendConfig[this.sourceControlType];
+          config.fetchMethod();
+          break;
+        default:
+          break;
+      }
+    },
 
-            goBack () {
-                // this.$router.push({
-                //     name: 'appSummary',
-                //     params: {
-                //         id: this.$route.params.id,
-                //         moduleId: this.curModuleId
-                //     }
-                // })
-                window.history.go(-1);
-            },
-            validSourceDir () {
-                const val = this.sourceDirVal || '';
-                if (!val) {
-                    this.sourceDirError = false;
-                    return;
-                }
-                this.sourceDirError = !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(val);
-            },
+    goBack() {
+      // this.$router.push({
+      //     name: 'appSummary',
+      //     params: {
+      //         id: this.$route.params.id,
+      //         moduleId: this.curModuleId
+      //     }
+      // })
+      window.history.go(-1);
+    },
+    validSourceDir() {
+      const val = this.sourceDirVal || '';
+      if (!val) {
+        this.sourceDirError = false;
+        return;
+      }
+      this.sourceDirError = !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(val);
+    },
 
-            /**
+    /**
              * 创建应用模块
              */
-            async createAppModule () {
-                if (!this.canCreateModule) {
-                    return;
-                }
-                let sourceRepoUrl = null;
-                if (!this.form.isValid()) {
-                    return;
-                }
+    async createAppModule() {
+      if (!this.canCreateModule) {
+        return;
+      }
+      let sourceRepoUrl = null;
+      if (!this.form.isValid()) {
+        return;
+      }
 
-                if (this.sourceDirError) {
-                    return;
-                }
+      if (this.sourceDirError) {
+        return;
+      }
 
-                if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
-                    const validRet = await this.$refs.repoInfo.valid();
-                    if (!validRet) {
-                        window.scrollTo(0, 0);
-                        return;
-                    }
-                }
-
-                if (this.$refs.validate2) {
-                    try {
-                        await this.$refs.validate2.validate();
-                    } catch (error) {
-                        console.log('error', error);
-                        return;
-                    }
-                }
-
-                this.formLoading = true;
-                // Remove all serverError error messages
-                this.globalErrorMessage = '';
-                this.form.reset();
-
-                if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {
-                    switch (this.sourceControlType) {
-                        case 'bk_gitlab':
-                        case 'github':
-                        case 'gitee':
-                        case 'tc_git':
-                            const config = this.gitExtendConfig[this.sourceControlType];
-                            sourceRepoUrl = config.selectedRepoUrl;
-                            if (!sourceRepoUrl) {
-                                this.formLoading = false;
-                                this.$paasMessage({
-                                    theme: 'error',
-                                    message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号')
-                                });
-                                window.scrollTo(0, 0);
-                                return;
-                            }
-                            break;
-                        case 'bk_svn':
-                        default:
-                            sourceRepoUrl = undefined;
-                            break;
-                    }
-                }
-
-                const params = {
-                    name: this.name,
-                    language: this.language,
-                    source_init_template: this.sourceInitTemplate,
-                    source_control_type: this.sourceControlType,
-                    source_repo_url: sourceRepoUrl,
-                    source_origin: this.sourceOrigin,
-                    source_dir: this.sourceDirVal || '',
-                    ...this.$form.serializeObject()
-                };
-
-                if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
-                    const repoData = this.$refs.repoInfo.getData();
-                    params.source_repo_url = repoData.url;
-                    params.source_repo_auth_info = {
-                        username: repoData.account,
-                        password: repoData.password
-                    };
-                    params.source_dir = repoData.sourceDir;
-                }
-
-                if (this.sourceOrigin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
-                    delete params.source_repo_url;
-                }
-
-                if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
-                    params.type = 'default';
-                    params.source_control_type = 'tc_docker';
-                    params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
-                    params.source_repo_auth_info = {
-                        username: '',
-                        password: ''
-                    };
-                }
-
-                try {
-                    this.formLoading = true;
-
-                    const res = await this.$store.dispatch('module/createAppModule', {
-                        appCode: this.appCode,
-                        data: params
-                    });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('创建应用模块成功！')
-                    });
-
-                    this.$store.commit('addAppModule', res.module);
-                    this.$router.push({
-                        name: 'appSummary',
-                        params: {
-                            id: this.appCode,
-                            moduleId: res.module.name
-                        }
-                    });
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.message
-                    });
-                } finally {
-                    this.formLoading = false;
-                }
-            }
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+        const validRet = await this.$refs.repoInfo.valid();
+        if (!validRet) {
+          window.scrollTo(0, 0);
+          return;
         }
-    };
+      }
+
+      if (this.$refs.validate2) {
+        try {
+          await this.$refs.validate2.validate();
+        } catch (error) {
+          console.log('error', error);
+          return;
+        }
+      }
+
+      this.formLoading = true;
+      // Remove all serverError error messages
+      this.globalErrorMessage = '';
+      this.form.reset();
+
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {
+        switch (this.sourceControlType) {
+          case 'bk_gitlab':
+          case 'github':
+          case 'gitee':
+          case 'tc_git':
+            const config = this.gitExtendConfig[this.sourceControlType];
+            sourceRepoUrl = config.selectedRepoUrl;
+            if (!sourceRepoUrl) {
+              this.formLoading = false;
+              this.$paasMessage({
+                theme: 'error',
+                message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号'),
+              });
+              window.scrollTo(0, 0);
+              return;
+            }
+            break;
+          case 'bk_svn':
+          default:
+            sourceRepoUrl = undefined;
+            break;
+        }
+      }
+
+      const params = {
+        name: this.name,
+        language: this.language,
+        source_init_template: this.sourceInitTemplate,
+        source_control_type: this.sourceControlType,
+        source_repo_url: sourceRepoUrl,
+        source_origin: this.sourceOrigin,
+        source_dir: this.sourceDirVal || '',
+        ...this.$form.serializeObject(),
+      };
+
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+        const repoData = this.$refs.repoInfo.getData();
+        params.source_repo_url = repoData.url;
+        params.source_repo_auth_info = {
+          username: repoData.account,
+          password: repoData.password,
+        };
+        params.source_dir = repoData.sourceDir;
+      }
+
+      if (this.sourceOrigin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
+        delete params.source_repo_url;
+      }
+
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
+        params.type = 'default';
+        params.source_control_type = 'tc_docker';
+        params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
+        params.source_repo_auth_info = {
+          username: '',
+          password: '',
+        };
+      }
+
+      try {
+        this.formLoading = true;
+
+        const res = await this.$store.dispatch('module/createAppModule', {
+          appCode: this.appCode,
+          data: params,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('创建应用模块成功！'),
+        });
+
+        this.$store.commit('addAppModule', res.module);
+        this.$router.push({
+          name: 'appSummary',
+          params: {
+            id: this.appCode,
+            moduleId: res.module.name,
+          },
+        });
+      } catch (res) {
+        this.$paasMessage({
+          theme: 'error',
+          message: res.message,
+        });
+      } finally {
+        this.formLoading = false;
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

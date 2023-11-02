@@ -37,7 +37,7 @@ export default {
       return this.$store.state.curAppInfo;
     },
     curAppModuleList() {
-      return this.$store.state.curAppModuleList;
+      return this.$store.state.curAppModuleList || [];
     },
     curAppModule() {
       return this.$store.state.curAppModule;

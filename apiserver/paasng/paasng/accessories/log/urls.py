@@ -126,8 +126,12 @@ urlpatterns += [
         config.CustomCollectorConfigViewSet.as_view({"get": "list", "post": "upsert"}),
     ),
     re_path(
-        make_app_pattern(r"/log/custom-collector/metadata/$", include_envs=False),
-        config.CustomCollectorConfigViewSet.as_view({"get": "list_metadata"}),
+        make_app_pattern(r"/log/custom-collector/(?P<name_en>[^/]+)/$", include_envs=False),
+        config.CustomCollectorConfigViewSet.as_view({"delete": "destroy"}),
+    ),
+    re_path(
+        make_app_pattern(r"/log/custom-collector-metadata/$", include_envs=False),
+        config.CustomCollectorConfigViewSet.as_view({"get": "get_metadata"}),
     ),
 ]
 

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
 
@@ -65,7 +65,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["image"] == "example.com/foo"
         assert proc_specs[1]["command"] == ["celery"]
-        assert proc_specs[1]["args"] is None
+        assert proc_specs[1]["args"] == []
 
     @pytest.fixture
     def web_v1alpha1(self, web):
@@ -90,9 +90,21 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["image"] == "example.com/foo"
         assert proc_specs[1]["command"] == ["celery"]
-        assert proc_specs[1]["args"] is None
+        assert proc_specs[1]["args"] == []
 
     def test_save(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
+        G(
+            ProcessSpecEnvOverlay,
+            proc_spec=web,
+            environment_name="stag",
+            autoscaling=True,
+            scaling_config={
+                "minReplicas": 1,
+                "maxReplicas": 5,
+                "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            },
+        )
+        assert web.get_autoscaling("stag")
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         request_data = [
             {
@@ -107,6 +119,7 @@ class TestModuleProcessSpecViewSet:
                         "environment_name": "stag",
                         "plan_name": "default",
                         "target_replicas": 2,
+                        "autoscaling": False,
                     }
                 },
             },
@@ -147,6 +160,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["command"] == ["python", "-m"]
         assert proc_specs[0]["args"] == ["http.server"]
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
+        assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
 
         assert proc_specs[1]["name"] == "beat"
         assert proc_specs[1]["image"] == "example.com/foo"
@@ -170,10 +184,11 @@ class TestModuleProcessSpecViewSet:
         request_data = [
             {
                 "name": "web",
-                "image": "python:latest",
-                "command": ["python", "-m"],
-                "args": ["http.server"],
-                "port": 5000,
+                "image": "python:v1",
+                "image_credential_name": "foo",
+                "command": ["python", "-m", "http.server"],
+                "args": None,
+                "port": 4999,
             }
         ]
         resp = api_client.post(url, data=request_data)
@@ -185,6 +200,8 @@ class TestModuleProcessSpecViewSet:
         assert metadata["allow_multiple_image"] is True
         assert len(proc_specs) == 1
         assert proc_specs[0]["name"] == "web"
-        assert proc_specs[0]["image"] == "python:latest"
-        assert proc_specs[0]["command"] == ["python", "-m"]
-        assert proc_specs[0]["args"] == ["http.server"]
+        assert proc_specs[0]["image"] == "python:v1"
+        assert proc_specs[0]["image_credential_name"] == "foo"
+        assert proc_specs[0]["command"] == ["python", "-m", "http.server"]
+        assert proc_specs[0]["args"] == []
+        assert proc_specs[0]["port"] == 4999

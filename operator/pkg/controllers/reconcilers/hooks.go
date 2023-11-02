@@ -61,8 +61,6 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			return r.Result.withError(err)
 		}
 
-		// TODO: timeout 或者 failed 是否直接终止整个调和循环？因为重新入队后下次调和循环也不可能成功
-		// TODO: 确定 kubebuilder 失败重试次数的阈值
 		switch {
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
@@ -74,6 +72,12 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 		case current.Succeeded():
 			return r.Result
+		case current.FailedUntilTimeout(resources.HookExecuteFailedTimeoutThreshold):
+			if err := r.Client.Delete(ctx, current.Pod); err != nil {
+				return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
+			}
+			// Pod 在超时时间内一直失败, 终止调和循环
+			return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully)).End()
 		default:
 			return r.Result.withError(
 				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),

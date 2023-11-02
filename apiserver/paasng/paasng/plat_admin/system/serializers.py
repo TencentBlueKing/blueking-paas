@@ -36,6 +36,7 @@ class QueryUniApplicationsByID(serializers.Serializer):
         help_text="应用 ID，最多不超过 20 个",
     )
     include_deploy_info = serializers.BooleanField(help_text='是否在结果中返回部署相关信息', default=False)
+    include_inactive_apps = serializers.BooleanField(help_text='是否查询已下架的应用', default=False)
 
 
 class QueryUniApplicationsByUserName(serializers.Serializer):
@@ -123,6 +124,7 @@ class AddonCredentialsSLZ(serializers.Serializer):
 
 class SearchApplicationSLZ(serializers.Serializer):
     keyword = serializers.CharField(default="", allow_blank=False, help_text="应用ID、应用名称")
+    include_inactive_apps = serializers.BooleanField(default=True, help_text="是否查询已下架的应用")
 
 
 class MinimalAppSLZ(serializers.Serializer):

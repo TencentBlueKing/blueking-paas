@@ -37,6 +37,20 @@ class AppProcessManager:
         self, process_type: str, release: Optional['Release'] = None, extra_envs: Optional[dict] = None
     ) -> Process:
         """通过 Release 对象组装单个 Process 对象"""
+        # WARNING: 当 extra_envs 参数为 None 时，我们无法通过单纯的 release 对象来构造
+        # 有效可运行的 Process 进程，因为缺少必须的环境变量。这种情况下，平台只能从 release
+        # 所绑定的 build 对象中获取少数几个构建用环境变量（参考 Release.get_envs()），
+        # 其他的内置环境变量都拿不到。
+        #
+        # 当前除了在普通应用部署结束时，由调用方手动传入了 extra_envs 参数（其中包含正常运
+        # 行所需的环境变量）的情况外，其他调用均未提供有效的 `extra_envs`，所产生的 Process
+        # 对象也无法直接被部署到集群中。
+        #
+        # 进程启停、扩缩容等操作因为用了 PATCH 方法来修改 Deployment 资源，不涉及 Process
+        # 组装过程，不受影响。
+        #
+        # TODO: 未来考虑是否需要把 extra_envs 中的所有环境变量保存到 Build 中，从而保证
+        # 可以通过 Release 对象还原构造出有效的 Process 对象。
         if not release:
             release = Release.objects.get_latest(self.app)
 

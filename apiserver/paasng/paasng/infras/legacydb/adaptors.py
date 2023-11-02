@@ -66,7 +66,7 @@ class AppAdaptor:
             .order_by(self.model.code)
         )
         if not include_inactive_apps:
-            # state <=1 表示未上架
+            # state > 1 表示上架状态
             legacy_apps = legacy_apps.filter(self.model.state > 1)
 
         if keyword:

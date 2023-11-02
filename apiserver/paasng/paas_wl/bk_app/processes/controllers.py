@@ -25,7 +25,6 @@ from django.utils.translation import ugettext_lazy as _
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
-from paas_wl.bk_app.cnative.specs.procs import get_procfile
 from paas_wl.bk_app.processes.entities import Process
 from paas_wl.bk_app.processes.exceptions import ProcessOperationTooOften
 from paas_wl.bk_app.processes.models import ProcessSpec
@@ -96,7 +95,7 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
 
     wl_app = env.wl_app
     if wl_app.type == WlAppType.CLOUD_NATIVE:
-        procfile = get_procfile(env)
+        procfile = {proc_spec.name: proc_spec.get_proc_command() for proc_spec in env.module.process_specs.all()}
     else:
         try:
             release: Release = Release.objects.get_latest(wl_app)

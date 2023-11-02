@@ -49,7 +49,6 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app, get_client_b
 if TYPE_CHECKING:
     from paas_wl.infras.resources.generation.mapper import MapperPack
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -553,7 +552,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
             kres_client.delete(name, namespace=self._get_namespace(app), non_grace_period=non_grace_period)
             return WaitDelete(self, app=app, name=name, namespace=self._get_namespace(app))
 
-    def upsert(self, res: AET) -> AET:
+    def upsert(self, res: AET, update_method='replace') -> AET:
         """Create or Update a new app related kube resource"""
         namespace = self._get_namespace(res.app)
         try:
@@ -564,7 +563,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
             self.save(res)
             return res
 
-        self.update(res, update_method='patch')
+        self.update(res, update_method=update_method)
         return res
 
     # Concrete methods start

@@ -128,7 +128,6 @@ export default {
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env' },
         { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
-        { name: 'imageCredential', label: this.$t('镜像凭证-title'), ref: 'ticket' },
         { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
       ],
       active: 'cloudAppDeployForProcess',

@@ -811,7 +811,7 @@ export default {
   编辑镜像地址: 'Edit mirror address',
   切换镜像: 'Switch mirror',
   部署限制: 'Deploy Permissions',
-  '开启部署权限控制，仅管理员可部署、下架该模块': 'Enable deployment permission, only administrators can deploy and archive the module',
+  '开启部署权限控制，仅管理员可部署、下架该模块。': 'Enable deployment permission, only administrators can deploy and archive the module.',
   预发布坏境: 'Stag env',
   '出口 IP 管理': 'Egress IP management',
   '如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。': 'If the module environment needs to access external services with IP whitelists set, you can get the export IP list of the APP here to complete the authorization of external services.',
@@ -2379,4 +2379,7 @@ export default {
   '确认删除该环境变量？': 'Are you sure to delete this environment variable?',
   新增环境变量: 'New env variables',
   '请创建成功后，到“模块配置”页面开启自动调节扩缩容。': 'After successful creation, go to the "Module Configuration" page to enable automatic adjustment of expansion and contraction.',
+  新建镜像凭证: 'New image credential',
+  '私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。': 'Private images need to provide image credentials to pull the image. After the image credentials are added, all modules under the application can be used.',
+  '一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。': 'A module can only configure one image warehouse, and all processes in "Process Configuration" will use this image.',
 };

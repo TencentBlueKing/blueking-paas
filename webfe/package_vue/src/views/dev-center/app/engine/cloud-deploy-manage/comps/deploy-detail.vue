@@ -37,13 +37,13 @@
                   v-if="row.isExpand"
                   class="image-icon"
                   @click="handleExpand(row)"
-                  src="/static/images/tableplus.svg"
+                  src="/static/images/tableminus.svg"
                 >
                 <img
                   v-else
                   class="image-icon"
                   @click="handleExpand(row)"
-                  src="/static/images/tableminus.svg"
+                  src="/static/images/tableplus.svg"
                 >
               </div>
             </div>

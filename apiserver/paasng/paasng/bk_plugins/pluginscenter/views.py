@@ -452,8 +452,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         release = PluginRelease.objects.create(
             plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
         )
-        release.initial_stage_set()
-        PluginReleaseExecutor(release).execute_current_stage(operator=request.user.username)
+        PluginReleaseExecutor(release).initial(operator=request.user.username)
 
         # 如果插件的状态不是已发布，则更新为发布中
         if plugin.status != constants.PluginStatus.RELEASED:

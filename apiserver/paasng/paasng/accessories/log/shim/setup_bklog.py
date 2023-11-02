@@ -237,7 +237,6 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
             type=collector_config.etl_type,
         )
     elif collector_config.etl_type == ETLType.JSON:
-        assert collector_config.time_field
 
         def make_string_field(index: int, field_name: str) -> ETLField:
             return ETLField(
@@ -250,31 +249,35 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
                 option={},
             )
 
+        time_filed = None
+        if collector_config.time_field:
+            time_filed = ETLField(
+                field_index=1,
+                field_name=collector_config.time_field,
+                field_type=FieldType.STRING,
+                is_time=True,
+                is_dimension=False,
+                option={
+                    "time_zone": BKLogConfigProvider(module).timezone,
+                    "time_format": collector_config.time_format,
+                },
+            )
+
+        fields = [
+            *([time_filed] if time_filed is not None else []),
+            make_string_field(2, "message"),
+            make_string_field(3, "levelname"),
+            make_string_field(4, "pathname"),
+            make_string_field(5, "funcName"),
+            make_string_field(6, "otelSpanID"),
+            make_string_field(7, "otelServiceName"),
+            make_string_field(8, "otelTraceID"),
+        ]
+
         etl_config = ETLConfig(
             type=collector_config.etl_type,
             params=ETLParams(retain_extra_json=True),
-            fields=[
-                ETLField(
-                    field_index=1,
-                    field_name=collector_config.time_field,
-                    field_type=FieldType.STRING,
-                    is_time=True,
-                    is_dimension=False,
-                    option={
-                        "time_zone": BKLogConfigProvider(module).timezone,
-                        "time_format": collector_config.time_format,
-                    },
-                ),
-                # NOTE: bklog 目前不支持将日志内容本身存储为 json, 所以只能逐个字段定义
-                # TODO: 日志平台支持存储将日志内容本身存储为 json 后, 修改这里的字段定义
-                make_string_field(2, "message"),
-                make_string_field(3, "levelname"),
-                make_string_field(4, "pathname"),
-                make_string_field(5, "funcName"),
-                make_string_field(6, "otelSpanID"),
-                make_string_field(7, "otelServiceName"),
-                make_string_field(8, "otelTraceID"),
-            ],
+            fields=fields,
         )
     else:
         raise NotImplementedError

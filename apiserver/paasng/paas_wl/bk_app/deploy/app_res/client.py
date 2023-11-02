@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.conf import settings
 
@@ -100,31 +100,28 @@ class K8sScheduler:
         """Deploy processes will create the Deployment and the Service"""
         for process in processes:
             self.processes_handler.deploy(process=process)
-            self.get_default_services(process).create_or_patch()
+            self.get_default_services(process.app, process.type).create_or_patch()
 
-    def scale_processes(self, processes: Iterable[Process]):
-        """Scale Processes will patch the Deployment and Service"""
-        for process in processes:
-            self.get_default_services(process).create_or_patch()
-            self.processes_handler.scale(process=process)
+    def scale_process(self, app: WlApp, process_type: str, replicas: int):
+        """Scale Process will patch the Deployment and Service"""
+        self.get_default_services(app, process_type).create_or_patch()
+        self.processes_handler.scale(app, process_type, replicas)
 
-    def shutdown_processes(self, processes: Iterable[Process]):
+    def shutdown_process(self, app: WlApp, process_type: str):
         """Shutdown process will set the replicas to zero, but not delete the Deployment"""
-        for process in processes:
-            process.replicas = 0
-            self.processes_handler.scale(process=process)
+        self.scale_process(app, process_type, 0)
 
     def delete_processes(self, processes: List[Process], with_access=True):
         """Delete process will delete the Deployment and the Service(if with_access=True)"""
         for process in processes:
             if with_access:
-                self.get_default_services(process).remove()
+                self.get_default_services(process.app, process.type).create_or_patch()
             self.processes_handler.delete(process=process)
 
     @staticmethod
-    def get_default_services(process: Process) -> ProcDefaultServices:
-        monitor_port = build_monitor_port(process.app)
-        return ProcDefaultServices(process.app, process.type, monitor_port=monitor_port)
+    def get_default_services(app: WlApp, process_type: str) -> ProcDefaultServices:
+        monitor_port = build_monitor_port(app)
+        return ProcDefaultServices(app, process_type, monitor_port=monitor_port)
 
     #############
     # build API #
@@ -202,7 +199,7 @@ class K8sScheduler:
     def ensure_image_credentials_secret(self, app: WlApp):
         """确保应用镜像的访问凭证存在"""
         credentials = ImageCredentials.load_from_app(app)
-        self.credential_handler.upsert(credentials)
+        self.credential_handler.upsert(credentials, update_method='patch')
 
     ###################
     # autoscaling API #

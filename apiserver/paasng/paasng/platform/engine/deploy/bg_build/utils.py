@@ -57,7 +57,7 @@ def generate_slug_path(bp: BuildProcess) -> str:
 
 
 def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
-    """generate all env vars needed for building"""
+    """Generate all env vars required for building."""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'WlApp' = bp.app

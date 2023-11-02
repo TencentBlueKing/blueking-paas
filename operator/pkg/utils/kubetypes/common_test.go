@@ -49,3 +49,14 @@ var _ = Describe("Test get/set JSON annotations", func() {
 		Expect(val).To(Equal(map[string]string{"foo": "bar"}))
 	})
 })
+
+var _ = DescribeTable("Test ReplaceCommandEnvVariables",
+	func(input, expected []string) {
+		Expect(ReplaceCommandEnvVariables(input)).To(Equal(expected))
+	},
+	Entry("no var", []string{"/start.sh"}, []string{"/start.sh"}),
+	Entry("var format-1", []string{"start", "-p", "$PORT"}, []string{"start", "-p", "$(PORT)"}),
+	Entry("var format-2", []string{"start", "-l", "http://${HOST}/"}, []string{"start", "-l", "http://$(HOST)/"}),
+	Entry("near variables", []string{"$FOO$BAR"}, []string{"$(FOO)$(BAR)"}),
+	Entry("escaped dollar symbol", []string{"echo", "dollar: \\$not_var"}, []string{"echo", "dollar: \\$not_var"}),
+)

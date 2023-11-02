@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -47,7 +47,7 @@ class FieldSchema(BaseModel):
     title: str = Field(default="", description="字段标题")
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
-    default: Optional[str] = Field(description="默认值")
+    default: Optional[Any] = Field(description="默认值")
     maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
     uiValidator: Optional[List] = Field(alias="ui:validator")
@@ -181,6 +181,7 @@ class ReleaseStageDefinition(BaseModel):
     api: Optional[PluginReleaseAPI] = Field(description="类型为 api/subpage 时必填")
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
+    pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
     itsmServiceName: Optional[str] = Field(description="itsm 服务名称, 类型为 itsm 时必填")
     builtinParams: Optional[Dict] = Field(description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)")
 

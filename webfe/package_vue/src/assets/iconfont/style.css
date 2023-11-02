@@ -65,6 +65,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-debug-fill:before {
 	content: "\e221";
 }
+.paasng-configuration-line:before {
+	content: "\e26a";
+}
 .paasng-diff-line:before {
 	content: "\e223";
 }
@@ -395,7 +398,7 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-down-shape:before {
 	content: "\e17b";
 }
-.paasng-download:before {
+.paasng-import:before {
 	content: "\e17d";
 }
 .paasng-edit:before {

@@ -109,20 +109,22 @@ def get_simple_app_by_legacy_app(app: LApplication) -> Optional[UniSimpleApp]:
     return simple_app
 
 
-def query_uni_apps_by_ids(ids: List[str]) -> Dict[str, UniSimpleApp]:
+def query_uni_apps_by_ids(ids: List[str], include_inactive_apps) -> Dict[str, UniSimpleApp]:
     """Query universal applications by app ids, it will combine the results of both default and legacy platforms"""
-    results = query_default_apps_by_ids(ids)
+    results = query_default_apps_by_ids(ids=ids, include_inactive_apps=include_inactive_apps)
 
     # Only query missing app ids on legacy platform
     missing_ids = set(ids) - set(results)
     if missing_ids:
-        results.update(query_legacy_apps_by_ids(missing_ids))
+        results.update(query_legacy_apps_by_ids(missing_ids, include_inactive_apps))
     return results
 
 
-def query_default_apps_by_ids(ids: Collection[str]) -> Dict[str, UniSimpleApp]:
+def query_default_apps_by_ids(ids: Collection[str], include_inactive_apps) -> Dict[str, UniSimpleApp]:
     """Query applications by application ids, returns universal model"""
-    apps = Application.objects.filter(code__in=ids, is_active=True).select_related('product')
+    apps = Application.objects.filter(code__in=ids).select_related('product')
+    if not include_inactive_apps:
+        apps = apps.filter(is_active=True)
 
     results = {}
     for app in apps:
@@ -130,11 +132,13 @@ def query_default_apps_by_ids(ids: Collection[str]) -> Dict[str, UniSimpleApp]:
     return results
 
 
-def query_legacy_apps_by_ids(ids: Collection[str]) -> Dict[str, UniSimpleApp]:
+def query_legacy_apps_by_ids(ids: Collection[str], include_inactive_apps: bool) -> Dict[str, UniSimpleApp]:
     """Query legacy applications by application ids, return universal model"""
     results = {}
     with legacy_db.session_scope() as session:
         apps = query_concrete_apps(session, LApplication).filter(LApplication.code.in_(ids))
+        if not include_inactive_apps:
+            apps.filter(LApplication.state > 1)
         for app in apps:
             simple_app = get_simple_app_by_legacy_app(app)
             if simple_app is not None:
@@ -179,12 +183,15 @@ class UniMinimalApp:
     name: str
 
 
-def query_uni_apps_by_keyword(keyword: str, offset: int, limit: int) -> List[UniMinimalApp]:
+def query_uni_apps_by_keyword(
+    keyword: str, offset: int, limit: int, include_inactive_apps: bool
+) -> List[UniMinimalApp]:
     """Query application basic info by keywords (APP ID, APP Name)
 
     :param keyword: APP ID or APP Name
     :param offset: the offset of the query
     :param limit: the limit of the query
+    :param include_inactive_apps: whether to include inactive apps
     """
     # 应用名称的字段需要根据请求语言来确定
     language = get_language()
@@ -192,6 +199,8 @@ def query_uni_apps_by_keyword(keyword: str, offset: int, limit: int) -> List[Uni
 
     # 蓝鲸统一的规范，默认排序为字母顺序，而不是按最近创建时间排序
     default_apps = Application.objects.all().order_by('code')
+    if not include_inactive_apps:
+        default_apps = default_apps.filter(is_active=True)
     if keyword:
         default_apps = default_apps.filter(Q(code__icontains=keyword) | Q(name__icontains=keyword))
 
@@ -203,7 +212,9 @@ def query_uni_apps_by_keyword(keyword: str, offset: int, limit: int) -> List[Uni
         return apps_list
 
     with legacy_db.session_scope() as session:
-        legacy_apps = AppAdaptor(session=session).get_by_keyword(keyword)
+        legacy_apps = AppAdaptor(session=session).get_by_keyword(
+            keyword=keyword, include_inactive_apps=include_inactive_apps
+        )
     apps_list.extend([UniMinimalApp(code=app['code'], name=app[name_field]) for app in legacy_apps])
 
     return apps_list

@@ -1,7 +1,6 @@
 <template>
   <section class="success-top-bar" v-if="visible">
     {{ $t('创建应用') }}
-    <i class="paasng-icon paasng-close" @click="visible = false"></i>
   </section>
 </template>
 
@@ -9,10 +8,10 @@
 export default {
   data() {
     return {
-      visible: true
-    }
-  }
-}
+      visible: true,
+    };
+  },
+};
 </script>
 
 <style lang="scss" scoped>

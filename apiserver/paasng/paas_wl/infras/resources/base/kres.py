@@ -286,10 +286,12 @@ class NameBasedOperations(BaseOperations):
         body: Optional[Manifest] = None,
         update_method: str = "replace",
         content_type: Optional[str] = None,
+        auto_add_version: bool = False,
     ) -> Tuple[ResourceInstance, bool]:
         """Create or update a resource by name
 
         :param content_type: content_type header for patch/replace requests
+        :param auto_add_version: 当 update_method=replace 时，是否自动添加 metadata.resourceVersion 字段，默认为 False
         :returns: (instance, created)
         """
         assert update_method in ["replace", "patch"], "Invalid update_method {}".format(update_method)
@@ -300,17 +302,19 @@ class NameBasedOperations(BaseOperations):
             body_dict = self.client.serialize_body(body)
 
         body_dict.setdefault('kind', self.kres.kind)
+        if body_dict and body_dict['metadata']['name'] != name:
+            raise ValueError("name in args must match name in body")
         # Try call create method first
         try:
-            if body_dict and body_dict['metadata']['name'] != name:
-                raise ValueError("name in args must match name in body")
-
             obj = self.resource.create(body=body_dict, namespace=namespace, **self.default_kwargs)
             return obj, True
         except ApiException as e:
             # Only continue when resource is already exits
             if not (e.status == 409 and json.loads(e.body)["reason"] == "AlreadyExists"):
                 raise
+
+        if update_method == "replace" and auto_add_version:
+            self._add_resource_version(name, namespace, body_dict)
 
         logger.info(f"Create {self.kres.kind} {name} failed, already existed, continue update")
         # Call replace/patch method
@@ -428,6 +432,14 @@ class NameBasedOperations(BaseOperations):
     def update_status(self, *args, **kwargs) -> ResourceInstance:
         """Update a resource's status field"""
         return functools.partial(self.update_subres, 'status')(*args, **kwargs)
+
+    def _add_resource_version(self, name: str, namespace: Namespace, body_dict: dict):
+        """get resource from k8s, and set metadata.resourceVersion to body_dict
+
+        :raises: ResourceMissing when resource can not be found.
+        """
+        obj = self.get(name, namespace)
+        body_dict['metadata'].setdefault('resourceVersion', obj.metadata.resourceVersion)
 
 
 class LabelBasedOperations(BaseOperations):

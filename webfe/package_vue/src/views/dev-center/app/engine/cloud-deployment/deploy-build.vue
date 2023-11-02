@@ -17,17 +17,17 @@
 </template>
 
 <script>
-import codeSource from "./comps/deploy-build/code-source.vue";
-import mirror from "./comps/deploy-build/mirror.vue";
-import appBaseMixin from "@/mixins/app-base-mixin";
+import codeSource from './comps/deploy-build/code-source.vue';
+import mirror from './comps/deploy-build/mirror.vue';
+import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
-  name: "DeployBuild",
-  mixins: [appBaseMixin],
+  name: 'DeployBuild',
   components: {
     codeSource,
     mirror,
   },
+  mixins: [appBaseMixin],
   data() {
     return {
       isLoading: true,

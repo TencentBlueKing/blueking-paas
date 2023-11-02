@@ -24,6 +24,7 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.processes.constants import PROCESS_NAME_KEY
 from paas_wl.core.resource import get_process_selector
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import (
@@ -87,12 +88,18 @@ class ProcessServiceDeserializer(AppEntityDeserializer['ProcessService']):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcessService':
         """Generate a ProcessService object from kubernetes resource"""
         res_name = kube_data.metadata.name
-        annotations = kube_data.metadata.get('annotations', {})
-        try:
-            process_type = annotations['process_type']
-        except KeyError:
-            # Backward-compatibility
-            process_type = self.extract_process_type_from_name(app, res_name)
+
+        # 优先处理云原生应用, 如 labels: {'bkapp.paas.bk.tencent.com/process-name': 'web'}
+        labels = kube_data.metadata.get('labels', {})
+        process_type = labels.get(PROCESS_NAME_KEY)
+
+        if not process_type:
+            annotations = kube_data.metadata.get('annotations', {})
+            try:
+                process_type = annotations['process_type']
+            except KeyError:
+                # Backward-compatibility
+                process_type = self.extract_process_type_from_name(app, res_name)
 
         ports = [
             PServicePortPair(name=p.name, protocol=p.protocol, port=p.port, target_port=p.targetPort)

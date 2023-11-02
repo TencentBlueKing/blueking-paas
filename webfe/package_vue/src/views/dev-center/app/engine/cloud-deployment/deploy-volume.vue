@@ -96,9 +96,7 @@
         v-model="detail"
         v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
         :height="fullScreen ? clientHeight : fileDialogConfig.height"
-        @error="handleEditorErr"
       />
-      <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
     </bk-dialog>
     <!-- 新增/编辑挂卷 -->
     <bk-sideslider
@@ -216,9 +214,7 @@
                     v-model="sliderEditordetail"
                     v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
                     :height="fullScreen ? clientHeight : fileSliderConfig.height"
-                    @error="handleEditorErr"
                   />
-                  <EditorStatus v-show="!!editorErr.message" class="status-wrapper" :message="editorErr.message" />
                 </div>
               </div>
             </bk-form-item>
@@ -239,7 +235,6 @@
 import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import ResourceEditor from './comps/deploy-resource-editor';
-import EditorStatus from './comps/deploy-resource-editor/editor-status';
 // import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
 import { isJsonString } from '@/common/utils';
@@ -247,7 +242,6 @@ import { isJsonString } from '@/common/utils';
 export default {
   components: {
     ResourceEditor,
-    EditorStatus,
   },
   mixins: [appBaseMixin],
   props: {},
@@ -260,10 +254,6 @@ export default {
       isLoading: true,
       fullScreen: false,
       clientHeight: document.body.clientHeight,
-      editorErr: {
-        type: '',
-        message: '',
-      },
       // 编辑器上面
       addFileInput: '',
       isAddFile: false,
@@ -405,11 +395,6 @@ export default {
       const initValue = this.volumeFormData.source_config_data[this.curValue];
       this.activeIndex = 0;
       this.handleSetEditValue(initValue);
-    },
-    handleEditorErr(err) {
-      // 捕获编辑器错误提示
-      this.editorErr.type = 'content'; // 编辑内容错误
-      this.editorErr.message = err;
     },
     init() {
       this.isLoading = true;

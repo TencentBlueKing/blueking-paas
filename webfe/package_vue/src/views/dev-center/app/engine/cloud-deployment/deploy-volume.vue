@@ -115,7 +115,7 @@
       </div>
       <div slot="content">
         <div class="slider-volume-content">
-          <bk-form :label-width="200" form-type="vertical" :model="volumeFormData">
+          <bk-form :label-width="200" form-type="vertical" :model="volumeFormData" ref="formRef">
             <bk-form-item
               :label="$t('名称')"
               :required="true"
@@ -172,6 +172,7 @@
                         :placeholder="$t('请输入')"
                         v-model="addFileInput"
                         @blur="handlerAddConfirm"
+                        @enter="handleEnter('add')"
                       ></bk-input>
                     </div>
                   </div>
@@ -188,6 +189,7 @@
                         :placeholder="$t('请输入')"
                         v-model="item.value"
                         @blur="handleBlur(item, index)"
+                        @enter="handleEnter('edit')"
                       ></bk-input>
                     </div>
                     <div
@@ -307,15 +309,6 @@ export default {
             regex: /^\/([^/\0]+(\/)?)*$/,
             message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径'),
             trigger: 'blur',
-          },
-          {
-            validator: () => {
-              const flag = this.volumeList.some(item => item.mount_path === this.volumeFormData.mount_path
-                  && item.environment_name === this.volumeFormData.environment_name);
-              return !flag;
-            },
-            message: () => this.$t('同环境和路径挂载卷已存在'),
-            trigger: 'blur change',
           },
         ],
         environment_name: [
@@ -506,6 +499,7 @@ export default {
     },
     // 确定新增或编辑挂载券
     async handleConfirmVolume() {
+      await this.$refs.formRef?.validate();
       try {
         this.addLoading = true;
         const fetchUrl = this.volumeFormData.id ? 'deploy/updateVolumeData' : 'deploy/createVolumeData';
@@ -562,7 +556,7 @@ export default {
         this.$refs.addFileInputRef.focus();
       });
     },
-    // 添加确认
+    // 失去焦点添加
     handlerAddConfirm() {
       // 没有内容时 return
       if (!this.addFileInput) {
@@ -592,6 +586,7 @@ export default {
     },
     // 文件名失焦
     handleBlur(item, index) {
+      console.log('item', item, index);
       const sourceConfigArrData = cloneDeep(this.volumeFormData.sourceConfigArrData);
       sourceConfigArrData.splice(index, 1);
       const isValueRepeat = sourceConfigArrData.find(e => e.value === item.value);
@@ -611,6 +606,20 @@ export default {
         delete this.volumeFormData.source_config_data[this.curValue];
       }
       this.curValue = item.value; // 失焦时需要更新curValue的值, 编辑右边yaml时有用到
+    },
+
+    // 处理回车键
+    handleEnter(type) {
+      if (type === 'add') {
+        this.$nextTick(() => {
+          this.$refs.addFileInputRef.blur();
+        });
+      } else {
+        console.log('this.$refs?.editFileInputRef', this.$refs?.editFileInputRef);
+        this.$nextTick(() => {
+          this.$refs?.editFileInputRef[0].blur();
+        });
+      }
     },
 
     // 点击label

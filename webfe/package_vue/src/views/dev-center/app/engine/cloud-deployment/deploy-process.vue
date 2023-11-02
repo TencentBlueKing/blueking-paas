@@ -1116,7 +1116,7 @@ export default {
   },
   watch: {
     formData: {
-      handler(c) {
+      handler() {
         if (!this.formData.port) this.formData.port = null;
         if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
       },
@@ -1150,7 +1150,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        this.processData = res.proc_specs;
+        this.processData = this.setProcessData(res.proc_specs);
         this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
         if (this.allowMultipleImage) {
           this.getImageCredentialList();
@@ -1171,6 +1171,20 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    // 将web放在第一个位置
+    setProcessData(processList = []) {
+      if (!processList.length) return processList;
+      let processItem = {};
+      for (let i = 0; i < processList.length; i++) {
+        if (processList[i].name === 'web') {
+          processItem = processList[i];
+          processList.splice(i, 1);
+          break;
+        }
+      }
+      processList.unshift(processItem);
+      return processList;
     },
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def make_bk_log_controller(env: ModuleEnvironment):
     # 如果集群支持蓝鲸日志平台方案, 则会下发 BkLogConfig(如果应用创建了日志采集配置)
     cluster = EnvClusterService(env).get_cluster()
-    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
         logger.warning("BkLog is not ready, skip apply BkLogConfig")
         return NullController()
     return AppLogConfigController(env)

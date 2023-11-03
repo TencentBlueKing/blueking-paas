@@ -33,16 +33,12 @@ export default {
      * @param {Object} params 包括appCode, env
      */
     getInstanceMetrics({}, params, config = {}) {
-      const { appCode } = params;
-      const { moduleId } = params;
-      const { env } = params;
+      const { appCode, moduleId, env } = params;
       // const instanceName = params.instanceName
       delete params.appCode;
       delete params.moduleId;
       delete params.env;
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/metrics/?${json2Query(
-        params
-      )}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/metrics/?${json2Query(params)}`;
       return http.get(url, config);
     },
 
@@ -97,7 +93,6 @@ export default {
      * @param {Object} params tplType模版类型, region应用版本 tplName模版名称
      */
     getProcessService({}, { appCode, moduleId, env }, config = {}) {
-      // `${BACKEND_URL}/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
       const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
       return http.get(url, config);
     },

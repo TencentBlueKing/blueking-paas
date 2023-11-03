@@ -20,11 +20,14 @@ import pickle
 
 import pytest
 from attrs import define
+from bkpaas_auth.core.constants import ProviderType
+from bkpaas_auth.core.encoder import user_id_encoder
 from blue_krill.contextlib import nullcontext as does_not_raise
+from django.db import models
 from django_dynamic_fixture import G
 
 from paasng.infras.accounts.models import UserProfile
-from paasng.utils.models import OrderByField, make_json_field, make_legacy_json_field
+from paasng.utils.models import BkUserField, OrderByField, make_json_field, make_legacy_json_field
 
 pytestmark = pytest.mark.django_db
 
@@ -97,3 +100,20 @@ UnPickleAbleField = make_legacy_json_field("NotAPickleAbleField", Baz)
 def test_pickle(field, expected):
     with expected:
         pickle.dumps(field)
+
+
+class TestBkUserField:
+    def test_set(self):
+        class M(models.Model):
+            creator = BkUserField()
+
+            class Meta:
+                app_label = "foo"
+
+        foo_u = user_id_encoder.encode(ProviderType.BK, "foo")
+        instance = M(creator=foo_u)
+        assert instance.creator.username == "foo"
+
+        bar_u = user_id_encoder.encode(ProviderType.BK, "bar")
+        instance.creator = bar_u
+        assert instance.creator.username == "bar"

@@ -19,16 +19,17 @@ to the current version of the project delivered to anyone in the future.
 import logging
 
 from paas_wl.bk_app.monitoring.bklog.managers import AppLogConfigController, NullController
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.accessories.log.constants import LogCollectorType
-from paasng.accessories.log.shim import get_log_collector_type
 
 logger = logging.getLogger(__name__)
 
 
 def make_bk_log_controller(env: ModuleEnvironment):
-    if get_log_collector_type(env) == LogCollectorType.ELK:
+    # 如果集群支持蓝鲸日志平台方案, 则会下发 BkLogConfig(如果应用创建了日志采集配置)
+    cluster = EnvClusterService(env).get_cluster()
+    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
         logger.warning("BkLog is not ready, skip apply BkLogConfig")
         return NullController()
-    else:
-        return AppLogConfigController(env)
+    return AppLogConfigController(env)

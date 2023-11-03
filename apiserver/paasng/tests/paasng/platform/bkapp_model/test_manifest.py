@@ -29,7 +29,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     ResQuotaPlan,
     VolumeSourceType,
 )
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, BkAppSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppHooks, BkAppResource, BkAppSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay, HostAlias
@@ -47,6 +47,7 @@ from paasng.platform.bkapp_model.manifest import (
     BuiltinAnnotsManifestConstructor,
     DomainResolutionManifestConstructor,
     EnvVarsManifestConstructor,
+    HooksManifestConstructor,
     MountsManifestConstructor,
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
@@ -62,6 +63,7 @@ from paasng.platform.bkapp_model.models import (
 )
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
 
@@ -169,6 +171,7 @@ class TestProcessesManifestConstructor:
             (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_2C2G),
             # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
             (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_2C4G),
+            (ResQuotaPlan.P_2C1G, ResQuotaPlan.P_2C1G),
         ],
     )
     def test_get_quota_plan(self, plan_name, expected):
@@ -278,6 +281,37 @@ class TestMountsManifestConstructor:
                 source=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
             )
         ]
+
+
+class TestHooksManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, command=["python"], args=["hook.py"])
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks(
+            preRelease={
+                "command": ["python"],
+                "args": ["hook.py"],
+            }
+        )
+
+    def test_proc_command(self, bk_module, blank_resource):
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="python hook.py")
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks(
+            preRelease={
+                "command": ["python"],
+                "args": ["hook.py"],
+            }
+        )
+
+    def test_not_found(self, bk_module, blank_resource):
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks()
+
+    def test_empty_command(self, bk_module, blank_resource):
+        bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, args=["hook.py"])
+        HooksManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.hooks == BkAppHooks(preRelease={"args": ["hook.py"]})
 
 
 class TestSvcDiscoveryManifestConstructor:

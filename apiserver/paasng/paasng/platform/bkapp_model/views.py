@@ -47,6 +47,7 @@ from paasng.platform.bkapp_model.serializers import (
     default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
+from paasng.platform.engine.constants import AppEnvName
 
 logger = logging.getLogger(__name__)
 
@@ -123,18 +124,18 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "name": proc_spec.name,
                 "image": proc_spec.image or image_repository,
                 "image_credential_name": proc_spec.image_credential_name or image_credential_name,
-                "command": proc_spec.command,
-                "args": proc_spec.args,
+                "command": proc_spec.command or [],
+                "args": proc_spec.args or [],
                 "port": proc_spec.port,
                 "env_overlay": {
-                    env_overlay.environment_name: {
-                        "environment_name": env_overlay.environment_name,
-                        "plan_name": env_overlay.plan_name,
-                        "target_replicas": env_overlay.target_replicas,
-                        "autoscaling": bool(env_overlay.autoscaling),
-                        "scaling_config": env_overlay.scaling_config or default_scaling_config(),
+                    environment_name.value: {
+                        "environment_name": environment_name.value,
+                        "plan_name": proc_spec.get_plan_name(environment_name),
+                        "target_replicas": proc_spec.get_target_replicas(environment_name),
+                        "autoscaling": bool(proc_spec.get_autoscaling(environment_name)),
+                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config(),
                     }
-                    for env_overlay in proc_spec.env_overlays.all()
+                    for environment_name in AppEnvName
                 },
             }
             for proc_spec in proc_specs
@@ -162,13 +163,18 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         }
         # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
         allow_multiple_image = len(images - {image_repository}) >= 1
+        image_credential_names = (
+            {}
+            if not allow_multiple_image
+            else {proc_spec["name"]: proc_spec.get("image_credential_name", None) for proc_spec in proc_specs}
+        )
 
         processes = [
             BkAppProcess(
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                targetPort=proc_spec["port"],
+                targetPort=proc_spec.get("port", None),
                 image=proc_spec["image"] if allow_multiple_image else "",
             )
             for proc_spec in proc_specs
@@ -176,7 +182,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         mgr = ModuleProcessSpecManager(module)
         # 更新进程配置
-        mgr.sync_from_bkapp(processes)
+        mgr.sync_from_bkapp(processes, image_credential_names)
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):

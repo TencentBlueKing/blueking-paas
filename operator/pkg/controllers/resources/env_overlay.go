@@ -253,6 +253,8 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 		cpuRaw, memRaw = "2000m", "1024Mi"
 	case paasv1alpha2.ResQuotaPlan2C2G:
 		cpuRaw, memRaw = "2000m", "2048Mi"
+	case paasv1alpha2.ResQuotaPlan2C4G:
+		cpuRaw, memRaw = "2000m", "4096Mi"
 	case paasv1alpha2.ResQuotaPlan4C1G:
 		cpuRaw, memRaw = "4000m", "1024Mi"
 	case paasv1alpha2.ResQuotaPlan4C2G:

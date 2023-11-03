@@ -132,5 +132,43 @@ export const TAG_MAP = {
 export const DEPLOY_STATUS = {
   successful: '成功',
   failed: '失败',
-  interrupted: '中断'
+  interrupted: '中断',
+};
+
+export const ENV_OVERLAY = {
+  prod: {
+    environment_name: 'prod',
+    plan_name: 'default',
+    target_replicas: 1,
+    autoscaling: false,
+    scaling_config: {
+      min_replicas: 1,
+      max_replicas: 2,
+      metrics: [
+        {
+          type: 'Resource',
+          metric: 'cpuUtilization',
+          value: '85%',
+        },
+      ],
+      policy: 'ScalingPolicy.DEFAULT',
+    },
+  },
+  stag: {
+    environment_name: 'stag',
+    plan_name: 'default',
+    target_replicas: 1,
+    autoscaling: false,
+    scaling_config: {
+      min_replicas: 1,
+      max_replicas: 2,
+      metrics: [
+        {
+          type: 'Resource',
+          metric: 'cpuUtilization',
+          value: '85%',
+        },
+      ],
+    },
+  },
 };

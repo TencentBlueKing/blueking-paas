@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
-from functools import lru_cache
 from typing import List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -36,7 +35,6 @@ from paasng.utils.models import make_json_field
 def env_overlay_getter_factory(field_name: str):
     """a proxy to get env overlay field"""
 
-    @lru_cache
     def func(self: "ModuleProcessSpec", environment_name: str):
         try:
             return getattr(self.env_overlays.get(environment_name=environment_name), field_name)
@@ -188,6 +186,16 @@ class ModuleDeployHook(TimestampedModel):
         if self.proc_command is not None:
             return self.proc_command
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
+
+    def get_command(self) -> List[str]:
+        if self.proc_command is not None:
+            return [shlex.split(self.proc_command)[0]]
+        return self.command or []
+
+    def get_args(self) -> List[str]:
+        if self.proc_command is not None:
+            return shlex.split(self.proc_command)[1:]
+        return self.args or []
 
 
 BkSaaSField = make_json_field("BkSaaSField", List[SvcDiscEntryBkSaaS])

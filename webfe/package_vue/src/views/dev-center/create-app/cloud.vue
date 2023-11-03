@@ -67,6 +67,29 @@
           </bk-radio-group>
         </div>
       </bk-form-item>
+
+      <!-- 构建方式 -->
+      <bk-form-item
+        v-if="formData.sourceOrigin === 'soundCode'"
+        :required="true"
+        error-display-type="normal"
+        ext-cls="form-item-cls mt20"
+        :label="$t('构建方式')"
+      >
+        <div class="mt5">
+          <bk-radio-group
+            v-model="formData.buildMethod"
+            class="construction-manner"
+          >
+            <bk-radio :value="'buildpack'">
+              {{ $t('蓝鲸 Buildpack') }}
+            </bk-radio>
+            <!-- <bk-radio :value="'dockerfile'">
+              {{ $t('Dockerfile 构建') }}
+            </bk-radio> -->
+          </bk-radio-group>
+        </div>
+      </bk-form-item>
     </bk-form>
 
     <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
@@ -142,6 +165,7 @@
     <section v-if="curStep === 1">
       <template v-if="formData.sourceOrigin === 'soundCode'">
         <bk-form
+          v-if="formData.buildMethod === 'buildpack'"
           ref="formModuleRef"
           :model="formData"
           :rules="rules"
@@ -255,7 +279,7 @@
                 <bk-input
                   v-model="formData.buildDir"
                   class="form-input-width"
-                  :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
+                  :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
                 />
               </div>
             </bk-form-item>
@@ -266,12 +290,87 @@
               ref="repoInfo"
               :key="sourceControlTypeItem"
               :type="sourceControlTypeItem"
+              :source-dir-label="'构建目录'"
+              :is-cloud-created="true"
             />
           </section>
+
+          <!-- Dockerfile 构建 -->
+          <template v-if="formData.buildMethod === 'dockerfile'">
+            <bk-form-item
+              :label="$t('Dockerfile 路径')"
+              :property="'dockerfile_path'"
+              error-display-type="normal"
+              ext-cls="form-dockerfile-cls mt20"
+            >
+              <div class="flex-row align-items-center code-depot">
+                <bk-input
+                  v-model="dockerfileData.dockerfilePath"
+                  class="form-input-width"
+                  :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                />
+              </div>
+            </bk-form-item>
+
+            <bk-form
+              :model="dockerfileData"
+              form-type="vertical"
+              ext-cls="build-params-form">
+              <div class="form-label">
+                {{$t('构建参数')}}
+              </div>
+              <div class="form-value-wrapper">
+                <bk-button
+                  v-if="!dockerfileData.buildParams.length"
+                  :text="true"
+                  title="primary"
+                  @click="addBuildParams">
+                  <i class="paasng-icon paasng-plus-thick" />
+                  {{ $t('新建构建参数') }}
+                </bk-button>
+                <template v-if="dockerfileData.buildParams.length">
+                  <div class="build-params-header">
+                    <div class="name">{{$t('参数名')}}</div>
+                    <div class="value">{{$t('参数值')}}</div>
+                  </div>
+                  <div
+                    v-for="(item, index) in dockerfileData.buildParams"
+                    class="build-params-item"
+                    :key="index">
+                    <bk-form :ref="`name-${index}`" :model="item">
+                      <bk-form-item :rules="rules.buildParams" :property="'name'">
+                        <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
+                      </bk-form-item>
+                    </bk-form>
+                    <span class="equal">=</span>
+                    <bk-form :ref="`value-${index}`" :model="item">
+                      <bk-form-item :rules="rules.buildParams" :property="'value'">
+                        <bk-input v-model="item.value"></bk-input>
+                      </bk-form-item>
+                    </bk-form>
+                    <i
+                      class="paasng-icon paasng-minus-circle-shape"
+                      @click="removeBuildParams(index)"
+                    ></i>
+                  </div>
+                </template>
+              </div>
+            </bk-form>
+            <bk-button
+              v-if="dockerfileData.buildParams.length"
+              ext-cls="add-build-params"
+              :text="true"
+              title="primary"
+              @click="addBuildParams">
+              <i class="paasng-icon paasng-plus-thick" />
+              {{ $t('新建构建参数') }}
+            </bk-button>
+          </template>
         </bk-form>
       </template>
 
       <bk-form
+        v-if="isAdvancedOptions"
         ref="formSourceRef"
         :model="formData"
         :rules="rules"
@@ -320,7 +419,7 @@
         </bk-alert>
       </collapseContent>
 
-      <collapseContent :title="$t('钩子命令')" class="mt20">
+      <collapseContent :title="$t('钩子命令')" class="mt20" :fold="false">
         <bk-alert
           type="info">
           <div slot="title">
@@ -430,8 +529,8 @@ import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
-import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
-import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
+import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
+import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
 import { TAG_MAP } from '@/common/constants.js';
 export default {
   components: {
@@ -455,6 +554,11 @@ export default {
         imageCredentialName: '', // 镜像名称
         imageCredentialUserName: '', // 镜像账号
         imageCredentialPassWord: '', // 镜像密码
+        buildMethod: 'buildpack', // 构建方式
+      },
+      dockerfileData: {
+        dockerfilePath: '', // Dockerfile 路径
+        buildParams: [], // 构建参数
       },
       sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
       createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
@@ -604,6 +708,13 @@ export default {
             trigger: 'blur',
           },
         ],
+        buildParams: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
       },
       buildDialog: {
         visiable: false,
@@ -647,6 +758,9 @@ export default {
     },
     userFeature() {
       return this.$store.state.userFeature;
+    },
+    isAdvancedOptions() {
+      return this.$store.state.createApp.isAdvancedOptions;
     },
   },
   watch: {
@@ -734,7 +848,6 @@ export default {
           }
           return e;
         });
-        console.log('this.sourceControlTypes', this.sourceControlTypes);
         const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
@@ -832,7 +945,12 @@ export default {
       try {
         await this.$refs.formBaseRef.validate();
         await this.$refs?.formImageRef?.validate();
-        await this.$refs?.repoInfo?.valid();   //
+        await this.$refs?.repoInfo?.valid();
+        // 构建参数校验
+        const flag = await this.buildParamsValidate();
+        if (!flag) {
+          return;
+        }
         if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {  // 普通应用
           await this.$refs?.extend?.valid();    // 代码仓库
           this.formData.sourceRepoUrl = null;
@@ -913,7 +1031,35 @@ export default {
           source_origin: this.sourceOrigin,
           source_dir: this.formData.buildDir || '',
         },
+        // 构建方式
+        build_config: {
+          build_method: this.formData.buildMethod,
+        },
       };
+
+      // dockerfile 构建方式
+      if (this.formData.buildMethod === 'dockerfile') {
+        // 构建参数
+        const dockerBuild = {};
+        this.dockerfileData.buildParams.forEach((item) => {
+          dockerBuild[item.name] = item.value;
+        });
+        if (this.dockerfileData.dockerfilePath === '') {
+          this.dockerfileData.dockerfilePath = null;
+        }
+        params.build_config = {
+          build_method: 'dockerfile',
+          dockerfile_path: this.dockerfileData.dockerfilePath,
+          docker_build_args: dockerBuild,
+        };
+      }
+
+      // 仅镜像
+      if (this.formData.sourceOrigin === 'image') {
+        params.build_config = {
+          build_method: 'custom_image',
+        };
+      }
 
       // 集群名称
       if (this.formData.clusterName) {
@@ -1040,6 +1186,37 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    // 构建参数校验
+    async buildParamsValidate() {
+      let flag = true;
+      if (!this.dockerfileData.buildParams.length) {
+        return flag;
+      }
+      for (const index in this.dockerfileData.buildParams) {
+        try {
+          await this.$refs[`name-${index}`][0]?.validate()
+            .finally(async () => {
+              await this.$refs[`value-${index}`][0]?.validate();
+            });
+        } catch (error) {
+          flag = false;
+        }
+      }
+      return flag;
+    },
+
+    // 新建构建参数
+    addBuildParams() {
+      this.dockerfileData.buildParams.push({
+        name: '',
+        value: '',
+      });
+    },
+
+    removeBuildParams(index) {
+      this.dockerfileData.buildParams.splice(index, 1);
     },
   },
 };

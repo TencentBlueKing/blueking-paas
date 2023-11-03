@@ -289,9 +289,27 @@ export function mergeObjects(obj1, obj2) {
       if (obj1.hasOwnProperty(prop) && typeof obj1[prop] === 'object' && typeof obj2[prop] === 'object') {
         mergeObjects(obj1[prop], obj2[prop]);
       } else {
+        // eslint-disable-next-line no-param-reassign
         obj1[prop] = obj2[prop];
       }
     }
   }
   return obj1;
+}
+
+/**
+ * 判断字符串是否为json字符串
+ *
+ * @param {str} 字符串
+ *
+ * @return {boolean} true or false
+ */
+export function isJsonString(str) {
+  try {
+    if (typeof JSON.parse(str) === 'object') {
+      return true;
+    }
+  } catch (e) {
+  }
+  return false;
 }

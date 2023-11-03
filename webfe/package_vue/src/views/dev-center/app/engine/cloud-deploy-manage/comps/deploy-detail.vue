@@ -31,19 +31,19 @@
             <div>
               <span>{{ row.name || '--' }}</span>
               <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
-              <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div>
+              <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <img
                   v-if="row.isExpand"
                   class="image-icon"
                   @click="handleExpand(row)"
-                  src="/static/images/tableplus.svg"
+                  src="/static/images/tableminus.svg"
                 >
                 <img
                   v-else
                   class="image-icon"
                   @click="handleExpand(row)"
-                  src="/static/images/tableminus.svg"
+                  src="/static/images/tableplus.svg"
                 >
               </div>
             </div>
@@ -94,7 +94,11 @@
                     :class="instance.state"
                   >
                   </div>
-                  {{ instance.state || '--' }}
+                  <span
+                    v-dashed="{disabled: instance.state === 'Running'}"
+                    v-bk-tooltips="instance.state_message || ''">
+                    {{ instance.state || '--' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -181,20 +185,20 @@
               </div>
               <div class="operate-process-wrapper mr15">
                 <bk-popconfirm
+                  v-bk-tooltips="$t('停止进程')"
                   v-if="row.targetStatus === 'start'"
                   :content="$t('确认停止该进程？')"
                   width="288"
                   trigger="click"
                   @confirm="handleUpdateProcess">
-                  <div class="round-wrapper">
-                    <div
-                      class="square-icon"
-                      @click="handleProcessOperation(row)">
+                  <div class="round-wrapper" @click="handleProcessOperation(row)">
+                    <div class="square-icon">
                     </div>
                   </div>
                 </bk-popconfirm>
                 <div v-else>
                   <bk-popconfirm
+                    v-bk-tooltips="$t('启动进程')"
                     :content="$t('确认启动该进程？')"
                     width="288"
                     trigger="click"
@@ -450,8 +454,7 @@
   </div>
 </template>
 
-<script>
-import moment from 'moment';
+<script>import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
@@ -661,7 +664,6 @@ export default {
       handler(value) {
         this.deployData = value;
         // this.handleDeployInstanceData();
-        console.log('this.deployData', this.deployData);
         this.formatProcesses(this.deployData);
       },
       immediate: true,
@@ -781,7 +783,6 @@ export default {
           autoscaling: processInfo.autoscaling,
           type,
         };
-
         this.updateProcessStatus(process);
 
         // 日期转换

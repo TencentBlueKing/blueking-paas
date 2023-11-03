@@ -456,7 +456,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
+        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id, 'mount_id': mount_instance.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 

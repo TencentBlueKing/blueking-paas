@@ -248,6 +248,13 @@ class ProcessesManifestConstructor(ManifestConstructor):
     def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
         """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
         try:
+            return ResQuotaPlan(spec_plan_name)
+        except ValueError:
+            logger.debug(
+                "unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name
+            )
+
+        try:
             spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
         except ProcessSpecPlan.DoesNotExist:
             return ResQuotaPlan.P_DEFAULT
@@ -313,8 +320,8 @@ class HooksManifestConstructor(ManifestConstructor):
         pre_release_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
         if pre_release_hook and pre_release_hook.enabled:
             hooks.preRelease = Hook(
-                command=pre_release_hook.command,
-                args=pre_release_hook.args,
+                command=pre_release_hook.get_command(),
+                args=pre_release_hook.get_args(),
             )
         model_res.spec.hooks = hooks
 

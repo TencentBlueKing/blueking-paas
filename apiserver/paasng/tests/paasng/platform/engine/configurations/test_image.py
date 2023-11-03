@@ -20,9 +20,7 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ApiVersion, BkAppResource
 from paas_wl.bk_app.applications.models import Build
-from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.engine.configurations.image import (
     RuntimeImageInfo,
     generate_image_repository,
@@ -31,6 +29,8 @@ from paasng.platform.engine.configurations.image import (
 )
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import BuildConfig
+from paasng.platform.sourcectl.models import VersionInfo
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -59,7 +59,9 @@ class TestRuntimeInfo:
         bk_module_full.build_config.build_method = RuntimeType.BUILDPACK
         bk_module_full.build_config.save()
         runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app())
-        with mock.patch("paasng.platform.engine.configurations.image.ModuleRuntimeManager.is_cnb_runtime", new=is_cnb_runtime):
+        with mock.patch(
+            "paasng.platform.engine.configurations.image.ModuleRuntimeManager.is_cnb_runtime", new=is_cnb_runtime
+        ):
             assert runtime_info.generate_image(
                 version_info=version, special_tag=version.version_name
             ) == expected.format(
@@ -78,26 +80,26 @@ class TestRuntimeInfo:
         )
 
     @pytest.mark.parametrize(
-        "bkapp, expected",
+        "image_repository, expected",
         [
-            (BkAppResource(apiVersion=ApiVersion.V1ALPHA1, metadata={"name": "foo"}, spec={}), ""),
+            # v1alpha1
+            ("", ""),
+            # v1alpha2
             (
-                BkAppResource(
-                    apiVersion=ApiVersion.V1ALPHA2,
-                    metadata={"name": "foo"},
-                    spec={"build": {"image": "docker.io/library/python"}},
-                ),
+                "docker.io/library/python",
                 "docker.io/library/python:{tag}",
             ),
         ],
     )
-    def test_cnative(self, bk_cnative_app, version, bkapp, expected):
+    def test_cnative(self, bk_cnative_app, version, image_repository, expected):
         bk_module = bk_cnative_app.get_default_module()
         bk_module.source_origin = SourceOrigin.CNATIVE_IMAGE
         bk_module.save()
         runtime_info = RuntimeImageInfo(bk_module.get_envs("prod").get_engine_app())
-        with mock.patch("paasng.platform.engine.configurations.image.get_bkapp", return_value=bkapp):
-            assert runtime_info.generate_image(version_info=version) == expected.format(tag=version.version_name)
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        cfg.image_repository = image_repository
+        cfg.save()
+        assert runtime_info.generate_image(version_info=version) == expected.format(tag=version.version_name)
 
     @pytest.mark.parametrize(
         "source_origin, expected",

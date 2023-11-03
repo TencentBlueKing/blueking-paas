@@ -20,7 +20,8 @@
   </div>
 </template>
 
-<script>import ByUserLoading from './loading/by-user';
+<script>
+import ByUserLoading from './loading/by-user';
 import LogLoading from './loading/log';
 import ProcessLoading from './loading/process';
 import IndexLoading from './loading/index';
@@ -66,6 +67,7 @@ import CloudApiIndexLoading from './loading/cloud-api-index';
 import DeployYamlLoading from './loading/deploy-yaml';
 import DeployResourceLoading from './loading/deploy-resource';
 import DeployEnvLoading from './loading/deploy-env';
+import DeployVolumeLoading from './loading/deploy-volume';
 import DeployProcessLoading from './loading/deploy-process';
 import DeployHookLoading from './loading/deploy-hook.vue';
 import SummaryPluginLoading from './loading/summary-plugin.vue';
@@ -127,6 +129,7 @@ export default {
     DeployYamlLoading,
     DeployResourceLoading,
     DeployEnvLoading,
+    DeployVolumeLoading,
     DeployProcessLoading,
     DeployHookLoading,
     SummaryPluginLoading,

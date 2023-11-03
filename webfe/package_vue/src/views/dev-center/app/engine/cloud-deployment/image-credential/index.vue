@@ -1,25 +1,34 @@
 <template>
   <div class="image-container">
     <paas-content-loader
-      class="app-container image-content"
+      class="image-content"
       :is-loading="isLoading"
       :is-transition="false"
       :offset-top="0"
       :offset-left="0"
       placeholder="roles-loading"
     >
-      <div class="middle ps-main">
-        <bk-button
-          theme="primary"
-          class="mb15"
-          @click="handleCreate"
-        >
-          <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增凭证') }}
-        </bk-button>
+      <div class="middle ps-main mirror-credentials">
+        <div class="flex-row align-items-center">
+          <span class="base-info-title">
+            {{ $t('镜像凭证') }}
+          </span>
+          <div
+            class="add-container"
+            @click="handleCreate"
+          >
+            <i class="paasng-icon paasng-plus-circle-shape pl10" />
+            {{ $t('新建镜像凭证') }}
+          </div>
+        </div>
+        <div class="credential-tips">{{ $t('私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。') }}</div>
         <bk-table
+          v-if="credentialList.length"
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
           :data="credentialList"
           size="small"
+          ext-cls="mirror-table-cls"
+          :outer-border="false"
           :pagination="pagination"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -37,16 +46,13 @@
               {{ props.row.username || '--' }}
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('密码')">
-            <span>******</span>
-          </bk-table-column>
           <bk-table-column :label="$t('描述')">
             <template slot-scope="props">
               {{ props.row.description || '--' }}
             </template>
           </bk-table-column>
           <bk-table-column
-            width="120"
+            width="150"
             :label="$t('操作')"
           >
             <template slot-scope="props">
@@ -91,6 +97,12 @@ export default {
   components: {
     CreateCredential,
   },
+  props: {
+    list: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       credentialList: [],
@@ -104,7 +116,7 @@ export default {
         loading: false,
         title: i18n.t('新增凭证'),
       },
-      isLoading: true,
+      isLoading: false,
       visiableDialog: false,
       tableLoading: false,
       type: 'new',
@@ -122,16 +134,14 @@ export default {
   watch: {
     curAppCode() {
       this.getCredentialList();
-      this.isLoading = true;
+      // this.isLoading = true;
     },
-  },
-  created() {
-    this.init();
+    list(value) {
+      // 镜像凭证初始化
+      this.credentialList = value;
+    },
   },
   methods: {
-    init() {
-      this.getCredentialList();
-    },
 
     // 获取凭证列表
     async getCredentialList() {
@@ -272,27 +282,62 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .image-container{
-    .ps-top-bar{
-      padding: 0 20px;
-    }
-    .image-content{
-      background: #fff;
-      padding-top: 0;
+.image-container {
+  .ps-top-bar {
+    padding: 0 20px;
+  }
+  .image-content {
+    background: #fff;
+    padding-top: 0;
+  }
+}
+.header-title {
+  display: flex;
+  align-items: center;
+  .app-code {
+    color: #979ba5;
+  }
+  .arrows {
+    margin: 0 9px;
+    transform: rotate(-90deg);
+    font-size: 12px;
+    font-weight: 600;
+    color: #979ba5;
+  }
+}
+
+.mirror-credentials {
+  padding: 20px 0;
+  border-bottom: 1px solid #dcdee5;
+  .base-info-title {
+    color: #313238;
+    font-size: 14px;
+    font-weight: bold;
+    width: 70px;
+    text-align: right;
+  }
+  .add-container{
+    color: #3A84FF;
+    font-size: 12px;
+    cursor: pointer;
+    padding-left: 10px;
+    i{
+      padding-right: 3px;
     }
   }
-    .header-title {
-        display: flex;
-        align-items: center;
-        .app-code {
-            color: #979BA5;
-        }
-        .arrows {
-            margin: 0 9px;
-            transform: rotate(-90deg);
-            font-size: 12px;
-            font-weight: 600;
-            color: #979ba5;
-        }
-    }
+
+  .credential-tips {
+    padding: 0 15px;
+    margin-top: 8px;
+    color: #979BA5;
+    font-size: 12px;
+  }
+}
+.mirror-table-cls {
+  margin-top: 20px;
+  padding: 0 15px;
+  /deep/ .bk-table-row-last td {
+    border-bottom: none !important;
+  }
+}
 </style>

@@ -15,7 +15,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -78,9 +77,11 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
 
     image = serializers.CharField(help_text="镜像仓库/镜像地址", allow_null=True, required=False)
     image_credential_name = serializers.CharField(help_text="镜像凭证", allow_null=True, required=False)
-    command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
-    args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
-    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, default=settings.CONTAINER_PORT)
+    command = serializers.ListSerializer(
+        child=serializers.CharField(), help_text="启动命令", default=list, allow_null=True
+    )
+    args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list, allow_null=True)
+    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False)
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
 
 

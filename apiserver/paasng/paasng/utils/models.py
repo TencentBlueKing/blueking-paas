@@ -144,7 +144,6 @@ class BkUserField(models.CharField):
         kwargs['null'] = True
         kwargs.setdefault('db_index', True)
         super(BkUserField, self).__init__(*args, **kwargs)
-        self._field_name = None
 
     def from_db_value(self, value, expression, connection):
         if value is None:

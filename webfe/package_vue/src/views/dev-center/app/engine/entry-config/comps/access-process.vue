@@ -2,7 +2,7 @@
   <div class="approve-container">
     <paas-content-loader
       :is-loading="loaderLoading"
-      placeholder="order-loading"
+      placeholder="process-service-loading"
       :offset-top="25"
       class="order-approve-wrapper"
     >
@@ -12,11 +12,13 @@
           v-model="activeName"
           ext-cls="process-collapse-cls"
           :hide-arrow="true"
+          v-if="processServiceList.length"
         >
           <bk-collapse-item
             v-for="(process, index) in processServiceList"
             :name="process.name"
             :key="index"
+            class="mt25"
           >
             <div class="header-warpper">
               <i class="paasng-icon paasng-right-shape"></i>
@@ -24,6 +26,7 @@
                 <div class="name">{{ process.process_type }}</div>
                 <div class="info">
                   <span>{{ $t('端口规则：') + process.ports.length + $t('个')}}</span>
+                  <span class="ml20">{{ $t('服务名称：') + process.name }}</span>
                 </div>
               </div>
               <!-- <div class="right-tip">{{ $t('已暴露 HTTP 服务') }}</div> -->
@@ -49,50 +52,57 @@
                 >
                   <bk-table-column
                     :label="$t('端口名称')"
-                    prop="source"
+                    prop="name"
                   ></bk-table-column>
                   <bk-table-column
                     :label="$t('协议')"
-                    prop="status"
+                    prop="protocol"
                   ></bk-table-column>
                   <bk-table-column
-                    :label="$t('服务端口（prod）')"
-                    prop="status"
+                    :label="$t('服务端口')"
+                    prop="port"
                   ></bk-table-column>
                   <bk-table-column
-                    :label="$t('进程内容端口')"
-                    prop="status"
+                    :label="$t('进程内端口')"
+                    prop="target_port"
                   ></bk-table-column>
                 </bk-table>
               </div>
             </div>
           </bk-collapse-item>
         </bk-collapse>
+        <!-- 暂无数据 -->
+        <bk-exception
+          v-else
+          class="exception-wrap-item exception-part"
+          type="empty"
+          scene="part"
+        >
+          <p>{{ $t('暂无数据') }}</p>
+        </bk-exception>
       </div>
     </paas-content-loader>
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   mixins: [appBaseMixin],
   data() {
     return {
       isLoading: false,
-      loaderLoading: false,
-      activeName: ['image4test--web'],
+      loaderLoading: true,
+      activeName: [''],
       processServiceList: [
         {
-          name: 'image4test--web',
-          process_type: 'web',
+          name: '',
+          process_type: '',
           ports: [],
         },
       ],
     };
   },
-  computed: {},
   created() {
     this.getProcessServiceData();
   },
@@ -111,13 +121,15 @@ export default {
           moduleId: this.curModuleId,
           env: 'stag',
         });
-        console.log('proc_services--', res);
         this.processServiceList = res.proc_services || [];
+        this.activeName = [this.processServiceList[0]?.name || ''];
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.loaderLoading = false;
       }
     },
   },
@@ -202,6 +214,14 @@ export default {
       cursor: pointer;
       color: #3a84ff;
     }
+  }
+}
+
+.process-wrapper {
+  min-height: 350px;
+
+  .exception-wrap-item {
+    margin-top: 50px;
   }
 }
 </style>

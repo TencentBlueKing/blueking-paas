@@ -43,7 +43,7 @@
             </a>
           </template>
           <bk-tab-panel
-            v-if="curAppInfo.application.type !== 'cloud_native'"
+            v-if="enable_bk_log_collector"
             name="structured"
             :label="$t('结构化日志')"
           >
@@ -73,8 +73,7 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import customLog from './custom-log.vue';
 import standartLog from './standart-log.vue';
@@ -98,6 +97,14 @@ export default {
       isLoading: true,
     };
   },
+  computed: {
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    enable_bk_log_collector() {
+      return this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR;
+    },
+  },
   watch: {
     tabActive() {
       this.$nextTick(() => {
@@ -114,8 +121,8 @@ export default {
     this.isLoading = true;
     if (this.$route.query.tab) {
       const isExistTab = ['structured', 'stream', 'access'].includes(this.$route.query.tab);
-      if (this.curAppInfo.application.type === 'cloud_native') {
-        this.tabActive = 'stream';
+      if (this.enable_bk_log_collector) {
+        this.tabActive = 'structured';
       } else {
         this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
       }

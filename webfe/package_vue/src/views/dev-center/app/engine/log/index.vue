@@ -43,7 +43,7 @@
             </a>
           </template>
           <bk-tab-panel
-            v-if="enable_bk_log_collector"
+            v-if="isStructuredLogTab"
             name="structured"
             :label="$t('结构化日志')"
           >
@@ -101,8 +101,15 @@ export default {
     curAppInfo() {
       return this.$store.state.curAppInfo;
     },
-    enable_bk_log_collector() {
+    enableBkLogCollector() {
       return this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR;
+    },
+    // eslint-disable-next-line vue/return-in-computed-property
+    isStructuredLogTab() {
+      if (this.curAppInfo.application.type !== 'cloud_native') {
+        return true;
+      }
+      return this.enableBkLogCollector;
     },
   },
   watch: {
@@ -119,13 +126,15 @@ export default {
   },
   mounted() {
     this.isLoading = true;
-    if (this.$route.query.tab) {
-      const isExistTab = ['structured', 'stream', 'access'].includes(this.$route.query.tab);
-      if (this.enable_bk_log_collector) {
-        this.tabActive = 'structured';
-      } else {
-        this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
+    this.tabActive = this.isStructuredLogTab ? 'structured' : 'stream';
+    // 存在query参数的情况
+    const tabActiveName = this.$route.query.tab;
+    if (tabActiveName) {
+      const tabNameList = ['stream', 'access'];
+      if (this.isStructuredLogTab) {
+        tabNameList.push('structured');
       }
+      this.tabActive = tabNameList.includes(tabActiveName) ? tabActiveName : 'stream';
     }
     setTimeout(() => {
       this.isLoading = false;

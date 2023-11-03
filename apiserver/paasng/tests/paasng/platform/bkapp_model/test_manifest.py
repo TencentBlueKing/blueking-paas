@@ -197,10 +197,10 @@ class TestProcessesManifestConstructor:
                     "targetPort": 8000,
                     "resQuotaPlan": "default",
                     "autoscaling": None,
-                    "cpu": "500m",
-                    "memory": "256Mi",
+                    "cpu": None,
+                    "memory": None,
                     "image": None,
-                    "imagePullPolicy": "IfNotPresent",
+                    "imagePullPolicy": None,
                 }
             ],
             "envOverlay": {

@@ -57,10 +57,10 @@ class TestCreateAppResource:
                         'targetPort': None,
                         'resQuotaPlan': None,
                         'autoscaling': None,
-                        'cpu': '500m',
-                        'memory': '256Mi',
+                        'cpu': None,
+                        'memory': None,
                         'image': None,
-                        'imagePullPolicy': 'IfNotPresent',
+                        'imagePullPolicy': None,
                     }
                 ],
                 'hooks': None,

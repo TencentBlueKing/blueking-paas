@@ -379,8 +379,9 @@ export default {
         margin-top: 30px;
         .entrances-adress {
             margin-top: 12px;
-            .set-pb {
-                padding-bottom: 8px;
+            p {
+              height: 32px;
+              line-height: 32px;
             }
             a {
                 display: inline-block;

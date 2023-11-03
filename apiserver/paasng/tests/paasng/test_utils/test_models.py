@@ -117,3 +117,10 @@ class TestBkUserField:
         bar_u = user_id_encoder.encode(ProviderType.BK, "bar")
         instance.creator = bar_u
         assert instance.creator.username == "bar"
+
+        instance.creator = None  # type: ignore
+        assert instance.creator is None
+
+        baz_u = user_id_encoder.encode(ProviderType.BK, "baz")
+        instance.creator = baz_u
+        assert instance.creator.username == "baz"

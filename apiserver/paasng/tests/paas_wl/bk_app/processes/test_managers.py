@@ -21,13 +21,13 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
+from paas_wl.bk_app.processes.entities import Process
+from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
+from paas_wl.bk_app.processes.serializers import extract_type_from_name
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paas_wl.bk_app.processes.entities import Process
-from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
-from paas_wl.bk_app.processes.serializers import extract_type_from_name
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.auto_create_ns]
@@ -118,6 +118,25 @@ class TestProcInstManager:
 
         events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0
+
+    def test_watch_unknown_res(self, wl_app, client, process_manager, process, v2_mapper):
+        pod_name = v2_mapper.pod(process=process).name
+        serializer = process_manager._make_serializer(wl_app)
+        pod_body = {
+            'apiVersion': 'v1',
+            'kind': 'Pod',
+            'metadata': {'labels': {}, 'name': pod_name},
+            'spec': serializer._construct_pod_body_specs(process),  # type: ignore
+        }
+        pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
+        events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
+        assert len(events) > 0
+        event = None
+        for event in events:
+            if event.type == "ERROR":
+                break
+        assert event is not None
+        assert event.error_message == "No process_type found in resource"
 
     def test_get_logs(self, wl_app, pod):
         # Query process instances

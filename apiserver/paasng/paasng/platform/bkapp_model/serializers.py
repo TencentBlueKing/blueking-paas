@@ -157,7 +157,7 @@ class DomainResolutionSLZ(serializers.Serializer):
         nameservers = data.get('nameservers')
         host_aliases = data.get('host_aliases')
 
-        if not nameservers and not host_aliases:
+        if (nameservers is None) and (host_aliases is None):
             raise serializers.ValidationError(_("至少需要提供一个有效值：nameservers 或 host_aliases"))
 
         return data

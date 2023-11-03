@@ -357,7 +357,7 @@ class SvcDiscoveryManifestConstructor(ManifestConstructor):
     """Construct the mounts part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        if queryset := SvcDiscConfig.objects.filter(application_id=module.application.id):
+        if queryset := SvcDiscConfig.objects.filter(application=module.application):
             svc_disc_config = queryset.first()
             model_res.spec.svcDiscovery = SvcDiscConfigSpec(bkSaaS=svc_disc_config.bk_saas)
 
@@ -366,7 +366,7 @@ class DomainResolutionManifestConstructor(ManifestConstructor):
     """Construct the mounts part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        if queryset := DomainResolution.objects.filter(application_id=module.application.id):
+        if queryset := DomainResolution.objects.filter(application=module.application):
             domain_res = queryset.first()
             model_res.spec.domainResolution = DomainResolutionSpec(
                 nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases

@@ -159,6 +159,14 @@ class TestDomainResolutionViewSet:
                     }
                 ],
             ),
+            (
+                {
+                    'nameservers': [],
+                    'host_aliases': [],
+                },
+                [],
+                [],
+            ),
         ],
     )
     def test_upsert(self, api_client, bk_app, domain_resolution, request_body, nameservers, host_aliases):
@@ -168,3 +176,9 @@ class TestDomainResolutionViewSet:
         assert response.status_code == 200
         assert response.data["nameservers"] == nameservers or domain_resolution.nameservers
         assert response.data["host_aliases"] == host_aliases or domain_resolution.nameservers
+
+    def test_upsert_error(self, api_client, bk_app, domain_resolution):
+        url = f"/api/bkapps/applications/{bk_app.code}/domain_resolution/"
+
+        response = api_client.post(url)
+        assert response.status_code == 400

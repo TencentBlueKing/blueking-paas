@@ -61,6 +61,7 @@ class PluginBackendAPIResource(BaseModel):
     """插件后台操作接口"""
 
     apiName: str = Field(description="网关名称")
+    stage: Optional[str] = Field(description="网关环境")
     path: str = Field(description="接口路径")
     method: Literal["GET", "POST", "PUT", "DELETE"]
 

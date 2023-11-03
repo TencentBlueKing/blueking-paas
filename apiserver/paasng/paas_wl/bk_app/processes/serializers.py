@@ -25,19 +25,20 @@ import cattr
 from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
-from paas_wl.workloads.release_controller.constants import ImagePullPolicy
-from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
-from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.bk_app.processes.constants import PROCESS_MAPPER_VERSION_KEY, PROCESS_NAME_KEY
+from paas_wl.bk_app.processes.exceptions import UnknownProcessTypeError
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
 from paas_wl.infras.resource_templates.utils import AddonManager, ProcessProbeManager
+from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
+from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 if TYPE_CHECKING:
-    from paas_wl.infras.resources.generation.mapper import MapperPack
     from paas_wl.bk_app.processes.entities import Instance, Process
+    from paas_wl.infras.resources.generation.mapper import MapperPack
 
 
 def extract_type_from_name(name: str, namespace: str) -> Optional[str]:
@@ -153,7 +154,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
     def _get_process_type(deployment: ResourceInstance) -> str:
         """Get process type for deployment resource
 
-        :raises: RuntimeError when no process_type info can be found
+        :raises: UnknownProcessTypeError: when no process_type info can be found
         """
         process_type = deployment.spec.template.metadata.labels.get(PROCESS_NAME_KEY)
         if process_type:
@@ -168,7 +169,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
         if process_type:
             return process_type
 
-        raise RuntimeError('No process_type found in resource')
+        raise UnknownProcessTypeError(res=deployment, msg="'No process_type found in resource")
 
     def _get_main_container(self, app: WlApp, deployment: ResourceInstance) -> ResourceField:
         """Get main container from main Pod"""
@@ -237,14 +238,15 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
     def get_process_type(pod: ResourceInstance) -> str:
         """Get process type for pod resource
 
-        :raises: RuntimeError when no process_type info can be found
+        :raises: UnknownProcessTypeError: when no process_type info can be found
         """
-        process_type = pod.metadata.labels.get(PROCESS_NAME_KEY)
+        labels = getattr(pod.metadata, "labels", {})
+        process_type = labels.get(PROCESS_NAME_KEY)
         if process_type:
             return process_type
 
         # label `process_id` is deprecated, should use `PROCESS_NAME_KEY` instead
-        process_type = pod.metadata.labels.get('process_id')
+        process_type = labels.get('process_id')
         if process_type:
             return process_type
 
@@ -252,7 +254,7 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
         if process_type:
             return process_type
 
-        raise RuntimeError('No process_type found in resource')
+        raise UnknownProcessTypeError(res=pod, msg="No process_type found in resource")
 
     @staticmethod
     def parse_instance_state(pod_phase: str, health_status: HealthStatus) -> Tuple[str, str]:

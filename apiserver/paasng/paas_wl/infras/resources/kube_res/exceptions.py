@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from kubernetes.dynamic.resource import ResourceInstance
 
 
 class AppEntityNotFound(Exception):
@@ -24,3 +25,12 @@ class AppEntityNotFound(Exception):
 
 class APIServerVersionIncompatible(Exception):
     """Raised when apiserver does not support requested api_version"""
+
+
+class AppEntityDeserializeError(Exception):
+    """Error in deserialize k8s resource"""
+
+    def __init__(self, res: ResourceInstance, msg: str):
+        super().__init__(msg)
+        self.res = res
+        self.msg = msg

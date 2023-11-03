@@ -312,6 +312,7 @@
                         :disabled="false"
                         style="width: 150px"
                         searchable
+                        @change="handleChange($event, 'stag')"
                       >
                         <bk-option
                           v-for="option in resQuotaData"
@@ -325,11 +326,7 @@
                         v-if="quotaPlansFlag"
                         class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                       />
-                      <i
-                        v-else
-                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        v-bk-tooltips="stagTips"
-                      />
+                      <quota-popver v-else :data="stagQuotaData" />
                     </div>
                   </bk-form-item>
                   <bk-form-item
@@ -489,6 +486,7 @@
                         :disabled="false"
                         style="width: 150px"
                         searchable
+                        @change="handleChange($event, 'prod')"
                       >
                         <bk-option
                           v-for="option in resQuotaData"
@@ -502,11 +500,7 @@
                         v-if="quotaPlansFlag"
                         class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                       />
-                      <i
-                        v-else
-                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        v-bk-tooltips="prodTips"
-                      />
+                      <quota-popver v-else :data="prodQuotaData" />
                     </div>
                   </bk-form-item>
                   <bk-form-item
@@ -746,11 +740,7 @@
                           v-if="quotaPlansFlag"
                           class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                         />
-                        <i
-                          v-else
-                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                          v-bk-tooltips="stagTips"
-                        />
+                        <quota-popver v-else :data="item.value === 'stag' ? stagQuotaData : prodQuotaData" />
                       </span>
                     </bk-form-item>
 
@@ -846,10 +836,12 @@
 import { bus } from '@/common/bus';
 import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
+import quotaPopver from './comps/quota-popver';
 
 export default {
   components: {
     userGuide,
+    quotaPopver,
   },
   props: {
     moduleId: {
@@ -1084,6 +1076,9 @@ export default {
         },
       },
       tagInputIndex: 0,
+      allQuotaList: [],
+      stagQuotaData: {},
+      prodQuotaData: {},
     };
   },
   computed: {
@@ -1105,38 +1100,6 @@ export default {
     },
     isV1alpha2() {
       return this.localCloudAppData?.apiVersion?.includes('v1alpha2');
-    },
-    stagTips() {
-      return {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `
-              <div>
-                ${this.$t('最大资源限制')}： <span>cpu：${this.extraConfigData.stag.limit.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.stag.limit.memory} </span>
-              </div>
-              <div>
-                ${this.$t('最小资源请求')}：<span>cpu：${this.extraConfigData.stag.request.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.stag.request.memory} </span>
-              </div>
-              `,
-        placements: ['bottom'],
-      };
-    },
-    prodTips() {
-      return {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `
-              <div>
-                ${this.$t('最大资源限制')}： <span>cpu：${this.extraConfigData.prod.limit.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.prod.limit.memory} </span>
-              </div>
-              <div>
-                ${this.$t('最小资源请求')}：<span>cpu：${this.extraConfigData.prod.request.cpu} </span> <span>${this.$t('内存')}：${this.extraConfigData.prod.request.memory} </span>
-              </div>
-              `,
-        placements: ['bottom'],
-      };
     },
     curModuleId() {
       return this.curAppModule?.name;
@@ -1316,14 +1279,12 @@ export default {
     },
   },
   async created() {
-    console.log('created---', this.isCreate);
     // 非创建应用初始化为查看态
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
     }
-    await this.getQuotaPlans('stag');
-    this.getQuotaPlans('prod');
+    this.getQuotaPlans();
   },
   methods: {
     trimStr(str) {
@@ -1697,14 +1658,19 @@ export default {
       }
     },
 
-    async getQuotaPlans(env) {
+    async getQuotaPlans() {
       try {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        const data = res.find(e => e.name === (this.extraConfigData[env].resQuotaPlan.plan || 'default'));
         this.resQuotaData = res.map(item => item.name);
-        this.extraConfigData[env].limit = data.limit;
-        this.extraConfigData[env].request = data.request;
+        // 资源配额数据
+        this.allQuotaList = res;
+        // 当前stag资源配额
+        this.handleChange(this.extraConfigData.stag.resQuotaPlan?.plan || 'default', 'stag');
+        // 当前prod资源配额
+        this.handleChange(this.extraConfigData.prod.resQuotaPlan?.plan || 'default', 'prod');
+        // this.extraConfigData[env].limit = data.limit;
+        // this.extraConfigData[env].request = data.request;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1724,6 +1690,15 @@ export default {
     // 查看指南
     handleViewGuide() {
       this.$refs.userGuideRef.showSideslider();
+    },
+
+    // 资源配额方案change回调
+    handleChange(name, env) {
+      if (env === 'stag') {
+        this.stagQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+      } else {
+        this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+      }
     },
   },
 };

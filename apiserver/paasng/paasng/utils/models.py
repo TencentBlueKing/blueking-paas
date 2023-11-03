@@ -129,7 +129,9 @@ class BkUserFieldAttribute(DeferredAttribute):
             return
         data = instance.__dict__
         field_name = self.field.attname
-        data[field_name] = SimpleUserIDWrapper(value)
+        if value:
+            value = SimpleUserIDWrapper(value)
+        data[field_name] = value
 
 
 class BkUserField(models.CharField):

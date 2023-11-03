@@ -260,9 +260,7 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
 
 def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a array according to the given field_schema"""
-    if field_schema.items == "string":
-        return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
-    return serializers.ListField()
+    return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
 
 
 def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:

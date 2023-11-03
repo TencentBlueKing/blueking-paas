@@ -113,7 +113,7 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
         # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
         # 判断应用或者模块是否存在
         if not Module.objects.filter(application__code=attrs['bkAppCode'], name=attrs['moduleName']).exists():
-            raise serializers.ValidationError(_('应用或模块不存在'))
+            raise serializers.ValidationError(_(f'应用{attrs["bkAppCode"]}或模块{attrs["moduleName"]}不存在'))
 
         return attrs
 
@@ -149,5 +149,14 @@ class HostAliasSLZ(serializers.Serializer):
 
 
 class DomainResolutionSLZ(serializers.Serializer):
-    nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.IPAddressField())
-    host_aliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ())
+    nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.IPAddressField(), required=False)
+    host_aliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ(), required=False)
+
+    def validate(self, data):
+        nameservers = data.get('nameservers')
+        host_aliases = data.get('host_aliases')
+
+        if not nameservers and not host_aliases:
+            raise serializers.ValidationError(_("至少需要提供一个有效值：nameservers 或 host_aliases"))
+
+        return data

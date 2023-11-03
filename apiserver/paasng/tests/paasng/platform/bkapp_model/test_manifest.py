@@ -282,7 +282,7 @@ class TestMountsManifestConstructor:
 
 class TestSvcDiscoveryManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
-        create_svc_disc = functools.partial(SvcDiscConfig.objects.create, application_id=bk_module.application.id)
+        create_svc_disc = functools.partial(SvcDiscConfig.objects.create, application=bk_module.application)
         # Create svc_disc object
         create_svc_disc(
             bk_saas=[
@@ -302,7 +302,7 @@ class TestSvcDiscoveryManifestConstructor:
 class TestDomainResolutionManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
         create_domain_resolution = functools.partial(
-            DomainResolution.objects.create, application_id=bk_module.application.id
+            DomainResolution.objects.create, application=bk_module.application
         )
         # Create domain_resolution object
         create_domain_resolution(

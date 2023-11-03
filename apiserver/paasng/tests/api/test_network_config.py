@@ -28,7 +28,7 @@ class TestSvcDiscConfigViewSet:
     def svc_disc(self, bk_app):
         """创建一个 SvcDiscConfig 对象"""
         svc_disc = SvcDiscConfig.objects.create(
-            application_id=bk_app.id,
+            application=bk_app,
             bk_saas=[
                 {
                     'bkAppCode': 'bk_app_code_test',
@@ -68,7 +68,7 @@ class TestDomainResolutionViewSet:
     def domain_resolution(self, bk_app):
         """创建一个 DomainResolution 对象"""
         domain_resolution = DomainResolution.objects.create(
-            application_id=bk_app.id,
+            application=bk_app,
             nameservers=['192.168.1.1', '192.168.1.2'],
             host_aliases=[
                 {

@@ -258,16 +258,17 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
     def upsert(self, request, code):
         application = self.get_application()
 
-        slz = DomainResolutionSLZ(data=request.data, partial=True)
+        slz = DomainResolutionSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
-        domain_resolution, _ = DomainResolution.objects.get_or_create(application_id=application.id)
-        for field in validated_data:
-            if field == "nameservers":
-                domain_resolution.nameservers = validated_data[field]
-            elif field == "host_aliases":
-                domain_resolution.host_aliases = validated_data[field]
+        defaults = {}
+        if nameservers := validated_data.get('nameservers'):
+            defaults['nameservers'] = nameservers
+        if host_aliases := validated_data.get('host_aliases'):
+            defaults['host_aliases'] = host_aliases
+
+        domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)
 
         domain_resolution.save()
 

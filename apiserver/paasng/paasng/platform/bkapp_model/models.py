@@ -26,6 +26,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaaS
 from paas_wl.utils.models import AuditedModel, TimestampedModel
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
@@ -197,7 +198,7 @@ HostAliasesField = make_json_field("HostAliasesField", List[HostAlias])
 class SvcDiscConfig(AuditedModel):
     """" 服务发现配置 """
 
-    application_id = models.UUIDField(verbose_name=_('所属应用'), unique=True, null=False)
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
 
     bk_saas: List[SvcDiscEntryBkSaaS] = BkSaaSField(default=list, help_text="")
 
@@ -205,7 +206,7 @@ class SvcDiscConfig(AuditedModel):
 class DomainResolution(AuditedModel):
     """ 域名解析配置 """
 
-    application_id = models.UUIDField(verbose_name=_('所属应用'), unique=True, null=False)
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
 
     nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")

@@ -240,12 +240,13 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
 
         :raises: UnknownProcessTypeError: when no process_type info can be found
         """
-        process_type = pod.metadata.labels.get(PROCESS_NAME_KEY)
+        labels = getattr(pod.metadata, "labels", {})
+        process_type = labels.get(PROCESS_NAME_KEY)
         if process_type:
             return process_type
 
         # label `process_id` is deprecated, should use `PROCESS_NAME_KEY` instead
-        process_type = pod.metadata.labels.get('process_id')
+        process_type = labels.get('process_id')
         if process_type:
             return process_type
 

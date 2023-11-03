@@ -27,9 +27,10 @@ class APIServerVersionIncompatible(Exception):
     """Raised when apiserver does not support requested api_version"""
 
 
-class DeserializeError(Exception):
+class AppEntityDeserializeError(Exception):
     """Error in deserialize k8s resource"""
 
     def __init__(self, res: ResourceInstance, msg: str):
+        super().__init__(msg)
         self.res = res
         self.msg = msg

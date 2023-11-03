@@ -98,8 +98,8 @@ class ProcInstByEnvListWatcher:
                 resource_version=rv_inst,
                 timeout_seconds=timeout_seconds,
                 # 由于历史原因, 存量的 Pod 有可能未添加资源类型的 label, 所以不能通过 labels 过滤进程实例
-                # 这导致有可能会过滤到 slug-builder, 所以需要设置 ignore_unknown_res=True
-                ignore_unknown_res=True,
+                # 这导致有可能会过滤到 slug-builder, 所以需要设置 ignore_unknown_objs=True
+                ignore_unknown_objs=True,
             ),
         ]
         # NOTE: Using of ThreadPoolExecutor/Multi-Threading may cause apiserver connections leak because every
@@ -155,8 +155,8 @@ class ProcInstByModuleEnvListWatcher:
                 resource_version=rv_inst,
                 timeout_seconds=timeout_seconds,
                 # 由于历史原因, 存量的 Pod 有可能未添加资源类型的 label, 所以不能通过 labels 过滤进程实例
-                # 这导致有可能会过滤到 slug-builder, 所以需要设置 ignore_unknown_res=True
-                ignore_unknown_res=True,
+                # 这导致有可能会过滤到 slug-builder, 所以需要设置 ignore_unknown_objs=True
+                ignore_unknown_objs=True,
             ),
         ]
         # NOTE: Using of ThreadPoolExecutor/Multi-Threading may cause apiserver connections leak because every

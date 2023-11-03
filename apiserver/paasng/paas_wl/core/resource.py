@@ -18,14 +18,14 @@ to the current version of the project delivered to anyone in the future.
 # Utils related with app resources
 from typing import Dict, Union
 
-from paas_wl.bk_app.cnative.specs.constants import MODULE_NAME_ANNO_KEY
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.cnative.specs.constants import MODULE_NAME_ANNO_KEY
+from paas_wl.bk_app.processes.constants import PROCESS_NAME_KEY
 from paas_wl.infras.resources.generation.mapper import MapperProcConfig
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.utils.command import get_command_name
-from paas_wl.bk_app.processes.constants import PROCESS_NAME_KEY
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 from paasng.platform.modules.models import Module

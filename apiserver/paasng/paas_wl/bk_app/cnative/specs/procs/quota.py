@@ -109,4 +109,4 @@ class ResourceQuotaReader:
         }
 
     def from_v1alpha1_bkapp(self) -> Dict[str, ResourceQuota]:
-        return {p.name: ResourceQuota(cpu=p.cpu, memory=p.memory) for p in self.res.spec.processes}
+        return {p.name: ResourceQuota(cpu=p.cpu or '', memory=p.memory or '') for p in self.res.spec.processes}

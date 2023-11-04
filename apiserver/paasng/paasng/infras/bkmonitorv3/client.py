@@ -51,7 +51,7 @@ class BkMonitorBackend(Protocol):
     def search_alert(self, *args, **kwargs) -> Dict:
         ...
 
-    def search_alarm_strategy_without_biz(self, *args, **kwargs) -> Dict:
+    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict:
         ...
 
     def promql_query(self, *args, **kwargs) -> Dict:
@@ -184,7 +184,7 @@ class BkMonitorClient:
         :param query_params: 查询告警策略的条件参数
         """
         try:
-            resp = self.client.search_alarm_strategy_without_biz(json=query_params.to_dict())
+            resp = self.client.search_alarm_strategy_v3(json=query_params.to_dict())
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
@@ -192,8 +192,10 @@ class BkMonitorClient:
         if not resp.get('result'):
             raise BkMonitorApiError(resp['message'])
 
-        alarm_strategies = resp.get('data', {}).get('lists', [])
+        alarm_strategies = resp.get('data', {}).get('strategy_config_list', [])
         for strategy in alarm_strategies:
+            if not isinstance(strategy, dict):
+                continue
             strategy['notice_group_ids'] = strategy.get('notice', {}).get('user_groups', [])
 
         total = resp.get('data', {}).get('total', 0)

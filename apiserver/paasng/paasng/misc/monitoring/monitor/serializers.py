@@ -59,8 +59,6 @@ class ListAlertsSLZ(serializers.Serializer):
     keyword = serializers.CharField(required=False)
     start_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
     end_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
-    page = serializers.IntegerField(default=1)
-    page_size = serializers.IntegerField(default=20)
 
     def to_internal_value(self, data) -> QueryAlertsParams:
         data = super().to_internal_value(data)
@@ -102,8 +100,6 @@ class ListAlarmStrategiesSLZ(serializers.Serializer):
     # ALERT: 表示告警中, INVALID: 表示已失效, OFF: 表示已关闭, ON: 表示已开启
     status = serializers.ChoiceField(choices=('ALERT', 'INVALID', 'OFF', 'ON'), required=False)
     keyword = serializers.CharField(required=False)
-    page = serializers.IntegerField(default=1)
-    page_size = serializers.IntegerField(default=20)
 
     def to_internal_value(self, data) -> QueryAlarmStrategiesParams:
         data = super().to_internal_value(data)

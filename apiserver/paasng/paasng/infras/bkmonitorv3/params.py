@@ -19,7 +19,14 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 
 from attrs import define
-from django.conf import settings
+from django.shortcuts import get_object_or_404
+
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+
+
+def get_bk_biz_id(app_code: str) -> str:
+    obj = get_object_or_404(BKMonitorSpace, application__code=app_code)
+    return obj.iam_resource_id
 
 
 @define(kw_only=True)
@@ -45,17 +52,15 @@ class QueryAlertsParams:
     alert_code: Optional[str] = None
     status: Optional[str] = None
     keyword: Optional[str] = None
-    page: Optional[int] = 1
-    page_size: Optional[int] = 20
 
     def to_dict(self) -> Dict:
         """组装成 search_alerts 接口需要的参数"""
         d = {
             'start_time': int(self.start_time.timestamp()),
             'end_time': int(self.end_time.timestamp()),
-            'bk_biz_ids': [settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')],
-            'page_size': self.page_size,
-            'page': self.page,
+            'bk_biz_ids': [get_bk_biz_id(self.app_code)],
+            'page_size': 1,
+            'page': 500,
             # 按照 ID 降序
             'ordering': ['-id'],
         }
@@ -72,7 +77,7 @@ class QueryAlertsParams:
         https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
         """
         # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
-        query_labels = f"PAAS_BUILTIN AND {self.app_code}"
+        query_labels = "PAAS_BUILTIN"
         if self.environment:
             query_labels = f"{query_labels} AND {self.environment}"
 
@@ -104,15 +109,13 @@ class QueryAlarmStrategiesParams:
     alert_code: Optional[str] = None
     status: Optional[str] = None
     keyword: Optional[str] = None
-    page: Optional[int] = 1
-    page_size: Optional[int] = 20
 
     def to_dict(self) -> Dict:
         """组装成 search_alarm_strategy_without_biz 接口需要的参数"""
         return {
-            'bk_biz_ids': [settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')],
-            'page_size': self.page_size,
-            'page': self.page,
+            'bk_biz_id': get_bk_biz_id(self.app_code),
+            'page': 1,
+            'page_size': 500,
             'conditions': self._build_conditions(),
         }
 
@@ -126,7 +129,7 @@ class QueryAlarmStrategiesParams:
             conditions.append({"key": "alert_name", "value": self.keyword})
 
         # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
-        query_labels = ["PAAS_BUILTIN", self.app_code]
+        query_labels = ["PAAS_BUILTIN"]
         if self.environment:
             query_labels.append(self.environment)
 

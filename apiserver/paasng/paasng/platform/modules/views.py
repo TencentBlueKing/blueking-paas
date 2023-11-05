@@ -254,7 +254,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         serializer = CreateCNativeModuleSLZ(data=request.data, context={'application': application})
         serializer.is_valid(raise_exception=True)
-        data = serializer.data
+        data = serializer.validated_data
 
         module_src_cfg: Dict[str, Any] = {}
         source_config = data["source_config"]
@@ -263,7 +263,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         self._ensure_source_origin_available(request.user, source_origin)
 
         # 初始化应用镜像凭证信息
-        if image_credentials := data.get('image_credentials'):
+        if image_credentials := data['bkapp_spec'].get('image_credentials'):
             self._init_image_credentials(application, image_credentials)
 
         module_src_cfg['source_origin'] = source_origin
@@ -292,8 +292,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             repo_auth_info=source_config.get('source_repo_auth_info'),
             source_dir=source_config.get('source_dir', ''),
             cluster_name=cluster.name,
-            manifest=data.get('manifest'),
-            build_config=serializer.validated_data['build_config'],
+            bkapp_spec=data['bkapp_spec'],
         )
 
         return Response(

@@ -33,7 +33,7 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppBuildConfig
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService
@@ -45,7 +45,10 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.bkapp_model.importer.importer import import_manifest_yaml
+from paasng.platform.bkapp_model.importer.build import import_build
+from paasng.platform.bkapp_model.importer.env_overlays import import_env_overlays
+from paasng.platform.bkapp_model.importer.hooks import import_hooks
+from paasng.platform.bkapp_model.importer.processes import import_processes
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -259,26 +262,46 @@ class ModuleInitializer:
         for env in self.module.get_envs():
             setup_env_log_model(env)
 
-    def initialize_app_model_resource(self, manifest: Optional[Dict] = None):
+    def initialize_app_model_resource(self, bkapp_spec: Optional[Dict] = None):
+        """
+        Initialize the AppModelResource and import the bkapp_spec into the corresponding bkapp models
+
+        :param bkapp_spec: validated_data from CreateBkAppSpecSLZ
+        """
         # 只有云原生应用需要在创建模块后初始化 AppModelResource
         if self.application.type != ApplicationType.CLOUD_NATIVE:
             return
 
-        res_name = generate_bkapp_name(self.module)
-        # 即使没有指定 manifest，也会默认初始化 AppModelResource，
+        # 即使没有指定 bkapp_spec，也会默认初始化 AppModelResource，
         # 但这仅仅是占位数据，应当在第一次部署时候被源码库中的配置替换
+        # TODO 删除创建 AppModelResource 占位用途?
+        res_name = generate_bkapp_name(self.module)
         resource = create_app_resource(name=res_name, image='stub')
-        if manifest:
-            manifest['metadata']['name'] = res_name
-            resource = BkAppResource(**manifest)
-
         AppModelResource.objects.create_from_resource(
             region=self.application.region,
             application_id=self.application.id,
             module_id=self.module.id,
             resource=resource,
         )
-        import_manifest_yaml(module=self.module, input_yaml_data=resource.json(exclude_none=True))
+
+        if not bkapp_spec or bkapp_spec['build_config'].build_method != RuntimeType.CUSTOM_IMAGE:
+            return
+
+        build_params = {'image': bkapp_spec['build_config'].image}
+        if image_credentials := bkapp_spec.get('image_credentials'):
+            build_params['imageCredentialsName'] = image_credentials['name']
+        import_build(self.module, BkAppBuildConfig(**build_params))
+
+        import_processes(self.module, processes=bkapp_spec['processes'])
+
+        if hooks := bkapp_spec.get('hooks'):
+            import_hooks(self.module, hooks)
+
+        if env_overlay := bkapp_spec.get('envOverlay', {}):
+            overlay_replicas = env_overlay.get('replicas', [])
+            overlay_res_quotas = env_overlay.get('resQuotas', [])
+            overlay_autoscaling = env_overlay.get('autoscaling', [])
+            import_env_overlays(self.module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""
@@ -343,8 +366,7 @@ def initialize_module(
     repo_auth_info: Optional[dict],
     source_dir: str = '',
     cluster_name: Optional[str] = None,
-    manifest: Optional[Dict] = None,
-    build_config: Optional[entities.BuildConfig] = None,
+    bkapp_spec: Optional[Dict] = None,
 ) -> ModuleInitResult:
     """Initialize a module
 
@@ -353,8 +375,7 @@ def initialize_module(
     :param repo_auth_info: The auth of repository, such as {"username": "ddd", "password": "www"}
     :param source_dir: The work dir, which containing Procfile.
     :param cluster_name: optional engine cluster name
-    :param manifest: optional cnative module manifest(only build_method=custom_image required)
-    :param build_config: optional build config
+    :param bkapp_spec: optional cnative module bkapp_spec
     :raises: ModuleInitializationError when any steps failed
     """
     module_initializer = ModuleInitializer(module)
@@ -372,6 +393,7 @@ def initialize_module(
                 repo_type, repo_url, repo_auth_info=repo_auth_info, source_dir=source_dir
             )
 
+    build_config = bkapp_spec['build_config'] if bkapp_spec else None
     if not build_config:
         if module_spec.templated_source_enabled:
             tmpl_mgr = TemplateRuntimeManager(region=module.region, tmpl_name=module.source_init_template)
@@ -403,7 +425,7 @@ def initialize_module(
         module_initializer.initialize_log_config()
 
     with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
-        module_initializer.initialize_app_model_resource(manifest)
+        module_initializer.initialize_app_model_resource(bkapp_spec)
 
     return ModuleInitResult(source_init_result=source_init_result)
 

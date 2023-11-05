@@ -466,24 +466,6 @@ class TestCreateCloudNativeApp:
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
-    def test_legacy(self, api_client):
-        """现存的云原生应用创建（cloud_native_params）"""
-
-        random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            '/api/bkapps/cloud-native/',
-            data={
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': f'uta-{random_suffix}',
-                'name': f'uta-{random_suffix}',
-                'cloud_native_params': {
-                    'image': 'nginx:alpine',
-                },
-            },
-        )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        assert response.json()['application']['type'] == 'cloud_native'
-
     def test_create_with_manifest(self, api_client):
         """托管方式：仅镜像（提供 manifest）"""
         random_suffix = generate_random_string(length=6)

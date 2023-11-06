@@ -35,7 +35,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, VolumeSource
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
+from paas_wl.bk_app.processes.shim import initialize_default_proc_spec_plans
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (

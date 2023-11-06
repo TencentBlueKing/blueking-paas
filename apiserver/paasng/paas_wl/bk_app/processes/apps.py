@@ -28,7 +28,7 @@ class ProcessesConfig(AppConfig):
 
     def ready(self):
         # Run initialization jobs
-        from .models import initialize_default_proc_spec_plans
+        from .shim import initialize_default_proc_spec_plans
 
         try:
             initialize_default_proc_spec_plans()

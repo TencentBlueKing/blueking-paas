@@ -198,19 +198,6 @@ class ProcessSpecManager:
             return default
 
 
-def initialize_default_proc_spec_plans():
-    """Initialize default process spec plan objects which were defined in settings"""
-    plans = settings.DEFAULT_PROC_SPEC_PLANS
-
-    for name, config in plans.items():
-        try:
-            ProcessSpecPlan.objects.get_by_name(name=name)
-            logger.debug(f'Plan: {name} already exists in region, skip initialization.')
-        except ProcessSpecPlan.DoesNotExist:
-            logger.info(f'Creating default plan: {name}...')
-            ProcessSpecPlan.objects.create(name=name, **config)
-
-
 def _get_structure(app: 'WlApp') -> Dict:
     return {item.name: item.computed_replicas for item in ProcessSpec.objects.filter(engine_app_id=app.uuid)}
 

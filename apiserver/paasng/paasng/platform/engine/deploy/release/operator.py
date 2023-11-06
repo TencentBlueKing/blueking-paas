@@ -37,6 +37,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeployStep
 
 logger = logging.getLogger(__name__)
@@ -117,10 +118,12 @@ def release_by_k8s_operator(
         raise
 
     try:
+        advanced_options = Deployment.objects.get(id=deployment_id).advanced_options if deployment_id else None
         bkapp_res = get_bkapp_resource_for_deploy(
             env,
             deploy_id=str(app_model_deploy.id),
             force_image=build.image if build else None,
+            image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
         )
 
         # 下发 k8s 资源前需要确保命名空间存在

@@ -38,13 +38,13 @@ from paas_wl.bk_app.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.base import AbortedDetails, AbortedDetailsPolicy
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.workflow.flow import DeploymentStateMgr
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ class DeployStatusHandler(CallbackHandler):
             state_mgr.update(release_status=job_status)
             state_mgr.finish(job_status, err_detail=dp.message or '', write_to_stream=True)
 
-        # 在部署流程结束后，发送信号触发操作审计等后续步骤(不支持创建监控告警规则)
+        # 在部署流程结束后，发送信号触发操作审计等后续步骤。告警规则的创建统一在 post_appenv_deploy 信号中触发
         post_cnative_env_deploy.send(dp.environment, deploy=dp)
 
     def parse_result(self, result: CallbackResult) -> Tuple[bool, str, Dict]:

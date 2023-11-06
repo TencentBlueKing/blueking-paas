@@ -19,14 +19,15 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 
 from attrs import define
-from django.shortcuts import get_object_or_404
 
-from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
+from paasng.platform.applications.models import Application
 
 
 def get_bk_biz_id(app_code: str) -> str:
-    obj = get_object_or_404(BKMonitorSpace, application__code=app_code)
-    return obj.iam_resource_id
+    app = Application.objects.get(code=app_code)
+    monitor_space, _ = get_or_create_bk_monitor_space(app)
+    return monitor_space.iam_resource_id
 
 
 @define(kw_only=True)

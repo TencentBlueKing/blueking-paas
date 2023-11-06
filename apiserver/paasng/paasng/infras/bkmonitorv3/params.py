@@ -41,8 +41,6 @@ class QueryAlertsParams:
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
     :param keyword: 告警名称包含的关键字. 可选
-    :param page:页数
-    :param page_size: 每页条数 (默认 20,最大 500)
     """
 
     app_code: str
@@ -100,8 +98,6 @@ class QueryAlarmStrategiesParams:
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ALERT: 表示告警中, INVALID: 表示已失效, OFF: 表示已关闭, ON: 表示已开启). 可选
     :param keyword: 告警名称包含的关键字. 可选
-    :param page:页数
-    :param page_size: 每页条数 (默认 20,最大 500)
     """
 
     app_code: str

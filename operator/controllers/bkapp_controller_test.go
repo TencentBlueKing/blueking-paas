@@ -130,7 +130,7 @@ var _ = Describe("", func() {
 		)
 	})
 
-	It("Should Update Status.Revision when a bkapp is created", func() {
+	It("Should Update Status.DeployID when a bkapp was created", func() {
 		By("By creating a new bkapp")
 		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
 
@@ -142,14 +142,14 @@ var _ = Describe("", func() {
 			if err := k8sClient.Get(ctx, bkappLookupKey, createdBkApp); err != nil {
 				return false
 			}
-			return createdBkApp.Status.Revision != nil
+			return createdBkApp.Status.DeployId != ""
 		}, timeout, interval).Should(BeTrue())
 
-		Expect(createdBkApp.Status.Revision.Revision).To(Equal(int64(1)))
+		Expect(createdBkApp.Status.DeployId).To(Equal("0"))
 		Expect(controllerutil.ContainsFinalizer(createdBkApp, paasv1alpha2.BkAppFinalizerName)).To(BeTrue())
 
 		By("By checking the pre-release-hook pod is dispatched")
-		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-rel-fake-app-1"}
+		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-rel-fake-app-0"}
 		preReleaseHookPod := &corev1.Pod{}
 
 		// We'll need to retry getting this newly created Pod, given that creation may not immediately happen.
@@ -256,12 +256,13 @@ var _ = Describe("", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		By("By update the Application.Spec to make a new Revision")
+		By("By update the Application.Spec and make a new Deploy")
 		Eventually(func() error {
 			err := k8sClient.Get(ctx, bkappLookupKey, createdBkApp)
 			if err != nil {
 				return err
 			}
+			createdBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] = "2"
 			createdBkApp.Spec.Configuration.Env = append(
 				createdBkApp.Spec.Configuration.Env,
 				paasv1alpha2.AppEnvVar{Name: "foo"},
@@ -275,7 +276,7 @@ var _ = Describe("", func() {
 			if err != nil {
 				return false
 			}
-			return createdBkApp.Status.Revision.Revision != int64(1)
+			return createdBkApp.Status.DeployId == "2"
 		}, timeout, interval).Should(BeTrue())
 
 		condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)

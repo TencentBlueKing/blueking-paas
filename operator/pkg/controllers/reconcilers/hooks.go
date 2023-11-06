@@ -108,7 +108,6 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 // 获取应用当前在集群中的状态
 func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha2.BkApp) resources.HookInstance {
-	currentStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
 	pod := corev1.Pod{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
 	if err != nil {
@@ -118,6 +117,8 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 		}
 	}
 
+	// NOTE: 最终返回的 Instance 状态并未完全使用该状态，仅仅只使用了“启动时间”，Instance 状态以 Pod 状态为准，
+	currentStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
 	// 如果创建 Pod 后未正常写入 Phase, 这里则重新写这个状态
 	if currentStatus == nil {
 		currentStatus = &paasv1alpha2.HookStatus{

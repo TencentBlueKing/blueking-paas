@@ -45,8 +45,6 @@ type DeployActionReconciler struct {
 	Result Result
 }
 
-const defaultDeployID = "1"
-
 // Reconcile reconciles.
 func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
@@ -55,7 +53,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 
 	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 	if currentDeployID == "" {
-		currentDeployID = defaultDeployID
+		currentDeployID = resources.DefaultDeployID
 	}
 
 	// Check if the current deploy ID has been processed already.

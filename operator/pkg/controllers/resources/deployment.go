@@ -45,6 +45,9 @@ const (
 
 	// DefaultImage 是当无法获取进程镜像时使用的默认镜像
 	DefaultImage = "busybox:latest"
+
+	// DefaultDeployID is the value that will be used if the DeployID is not set
+	DefaultDeployID = "0"
 )
 
 // log is for logging in this package.
@@ -54,7 +57,7 @@ var log = logf.Log.WithName("controllers-resources")
 func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 	deployID := app.Status.DeployId
 	if deployID == "" {
-		deployID = "1"
+		deployID = DefaultDeployID
 	}
 
 	annotations := map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID}

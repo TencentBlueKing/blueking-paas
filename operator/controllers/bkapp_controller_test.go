@@ -145,11 +145,11 @@ var _ = Describe("", func() {
 			return createdBkApp.Status.DeployId != ""
 		}, timeout, interval).Should(BeTrue())
 
-		Expect(createdBkApp.Status.DeployId).To(Equal("1"))
+		Expect(createdBkApp.Status.DeployId).To(Equal("0"))
 		Expect(controllerutil.ContainsFinalizer(createdBkApp, paasv1alpha2.BkAppFinalizerName)).To(BeTrue())
 
 		By("By checking the pre-release-hook pod is dispatched")
-		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-rel-fake-app-1"}
+		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-rel-fake-app-0"}
 		preReleaseHookPod := &corev1.Pod{}
 
 		// We'll need to retry getting this newly created Pod, given that creation may not immediately happen.

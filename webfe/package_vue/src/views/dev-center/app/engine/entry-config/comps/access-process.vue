@@ -79,6 +79,7 @@
                     :data="process.ports"
                     :outer-border="false"
                     :header-border="false"
+                    ext-cls="process-config-table-cls"
                   >
                     <bk-table-column
                       :label="$t('端口名称')"
@@ -282,5 +283,11 @@ export default {
 .module-select-custom,
 .env-select-custom {
   background: #FFF;
+}
+
+.process-config-table-cls {
+  /deep/ .bk-table-row-last td {
+    border-bottom: none !important;
+  }
 }
 </style>

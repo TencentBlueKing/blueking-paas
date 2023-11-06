@@ -26,8 +26,8 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.text import b64decode, b64encode
 from paas_wl.workloads.images import constants
-
-from .entities import ImageCredential
+from paas_wl.workloads.images.entities import ImageCredential
+from paas_wl.workloads.images.utils import make_image_pull_secret_name
 
 if TYPE_CHECKING:
     from paas_wl.workloads.images.kres_entities import ImageCredentials
@@ -56,10 +56,10 @@ class ImageCredentialsDeserializer(AppEntityDeserializer['ImageCredentials']):
         if kube_data.type != constants.KUBE_SECRET_TYPE:
             raise ValueError(f"Invalid kube resource: {kube_data.type}")
 
-        if kube_data.metadata.name != constants.KUBE_RESOURCE_NAME:
+        res_name = make_image_pull_secret_name(app)
+        if kube_data.metadata.name != res_name:
             logger.warning(
-                "unexpected resource name, "
-                f"given is '{kube_data.metadata.name}', but expected is '{constants.KUBE_RESOURCE_NAME}'"
+                f"unexpected resource name, given is '{kube_data.metadata.name}', but expected is '{res_name}'"
             )
 
         b64encoded = kube_data.data[constants.KUBE_DATA_KEY]

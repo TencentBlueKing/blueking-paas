@@ -310,6 +310,7 @@
                         :disabled="false"
                         style="width: 150px"
                         searchable
+                        @change="handleChange($event, 'stag')"
                       >
                         <bk-option
                           v-for="option in resQuotaData"
@@ -323,11 +324,7 @@
                         v-if="quotaPlansFlag"
                         class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                       />
-                      <i
-                        v-else
-                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        v-bk-tooltips="stagTips"
-                      />
+                      <quota-popver v-else :data="stagQuotaData" />
                     </div>
                   </bk-form-item>
                   <bk-form-item
@@ -487,6 +484,7 @@
                         :disabled="false"
                         style="width: 150px"
                         searchable
+                        @change="handleChange($event, 'prod')"
                       >
                         <bk-option
                           v-for="option in resQuotaData"
@@ -500,11 +498,7 @@
                         v-if="quotaPlansFlag"
                         class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                       />
-                      <i
-                        v-else
-                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        v-bk-tooltips="prodTips"
-                      />
+                      <quota-popver v-else :data="prodQuotaData" />
                     </div>
                   </bk-form-item>
                   <bk-form-item
@@ -743,11 +737,7 @@
                           v-if="quotaPlansFlag"
                           class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                         />
-                        <i
-                          v-else
-                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                          v-bk-tooltips="stagTips"
-                        />
+                        <quota-popver v-else :data="item.value === 'stag' ? stagQuotaData : prodQuotaData" />
                       </span>
                     </bk-form-item>
 
@@ -841,10 +831,12 @@
 <script>import _ from 'lodash';
 import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
+import quotaPopver from './comps/quota-popver';
 
 export default {
   components: {
     userGuide,
+    quotaPopver,
   },
   props: {
     moduleId: {
@@ -1048,17 +1040,10 @@ export default {
         stag: {},
       },
       tagInputIndex: 0,
-      resQuotaConfig: {
-        stag: {
-          limit: {},
-          request: {},
-        },
-        prod: {
-          limit: {},
-          request: {},
-        },
-      },
       allowMultipleImage: false,
+      allQuotaList: [],
+      stagQuotaData: {},
+      prodQuotaData: {},
     };
   },
   computed: {
@@ -1070,38 +1055,6 @@ export default {
     },
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.processPageEdit;
-    },
-    stagTips() {
-      return {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `
-              <div>
-                ${this.$t('最大资源限制')}： <span>cpu：${this.resQuotaConfig.stag.limit.cpu} </span> <span>${this.$t('内存')}：${this.resQuotaConfig.stag.limit.memory} </span>
-              </div>
-              <div>
-                ${this.$t('最小资源请求')}：<span>cpu：${this.resQuotaConfig.stag.request.cpu} </span> <span>${this.$t('内存')}：${this.resQuotaConfig.stag.request.memory} </span>
-              </div>
-              `,
-        placements: ['bottom'],
-      };
-    },
-    prodTips() {
-      return {
-        theme: 'light',
-        allowHtml: true,
-        content: this.$t('提示信息'),
-        html: `
-              <div>
-                ${this.$t('最大资源限制')}： <span>cpu：${this.resQuotaConfig.prod.limit.cpu} </span> <span>${this.$t('内存')}：${this.resQuotaConfig.prod.limit.memory} </span>
-              </div>
-              <div>
-                ${this.$t('最小资源请求')}：<span>cpu：${this.resQuotaConfig.prod.request.cpu} </span> <span>${this.$t('内存')}：${this.resQuotaConfig.prod.request.memory} </span>
-              </div>
-              `,
-        placements: ['bottom'],
-      };
     },
     curModuleId() {
       return this.curAppModule?.name;
@@ -1116,13 +1069,12 @@ export default {
   },
   watch: {
     formData: {
-      handler(c) {
+      handler() {
         if (!this.formData.port) this.formData.port = null;
         if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
       },
       deep: true,
     },
-
   },
   async created() {
     // 非创建应用初始化为查看态
@@ -1137,8 +1089,6 @@ export default {
     if (this.isCustomImage) {
       this.init();
     }
-    await this.getQuotaPlans('stag');
-    this.getQuotaPlans('prod');
   },
   mounted() {
   },
@@ -1150,7 +1100,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        this.processData = res.proc_specs;
+        this.processData = this.setProcessData(res.proc_specs);
         this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
         if (this.allowMultipleImage) {
           this.getImageCredentialList();
@@ -1170,7 +1120,23 @@ export default {
         });
       } finally {
         this.isLoading = false;
+        // 获取资源配额数据
+        await this.getQuotaPlans();
       }
+    },
+    // 将web放在第一个位置
+    setProcessData(processList = []) {
+      if (!processList.length) return processList;
+      let processItem = {};
+      for (let i = 0; i < processList.length; i++) {
+        if (processList[i].name === 'web') {
+          processItem = processList[i];
+          processList.splice(i, 1);
+          break;
+        }
+      }
+      processList.unshift(processItem);
+      return processList;
     },
     trimStr(str) {
       return str.replace(/(^\s*)|(\s*$)/g, '');
@@ -1351,15 +1317,20 @@ export default {
       this.btnIndex = 0;
     },
 
-    async getQuotaPlans(env) {
+    // 获取资源配额信息
+    async getQuotaPlans() {
       try {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        const data = res.find(e => e.name === 'default');
+        // 默认值
         this.resQuotaData = res.map(item => item.name);
-        this.resQuotaConfig[env].limit = data.limit;
-        this.resQuotaConfig[env].request = data.request;
-        console.log(this.resQuotaConfig);
+
+        // 资源配额数据
+        this.allQuotaList = res;
+        // 当前stag资源配额
+        this.handleChange(this.formData.env_overlay.stag?.plan_name || 'default', 'stag');
+        // 当前prod资源配额
+        this.handleChange(this.formData.env_overlay.prod?.plan_name || 'default', 'prod');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1424,6 +1395,15 @@ export default {
     // 查看指南
     handleViewGuide() {
       this.$refs.userGuideRef.showSideslider();
+    },
+
+    // 资源配额方案change回调
+    handleChange(name, env) {
+      if (env === 'stag') {
+        this.stagQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+      } else {
+        this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+      }
     },
   },
 };

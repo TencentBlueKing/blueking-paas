@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -98,6 +97,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 				UpdatedReplicas: 1,
 			},
 		}
+		fakeDeploy.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = resources.ComputeDeploymentHash(&fakeDeploy)
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
@@ -117,6 +117,9 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			Status: corev1.ConditionTrue,
 			Type:   appsv1.DeploymentAvailable,
 		})
+		// Skip the update of deployment when reconciling
+		web.Annotations[paasv1alpha2.DeploySkipUpdateAnnoKey] = "true"
+
 		cli := builder.WithObjects(bkapp, outdated, web).Build()
 		r := NewDeploymentReconciler(cli)
 
@@ -173,32 +176,18 @@ var _ = Describe("Test DeploymentReconciler", func() {
 		It("test update", func() {
 			ctx := context.Background()
 			current := fakeDeploy.DeepCopy()
-			current.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
-
 			client := builder.WithObjects(bkapp, current).Build()
-			r := NewDeploymentReconciler(client)
 
+			// Increase the replicas and update the content hash
+			*current.Spec.Replicas = *current.Spec.Replicas + 1
+			current.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = resources.ComputeDeploymentHash(current)
+			Expect(NewDeploymentReconciler(client).deploy(ctx, current)).NotTo(HaveOccurred())
+
+			// Check the deployment resource has been updated
+			newObj := appsv1.Deployment{}
 			objKey := types.NamespacedName{Name: current.Name, Namespace: current.Namespace}
-
-			By("deploy with same RevisionAnnoKey")
-			one := current.DeepCopy()
-			one.Spec.Replicas = lo.ToPtr(*one.Spec.Replicas + 1)
-			Expect(r.deploy(ctx, one)).NotTo(HaveOccurred())
-
-			got1 := appsv1.Deployment{}
-			_ = client.Get(ctx, objKey, &got1)
-			Expect(got1.Annotations[paasv1alpha2.RevisionAnnoKey]).To(Equal("1"))
-			Expect(*got1.Spec.Replicas).To(Equal(*one.Spec.Replicas - 1))
-			Expect(*current).To(Equal(got1))
-
-			By("deploy with changed RevisionAnnoKey")
-			two := fakeDeploy.DeepCopy()
-			two.Annotations[paasv1alpha2.RevisionAnnoKey] = "2"
-			Expect(r.deploy(ctx, two)).NotTo(HaveOccurred())
-
-			got2 := appsv1.Deployment{}
-			_ = client.Get(ctx, objKey, &got2)
-			Expect(got2.Annotations[paasv1alpha2.RevisionAnnoKey]).To(Equal("2"))
+			_ = client.Get(ctx, objKey, &newObj)
+			Expect(newObj.Spec.Replicas).To(Equal(current.Spec.Replicas))
 		})
 	})
 })

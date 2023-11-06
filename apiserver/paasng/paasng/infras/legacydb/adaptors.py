@@ -54,7 +54,7 @@ class AppAdaptor:
         app = self.session.query(self.model).filter_by(id=app_id).scalar()
         return app
 
-    def get_by_keyword(self, keyword: str) -> List[Dict[str, str]]:
+    def get_by_keyword(self, keyword: str, include_inactive_apps: bool) -> List[Dict[str, str]]:
         """Query application info not in PaaS3.0 by keywords (APP ID, APP Name)"""
         legacy_apps = (
             self.session.query(self.model)
@@ -65,6 +65,9 @@ class AppAdaptor:
             )
             .order_by(self.model.code)
         )
+        if not include_inactive_apps:
+            # state > 1 表示上架状态
+            legacy_apps = legacy_apps.filter(self.model.state > 1)
 
         if keyword:
             # 模糊匹配的关键字

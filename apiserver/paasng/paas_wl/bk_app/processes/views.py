@@ -27,10 +27,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.utils import get_bkapp
-from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferred
-from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.bk_app.processes.drf_serializers import (
     ModuleScopedData,
     ModuleState,
@@ -41,13 +37,16 @@ from paas_wl.bk_app.processes.drf_serializers import (
 )
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, WatchEvent
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paas_wl.utils.views import IgnoreClientContentNegotiation
+from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferred
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.version import get_env_deployed_version_info
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import Module
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
@@ -176,7 +175,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             and module.build_config.build_method == RuntimeType.CUSTOM_IMAGE
         ):
             try:
-                return ImageParser(get_bkapp(application, module)).get_repository()
+                return get_image_info(module)[0]
             except ValueError:
                 return None
         repo = module.get_source_obj()

@@ -80,3 +80,16 @@ class BkCIClient:
             raise BKCIApiError(resp['message'], resp['code'])
 
         return resp.get('data')
+
+    def get_codecc_taskinfo_by_build_id(self, build_id: str):
+        """[应用态]根据codeccBuildId查询buildId映射"""
+        try:
+            resp = self.client.app_codecc_build_id_mapping(data={"codeccbuildId": build_id})
+        except APIGatewayResponseError as e:
+            raise BKCIGatewayServiceError(f'get codecc task info by build({build_id}) error, detail: {e}')
+
+        if resp.get('code') != '0':
+            logger.exception(f"get codecc task info, resp:{resp}")
+            raise BKCIApiError(resp['message'], resp['code'])
+
+        return resp.get('data', {}).get('task_id')

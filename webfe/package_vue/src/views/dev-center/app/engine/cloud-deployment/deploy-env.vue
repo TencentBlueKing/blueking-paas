@@ -20,60 +20,79 @@
             </span>
           </span>
         </bk-alert>
-        <div class="flex-row align-items-center mt20">
-          <bk-dropdown-menu
-            ref="largeDropdown"
-            trigger="click"
-            ext-cls="env-export-wrapper"
-          >
-            <bk-button
-              slot="dropdown-trigger"
-              class="mr10"
-            >
-              {{ $t('批量导入') }}
-            </bk-button>
-            <ul
-              slot="dropdown-content"
-              class="bk-dropdown-list"
-            >
-              <li>
-                <a
-                  href="javascript:;"
-                  style="margin: 0"
-                  :class="addedModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
-                  @click="handleCloneFromModule"
-                >
-                  {{ $t('从模块导入') }}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="javascript:;"
-                  style="margin: 0"
-                  :class="!canModifyEnvVariable ? 'is-disabled' : ''"
-                  @click="handleImportFromFile"
-                >
-                  {{ $t('从文件导入') }}
-                </a>
-              </li>
+        <div class="flex-row align-items-center justify-content-between mt20">
+          <div class="left-filter">
+            <ul class="filter-action-list" v-if="!isBatchEdit">
+              <li
+                @click="handleFilterEnv('all')"
+                :class="{ 'active': activeEnvValue === 'all' }"
+              >{{ $t('全部') }}</li>
+              <li
+                v-for="item in envSelectList"
+                :key="item.value"
+                @click="handleFilterEnv(item.value)"
+                :class="{ 'active': activeEnvValue === item.value }"
+              >{{ item.text }}</li>
             </ul>
-          </bk-dropdown-menu>
-          <bk-button
-            :theme="'default'"
-            :outline="true"
-            class="export-btn-cls mr10"
-            @click="handleExportToFile"
-          >
-            {{ $t('批量导出') }}
-          </bk-button>
-          <bk-button
-            :theme="'default'"
-            class="export-btn-cls"
-            :outline="true"
-            @click="handleEditClick"
-          >
-            {{ $t('批量编辑') }}
-          </bk-button>
+          </div>
+          <div class="right flex-row align-items-center">
+            <bk-button
+              v-if="!isBatchEdit"
+              :theme="'default'"
+              class="export-btn-cls mr10"
+              :outline="true"
+              @click="handleEditClick"
+            >
+              {{ $t('批量编辑') }}
+            </bk-button>
+            <bk-dropdown-menu
+              ref="largeDropdown"
+              trigger="click"
+              ext-cls="env-export-wrapper"
+            >
+              <bk-button
+                slot="dropdown-trigger"
+                class="mr10"
+              >
+                <i class="paasng-icon paasng-upload mr6"></i>
+                {{ $t('导入') }}
+              </bk-button>
+              <ul
+                slot="dropdown-content"
+                class="bk-dropdown-list"
+              >
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0"
+                    :class="addedModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
+                    @click="handleCloneFromModule"
+                  >
+                    {{ $t('从模块导入') }}
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0"
+                    :class="!canModifyEnvVariable ? 'is-disabled' : ''"
+                    @click="handleImportFromFile"
+                  >
+                    {{ $t('从文件导入') }}
+                  </a>
+                </li>
+              </ul>
+            </bk-dropdown-menu>
+            <bk-button
+              :theme="'default'"
+              :outline="true"
+              class="export-btn-cls"
+              @click="handleExportToFile"
+            >
+              <i class="paasng-icon paasng-import mr6"></i>
+              {{ $t('导出') }}
+            </bk-button>
+          </div>
         </div>
         <bk-table
           v-bkloading="{ isLoading: isTableLoading }"
@@ -158,9 +177,6 @@
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
-            :filters="envSelectList"
-            :filter-method="sourceFilterMethod"
-            :filter-multiple="false"
             prop="environment_name"
           >
             <template slot-scope="{ row }">
@@ -248,7 +264,7 @@
                     trigger="click"
                     :ext-cls="'asadsadsads'"
                     width="288"
-                    @confirm="handleSingleDelete($index)"
+                    @confirm="handleSingleDelete(row)"
                   >
                     <div slot="content">
                       <div class="demo-custom mb10">
@@ -578,7 +594,6 @@ export default {
         description: [
           {
             validator: (value) => {
-              console.log(value);
               if (!value) {
                 return true;
               }
@@ -628,6 +643,8 @@ export default {
       curFile: {},
       isFileTypeError: false,
       envEnums: ENV_ENUM,
+      isBatchEdit: false,
+      activeEnvValue: 'all',
     };
   },
   computed: {
@@ -664,6 +681,7 @@ export default {
           this.$set(v, 'isEdit', false);
         });
         this.envLocalVarList = _.cloneDeep(this.envVarList);
+        this.handleFilterEnv(this.activeEnvValue);
       }, (errRes) => {
         const errorMsg = errRes.message;
         this.$paasMessage({
@@ -738,6 +756,7 @@ export default {
     async createdEnvVariable(data, i) {
       // 删除冗余数据
       delete data.isEdit;
+      delete data.isAdd;
       try {
         await this.$store.dispatch('envVar/createdEnvVariable', {
           appCode: this.appCode,
@@ -820,6 +839,7 @@ export default {
           message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
         });
       }
+      this.isBatchEdit = false;
     },
 
     handleShoEnvDialog() {
@@ -921,6 +941,9 @@ export default {
           description: '',
         });
       }
+      // 批量编辑展示所有环境变量
+      this.handleFilterEnv('all');
+      this.isBatchEdit = true;
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
 
@@ -1068,7 +1091,6 @@ export default {
 
     handleExportToFile() {
       this.exportLoading = true;
-      console.log('this.curSortKey', this.curSortKey);
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
       this.$http
         .get(url)
@@ -1204,6 +1226,7 @@ export default {
     // 取消
     handleCancel() {
       this.envVarList = _.cloneDeep(this.envLocalVarList);
+      this.isBatchEdit = false;
     },
 
     sourceFilterMethod(value, row, column) {
@@ -1241,8 +1264,8 @@ export default {
     },
 
     // 删除单个环境变量
-    async handleSingleDelete(index) {
-      const [deleteEnvVarData] = this.envVarList.splice(index, 1);
+    async handleSingleDelete(row) {
+      const deleteEnvVarData = this.envVarList.find(v => v.id === row.id);
       const varId = deleteEnvVarData.id;
       try {
         await this.$store.dispatch('envVar/deleteEnvVariable', {
@@ -1265,7 +1288,7 @@ export default {
 
     // 单个环境编辑保存
     handleSingleSave(index) {
-      if (!this.envLocalVarList[index]) { // 新建
+      if (this.envVarList[index].isAdd) { // 新建
         this.singleValidate(index, 'add');
       } else { // 编辑
         this.singleValidate(index, 'update');
@@ -1282,6 +1305,7 @@ export default {
           environment_name: 'stag',
           description: '',
           isEdit: true,
+          isAdd: true,
         });
       }
     },
@@ -1299,6 +1323,17 @@ export default {
         this.envVarList[index].description = this.envLocalVarList[index].description;
         this.envVarList[index].environment_name = this.envLocalVarList[index].environment_name;
       }
+    },
+
+    // 过滤环境
+    handleFilterEnv(value) {
+      this.activeEnvValue = value;
+      // 过滤
+      if (value === 'all') {
+        this.envVarList = _.cloneDeep(this.envLocalVarList);
+        return;
+      }
+      this.envVarList = this.envLocalVarList.filter(v => v.environment_name === value);
     },
   },
 };
@@ -1799,6 +1834,64 @@ a.is-disabled {
 .variable-table-cls {
   /deep/ .bk-table-empty-block {
     display: none;
+  }
+}
+.mr6 {
+  margin-right: 6px;
+}
+.right {
+  .paasng-upload,
+  .paasng-download {
+    font-size: 12px;
+  }
+}
+.filter-action-list {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 4px;
+  border-radius: 2px;
+  background: #F0F1F5;
+
+  li {
+    position: relative;
+    user-select: none;
+    height: 100%;
+    line-height: 24px;
+    font-size: 12px;
+    color: #63656E;
+    padding: 0 15px;
+    cursor: pointer;
+
+
+    &::before {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      display: block;
+      width: 1px;
+      height: 12px;
+      margin-top: -6px;
+      background: #DCDEE5;
+      content: "";
+    }
+    &:first-child::before {
+      height: 0;
+    }
+
+    &.active {
+      color: #3a84ff;
+      background: #fff;
+      border-radius: 2px;
+
+      &::before {
+        background: #fff;
+      }
+
+      & + li::before {
+        height: 0;
+      }
+    }
   }
 }
 </style>

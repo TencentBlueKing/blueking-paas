@@ -181,11 +181,19 @@ class UpsertMountSLZ(serializers.Serializer):
         environment_name = attrs["environment_name"]
         name = attrs["name"]
 
-        # 检查当前 module_id 下,相同环境中是否存在具有相同 name 的 mount
-        module_id = self.context['module_id']
-        if Mount.objects.filter(
-            module_id=module_id, name=name, environment_name__in=[environment_name, MountEnvName.GLOBAL.value]
-        ).exists():
+        module_id = self.context.get('module_id')
+
+        # 验证重名挂载卷
+        filtered_mounts = Mount.objects.filter(
+            module_id=module_id,
+            name=name,
+            environment_name__in=[environment_name, MountEnvName.GLOBAL.value],
+        )
+        # 传入了 mount_instance 表示更新操作，否则表示创建操作。更新操作时候，排除被更新 mount 对象
+        if mount_id := self.context.get('mount_id', None):
+            filtered_mounts = filtered_mounts.exclude(id=mount_id)
+
+        if filtered_mounts.exists():
             raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
 
         # 根据 source_type 验证 source_config_data

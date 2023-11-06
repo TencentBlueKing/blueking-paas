@@ -19,6 +19,8 @@
 package resources
 
 import (
+	"fmt"
+	"hash/fnv"
 	"strconv"
 
 	"github.com/samber/lo"
@@ -26,11 +28,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/rand"
+
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
+	"bk.tencent.com/paas-app-operator/pkg/utils/hash"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
 const (
@@ -39,6 +45,9 @@ const (
 
 	// DefaultImage 是当无法获取进程镜像时使用的默认镜像
 	DefaultImage = "busybox:latest"
+
+	// DefaultDeployID is the value that will be used if the DeployID is not set
+	DefaultDeployID = "0"
 )
 
 // log is for logging in this package.
@@ -46,12 +55,12 @@ var log = logf.Log.WithName("controllers-resources")
 
 // GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
 func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
-	newRevision := int64(0)
-	if rev := app.Status.Revision; rev != nil {
-		newRevision = rev.Revision
+	deployID := app.Status.DeployId
+	if deployID == "" {
+		deployID = DefaultDeployID
 	}
 
-	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
+	annotations := map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID}
 	envs := GetAppEnvs(app)
 	volMountMap := GetVolumeMountMap(app)
 	replicasGetter := NewReplicasGetter(app)
@@ -101,7 +110,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels:      objLabels,
-						Annotations: annotations,
+						Annotations: map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID},
 					},
 					Spec: corev1.PodSpec{
 						DNSConfig:        buildDNSConfig(app),
@@ -121,6 +130,9 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 				log.Error(err, "Failed to inject mounts info to process", proc.Name)
 			}
 		}
+
+		// Calculate a hash value for the deployment and set it as the annotation
+		deployment.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = ComputeDeploymentHash(deployment)
 		deployList = append(deployList, deployment)
 	}
 	return deployList
@@ -157,8 +169,8 @@ func buildContainers(
 		Resources:       resRequirements,
 		ImagePullPolicy: pullPolicy,
 		Env:             envs,
-		Command:         command,
-		Args:            args,
+		Command:         kubetypes.ReplaceCommandEnvVariables(command),
+		Args:            kubetypes.ReplaceCommandEnvVariables(args),
 	}
 	if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
@@ -202,4 +214,11 @@ func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
 		return results
 	}
 	return nil
+}
+
+// ComputeDeploymentHash computes the hash value for the deployment object
+func ComputeDeploymentHash(obj *appsv1.Deployment) string {
+	deployHasher := fnv.New32a()
+	hash.DeepHashObject(deployHasher, obj)
+	return rand.SafeEncodeString(fmt.Sprint(deployHasher.Sum32()))
 }

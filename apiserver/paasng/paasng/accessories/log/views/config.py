@@ -17,23 +17,39 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Set
 
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from paasng.accessories.log.models import CustomCollectorConfig
+from paasng.accessories.log.serializers import (
+    BkLogCustomCollectMetadataOutputSLZ,
+    BkLogCustomCollectMetadataQuerySLZ,
+    ModuleCustomCollectorConfigSLZ,
+)
+from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bk_log.client import make_bk_log_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.accessories.log.models import CustomCollectorConfig
-from paasng.accessories.log.serializers import BkLogCustomCollectorConfigSLZ, ModuleCustomCollectorConfigSLZ
-from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
+
+
+def get_all_build_in_config_names(application: Application) -> Set[str]:
+    """get all builtin custom collector config name for application"""
+    names = set()
+    for module in application.modules.all():
+        names.add(build_custom_collector_config_name(module, type="json"))
+        names.add(build_custom_collector_config_name(module, type="stdout"))
+    return names
 
 
 class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
@@ -46,6 +62,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         Extra context provided to the serializer class.
         """
         module = self.get_module_via_path()
+        monitor_space, _ = get_or_create_bk_monitor_space(module.application)
         return {
             'request': self.request,
             'format': self.format_kwarg,
@@ -54,17 +71,41 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
                 build_custom_collector_config_name(module, type="json"),
                 build_custom_collector_config_name(module, type="stdout"),
             ],
+            "space_uid": monitor_space.space_uid,
         }
 
-    @swagger_auto_schema(response_serializer=BkLogCustomCollectorConfigSLZ(many=True), tags=["日志采集"])
-    def list_metadata(self, request, code, module_name):
-        """查询在日志平台已创建的自定义上报配置"""
+    @swagger_auto_schema(
+        query_serializer=BkLogCustomCollectMetadataQuerySLZ,
+        response_serializer=BkLogCustomCollectMetadataOutputSLZ,
+        tags=["日志采集"],
+    )
+    def get_metadata(self, request, code, module_name):
+        """查询在日志平台已创建的自定义上报配置以及日志平台的访问地址"""
+        application = self.get_application()
         module = self.get_module_via_path()
+        slz = BkLogCustomCollectMetadataQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
         cfgs = make_bk_log_client().list_custom_collector_config(biz_or_space_id=monitor_space.iam_resource_id)
-
+        if not slz.validated_data.get("all", False):
+            existed_ids = set(
+                CustomCollectorConfig.objects.filter(module=module).values_list("collector_config_id", flat=True)
+            )
+            # 创建采集规则时默认隐藏平台内置的自定义采集项
+            builtin_collector_config_ids = set(
+                CustomCollectorConfig.objects.filter(
+                    module_id__in=application.modules.values_list("id", flat=True),
+                    name_en__in=get_all_build_in_config_names(application),
+                ).values_list("collector_config_id", flat=True)
+            )
+            cfgs = [cfg for cfg in cfgs if cfg.id not in (existed_ids | builtin_collector_config_ids)]
         return Response(
-            data=BkLogCustomCollectorConfigSLZ(cfgs, many=True, context=self.get_serializer_context()).data
+            data=BkLogCustomCollectMetadataOutputSLZ(
+                {
+                    "options": cfgs,
+                },
+                context=self.get_serializer_context(),
+            ).data
         )
 
     @swagger_auto_schema(response_serializer=ModuleCustomCollectorConfigSLZ(many=True), tags=["日志采集"])
@@ -111,3 +152,10 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         return Response(
             data=ModuleCustomCollectorConfigSLZ(collector_config, context=self.get_serializer_context()).data
         )
+
+    @swagger_auto_schema(tags=["日志采集"])
+    def destroy(self, request, code, module_name, name_en):
+        module = self.get_module_via_path()
+        cfg = get_object_or_404(CustomCollectorConfig, module=module, name_en=name_en)
+        cfg.delete()
+        return Response()

@@ -18,4 +18,3 @@ to the current version of the project delivered to anyone in the future.
 """
 KUBE_SECRET_TYPE = "kubernetes.io/dockerconfigjson"
 KUBE_DATA_KEY = ".dockerconfigjson"
-KUBE_RESOURCE_NAME = PULL_SECRET_NAME = "bkapp-dockerconfigjson"

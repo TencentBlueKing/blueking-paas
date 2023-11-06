@@ -43,12 +43,15 @@ from kubernetes.dynamic import ResourceField, ResourceInstance
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import NotAppScopedResource, ResourceDeleteTimeout, ResourceMissing
-from paas_wl.infras.resources.kube_res.exceptions import APIServerVersionIncompatible, AppEntityNotFound
+from paas_wl.infras.resources.kube_res.exceptions import (
+    APIServerVersionIncompatible,
+    AppEntityDeserializeError,
+    AppEntityNotFound,
+)
 from paas_wl.infras.resources.utils.basic import get_client_by_app, get_client_by_cluster_name
 
 if TYPE_CHECKING:
     from paas_wl.infras.resources.generation.mapper import MapperPack
-
 
 logger = logging.getLogger(__name__)
 
@@ -312,9 +315,17 @@ class NamespaceScopedReader(Generic[AET]):
         namespace: str,
         labels: Optional[Dict] = None,
         resource_version: Optional[int] = None,
+        ignore_unknown_objs: bool = False,
         **kwargs,
     ) -> Iterator[WatchEvent[AET]]:
-        """Watch resources change event for a specified namespace"""
+        """Watch resources change event for a specified namespace
+
+        :param cluster_name: name of the k8s cluster to watch
+        :param namespace: the namespace to watch
+        :param labels: labels for filtering results.
+        :param resource_version: if resource_version is not None, watch changes relative to the given resource_version.
+        :param ignore_unknown_objs: whether skip watch event when deserialize can not handle the object.
+        """
         labels = labels or {}
         # set "resource_version" when it's value is not None
         # because None value will trigger apiserver error
@@ -341,8 +352,15 @@ class NamespaceScopedReader(Generic[AET]):
                         continue
 
                     event = WatchEvent[AET](type=raw_event["type"])
-                    event.res_object = deserializer.deserialize(wl_app, kube_data)
-                    event.res_object._kube_data = kube_data
+                    try:
+                        event.res_object = deserializer.deserialize(wl_app, raw_event["object"])
+                    except AppEntityDeserializeError as e:
+                        if ignore_unknown_objs:
+                            logger.warning("failed to deserialize k8s resource %s, skip.", e.res)
+                            continue
+                        yield WatchEvent(type='ERROR', error_message=e.msg)
+                        return
+                    event.res_object._kube_data = raw_event["object"]
                     yield event
             except ApiException as exc:
                 if self._exc_is_expired_rv(exc):
@@ -439,8 +457,14 @@ class AppEntityReader(Generic[AET]):
             items.append(item)
         return ResourceList[AET](items=items, metadata=ret.metadata)
 
-    def watch_by_app(self, app: WlApp, labels: Optional[Dict] = None, **kwargs) -> Iterator[WatchEvent[AET]]:
-        """Get notified when resource changes"""
+    def watch_by_app(
+        self, app: WlApp, labels: Optional[Dict] = None, ignore_unknown_objs: bool = False, **kwargs
+    ) -> Iterator[WatchEvent[AET]]:
+        """Get notified when resource changes
+
+        :param labels: labels for filtering results
+        :param ignore_unknown_objs: whether skip watch event when deserialize can not handle the object
+        """
         labels = labels or {}
         # Remove "resource_version" param when it's value is None because None value will trigger apiserver error
         if 'resource_version' in kwargs and kwargs['resource_version'] is None:
@@ -464,7 +488,14 @@ class AppEntityReader(Generic[AET]):
                         return
 
                     event = WatchEvent[AET](type=raw_event["type"])
-                    event.res_object = deserializer.deserialize(app, raw_event["object"])
+                    try:
+                        event.res_object = deserializer.deserialize(app, raw_event["object"])
+                    except AppEntityDeserializeError as e:
+                        if ignore_unknown_objs:
+                            logger.warning("failed to deserialize k8s resource %s, skip.", e.res)
+                            continue
+                        yield WatchEvent(type='ERROR', error_message=e.msg)
+                        return
                     event.res_object._kube_data = raw_event["object"]
                     yield event
             except ApiException as exc:
@@ -553,7 +584,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
             kres_client.delete(name, namespace=self._get_namespace(app), non_grace_period=non_grace_period)
             return WaitDelete(self, app=app, name=name, namespace=self._get_namespace(app))
 
-    def upsert(self, res: AET) -> AET:
+    def upsert(self, res: AET, update_method='replace') -> AET:
         """Create or Update a new app related kube resource"""
         namespace = self._get_namespace(res.app)
         try:
@@ -564,7 +595,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
             self.save(res)
             return res
 
-        self.update(res, update_method='patch')
+        self.update(res, update_method=update_method)
         return res
 
     # Concrete methods start

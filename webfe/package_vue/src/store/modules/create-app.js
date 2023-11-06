@@ -23,14 +23,20 @@ import http from '@/api';
 
 export default {
   namespaced: true,
-  state: {},
+  state: {
+    isAdvancedOptions: false,
+  },
   getters: {},
-  mutations: {},
+  mutations: {
+    updateAdvancedOptions(state, data) {
+      state.isAdvancedOptions = data;
+    },
+  },
   actions: {
     /**
          * 获取增强服务实例
          */
-    getRegionsServices ({ commit, state }, { region, language }, config = {}) {
+    getRegionsServices({ commit, state }, { region, language }, config = {}) {
       const url = `${BACKEND_URL}/api/services/regions/${region}/init_templates/${language}`;
       return http.get(url, config);
     },
@@ -38,9 +44,9 @@ export default {
     /**
          * 获取与应用创建有关的可选项
          */
-    getOptions ({ commit, state }, config = {}) {
+    getOptions({ commit, state }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/creation/options/`;
       return http.get(url, config);
-    }
-  }
+    },
+  },
 };

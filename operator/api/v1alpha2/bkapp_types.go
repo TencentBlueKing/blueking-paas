@@ -204,7 +204,7 @@ const (
 	// ResQuotaPlan2C2G means 2 cpu & 2Gi memory
 	ResQuotaPlan2C2G ResQuotaPlan = "2C2G"
 
-	// ResQuotaPlan2C2G means 2 cpu & 4Gi memory
+	// ResQuotaPlan2C4G means 2 cpu & 4Gi memory
 	ResQuotaPlan2C4G ResQuotaPlan = "2C4G"
 
 	// ResQuotaPlan4C1G means 4 cpu & 1Gi memory
@@ -414,6 +414,9 @@ type AppStatus struct {
 	// HookStatuses is the status of Hook execution
 	HookStatuses []HookStatus `json:"hookStatuses,omitempty"`
 
+	// Deprecated: The Revision field was designed to save the revision of the BkApp resource,
+	// controls how the reconcile works. But it doesn't have any effects now because we switched
+	// to using "DeployID" field.
 	// Revision of the BkApp configuration it generates
 	Revision *Revision `json:"revision,omitempty"`
 
@@ -506,12 +509,9 @@ const (
 	HookPreRelease HookType = "pre-release"
 )
 
-// SetRevision used to set the Revision field (and also update the LastUpdate field)
-func (status *AppStatus) SetRevision(revision int64, deployId string) {
-	status.Revision = &Revision{Revision: revision}
-	if deployId != "" {
-		status.DeployId = deployId
-	}
+// SetDeployID set the DeployID field in the status.
+func (status *AppStatus) SetDeployID(deployId string) {
+	status.DeployId = deployId
 	status.LastUpdate = lo.ToPtr(metav1.Now())
 }
 

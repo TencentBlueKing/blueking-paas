@@ -22,17 +22,18 @@
             <div class="left-info">
               <div class="module">
                 <i class="icon paasng-icon paasng-deploy-item-dot"></i>
-                <span class="name">{{deploymentInfo.module_name}}</span>
                 <div
-                  v-if="deploymentInfo.exposed_url"
-                  class="access-entrance"
                   @click="handleOpenUrl(deploymentInfo.exposed_url)"
+                  :class="['module-name-wrapper', { 'link': deploymentInfo.exposed_url }]"
+                  v-bk-tooltips="{ content: $t('访问模块'), disabled: !deploymentInfo.exposed_url, distance: -3 }"
                 >
-                  <img
-                    :class="['deploy-icon', { en: localLanguage === 'en' }]"
-                    :src="`/static/images/${localLanguage === 'en' ? 'deployed_en.png' : 'deployed_zh.png' }`"
+                  <span class="name">{{deploymentInfo.module_name}}</span>
+                  <div
+                    v-if="deploymentInfo.exposed_url"
+                    class="access-entrance"
                   >
-                  <i class="paasng-icon paasng-jump-link"></i>
+                    <i class="paasng-icon paasng-jump-link ml10"></i>
+                  </div>
                 </div>
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
@@ -110,12 +111,21 @@
               </bk-button>
               <bk-button
                 :theme="'default'"
+                class="mr10"
                 size="small"
                 @click="handleOfflineApp(deploymentInfo)"
                 :disabled="!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending
                   || !deploymentInfo.state.deployment.latest_succeeded"
                 :loading="!!deploymentInfo.state.offline.pending">
                 {{$t('下架')}}
+              </bk-button>
+              <bk-button
+                :theme="'default'"
+                ext-cls="module-config-btn"
+                size="small"
+                v-bk-tooltips="$t('模块配置')"
+                @click="handleToModuleConfig(deploymentInfo.module_name)">
+                <i class="paasng-icon paasng-configuration-line"></i>
               </bk-button>
             </div>
           </section>
@@ -135,10 +145,9 @@
               v-if="!deploymentInfo.isExpand" />
             <div
               class="operation-wrapper"
+              @click="handleChangePanel(deploymentInfo)"
               v-if="deploymentInfo.processes.length || deploymentInfo.proc_specs.length">
-              <div
-                class="btn"
-                @click="handleChangePanel(deploymentInfo)">
+              <div class="btn">
                 {{ deploymentInfo.isExpand ? $t('收起') : $t('展开详情') }}
                 <i class="paasng-icon paasng-ps-arrow-down" v-if="!deploymentInfo.isExpand"></i>
                 <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
@@ -472,6 +481,14 @@ export default {
     handleOpenUrl(url) {
       window.open(url);
     },
+
+    // 跳转模块配置
+    handleToModuleConfig(moduleName) {
+      this.$router.push({
+        name: 'cloudAppDeployForProcess',
+        params: { id: this.appCode, moduleId: moduleName },
+      });
+    },
   },
 };
 </script>
@@ -510,18 +527,21 @@ export default {
           cursor: pointer;
           color: #C4C6CC;
         }
+
         .paasng-jump-link {
           font-size: 14px;
           color: #3A84FF;
           transform: translateY(1px);
         }
 
+        .paasng-deploy-item-dot {
+          margin-right: 14px;
+        }
+
         .name {
           font-weight: 700;
           font-size: 14px;
           color: #313238;
-          margin-left: 12px;
-          margin-right: 10px;
         }
 
         .icon-cls-link {
@@ -568,6 +588,18 @@ export default {
         }
       }
     }
+    .right-btn {
+      .module-config-btn.bk-button {
+        min-width: 26px;
+        padding: 0 !important;
+        width: 26px;
+      }
+      .paasng-configuration-line {
+        font-size: 14px;
+        color: #979BA5;
+        transform: translateY(0px);
+      }
+    }
   }
   .main {
     background: #fff;
@@ -577,11 +609,12 @@ export default {
   .operation-wrapper {
     display: flex;
     justify-content: center;
-    padding-bottom: 12px;
+    align-items: center;
+    height: 40px;
+    cursor: pointer;
     .btn {
       font-size: 12px;
       color: #3A84FF;
-      cursor: pointer;
     }
   }
   .not-deployed {
@@ -609,5 +642,18 @@ export default {
 }
 .tl em {
   font-weight: bold;
+}
+.module-name-wrapper {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 5px;
+
+  &.link {
+    cursor: pointer;
+    &:hover .name {
+      color: #3A84FF !important;
+    }
+  }
 }
 </style>

@@ -86,6 +86,24 @@ class PluginReleaseVersionSLZ(serializers.Serializer):
     source_hash = serializers.CharField(help_text="代码提交哈希")
 
 
+class PluginReleaseStageSLZ(serializers.Serializer):
+    """插件发布版本-步骤的结构"""
+
+    stage_id = serializers.CharField(help_text="阶段标识")
+    stage_name = serializers.CharField(help_text="阶段名称")
+    status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="阶段状态")
+
+
+class PluginReleaseAPIRequestSLZ(serializers.Serializer):
+    """插件版本创建回调的请求体格式"""
+
+    plugin_id = serializers.CharField(help_text="插件id")
+    version = PluginReleaseVersionSLZ(help_text="插件发布版本信息")
+    operator = serializers.CharField(help_text="操作人")
+    current_stage = PluginReleaseStageSLZ()
+    status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="插件版本状态")
+
+
 class DeployPluginRequestSLZ(serializers.Serializer):
     """插件部署操作的请求体格式"""
 

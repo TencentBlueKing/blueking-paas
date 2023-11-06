@@ -24,9 +24,9 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from elasticsearch_dsl.response import Hit
 
-from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 
 pytestmark = pytest.mark.django_db
 
@@ -136,9 +136,10 @@ class TestModuleStructuredLogAPIView:
                 # # 高亮
                 "message": "[bk-mark]???[/bk-mark]",
                 "detail": {
-                    "@timestamp": 1,
+                    # 不在白名单内的字段, 不返回
+                    # "@timestamp": 1,
+                    # "one.two.three": "four",
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "one.two.three": "four",
                     "region": bk_app.region,
                     "app_code": bk_app.code,
                     "module_name": "default",
@@ -179,6 +180,10 @@ class TestCustomCollectorConfigViewSet:
             log_type="stdout",
         )
 
+    @pytest.fixture(autouse=True)
+    def bkmonitor_space(self, bk_app):
+        return G(BKMonitorSpace, application=bk_app)
+
     def test_list(self, api_client, bk_app, bk_module, builtin_json_cfg, builtin_stdout_cfg, cfg_maker):
         cfg_maker()
 
@@ -190,18 +195,12 @@ class TestCustomCollectorConfigViewSet:
         assert resp.data[2]["is_builtin"]
 
     @pytest.fixture
-    def bkmonitor_space(self, bk_app):
-        return G(BKMonitorSpace, application=bk_app)
-
-    @pytest.fixture
     def apigw_client(self):
-        with mock.patch("paasng.infras.bk_log.client.APIGWClient") as cls, override_settings(
-            ENABLE_BK_LOG_APIGW=True
-        ):
+        with mock.patch("paasng.infras.bk_log.client.APIGWClient") as cls, override_settings(ENABLE_BK_LOG_APIGW=True):
             yield cls().api
 
     def test_list_metadata(self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space):
-        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector/metadata/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector-metadata/"
 
         apigw_client.databus_list_collectors.return_value = {
             "result": True,
@@ -234,10 +233,12 @@ class TestCustomCollectorConfigViewSet:
         }
 
         resp = api_client.get(url)
-        assert len(resp.data) == 3
-        assert resp.data[0]["is_builtin"]
-        assert resp.data[1]["is_builtin"]
-        assert not resp.data[2]["is_builtin"]
+        assert "url" in resp.data
+        options = resp.data["options"]
+        assert len(options) == 3
+        assert options[0]["is_builtin"]
+        assert options[1]["is_builtin"]
+        assert not options[2]["is_builtin"]
 
     def test_insert_success(self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector/"

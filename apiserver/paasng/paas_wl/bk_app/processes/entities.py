@@ -21,18 +21,18 @@ from typing import Dict, List, Optional
 
 from kubernetes.dynamic import ResourceField
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.core.app_structure import get_structure
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release
 from paas_wl.bk_app.applications.models.managers import AppConfigVarManager
-from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paas_wl.bk_app.processes.serializers import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
+from paas_wl.core.app_structure import get_structure
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
-from paas_wl.workloads.images.constants import PULL_SECRET_NAME
-from paas_wl.bk_app.processes.serializers import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
+from paas_wl.workloads.images.utils import make_image_pull_secret_name
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
 @dataclass
@@ -183,7 +183,7 @@ class Process(AppEntity):
                 args=build.get_command_for_proc(type_, procfile[type_]),
                 proc_command=procfile[type_],
                 image_pull_policy=config.runtime.get_image_pull_policy(),
-                image_pull_secrets=[{"name": PULL_SECRET_NAME}],
+                image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=release.app)}],
             ),
             schedule=Schedule(
                 node_selector=get_full_node_selector(release.app, config),

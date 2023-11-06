@@ -52,10 +52,9 @@ class TestListAlertsView:
                 'end_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             },
         )
-        alerts = resp.data['alerts']
-        assert len(alerts) == 3
-        assert alerts[0]['status'] in ['ABNORMAL', 'CLOSED', 'RECOVERED']
-        assert len(alerts[0]['receivers']) == 2
+        assert len(resp.data) == 3
+        assert resp.data[0]['status'] in ['ABNORMAL', 'CLOSED', 'RECOVERED']
+        assert len(resp.data[0]['receivers']) == 2
 
 
 class TestAlarmStrategiesView:
@@ -64,6 +63,5 @@ class TestAlarmStrategiesView:
         resp = api_client.post(
             f'/api/monitor/applications/{bk_app.code}/alarm_strategies/',
         )
-        alarm_strategies = resp.data['alarm_strategies']
-        assert len(alarm_strategies) == 3
-        assert alarm_strategies[0]['is_enabled'] in [True, False]
+        assert len(resp.data) == 3
+        assert resp.data[0]['is_enabled'] in [True, False]

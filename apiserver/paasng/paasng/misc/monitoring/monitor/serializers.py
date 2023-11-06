@@ -71,7 +71,7 @@ class ListAlertsSLZ(serializers.Serializer):
         return data
 
 
-class AlertDetailSLZ(serializers.Serializer):
+class AlertSLZ(serializers.Serializer):
     id = serializers.CharField()
     alert_name = serializers.CharField()
     status = serializers.CharField()
@@ -87,11 +87,6 @@ class AlertDetailSLZ(serializers.Serializer):
     def get_detail_link(self, instance) -> str:
         bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
         return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
-
-
-class AlertsSLZ(serializers.Serializer):
-    alerts = serializers.ListField(child=AlertDetailSLZ(), help_text='告警列表')
-    total = serializers.IntegerField(help_text='告警总数')
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):
@@ -119,7 +114,7 @@ class AlgorithmsSLZ(serializers.Serializer):
     algorithms = serializers.ListField(help_text='算法列表', child=AlgorithmSLZ())
 
 
-class AlarmStrategyDetailSLZ(serializers.Serializer):
+class AlarmStrategySLZ(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField(help_text='策略名称')
     is_enabled = serializers.BooleanField(help_text='是否启用')
@@ -133,8 +128,3 @@ class AlarmStrategyDetailSLZ(serializers.Serializer):
     def get_detail_link(self, instance) -> str:
         bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
         return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
-
-
-class AlarmStrategiesSLZ(serializers.Serializer):
-    alarm_strategies = serializers.ListField(child=AlarmStrategyDetailSLZ(), help_text='告警策略列表')
-    total = serializers.IntegerField(help_text='告警策略总数')

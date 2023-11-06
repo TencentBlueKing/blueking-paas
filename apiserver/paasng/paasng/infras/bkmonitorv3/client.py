@@ -160,7 +160,7 @@ class BkMonitorClient:
     def __init__(self, backend: BkMonitorBackend):
         self.client = backend
 
-    def query_alerts(self, query_params: QueryAlertsParams) -> Dict:
+    def query_alerts(self, query_params: QueryAlertsParams) -> List:
         """查询告警
 
         :param query_params: 查询告警的条件参数
@@ -174,11 +174,9 @@ class BkMonitorClient:
         if not resp.get('result'):
             raise BkMonitorApiError(resp['message'])
 
-        alerts = resp.get('data', {}).get('alerts', [])
-        total = resp.get('data', {}).get('total')
-        return {'alerts': alerts, 'total': total}
+        return resp.get('data', {}).get('alerts', [])
 
-    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
+    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> List:
         """查询告警策略
 
         :param query_params: 查询告警策略的条件参数
@@ -198,8 +196,7 @@ class BkMonitorClient:
                 continue
             strategy['notice_group_ids'] = strategy.get('notice', {}).get('user_groups', [])
 
-        total = resp.get('data', {}).get('total')
-        return {'alarm_strategies': alarm_strategies, 'total': total}
+        return alarm_strategies
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """

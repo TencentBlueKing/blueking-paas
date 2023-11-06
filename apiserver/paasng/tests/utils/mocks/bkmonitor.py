@@ -16,14 +16,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import random
-from typing import Dict
+from typing import List
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 
-def get_fake_alerts(start_time: int, end_time: int) -> Dict:
+def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
             'id': generate_random_string(6),
@@ -37,10 +37,10 @@ def get_fake_alerts(start_time: int, end_time: int) -> Dict:
         }
         for _ in range(3)
     ]
-    return {"alerts": alerts, "total": len(alerts)}
+    return alerts
 
 
-def get_fake_alarm_strategies() -> Dict:
+def get_fake_alarm_strategies() -> List:
     alarm_strategies = [
         {
             'id': generate_random_string(6),
@@ -53,16 +53,16 @@ def get_fake_alarm_strategies() -> Dict:
         }
         for _ in range(3)
     ]
-    return {"alarm_strategies": alarm_strategies, "total": len(alarm_strategies)}
+    return alarm_strategies
 
 
 class StubBKMonitorClient(BkMonitorClient):
     """蓝鲸监控提供的API，仅供单元测试使用"""
 
-    def query_alerts(self, query_params: QueryAlertsParams) -> Dict:
+    def query_alerts(self, query_params: QueryAlertsParams) -> List:
         query_data = query_params.to_dict()
         return get_fake_alerts(query_data['start_time'], query_data['end_time'])
 
-    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
+    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> List:
         query_params.to_dict()
         return get_fake_alarm_strategies()

@@ -1217,6 +1217,14 @@ export default {
         this.cloudAppData = _.cloneDeep(this.localCloudAppData);
         this.$store.commit('cloudApi/updateHookPageEdit', false);
         this.$store.commit('cloudApi/updateProcessPageEdit', false);
+        // 返回模块配置
+        this.$router.push({
+          name: 'cloudAppDeployForProcess',
+          params: {
+            moduleId: this.curModuleId,
+            id: this.appCode,
+          },
+        });
       }
     },
 

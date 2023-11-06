@@ -7,79 +7,110 @@
       class="order-approve-wrapper"
     >
       <div class="process-wrapper">
-        <!-- activeName 默认激活项 -->
-        <bk-collapse
-          v-model="activeName"
-          ext-cls="process-collapse-cls"
-          :hide-arrow="true"
-          v-if="processServiceList.length"
-        >
-          <bk-collapse-item
-            v-for="(process, index) in processServiceList"
-            :name="process.name"
-            :key="index"
-            class="mt25"
+        <section class="flex-row align-items-center">
+          <bk-select
+            v-model="curModuleValue"
+            :clearable="false"
+            style="width: 180px;"
+            class="mr10"
+            ext-cls="module-select-custom"
+            @change="handleChangeModule">
+            <bk-option
+              v-for="option in curAppModuleList"
+              :key="option.name"
+              :id="option.name"
+              :name="option.name">
+            </bk-option>
+          </bk-select>
+          <bk-select
+            v-model="curEnvValue"
+            :clearable="false"
+            style="width: 150px;"
+            ext-cls="env-select-custom"
+            @change="handleChangeEnv">
+            <bk-option
+              v-for="option in envList"
+              :key="option.id"
+              :id="option.id"
+              :name="option.name">
+            </bk-option>
+          </bk-select>
+        </section>
+        <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
+          <!-- activeName 默认激活项 -->
+          <bk-collapse
+            v-model="activeName"
+            ext-cls="process-collapse-cls"
+            :hide-arrow="true"
+            v-if="processServiceList.length"
           >
-            <div class="header-warpper">
-              <i class="paasng-icon paasng-right-shape"></i>
-              <div class="process-info">
-                <div class="name">{{ process.process_type }}</div>
-                <div class="info">
-                  <span>{{ $t('端口规则：') + process.ports.length + $t('个')}}</span>
-                  <span class="ml20">{{ $t('服务名称：') + process.name }}</span>
-                </div>
-              </div>
-              <!-- <div class="right-tip">{{ $t('已暴露 HTTP 服务') }}</div> -->
-            </div>
-            <div
-              slot="content"
-              class="f13"
+            <bk-collapse-item
+              v-for="(process, index) in processServiceList"
+              :name="process.name"
+              :key="index"
+              class="mt25"
             >
-              <!-- 端口配置 -->
-              <div class="process-config-item">
-                <div class="header">
-                  <p>{{ $t('端口配置') }}</p>
+              <div class="header-warpper">
+                <i class="paasng-icon paasng-right-shape"></i>
+                <div class="process-info">
+                  <div class="name">{{ process.process_type }}</div>
+                  <div class="info">
+                    <span>{{ $t('端口规则：') + process.ports.length + $t('个')}}</span>
+                    <span class="ml20">{{ $t('服务名称：') + process.name }}</span>
+                  </div>
+                </div>
+              <!-- <div class="right-tip">{{ $t('已暴露 HTTP 服务') }}</div> -->
+              </div>
+              <div
+                slot="content"
+                class="f13"
+              >
+                <!-- 端口配置 -->
+                <div class="process-config-item">
+                  <div class="header">
+                    <p>{{ $t('端口配置') }}</p>
                   <!-- 二期 -->
                   <!-- <div class="edit-container">
                     <i class="paasng-icon paasng-edit-2 pl10" />
                     {{ $t('编辑') }}
                   </div> -->
+                  </div>
+                  <bk-table
+                    :data="process.ports"
+                    :outer-border="false"
+                    :header-border="false"
+                  >
+                    <bk-table-column
+                      :label="$t('端口名称')"
+                      prop="name"
+                    ></bk-table-column>
+                    <bk-table-column
+                      :label="$t('协议')"
+                      prop="protocol"
+                    ></bk-table-column>
+                    <bk-table-column
+                      :label="$t('服务端口')"
+                      prop="port"
+                    ></bk-table-column>
+                    <bk-table-column
+                      :label="$t('进程内端口')"
+                      prop="target_port"
+                    ></bk-table-column>
+                  </bk-table>
                 </div>
-                <bk-table
-                  :data="process.ports"
-                  :outer-border="false"
-                  :header-border="false"
-                >
-                  <bk-table-column
-                    :label="$t('端口名称')"
-                    prop="name"
-                  ></bk-table-column>
-                  <bk-table-column
-                    :label="$t('协议')"
-                    prop="protocol"
-                  ></bk-table-column>
-                  <bk-table-column
-                    :label="$t('服务端口')"
-                    prop="port"
-                  ></bk-table-column>
-                  <bk-table-column
-                    :label="$t('进程内端口')"
-                    prop="target_port"
-                  ></bk-table-column>
-                </bk-table>
               </div>
-            </div>
-          </bk-collapse-item>
-        </bk-collapse>
-        <!-- 暂无数据 -->
-        <bk-exception
-          v-else
-          class="exception-wrap-item exception-part"
-          type="empty"
-          scene="part"
-        >
-          <p>{{ $t('暂无数据') }}</p>
-        </bk-exception>
+            </bk-collapse-item>
+          </bk-collapse>
+          <!-- 暂无数据 -->
+          <bk-exception
+            v-else
+            class="exception-wrap-item exception-part"
+            type="empty"
+            scene="part"
+          >
+            <p>{{ $t('暂无数据') }}</p>
+          </bk-exception>
+        </div>
       </div>
     </paas-content-loader>
   </div>
@@ -101,6 +132,12 @@ export default {
           ports: [],
         },
       ],
+      curModuleValue: 'default',
+      curEnvValue: 'stag',
+      envList: [
+        { id: 'stag', name: this.$t('预发布环境') },
+        { id: 'prod', name: this.$t('生产环境') },
+      ],
     };
   },
   created() {
@@ -114,12 +151,14 @@ export default {
       this.isLoading = false;
       this.loaderLoading = false;
     },
+    // 获取进程服务数据
     async getProcessServiceData() {
+      this.isLoading = true;
       try {
         const res = await this.$store.dispatch('processes/getProcessService', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
-          env: 'stag',
+          moduleId: this.curModuleValue,
+          env: this.curEnvValue,
         });
         this.processServiceList = res.proc_services || [];
         this.activeName = [this.processServiceList[0]?.name || ''];
@@ -130,7 +169,18 @@ export default {
         });
       } finally {
         this.loaderLoading = false;
+        this.isLoading = false;
       }
+    },
+    // 模块change回调
+    handleChangeModule(moduleName) {
+      this.curModuleValue = moduleName;
+      this.getProcessServiceData();
+    },
+    // 环境change回调
+    handleChangeEnv(envId) {
+      this.curEnvValue = envId;
+      this.getProcessServiceData();
     },
   },
 };
@@ -223,5 +273,10 @@ export default {
   .exception-wrap-item {
     margin-top: 50px;
   }
+}
+
+.module-select-custom,
+.env-select-custom {
+  background: #FFF;
 }
 </style>

@@ -20,14 +20,15 @@ from typing import Dict, List, Optional, Union
 
 from attrs import define
 
-from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.platform.applications.models import Application
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorSpaceDoesNotExist
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 
 
 def get_bk_biz_id(app_code: str) -> str:
-    app = Application.objects.get(code=app_code)
-    monitor_space, _ = get_or_create_bk_monitor_space(app)
-    return monitor_space.iam_resource_id
+    try:
+        return BKMonitorSpace.objects.get(application__code=app_code).iam_resource_id
+    except BKMonitorSpace.DoesNotExist as e:
+        raise BkMonitorSpaceDoesNotExist(e)
 
 
 @define(kw_only=True)

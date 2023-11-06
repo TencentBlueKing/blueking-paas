@@ -41,7 +41,3 @@ class BkMonitorApiError(BkMonitorGatewayServiceError):
 
 class BkMonitorSpaceDoesNotExist(BkMonitorApiError):
     """The namespace applied to BK Monitoring does not exist"""
-
-
-class ParamsToDictError(Exception):
-    """Raised when params cannot be converted to dict"""

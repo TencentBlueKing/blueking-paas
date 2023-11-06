@@ -129,6 +129,9 @@ def remove_user_all_roles(app_code: str, usernames: Union[List[str], str]):
     """
     usernames = [usernames] if isinstance(usernames, str) else usernames
 
+    if not usernames:
+        return
+
     # 先清理掉分级管理员权限
     IAM_CLI.delete_grade_manager_members(
         grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,

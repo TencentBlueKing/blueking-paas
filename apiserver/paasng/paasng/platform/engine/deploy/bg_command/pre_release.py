@@ -114,6 +114,8 @@ class CommandPoller(DeployPoller):
     Finish when the command in engine side was completed
     """
 
+    overall_timeout_seconds = 30 * 60
+
     def query(self) -> PollingResult:
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])
 

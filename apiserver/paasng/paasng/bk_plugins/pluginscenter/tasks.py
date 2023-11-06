@@ -25,6 +25,9 @@ from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controlle
 
 
 class ReleaseStatusPoller(TaskPoller):
+
+    overall_timeout_seconds = 30 * 60
+
     def query(self) -> PollingResult:
         plugin = PluginInstance.objects.get(pd__identifier=self.params["pd_id"], id=self.params["plugin_id"])
         release = PluginRelease.objects.get(plugin=plugin, id=self.params["release_id"])

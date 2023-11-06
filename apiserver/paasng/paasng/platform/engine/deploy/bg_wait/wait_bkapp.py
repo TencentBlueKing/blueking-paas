@@ -38,13 +38,13 @@ from paas_wl.bk_app.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.base import AbortedDetails, AbortedDetailsPolicy
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.workflow.flow import DeploymentStateMgr
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,8 @@ class WaitProcedurePoller(TaskPoller):
     :param module_env_id: id of ModuleEnvironment object
     """
 
+    # over 15 min considered as timeout
+    overall_timeout_seconds = 15 * 60
     # Abort policies were extra rules which were used to break current polling procedure
     abort_policies: List[AbortPolicy] = []
 

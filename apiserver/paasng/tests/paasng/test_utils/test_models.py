@@ -20,11 +20,17 @@ import pickle
 
 import pytest
 from attrs import define
+from bkpaas_auth.core.constants import ProviderType
+from bkpaas_auth.core.encoder import user_id_encoder
 from blue_krill.contextlib import nullcontext as does_not_raise
+from django.db import models
 from django_dynamic_fixture import G
 
 from paasng.infras.accounts.models import UserProfile
-from paasng.utils.models import OrderByField, make_json_field, make_legacy_json_field
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.utils import create_application
+from paasng.utils.models import BkUserField, OrderByField, make_json_field, make_legacy_json_field
+from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
@@ -97,3 +103,42 @@ UnPickleAbleField = make_legacy_json_field("NotAPickleAbleField", Baz)
 def test_pickle(field, expected):
     with expected:
         pickle.dumps(field)
+
+
+class TestBkUserField:
+    def test_set(self):
+        class M(models.Model):
+            creator = BkUserField()
+
+            class Meta:
+                app_label = "foo"
+
+        foo_u = user_id_encoder.encode(ProviderType.BK, "foo")
+        instance = M(creator=foo_u)
+        assert instance.creator.username == "foo"
+
+        bar_u = user_id_encoder.encode(ProviderType.BK, "bar")
+        instance.creator = bar_u
+        assert instance.creator.username == "bar"
+
+        instance.creator = None  # type: ignore
+        assert instance.creator is None
+
+        baz_u = user_id_encoder.encode(ProviderType.BK, "baz")
+        instance.creator = baz_u
+        assert instance.creator.username == "baz"
+
+    def test_integrated(self):
+        application = create_application(
+            region="default",
+            code=generate_random_string(6),
+            name=generate_random_string(6),
+            name_en=generate_random_string(6),
+            type_=ApplicationType.DEFAULT,
+            operator=user_id_encoder.encode(ProviderType.BK, "foo"),
+        )
+        assert application.creator.username == "foo"
+
+        application.creator = user_id_encoder.encode(ProviderType.BK, "bar")
+        application.save()
+        assert application.creator.username == "bar"

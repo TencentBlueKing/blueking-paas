@@ -122,7 +122,18 @@ class ProcessedImageField(OrigProcessedImageField):
 
 
 class BkUserFieldAttribute(DeferredAttribute):
-    """A wrapper for BkUserField, always transform value to SimpleUserIDWrapper"""
+    """A wrapper for BkUserField, always transform value to SimpleUserIDWrapper
+
+    Example:
+        class A(models.Model):
+            creator = BkUserField()
+
+        a = A.objects.create(creator=user_id_encoder.encode(ProviderType.BK, "foo"))
+        assert a.creator.username == "foo"
+
+        a.creator = user_id_encoder.encode(ProviderType.BK, "bar")
+        assert a.creator.username == "bar"
+    """
 
     def __set__(self, instance, value):
         if instance is None:

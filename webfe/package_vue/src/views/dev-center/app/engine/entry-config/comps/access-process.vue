@@ -6,7 +6,7 @@
       :offset-top="25"
       class="order-approve-wrapper"
     >
-      <div class="process-wrapper">
+      <div :class="['process-wrapper', { 'common-app': !isCloudNativeApp }]">
         <section class="flex-row align-items-center">
           <bk-select
             v-model="curModuleValue"
@@ -268,11 +268,15 @@ export default {
 }
 
 .process-wrapper {
-  min-height: 350px;
+  min-height: 520px;
 
   .exception-wrap-item {
     margin-top: 50px;
   }
+}
+
+.common-app {
+  padding: 20px 24px 20px 24px;
 }
 
 .module-select-custom,

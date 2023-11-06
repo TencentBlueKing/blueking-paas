@@ -475,19 +475,18 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
+                "bkapp_spec": {
+                    "build_config": {"build_method": "custom_image", "image": "strm/helloworld-http"},
+                    'processes': [{"name": "web", "replicas": 1}],
+                },
                 "source_config": {
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
-                "build_config": {"build_method": "custom_image"},
                 "manifest": {
-                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
-                    "kind": "BkApp",
-                    "metadata": {"name": f"uta-{random_suffix}", "generation": 0, "annotations": {}},
                     "spec": {
                         "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
                         "processes": [{"name": "web", "replicas": 1}],
-                        "configuration": {"env": []},
                     },
                 },
             },
@@ -516,7 +515,7 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
-                "build_config": {"build_method": "buildpack"},
+                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -540,7 +539,7 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
-                "build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"},
+                "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
                 "source_config": {
                     "source_init_template": "docker",
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,

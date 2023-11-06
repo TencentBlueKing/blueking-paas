@@ -175,7 +175,7 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp['message'])
 
         alerts = resp.get('data', {}).get('alerts', [])
-        total = resp.get('data', {}).get('total', 0)
+        total = resp.get('data', {}).get('total')
         return {'alerts': alerts, 'total': total}
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
@@ -198,7 +198,7 @@ class BkMonitorClient:
                 continue
             strategy['notice_group_ids'] = strategy.get('notice', {}).get('user_groups', [])
 
-        total = resp.get('data', {}).get('total', 0)
+        total = resp.get('data', {}).get('total')
         return {'alarm_strategies': alarm_strategies, 'total': total}
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:

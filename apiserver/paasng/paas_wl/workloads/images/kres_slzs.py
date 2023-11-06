@@ -59,7 +59,7 @@ class ImageCredentialsDeserializer(AppEntityDeserializer['ImageCredentials']):
         res_name = make_image_pull_secret_name(app)
         if kube_data.metadata.name != res_name:
             logger.warning(
-                "unexpected resource name, " f"given is '{kube_data.metadata.name}', but expected is '{res_name}'"
+                f"unexpected resource name, given is '{kube_data.metadata.name}', but expected is '{res_name}'"
             )
 
         b64encoded = kube_data.data[constants.KUBE_DATA_KEY]

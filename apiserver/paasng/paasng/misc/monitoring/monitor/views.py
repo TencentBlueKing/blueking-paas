@@ -29,6 +29,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, ParamsToDictError
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
@@ -38,7 +39,7 @@ from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
-from .exceptions import BKMonitorGatewayServiceError, BKMonitorNotSupportedError
+from .exceptions import BKMonitorNotSupportedError
 from .models import AppAlertRule
 from .phalanx import Client
 from .serializer import (
@@ -253,7 +254,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 
         try:
             alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
-        except BKMonitorGatewayServiceError as e:
+        except (BkMonitorGatewayServiceError, ParamsToDictError) as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
         serializer = AlertsSLZ(alerts)
@@ -271,8 +272,8 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
 
         try:
             alarm_strategies = make_bk_monitor_client().query_alarm_strategies(serializer.validated_data)
-        except BKMonitorGatewayServiceError as e:
-            raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
+        except (BkMonitorGatewayServiceError, ParamsToDictError) as e:
+            raise error_codes.QUERY_ALARM_STRATEGIES_FAILED.f(str(e))
 
         serializer = AlarmStrategiesSLZ(alarm_strategies)
         return Response(serializer.data)

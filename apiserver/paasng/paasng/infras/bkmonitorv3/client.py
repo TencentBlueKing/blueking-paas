@@ -30,6 +30,7 @@ from paasng.infras.bkmonitorv3.exceptions import (
     BkMonitorApiError,
     BkMonitorGatewayServiceError,
     BkMonitorSpaceDoesNotExist,
+    ParamsToDictError,
 )
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 
@@ -166,7 +167,12 @@ class BkMonitorClient:
         :param query_params: 查询告警的条件参数
         """
         try:
-            resp = self.client.search_alert(json=query_params.to_dict())
+            query_params_dict = query_params.to_dict()
+        except Exception as e:
+            raise ParamsToDictError(e)
+
+        try:
+            resp = self.client.search_alert(json=query_params_dict)
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
@@ -184,7 +190,12 @@ class BkMonitorClient:
         :param query_params: 查询告警策略的条件参数
         """
         try:
-            resp = self.client.search_alarm_strategy_v3(json=query_params.to_dict())
+            query_params_dict = query_params.to_dict()
+        except Exception as e:
+            raise ParamsToDictError(e)
+
+        try:
+            resp = self.client.search_alarm_strategy_v3(json=query_params_dict)
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')

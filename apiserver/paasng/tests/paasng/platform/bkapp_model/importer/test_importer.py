@@ -17,9 +17,11 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer.importer import import_manifest
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.models.config_var import ConfigVar
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
@@ -36,6 +38,30 @@ def base_manifest(bk_app):
             'build': {'image': 'nginx:latest'},
             'processes': [{'name': 'web', 'replicas': 1, 'resQuotaPlan': 'default'}],
         },
+    }
+
+
+def test_import_with_enum_type(bk_module, base_manifest):
+    """test import from bkapp serialize from pydantic"""
+    base_manifest["spec"]["processes"] = [
+        {
+            "name": "web",
+            "replicas": 1,
+            "resQuotaPlan": ResQuotaPlan.P_DEFAULT,
+            "autoscaling": {
+                "minReplicas": 1,
+                "maxReplicas": 2,
+                "policy": ScalingPolicy.DEFAULT,
+            },
+        }
+    ]
+    import_manifest(bk_module, base_manifest)
+    proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+    assert proc_spec.plan_name == ResQuotaPlan.P_DEFAULT.value
+    assert proc_spec.scaling_config == {
+        "minReplicas": 1,
+        "maxReplicas": 2,
+        "policy": ScalingPolicy.DEFAULT.value,
     }
 
 
@@ -93,7 +119,7 @@ class TestReplicasOverlay:
                 {
                     'envName': 'stag',
                     'process': 'web',
-                    'replicas': 'not_a_number',
+                    'count': 'not_a_number',
                 }
             ]
         }
@@ -102,6 +128,53 @@ class TestReplicasOverlay:
 
         assert 'envOverlay.replicas.0.count' in str(e)
 
-    def test_normal(self):
-        # TODO: Add after the processes can be imported.
-        pass
+    def test_str(self, bk_module, base_manifest):
+        base_manifest['spec']['envOverlay'] = {
+            'replicas': [
+                {
+                    'envName': 'stag',
+                    'process': 'web',
+                    'count': '3',
+                }
+            ]
+        }
+        import_manifest(bk_module, base_manifest)
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_target_replicas("stag") == 3
+
+
+class TestAutoscaling:
+    def test_normal(self, bk_module, base_manifest):
+        base_manifest["spec"]["envOverlay"] = {
+            "autoscaling": [
+                {
+                    "envName": "stag",
+                    "process": "web",
+                    "minReplicas": 1,
+                    "maxReplicas": 1,
+                    "policy": "default",
+                }
+            ]
+        }
+        import_manifest(bk_module, base_manifest)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_autoscaling("stag")
+        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'maxReplicas': 1, 'minReplicas': 1}
+
+    def test_missing_policy(self, bk_module, base_manifest):
+        base_manifest["spec"]["envOverlay"] = {
+            "autoscaling": [
+                {
+                    "envName": "stag",
+                    "process": "web",
+                    "minReplicas": 1,
+                    "maxReplicas": 1,
+                }
+            ]
+        }
+        import_manifest(bk_module, base_manifest)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_autoscaling("stag")
+        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'maxReplicas': 1, 'minReplicas': 1}

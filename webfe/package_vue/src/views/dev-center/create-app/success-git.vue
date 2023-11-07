@@ -240,6 +240,7 @@ export default {
     },
     isShowGitBash() {
       const isDockerfile = this.$route.query.method === 'dockerfile';
+      // dockerfile构建方式，蓝鲸插件不展示GitBash
       if (!isDockerfile && this.application.type !== 'bk_plugin' && this.isShowTips) {
         return true;
       }

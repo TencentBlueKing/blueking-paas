@@ -203,11 +203,11 @@ def get_bk_log_authorization_scope_list(bk_space_id: str, app_name: str, include
     scope_list = []
     for resource_type, resource_data in constants.APP_MINI_ACTIONS_IN_BK_LOG.items():
         scopes = {
-            'actions': [{'id': action} for action in resource_data['actions']],  # type: ignore
+            'actions': [{'id': action} for action in resource_data['actions']],
             # 日志平台的 resources 是直接使用监控的资源
             'resources': [
                 {
-                    'system': resource_data['resource_system'],  # type: ignore
+                    'system': resource_data['resource_system'],
                     'type': resource_type,
                     'paths': [
                         [
@@ -223,6 +223,6 @@ def get_bk_log_authorization_scope_list(bk_space_id: str, app_name: str, include
             ],
         }
         if include_system:
-            scopes["system"] = constants.BK_LOG_SYSTEM_ID  # type: ignore
+            scopes["system"] = constants.BK_LOG_SYSTEM_ID
         scope_list.append(scopes)
     return scope_list

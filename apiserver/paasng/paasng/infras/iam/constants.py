@@ -123,7 +123,10 @@ APP_MINI_ACTIONS_IN_BK_LOG = {
             'manage_extract_config_v2',
         ],
     },
-    ResourceType.BkMonitorDashBoard: ['view_single_dashboard', 'edit_single_dashboard'],
+    ResourceType.BkMonitorDashBoard: {
+        'resource_system': BK_MONITOR_SYSTEM_ID,
+        'actions': ['view_single_dashboard', 'edit_single_dashboard'],
+    },
     ResourceType.BkLogIndices: {
         'resource_system': BK_LOG_SYSTEM_ID,
         'actions': ['manage_indices_v2', 'search_log_v2'],

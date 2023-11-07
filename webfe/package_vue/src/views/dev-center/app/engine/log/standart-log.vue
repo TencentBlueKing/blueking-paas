@@ -114,9 +114,13 @@
           v-if="!isStreamLogListLoading"
           class="text"
         >
+          <!-- 异常处理 -->
           <empty-dark
             :keyword="emptyDarkConf.keyword"
+            :abnormal="emptyDarkConf.isAbnormal"
+            :empty-title="emptyDarkConf.title"
             @clear-filter="clearFilter"
+            @reacquire="getStreamLogList"
           />
         </div>
       </div>
@@ -124,483 +128,487 @@
   </div>
 </template>
 
-<script>
-    import moment from 'moment';
-    import xss from 'xss';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import logFilter from './comps/log-filter.vue';
-    import { formatDate } from '@/common/tools';
+<script>import moment from 'moment';
+import xss from 'xss';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import logFilter from './comps/log-filter.vue';
+import { formatDate } from '@/common/tools';
 
-    const xssOptions = {
-        whiteList: {
-            'bk-highlight-mark': []
-        }
+const xssOptions = {
+  whiteList: {
+    'bk-highlight-mark': [],
+  },
+};
+const logXss = new xss.FilterXSS(xssOptions);
+const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
+
+export default {
+  components: {
+    logFilter,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      tabActive: 'standartLog',
+      filterKeyword: '',
+      contentHeight: 400,
+      renderIndex: 0,
+      renderFilter: 0,
+      routeChangeIndex: 0,
+      isLoading: true,
+      tableMaxWidth: 700,
+      isStreamLogListLoading: true,
+      isScrollLoading: false,
+      hasNextStreamLog: true,
+      isShowDate: true,
+      lastScrollId: '',
+      initDateTimeRange: [initStartDate, initEndDate],
+      lastTopStreamLog: null,
+      autoTimer: 0,
+      streamLogCount: 0,
+      streamLogList: [],
+      searchFilterKey: [],
+      streamLogFilters: [],
+      envList: [],
+      processList: [],
+      streamList: [],
+      logParams: {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        levelname: '',
+        time_range: '1h',
+      },
+      isFilter: false,
+      emptyDarkConf: {
+        keyword: '',
+        isAbnormal: false,
+        title: this.$t('暂无数据'),
+      },
     };
-    const logXss = new xss.FilterXSS(xssOptions);
-    const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
-
-    export default {
-        components: {
-            logFilter
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                tabActive: 'standartLog',
-                filterKeyword: '',
-                contentHeight: 400,
-                renderIndex: 0,
-                renderFilter: 0,
-                routeChangeIndex: 0,
-                isLoading: true,
-                tableMaxWidth: 700,
-                isStreamLogListLoading: true,
-                isScrollLoading: false,
-                hasNextStreamLog: true,
-                isShowDate: true,
-                lastScrollId: '',
-                initDateTimeRange: [initStartDate, initEndDate],
-                lastTopStreamLog: null,
-                autoTimer: 0,
-                streamLogCount: 0,
-                streamLogList: [],
-                searchFilterKey: [],
-                streamLogFilters: [],
-                envList: [],
-                processList: [],
-                streamList: [],
-                logParams: {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    levelname: '',
-                    time_range: '1h'
-                },
-                isFilter: false,
-                emptyDarkConf: {
-                    keyword: ''
-                }
-            };
-        },
-        watch: {
-            'logParams.keyword' (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    if (this.isFilter) {
-                        this.loadData(false);
-                        this.isFilter = false;
-                    }
-                }
-            },
-            '$route.params' (newVal, oldVal) {
-                if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
-                    this.isLoading = true;
-                    this.renderIndex++;
-                    this.routeChangeIndex++;
-                    this.resetParams();
-                    this.loadData();
-                }
-            }
-        },
-        beforeRouteLeave (to, from, next) {
-            clearInterval(this.autoTimer);
-            this.resetParams();
-            next(true);
-        },
-        created () {
-            const query = this.$route.query || {};
-            this.logParams = {
-                start_time: query.start_time || initStartDate,
-                end_time: query.end_time || initEndDate,
-                environment: query.environment || '',
-                process_id: query.process_id || '',
-                stream: query.stream || '',
-                keyword: query.keyword || '',
-                levelname: query.levelname || '',
-                time_range: query.time_range || '1h'
-            };
-        },
-        mounted () {
-            this.init();
-        },
-        methods: {
-            /**
+  },
+  watch: {
+    'logParams.keyword'(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        if (this.isFilter) {
+          this.loadData(false);
+          this.isFilter = false;
+        }
+      }
+    },
+    '$route.params'(newVal, oldVal) {
+      if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
+        this.isLoading = true;
+        // eslint-disable-next-line no-plusplus
+        this.renderIndex++;
+        // eslint-disable-next-line no-plusplus
+        this.routeChangeIndex++;
+        this.resetParams();
+        this.loadData();
+      }
+    },
+  },
+  beforeRouteLeave(to, from, next) {
+    clearInterval(this.autoTimer);
+    this.resetParams();
+    next(true);
+  },
+  created() {
+    const query = this.$route.query || {};
+    this.logParams = {
+      start_time: query.start_time || initStartDate,
+      end_time: query.end_time || initEndDate,
+      environment: query.environment || '',
+      process_id: query.process_id || '',
+      stream: query.stream || '',
+      keyword: query.keyword || '',
+      levelname: query.levelname || '',
+      time_range: query.time_range || '1h',
+    };
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    /**
              * 初始化入口
              */
-            init () {
-                this.isLoading = true;
-                this.loadData();
+    init() {
+      this.isLoading = true;
+      this.loadData();
 
-                const winHeight = window.innerHeight;
-                const height = winHeight - 400;
-                if (height > 400) {
-                    this.contentHeight = height;
-                }
-            },
+      const winHeight = window.innerHeight;
+      const height = winHeight - 400;
+      if (height > 400) {
+        this.contentHeight = height;
+      }
+    },
 
-            handleTabChange (name) {
-                this.resetParams();
-                this.loadData();
-            },
+    handleTabChange(name) {
+      this.resetParams();
+      this.loadData();
+    },
 
-            bindScrollLoading () {
-                this.$refs.logContainer.addEventListener('scroll', this.scrollLoadStreamLog);
-            },
+    bindScrollLoading() {
+      this.$refs.logContainer.addEventListener('scroll', this.scrollLoadStreamLog);
+    },
 
-            unbindScrollLoading () {
-                this.$refs.logContainer.removeEventListener('scroll', this.scrollLoadStreamLog);
-            },
+    unbindScrollLoading() {
+      this.$refs.logContainer.removeEventListener('scroll', this.scrollLoadStreamLog);
+    },
 
-            scrollLoadStreamLog () {
-                const logContainer = this.$refs.logContainer;
-                const scrollTop = logContainer.scrollTop;
+    scrollLoadStreamLog() {
+      const { logContainer } = this.$refs;
+      const { scrollTop } = logContainer;
 
-                // 滚动到底部
-                if (scrollTop === 0) {
-                    if (this.isScrollLoading) {
-                        return false;
-                    } else {
-                        this.isScrollLoading = true;
-                    }
-                    this.loadData();
-                }
-            },
+      // 滚动到底部
+      if (scrollTop === 0) {
+        if (this.isScrollLoading) {
+          return false;
+        }
+        this.isScrollLoading = true;
 
-            /**
+        this.loadData();
+      }
+    },
+
+    /**
              * 选择自定义时间，并确定
              */
-            handlePickSuccess (params) {
-                this.logParams = params;
-                this.resetStreamLog();
-                this.loadData();
-            },
+    handlePickSuccess(params) {
+      this.logParams = params;
+      this.resetStreamLog();
+      this.loadData();
+    },
 
-            /**
+    /**
              * 清空查询参数
              */
-            removeFilterParams () {
-                if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
-                    this.$refs.bkSearcher.removeAllParams();
-                }
-            },
+    removeFilterParams() {
+      if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
+        this.$refs.bkSearcher.removeAllParams();
+      }
+    },
 
-            getParams () {
-                return {
-                    start_time: this.logParams.start_time,
-                    end_time: this.logParams.end_time,
-                    time_range: this.logParams.time_range,
-                    log_type: 'STANDARD_OUTPUT'
-                };
-            },
+    getParams() {
+      return {
+        start_time: this.logParams.start_time,
+        end_time: this.logParams.end_time,
+        time_range: this.logParams.time_range,
+        log_type: 'STANDARD_OUTPUT',
+      };
+    },
 
-            /**
+    /**
              * 构建过滤参数
              */
-            getFilterParams () {
-                const params = {
-                    query: {
-                        query_string: this.logParams.keyword
-                    }
-                };
+    getFilterParams() {
+      const params = {
+        query: {
+          query_string: this.logParams.keyword,
+        },
+      };
 
-                const filters = this.streamLogFilters;
-                filters.forEach(filter => {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms[filter.key] = [filter.value];
-                });
+      const filters = this.streamLogFilters;
+      filters.forEach((filter) => {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms[filter.key] = [filter.value];
+      });
 
-                if (this.logParams.process_id) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['process_id'] = [this.logParams.process_id];
-                }
+      if (this.logParams.process_id) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.process_id = [this.logParams.process_id];
+      }
 
-                if (this.logParams.environment) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['environment'] = [this.logParams.environment];
-                }
+      if (this.logParams.environment) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.environment = [this.logParams.environment];
+      }
 
-                if (this.logParams.stream) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['stream'] = [this.logParams.stream];
-                }
-                return params;
-            },
+      if (this.logParams.stream) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.stream = [this.logParams.stream];
+      }
+      return params;
+    },
 
-            /**
+    /**
              * 加载所有数据
              */
-            loadData (isLoadFilter = true, isMaskLayer) {
-                // 限制在一天内
-                const startDay = moment(this.logParams.start_time).add(1, 'day');
-                const endDay = moment(this.logParams.end_time);
-                if (startDay.valueOf() < endDay.valueOf()) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: this.$t('请重新选择时间范围，最长不超过一天')
-                    });
-                    return false;
-                }
-                this.$refs.standartLogFilter.setAutoLoad();
-                // 标准化输出
-                this.getStreamLogList(isMaskLayer);
-                isLoadFilter && this.getFilterData();
-            },
+    loadData(isLoadFilter = true, isMaskLayer) {
+      // 限制在一天内
+      const startDay = moment(this.logParams.start_time).add(1, 'day');
+      const endDay = moment(this.logParams.end_time);
+      if (startDay.valueOf() < endDay.valueOf()) {
+        this.$bkMessage({
+          theme: 'error',
+          message: this.$t('请重新选择时间范围，最长不超过一天'),
+        });
+        return false;
+      }
+      this.$refs.standartLogFilter.setAutoLoad();
+      // 标准化输出
+      this.getStreamLogList(isMaskLayer);
+      isLoadFilter && this.getFilterData();
+    },
 
-            /**
+    /**
              * 清空查询条件
              */
-            clearConditionParams () {
-                this.logParams.environment = '';
-                this.logParams.process_id = '';
-                this.logParams.stream = '';
-                this.logParams.levelname = '';
-            },
+    clearConditionParams() {
+      this.logParams.environment = '';
+      this.logParams.process_id = '';
+      this.logParams.stream = '';
+      this.logParams.levelname = '';
+    },
 
-            /**
+    /**
              * 重围搜索参数
              */
-            resetParams () {
-                this.initDateTimeRange = [initStartDate, initEndDate];
-                this.lastScrollId = '';
-                this.streamLogList = [];
-                this.streamLogFilters = [];
-                this.envList = [];
-                this.streamList = [];
-                this.processList = [];
-                this.streamLogCount = 0;
-                this.hasNextStreamLog = true;
-                this.lastTopStreamLog = null;
-                this.isScrollLoading = false;
-                this.logParams = {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    time_range: '1h',
-                    levelname: ''
-                };
-            },
+    resetParams() {
+      this.initDateTimeRange = [initStartDate, initEndDate];
+      this.lastScrollId = '';
+      this.streamLogList = [];
+      this.streamLogFilters = [];
+      this.envList = [];
+      this.streamList = [];
+      this.processList = [];
+      this.streamLogCount = 0;
+      this.hasNextStreamLog = true;
+      this.lastTopStreamLog = null;
+      this.isScrollLoading = false;
+      this.logParams = {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        time_range: '1h',
+        levelname: '',
+      };
+    },
 
-            /**
+    /**
              * 关键字高亮
              * @param {String} text 匹配字符串
              */
-            setKeywordHight (text) {
-                const keywords = this.logParams.keyword.split(';');
-                if (keywords.length) {
-                    keywords.forEach(keyword => {
-                        keyword = keyword.trim();
-                        if (keyword) {
-                            const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
-                            const strReg = new RegExp(keyword, 'ig');
-                            text = text.replace(strReg, tpl);
-                        }
-                    });
-                    return text;
-                } else {
-                    return text;
-                }
-            },
+    setKeywordHight(text) {
+      const keywords = this.logParams.keyword.split(';');
+      if (keywords.length) {
+        keywords.forEach((keyword) => {
+          keyword = keyword.trim();
+          if (keyword) {
+            const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
+            const strReg = new RegExp(keyword, 'ig');
+            text = text.replace(strReg, tpl);
+          }
+        });
+        return text;
+      }
+      return text;
+    },
 
-            highlight (message) {
-                return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
-            },
+    highlight(message) {
+      return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
+    },
 
-            /**
+    /**
              * 获取标准输出日志数据
              * @param  {Number} page 第几页数据
              */
-            async getStreamLogList (isMaskLayer) {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
-                const params = this.getParams();
-                const filter = this.getFilterParams();
+    async getStreamLogList(isMaskLayer) {
+      const { appCode } = this;
+      const moduleId = this.curModuleId;
+      const params = this.getParams();
+      const filter = this.getFilterParams();
 
-                if (this.lastScrollId && this.isScrollLoading) {
-                    params.scroll_id = this.lastScrollId;
-                }
+      if (this.lastScrollId && this.isScrollLoading) {
+        params.scroll_id = this.lastScrollId;
+      }
 
-                this.lastScrollId = '';
-                if (isMaskLayer) {
-                    this.isStreamLogListLoading = true;
-                }
-                this.unbindScrollLoading();
-                this.lastTopStreamLog = document.querySelector('.stream-log');
-                try {
-                    const res = await this.$store.dispatch('log/getStreamLogList', {
-                        appCode,
-                        moduleId,
-                        params,
-                        filter
-                    });
-                    this.lastScrollId = res.scroll_id;
-                    const data = res.logs.reverse();
-                    data.forEach((item) => {
-                        item.message = this.highlight(logXss.process(item.message));
-                        item.podShortName = item.pod_name.split('-').reverse()[0];
-                    });
+      this.lastScrollId = '';
+      if (isMaskLayer) {
+        this.isStreamLogListLoading = true;
+      }
+      this.unbindScrollLoading();
+      this.lastTopStreamLog = document.querySelector('.stream-log');
+      try {
+        const res = await this.$store.dispatch('log/getStreamLogList', {
+          appCode,
+          moduleId,
+          params,
+          filter,
+        });
+        this.lastScrollId = res.scroll_id;
+        const data = res.logs.reverse();
+        data.forEach((item) => {
+          item.message = this.highlight(logXss.process(item.message));
+          item.podShortName = item.pod_name.split('-').reverse()[0];
+        });
 
-                    if (!data.length) {
-                        this.hasNextStreamLog = false;
-                    } else {
-                        this.bindScrollLoading();
-                    }
-                    this.streamLogCount = res.total;
-
-                    if (this.isScrollLoading) {
-                        this.streamLogList = [...data, ...this.streamLogList];
-                        setTimeout(() => {
-                            this.$refs.logContainer.scrollTop = data.length * 35;
-                        }, 0);
-                    } else {
-                        this.streamLogList.splice(0, this.streamLogList.length, ...data);
-                        setTimeout(() => {
-                            // 滚动到底部
-                            this.$refs.logContainer.scrollTop = this.$refs.logContainer.scrollHeight;
-                        }, 0);
-                    }
-                    this.updateEmptyDarkConfig();
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isStreamLogListLoading = false;
-                        this.isScrollLoading = false;
-                        this.isLoading = false;
-                    }, 500);
-                }
-            },
-
-            async getFilterData () {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
-                const params = this.getParams();
-
-                try {
-                    const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
-                    const data = res;
-                    data.forEach(item => {
-                        const condition = {
-                            id: item.key,
-                            name: item.name,
-                            text: item.chinese_name || item.name,
-                            list: []
-                        };
-                        item.options.forEach(option => {
-                            condition.list.push({
-                                id: option[0],
-                                text: option[0]
-                            });
-                        });
-                        if (condition.name === 'environment') {
-                            this.envList = condition.list;
-                        } else if (condition.name === 'process_id') {
-                            this.processList = condition.list;
-                        } else if (condition.name === 'stream') {
-                            this.streamList = condition.list;
-                        }
-                    });
-                    this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                }
-            },
-
-            handleLogSearch (params) {
-                this.logParams = params;
-                this.resetStreamLog();
-                this.loadData(params.isDateChange);
-
-                const query = Object.assign({}, this.$route.query, params);
-                this.$router.push({
-                    name: 'appLog',
-                    params: this.$route.params,
-                    query: query
-                });
-            },
-
-            handleLogReload (params) {
-                this.resetStreamLog();
-                this.loadData(false, params);
-            },
-
-            resetStreamLog () {
-                const logContainer = this.$refs.logContainer;
-                this.unbindScrollLoading();
-                logContainer.scrollTop = 0;
-                this.lastScrollId = '';
-                this.lastTopStreamLog = null;
-                this.isScrollLoading = false;
-                this.hasNextStreamLog = true;
-            },
-
-            searchLog (params) {
-                this.logParams.environment = '';
-                this.logParams.process_id = '';
-                this.logParams.stream = '';
-                this.logParams.levelname = '';
-
-                params.forEach(item => {
-                    const type = item.id;
-                    const selectItem = item.value;
-                    this.logParams[type] = selectItem.id;
-                });
-                this.loadData(false);
-            },
-
-            handleAddStreamLogFilters (log) {
-                this.streamLogFilters.push({
-                    key: 'pod_name',
-                    value: log.pod_name,
-                    text: log.podShortName
-                });
-                this.resetStreamLog();
-                this.loadData(false);
-            },
-
-            handleClearStreamLogFilters () {
-                this.streamLogFilters = [];
-                this.renderIndex++;
-                this.loadData(false);
-            },
-
-            processIdSlice (str) {
-                return str.slice(0, 4) + '.';
-            },
-
-            clearFilter () {
-                this.$refs.standartLogFilter && this.$refs.standartLogFilter.clearKeyword();
-                this.isStreamLogListLoading = true;
-            },
-
-            updateEmptyDarkConfig () {
-                this.emptyDarkConf.keyword = this.logParams.keyword;
-            },
-
-            formatTime (time) {
-                return time ? formatDate(time * 1000) : '--';
-            }
+        if (!data.length) {
+          this.hasNextStreamLog = false;
+        } else {
+          this.bindScrollLoading();
         }
-    };
+        this.streamLogCount = res.total;
+
+        if (this.isScrollLoading) {
+          this.streamLogList = [...data, ...this.streamLogList];
+          setTimeout(() => {
+            this.$refs.logContainer.scrollTop = data.logs * 35;
+          }, 0);
+        } else {
+          this.streamLogList.splice(0, this.streamLogList.length, ...data);
+          setTimeout(() => {
+            // 滚动到底部
+            this.$refs.logContainer.scrollTop = this.$refs.logContainer.scrollHeight;
+          }, 0);
+        }
+        this.updateEmptyDarkConfig();
+        this.emptyDarkConf.isAbnormal = false;
+        this.emptyDarkConf.title = this.$t('暂无数据');
+      } catch (res) {
+        this.streamLogList = [];
+        // 日志数据 - 普通应用（去除弹窗，将空状态转为异常）
+        this.emptyDarkConf.isAbnormal = true;
+        this.emptyDarkConf.title = this.$t('数据获取异常');
+      } finally {
+        setTimeout(() => {
+          this.isStreamLogListLoading = false;
+          this.isScrollLoading = false;
+          this.isLoading = false;
+        }, 500);
+      }
+    },
+
+    async getFilterData() {
+      const { appCode } = this;
+      const moduleId = this.curModuleId;
+      const params = this.getParams();
+
+      try {
+        const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
+        const data = res;
+        data.forEach((item) => {
+          const condition = {
+            id: item.key,
+            name: item.name,
+            text: item.chinese_name || item.name,
+            list: [],
+          };
+          item.options.forEach((option) => {
+            condition.list.push({
+              id: option[0],
+              text: option[0],
+            });
+          });
+          if (condition.name === 'environment') {
+            this.envList = condition.list;
+          } else if (condition.name === 'process_id') {
+            this.processList = condition.list;
+          } else if (condition.name === 'stream') {
+            this.streamList = condition.list;
+          }
+        });
+        this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
+      } catch (res) {
+        this.envList = [];
+        this.processList = [];
+        this.streamList = [];
+      }
+    },
+
+    handleLogSearch(params) {
+      this.logParams = params;
+      this.resetStreamLog();
+      this.loadData(params.isDateChange);
+
+      const query = Object.assign({}, this.$route.query, params);
+      this.$router.push({
+        name: 'appLog',
+        params: this.$route.params,
+        query,
+      });
+    },
+
+    handleLogReload(params) {
+      this.resetStreamLog();
+      this.loadData(false, params);
+    },
+
+    resetStreamLog() {
+      const { logContainer } = this.$refs;
+      this.unbindScrollLoading();
+      logContainer.scrollTop = 0;
+      this.lastScrollId = '';
+      this.lastTopStreamLog = null;
+      this.isScrollLoading = false;
+      this.hasNextStreamLog = true;
+    },
+
+    searchLog(params) {
+      this.logParams.environment = '';
+      this.logParams.process_id = '';
+      this.logParams.stream = '';
+      this.logParams.levelname = '';
+
+      params.forEach((item) => {
+        const type = item.id;
+        const selectItem = item.value;
+        this.logParams[type] = selectItem.id;
+      });
+      this.loadData(false);
+    },
+
+    handleAddStreamLogFilters(log) {
+      this.streamLogFilters.push({
+        key: 'pod_name',
+        value: log.pod_name,
+        text: log.podShortName,
+      });
+      this.resetStreamLog();
+      this.loadData(false);
+    },
+
+    handleClearStreamLogFilters() {
+      this.streamLogFilters = [];
+      this.renderIndex++;
+      this.loadData(false);
+    },
+
+    processIdSlice(str) {
+      return `${str.slice(0, 4)}.`;
+    },
+
+    clearFilter() {
+      this.$refs.standartLogFilter && this.$refs.standartLogFilter.clearKeyword();
+      this.isStreamLogListLoading = true;
+    },
+
+    updateEmptyDarkConfig() {
+      this.emptyDarkConf.keyword = this.logParams.keyword;
+    },
+
+    formatTime(time) {
+      return time ? formatDate(time * 1000) : '--';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

@@ -1033,6 +1033,7 @@ export default {
           dockerfile_path: this.dockerfileData.dockerfilePath,
           docker_build_args: dockerBuild,
         };
+        delete params.source_config.source_init_template;
       }
 
       // 仅镜像
@@ -1106,6 +1107,7 @@ export default {
         this.$router.push({
           path,
           query: {
+            method: params.build_config.build_method,
             objectKey,
           },
         });

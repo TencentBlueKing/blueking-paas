@@ -20,6 +20,7 @@ package resources
 
 import (
 	"context"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,7 +38,13 @@ func GetAppEnvs(bkapp *paasv1alpha2.BkApp) []corev1.EnvVar {
 	// 应用声明的环境变量(优先级最低)
 	envs := NewEnvVarsGetter(bkapp).Get()
 	// 增强服务的环境变量
+	//
+	// WARNING/TODO: 此处增强服务返回的环境变量 Key 顺序不稳定，未来需删除以下逻辑，完全由 apiserver
+	// 传递所有的环境变量。
 	envs = append(envs, retrieveAddonEnvVar(bkapp)...)
+
+	// 给所有环境变量排序以获得稳定的结果
+	sort.Slice(envs, func(i, j int) bool { return envs[i].Name < envs[j].Name })
 	return envs
 }
 

@@ -570,6 +570,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 "docs": release_revision.docs,
                 "source_version_pattern": release_revision.revisionPattern,
                 "version_no": release_revision.versionNo,
+                "version_type": release_revision.revisionType,
                 "extra_fields": cattr.unstructure(release_revision.extraFields),
                 "source_versions": cattr.unstructure(versions),
                 "semver_choices": semver_choices,

@@ -77,10 +77,11 @@ def make_client(resource: PluginBackendAPIResource, bk_username: Optional[str] =
     auth = {"bk_app_code": settings.BK_APP_CODE, "bk_app_secret": settings.BK_APP_SECRET}
     if bk_username:
         auth["bk_username"] = bk_username
+
     return (
         DynamicClient(
             api_name=resource.apiName,
-            stage=settings.BK_PLUGIN_APIGW_SERVICE_STAGE,
+            stage=resource.stage or settings.BK_PLUGIN_APIGW_SERVICE_STAGE,
             endpoint=settings.BK_API_URL_TMPL,
         )
         .with_group(_make_operation_group(resource))

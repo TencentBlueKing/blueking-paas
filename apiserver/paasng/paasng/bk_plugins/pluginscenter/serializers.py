@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Optional, Type
 
 import arrow
+import cattr
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
@@ -260,7 +261,12 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
 
 def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a array according to the given field_schema"""
-    return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
+    # 如果没有定义 items，则默认为：List[str]
+    if not field_schema.items:
+        return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
+    child_field_schema = cattr.structure(field_schema.items, FieldSchema)
+    child_field = make_json_schema_field(child_field_schema)
+    return serializers.ListField(child=child_field)
 
 
 def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:

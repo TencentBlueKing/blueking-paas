@@ -31,7 +31,7 @@ from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.applications.models import Build, BuildProcess, WlApp
-from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
+from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan, initialize_default_proc_spec_plans
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.utils import get_default_cluster_by_region
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
@@ -62,8 +62,6 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
             cluster = create_default_cluster()
             setup_default_client(cluster)
-
-        from paas_wl.bk_app.processes.shim import initialize_default_proc_spec_plans
 
         # The initialization in `processes.models` will not create default package plans in the TEST database,
         # it only creates the default plans in the non-test database(without the "test_" prefix).

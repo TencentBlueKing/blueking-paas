@@ -20,12 +20,15 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from cattr import unstructure
 from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.bk_app.processes.constants import ProbeType, ProcessTargetStatus
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
@@ -242,3 +245,29 @@ class ProcessProbe(models.Model):
 
     class Meta:
         unique_together = ('app', 'process_type', 'probe_type')
+
+
+def initialize_default_proc_spec_plans():
+    """Initialize default process spec plan objects which were defined in settings"""
+    plans = settings.DEFAULT_PROC_SPEC_PLANS
+
+    for name, config in plans.items():
+        try:
+            ProcessSpecPlan.objects.get_by_name(name=name)
+            logger.debug(f'Plan: {name} already exists, skip initialization.')
+        except ProcessSpecPlan.DoesNotExist:
+            logger.info(f'Creating default plan: {name}...')
+            ProcessSpecPlan.objects.create(name=name, **config)
+
+    for cnative_plan in ResQuotaPlan.get_values():
+        try:
+            ProcessSpecPlan.objects.get_by_name(name=cnative_plan)
+            logger.debug(f'Plan: {cnative_plan} already exists, skip initialization.')
+        except ProcessSpecPlan.DoesNotExist:
+            logger.info(f'Creating default plan: {cnative_plan}...')
+            ProcessSpecPlan.objects.create(
+                name=cnative_plan,
+                max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS,
+                limits=unstructure(PLAN_TO_LIMIT_QUOTA_MAP[cnative_plan]),
+                requests=unstructure(PLAN_TO_REQUEST_QUOTA_MAP[cnative_plan]),
+            )

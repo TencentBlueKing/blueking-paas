@@ -22,6 +22,10 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 PROCESS_NAME_KEY = "bkapp.paas.bk.tencent.com/process-name"
 PROCESS_MAPPER_VERSION_KEY = "bkapp.paas.bk.tencent.com/process-mapper-version"
 
+# The default maximum replicas for cloud-native apps's processes
+# TODO: Use dynamic limitation for each app
+DEFAULT_CNATIVE_MAX_REPLICAS = 10
+
 
 class ProcessUpdateType(str, StructuredEnum):
     """Type of updating processes"""

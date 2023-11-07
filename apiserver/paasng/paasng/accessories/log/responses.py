@@ -81,7 +81,6 @@ def get_engine_app_name(raw_log: Dict):
 @define
 class IngressLogLine(LogLine):
     """ingress 访问日志结构
-    :param engine_app_name: [deprecated] engine_app_name
 
     :param method: [required] method, The HTTP method used in the request
     :param path: [required] path, The URL path of the request
@@ -92,9 +91,6 @@ class IngressLogLine(LogLine):
     :param user_agent: [required] user_agent, The user agent string of the client
     :param http_version: [required] http_version, The HTTP version used in the request
     """
-
-    # [deprecated] 好像没有地方用到这个属性, 确定不需要就删了
-    engine_app_name: Optional[str] = extra_field(source=get_engine_app_name, converter=converters.optional(str))
 
     method: Optional[str] = extra_field(converter=converters.optional(str))
     path: Optional[str] = extra_field(converter=converters.optional(str))

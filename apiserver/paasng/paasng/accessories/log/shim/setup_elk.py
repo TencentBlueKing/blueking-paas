@@ -97,8 +97,7 @@ def setup_platform_elk_model():
         builtinFilters={"stream": ["stdout"]},
         builtinExcludes={},
         filedMatcher=(
-            r"engine_app_name"
-            r"|method|path|status_code|response_time"
+            r"method|path|status_code|response_time"
             r"|client_ip|bytes_sent|user_agent|http_version"
             r"|environment|process_id|stream"
         ),

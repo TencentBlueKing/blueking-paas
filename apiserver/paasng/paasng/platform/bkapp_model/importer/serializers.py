@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import field_env_var_key
@@ -95,7 +95,7 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
     process = serializers.CharField()
-    plan = serializers.CharField()
+    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
 
     def to_internal_value(self, data) -> bk_app.ResQuotaOverlay:
         d = super().to_internal_value(data)
@@ -156,7 +156,7 @@ class ProcessInputSLZ(serializers.Serializer):
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN)
     replicas = serializers.IntegerField(min_value=0)
-    resQuotaPlan = serializers.CharField(allow_null=True, default=None)
+    resQuotaPlan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
     targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)

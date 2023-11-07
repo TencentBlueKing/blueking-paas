@@ -176,7 +176,7 @@ class BkMonitorClient:
 
         return resp.get('data', {}).get('alerts', [])
 
-    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> List:
+    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略
 
         :param query_params: 查询告警策略的条件参数
@@ -190,13 +190,7 @@ class BkMonitorClient:
         if not resp.get('result'):
             raise BkMonitorApiError(resp['message'])
 
-        alarm_strategies = resp.get('data', {}).get('strategy_config_list', [])
-        for strategy in alarm_strategies:
-            if not isinstance(strategy, dict):
-                continue
-            strategy['notice_group_ids'] = strategy.get('notice', {}).get('user_groups', [])
-
-        return alarm_strategies
+        return resp.get('data', {})
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """

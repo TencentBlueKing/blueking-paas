@@ -16,7 +16,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import random
-from typing import List
+from typing import Dict, List
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
@@ -40,20 +40,38 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
     return alerts
 
 
-def get_fake_alarm_strategies() -> List:
+def get_fake_alarm_strategies() -> Dict:
     alarm_strategies = [
         {
             'id': generate_random_string(6),
             'name': generate_random_string(6),
             'is_enabled': random.choice(['true', 'false']),
             'labels': [generate_random_string(6) for _ in range(random.randint(1, 4))],
-            'notice_group_ids': [random.randint(1, 4) for _ in range(random.randint(1, 4))],
-            'detects': [{"trigger_config": {"count": random.randint(1, 4), "check_window": random.randint(1, 10)}}],
-            'items': [{'algorithms': [{'type': generate_random_string(6), 'config': generate_random_string(6)}]}],
+            'notice': {"user_groups": [random.randint(1, 4) for _ in range(random.randint(1, 4))]},
+            'detects': [
+                {
+                    "trigger_config": {"count": random.randint(1, 4), "check_window": random.randint(1, 10)},
+                    "connector": random.choice(['and', 'or']),
+                }
+            ],
+            'items': [
+                {
+                    'algorithms': [
+                        {
+                            'type': generate_random_string(6),
+                            'config': generate_random_string(6),
+                            "level": random.randint(1, 3),
+                        }
+                    ]
+                }
+            ],
         }
         for _ in range(3)
     ]
-    return alarm_strategies
+    user_group_list = [
+        {"user_group_id": generate_random_string(4), "user_group_name": generate_random_string(4)} for _ in range(3)
+    ]
+    return {"strategy_config_list": alarm_strategies, "user_group_list": user_group_list}
 
 
 class StubBKMonitorClient(BkMonitorClient):
@@ -63,6 +81,6 @@ class StubBKMonitorClient(BkMonitorClient):
         query_data = query_params.to_dict()
         return get_fake_alerts(query_data['start_time'], query_data['end_time'])
 
-    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> List:
+    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         query_params.to_dict()
         return get_fake_alarm_strategies()

@@ -103,6 +103,8 @@ class WaitProcedurePoller(TaskPoller):
     :param module_env_id: id of ModuleEnvironment object
     """
 
+    # over 15 min considered as timeout
+    overall_timeout_seconds = 15 * 60
     # Abort policies were extra rules which were used to break current polling procedure
     abort_policies: List[AbortPolicy] = []
 

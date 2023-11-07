@@ -44,7 +44,7 @@ from paasng.platform.bkapp_model.serializers import (
     default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
-from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +173,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 args=proc_spec["args"],
                 targetPort=proc_spec.get("port", None),
                 image=proc_spec["image"] if allow_multiple_image else "",
+                imagePullPolicy=ImagePullPolicy.IF_NOT_PRESENT,
             )
             for proc_spec in proc_specs
         ]

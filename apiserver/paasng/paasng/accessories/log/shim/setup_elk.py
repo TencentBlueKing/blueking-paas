@@ -97,6 +97,7 @@ def setup_platform_elk_model():
         builtinFilters={"stream": ["stdout"]},
         builtinExcludes={},
         filedMatcher=(
+            # 字段需要与模型 IngressLogLine 保持一致
             r"method|path|status_code|response_time"
             r"|client_ip|bytes_sent|user_agent|http_version"
             r"|environment|process_id|stream"

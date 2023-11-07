@@ -17,11 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 from attrs import converters, define
 
-from paasng.accessories.log.exceptions import LogLineInfoBrokenError
 from paasng.utils.es_log.models import LogLine, extra_field, field_extractor_factory
 
 logger = logging.getLogger(__name__)
@@ -69,13 +68,6 @@ class StructureLogLine(LogLine):
     stream: Optional[str] = extra_field(
         source=field_extractor_factory(field_key="stream", raise_exception=False), converter=converters.optional(str)
     )
-
-
-def get_engine_app_name(raw_log: Dict):
-    if "engine_app_name" not in raw_log:
-        raise LogLineInfoBrokenError("engine_app_name")
-    # ingress 日志是从 serviceName 解析的 engine_app_name，下划线已经转换成 0us0
-    return raw_log["engine_app_name"].replace("0us0", "_")
 
 
 @define

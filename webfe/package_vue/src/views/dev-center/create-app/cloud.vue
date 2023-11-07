@@ -47,30 +47,8 @@
         </bk-input>
       </bk-form-item>
 
-      <bk-form-item
-        :required="true"
-        error-display-type="normal"
-        ext-cls="form-item-cls mt20"
-        :label="$t('托管方式')"
-      >
-        <div class="mt5">
-          <bk-radio-group
-            v-model="formData.sourceOrigin"
-            class="construction-manner"
-          >
-            <bk-radio :value="'soundCode'" v-if="userFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE">
-              {{ $t('源代码') }}
-            </bk-radio>
-            <bk-radio :value="'image'">
-              {{ $t('仅镜像') }}
-            </bk-radio>
-          </bk-radio-group>
-        </div>
-      </bk-form-item>
-
       <!-- 构建方式 -->
       <bk-form-item
-        v-if="formData.sourceOrigin === 'soundCode'"
         :required="true"
         error-display-type="normal"
         ext-cls="form-item-cls mt20"
@@ -80,13 +58,17 @@
           <bk-radio-group
             v-model="formData.buildMethod"
             class="construction-manner"
+            @change="handleChangeBuildMethod"
           >
             <bk-radio :value="'buildpack'">
               {{ $t('蓝鲸 Buildpack') }}
             </bk-radio>
-            <!-- <bk-radio :value="'dockerfile'">
-              {{ $t('Dockerfile 构建') }}
-            </bk-radio> -->
+            <bk-radio :value="'dockerfile'">
+              Dockerfile
+            </bk-radio>
+            <bk-radio :value="'image'">
+              {{ $t('仅镜像') }}
+            </bk-radio>
           </bk-radio-group>
         </div>
       </bk-form-item>
@@ -800,7 +782,6 @@ export default {
     },
   },
   mounted() {
-    this.formData.sourceOrigin = this.userFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE ? 'soundCode' : 'image';
     this.init();
   },
   methods: {
@@ -1217,6 +1198,10 @@ export default {
 
     removeBuildParams(index) {
       this.dockerfileData.buildParams.splice(index, 1);
+    },
+
+    handleChangeBuildMethod(value) {
+      this.formData.sourceOrigin = value === 'image' ? 'image' : 'soundCode';
     },
   },
 };

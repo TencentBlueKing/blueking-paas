@@ -27,11 +27,10 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import b64encode
-from paas_wl.workloads.images import constants
+from paas_wl.workloads.images.entities import ImageCredential
+from paas_wl.workloads.images.kres_slzs import ImageCredentialsDeserializer, ImageCredentialsSerializer
 from paas_wl.workloads.images.models import AppImageCredential
-
-from .entities import ImageCredential
-from .kres_slzs import ImageCredentialsDeserializer, ImageCredentialsSerializer
+from paas_wl.workloads.images.utils import make_image_pull_secret_name
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ class ImageCredentials(AppEntity):
             )
         return ImageCredentials(
             app=app,
-            name=constants.KUBE_RESOURCE_NAME,
+            name=make_image_pull_secret_name(app),
             credentials=credentials,
         )
 

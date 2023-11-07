@@ -113,8 +113,8 @@ var _ = Describe("HookUtils", func() {
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 
-		It("complex case - override Pod.name by Revision and Status.Phase by PreRelease.Status", func() {
-			bkapp.Status.Revision = &paasv1alpha2.Revision{Revision: 100}
+		It("complex case - override Pod.name by DeployID and Status.Phase by PreRelease.Status", func() {
+			bkapp.Status.DeployId = "100"
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
 			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))

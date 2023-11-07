@@ -26,13 +26,13 @@ from attrs import define
 from blue_krill.web.std_error import APIError
 from django.conf import settings
 
-from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.iam_adaptor import definitions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import NEVER_EXPIRE_DAYS, PLUGIN_BUILTIN_ROLES
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.client import lazy_iam_client
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
 
 
 @define
@@ -161,6 +161,9 @@ def remove_user_all_roles(plugin: PluginInstance, usernames: List[str]):
     :param plugin: 蓝鲸插件
     :param usernames: 待删除的成员名称列表
     """
+    if not usernames:
+        return
+
     # 先清理掉分级管理员权限
     iam_grade_manager = PluginGradeManager.objects.filter_by_plugin(plugin).get()
     lazy_iam_client.delete_grade_manager_members(

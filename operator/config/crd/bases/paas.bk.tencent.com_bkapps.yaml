@@ -1153,7 +1153,10 @@ spec:
                   of where the BkApp is in its lifecycle.
                 type: string
               revision:
-                description: Revision of the BkApp configuration it generates
+                description: 'Deprecated: The Revision field was designed to save
+                  the revision of the BkApp resource, controls how the reconcile works.
+                  But it doesn''t have any effects now because we switched to using
+                  "DeployID" field. Revision of the BkApp configuration it generates'
                 properties:
                   revision:
                     description: BkApp's version

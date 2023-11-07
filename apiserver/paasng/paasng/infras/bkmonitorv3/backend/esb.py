@@ -62,6 +62,13 @@ class MonitorV3Group(OperationGroup):
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/search_alert/",
     )
+    # 查询告警策略
+    search_alarm_strategy_v3 = bind_property(
+        Operation,
+        name="search_alarm_strategy_v3",
+        method="POST",
+        path="/api/c/compapi/v2/monitor_v3/search_alarm_strategy_v3/",
+    )
     # 统一查询时序数据
     promql_query = bind_property(
         Operation,

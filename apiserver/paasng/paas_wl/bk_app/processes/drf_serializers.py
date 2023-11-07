@@ -299,7 +299,6 @@ class ProcessSpecSLZ(serializers.Serializer):
     max_replicas = serializers.IntegerField(source='plan.max_replicas')
     resource_limit = serializers.JSONField(source='plan.limits')
     resource_requests = serializers.JSONField(source='plan.requests')
-    plan_id = serializers.CharField(source="plan.id")
     plan_name = serializers.CharField(source="plan.name")
     resource_limit_quota = serializers.SerializerMethodField(read_only=True)
     autoscaling = serializers.BooleanField()

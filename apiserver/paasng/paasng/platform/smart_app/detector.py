@@ -158,6 +158,7 @@ class SourcePackageStatReader:
         """Return source package's stats object"""
         logger.debug("parsing source package's stats object.")
         relative_path, meta_info = self.get_meta_info()
+        # 从源码包解析 app version 失败, 需要由其他途径保证能获取到 version. 例如上传源码包的接口中的 version 参数
         version = self._try_extract_version(meta_info) or ''
         return SPStat(
             name=self.path.name,

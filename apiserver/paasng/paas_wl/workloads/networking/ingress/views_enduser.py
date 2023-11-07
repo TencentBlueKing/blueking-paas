@@ -22,7 +22,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.cnative.specs.constants import MODULE_NAME_ANNO_KEY
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
 from paas_wl.workloads.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
@@ -44,8 +46,13 @@ class ProcessServicesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """查看所有进程服务信息"""
         env = self.get_env_via_path()
         wl_app = WlApp.objects.get(pk=env.engine_app_id)
+
         # Get all services
-        proc_services = service_kmodel.list_by_app(wl_app)
+        labels = None
+        if wl_app.type == WlAppType.CLOUD_NATIVE:
+            labels = {MODULE_NAME_ANNO_KEY: wl_app.module_name}
+
+        proc_services = service_kmodel.list_by_app(wl_app, labels)
         proc_services_json = ProcServiceSLZ(proc_services, many=True).data
 
         # Get default ingress

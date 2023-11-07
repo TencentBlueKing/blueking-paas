@@ -43,7 +43,7 @@
             </a>
           </template>
           <bk-tab-panel
-            v-if="curAppInfo.application.type !== 'cloud_native'"
+            v-if="isStructuredLogTab"
             name="structured"
             :label="$t('结构化日志')"
           >
@@ -73,8 +73,7 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import customLog from './custom-log.vue';
 import standartLog from './standart-log.vue';
@@ -98,6 +97,21 @@ export default {
       isLoading: true,
     };
   },
+  computed: {
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    enableBkLogCollector() {
+      return this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR;
+    },
+    // eslint-disable-next-line vue/return-in-computed-property
+    isStructuredLogTab() {
+      if (this.curAppInfo.application.type !== 'cloud_native') {
+        return true;
+      }
+      return this.enableBkLogCollector;
+    },
+  },
   watch: {
     tabActive() {
       this.$nextTick(() => {
@@ -112,13 +126,15 @@ export default {
   },
   mounted() {
     this.isLoading = true;
-    if (this.$route.query.tab) {
-      const isExistTab = ['structured', 'stream', 'access'].includes(this.$route.query.tab);
-      if (this.curAppInfo.application.type === 'cloud_native') {
-        this.tabActive = 'stream';
-      } else {
-        this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
+    this.tabActive = this.isStructuredLogTab ? 'structured' : 'stream';
+    // 存在query参数的情况
+    const tabActiveName = this.$route.query.tab;
+    if (tabActiveName) {
+      const tabNameList = ['stream', 'access'];
+      if (this.isStructuredLogTab) {
+        tabNameList.push('structured');
       }
+      this.tabActive = tabNameList.includes(tabActiveName) ? tabActiveName : 'stream';
     }
     setTimeout(() => {
       this.isLoading = false;

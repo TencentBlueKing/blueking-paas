@@ -21,14 +21,28 @@ from unittest import mock
 
 import pytest
 
+from paasng.infras.bkmonitorv3.constants import SpaceType
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from tests.utils.mocks.bkmonitor import StubBKMonitorClient
 
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture
+def bk_monitor_space(bk_app):
+    return BKMonitorSpace.objects.create(
+        application=bk_app,
+        id=40000,
+        space_type_id=SpaceType.SAAS,
+        space_id='100',
+        space_name='蓝鲸应用-test',
+        extra_info={'test': 'test'},
+    )
+
+
 class TestListAlertsView:
     @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
-    def test_list_alerts(self, api_client, bk_app):
+    def test_list_alerts(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
             f'/api/monitor/applications/{bk_app.code}/alerts/',
             data={
@@ -41,3 +55,13 @@ class TestListAlertsView:
         assert len(resp.data) == 3
         assert resp.data[0]['status'] in ['ABNORMAL', 'CLOSED', 'RECOVERED']
         assert len(resp.data[0]['receivers']) == 2
+
+
+class TestAlarmStrategiesView:
+    @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
+    def test_list_alarm_strategies(self, api_client, bk_app, bk_monitor_space):
+        resp = api_client.post(
+            f'/api/monitor/applications/{bk_app.code}/alarm_strategies/',
+        )
+        assert len(resp.data) == 3
+        assert resp.data[0]['is_enabled'] in [True, False]

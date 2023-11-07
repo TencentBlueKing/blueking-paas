@@ -1094,7 +1094,6 @@ export default {
   '仅显示查询结果前200条数据包含的字段，没有出现的字段仍可以通过输入关键字查询': 'Only the fields contained in the first 200 pieces of data in the query result are displayed, and the fields that do not appear can still be queried by entering keywords',
   搜索: 'Search',
   没找到: 'Not found',
-  '日志服务暂不可用，请稍后再试': 'The log service is temporarily unavailable, please try again later',
   '您可以按照以下方式优化查询结果：': 'You can optimize query results in the following ways: ',
   修改查询时间范围: 'Modify query time range',
   优化查询语法: 'Optimize query syntax',
@@ -2382,4 +2381,6 @@ export default {
   新建镜像凭证: 'New image credential',
   '私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。': 'Private images need to provide image credentials to pull the image. After the image credentials are added, all modules under the application can be used.',
   '一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。': 'A module can only configure one image warehouse, and all processes in "Process Configuration" will use this image.',
+  端口名称: 'Port name',
+  进程内端口: 'In-process port',
 };

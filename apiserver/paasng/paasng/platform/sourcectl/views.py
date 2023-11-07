@@ -35,11 +35,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from svn.common import SvnException
 
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.core.region.states import RegionType
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
+from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl import serializers as slzs
 from paasng.platform.sourcectl.connector import generate_downloadable_app_template, get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
@@ -59,12 +65,6 @@ from paasng.platform.sourcectl.svn.admin import promote_repo_privilege_temporary
 from paasng.platform.sourcectl.svn.client import RepoProvider
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.platform.sourcectl.version_services import get_version_service
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
-from paasng.platform.modules.specs import ModuleSpecs
-from paasng.core.region.states import RegionType
 from paasng.utils.error_codes import error_codes
 from paasng.utils.notifier import get_notification_backend
 
@@ -306,7 +306,9 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         filename = Path(urlparse(package_url).path).name.split(".")[0]
         # 保证文件名中会记录版本信息.
         filename = f"{filename}:{version}" if version not in filename else filename
-        source_package = upload_package_via_url(module, package_url, version, filename, request.user, allow_overwrite)
+        source_package = upload_package_via_url(
+            module, package_url, version, filename, request.user, allow_overwrite=allow_overwrite, need_patch=False
+        )
         return Response(data=slzs.SourcePackageSLZ(source_package).data)
 
 

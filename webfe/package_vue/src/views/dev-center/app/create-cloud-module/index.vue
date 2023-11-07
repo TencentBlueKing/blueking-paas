@@ -60,55 +60,8 @@
               </bk-form-item>
             </bk-form>
 
-            <!-- <div class="form-group pb0 mt10">
-              <label class="form-label"> {{ $t('模块名称') }} </label>
-              <div class="form-group-flex">
-
-                <p>
-                  <input
-                    type="text"
-                    name="name"
-                    data-parsley-required="true"
-                    :data-parsley-required-message="$t('该字段是必填项')"
-                    data-parsley-maxlength="16"
-                    data-parsley-pattern="[a-z][a-z0-9-]+"
-                    :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')"
-                    data-parsley-trigger="input blur"
-                    class="ps-form-control"
-                    :placeholder="$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符')"
-                  >
-                </p>
-              </div>
-            </div> -->
-
-            <div
-              class="form-group mt10"
-              style="margin-left: 10px"
-            >
-              <label class="form-label"> {{ $t('托管方式') }} </label>
-              <div
-                class="form-group-flex-radio"
-                style="width: 100%"
-              >
-                <div class="form-group-radio mt5">
-                  <bk-radio-group
-                    v-model="structureType"
-                    class="construction-manner"
-                  >
-                    <bk-radio :value="'soundCode'" v-if="curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE">
-                      {{ $t('源代码') }}
-                    </bk-radio>
-                    <bk-radio :value="'mirror'">
-                      {{ $t('仅镜像') }}
-                    </bk-radio>
-                  </bk-radio-group>
-                </div>
-              </div>
-            </div>
-
             <!-- 构建方式 -->
             <div
-              v-if="structureType === 'soundCode'"
               class="form-group mt10 align-items-center"
               style="margin-top: 10px;"
             >
@@ -119,13 +72,17 @@
                 <bk-radio-group
                   v-model="formData.buildMethod"
                   class="construction-manner"
+                  @change="handleChangeBuildMethod"
                 >
                   <bk-radio :value="'buildpack'">
                     {{ $t('蓝鲸 Buildpack') }}
                   </bk-radio>
-                  <!-- <bk-radio :value="'dockerfile'">
-                    {{ $t('Dockerfile 构建') }}
-                  </bk-radio> -->
+                  <bk-radio :value="'dockerfile'">
+                    Dockerfile
+                  </bk-radio>
+                  <bk-radio :value="'mirror'">
+                    {{ $t('仅镜像') }}
+                  </bk-radio>
                 </bk-radio-group>
               </div>
             </div>
@@ -828,7 +785,6 @@ export default {
     },
   },
   async created() {
-    this.structureType = this.curUserFeature.ENABLE_DEPLOY_CNATIVE_APP_FROM_CODE ? 'soundCode' : 'mirror';
     await this.fetchRegion();
     await this.getLanguageByRegion();
     await this.getCodeTypes();
@@ -1261,6 +1217,14 @@ export default {
         this.cloudAppData = _.cloneDeep(this.localCloudAppData);
         this.$store.commit('cloudApi/updateHookPageEdit', false);
         this.$store.commit('cloudApi/updateProcessPageEdit', false);
+        // 返回模块配置
+        this.$router.push({
+          name: 'cloudAppDeployForProcess',
+          params: {
+            moduleId: this.curModuleId,
+            id: this.appCode,
+          },
+        });
       }
     },
 
@@ -1316,6 +1280,10 @@ export default {
 
     removeBuildParams(index) {
       this.dockerfileData.buildParams.splice(index, 1);
+    },
+
+    handleChangeBuildMethod(value) {
+      this.structureType = value === 'mirror' ? 'mirror' : 'soundCode';
     },
   },
 };

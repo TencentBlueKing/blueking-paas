@@ -269,7 +269,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
                 return quota_plan
-        return quota_plan_memory[-1][0]
+        return quota_plan_memory[-1][1]
 
     @staticmethod
     def get_command_and_args(module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
@@ -409,13 +409,17 @@ def get_bkapp_resource(module: Module) -> BkAppResource:
 
 
 def get_bkapp_resource_for_deploy(
-    env: ModuleEnvironment, deploy_id: str, force_image: Optional[str] = None
+    env: ModuleEnvironment,
+    deploy_id: str,
+    force_image: Optional[str] = None,
+    image_pull_policy: Optional[str] = None,
 ) -> BkAppResource:
     """Get the BkApp manifest for deploy.
 
     :param env: The environment object.
     :param deploy_id: The ID of the AppModelDeploy object.
     :param force_image: If given, set the image of the application to this value.
+    :param image_pull_policy: If given, set the imagePullPolicy to this value.
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)
@@ -424,6 +428,11 @@ def get_bkapp_resource_for_deploy(
         if not model_res.spec.build:
             model_res.spec.build = BkAppBuildConfig()
         model_res.spec.build.image = force_image
+
+    if image_pull_policy:
+        if not model_res.spec.build:
+            model_res.spec.build = BkAppBuildConfig()
+        model_res.spec.build.imagePullPolicy = image_pull_policy
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

@@ -24,9 +24,7 @@ from typing import Any, Generator, List, Optional, Union
 from django.db import connection
 from django.utils.functional import cached_property
 
-from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.kube_res.base import WatchEvent
 from paas_wl.bk_app.processes.controllers import ProcessesInfo, list_ns_processes, list_processes
 from paas_wl.bk_app.processes.entities import Instance, Process
 from paas_wl.bk_app.processes.readers import (
@@ -36,6 +34,8 @@ from paas_wl.bk_app.processes.readers import (
     ns_process_kmodel,
     process_kmodel,
 )
+from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.infras.resources.kube_res.base import WatchEvent
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -97,6 +97,9 @@ class ProcInstByEnvListWatcher:
                 namespace=self.namespace,
                 resource_version=rv_inst,
                 timeout_seconds=timeout_seconds,
+                # 由于历史原因, 存量的 Pod 有可能未添加资源类型的 label, 所以不能通过 labels 过滤进程实例
+                # 这导致有可能会过滤到 slug-builder, 所以需要设置 ignore_unknown_objs=True
+                ignore_unknown_objs=True,
             ),
         ]
         # NOTE: Using of ThreadPoolExecutor/Multi-Threading may cause apiserver connections leak because every
@@ -151,6 +154,9 @@ class ProcInstByModuleEnvListWatcher:
                 labels=ProcessAPIAdapter.app_selector(self.wl_app),
                 resource_version=rv_inst,
                 timeout_seconds=timeout_seconds,
+                # 由于历史原因, 存量的 Pod 有可能未添加资源类型的 label, 所以不能通过 labels 过滤进程实例
+                # 这导致有可能会过滤到 slug-builder, 所以需要设置 ignore_unknown_objs=True
+                ignore_unknown_objs=True,
             ),
         ]
         # NOTE: Using of ThreadPoolExecutor/Multi-Threading may cause apiserver connections leak because every

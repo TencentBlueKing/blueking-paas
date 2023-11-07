@@ -388,12 +388,9 @@ const (
 	HookPreRelease HookType = "pre-release"
 )
 
-// SetRevision used to set the Revision field (and also update the LastUpdate field)
-func (status *AppStatus) SetRevision(revision int64, deployId string) {
-	status.Revision = &Revision{Revision: revision}
-	if deployId != "" {
-		status.DeployId = deployId
-	}
+// SetDeployID set the DeployID field in the status.
+func (status *AppStatus) SetDeployID(deployId string) {
+	status.DeployId = deployId
 	status.LastUpdate = lo.ToPtr(metav1.Now())
 }
 

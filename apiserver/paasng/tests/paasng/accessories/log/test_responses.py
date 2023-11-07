@@ -228,7 +228,7 @@ class TestIngressLogLine:
         "deleting_field",
         [
             ["@timestamp"],
-            ["engine_app_name"],
+            ["response_time"],
         ],
     )
     def test_ingress_lacking_key_info(self, search_params, make_fake_hit, deleting_field):

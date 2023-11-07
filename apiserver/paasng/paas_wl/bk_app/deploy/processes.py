@@ -23,7 +23,7 @@ from typing import Optional
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.bk_app.processes.constants import ProcessTargetStatus
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import ProcControllerHub
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ScaleProcessError
 from paas_wl.bk_app.processes.models import ProcessSpec
@@ -177,10 +177,6 @@ class AppProcessesController:
 class CNativeProcController:
     """Process controller for cloud-native applications"""
 
-    # A hard limit on count
-    # TODO: Replace it with more concise solutions
-    HARD_LIMIT_COUNT = 10
-
     def __init__(self, env: ModuleEnvironment):
         self.env = env
 
@@ -209,8 +205,8 @@ class CNativeProcController:
         if target_replicas is None:
             raise ValueError('target_replicas required when scale process')
 
-        if target_replicas > self.HARD_LIMIT_COUNT:
-            raise ValueError(f"target_replicas can't be greater than {self.HARD_LIMIT_COUNT}")
+        if target_replicas > DEFAULT_CNATIVE_MAX_REPLICAS:
+            raise ValueError(f"target_replicas can't be greater than {DEFAULT_CNATIVE_MAX_REPLICAS}")
 
         try:
             ProcReplicas(self.env).scale(proc_type, target_replicas)

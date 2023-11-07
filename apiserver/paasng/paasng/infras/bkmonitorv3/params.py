@@ -16,10 +16,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Union
 
 from attrs import define
-from django.conf import settings
+
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorSpaceDoesNotExist
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+
+
+def get_bk_biz_id(app_code: str) -> str:
+    try:
+        return BKMonitorSpace.objects.get(application__code=app_code).iam_resource_id
+    except BKMonitorSpace.DoesNotExist as e:
+        raise BkMonitorSpaceDoesNotExist(e)
 
 
 @define(kw_only=True)
@@ -49,16 +58,15 @@ class QueryAlertsParams:
         d = {
             'start_time': int(self.start_time.timestamp()),
             'end_time': int(self.end_time.timestamp()),
-            'bk_biz_ids': [settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')],
-            # 按现有的查询, 只返回最多 5000 条可以满足需求
-            'page_size': 5000,
-            'page': 1,
+            'bk_biz_ids': [get_bk_biz_id(self.app_code)],
+            'page_size': 1,
+            'page': 500,
             # 按照 ID 降序
             'ordering': ['-id'],
         }
 
         if self.status:
-            d['status'] = self.status
+            d['status'] = [self.status]
 
         d['query_string'] = self._build_query_string()
 
@@ -68,15 +76,63 @@ class QueryAlertsParams:
         """构建 query_string 参数. 查询语法参考
         https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
         """
-        query_alert_code = self.alert_code or '*'
-
+        # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
+        query_labels = "PAAS_BUILTIN"
         if self.environment:
-            query_rule_name = f'{self.app_code}_*{self.environment}_{query_alert_code}'
-        else:
-            query_rule_name = f'{self.app_code}_*_{query_alert_code}'
+            query_labels = f"{query_labels} AND {self.environment}"
+
+        if self.alert_code:
+            query_labels = f"{query_labels} AND {self.alert_code}"
+
+        query_string = f"labels:({query_labels})"
+        if self.keyword:
+            query_string = f'{query_string} AND alert_name:{self.keyword}'
+        return query_string
+
+
+@define(kw_only=True)
+class QueryAlarmStrategiesParams:
+    """
+    查询告警的参数
+
+    :param app_code: 应用 code
+    :param environment: 应用部署环境. 可选
+    :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
+    :param status: 告警状态 (ALERT: 表示告警中, INVALID: 表示已失效, OFF: 表示已关闭, ON: 表示已开启). 可选
+    :param keyword: 告警名称包含的关键字. 可选
+    """
+
+    app_code: str
+    environment: Optional[str] = None
+    alert_code: Optional[str] = None
+    status: Optional[str] = None
+    keyword: Optional[str] = None
+
+    def to_dict(self) -> Dict:
+        """组装成 search_alarm_strategy_without_biz 接口需要的参数"""
+        return {
+            'bk_biz_id': get_bk_biz_id(self.app_code),
+            'page': 1,
+            'page_size': 500,
+            'conditions': self._build_conditions(),
+        }
+
+    def _build_conditions(self) -> List:
+        """构建 conditions 参数. 具体参数参考 search_alarm_strategy_without_biz 接口文档"""
+        conditions: List[Dict[str, Union[str, List[str]]]] = []
+        if self.status:
+            conditions.append({"key": "strategy_status", "value": self.status})
+
+        if self.keyword:
+            conditions.append({"key": "alert_name", "value": self.keyword})
 
         # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
-        query_string = f"labels:(BKPAAS AND {self.app_code} AND {query_rule_name})"
-        if self.keyword:
-            query_string = f'{query_string} AND alert_name:*{self.keyword}*'
-        return query_string
+        query_labels = ["PAAS_BUILTIN"]
+        if self.environment:
+            query_labels.append(self.environment)
+
+        if self.alert_code:
+            query_labels.append(self.alert_code)
+
+        conditions.append({"key": "label_name", "value": query_labels})
+        return conditions

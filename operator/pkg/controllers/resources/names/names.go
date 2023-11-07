@@ -25,16 +25,16 @@ import (
 )
 
 const (
-	defaultRevision int64 = 1
+	defaultDeployID string = "1"
 )
 
 // PreReleaseHook 生成用于执行 pre-release-hook 的 Pod 名称
 func PreReleaseHook(bkapp *paasv1alpha2.BkApp) string {
-	revision := defaultRevision
-	if rev := bkapp.Status.Revision; rev != nil {
-		revision = rev.Revision
+	deployID := bkapp.Status.DeployId
+	if deployID == "" {
+		deployID = defaultDeployID
 	}
-	return fmt.Sprintf("pre-rel-%s-%d", bkapp.GetName(), revision)
+	return fmt.Sprintf("pre-rel-%s-%s", bkapp.GetName(), deployID)
 }
 
 // Deployment 为应用的不同进程生成 Deployment 资源名称

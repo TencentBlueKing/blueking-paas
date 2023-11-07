@@ -98,8 +98,8 @@ class ImageReleaseMgr(DeployStep):
                         ProcessTmpl(
                             name=proc_spec.name,
                             command=proc_spec.get_proc_command(),
-                            replicas=proc_spec.target_replicas,
-                            plan=proc_spec.plan_name,
+                            replicas=proc_spec.get_target_replicas(self.module_environment.environment),
+                            plan=proc_spec.get_plan_name(self.module_environment.environment),
                         )
                         for proc_spec in ModuleProcessSpec.objects.filter(module=module)
                     ]

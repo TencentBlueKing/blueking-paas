@@ -30,13 +30,6 @@ from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, Re
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.structure import register
 
-# Default resource limitations for each process
-DEFAULT_PROC_CPU = '500m'
-DEFAULT_PROC_MEM = '256Mi'
-# Default resource request for each process
-DEFAULT_PROC_CPU_REQUEST = '125m'
-DEFAULT_PROC_MEM_REQUEST = '126Mi'
-
 
 class MetaV1Condition(BaseModel):
     """Condition contains details for one aspect of the current state of this API Resource"""
@@ -68,13 +61,13 @@ class BkAppProcess(BaseModel):
     autoscaling: Optional[AutoscalingSpec] = None
 
     # Deprecated: use resQuotaPlan instead in v1alpha2
-    cpu: str = DEFAULT_PROC_CPU
+    cpu: Optional[str] = None
     # Deprecated: use resQuotaPlan instead in v1alpha2
-    memory: str = DEFAULT_PROC_MEM
+    memory: Optional[str] = None
     # Deprecated: use spec.build.image instead in v1alpha2
     image: Optional[str] = None
     # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
-    imagePullPolicy: Optional[str] = ImagePullPolicy.IF_NOT_PRESENT
+    imagePullPolicy: Optional[str] = None
 
 
 class Hook(BaseModel):

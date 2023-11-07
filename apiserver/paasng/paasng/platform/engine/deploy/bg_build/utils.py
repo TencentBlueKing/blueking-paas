@@ -30,8 +30,8 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
 from paas_wl.utils.text import b64encode
-from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 from paas_wl.workloads.images.kres_entities import ImageCredentials
+from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 from paasng.utils.blobstore import make_blob_store
@@ -181,7 +181,7 @@ def prepare_slugbuilder_template(
         name=generate_builder_name(app),
         namespace=app.namespace,
         runtime=ContainerRuntimeSpec(
-            image=image, envs=env_vars or {}, image_pull_secrets=[{"name": PULL_SECRET_NAME}]
+            image=image, envs=env_vars or {}, image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=app)}]
         ),
         schedule=get_schedule_config(app),
     )

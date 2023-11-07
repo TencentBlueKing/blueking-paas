@@ -99,6 +99,7 @@ class ErrorCodes:
     # Monitor
     INIT_ALERT_RULES_FAILED = ErrorCode(_('初始化告警规则失败'))
     QUERY_ALERTS_FAILED = ErrorCode(_('查询告警失败'))
+    QUERY_ALARM_STRATEGIES_FAILED = ErrorCode(_('查询告警策略失败'))
     # 独立域名
     CANNOT_UPDATE_DOMAIN = ErrorCode(_('无法更新独立域名'))
     CANNOT_CREATE_DOMAIN = ErrorCode(_('无法添加独立域名'))

@@ -25,19 +25,19 @@ from django.db import transaction
 
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.processes.shim import ProcessManager
-from paasng.platform.engine.models.deployment import Deployment
+from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.core.region.models import get_region
+from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
-from paasng.infras.oauth2.utils import create_oauth2_client
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
-from paasng.accessories.publish.market.constant import ProductSourceUrlType
-from paasng.accessories.publish.market.models import MarketConfig
 
 logger = logging.getLogger(__name__)
 

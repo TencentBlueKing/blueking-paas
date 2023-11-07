@@ -26,12 +26,21 @@ from typing import Dict, List, Optional
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.models import User, UserProfile
-from paasng.infras.accounts.permissions.application import user_has_app_action_perm
+from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
+from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
+from paasng.accessories.publish.market.protections import ModulePublishPreparer
+from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.core.region.models import get_region
+from paasng.infras.accounts.models import User, UserProfile
+from paasng.infras.accounts.permissions.application import user_has_app_action_perm
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.oauth2.utils import create_oauth2_client
+from paasng.platform.applications.handlers import application_logo_updated
+from paasng.platform.applications.models import Application
+from paasng.platform.applications.signals import application_default_module_switch, post_create_application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.fields import AppNameField, AppRegionField
 from paasng.platform.declarative.application.resources import ApplicationDesc, MarketDesc, ModuleDesc, ServiceSpec
@@ -39,18 +48,9 @@ from paasng.platform.declarative.application.serializers import AppDescriptionSL
 from paasng.platform.declarative.basic import remove_omitted
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.models import ApplicationDescription
-from paasng.platform.applications.handlers import application_logo_updated
-from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import application_default_module_switch, post_create_application
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.manager import Module, initialize_smart_module
-from paasng.infras.oauth2.utils import create_oauth2_client
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
-from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
-from paasng.accessories.publish.market.protections import ModulePublishPreparer
-from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 
 logger = logging.getLogger(__name__)
 

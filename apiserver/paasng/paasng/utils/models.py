@@ -33,6 +33,7 @@ from django.conf import settings
 from django.core.files import File
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
+from django.db.models.query_utils import DeferredAttribute
 from imagekit.models import ProcessedImageField as OrigProcessedImageField
 from imagekit.utils import suggest_extension
 from jsonfield import JSONField
@@ -120,10 +121,35 @@ class ProcessedImageField(OrigProcessedImageField):
         return name, path, args, kwargs
 
 
+class BkUserFieldAttribute(DeferredAttribute):
+    """A wrapper for BkUserField, always transform value to SimpleUserIDWrapper
+
+    Example:
+        class A(models.Model):
+            creator = BkUserField()
+
+        a = A.objects.create(creator=user_id_encoder.encode(ProviderType.BK, "foo"))
+        assert a.creator.username == "foo"
+
+        a.creator = user_id_encoder.encode(ProviderType.BK, "bar")
+        assert a.creator.username == "bar"
+    """
+
+    def __set__(self, instance, value):
+        if instance is None:
+            return
+        data = instance.__dict__
+        field_name = self.field.attname
+        if value:
+            value = SimpleUserIDWrapper(value)
+        data[field_name] = value
+
+
 class BkUserField(models.CharField):
     """Field for storing blueking user pk"""
 
     description = 'DB field for storing blueking user'
+    descriptor_class = BkUserFieldAttribute
 
     def __init__(self, *args, **kwargs):
         kwargs['max_length'] = 64

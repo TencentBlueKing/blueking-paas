@@ -50,4 +50,8 @@ urlpatterns = [
     ),
     path('api/monitor/supported_alert_rules/', views.AlertRulesView.as_view({'get': 'list_supported_alert_rules'})),
     path('api/monitor/applications/<slug:code>/alerts/', views.ListAlertsView.as_view({'post': 'list'})),
+    path(
+        'api/monitor/applications/<slug:code>/alarm_strategies/',
+        views.ListAlarmStrategiesView.as_view({'post': 'list'}),
+    ),
 ]

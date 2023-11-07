@@ -61,6 +61,12 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["image"] == "example.com/foo"
         assert proc_specs[0]["command"] == ["python"]
         assert proc_specs[0]["args"] == ["-m", "http.server"]
+        assert proc_specs[0]["env_overlay"]["stag"]["scaling_config"] == {
+            'min_replicas': 1,
+            'max_replicas': 1,
+            'metrics': [{'type': 'Resource', 'metric': 'cpuUtilization', 'value': '85%'}],
+            'policy': 'default',
+        }
 
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["image"] == "example.com/foo"
@@ -189,6 +195,14 @@ class TestModuleProcessSpecViewSet:
                 "command": ["python", "-m", "http.server"],
                 "args": None,
                 "port": 4999,
+                "env_overlay": {
+                    "stag": {
+                        "environment_name": "stag",
+                        "plan_name": "default",
+                        "target_replicas": 2,
+                        "autoscaling": False,
+                    }
+                },
             }
         ]
         resp = api_client.post(url, data=request_data)
@@ -205,3 +219,4 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["command"] == ["python", "-m", "http.server"]
         assert proc_specs[0]["args"] == []
         assert proc_specs[0]["port"] == 4999
+        assert proc_specs[0]["env_overlay"]["stag"]["plan_name"] == "default"

@@ -48,11 +48,10 @@ from paas_wl.utils.kubestatus import (
     parse_container_status,
     parse_pod,
 )
-from paas_wl.workloads.images.constants import PULL_SECRET_NAME
+from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
+from paas_wl.workloads.release_controller.hooks.entities import CommandKubeAdaptor
 from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
-
-from .entities import CommandKubeAdaptor
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +239,7 @@ class Command(AppEntity):
                 args=command.split_command,
                 envs=envs,
                 image_pull_policy=command.config.runtime.get_image_pull_policy(),
-                image_pull_secrets=[{"name": PULL_SECRET_NAME}],
+                image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=command.app)}],
             ),
             schedule=Schedule(
                 cluster_name=get_cluster_by_app(command.app).name,

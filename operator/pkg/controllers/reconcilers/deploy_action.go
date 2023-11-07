@@ -16,14 +16,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// This reconciler helps initialize the status of the BkApp when a new deploy action
+// is issued.
 package reconcilers
 
 import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/samber/lo"
-	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,32 +31,35 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
-	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
 
-const defaultRevision int64 = 1
-
-// NewRevisionReconciler will return a RevisionReconciler with given k8s client
-func NewRevisionReconciler(client client.Client) *RevisionReconciler {
-	return &RevisionReconciler{Client: client}
+// NewDeployActionReconciler returns a DeployActionReconciler.
+func NewDeployActionReconciler(client client.Client) *DeployActionReconciler {
+	return &DeployActionReconciler{Client: client}
 }
 
-// RevisionReconciler 处理版本相关的调和逻辑
-type RevisionReconciler struct {
+// DeployActionReconciler reconcile the statuses when a new deploy action has been
+// detected.
+type DeployActionReconciler struct {
 	Client client.Client
 	Result Result
 }
 
-// Reconcile ...
-func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
+// Reconcile reconciles.
+func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
 	var err error
-	log.V(4).Info("handling revision reconciliation")
+	log.V(4).Info("handling deploy action reconciliation.")
 
-	// Generation 未变化说明 BkApp 的定义未被修改, 此时的调和循环不会触发新的 hooks
-	if !isNewRevision(bkapp) {
+	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
+	if currentDeployID == "" {
+		currentDeployID = resources.DefaultDeployID
+	}
+
+	// Check if the current deploy ID has been processed already.
+	if bkapp.Status.ObservedGeneration >= bkapp.Generation || bkapp.Status.DeployId == currentDeployID {
 		log.V(2).Info(
-			"BkApp is unchanged, this reconciliation loop will never update bkapp revision",
+			"No new deploy action found on the BkApp, skip the rest of the process.",
 			"ObservedGeneration",
 			bkapp.Status.ObservedGeneration,
 			"Generation",
@@ -65,53 +68,43 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.
 		return r.Result
 	}
 
-	allDeploys := appsv1.DeploymentList{}
-	err = r.Client.List(
-		ctx,
-		&allDeploys,
-		client.InNamespace(bkapp.Namespace),
-		client.MatchingFields{paasv1alpha2.KubeResOwnerKey: bkapp.Name},
-	)
-	if err != nil {
-		return r.Result.withError(err)
-	}
-
-	maxOldRevision := revision.MaxRevision(lo.ToSlicePtr(allDeploys.Items))
-	newRevision := maxOldRevision + 1
-
-	if newRevision != defaultRevision {
-		preReleaseHook := resources.BuildPreReleaseHook(
-			bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
-		)
-		if preReleaseHook != nil {
-			// 检测上一个版本的 PreReleaseHook 是否仍在运行
-			if preReleaseHook.Progressing() {
-				if _, err = CheckAndUpdatePreReleaseHookStatus(
-					ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
-				); err != nil {
-					return r.Result.withError(err)
-				}
-				return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
-			}
-			// 上一个版本的 hook 失败不应该阻止调和循环，revision 需要自增以跳过失败的版本
-			if preReleaseHook.Failed() {
-				newRevision += 1
-			}
+	// If this is not the initial deploy action, check if there is any preceding running hooks,
+	// wait for these hooks by return an error to delay for another reconcile cycle.
+	//
+	// TODO: Should we remove this logic and allow every new deploy action to start even the
+	// hook triggered by older deploy is not finished yet?
+	if bkapp.Status.DeployId != "" {
+		if err = r.validateNoRunningHooks(ctx, bkapp); err != nil {
+			return r.Result.withError(err)
 		}
 	}
 
-	log.Info("new revision accepted!", "GetRevision", newRevision)
+	log.Info("New deploy action found.", "name", bkapp.Name, "deployID", currentDeployID)
 	bkapp.Status.Phase = paasv1alpha2.AppPending
-	bkapp.Status.SetRevision(newRevision, bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey])
 	bkapp.Status.HookStatuses = nil
 	bkapp.Status.ObservedGeneration = bkapp.Generation
+	bkapp.Status.SetDeployID(currentDeployID)
 	SetDefaultConditions(&bkapp.Status)
-	err = r.Client.Status().Update(ctx, bkapp)
-	if err != nil {
-		log.Error(err, "unable to update app revision")
+
+	if err = r.Client.Status().Update(ctx, bkapp); err != nil {
+		log.Error(err, "Unable to update app status.")
 		return r.Result.withError(err)
 	}
 	return r.Result
+}
+
+// validate that there are no running hooks currently, return error if found any running hooks.
+func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
+	// Check pre-release hook
+	hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+	if hook != nil && hook.Progressing() {
+		_, err := CheckAndUpdatePreReleaseHookStatus(ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold)
+		if err != nil {
+			return err
+		}
+		return errors.WithStack(resources.ErrLastHookStillRunning)
+	}
+	return nil
 }
 
 // SetDefaultConditions set all conditions to initial value
@@ -127,14 +120,14 @@ func SetDefaultConditions(status *paasv1alpha2.AppStatus) {
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.AppAvailable,
 		Status:             availableStatus,
-		Reason:             "NewRevision",
+		Reason:             "NewDeploy",
 		Message:            availableMessage,
 		ObservedGeneration: status.ObservedGeneration,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.AppProgressing,
 		Status:             metav1.ConditionTrue,
-		Reason:             "NewRevision",
+		Reason:             "NewDeploy",
 		ObservedGeneration: status.ObservedGeneration,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
@@ -149,13 +142,4 @@ func SetDefaultConditions(status *paasv1alpha2.AppStatus) {
 		Reason:             "Initial",
 		ObservedGeneration: status.ObservedGeneration,
 	})
-}
-
-func isNewRevision(bkapp *paasv1alpha2.BkApp) bool {
-	// Generation 未变化说明 BkApp 的定义未被修改
-	if bkapp.Status.ObservedGeneration < bkapp.Generation {
-		return true
-	}
-	// DeployId 发生变化说明平台触发了部署
-	return bkapp.Status.DeployId != bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 }

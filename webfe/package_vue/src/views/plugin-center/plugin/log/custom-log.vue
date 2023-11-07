@@ -296,655 +296,648 @@
   </div>
 </template>
 
-<script>
-    import moment from 'moment';
-    import xss from 'xss';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import logFilter from './comps/log-filter.vue';
-    import { formatDate } from '@/common/tools';
+<script>import moment from 'moment';
+import xss from 'xss';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import logFilter from './comps/log-filter.vue';
+import { formatDate } from '@/common/tools';
 
-    const xssOptions = {
-        whiteList: {
-            'bk-highlight-mark': []
-        }
+const xssOptions = {
+  whiteList: {
+    'bk-highlight-mark': [],
+  },
+};
+const logXss = new xss.FilterXSS(xssOptions);
+const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
+
+export default {
+  components: {
+    logFilter,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      name: 'log-component',
+      tabActive: 'customLog',
+      filterKeyword: '',
+      contentHeight: 400,
+      tabChangeIndex: 0,
+      renderIndex: 0,
+      renderFilter: 0,
+      routeChangeIndex: 0,
+      isLoading: true,
+      tableMaxWidth: 700,
+      isShowDate: true,
+      lastScrollId: '',
+      initDateTimeRange: [initStartDate, initEndDate],
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 20,
+      },
+      autoTimer: 0,
+      fieldChecked: {},
+      fieldPopoverShow: {},
+      fieldCheckedList: [],
+      isChartLoading: false,
+      isLogListLoading: false,
+      logList: [],
+      streamLogList: [],
+      searchFilterKey: [],
+      tableFilters: [],
+      streamLogFilters: [],
+      envList: [],
+      processList: [],
+      filterData: [],
+      streamList: [],
+      fieldList: [],
+      logParams: {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        levelname: '',
+        time_range: '1h',
+      },
+      fieldSelectedList: [],
+      isFilter: false,
+      searchLogTips: [
+        {
+          text: this.$t('修改查询时间范围'),
+          link: '',
+          url: '',
+        },
+        {
+          text: this.$t('优化查询语法'),
+          link: this.$t('日志查询语法'),
+          url: this.GLOBAL.DOC.LOG_QUERY_SYNTAX,
+        },
+        {
+          text: this.$t('按指引排查'),
+          link: this.$t('为什么日志查询为空'),
+          url: this.GLOBAL.DOC.LOG_QUERY_EMPTY,
+        },
+      ],
+      tableEmptyConf: {
+        isAbnormal: false,
+        keyword: '',
+      },
     };
-    const logXss = new xss.FilterXSS(xssOptions);
-    const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
-
-    export default {
-        components: {
-            logFilter
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-                name: 'log-component',
-                tabActive: 'customLog',
-                filterKeyword: '',
-                contentHeight: 400,
-                tabChangeIndex: 0,
-                renderIndex: 0,
-                renderFilter: 0,
-                routeChangeIndex: 0,
-                isLoading: true,
-                tableMaxWidth: 700,
-                isShowDate: true,
-                lastScrollId: '',
-                initDateTimeRange: [initStartDate, initEndDate],
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 20
-                },
-                autoTimer: 0,
-                fieldChecked: {},
-                fieldPopoverShow: {},
-                fieldCheckedList: [],
-                isChartLoading: false,
-                isLogListLoading: false,
-                logList: [],
-                streamLogList: [],
-                searchFilterKey: [],
-                tableFilters: [],
-                streamLogFilters: [],
-                envList: [],
-                processList: [],
-                filterData: [],
-                streamList: [],
-                fieldList: [],
-                logParams: {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    levelname: '',
-                    time_range: '1h'
-                },
-                fieldSelectedList: [],
-                isFilter: false,
-                searchLogTips: [
-                    {
-                        text: this.$t('修改查询时间范围'),
-                        link: '',
-                        url: ''
-                    },
-                    {
-                        text: this.$t('优化查询语法'),
-                        link: this.$t('日志查询语法'),
-                        url: this.GLOBAL.DOC.LOG_QUERY_SYNTAX
-                    },
-                    {
-                        text: this.$t('按指引排查'),
-                        link: this.$t('为什么日志查询为空'),
-                        url: this.GLOBAL.DOC.LOG_QUERY_EMPTY
-                    }
-                ],
-                tableEmptyConf: {
-                    isAbnormal: false,
-                    keyword: ''
-                }
-            };
-        },
-        computed: {
-            chartData () {
-                const data = this.$store.state.plugin.chartData;
-                return data;
-            },
-            tableFormatFilters () {
-                const results = [];
-                const obj = {};
-                // 重复key聚合
-                this.tableFilters.forEach(item => {
-                    if (!obj[item.key]) {
-                        obj[item.key] = [];
-                    }
-                    obj[item.key].push(item.value);
-                });
-                for (const key in obj) {
-                    results.push({
-                        key: key,
-                        value: obj[key].join(' | ')
-                    });
-                }
-                return results;
-            },
-            fieldOptions () {
-                const options = {};
-                const fieldList = this.fieldList;
-                fieldList.forEach(field => {
-                    options[field.name] = [];
-                    field.list.forEach(item => {
-                        options[field.name].push({
-                            text: item.text,
-                            value: item.id
-                        });
-                    });
-                });
-                return options;
-            },
-            fieldMap () {
-                const obj = {};
-                const fieldList = this.fieldList;
-                fieldList.forEach(field => {
-                    obj[field.name] = field.id;
-                });
-                return obj;
-            },
-            hasChartData () {
-                if (this.chartData.series.length && this.chartData.series[0].data.length) {
-                    return true;
-                }
-                return false;
-            }
-        },
-        watch: {
-            'logParams.keyword' (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    if (this.isFilter) {
-                        this.loadData(false);
-                        this.isFilter = false;
-                    }
-                }
-            },
-            '$route.params' (newVal, oldVal) {
-                if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
-                    this.isLoading = true;
-                    this.renderIndex++;
-                    this.routeChangeIndex++;
-                    this.resetParams();
-                    this.loadData();
-                }
-            },
-            fieldSelectedList () {
-                const keys = Object.keys(this.fieldChecked);
-                this.fieldSelectedList.forEach(item => {
-                    if (!this.fieldChecked.hasOwnProperty(item)) {
-                        this.fieldChecked[item] = [];
-                        this.fieldPopoverShow[item] = false;
-                    }
-                });
-                keys.forEach(item => {
-                    if (!this.fieldSelectedList.includes(item)) {
-                        delete this.fieldChecked[item];
-                        delete this.fieldPopoverShow[item];
-                    }
-                });
-                this.renderIndex++;
-                this.hideAllFilterPopover();
-                this.loadData(false);
-            }
-        },
-        beforeRouteLeave (to, from, next) {
-            clearInterval(this.autoTimer);
-            this.resetParams();
-            next(true);
-        },
-        created () {
-            const query = this.$route.query || {};
-            this.logParams = {
-                start_time: query.start_time || initStartDate,
-                end_time: query.end_time || initEndDate,
-                environment: query.environment || '',
-                process_id: query.process_id || '',
-                stream: query.stream || '',
-                keyword: query.keyword || '',
-                levelname: query.levelname || '',
-                time_range: query.time_range || '1h'
-            };
-        },
-        mounted () {
-            this.init();
-        },
-        methods: {
-            /**
+  },
+  computed: {
+    chartData() {
+      const data = this.$store.state.plugin.chartData;
+      return data;
+    },
+    tableFormatFilters() {
+      const results = [];
+      const obj = {};
+      // 重复key聚合
+      this.tableFilters.forEach((item) => {
+        if (!obj[item.key]) {
+          obj[item.key] = [];
+        }
+        obj[item.key].push(item.value);
+      });
+      for (const key in obj) {
+        results.push({
+          key,
+          value: obj[key].join(' | '),
+        });
+      }
+      return results;
+    },
+    fieldOptions() {
+      const options = {};
+      const { fieldList } = this;
+      fieldList.forEach((field) => {
+        options[field.name] = [];
+        field.list.forEach((item) => {
+          options[field.name].push({
+            text: item.text,
+            value: item.id,
+          });
+        });
+      });
+      return options;
+    },
+    fieldMap() {
+      const obj = {};
+      const { fieldList } = this;
+      fieldList.forEach((field) => {
+        obj[field.name] = field.id;
+      });
+      return obj;
+    },
+    hasChartData() {
+      if (this.chartData.series.length && this.chartData.series[0].data.length) {
+        return true;
+      }
+      return false;
+    },
+  },
+  watch: {
+    'logParams.keyword'(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        if (this.isFilter) {
+          this.loadData(false);
+          this.isFilter = false;
+        }
+      }
+    },
+    '$route.params'(newVal, oldVal) {
+      if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
+        this.isLoading = true;
+        // eslint-disable-next-line no-plusplus
+        this.renderIndex++;
+        // eslint-disable-next-line no-plusplus
+        this.routeChangeIndex++;
+        this.resetParams();
+        this.loadData();
+      }
+    },
+    fieldSelectedList() {
+      const keys = Object.keys(this.fieldChecked);
+      this.fieldSelectedList.forEach((item) => {
+        if (!this.fieldChecked.hasOwnProperty(item)) {
+          this.fieldChecked[item] = [];
+          this.fieldPopoverShow[item] = false;
+        }
+      });
+      keys.forEach((item) => {
+        if (!this.fieldSelectedList.includes(item)) {
+          delete this.fieldChecked[item];
+          delete this.fieldPopoverShow[item];
+        }
+      });
+      // eslint-disable-next-line no-plusplus
+      this.renderIndex++;
+      this.hideAllFilterPopover();
+      this.loadData(false);
+    },
+  },
+  beforeRouteLeave(to, from, next) {
+    clearInterval(this.autoTimer);
+    this.resetParams();
+    next(true);
+  },
+  created() {
+    const query = this.$route.query || {};
+    this.logParams = {
+      start_time: query.start_time || initStartDate,
+      end_time: query.end_time || initEndDate,
+      environment: query.environment || '',
+      process_id: query.process_id || '',
+      stream: query.stream || '',
+      keyword: query.keyword || '',
+      levelname: query.levelname || '',
+      time_range: query.time_range || '1h',
+    };
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    /**
              * 初始化入口
              */
-            init () {
-                this.isLoading = true;
-                this.loadData();
+    init() {
+      this.isLoading = true;
+      this.loadData();
 
-                const winHeight = document.body.scrollHeight || window.innerHeight;
-                const height = winHeight - 400;
-                if (height > 400) {
-                    this.contentHeight = height;
-                }
-                this.initTableBox();
-                window.onresize = () => {
-                    this.initTableBox();
-                };
-            },
+      const winHeight = document.body.scrollHeight || window.innerHeight;
+      const height = winHeight - 400;
+      if (height > 400) {
+        this.contentHeight = height;
+      }
+      this.initTableBox();
+      window.onresize = () => {
+        this.initTableBox();
+      };
+    },
 
-            initTableBox () {
-                setTimeout(() => {
-                    if (this.$refs.logMain) {
-                        const width = this.$refs.logMain.getBoundingClientRect().width - 220;
-                        this.$refs.tableBox.style.width = width + 'px';
-                        this.$refs.tableBox.style.maxWidth = width + 'px';
-                    }
-                }, 1000);
-            },
+    initTableBox() {
+      setTimeout(() => {
+        if (this.$refs.logMain) {
+          const width = this.$refs.logMain.getBoundingClientRect().width - 220;
+          this.$refs.tableBox.style.width = `${width}px`;
+          this.$refs.tableBox.style.maxWidth = `${width}px`;
+        }
+      }, 1000);
+    },
 
-            /**
+    /**
              * 选择自定义时间，并确定
              */
-            handlePickSuccess (params) {
-                this.logParams = params;
-                this.resetStreamLog();
-                this.loadData();
-            },
+    handlePickSuccess(params) {
+      this.logParams = params;
+      this.resetStreamLog();
+      this.loadData();
+    },
 
-            /**
+    /**
              * 清空查询参数
              */
-            removeFilterParams () {
-                if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
-                    this.$refs.bkSearcher.removeAllParams();
-                }
-            },
+    removeFilterParams() {
+      if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
+        this.$refs.bkSearcher.removeAllParams();
+      }
+    },
 
-            toggleDetail (log) {
-                log.isToggled = !log.isToggled;
-                const list = JSON.parse(JSON.stringify(this.logList));
-                this.logList.splice(0, this.logList.length, ...list);
-                this.hideAllFilterPopover();
-            },
+    toggleDetail(log) {
+      log.isToggled = !log.isToggled;
+      const list = JSON.parse(JSON.stringify(this.logList));
+      this.logList.splice(0, this.logList.length, ...list);
+      this.hideAllFilterPopover();
+    },
 
-            getParams () {
-                return {
-                    start_time: this.logParams.start_time,
-                    end_time: this.logParams.end_time,
-                    time_range: this.logParams.time_range
-                    // log_type: this.tabActive === 'customLog' ? 'STRUCTURED' : 'STANDARD_OUTPUT'
-                };
-            },
+    getParams() {
+      return {
+        start_time: this.logParams.start_time,
+        end_time: this.logParams.end_time,
+        time_range: this.logParams.time_range,
+        // log_type: this.tabActive === 'customLog' ? 'STRUCTURED' : 'STANDARD_OUTPUT'
+      };
+    },
 
-            /**
+    /**
              * 构建过滤参数
              */
-            getFilterParams () {
-                const params = {
-                    query: {
-                        query_string: this.logParams.keyword
-                    }
-                    // "query": {
-                    //     "query_string": "32",
-                    //     "terms": {
-                    //         "json.levelname.keyword": ["ERROR"]  # 因为 json.levelname 对应的 key 是 "json.levelname.keyword"
-                    //     }
-                    // }
-                };
+    getFilterParams() {
+      const params = {
+        query: {
+          query_string: this.logParams.keyword,
+        },
+        // "query": {
+        //     "query_string": "32",
+        //     "terms": {
+        //         "json.levelname.keyword": ["ERROR"]  # 因为 json.levelname 对应的 key 是 "json.levelname.keyword"
+        //     }
+        // }
+      };
 
-                const filters = this.tabActive === 'customLog' ? this.tableFilters : this.streamLogFilters;
-                filters.forEach(filter => {
-                    const filterKey = this.fieldMap[filter.key] || filter.key;
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
+      const filters = this.tabActive === 'customLog' ? this.tableFilters : this.streamLogFilters;
+      filters.forEach((filter) => {
+        const filterKey = this.fieldMap[filter.key] || filter.key;
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
 
-                    if (!params.query.terms[filterKey]) {
-                        params.query.terms[filterKey] = [];
-                    }
+        if (!params.query.terms[filterKey]) {
+          params.query.terms[filterKey] = [];
+        }
 
-                    params.query.terms[filterKey].push(filter.value);
-                });
+        params.query.terms[filterKey].push(filter.value);
+      });
 
-                if (this.logParams.process_id) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['process_id'] = [this.logParams.process_id];
-                }
+      if (this.logParams.process_id) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.process_id = [this.logParams.process_id];
+      }
 
-                if (this.logParams.environment) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['environment'] = [this.logParams.environment];
-                }
+      if (this.logParams.environment) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.environment = [this.logParams.environment];
+      }
 
-                if (this.logParams.stream) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['stream'] = [this.logParams.stream];
-                }
-                return params;
-            },
+      if (this.logParams.stream) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.stream = [this.logParams.stream];
+      }
+      return params;
+    },
 
-            /**
+    /**
              * 加载所有数据
              */
-            loadData (isLoadFilter = true) {
-                this.$refs.customLogFilter.setAutoLoad();
-                this.pagination.current = 1;
-                this.getPluginChartData();
-                // 获取日志数据
-                this.getPluginLogList();
-                isLoadFilter && this.getPluginFilterData();
-            },
+    loadData(isLoadFilter = true) {
+      this.$refs.customLogFilter.setAutoLoad();
+      this.pagination.current = 1;
+      this.getPluginChartData();
+      // 获取日志数据
+      this.getPluginLogList();
+      isLoadFilter && this.getPluginFilterData();
+    },
 
-            /**
+    /**
              * 重围搜索参数
              */
-            resetParams () {
-                this.initDateTimeRange = [initStartDate, initEndDate];
-                this.lastScrollId = '';
-                this.tableFilters = [];
-                this.fieldSelectedList = [];
-                this.fieldList = [];
-                this.envList = [];
-                this.filterData = [];
-                this.streamList = [];
-                this.processList = [];
-                this.logList = [];
-                this.streamLogList = [];
-                this.streamLogFilters = [];
-                this.pagination = {
-                    current: 1,
-                    count: 0,
-                    limit: 20
-                };
-                this.logParams = {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    time_range: '1h',
-                    levelname: ''
-                };
-            },
+    resetParams() {
+      this.initDateTimeRange = [initStartDate, initEndDate];
+      this.lastScrollId = '';
+      this.tableFilters = [];
+      this.fieldSelectedList = [];
+      this.fieldList = [];
+      this.envList = [];
+      this.filterData = [];
+      this.streamList = [];
+      this.processList = [];
+      this.logList = [];
+      this.streamLogList = [];
+      this.streamLogFilters = [];
+      this.pagination = {
+        current: 1,
+        count: 0,
+        limit: 20,
+      };
+      this.logParams = {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        time_range: '1h',
+        levelname: '',
+      };
+    },
 
-            /**
+    /**
              * 关键字高亮
              * @param {String} text 匹配字符串
              */
-            setKeywordHight (text) {
-                const keywords = this.logParams.keyword.split(';');
-                if (keywords.length) {
-                    keywords.forEach(keyword => {
-                        keyword = keyword.trim();
-                        if (keyword) {
-                            const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
-                            const strReg = new RegExp(keyword, 'ig');
-                            text = text.replace(strReg, tpl);
-                        }
-                    });
-                    return text;
-                } else {
-                    return text;
-                }
-            },
+    setKeywordHight(text) {
+      const keywords = this.logParams.keyword.split(';');
+      if (keywords.length) {
+        keywords.forEach((keyword) => {
+          keyword = keyword.trim();
+          if (keyword) {
+            const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
+            const strReg = new RegExp(keyword, 'ig');
+            text = text.replace(strReg, tpl);
+          }
+        });
+        return text;
+      }
+      return text;
+    },
 
-            /**
+    /**
              * 获取图表数据
              */
-            async getPluginChartData () {
-                const pdId = this.pdId;
-                const pluginId = this.pluginId;
-                const params = this.getParams();
-                const data = this.getFilterParams();
-                this.isChartLoading = true;
-                try {
-                    const res = await this.$store.dispatch('plugin/getCustomChartData', {
-                        pdId,
-                        pluginId,
-                        params,
-                        data
-                    });
-                    this.$store.commit('plugin/updateChartData', res);
-                } catch (res) {
-                    this.$store.commit('plugin/updateChartData', {
-                        series: [],
-                        timestamps: []
-                    });
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isChartLoading = false;
-                        this.isLoading = false;
-                    }, 1000);
-                }
-            },
+    async getPluginChartData() {
+      const { pdId } = this;
+      const { pluginId } = this;
+      const params = this.getParams();
+      const data = this.getFilterParams();
+      this.isChartLoading = true;
+      try {
+        const res = await this.$store.dispatch('plugin/getCustomChartData', {
+          pdId,
+          pluginId,
+          params,
+          data,
+        });
+        this.$store.commit('plugin/updateChartData', res);
+      } catch (res) {
+        this.$store.commit('plugin/updateChartData', {
+          series: [],
+          timestamps: [],
+        });
+      } finally {
+        setTimeout(() => {
+          this.isChartLoading = false;
+          this.isLoading = false;
+        }, 1000);
+      }
+    },
 
-            /**
+    /**
              * 修改页数目回调
              * @param  {Number} pageSize 每页数目
              */
-            handlePageSizeChange (pageSize) {
-                this.pagination.current = 1;
-                this.pagination.limit = pageSize;
-                this.$nextTick(() => {
-                    this.getPluginLogList();
-                });
-            },
+    handlePageSizeChange(pageSize) {
+      this.pagination.current = 1;
+      this.pagination.limit = pageSize;
+      this.$nextTick(() => {
+        this.getPluginLogList();
+      });
+    },
 
-            handlePageChange (page = 1) {
-                this.getPluginLogList(page);
-            },
+    handlePageChange(page = 1) {
+      this.getPluginLogList(page);
+    },
 
-            highlight (message) {
-                return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
-            },
+    highlight(message) {
+      return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
+    },
 
-            /**
+    /**
              * 获取日志数据
              * @param  {Number} page 第几页数据
              */
-            async getPluginLogList (page = 1) {
-                const pdId = this.pdId;
-                const pluginId = this.pluginId;
-                const params = this.getParams();
-                params.offset = page - 1;
-                params.limit = this.pagination.limit;
-                const filter = this.getFilterParams();
-                this.isLogListLoading = true;
-                try {
-                    const res = await this.$store.dispatch('plugin/getCustomLogList', {
-                        pdId,
-                        pluginId,
-                        params,
-                        data: filter
-                    });
-                    const data = res.logs;
-                    data.forEach((item) => {
-                        item.message = this.highlight(logXss.process(item.message));
-                        if (item.raw) {
-                            for (const key in item.raw) {
-                                item.raw[key] = this.highlight(logXss.process(item.raw[key]));
-                            }
-                        }
-                        item.isToggled = false;
-                    });
-
-                    this.logList.splice(0, this.logList.length, ...data);
-
-                    this.pagination.count = res.total;
-                    this.pagination.current = page;
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (res) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                    this.logList.splice(0, this.logList.length, ...[]);
-                    this.pagination.count = 0;
-                } finally {
-                    setTimeout(() => {
-                        this.isLogListLoading = false;
-                        this.isLoading = false;
-                    }, 500);
-                }
-            },
-
-            // 字段设置（获取）
-            async getPluginFilterData () {
-                const pdId = this.pdId;
-                const pluginId = this.pluginId;
-                const params = this.getParams();
-                const filter = this.getFilterParams();
-                 try {
-                    const res = await this.$store.dispatch('plugin/getFilterData', {
-                        pdId,
-                        pluginId,
-                        params,
-                        data: filter
-                    });
-                    const filters = [];
-                    const fieldList = [];
-                    const data = res;
-
-                    data.forEach(item => {
-                        const condition = {
-                            id: item.key,
-                            name: item.name,
-                            text: item.chinese_name || item.name,
-                            list: []
-                        };
-                        item.options.forEach(option => {
-                            condition.list.push({
-                                id: option[0],
-                                text: option[0]
-                            });
-                        });
-                        if (condition.name === 'environment') {
-                            this.envList = condition.list;
-                        } else if (condition.name === 'process_id') {
-                            this.processList = condition.list;
-                        } else if (condition.name === 'stream') {
-                            this.streamList = condition.list;
-                        } else {
-                            fieldList.push(condition);
-                        }
-                        filters.push(condition);
-                    });
-                    this.filterData = filters;
-                    this.fieldList = fieldList;
-                    this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
-                 } catch (res) {
-                    this.envList = [];
-                    this.processList = [];
-                    this.streamList = [];
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                }
-            },
-
-            handleLogSearch (params) {
-                this.logParams = params;
-                this.loadData(params.isDateChange);
-
-                const query = Object.assign({}, this.$route.query, params);
-                this.$router.push({
-                    name: 'pluginLog',
-                    params: this.$route.params,
-                    query: query
-                });
-            },
-
-            handleLogReload (params) {
-                this.loadData(false);
-            },
-
-            // searchLog (params) {
-            //     this.logParams.environment = '';
-            //     this.logParams.process_id = '';
-            //     this.logParams.stream = '';
-            //     this.logParams.levelname = '';
-
-            //     params.forEach(item => {
-            //         const type = item.id;
-            //         const selectItem = item.value;
-            //         this.logParams[type] = selectItem.id;
-            //     });
-            //     this.loadData(false);
-            // },
-
-            handleFilterChange (field) {
-                const list = [];
-                for (const key in this.fieldChecked) {
-                    this.fieldChecked[key].forEach(field => {
-                        const params = field.split(':');
-                        list.push({
-                            key: params[0],
-                            value: params[1]
-                        });
-                    });
-                }
-                this.tableFilters = list;
-                this.fieldPopoverShow[field] = false;
-                this.loadData(false);
-            },
-
-            handleCancelFilterChange (field) {
-                this.fieldPopoverShow[field] = false;
-                this.renderIndex++;
-            },
-
-            handleRemoveFilter (filter, index) {
-                this.tableFilters.splice(index, 1);
-            },
-
-            handleClearFilters () {
-                this.tableFilters = [];
-                this.renderIndex++;
-                // 清空筛选
-                for (const key in this.fieldChecked) {
-                    this.fieldChecked[key] = [];
-                }
-                this.loadData(false);
-            },
-
-            handleExpandRow (row) {
-                this.$refs.logList.toggleRowExpansion(row);
-            },
-
-            handleShowFilter (field) {
-                if (!this.fieldPopoverShow[field]) {
-                    for (const key in this.fieldPopoverShow) {
-                        this.fieldPopoverShow[key] = false;
-                    }
-                    this.fieldPopoverShow[field] = true;
-                    this.filterKeyword = '';
-                    this.renderIndex++;
-                }
-            },
-
-            hideAllFilterPopover (el) {
-                for (const key in this.fieldPopoverShow) {
-                    this.fieldPopoverShow[key] = false;
-                }
-                this.renderFilter++;
-            },
-
-            handleHideFilter (field) {
-                this.fieldPopoverShow[field] = false;
-            },
-
-            formatTime (time) {
-                return time ? formatDate(time * 1000) : '--';
-            },
-
-            clearFilterKey () {
-                this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
-            },
-
-            updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.logParams.keyword;
+    async getPluginLogList(page = 1) {
+      const { pdId } = this;
+      const { pluginId } = this;
+      const params = this.getParams();
+      params.offset = page - 1;
+      params.limit = this.pagination.limit;
+      const filter = this.getFilterParams();
+      this.isLogListLoading = true;
+      try {
+        const res = await this.$store.dispatch('plugin/getCustomLogList', {
+          pdId,
+          pluginId,
+          params,
+          data: filter,
+        });
+        const data = res.logs;
+        data.forEach((item) => {
+          item.message = this.highlight(logXss.process(item.message));
+          if (item.raw) {
+            for (const key in item.raw) {
+              item.raw[key] = this.highlight(logXss.process(item.raw[key]));
             }
+          }
+          item.isToggled = false;
+        });
+
+        this.logList.splice(0, this.logList.length, ...data);
+
+        this.pagination.count = res.total;
+        this.pagination.current = page;
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (res) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.logList.splice(0, this.logList.length, ...[]);
+        this.pagination.count = 0;
+      } finally {
+        setTimeout(() => {
+          this.isLogListLoading = false;
+          this.isLoading = false;
+        }, 500);
+      }
+    },
+
+    // 字段设置（获取）
+    async getPluginFilterData() {
+      const { pdId, pluginId } = this;
+      const params = this.getParams();
+      const filter = this.getFilterParams();
+      try {
+        const res = await this.$store.dispatch('plugin/getFilterData', {
+          pdId,
+          pluginId,
+          params,
+          data: filter,
+        });
+        const filters = [];
+        const fieldList = [];
+        const data = res;
+
+        data.forEach((item) => {
+          const condition = {
+            id: item.key,
+            name: item.name,
+            text: item.chinese_name || item.name,
+            list: [],
+          };
+          item.options.forEach((option) => {
+            condition.list.push({
+              id: option[0],
+              text: option[0],
+            });
+          });
+          if (condition.name === 'environment') {
+            this.envList = condition.list;
+          } else if (condition.name === 'process_id') {
+            this.processList = condition.list;
+          } else if (condition.name === 'stream') {
+            this.streamList = condition.list;
+          } else {
+            fieldList.push(condition);
+          }
+          filters.push(condition);
+        });
+        this.filterData = filters;
+        this.fieldList = fieldList;
+        this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
+      } catch (res) {
+        this.envList = [];
+        this.processList = [];
+        this.streamList = [];
+      }
+    },
+
+    handleLogSearch(params) {
+      this.logParams = params;
+      this.loadData(params.isDateChange);
+
+      const query = Object.assign({}, this.$route.query, params);
+      this.$router.push({
+        name: 'pluginLog',
+        params: this.$route.params,
+        query,
+      });
+    },
+
+    handleLogReload(params) {
+      this.loadData(false);
+    },
+
+    // searchLog (params) {
+    //     this.logParams.environment = '';
+    //     this.logParams.process_id = '';
+    //     this.logParams.stream = '';
+    //     this.logParams.levelname = '';
+
+    //     params.forEach(item => {
+    //         const type = item.id;
+    //         const selectItem = item.value;
+    //         this.logParams[type] = selectItem.id;
+    //     });
+    //     this.loadData(false);
+    // },
+
+    handleFilterChange(field) {
+      const list = [];
+      for (const key in this.fieldChecked) {
+        this.fieldChecked[key].forEach((field) => {
+          const params = field.split(':');
+          list.push({
+            key: params[0],
+            value: params[1],
+          });
+        });
+      }
+      this.tableFilters = list;
+      this.fieldPopoverShow[field] = false;
+      this.loadData(false);
+    },
+
+    handleCancelFilterChange(field) {
+      this.fieldPopoverShow[field] = false;
+      // eslint-disable-next-line no-plusplus
+      this.renderIndex++;
+    },
+
+    handleRemoveFilter(filter, index) {
+      this.tableFilters.splice(index, 1);
+    },
+
+    handleClearFilters() {
+      this.tableFilters = [];
+      // eslint-disable-next-line no-plusplus
+      this.renderIndex++;
+      // 清空筛选
+      for (const key in this.fieldChecked) {
+        this.fieldChecked[key] = [];
+      }
+      this.loadData(false);
+    },
+
+    handleExpandRow(row) {
+      this.$refs.logList.toggleRowExpansion(row);
+    },
+
+    handleShowFilter(field) {
+      if (!this.fieldPopoverShow[field]) {
+        for (const key in this.fieldPopoverShow) {
+          this.fieldPopoverShow[key] = false;
         }
-    };
+        this.fieldPopoverShow[field] = true;
+        this.filterKeyword = '';
+        // eslint-disable-next-line no-plusplus
+        this.renderIndex++;
+      }
+    },
+
+    hideAllFilterPopover(el) {
+      for (const key in this.fieldPopoverShow) {
+        this.fieldPopoverShow[key] = false;
+      }
+      // eslint-disable-next-line no-plusplus
+      this.renderFilter++;
+    },
+
+    handleHideFilter(field) {
+      this.fieldPopoverShow[field] = false;
+    },
+
+    formatTime(time) {
+      return time ? formatDate(time * 1000) : '--';
+    },
+
+    clearFilterKey() {
+      this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
+    },
+
+    updateTableEmptyConfig() {
+      this.tableEmptyConf.keyword = this.logParams.keyword;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

@@ -708,14 +708,9 @@ export default {
           filter,
         });
       } catch (res) {
-        console.log('getChartData', res);
         this.$store.commit('log/updateChartData', {
           series: [],
           timestamps: [],
-        });
-        this.$paasMessage({
-          theme: 'error',
-          message: res.detail || this.$t('日志服务暂不可用，请稍后再试'),
         });
       } finally {
         setTimeout(() => {
@@ -784,10 +779,6 @@ export default {
         this.tableEmptyConf.isAbnormal = false;
       } catch (res) {
         this.tableEmptyConf.isAbnormal = true;
-        this.$paasMessage({
-          theme: 'error',
-          message: res.detail || this.$t('日志服务暂不可用，请稍后再试'),
-        });
         this.logList.splice(0, this.logList.length, ...[]);
         this.pagination.count = 0;
       } finally {
@@ -840,10 +831,6 @@ export default {
         this.envList = [];
         this.processList = [];
         this.streamList = [];
-        this.$paasMessage({
-          theme: 'error',
-          message: res.detail || this.$t('日志服务暂不可用，请稍后再试'),
-        });
       }
     },
 

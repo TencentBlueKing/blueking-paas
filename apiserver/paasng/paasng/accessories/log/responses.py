@@ -17,11 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 from attrs import converters, define
 
-from paasng.accessories.log.exceptions import LogLineInfoBrokenError
 from paasng.utils.es_log.models import LogLine, extra_field, field_extractor_factory
 
 logger = logging.getLogger(__name__)
@@ -71,17 +70,9 @@ class StructureLogLine(LogLine):
     )
 
 
-def get_engine_app_name(raw_log: Dict):
-    if "engine_app_name" not in raw_log:
-        raise LogLineInfoBrokenError("engine_app_name")
-    # ingress 日志是从 serviceName 解析的 engine_app_name，下划线已经转换成 0us0
-    return raw_log["engine_app_name"].replace("0us0", "_")
-
-
 @define
 class IngressLogLine(LogLine):
     """ingress 访问日志结构
-    :param engine_app_name: [deprecated] engine_app_name
 
     :param method: [required] method, The HTTP method used in the request
     :param path: [required] path, The URL path of the request
@@ -92,9 +83,6 @@ class IngressLogLine(LogLine):
     :param user_agent: [required] user_agent, The user agent string of the client
     :param http_version: [required] http_version, The HTTP version used in the request
     """
-
-    # [deprecated] 好像没有地方用到这个属性, 确定不需要就删了
-    engine_app_name: Optional[str] = extra_field(source=get_engine_app_name, converter=converters.optional(str))
 
     method: Optional[str] = extra_field(converter=converters.optional(str))
     path: Optional[str] = extra_field(converter=converters.optional(str))

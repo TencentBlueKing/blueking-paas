@@ -22,7 +22,6 @@ import cattr
 from django.conf import settings
 from django.db import IntegrityError
 
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
@@ -30,6 +29,7 @@ from paasng.accessories.log.models import (
     ElasticSearchParams,
     ProcessLogQueryConfig,
 )
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 ELK_STDOUT_COLLECTOR_CONFIG_ID = "elk-stdout"
@@ -97,7 +97,10 @@ def setup_platform_elk_model():
         builtinFilters={"stream": ["stdout"]},
         builtinExcludes={},
         filedMatcher=(
-            r"client_ip|bytes_sent|user_agent|http_version|environment|process_id|stream|method|path|status_code"
+            # 字段需要与模型 IngressLogLine 保持一致
+            r"method|path|status_code|response_time"
+            r"|client_ip|bytes_sent|user_agent|http_version"
+            r"|environment|process_id|stream"
         ),
     )
     ElasticSearchConfig.objects.update_or_create(

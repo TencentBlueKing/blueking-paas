@@ -102,10 +102,10 @@ APP_MINI_ACTIONS_IN_BK_MONITOR = {
     ResourceType.BkMonitorApm: [
         'view_apm_application_v2',
         'manage_apm_application_v2',
-        'edit_single_dashboard',
     ],
     ResourceType.BkMonitorDashBoard: [
         'view_single_dashboard',
+        'edit_single_dashboard',
     ],
 }
 

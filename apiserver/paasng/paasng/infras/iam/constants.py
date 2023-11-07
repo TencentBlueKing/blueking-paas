@@ -119,13 +119,8 @@ APP_MINI_ACTIONS_IN_BK_LOG = {
             'create_collection_v2',
             'create_es_source_v2',
             'create_indices_v2',
-            'new_dashboard',
             'manage_extract_config_v2',
         ],
-    },
-    ResourceType.BkMonitorDashBoard: {
-        'resource_system': BK_MONITOR_SYSTEM_ID,
-        'actions': ['view_single_dashboard', 'edit_single_dashboard'],
     },
     ResourceType.BkLogIndices: {
         'resource_system': BK_LOG_SYSTEM_ID,

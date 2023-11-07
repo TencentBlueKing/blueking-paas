@@ -19,13 +19,14 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, List, Optional
 
-from cattrs import unstructure
+from cattr import unstructure
 from django.conf import settings
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS
 from paas_wl.bk_app.processes.controllers import Process, list_processes
 from paas_wl.bk_app.processes.drf_serializers import ProcessSpecSLZ
 from paas_wl.bk_app.processes.models import ProcessSpecManager, ProcessSpecPlan, ProcessTmpl
@@ -36,10 +37,6 @@ from paas_wl.infras.resources.base.bcs_client import BCSClient
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
-
-# The default maximum replicas for cloud-native apps's processes
-# TODO: Use dynamic limitation for each app
-DEFAULT_MAX_REPLICAS = 10
 
 
 def _list_proc_specs(env: ModuleEnvironment) -> List[Dict]:
@@ -152,7 +149,7 @@ def initialize_default_proc_spec_plans():
             logger.info(f'Creating default plan: {cnative_plan}...')
             ProcessSpecPlan.objects.create(
                 name=cnative_plan,
-                max_replicas=DEFAULT_MAX_REPLICAS,
+                max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS,
                 limits=unstructure(PLAN_TO_LIMIT_QUOTA_MAP[cnative_plan]),
                 requests=unstructure(PLAN_TO_REQUEST_QUOTA_MAP[cnative_plan]),
             )

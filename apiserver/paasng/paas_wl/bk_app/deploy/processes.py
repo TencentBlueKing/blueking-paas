@@ -23,11 +23,10 @@ from typing import Optional
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.bk_app.processes.constants import ProcessTargetStatus
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import ProcControllerHub
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ScaleProcessError
 from paas_wl.bk_app.processes.models import ProcessSpec
-from paas_wl.bk_app.processes.shim import DEFAULT_MAX_REPLICAS
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
@@ -206,8 +205,8 @@ class CNativeProcController:
         if target_replicas is None:
             raise ValueError('target_replicas required when scale process')
 
-        if target_replicas > DEFAULT_MAX_REPLICAS:
-            raise ValueError(f"target_replicas can't be greater than {DEFAULT_MAX_REPLICAS}")
+        if target_replicas > DEFAULT_CNATIVE_MAX_REPLICAS:
+            raise ValueError(f"target_replicas can't be greater than {DEFAULT_CNATIVE_MAX_REPLICAS}")
 
         try:
             ProcReplicas(self.env).scale(proc_type, target_replicas)

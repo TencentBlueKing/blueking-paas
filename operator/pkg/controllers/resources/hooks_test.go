@@ -19,6 +19,8 @@
 package resources
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -109,7 +111,9 @@ var _ = Describe("HookUtils", func() {
 			).To(Equal(config.Global.GetProcDefaultMemLimits()))
 
 			// 镜像拉取密钥
-			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(paasv1alpha2.DefaultImagePullSecretName))
+			Expect(
+				hook.Pod.Spec.ImagePullSecrets[0].Name,
+			).To(Equal(fmt.Sprintf(paasv1alpha2.DefaultImagePullSecretNameTmpl, bkapp.GetName())))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 

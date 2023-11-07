@@ -37,6 +37,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeployStep
 
 logger = logging.getLogger(__name__)
@@ -58,8 +59,8 @@ class BkAppReleaseMgr(DeployStep):
                 self.module_environment,
                 revision,
                 operator=self.deployment.operator,
-                deployment_id=self.deployment.id,
                 build=build,
+                deployment=self.deployment,
             )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
@@ -78,7 +79,7 @@ def release_by_k8s_operator(
     revision: AppModelRevision,
     operator: str,
     build: Optional[Build] = None,
-    deployment_id: Optional[str] = None,
+    deployment: Optional[Deployment] = None,
 ) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
     this action will start an async waiting procedure which waits for the release to be finished.
@@ -86,7 +87,7 @@ def release_by_k8s_operator(
     :param env: The environment to create the release for.
     :param revision: The revision to be released.
     :param operator: current operator's user_id
-    :param deployment_id: the deployment id of the release
+    :param deployment: the deployment of the release
 
     :raises: ValueError when image credential_refs is invalid  TODO: 抛更具体的异常
     :raises: UnprocessibleEntityError when k8s can not process this manifest
@@ -117,10 +118,12 @@ def release_by_k8s_operator(
         raise
 
     try:
+        advanced_options = deployment.advanced_options if deployment else None
         bkapp_res = get_bkapp_resource_for_deploy(
             env,
             deploy_id=str(app_model_deploy.id),
             force_image=build.image if build else None,
+            image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
         )
 
         # 下发 k8s 资源前需要确保命名空间存在
@@ -154,7 +157,8 @@ def release_by_k8s_operator(
     # TODO: 统计成功 metrics
     # Poll status in background
     WaitAppModelReady.start(
-        {'env_id': env.id, 'deploy_id': app_model_deploy.id, 'deployment_id': deployment_id}, DeployStatusHandler
+        {'env_id': env.id, 'deploy_id': app_model_deploy.id, 'deployment_id': deployment.id if deployment else None},
+        DeployStatusHandler,
     )
     return str(app_model_deploy.id)
 

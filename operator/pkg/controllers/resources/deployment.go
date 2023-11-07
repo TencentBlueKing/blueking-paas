@@ -186,7 +186,7 @@ func buildImagePullSecrets(app *paasv1alpha2.BkApp) []corev1.LocalObjectReferenc
 	// DefaultImagePullSecretName 由 workloads 服务负责创建
 	return []corev1.LocalObjectReference{
 		{
-			Name: paasv1alpha2.DefaultImagePullSecretName,
+			Name: fmt.Sprintf(paasv1alpha2.DefaultImagePullSecretNameTmpl, app.GetName()),
 		},
 	}
 }

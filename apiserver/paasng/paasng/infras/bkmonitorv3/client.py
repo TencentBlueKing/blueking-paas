@@ -195,7 +195,7 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp['message'])
         data = resp.get('data', {})
         data[
-            'strategy-config_link'
+            'strategy_config_link'
         ] = f"{settings.BK_MONITORV3_URL}/?bizid={query_params_dict['bk_biz_id']}/#/strategy-config/"
         return data
 

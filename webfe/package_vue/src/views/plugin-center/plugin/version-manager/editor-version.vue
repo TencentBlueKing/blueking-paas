@@ -80,7 +80,7 @@
                   class="mr10"
                   @click="handleShowCommits"
                 >
-                  <i class="paasng-icon paasng-diff-line" />
+                  <i class="paasng-icon paasng-diff-line mr5" />
                   <span>{{ $t('代码差异') }}</span>
                 </div>
               </div>
@@ -229,257 +229,262 @@
     >
       <template v-if="curVersionData.source_versions">
         <div class="version-tips-item">
-          <span>{{ $t('代码分支：') }}{{ curVersionData.source_versions[0].name }}</span>
+          <span>{{ $t('代码分支：') }}{{ curVersionData.source_versions[0]?.name }}</span>
         </div>
         <div class="version-tips-item">
-          <span>{{ $t('代码更新时间：') }}{{ formatTime(curVersionData.source_versions[0].last_update) }}</span>
+          <span>{{ $t('代码更新时间：') }}{{ formatTime(curVersionData.source_versions[0]?.last_update) }}</span>
         </div>
         <div class="version-tips-item">
-          <span>Commit Message: {{ curVersionData.source_versions[0].message }}</span>
+          <span>Commit Message: {{ curVersionData.source_versions[0]?.message }}</span>
         </div>
       </template>
     </bk-dialog>
   </div>
 </template>
 
-<script>
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import paasPluginTitle from '@/components/pass-plugin-title';
-    import { formatTime } from '@/common/tools';
+<script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import paasPluginTitle from '@/components/pass-plugin-title';
+import { formatTime } from '@/common/tools';
 
-    export default {
-        components: {
-            paasPluginTitle
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-                isLoading: false,
-                versionDetail: {
-                    isShow: false
-                },
-                versionList: [],
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
-                curVersion: {
-                    // 仓库地址
-                    repository: '',
-                    // 代码分支
-                    source_versions: '',
-                    // 版本类型
-                    semver_choices: {},
-                    // 版本号
-                    version: '',
-                    // 版本日志
-                    comment: ''
-                },
-                sourceVersions: [],
-                isLogLoading: false,
-                isSubmitLoading: false,
-                newVersionConfig: {
-                    visible: false
-                },
-                curVersionData: {},
-                formatTime: formatTime,
-                rules: {
-                    source_versions: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    version: [
-                        {
-                            required: true,
-                            message: this.$t('请选择版本类型'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    comment: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ]
-                }
-            };
-        },
-        computed: {
-            isPending () {
-                return this.$route.query.isPending;
-            }
-        },
-        watch: {
-            'curVersion.source_versions' (value) {
-                if (this.curVersion.version_no === 'revision' || this.curVersion.version_no === 'commit-hash') {
-                    const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
-                    if (this.curVersion.version_no === 'revision') {
-                        this.curVersion.version = versionData[0].name;
-                    } else {
-                        this.curVersion.version = versionData[0].revision;
-                    }
-                }
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.getNewVersionFormat();
-            },
-
-            // 获取新建版本表单格式
-            async getNewVersionFormat () {
-                this.isLoading = true;
-                const data = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId
-                };
-                try {
-                    const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
-                    this.curVersionData = res;
-                    this.curVersion.doc = res.doc;
-                    this.curVersion.current_release = res.current_release;
-                    // 代码仓库
-                    this.curVersion.repository = res.source_versions[0].url;
-                    this.sourceVersions = res.source_versions;
-                    // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
-                    this.curVersion.semver_choices = res.semver_choices;
-                    this.curVersion.source_versions = res.source_versions[0].name;
-                    if (res.version_no === 'revision') {
-                        // 与代码版本一致(revision)
-                        this.curVersion.version = res.source_versions[0].name;
-                    } else if (res.version_no === 'commit-hash') {
-                        // 提交哈希一致(commit-hash)
-                        this.curVersion.version = res.source_versions[0].revision;
-                    } else if (res.version_no === 'automatic') {
-                        // 自动生成(automatic), 版本类型用户自行选择
-                        this.curVersion.version = '';
-                    } else if (res.version_no === 'self-fill') {
-                        // 用户自助填写(self-fill)
-                        this.curVersion.version = '';
-                    }
-                    this.curVersion.version_no = res.version_no;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-
-            submitVersionForm () {
-                this.$refs.versionForm.validate().then(validator => {
-                    this.newVersionConfig.visible = true;
-                    // this.createVersion();
-                });
-            },
-
-            // 新建版本并发布
-            async createVersion () {
-                this.isSubmitLoading = true;
-                // 当前选中分支的数据
-                const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
-
-                const data = {
-                    source_version_type: versionData[0].type,
-                    source_version_name: versionData[0].name,
-                    version: this.curVersion.version,
-                    comment: this.curVersion.comment
-                };
-
-                // 仅 versionNo=automatic 需要传递
-                if (this.curVersion.version_no === 'automatic') {
-                    for (const key in this.curVersion.semver_choices) {
-                        if (this.curVersion.semver_choices[key] === this.curVersion.version) {
-                            data.semver_type = key;
-                        }
-                    }
-                }
-
-                const params = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    data
-                };
-                try {
-                    const res = await this.$store.dispatch('plugin/createVersion', params);
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('新建成功!')
-                    });
-                    // 跳转至发布详情
-                    this.goRelease(res);
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isSubmitLoading = false;
-                }
-            },
-
-            goBack () {
-                this.$router.push({
-                    name: 'pluginVersionManager'
-                });
-            },
-
-            goRelease (data) {
-                this.$router.push({
-                    name: 'pluginVersionRelease',
-                    query: {
-                        release_id: data.id
-                    }
-                });
-            },
-
-            async handleShowCommits () {
-                if (!this.curVersion.source_versions) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('请选择代码分支')
-                    });
-                    return false;
-                }
-
-                const fromRevision = this.curVersion.current_release.source_hash;
-                const curCodeItem = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
-                const toRevision = `${curCodeItem[0].type}:${curCodeItem[0].name}`;
-                const win = window.open();
-                const res = await this.$store.dispatch('plugin/getGitCompareUrl', {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    fromRevision,
-                    toRevision
-                });
-                win.location.href = res.result;
-            },
-
-            handlerConfirm () {
-                this.createVersion();
-            },
-
-            handlerCancel () {
-                this.isSubmitLoading = false;
-            },
-
-            changeVersionType () {
-                this.$refs.versionForm.validate();
-            }
-        }
+export default {
+  components: {
+    paasPluginTitle,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      isLoading: false,
+      versionDetail: {
+        isShow: false,
+      },
+      versionList: [],
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      curVersion: {
+        // 仓库地址
+        repository: '',
+        // 代码分支
+        source_versions: '',
+        // 版本类型
+        semver_choices: {},
+        // 版本号
+        version: '',
+        // 版本日志
+        comment: '',
+      },
+      sourceVersions: [],
+      isLogLoading: false,
+      isSubmitLoading: false,
+      newVersionConfig: {
+        visible: false,
+      },
+      curVersionData: {
+        source_versions: [],
+      },
+      formatTime,
+      rules: {
+        source_versions: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        version: [
+          {
+            required: true,
+            message: this.$t('请选择版本类型'),
+            trigger: 'blur',
+          },
+        ],
+        comment: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
     };
+  },
+  computed: {
+    isPending() {
+      return this.$route.query.isPending;
+    },
+    curPluginInfo() {
+      return this.$store.state.plugin.curPluginInfo;
+    },
+  },
+  watch: {
+    'curVersion.source_versions'() {
+      if (this.curVersion.version_no === 'revision' || this.curVersion.version_no === 'commit-hash') {
+        const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
+        if (this.curVersion.version_no === 'revision') {
+          this.curVersion.version = versionData[0].name;
+        } else {
+          this.curVersion.version = versionData[0].revision;
+        }
+      }
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.getNewVersionFormat();
+      this.curVersion.repository = this.curPluginInfo.repository;
+    },
+
+    // 获取新建版本表单格式
+    async getNewVersionFormat() {
+      this.isLoading = true;
+      const data = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+      };
+      try {
+        const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
+        this.curVersionData = res;
+        this.curVersion.doc = res.doc;
+        this.curVersion.current_release = res.current_release;
+        this.sourceVersions = res.source_versions;
+        // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
+        this.curVersion.semver_choices = res.semver_choices;
+        // source_versions 会存在 [] 情况
+        this.curVersion.source_versions = res.source_versions[0]?.name || '';
+        if (res.version_no === 'revision') {
+        // 与代码版本一致(revision)
+          this.curVersion.version = res.source_versions[0]?.name || '';
+        } else if (res.version_no === 'commit-hash') {
+        // 提交哈希一致(commit-hash)
+          this.curVersion.version = res.source_versions[0]?.revision || '';
+        } else if (res.version_no === 'automatic') {
+        // 自动生成(automatic), 版本类型用户自行选择
+          this.curVersion.version = '';
+        } else if (res.version_no === 'self-fill') {
+        // 用户自助填写(self-fill)
+          this.curVersion.version = '';
+        }
+        this.curVersion.version_no = res.version_no;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+
+    submitVersionForm() {
+      this.$refs.versionForm.validate().then(() => {
+        this.newVersionConfig.visible = true;
+      }, (validator) => {
+        console.error(validator.content);
+      });
+    },
+
+    // 新建版本并发布
+    async createVersion() {
+      this.isSubmitLoading = true;
+      // 当前选中分支的数据
+      const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
+
+      const data = {
+        source_version_type: versionData[0].type,
+        source_version_name: versionData[0].name,
+        version: this.curVersion.version,
+        comment: this.curVersion.comment,
+      };
+
+      // 仅 versionNo=automatic 需要传递
+      if (this.curVersion.version_no === 'automatic') {
+        for (const key in this.curVersion.semver_choices) {
+          if (this.curVersion.semver_choices[key] === this.curVersion.version) {
+            data.semver_type = key;
+          }
+        }
+      }
+
+      const params = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        data,
+      };
+      try {
+        const res = await this.$store.dispatch('plugin/createVersion', params);
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('新建成功!'),
+        });
+        // 跳转至发布详情
+        this.goRelease(res);
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.isSubmitLoading = false;
+      }
+    },
+
+    goBack() {
+      this.$router.push({
+        name: 'pluginVersionManager',
+      });
+    },
+
+    goRelease(data) {
+      this.$router.push({
+        name: 'pluginVersionRelease',
+        query: {
+          release_id: data.id,
+        },
+      });
+    },
+
+    async handleShowCommits() {
+      if (!this.curVersion.source_versions) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请选择代码分支'),
+        });
+        return false;
+      }
+
+      const fromRevision = this.curVersion.current_release.source_hash;
+      const curCodeItem = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
+      const toRevision = `${curCodeItem[0].type}:${curCodeItem[0].name}`;
+      const win = window.open();
+      const res = await this.$store.dispatch('plugin/getGitCompareUrl', {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        fromRevision,
+        toRevision,
+      });
+      win.location.href = res.result;
+    },
+
+    handlerConfirm() {
+      this.createVersion();
+    },
+
+    handlerCancel() {
+      this.isSubmitLoading = false;
+    },
+
+    changeVersionType() {
+      this.$refs.versionForm.validate();
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

@@ -43,6 +43,7 @@ class QueryAlertsParams:
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
     :param keyword: 告警名称包含的关键字. 可选
+    :param module_name: 模块名称. 可选
     """
 
     app_code: str
@@ -52,6 +53,7 @@ class QueryAlertsParams:
     alert_code: Optional[str] = None
     status: Optional[str] = None
     keyword: Optional[str] = None
+    module_name: Optional[str] = None
 
     def to_dict(self) -> Dict:
         """组装成 search_alerts 接口需要的参数"""
@@ -68,26 +70,32 @@ class QueryAlertsParams:
         if self.status:
             d['status'] = [self.status]
 
-        d['query_string'] = self._build_query_string()
+        if query_string := self._build_query_string():
+            d['query_string'] = query_string
 
         return d
 
-    def _build_query_string(self) -> str:
+    def _build_query_string(self) -> Optional[str]:
         """构建 query_string 参数. 查询语法参考
         https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
         """
         # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
-        query_labels = "PAAS_BUILTIN"
-        if self.environment:
-            query_labels = f"{query_labels} AND {self.environment}"
+        query_string = None
+        query_labels = self._build_valid_args(self.environment, self.alert_code)
+        if query_labels:
+            query_string = f'labels:({query_labels})'
 
-        if self.alert_code:
-            query_labels = f"{query_labels} AND {self.alert_code}"
-
-        query_string = f"labels:({query_labels})"
         if self.keyword:
-            query_string = f'{query_string} AND alert_name:{self.keyword}'
+            query_keyword = f'alert_name:({self.keyword} OR *{self.keyword}*)'
+            query_string = self._build_valid_args(query_string, query_keyword)
         return query_string
+
+    def _build_valid_args(self, *args) -> Optional[str]:
+        """ 将非空参数拼接为 "arg1 AND arg2 AND arg3" 的形式 """
+        valid_args: List[str] = list(filter(None, args))
+        if not valid_args:
+            return None
+        return ' AND '.join(valid_args)
 
 
 @define(kw_only=True)
@@ -124,10 +132,10 @@ class QueryAlarmStrategiesParams:
             conditions.append({"key": "strategy_status", "value": self.status})
 
         if self.keyword:
-            conditions.append({"key": "alert_name", "value": self.keyword})
+            conditions.append({"key": "strategy_name", "value": self.keyword})
 
         # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
-        query_labels = ["PAAS_BUILTIN"]
+        query_labels = []
         if self.environment:
             query_labels.append(self.environment)
 

@@ -173,24 +173,31 @@ class BkMonitorClient:
 
         if not resp.get('result'):
             raise BkMonitorApiError(resp['message'])
-
-        return resp.get('data', {}).get('alerts', [])
+        alerts = resp.get('data', {}).get('alerts', [])
+        module_name = query_params.module_name
+        # 筛选环境符合 module_name 的告警
+        filtered_data = [alert for alert in alerts if alert.get('name').split("[")[1].split(":") == module_name]
+        return filtered_data
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略
 
         :param query_params: 查询告警策略的条件参数
         """
+        query_params_dict = query_params.to_dict()
         try:
-            resp = self.client.search_alarm_strategy_v3(json=query_params.to_dict())
+            resp = self.client.search_alarm_strategy_v3(json=query_params_dict)
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
 
         if not resp.get('result'):
             raise BkMonitorApiError(resp['message'])
-
-        return resp.get('data', {})
+        data = resp.get('data', {})
+        data[
+            'strategy-config_link'
+        ] = f"{settings.BK_MONITORV3_URL}/?bizid={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        return data
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """

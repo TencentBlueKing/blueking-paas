@@ -59,6 +59,7 @@ class ListAlertsSLZ(serializers.Serializer):
     keyword = serializers.CharField(required=False)
     start_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
     end_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
+    module_name = serializers.CharField(required=False)
 
     def to_internal_value(self, data) -> QueryAlertsParams:
         data = super().to_internal_value(data)
@@ -82,11 +83,12 @@ class AlertSLZ(serializers.Serializer):
     receivers = serializers.ListField(
         child=serializers.CharField(), min_length=1, help_text='告警接收者', source='assignee'
     )
+    bk_biz_id = serializers.CharField(help_text='业务id')
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
 
     def get_detail_link(self, instance) -> str:
-        bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
-        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
+        bk_biz_id = instance['bk_biz_id']
+        return f"{settings.BK_MONITORV3_URL}/?bizld={bk_biz_id}/#/event-center/detail/{instance['id']}"
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):
@@ -124,12 +126,13 @@ class StrategyConfigSLZ(serializers.Serializer):
     notice_group_ids = serializers.ListField(help_text='通知组 id 列表', source='notice.user_groups')
     detects = serializers.ListField(help_text='检测列表', child=DetectSLZ())
     items = serializers.ListField(help_text='检测项列表', child=AlgorithmsSLZ())
+    bk_biz_id = serializers.CharField(help_text='业务id')
 
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
 
     def get_detail_link(self, instance) -> str:
-        bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
-        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
+        bk_biz_id = instance['bk_biz_id']
+        return f"{settings.BK_MONITORV3_URL}/?bizid={bk_biz_id}/#/strategy-config/detail/{instance['id']}"
 
 
 class UserGroupSLZ(serializers.Serializer):
@@ -140,3 +143,4 @@ class UserGroupSLZ(serializers.Serializer):
 class AlarmStrategySLZ(serializers.Serializer):
     strategy_config_list = serializers.ListField(child=StrategyConfigSLZ(), help_text='策略配置列表')
     user_group_list = serializers.ListField(child=UserGroupSLZ(), help_text='通知组列表')
+    strategy_config_link = serializers.CharField(help_text='策略配置链接')

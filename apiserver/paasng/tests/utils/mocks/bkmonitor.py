@@ -27,6 +27,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
             'id': generate_random_string(6),
+            'bk_biz_id': random.randint(-5000000, -4000000),
             'alert_name': generate_random_string(6),
             'status': random.choice(['ABNORMAL', 'CLOSED', 'RECOVERED']),
             'description': generate_random_string(),
@@ -44,6 +45,7 @@ def get_fake_alarm_strategies() -> Dict:
     alarm_strategies = [
         {
             'id': generate_random_string(6),
+            'bk_biz_id': random.randint(-5000000, -4000000),
             'name': generate_random_string(6),
             'is_enabled': random.choice(['true', 'false']),
             'labels': [generate_random_string(6) for _ in range(random.randint(1, 4))],
@@ -71,7 +73,11 @@ def get_fake_alarm_strategies() -> Dict:
     user_group_list = [
         {"user_group_id": generate_random_string(4), "user_group_name": generate_random_string(4)} for _ in range(3)
     ]
-    return {"strategy_config_list": alarm_strategies, "user_group_list": user_group_list}
+    return {
+        "strategy_config_list": alarm_strategies,
+        "user_group_list": user_group_list,
+        "strategy_config_link": generate_random_string(10),
+    }
 
 
 class StubBKMonitorClient(BkMonitorClient):

@@ -213,8 +213,7 @@
                 v-bk-tooltips="$t('进程详情')"
                 class="paasng-icon paasng-log-2 detail mr10"
                 @click="showProcessDetailDialog(row)"></i>
-              <!-- 暂时不展示 -->
-              <!-- <bk-popover
+              <bk-popover
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom">
@@ -222,7 +221,7 @@
                 <div slot="content" style="white-space: normal;">
                   <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
                 </div>
-              </bk-popover> -->
+              </bk-popover>
             </div>
           </template>
         </bk-table-column>

@@ -196,7 +196,7 @@ class BkMonitorClient:
         data = resp.get('data', {})
         data[
             'strategy_config_link'
-        ] = f"{settings.BK_MONITORV3_URL}/?bizid={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        ] = f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
         return data
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:

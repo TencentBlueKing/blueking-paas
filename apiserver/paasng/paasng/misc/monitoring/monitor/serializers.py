@@ -88,7 +88,7 @@ class AlertSLZ(serializers.Serializer):
 
     def get_detail_link(self, instance) -> str:
         bk_biz_id = instance['bk_biz_id']
-        return f"{settings.BK_MONITORV3_URL}/?bizld={bk_biz_id}/#/event-center/detail/{instance['id']}"
+        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):
@@ -132,7 +132,7 @@ class StrategyConfigSLZ(serializers.Serializer):
 
     def get_detail_link(self, instance) -> str:
         bk_biz_id = instance['bk_biz_id']
-        return f"{settings.BK_MONITORV3_URL}/?bizid={bk_biz_id}/#/strategy-config/detail/{instance['id']}"
+        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/strategy-config/detail/{instance['id']}"
 
 
 class UserGroupSLZ(serializers.Serializer):

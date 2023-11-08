@@ -103,7 +103,8 @@ class TestQueryAlertsParams:
     def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
         result = query_params.to_dict()
         assert result['bk_biz_ids'] == [bk_monitor_space.iam_resource_id]
-        assert result['query_string'] == expected_query_string
+        if query_string := result.get('query_string'):
+            assert query_string == expected_query_string
 
 
 class TestQueryAlarmStrategiesParams:

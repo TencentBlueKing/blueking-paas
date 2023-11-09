@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+import re
 from typing import Dict, List, Optional, Union
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
@@ -176,8 +177,19 @@ class BkMonitorClient:
         alerts = resp.get('data', {}).get('alerts', [])
         module_name = query_params.module_name
         # 筛选环境符合 module_name 的告警
-        filtered_data = [alert for alert in alerts if alert.get('name').split("[")[1].split(":") == module_name]
-        return filtered_data
+        if module_name:
+            alerts = self._filter_alerts_by_module(alerts, module_name)
+        return alerts
+
+    @staticmethod
+    def _filter_alerts_by_module(alerts: List, module_name: str) -> List:
+        pattern = re.compile(r"\s\[(?P<module_name>[^:]+):(?P<environment>prod|stag)\]")
+        filtered_alerts = []
+        for alert in alerts:
+            match = pattern.match(alert.get('name'))
+            if match and (match.group('module_name') == module_name):
+                filtered_alerts.append(alert)
+        return filtered_alerts
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略

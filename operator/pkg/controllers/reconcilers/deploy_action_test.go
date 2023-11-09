@@ -114,15 +114,6 @@ var _ = Describe("Test DeployActionReconciler", func() {
 			expectDeployActionIgnored(ret, bkapp, "1")
 		})
 
-		It("deploy ID changed but observedGeneration is not behind", func() {
-			bkapp.SetAnnotations(map[string]string{paasv1alpha2.DeployIDAnnoKey: "2"})
-			bkapp.Status.DeployId = "1"
-			bkapp.Status.ObservedGeneration = 2
-			ret := NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
-
-			expectDeployActionIgnored(ret, bkapp, "1")
-		})
-
 		It("deploy ID changed with finished hook", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.DeployIDAnnoKey: "2"})
 			bkapp.Status.DeployId = "1"

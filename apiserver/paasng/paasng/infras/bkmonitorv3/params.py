@@ -43,7 +43,6 @@ class QueryAlertsParams:
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
     :param keyword: 告警名称包含的关键字. 可选
-    :param module_name: 模块名称. 可选
     """
 
     app_code: str

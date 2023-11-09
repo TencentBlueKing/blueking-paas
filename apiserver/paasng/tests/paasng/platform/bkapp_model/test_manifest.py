@@ -36,6 +36,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, VolumeSource
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
+from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
@@ -145,7 +146,10 @@ class TestBuiltinAnnotsManifestConstructor:
         BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
 
         annots = blank_resource.metadata.annotations
-        assert annots['bkapp.paas.bk.tencent.com/image-credentials'] == 'true'
+        assert (
+            annots['bkapp.paas.bk.tencent.com/image-credentials']
+            == f'{CNativeBkAppNameGenerator.generate(bk_module)}--dockerconfigjson'
+        )
         assert annots['bkapp.paas.bk.tencent.com/module-name'] == bk_module.name
         assert annots['bkapp.paas.bk.tencent.com/name'] == app.name
         assert annots['bkapp.paas.bk.tencent.com/region'] == app.region

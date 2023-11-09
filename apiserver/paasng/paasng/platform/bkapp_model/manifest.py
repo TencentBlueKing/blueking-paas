@@ -133,8 +133,10 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
                 MODULE_NAME_ANNO_KEY: module.name,
             }
         )
-        # Set the annotation to inform operator that the secret has been created.
-        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
+        # Set the annotation to inform operator what the image pull secret name is
+        model_res.metadata.annotations[
+            IMAGE_CREDENTIALS_REF_ANNO_KEY
+        ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
 
         # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
         # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注

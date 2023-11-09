@@ -1455,7 +1455,7 @@ export default {
     // 处理进程状态
     handleProcessStatus() {
       // 进程之后请求列表数据
-      // bus.$emit('get-release-info');
+      bus.$emit('get-release-info');
     },
 
     handleMouseEnter(name) {

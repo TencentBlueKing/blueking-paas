@@ -100,198 +100,202 @@
 </template>
 
 <script>
-    import Clipboard from 'clipboard';
+import Clipboard from 'clipboard';
 
-    export default {
-        data () {
-            return {
-                name: this.$t('代码库管理'),
-                isopen: false,
-                timer: '60',
-                // 倒计时
-                flag: false,
-                timeInterval: '',
-                userList: '',
-                bkpaasUserId: '',
-                username: '',
-                isCan: true,
-                region: '',
-                userid: '',
-                verificationcode: '',
-                isNew: '',
-                phoneNumerLoading: true,
-                loading: true,
-                formLoading: false
-            };
-        },
-        mounted () {
-            const clipboard = new Clipboard('.password-submit');
-            const me = this;
-            clipboard.on('success', (e) => {
-                me.$paasMessage({
-                    theme: 'success',
-                    message: this.$t('复制成功！')
-                });
-            });
-
-            clipboard.on('error', (e) => {
-                me.$paasMessage({
-                    theme: 'error',
-                    message: this.$t('复制失败！')
-                });
-            });
-        },
-        created () {
-            // 获取用户信息
-            this.$http.get(BACKEND_URL + '/api/accounts/userinfo/').then((response) => {
-                this.userList = response;
-                this.bkpaasUserId = this.userList.bkpaas_user_id.replace(/[A-Za-z0-9\-_]/g, '*');
-                this.username = this.userList.username;
-            }).finally(() => {
-                this.loading = false;
-                this.$emit('ready');
-            });
-            this.init();
-        },
-        methods: {
-            initialize () {
-                this.formLoading = true;
-
-                const ParamsForCreation = {
-                    'region': 'ieod'
-                };
-                // 调用post请求创建一个账户
-                this.$http.post(BACKEND_URL + '/api/sourcectl/bksvn/accounts/', ParamsForCreation).then((response) => {
-                    this.init();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('初始化蓝鲸SVN账号成功！')
-                    });
-                }, (res) => {
-                    this.verificationcode = '';
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('初始化蓝鲸SVN账号失败！')
-                    });
-                }).then(() => {
-                    this.closePassword();
-                    clearInterval(this.timeInterval);
-                    this.timer = 60;
-                    this.isCan = true;
-                    this.formLoading = false;
-                });
-            },
-            openPassword () {
-                if (this.isopen) {
-                    return;
-                }
-                this.getPassword();
-            },
-            getPassword (isRetry) {
-                // 接收值时打开输入框并获取密码
-                if (isRetry) {
-                    // 重新获取密码
-                    this.timer = 60;
-                    this.flag = true;
-                } else {
-                    if (!this.timer) {
-                        this.timer = 60;
-                    }
-                    this.isopen = true;
-                    this.flag = true;
-                }
-
-                if (this.flag) {
-                    if (this.isCan) {
-                        clearInterval(this.timeInterval);
-
-                        // 验证码-生成并发送验证码到用户的手机
-                        this.$http.post(BACKEND_URL + '/api/accounts/verification/generation/', { 'func': 'SVN' }).then((response) => {
-                            this.phoneNumerLoading = false;
-                        }, (response) => {
-                            this.isopen = false;
-                            this.closePassword();
-                            clearInterval(this.timeInterval);
-                            this.timer = 60;
-                            this.isCan = true;
-                            this.verificationcode = '';
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: this.$t('操作太频繁了，请稍后再试！')
-                            });
-                        });
-
-                        this.isCan = false;
-                    } else {
-                        return;
-                    }
-                    this.timeInterval = setInterval(() => {
-                        if (this.timer > 0) {
-                            this.timer--;
-                        } else {
-                            this.flag = false;
-                            this.isCan = true;
-                        }
-                    }, 1000);
-                }
-            },
-            // 关闭密码框
-            closePassword () {
-                this.isopen = false;
-                this.flag = false;
-            },
-            // 重置
-            resetPassword () {
-                if (this.verificationcode === '') {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: this.$t('请输入验证码！')
-                    });
-                    return false;
-                }
-
-                const paramsForReset = {
-                    region: 'ieod',
-                    verification_code: this.verificationcode
-                };
-
-                // 直接用put修改密码
-                this.$http.put(BACKEND_URL + '/api/sourcectl/bksvn/accounts/' + this.userid + '/reset/', paramsForReset).then((response) => {
-                    this.$paasMessage({
-                        type: 'notify',
-                        theme: 'success',
-                        delay: 0,
-                        title: this.$t('重置密码成功'),
-                        message: `${this.$t('新密码为：')}${response.password} ${this.$t('刷新页面后将无法查看，请妥善保存')}`
-                    });
-                    this.closePassword();
-                    clearInterval(this.timeInterval);
-                    this.timer = 60;
-                    this.isCan = true;
-                }, (res) => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('验证码错误！')
-                    });
-                }).then(() => {
-                    this.verificationcode = '';
-                });
-            },
-            init () {
-                // 判断是否存在svn账户
-                this.$http.get(BACKEND_URL + '/api/sourcectl/bksvn/accounts/').then((response) => {
-                    const dataRes = response;
-                    if (dataRes.length !== 0) {
-                        this.userid = dataRes[0].id;
-                    }
-                });
-                if (!this.userid) {
-                    this.$emit('changeTips', 'svn');
-                }
-            }
-        }
+export default {
+  data() {
+    return {
+      name: this.$t('代码库管理'),
+      isopen: false,
+      timer: '60',
+      // 倒计时
+      flag: false,
+      timeInterval: '',
+      userList: '',
+      bkpaasUserId: '',
+      username: '',
+      isCan: true,
+      region: '',
+      userid: '',
+      verificationcode: '',
+      isNew: '',
+      phoneNumerLoading: true,
+      loading: true,
+      formLoading: false,
     };
+  },
+  mounted() {
+    const clipboard = new Clipboard('.password-submit');
+    const me = this;
+    clipboard.on('success', () => {
+      me.$paasMessage({
+        theme: 'success',
+        message: this.$t('复制成功！'),
+      });
+    });
+
+    clipboard.on('error', () => {
+      me.$paasMessage({
+        theme: 'error',
+        message: this.$t('复制失败！'),
+      });
+    });
+  },
+  created() {
+    // 获取用户信息
+    this.$http.get(`${BACKEND_URL}/api/accounts/userinfo/`).then((response) => {
+      this.userList = response;
+      this.bkpaasUserId = this.userList.bkpaas_user_id.replace(/[A-Za-z0-9\-_]/g, '*');
+      this.username = this.userList.username;
+    })
+      .finally(() => {
+        this.loading = false;
+        this.$emit('ready');
+      });
+    this.init();
+  },
+  methods: {
+    initialize() {
+      this.formLoading = true;
+
+      const ParamsForCreation = {
+        region: 'ieod',
+      };
+      // 调用post请求创建一个账户
+      this.$http.post(`${BACKEND_URL}/api/sourcectl/bksvn/accounts/`, ParamsForCreation).then(() => {
+        this.init();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('初始化蓝鲸SVN账号成功！'),
+        });
+      }, () => {
+        this.verificationcode = '';
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('初始化蓝鲸SVN账号失败！'),
+        });
+      })
+        .then(() => {
+          this.closePassword();
+          clearInterval(this.timeInterval);
+          this.timer = 60;
+          this.isCan = true;
+          this.formLoading = false;
+        });
+    },
+    openPassword() {
+      if (this.isopen) {
+        return;
+      }
+      this.getPassword();
+    },
+    getPassword(isRetry) {
+      // 接收值时打开输入框并获取密码
+      if (isRetry) {
+        // 重新获取密码
+        this.timer = 60;
+        this.flag = true;
+      } else {
+        if (!this.timer) {
+          this.timer = 60;
+        }
+        this.isopen = true;
+        this.flag = true;
+      }
+
+      if (this.flag) {
+        if (this.isCan) {
+          clearInterval(this.timeInterval);
+
+          // 验证码-生成并发送验证码到用户的手机
+          this.$http.post(`${BACKEND_URL}/api/accounts/verification/generation/`, { func: 'SVN' }).then(() => {
+            this.phoneNumerLoading = false;
+          }, () => {
+            this.isopen = false;
+            this.closePassword();
+            clearInterval(this.timeInterval);
+            this.timer = 60;
+            this.isCan = true;
+            this.verificationcode = '';
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('操作太频繁了，请稍后再试！'),
+            });
+          });
+
+          this.isCan = false;
+        } else {
+          return;
+        }
+        this.timeInterval = setInterval(() => {
+          if (this.timer > 0) {
+            // eslint-disable-next-line no-plusplus
+            this.timer--;
+          } else {
+            this.flag = false;
+            this.isCan = true;
+          }
+        }, 1000);
+      }
+    },
+    // 关闭密码框
+    closePassword() {
+      this.isopen = false;
+      this.flag = false;
+    },
+    // 重置
+    resetPassword() {
+      if (this.verificationcode === '') {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: this.$t('请输入验证码！'),
+        });
+        return false;
+      }
+
+      const paramsForReset = {
+        region: 'ieod',
+        verification_code: this.verificationcode,
+      };
+
+      // 直接用put修改密码
+      this.$http.put(`${BACKEND_URL}/api/sourcectl/bksvn/accounts/${this.userid}/reset/`, paramsForReset).then((response) => {
+        this.$paasMessage({
+          type: 'notify',
+          theme: 'success',
+          delay: 0,
+          title: this.$t('重置密码成功'),
+          message: `${this.$t('新密码为：')}${response.password} ${this.$t('刷新页面后将无法查看，请妥善保存')}`,
+        });
+        this.closePassword();
+        clearInterval(this.timeInterval);
+        this.timer = 60;
+        this.isCan = true;
+      }, () => {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('为方便后续管理，请尽快将代码迁移到工蜂。如需查看 SVN 密码，请联系 BK组手'),
+        });
+      })
+        .then(() => {
+          this.verificationcode = '';
+        });
+    },
+    init() {
+      // 判断是否存在svn账户
+      this.$http.get(`${BACKEND_URL}/api/sourcectl/bksvn/accounts/`).then((response) => {
+        const dataRes = response;
+        if (dataRes.length !== 0) {
+          this.userid = dataRes[0].id;
+        }
+      });
+      if (!this.userid) {
+        this.$emit('changeTips', 'svn');
+      }
+    },
+  },
+};
 </script>
 
 <style lang="css" scoped>

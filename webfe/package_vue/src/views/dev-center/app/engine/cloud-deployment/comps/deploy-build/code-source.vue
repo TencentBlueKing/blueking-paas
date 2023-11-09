@@ -52,7 +52,8 @@
           </label>
           <div
             v-for="(item, index) in sourceControlTypes" :key="index"
-            :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }, { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
+            :class="['code-depot-item mr10', { 'on': item.value === sourceControlType },
+                     { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
             @click="changeSourceControl(item.value)">
             <img :src="'/static/images/' + item.imgSrc + '.png'">
             <p class="source-control-title" :title="item.name">
@@ -353,7 +354,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map((repo, index) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -407,7 +408,8 @@ export default {
         this.sourceControlChangeForm.sourceDir = '';
         return;
       }
-      if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+      if (this.curAppModule.source_origin === 1
+      || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
         this.sourceControlType = this.curAppModule.repo.type;
         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
@@ -460,6 +462,7 @@ export default {
           break;
         case 'bare_svn':
         case 'bare_git':
+          // eslint-disable-next-line no-case-declarations
           const repoData = this.$refs.repoInfo.getData();
           if (!repoData.url) {
             this.$paasMessage({
@@ -572,7 +575,8 @@ export default {
           moduleId: this.curModuleId,
         });
 
-        if (this.curAppModule.source_origin === 1 || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+        if (this.curAppModule.source_origin === 1
+         || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
           const { repo } = this.curAppModule;
           if (repo) {
             this.sourceControlType = repo.type;
@@ -803,7 +807,6 @@ export default {
 
       .on {
         border: solid 2px #3A84FF;
-        padding: 0 16px 0 14px;
         background-color: #fff;
         color: #3A84FF;
         @include border-active-logo;

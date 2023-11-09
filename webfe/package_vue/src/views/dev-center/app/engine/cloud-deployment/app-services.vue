@@ -730,8 +730,8 @@ export default {
       color: #3A84FF;
     }
     .text-disabled{
-      color: #dcdee5;
-      cursor: not-allowed;
+      color: #63656e;
+      cursor: unset;
     }
     .row-icon{
       cursor: pointer;

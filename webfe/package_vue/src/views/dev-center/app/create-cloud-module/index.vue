@@ -1068,6 +1068,7 @@ export default {
           dockerfile_path: this.dockerfileData.dockerfilePath,
           docker_build_args: dockerBuild,
         };
+        delete params.source_config.source_init_template;
       }
 
       // 仅镜像

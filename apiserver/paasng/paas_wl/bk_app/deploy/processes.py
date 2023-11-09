@@ -235,6 +235,7 @@ class ProcSpecUpdater:
     def set_start(self):
         """Set the process to "start" state."""
         proc_spec = self.spec_object
+        # Reset the replicas if it's 0.
         if proc_spec.target_replicas <= 0:
             proc_spec.target_replicas = 1
         proc_spec.target_status = ProcessTargetStatus.START.value

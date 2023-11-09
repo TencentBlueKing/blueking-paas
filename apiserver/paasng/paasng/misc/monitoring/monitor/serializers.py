@@ -15,6 +15,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
+from typing import Optional
+
 from django.conf import settings
 from rest_framework import serializers
 
@@ -59,7 +62,6 @@ class ListAlertsSLZ(serializers.Serializer):
     keyword = serializers.CharField(required=False)
     start_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
     end_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
-    module_name = serializers.CharField(required=False)
 
     def to_internal_value(self, data) -> QueryAlertsParams:
         data = super().to_internal_value(data)
@@ -85,10 +87,18 @@ class AlertSLZ(serializers.Serializer):
     )
     bk_biz_id = serializers.CharField(help_text='业务id')
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
+    module_name = serializers.SerializerMethodField(help_text='模块名称')
 
     def get_detail_link(self, instance) -> str:
         bk_biz_id = instance['bk_biz_id']
         return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
+
+    def get_module_name(self, instance) -> Optional[str]:
+        pattern = re.compile(r"\s\[(?P<module_name>[^:]+):(?P<environment>prod|stag)\]")
+        match = pattern.match(instance.get('alert_name'))
+        if match:
+            return match.group('module_name')
+        return None
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

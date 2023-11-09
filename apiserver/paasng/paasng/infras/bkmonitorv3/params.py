@@ -53,7 +53,6 @@ class QueryAlertsParams:
     alert_code: Optional[str] = None
     status: Optional[str] = None
     keyword: Optional[str] = None
-    module_name: Optional[str] = None
 
     def to_dict(self) -> Dict:
         """组装成 search_alerts 接口需要的参数"""

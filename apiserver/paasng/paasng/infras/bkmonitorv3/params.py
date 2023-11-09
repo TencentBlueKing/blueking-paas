@@ -79,14 +79,21 @@ class QueryAlertsParams:
         """
         # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
         query_string = None
-        query_labels = build_valid_args(self.environment, self.alert_code)
+        query_labels = self._build_valid_args(self.environment, self.alert_code)
         if query_labels:
             query_string = f'labels:({query_labels})'
 
         if self.keyword:
             query_keyword = f'alert_name:({self.keyword} OR *{self.keyword}*)'
-            query_string = build_valid_args(query_string, query_keyword)
+            query_string = self._build_valid_args(query_string, query_keyword)
         return query_string
+
+    def _build_valid_args(self, *args) -> Optional[str]:
+        """ 将非空参数拼接为 "arg1 AND arg2 AND arg3" 的形式 """
+        valid_args: List[str] = list(filter(None, args))
+        if not valid_args:
+            return None
+        return ' AND '.join(valid_args)
 
 
 @define(kw_only=True)
@@ -135,11 +142,3 @@ class QueryAlarmStrategiesParams:
 
         conditions.append({"key": "label_name", "value": query_labels})
         return conditions
-
-
-def build_valid_args(*args) -> Optional[str]:
-    """ 将非空参数拼接为 "arg1 AND arg2 AND arg3" 的形式 """
-    valid_args: List[str] = list(filter(None, args))
-    if not valid_args:
-        return None
-    return ' AND '.join(valid_args)

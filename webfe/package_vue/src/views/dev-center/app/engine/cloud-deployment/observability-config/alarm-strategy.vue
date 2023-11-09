@@ -4,10 +4,10 @@
       <h4>{{ $t('告警策略') }}</h4>
       <p class="tips">
         {{ $t('如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
-        <span class="customize">
+        <a :href="strategyLink" target="_blank">
           <i class="paasng-icon paasng-jump-link"></i>
           {{ $t('配置告警策略') }}
-        </span>
+        </a>
       </p>
     </div>
     <!-- 策略列表 -->
@@ -21,9 +21,14 @@
     >
       <bk-table-column
         :label="$t('策略名')"
-        prop="name"
         :show-overflow-tooltip="true"
-      ></bk-table-column>
+      >
+        <template slot-scope="{ row }">
+          <a :href="row.detail_link" target="_blank">
+            {{ row.name }}
+          </a>
+        </template>
+      </bk-table-column>
       <bk-table-column :label="$t('标签')">
         <template slot-scope="{ row }">
           <div
@@ -59,7 +64,7 @@
         :label="$t('级别')"
       >
         <template slot-scope="{ row }">
-          <span :class="['level-border', `level${row.levelText.id}`]">
+          <span :class="['level-border', `level${row.levelText?.id}`]">
             {{ row.levelText && $t(row.levelText.text) }}
           </span>
         </template>
@@ -69,7 +74,7 @@
       >
         <template slot-scope="{ row }">
           <div
-            v-if="row.noticeGroupNames.length"
+            v-if="row.noticeGroupNames?.length"
             v-bk-overflow-tips="{ content: row.noticeGroupNames.join(', ') }"
           >
             <span
@@ -127,6 +132,7 @@ export default {
         count: 0,
         limit: 10,
       },
+      strategyLink: '',
     };
   },
   computed: {
@@ -141,7 +147,11 @@ export default {
     // 获取告警策略
     async getAlarmStrategies() {
       try {
-        const { strategy_config_list: strategyList, user_group_list } = await this.$store.dispatch('alarm/getAlarmStrategies', {
+        const {
+          strategy_config_list: strategyList,
+          user_group_list,
+          strategy_config_link,
+        } = await this.$store.dispatch('alarm/getAlarmStrategies', {
           appCode: this.appCode,
         });
 
@@ -197,6 +207,8 @@ export default {
           }
         });
         this.alarmStrategyList = strategyList;
+        // eslint-disable-next-line camelcase
+        this.strategyLink = strategy_config_link;
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -221,10 +233,6 @@ export default {
     padding: 0;
     margin-right: 16px;
     font-weight: 400;
-  }
-  .customize {
-    color: #3a84ff;
-    cursor: pointer;
   }
 }
 .alarm-strategy {

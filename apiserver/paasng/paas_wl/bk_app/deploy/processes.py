@@ -176,14 +176,22 @@ class CNativeProcController:
         self.env = env
 
     def start(self, proc_type: str):
-        """Start a process"""
-        # TODO: Read target replicas from existed resource to maintain consistency
-        default_replicas = 1
-        return self.scale(proc_type, target_replicas=default_replicas)
+        """Start a process."""
+        spec_updater = ProcSpecUpdater(self.env, proc_type)
+        spec_updater.set_start()
+        try:
+            ProcReplicas(self.env).scale(proc_type, spec_updater.spec_object.target_replicas)
+        except ProcNotFoundInRes as e:
+            raise ProcessNotFound(str(e))
 
     def stop(self, proc_type: str):
-        """Stop a process by setting replicas to zero"""
-        return self.scale(proc_type, target_replicas=0)
+        """Stop a process."""
+        spec_updater = ProcSpecUpdater(self.env, proc_type)
+        spec_updater.set_stop()
+        try:
+            ProcReplicas(self.env).scale(proc_type, 0)
+        except ProcNotFoundInRes as e:
+            raise ProcessNotFound(str(e))
 
     def scale(
         self,

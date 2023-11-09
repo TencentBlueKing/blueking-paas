@@ -187,6 +187,19 @@ class TestProcessesManifestConstructor:
         with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
             assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
 
+    def test_get_command_and_args_invalid_var_expr(self, bk_module):
+        """Test get_command_and_args() when there is an invalid env var expression."""
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        cfg.build_method = RuntimeType.DOCKERFILE
+        cfg.save(update_fields=['build_method'])
+
+        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}", image=None)
+
+        assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
+            ['start'],
+            ['-b', '${PORT}'],
+        ), "The ${PORT:-5000} should be replaced."
+
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)

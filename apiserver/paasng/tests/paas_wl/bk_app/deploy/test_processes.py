@@ -21,8 +21,8 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.deploy.processes import ProcSpecUpdater
-from paas_wl.bk_app.processes.constants import ProcessTargetStatus
-from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
+from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -30,7 +30,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestProcSpecUpdater:
     @pytest.fixture
     def web_proc_factory(self, bk_stag_wl_app):
-        return partial(G, ProcessSpec, engine_app=bk_stag_wl_app, name='web')
+        plan = G(ProcessSpecPlan, max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS)
+        return partial(G, ProcessSpec, engine_app=bk_stag_wl_app, name='web', plan=plan)
 
     def test_set_start(self, bk_stag_env, web_proc_factory):
         web_proc_factory(target_replicas=0, target_status=ProcessTargetStatus.STOP.value)

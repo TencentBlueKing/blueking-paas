@@ -185,7 +185,8 @@ func buildImagePullSecrets(app *paasv1alpha2.BkApp) []corev1.LocalObjectReferenc
 	case "":
 		return nil
 	case "true":
-		// 兼容旧协议
+		// 兼容支持多模块前的注解值
+		// 历史版本使用 `true` 表示 image pull secret 已由 PaaS 创建, secret 名称约定为 $LegacyImagePullSecretName
 		pullSecretName = paasv1alpha2.LegacyImagePullSecretName
 	}
 	// DefaultImagePullSecretName 由 workloads 服务负责创建

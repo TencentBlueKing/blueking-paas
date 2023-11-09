@@ -33,6 +33,7 @@ class BkAppArchiveManager(BaseArchiveManager):
         # 清理 BkApp crd
         delete_bkapp(self.env)
         # 清理进程配置
-        # Note: 由于云原生应用可由用户直接选择 plan, 因此下架应用可直接删除 ProcessSpec 数据, 无需担心后台分配的 plan 记录被清理
+        # 与普通应用不同, 由于云原生应用可由用户直接选择 plan, 重新部署后可恢复分配的 plan 记录
+        # 因此下架应用可直接删除 ProcessSpec 数据, 无需担心在管理端后台分配的 plan 记录被清理
         self.env.wl_app.process_specs.all().delete()
         wait_for_all_stopped(env=self.env, result_handler=result_handler, extra_params={"operation_id": op_id})

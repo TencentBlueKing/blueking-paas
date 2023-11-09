@@ -56,7 +56,9 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 		currentDeployID = resources.DefaultDeployID
 	}
 
-	// Check if the current deploy ID has been processed already.
+	// When the deploy id in the status is the same with the value in the annotations,
+	// it means that there is no new deploy action, the further process of current reconcile
+	// loop wil be skipped.
 	if bkapp.Status.DeployId == currentDeployID {
 		log.V(2).Info(
 			"No new deploy action found on the BkApp, skip the rest of the process.",

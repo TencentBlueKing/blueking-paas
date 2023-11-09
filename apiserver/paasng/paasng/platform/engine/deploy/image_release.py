@@ -25,7 +25,7 @@ from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.models import AppModelRevision
-from paas_wl.bk_app.processes.shim import ProcessManager, ProcessTmpl
+from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
@@ -114,7 +114,6 @@ class ImageReleaseMgr(DeployStep):
                     artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
                 )
 
-            ProcessManager(self.engine_app.env).sync_processes_specs(processes=processes)
             self.deployment.update_fields(
                 processes={p.name: p for p in processes}, build_status=JobStatus.SUCCESSFUL, build_id=build_id
             )

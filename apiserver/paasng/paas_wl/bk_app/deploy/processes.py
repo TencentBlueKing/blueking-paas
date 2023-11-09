@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+# TODO: Add Tests for both controller classes
 import logging
 from dataclasses import asdict
 from typing import Optional
@@ -37,6 +38,7 @@ from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,7 @@ class AppProcessesController:
 
     def __init__(self, env: ModuleEnvironment):
         self.app = env.wl_app
+        self.env = env
         self.client = get_scheduler_client_by_app(self.app)
 
     def start(self, proc_type: str):
@@ -59,12 +62,9 @@ class AppProcessesController:
         :param proc_type: process type
         :raise: ScaleProcessError when error occurs
         """
-        proc_spec = self._get_spec(proc_type)
-        if proc_spec.target_replicas <= 0:
-            proc_spec.target_replicas = 1
-        proc_spec.target_status = ProcessTargetStatus.START.value
-        proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
-
+        spec_updater = ProcSpecUpdater(self.env, proc_type)
+        spec_updater.set_start()
+        proc_spec = spec_updater.spec_object
         try:
             self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
         except Exception as e:
@@ -76,10 +76,9 @@ class AppProcessesController:
         :param proc_type: process type
         :raise: ScaleProcessError when error occurs
         """
-        proc_spec = self._get_spec(proc_type)
-        proc_spec.target_status = ProcessTargetStatus.STOP.value
-        proc_spec.save(update_fields=['target_status', 'updated'])
-
+        spec_updater = ProcSpecUpdater(self.env, proc_type)
+        spec_updater.set_stop()
+        proc_spec = spec_updater.spec_object
         try:
             self.client.shutdown_process(self.app, proc_spec.name)
         except Exception as e:
@@ -117,13 +116,9 @@ class AppProcessesController:
         if target_replicas is None:
             raise ValueError('target_replicas required when scale process')
 
-        proc_spec = self._get_spec(proc_type)
-        proc_spec.target_replicas = target_replicas
-        proc_spec.target_status = (
-            ProcessTargetStatus.START.value if target_replicas else ProcessTargetStatus.STOP.value
-        )
-        proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
-
+        spec_updater = ProcSpecUpdater(self.env, proc_type)
+        spec_updater.change_replicas(target_replicas)
+        proc_spec = spec_updater.spec_object
         try:
             self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
         except Exception as e:
@@ -208,10 +203,57 @@ class CNativeProcController:
         if target_replicas > DEFAULT_CNATIVE_MAX_REPLICAS:
             raise ValueError(f"target_replicas can't be greater than {DEFAULT_CNATIVE_MAX_REPLICAS}")
 
+        ProcSpecUpdater(self.env, proc_type).change_replicas(target_replicas)
+        # Update the module specs also to keep the bkapp model in sync.
+        ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
+
         try:
             ProcReplicas(self.env).scale(proc_type, target_replicas)
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
+
+
+class ProcSpecUpdater:
+    """It update the ProcessSpec object for the given env and process type.
+
+    :param env: The environment object.
+    :param proc_type: The process type.
+    """
+
+    def __init__(self, env: ModuleEnvironment, proc_type: str):
+        self.app = env.wl_app
+        self.proc_type = proc_type
+
+    def set_start(self):
+        """Set the process to "start" state."""
+        proc_spec = self.spec_object
+        if proc_spec.target_replicas <= 0:
+            proc_spec.target_replicas = 1
+        proc_spec.target_status = ProcessTargetStatus.START.value
+        proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
+
+    def set_stop(self):
+        """Set the process to "stop" state."""
+        proc_spec = self.spec_object
+        proc_spec.target_status = ProcessTargetStatus.STOP.value
+        proc_spec.save(update_fields=['target_status', 'updated'])
+
+    def change_replicas(self, target_replicas: int):
+        """Change the target_replicas value."""
+        proc_spec = self.spec_object
+        proc_spec.target_replicas = target_replicas
+        proc_spec.target_status = (
+            ProcessTargetStatus.START.value if target_replicas else ProcessTargetStatus.STOP.value
+        )
+        proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
+
+    @property
+    def spec_object(self) -> ProcessSpec:
+        """Get the ProcessSpec object"""
+        try:
+            return ProcessSpec.objects.get(engine_app_id=self.app.uuid, name=self.proc_type)
+        except ProcessSpec.DoesNotExist:
+            raise ProcessNotFound(self.proc_type)
 
 
 # Register controllers

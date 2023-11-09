@@ -57,7 +57,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	}
 
 	// Check if the current deploy ID has been processed already.
-	if bkapp.Status.ObservedGeneration >= bkapp.Generation || bkapp.Status.DeployId == currentDeployID {
+	if bkapp.Status.DeployId == currentDeployID {
 		log.V(2).Info(
 			"No new deploy action found on the BkApp, skip the rest of the process.",
 			"ObservedGeneration",

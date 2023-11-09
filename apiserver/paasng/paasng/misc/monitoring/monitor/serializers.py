@@ -27,6 +27,8 @@ from paasng.utils.serializers import HumanizeTimestampField
 
 from .models import AppAlertRule
 
+MODULE_NAME_PATTERN = re.compile(r"\s\[([^\s:]+):(prod|stag)\]")
+
 
 class ListAlertRulesSLZ(serializers.Serializer):
     alert_code = serializers.CharField(required=False)
@@ -94,10 +96,9 @@ class AlertSLZ(serializers.Serializer):
         return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
 
     def get_module_name(self, instance) -> Optional[str]:
-        pattern = re.compile(r"\s\[(?P<module_name>[^:]+):(?P<environment>prod|stag)\]")
-        match = pattern.match(instance.get('alert_name'))
+        match = MODULE_NAME_PATTERN.match(instance.get('alert_name'))
         if match:
-            return match.group('module_name')
+            return match.group(1)
         return None
 
 
@@ -147,7 +148,7 @@ class StrategyConfigSLZ(serializers.Serializer):
 
 class UserGroupSLZ(serializers.Serializer):
     user_group_id = serializers.CharField(help_text='通知组 id')
-    user_group_name = serializers.CharField(help_text='通知组 名称')
+    user_group_name = serializers.CharField(help_text='通知组名称')
 
 
 class AlarmStrategySLZ(serializers.Serializer):

@@ -137,8 +137,7 @@
   </bk-dialog>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 let maxReplicasNum = 0;
 
@@ -155,6 +154,7 @@ export default {
   data() {
     return {
       environment: 'stag',
+      moduleName: 'default',
       isLoading: false,
       isContentLoading: true,
       scaleDialog: {
@@ -284,7 +284,7 @@ export default {
       try {
         await this.$store.dispatch('processes/updateProcess', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
+          moduleId: this.moduleName,
           env: this.environment,
           data: planForm,
         });
@@ -308,7 +308,7 @@ export default {
       try {
         const res = await this.$store.dispatch('deploy/getAutoScalFlagWithEnv', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
+          moduleId: this.moduleName,
           env: this.environment,
         });
         this.autoScalDisableConfig = res;
@@ -429,9 +429,10 @@ export default {
      * @param process {Object} 当前进程数据
      * @param env {string} 环境
      */
-    handleShowDialog(process, env = 'stag') {
-      this.getAutoScalFlag();
+    handleShowDialog(process, env = 'stag', moduleName) {
       this.environment = env;
+      this.moduleName = moduleName;
+      this.getAutoScalFlag();
 
       // 最大副本数
       maxReplicasNum = process.maxReplicas;

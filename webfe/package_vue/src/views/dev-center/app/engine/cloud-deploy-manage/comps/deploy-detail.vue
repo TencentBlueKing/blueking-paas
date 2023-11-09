@@ -446,7 +446,8 @@
 
     <!-- 扩缩容 -->
     <scale-dialog
-      :key="moduleName" :ref="`${moduleName}ScaleDialog`"
+      :key="moduleName"
+      :ref="`${moduleName}ScaleDialog`"
       @updateStatus="handleProcessStatus"
     >
     </scale-dialog>
@@ -698,7 +699,7 @@ export default {
     handleExpansionAndContraction(row) {
       this.curUpdateProcess = row;    // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
-      this.$refs[refName].handleShowDialog(row, this.environment);
+      this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
     },
     // 处理进程与实例的关系
     // handleDeployInstanceData() {

@@ -156,7 +156,7 @@ export default {
       environment: 'stag',
       moduleName: 'default',
       isLoading: false,
-      isContentLoading: true,
+      isContentLoading: false,
       scaleDialog: {
         visible: false,
       },
@@ -174,7 +174,9 @@ export default {
         ],
       },
       initScalingConfig: {},
-      autoScalDisableConfig: {},
+      autoScalDisableConfig: {
+        ENABLE_AUTOSCALING: false,
+      },
       processPlan: {
         processType: 'unkonwn',
         targetReplicas: 0,
@@ -432,7 +434,7 @@ export default {
     handleShowDialog(process, env = 'stag', moduleName) {
       this.environment = env;
       this.moduleName = moduleName;
-      this.getAutoScalFlag();
+      // this.getAutoScalFlag();
 
       // 最大副本数
       maxReplicasNum = process.maxReplicas;

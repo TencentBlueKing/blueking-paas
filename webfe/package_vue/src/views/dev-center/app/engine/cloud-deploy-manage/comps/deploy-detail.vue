@@ -166,7 +166,7 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('进程操作')"
-          width="170"
+          :width="195"
           class-name="table-colum-operation-cls default-background"
         >
           <template slot-scope="{ row }">
@@ -179,7 +179,7 @@
                   src="/static/images/btn_loading.gif"
                   class="loading"
                 >
-                <span class="pl10">
+                <span class="pl10" style="white-space: nowrap;">
                   {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
                 </span>
               </div>

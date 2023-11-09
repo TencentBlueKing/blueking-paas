@@ -89,7 +89,8 @@ class QueryAlertsParams:
             query_string = self._build_valid_args(query_string, query_keyword)
         return query_string
 
-    def _build_valid_args(self, *args) -> Optional[str]:
+    @staticmethod
+    def _build_valid_args(*args) -> Optional[str]:
         """ 将非空参数拼接为 "arg1 AND arg2 AND arg3" 的形式 """
         valid_args: List[str] = list(filter(None, args))
         if not valid_args:

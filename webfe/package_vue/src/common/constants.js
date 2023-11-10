@@ -151,7 +151,7 @@ export const ENV_OVERLAY = {
           value: '85%',
         },
       ],
-      policy: 'ScalingPolicy.DEFAULT',
+      policy: 'default',
     },
   },
   stag: {
@@ -169,6 +169,7 @@ export const ENV_OVERLAY = {
           value: '85%',
         },
       ],
+      policy: 'default',
     },
   },
 };

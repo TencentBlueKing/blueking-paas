@@ -22,6 +22,10 @@ from blue_krill.web.drf_utils import stringify_validation_error
 from rest_framework.exceptions import ValidationError
 
 
+class AppDescriptionNotFoundError(Exception):
+    """Raised when app description is not found"""
+
+
 class DescriptionValidationError(Exception):
     """Raised when any given description was invalid
 

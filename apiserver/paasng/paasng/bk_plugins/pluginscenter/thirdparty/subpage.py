@@ -25,7 +25,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty import utils
 logger = logging.getLogger(__name__)
 
 
-def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease):
+def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease) -> bool:
     """获取子页面的状态，用于判断是否可进入到下一个页面"""
     current_stage = version.current_stage
     sub_stage_definition = find_stage_by_id(pd.release_stages, current_stage.stage_id)
@@ -36,9 +36,10 @@ def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: 
     resp = utils.make_client(sub_stage_definition.api.result).call(
         path_params={"plugin_id": plugin.id, "version_id": version.version}
     )
-    # TODO 计算平台先给的临时 API，后续返回值为变
+    # TODO 计算平台先给的临时 API，后续返回值会变
     if not resp.get('result'):
         logger.error(f"get sub page status error: {resp.get('message')}")
+        return False
 
     status = resp.get('data').get('status')
     return status == 'running'

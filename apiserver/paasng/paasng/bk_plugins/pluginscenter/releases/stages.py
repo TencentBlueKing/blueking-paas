@@ -35,6 +35,7 @@ from paasng.bk_plugins.pluginscenter.serializers import ItsmTicketInfoSlz, Plugi
 from paasng.bk_plugins.pluginscenter.sourcectl import get_plugin_repo_accessor
 from paasng.bk_plugins.pluginscenter.thirdparty.deploy import check_deploy_result, deploy_version, get_deploy_logs
 from paasng.bk_plugins.pluginscenter.thirdparty.market import read_market_info
+from paasng.bk_plugins.pluginscenter.thirdparty.subpage import can_enter_next_stage
 
 
 class BaseStageController:
@@ -231,14 +232,19 @@ class SubPageStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.SUBPAGE
 
     def execute(self, operator: str):
-        raise NotImplementedError
+        # 内嵌页面，不需要做任何处理
+        return
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
         stage_def = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
         if not stage_def:
             raise error_codes.STAGE_DEF_NOT_FOUND
-        return {**basic_info, "detail": {"page_url": stage_def.pageUrl}}
+        if page_url := stage_def.pageUrl:
+            page_url = page_url.format(plugin_id=self.plugin.id, version_id=self.release.version)
+        # 能否进入到下一步
+        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release)
+        return {**basic_info, "detail": {"page_url": page_url, "can_proceed": can_proceed}}
 
 
 class BuiltinStage(BaseStageController):

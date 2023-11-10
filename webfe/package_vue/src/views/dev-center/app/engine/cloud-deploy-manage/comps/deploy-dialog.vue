@@ -287,7 +287,7 @@ export default {
       imagePullStrategy: 'IfNotPresent',
       alwaysTooltipsConfig: {
         content: this.$t('总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项'),
-        placements: ['bottom-start'],
+        placements: ['right'],
         width: 300,
       },
       ifNotPresentTooltipsConfig: {

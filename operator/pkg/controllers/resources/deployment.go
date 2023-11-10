@@ -180,13 +180,19 @@ func buildContainers(
 
 // buildImagePullSecrets 返回拉取镜像的 Secrets 列表
 func buildImagePullSecrets(app *paasv1alpha2.BkApp) []corev1.LocalObjectReference {
-	if app.GetAnnotations()[paasv1alpha2.ImageCredentialsRefAnnoKey] == "" {
+	pullSecretName := app.GetAnnotations()[paasv1alpha2.ImageCredentialsRefAnnoKey]
+	switch pullSecretName {
+	case "":
 		return nil
+	case "true":
+		// 兼容支持多模块前的注解值
+		// 历史版本使用 `true` 表示 image pull secret 已由 PaaS 创建, secret 名称约定为 $LegacyImagePullSecretName
+		pullSecretName = paasv1alpha2.LegacyImagePullSecretName
 	}
 	// DefaultImagePullSecretName 由 workloads 服务负责创建
 	return []corev1.LocalObjectReference{
 		{
-			Name: paasv1alpha2.DefaultImagePullSecretName,
+			Name: pullSecretName,
 		},
 	}
 }

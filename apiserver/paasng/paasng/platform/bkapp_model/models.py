@@ -74,6 +74,7 @@ class ModuleProcessSpec(TimestampedModel):
 
     class Meta:
         unique_together = ("module", "name")
+        ordering = ['id']
 
     def get_proc_command(self) -> str:
         if self.proc_command:

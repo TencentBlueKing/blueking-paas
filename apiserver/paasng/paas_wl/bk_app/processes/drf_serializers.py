@@ -29,7 +29,6 @@ from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
 from paas_wl.bk_app.applications.models import Release
-from paas_wl.bk_app.cnative.specs.procs import CNativeProcSpec
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec
@@ -304,32 +303,16 @@ class ProcessSpecSLZ(serializers.Serializer):
     autoscaling = serializers.BooleanField()
     scaling_config = serializers.JSONField()
 
+    # deprecated: 兼容旧的 CNativeProcSpecSLZ, 待前端替换取值字段后移除
+    cpu_limit = serializers.CharField(source="plan.limits.cpu")
+    memory_limit = serializers.CharField(source="plan.limits.memory")
+
     def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
         limits = obj.plan.limits
         # 内存的单位为 Mi
         memory_quota = int(parse_quantity(limits['memory']) / (1024 * 1024))
         # CPU 的单位为 m
         cpu_quota = int(parse_quantity(limits['cpu']) * 1000)
-        return {"cpu": cpu_quota, "memory": memory_quota}
-
-
-class CNativeProcSpecSLZ(serializers.Serializer):
-    """Format cloud-native process specs"""
-
-    name = serializers.CharField()
-    target_replicas = serializers.IntegerField()
-    target_status = serializers.CharField()
-    max_replicas = serializers.IntegerField()
-    cpu_limit = serializers.CharField()
-    memory_limit = serializers.CharField()
-    resource_limit_quota = serializers.SerializerMethodField(read_only=True)
-    autoscaling = serializers.BooleanField()
-
-    def get_resource_limit_quota(self, obj: CNativeProcSpec) -> dict:
-        # 内存的单位为 Mi
-        memory_quota = int(parse_quantity(obj.memory_limit) / (1024 * 1024))
-        # CPU 的单位为 m
-        cpu_quota = int(parse_quantity(obj.cpu_limit) * 1000)
         return {"cpu": cpu_quota, "memory": memory_quota}
 
 

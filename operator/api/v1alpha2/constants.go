@@ -108,8 +108,8 @@ const (
 	// BkAppFinalizerName BkApp 的 finalizer 标记
 	BkAppFinalizerName = "bkapp.paas.bk.tencent.com/finalizer"
 
-	// DefaultImagePullSecretName 平台默认的 pullImageSecret 名称
-	DefaultImagePullSecretName = "bkapp-dockerconfigjson"
+	// LegacyImagePullSecretName 支持多模块前的 pullImageSecret 名称
+	LegacyImagePullSecretName = "bkapp-dockerconfigjson"
 )
 
 const (

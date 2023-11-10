@@ -22,6 +22,9 @@ from django.utils.translation import gettext_lazy as _
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = '500m'
 DEFAULT_PROC_MEM = '256Mi'
+# Default resource request for each process
+DEFAULT_PROC_CPU_REQUEST = '125m'
+DEFAULT_PROC_MEM_REQUEST = '126Mi'
 
 DEFAULT_PROCESS_NAME = 'web'
 

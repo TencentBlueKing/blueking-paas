@@ -21,15 +21,13 @@ from typing import Dict, List, Optional
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.cnative.specs.procs import get_proc_specs
 from paas_wl.bk_app.processes.controllers import Process, list_processes
-from paas_wl.bk_app.processes.drf_serializers import CNativeProcSpecSLZ, ProcessSpecSLZ
+from paas_wl.bk_app.processes.drf_serializers import ProcessSpecSLZ
 from paas_wl.bk_app.processes.models import ProcessSpecManager, ProcessTmpl
 from paas_wl.bk_app.processes.processes import PlainProcess, condense_processes
 from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs_client import BCSClient
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -38,9 +36,6 @@ def _list_proc_specs(env: ModuleEnvironment) -> List[Dict]:
 
     :return: list of process specs
     """
-    # TODO: 在云原生应用也使用 ProcessSpec 模型存储进程信息后, 移除这里的差异性代码.
-    if env.application.type == ApplicationType.CLOUD_NATIVE:
-        return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
     wl_app = env.wl_app
     return ProcessSpecSLZ(wl_app.process_specs.select_related("plan").all(), many=True).data
 

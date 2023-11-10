@@ -94,353 +94,354 @@
     </paas-content-loader>
   </div>
 </template>
-<script>
-    import paasPluginTitle from '@/components/pass-plugin-title';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import deployStage from './release-stages/deploy';
-    import marketStage from './release-stages/market';
-    import onlineStage from './release-stages/online';
-    import itsmStage from './release-stages/itsm';
+<script>import paasPluginTitle from '@/components/pass-plugin-title';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import deployStage from './release-stages/deploy';
+import marketStage from './release-stages/market';
+import onlineStage from './release-stages/online';
+import itsmStage from './release-stages/itsm';
+import buildStage from './release-stages/build';
 
-    export default {
-        components: {
-            paasPluginTitle,
-            deploy: deployStage,
-            market: marketStage,
-            online: onlineStage,
-            itsm: itsmStage
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-                stagesIndex: 0,
-                curStep: 1,
-                isLoading: true,
-                stageData: {},
-                pluginDetailedData: {},
-                failedMessage: '',
-                stepsStatus: '',
-                isFirstStage: false,
-                isFinalStage: false
-            };
-        },
-        computed: {
-            releaseId () {
-                return this.$route.query.release_id;
-            },
-            stageId () {
-                return this.$store.state.plugin.curRelease.current_stage && this.$store.state.plugin.curRelease.current_stage.stage_id;
-            },
-            curVersion () {
-                return this.$route.query.version || this.titleVersion;
-            },
-            titleVersion () {
-                let releaseData = this.$store.state.plugin.curRelease;
-                return `${releaseData.version} (${releaseData.source_version_name})`;
-            },
-            status () {
-                return this.$store.state.plugin.curRelease.status;
-            },
-            releaseTopHeight () {
-                let topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
-                // 是否展示steps
-                return !this.isSingleStage ? topHeight : topHeight - 44;
-            },
-            curFirstStep () {
-                return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
-            },
-            curStageComponmentType () {
-              return this.stageData.stage_id;
-            },
-            finalStageIsOnline () {
-              return this.curAllStages.length > 0 && this.curAllStages[this.curAllStages.length - 1].name === 'online';
-            },
-            isSingleStage () {
-              return this.curAllStages.length === 1;
-            },
-            // 是否禁用上一步
-            isAllowPrev () {
-              switch (this.curStageComponmentType) {
-                case 'itsm':
-                  const itemStatus = this.pluginDetailedData.current_stage?.status;
-                  // 已撤销、审批不通过，才显示上一步，其余情况禁用
-                  const isDisabledList = ['interrupted', 'failed'];
-                  return isDisabledList.includes(itemStatus) ? true : false;
-                  break;
-                default:
-                  const isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
-                  return !isRunningDeploy && this.status !== 'successful';
-                  break;
-              }
-            },
-            isAllowNext () {
-              return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
-            },
-            // 是否为审批阶段
-            isItsmStage () {
-              return this.curStageComponmentType === 'itsm';
-            }
-        },
-        watch: {
-            stageData: {
-                handler () {
-                    // 获取 stage 对应的序号
-                    const curStep = this.calStageOrder(this.stageData);
-                    this.isFirstStage = curStep === 1;
-                    this.isFinalStage = this.curAllStages.length === curStep;
-                    this.curStep = curStep;
-                },
-                deep: true,
-                immediate: true
-            },
-            'stageData.stage_id' () {
-                if (!Object.keys(this.pluginDetailedData).length) {
-                    this.getReleaseDetail();
-                }
-            }
-        },
-        async created () {
-            await this.getReleaseDetail();
-            this.getReleaseStageDetail();
-        },
-        methods: {
-            async pollingReleaseStageDetail () {
-                const ctx = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: this.releaseId,
-                    stageId: this.stageId
-                };
-                await new Promise(resolve => {
-                    setTimeout(resolve, 2000);
-                });
-                const currentCtx = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: this.releaseId,
-                    stageId: this.stageId
-                };
-                // 页面状态改变, 停止轮询
-                if (ctx !== currentCtx) this.getReleaseStageDetail();
-            },
-            // 获取发布步骤详情
-            async getReleaseStageDetail () {
-                try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        releaseId: this.releaseId,
-                        stageId: this.stageId
-                    };
-                    if (Object.values(params).some(value => value === undefined)) {
-                        return;
-                    }
-                    const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
-                    this.stageData = stageData;
-                    switch (this.stageData.stage_id) {
-                        case 'market':
-                            break;
-                        case 'deploy':
-                            if (this.stageData.status === 'pending') {
-                                this.pollingReleaseStageDetail();
-                            } else if (this.stageData.status === 'failed') {
-                                // 改变状态
-                                this.stepsStatus = 'error';
-                                this.failedMessage = stageData.fail_message;
-                            } else {
-                                this.stepsStatus = '';
-                            }
-                            break;
-                    }
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 500);
-                }
-            },
-
-            // 获取版本详情
-            async getReleaseDetail () {
-                const data = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: this.releaseId
-                };
-                try {
-                    const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
-                    this.pluginDetailedData = releaseData
-                    this.$store.commit('plugin/updateCurRelease', releaseData);
-                    // 获取 stage 对应的序号
-                    this.curStep = this.calStageOrder(releaseData.current_stage);
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
-            },
-
-            // 重新执行发布步骤
-            async rerunStage () {
-                const params = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: this.releaseId,
-                    stageId: this.stageId
-                };
-                this.stepsStatus = '';
-                try {
-                    const releaseData = await this.$store.dispatch('plugin/rerunStage', params);
-                    this.$store.commit('plugin/updateCurRelease', releaseData);
-                    await this.getReleaseStageDetail();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-
-            // 重新发布, 重置之前的发布状态
-            async republish () {
-                const params = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: this.$route.query.release_id
-                };
-                try {
-                    const releaseData = await this.$store.dispatch('plugin/republishRelease', params);
-                    this.$store.commit('plugin/updateCurRelease', releaseData);
-                    await this.getReleaseStageDetail();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            // 下一步
-            async handlerNext () {
-                if (!this.isAllowNext) {
-                  return;
-                }
-                this.isLoading = true;
-                await this.$refs.curStageComponment.nextStage(async () => {
-                  try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        releaseId: this.$route.query.release_id
-                    };
-                    const releaseData = await this.$store.dispatch('plugin/nextStage', params);
-                    this.$store.commit('plugin/updateCurRelease', releaseData);
-                    await this.getReleaseDetail();
-                    await this.getReleaseStageDetail();
-                  } catch (e) {
-                      this.$bkMessage({
-                          theme: 'error',
-                          message: e.detail || e.message || this.$t('接口异常')
-                      });
-                  } finally {
-                      setTimeout(() => {
-                          this.isLoading = false;
-                      }, 200);
-                  }
-                });
-            },
-
-            showInfoCancelRelease () {
-                this.$bkInfo({
-                    title: `${this.$t('确认终止发布版本')}${this.curVersion} ？`,
-                    width: 480,
-                    maskClose: true,
-                    confirmFn: () => {
-                        this.handlerCancelRelease();
-                    }
-                });
-            },
-
-            // 终止发布
-            async handlerCancelRelease () {
-                try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        releaseId: this.$route.query.release_id
-                    };
-                    await this.$store.dispatch('plugin/cancelRelease', params);
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('已终止当前的发布流程')
-                    });
-                    this.goVersionManager();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-
-            // 上一步
-            async handlerPrev () {
-                this.isLoading = true;
-                try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        releaseId: this.$route.query.release_id
-                    };
-                    const releaseData = await this.$store.dispatch('plugin/backRelease', params);
-                    this.$store.commit('plugin/updateCurRelease', releaseData);
-                    await this.getReleaseStageDetail();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                        this.stepsStatus = '';
-                    }, 200);
-                }
-            },
-
-            goVersionManager () {
-                this.$router.push({
-                    name: 'pluginVersionManager'
-                });
-            },
-
-            calStageOrder (stage) {
-                const defaultOrder = 1;
-                if (!this.curAllStages) return defaultOrder;
-                for (let index = 0; index < this.curAllStages.length; index++) {
-                    const element = this.curAllStages[index];
-                    if (element.stage_id === stage.stage_id) return index + 1;
-                }
-                return defaultOrder;
-            }
-        }
+export default {
+  components: {
+    paasPluginTitle,
+    deploy: deployStage,
+    market: marketStage,
+    online: onlineStage,
+    itsm: itsmStage,
+    build: buildStage,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      stagesIndex: 0,
+      curStep: 1,
+      isLoading: true,
+      stageData: {},
+      pluginDetailedData: {},
+      failedMessage: '',
+      stepsStatus: '',
+      isFirstStage: false,
+      isFinalStage: false,
     };
+  },
+  computed: {
+    releaseId() {
+      return this.$route.query.release_id;
+    },
+    stageId() {
+      return this.$store.state.plugin.curRelease.current_stage && this.$store.state.plugin.curRelease.current_stage.stage_id;
+    },
+    curVersion() {
+      return this.$route.query.version || this.titleVersion;
+    },
+    titleVersion() {
+      const releaseData = this.$store.state.plugin.curRelease;
+      return `${releaseData.version} (${releaseData.source_version_name})`;
+    },
+    status() {
+      return this.$store.state.plugin.curRelease.status;
+    },
+    releaseTopHeight() {
+      const topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
+      // 是否展示steps
+      return !this.isSingleStage ? topHeight : topHeight - 44;
+    },
+    curFirstStep() {
+      return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
+    },
+    curStageComponmentType() {
+      return this.stageData.stage_id;
+    },
+    finalStageIsOnline() {
+      return this.curAllStages.length > 0 && this.curAllStages[this.curAllStages.length - 1].name === 'online';
+    },
+    isSingleStage() {
+      return this.curAllStages.length === 1;
+    },
+    // 是否禁用上一步
+    isAllowPrev() {
+      switch (this.curStageComponmentType) {
+        case 'itsm':
+          const itemStatus = this.pluginDetailedData.current_stage?.status;
+          // 已撤销、审批不通过，才显示上一步，其余情况禁用
+          const isDisabledList = ['interrupted', 'failed'];
+          return !!isDisabledList.includes(itemStatus);
+          break;
+        default:
+          const isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
+          return !isRunningDeploy && this.status !== 'successful';
+          break;
+      }
+    },
+    isAllowNext() {
+      return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
+    },
+    // 是否为审批阶段
+    isItsmStage() {
+      return this.curStageComponmentType === 'itsm';
+    },
+  },
+  watch: {
+    stageData: {
+      handler() {
+        // 获取 stage 对应的序号
+        const curStep = this.calStageOrder(this.stageData);
+        this.isFirstStage = curStep === 1;
+        this.isFinalStage = this.curAllStages.length === curStep;
+        this.curStep = curStep;
+      },
+      deep: true,
+      immediate: true,
+    },
+    'stageData.stage_id'() {
+      if (!Object.keys(this.pluginDetailedData).length) {
+        this.getReleaseDetail();
+      }
+    },
+  },
+  async created() {
+    await this.getReleaseDetail();
+    this.getReleaseStageDetail();
+  },
+  methods: {
+    async pollingReleaseStageDetail() {
+      const ctx = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: this.releaseId,
+        stageId: this.stageId,
+      };
+      await new Promise((resolve) => {
+        setTimeout(resolve, 2000);
+      });
+      const currentCtx = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: this.releaseId,
+        stageId: this.stageId,
+      };
+      // 页面状态改变, 停止轮询
+      if (ctx !== currentCtx) this.getReleaseStageDetail();
+    },
+    // 获取发布步骤详情
+    async getReleaseStageDetail() {
+      try {
+        const params = {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: this.releaseId,
+          stageId: this.stageId,
+        };
+        if (Object.values(params).some(value => value === undefined)) {
+          return;
+        }
+        const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
+        this.stageData = stageData;
+        switch (this.stageData.stage_id) {
+          case 'market':
+            break;
+          case 'deploy':
+            if (this.stageData.status === 'pending') {
+              this.pollingReleaseStageDetail();
+            } else if (this.stageData.status === 'failed') {
+              // 改变状态
+              this.stepsStatus = 'error';
+              this.failedMessage = stageData.fail_message;
+            } else {
+              this.stepsStatus = '';
+            }
+            break;
+        }
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 500);
+      }
+    },
+
+    // 获取版本详情（获取当前步骤详情数据）
+    async getReleaseDetail() {
+      const data = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: this.releaseId,
+      };
+      try {
+        const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
+        this.pluginDetailedData = releaseData;
+        this.$store.commit('plugin/updateCurRelease', releaseData);
+        // 获取 stage 对应的序号
+        this.curStep = this.calStageOrder(releaseData.current_stage);
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 重新执行发布步骤
+    async rerunStage() {
+      const params = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: this.releaseId,
+        stageId: this.stageId,
+      };
+      this.stepsStatus = '';
+      try {
+        const releaseData = await this.$store.dispatch('plugin/rerunStage', params);
+        this.$store.commit('plugin/updateCurRelease', releaseData);
+        await this.getReleaseStageDetail();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+
+    // 重新发布, 重置之前的发布状态
+    async republish() {
+      const params = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: this.$route.query.release_id,
+      };
+      try {
+        const releaseData = await this.$store.dispatch('plugin/republishRelease', params);
+        this.$store.commit('plugin/updateCurRelease', releaseData);
+        await this.getReleaseStageDetail();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+    // 下一步
+    async handlerNext() {
+      if (!this.isAllowNext) {
+        return;
+      }
+      this.isLoading = true;
+      await this.$refs.curStageComponment.nextStage(async () => {
+        try {
+          const params = {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+            releaseId: this.$route.query.release_id,
+          };
+          const releaseData = await this.$store.dispatch('plugin/nextStage', params);
+          this.$store.commit('plugin/updateCurRelease', releaseData);
+          await this.getReleaseDetail();
+          await this.getReleaseStageDetail();
+        } catch (e) {
+          this.$bkMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
+        } finally {
+          setTimeout(() => {
+            this.isLoading = false;
+          }, 200);
+        }
+      });
+    },
+
+    showInfoCancelRelease() {
+      this.$bkInfo({
+        title: `${this.$t('确认终止发布版本')}${this.curVersion} ？`,
+        width: 480,
+        maskClose: true,
+        confirmFn: () => {
+          this.handlerCancelRelease();
+        },
+      });
+    },
+
+    // 终止发布
+    async handlerCancelRelease() {
+      try {
+        const params = {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: this.$route.query.release_id,
+        };
+        await this.$store.dispatch('plugin/cancelRelease', params);
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('已终止当前的发布流程'),
+        });
+        this.goVersionManager();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+
+    // 上一步
+    async handlerPrev() {
+      this.isLoading = true;
+      try {
+        const params = {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: this.$route.query.release_id,
+        };
+        const releaseData = await this.$store.dispatch('plugin/backRelease', params);
+        this.$store.commit('plugin/updateCurRelease', releaseData);
+        await this.getReleaseStageDetail();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+          this.stepsStatus = '';
+        }, 200);
+      }
+    },
+
+    goVersionManager() {
+      this.$router.push({
+        name: 'pluginVersionManager',
+      });
+    },
+
+    calStageOrder(stage) {
+      const defaultOrder = 1;
+      if (!this.curAllStages) return defaultOrder;
+      for (let index = 0; index < this.curAllStages.length; index++) {
+        const element = this.curAllStages[index];
+        if (element.stage_id === stage.stage_id) return index + 1;
+      }
+      return defaultOrder;
+    },
+  },
+};
 </script>
 <style lang="scss">
 .deploy-action-box {

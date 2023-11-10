@@ -16,9 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from paasng.bk_plugins.pluginscenter.definitions import find_stage_by_id
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance, PluginRelease
 from paasng.bk_plugins.pluginscenter.thirdparty import utils
+
+logger = logging.getLogger(__name__)
 
 
 def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease):
@@ -33,5 +37,8 @@ def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: 
         path_params={"plugin_id": plugin.id, "version_id": version.version}
     )
     # TODO 计算平台先给的临时 API，后续返回值为变
-    status = resp.get('data', {}).get('status')
+    if not resp.get('result'):
+        logger.error(f"get sub page status error: {resp.get('message')}")
+
+    status = resp.get('data').get('status')
     return status == 'running'

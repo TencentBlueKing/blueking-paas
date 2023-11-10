@@ -36,7 +36,7 @@
           {{ item.tag }}
         </div>
         <div
-          v-if="item.content"
+          v-if="item.content && !hideTime.includes(item.status)"
           class="paas-timeline-content"
         >
           {{ item.content }}
@@ -77,6 +77,8 @@
       curSelectedItem: {},
       // 插件loading 状态
       LOADING_MAP: ['QUEUE', 'RUNNING', 'REVIEWING', 'PREPARE_ENV', 'LOOP_WAITING', 'CALL_WAITING'],
+      // 无需展示时间
+      hideTime: ['SKIP', 'UNEXEC'],
     };
   },
   watch: {

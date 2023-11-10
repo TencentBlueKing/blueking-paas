@@ -62,6 +62,11 @@ export default {
       // 显示/隐藏时间
       this.$refs.bkLog.changeShowTime(value);
     },
+    stageData() {
+      // 重新格式化数据
+      this.formatBuildLineData();
+      this.formatLogs();
+    },
   },
   created() {
     this.init();
@@ -73,6 +78,7 @@ export default {
     },
     // 处理左侧数据
     formatBuildLineData() {
+      this.timeLineList = [];
       // stages.length < 2 前端报错
       if (this.curStages.length === 2) {
         const { elements } = this.curStages[1].containers[0];

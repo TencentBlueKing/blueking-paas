@@ -123,6 +123,8 @@ export default {
       stepsStatus: '',
       isFirstStage: false,
       isFinalStage: false,
+      // 停止轮询状态
+      stopPollingStatus: ['successful', 'failed', 'interrupted'],
     };
   },
   computed: {
@@ -206,23 +208,16 @@ export default {
   },
   methods: {
     async pollingReleaseStageDetail() {
-      const ctx = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-        releaseId: this.releaseId,
-        stageId: this.stageId,
-      };
       await new Promise((resolve) => {
         setTimeout(resolve, 2000);
       });
-      const currentCtx = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-        releaseId: this.releaseId,
-        stageId: this.stageId,
-      };
-      // 页面状态改变, 停止轮询
-      if (ctx !== currentCtx) this.getReleaseStageDetail();
+
+      // 对应状态，停止轮询
+      if (this.stopPollingStatus.includes(this.stageData.status)) {
+        return;
+      }
+      // 轮询获取发布步骤详情
+      this.getReleaseStageDetail();
     },
     // 获取发布步骤详情
     async getReleaseStageDetail() {
@@ -238,13 +233,15 @@ export default {
         }
         const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
         this.stageData = stageData;
+        // 所有阶段都需要进行轮询
+        if (this.stageData.status === 'pending') {
+          this.pollingReleaseStageDetail();
+        }
         switch (this.stageData.stage_id) {
           case 'market':
             break;
           case 'deploy':
-            if (this.stageData.status === 'pending') {
-              this.pollingReleaseStageDetail();
-            } else if (this.stageData.status === 'failed') {
+            if (this.stageData.status === 'failed') {
               // 改变状态
               this.stepsStatus = 'error';
               this.failedMessage = stageData.fail_message;

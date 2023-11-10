@@ -264,7 +264,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategySLZ(many=True)})
+    @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategySLZ})
     def list(self, request, code):
         """查询告警策略"""
         serializer = ListAlarmStrategiesSLZ(data=request.data, context={'app_code': code})
@@ -275,5 +275,5 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALARM_STRATEGIES_FAILED.f(str(e))
 
-        serializer = AlarmStrategySLZ(alarm_strategies, many=True)
+        serializer = AlarmStrategySLZ(alarm_strategies)
         return Response(serializer.data)

@@ -15,6 +15,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
+from typing import Optional
+
 from django.conf import settings
 from rest_framework import serializers
 
@@ -23,6 +26,8 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
 from .models import AppAlertRule
+
+MODULE_NAME_PATTERN = re.compile(r"\s\[([^\s:]+):(prod|stag)\]")
 
 
 class ListAlertRulesSLZ(serializers.Serializer):
@@ -82,11 +87,19 @@ class AlertSLZ(serializers.Serializer):
     receivers = serializers.ListField(
         child=serializers.CharField(), min_length=1, help_text='告警接收者', source='assignee'
     )
+    bk_biz_id = serializers.CharField(help_text='业务id')
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
+    module_name = serializers.SerializerMethodField(help_text='模块名称')
 
     def get_detail_link(self, instance) -> str:
-        bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
+        bk_biz_id = instance['bk_biz_id']
         return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
+
+    def get_module_name(self, instance) -> Optional[str]:
+        match = MODULE_NAME_PATTERN.match(instance.get('alert_name'))
+        if match:
+            return match.group(1)
+        return None
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):
@@ -101,30 +114,44 @@ class ListAlarmStrategiesSLZ(serializers.Serializer):
         return QueryAlarmStrategiesParams(app_code=self.context['app_code'], **data)
 
 
-class TriggerConfigSLZ(serializers.Serializer):
+class DetectSLZ(serializers.Serializer):
     trigger_config = serializers.DictField(help_text='触发器配置')
+    connector = serializers.CharField(help_text='同级别算法连接符')
 
 
 class AlgorithmSLZ(serializers.Serializer):
-    type = serializers.CharField()
-    config = serializers.ListField()
+    type = serializers.CharField(help_text='算法类型')
+    config = serializers.ListField(help_text='算法配置')
+    level = serializers.IntegerField(help_text='告警等级')
 
 
 class AlgorithmsSLZ(serializers.Serializer):
     algorithms = serializers.ListField(help_text='算法列表', child=AlgorithmSLZ())
 
 
-class AlarmStrategySLZ(serializers.Serializer):
+class StrategyConfigSLZ(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField(help_text='策略名称')
     is_enabled = serializers.BooleanField(help_text='是否启用')
     labels = serializers.ListField(child=serializers.CharField())
-    notice_group_ids = serializers.ListField(help_text='通知组 id 列表')
-    detects = serializers.ListField(help_text='检测列表', child=TriggerConfigSLZ())
+    notice_group_ids = serializers.ListField(help_text='通知组 id 列表', source='notice.user_groups')
+    detects = serializers.ListField(help_text='检测列表', child=DetectSLZ())
     items = serializers.ListField(help_text='检测项列表', child=AlgorithmsSLZ())
+    bk_biz_id = serializers.CharField(help_text='业务id')
 
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
 
     def get_detail_link(self, instance) -> str:
-        bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
-        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
+        bk_biz_id = instance['bk_biz_id']
+        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/strategy-config/detail/{instance['id']}"
+
+
+class UserGroupSLZ(serializers.Serializer):
+    user_group_id = serializers.CharField(help_text='通知组 id')
+    user_group_name = serializers.CharField(help_text='通知组名称')
+
+
+class AlarmStrategySLZ(serializers.Serializer):
+    strategy_config_list = serializers.ListField(child=StrategyConfigSLZ(), help_text='策略配置列表')
+    user_group_list = serializers.ListField(child=UserGroupSLZ(), help_text='通知组列表')
+    strategy_config_link = serializers.CharField(help_text='策略配置链接')

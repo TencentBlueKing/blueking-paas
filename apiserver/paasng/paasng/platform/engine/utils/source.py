@@ -29,6 +29,7 @@ from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
 from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.engine.exceptions import DeployShouldAbortError, SkipPatchCode
 from paasng.platform.engine.models import Deployment, EngineApp
@@ -98,7 +99,10 @@ def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
     except NotImplementedError:
         # 对于不支持从源码读取 .dockerignore 的应用, 忽略异常
         return None
-    return DockerIgnore(content)
+
+    # should not ignore dockerfile for kaniko builder
+    dockerfile_path = get_dockerfile_path(module)
+    return DockerIgnore(content, whitelist=[dockerfile_path])
 
 
 def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901

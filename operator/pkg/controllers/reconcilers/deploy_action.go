@@ -67,7 +67,20 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 			"Generation",
 			bkapp.Generation,
 		)
+
+		if bkapp.Generation > bkapp.Status.ObservedGeneration {
+			log.V(2).Info("Update app status ObservedGeneration with new generation.", "Generation", bkapp.Generation)
+
+			bkapp.Status.Phase = paasv1alpha2.AppPending
+			bkapp.Status.ObservedGeneration = bkapp.Generation
+
+			if err = r.Client.Status().Update(ctx, bkapp); err != nil {
+				log.Error(err, "Unable to update app status.")
+				return r.Result.withError(err)
+			}
+		}
 		return r.Result
+
 	}
 
 	// If this is not the initial deploy action, check if there is any preceding running hooks,

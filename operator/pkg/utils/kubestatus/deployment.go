@@ -54,11 +54,16 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		}
 
 		progressingCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentProgressing)
-		if progressingCond != nil && progressingCond.Status == corev1.ConditionFalse {
-			return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, progressingCond)
+		if progressingCond != nil {
+			if progressingCond.Status == corev1.ConditionFalse {
+				return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, progressingCond)
+			}
+			// Deployment 正在滚动更新
+			if deployment.Status.Replicas != *deployment.Spec.Replicas {
+				return makeStatusFromDeploymentCondition(paasv1alpha2.HealthProgressing, progressingCond)
+			}
 		}
 
-		// 只有当前就绪的副本数等于需要的副本数时, Deployment 才完成滚动更新
 		if deployment.Status.UpdatedReplicas == *deployment.Spec.Replicas {
 			availableCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentAvailable)
 			if availableCond != nil {

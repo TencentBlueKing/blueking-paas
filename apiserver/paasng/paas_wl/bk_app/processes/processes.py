@@ -20,7 +20,8 @@ from typing import List, Optional
 
 from attrs import define, field
 
-from paas_wl.bk_app.processes.entities import Process, Status
+from paas_wl.bk_app.processes.entities import Status
+from paas_wl.bk_app.processes.kres_entities import Process
 
 
 def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':

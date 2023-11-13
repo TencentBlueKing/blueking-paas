@@ -26,7 +26,7 @@ from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.bk_app.applications.models import Build, BuildProcess
 from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType
-from paas_wl.bk_app.processes.drf_serializers import ProcessSpecSLZ
+from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import (

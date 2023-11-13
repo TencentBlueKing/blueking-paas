@@ -21,9 +21,9 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.bk_app.processes.kres_entities import Process
+from paas_wl.bk_app.processes.kres_slzs import extract_type_from_name
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
-from paas_wl.bk_app.processes.serializers import extract_type_from_name
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager

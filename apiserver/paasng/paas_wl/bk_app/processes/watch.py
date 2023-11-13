@@ -26,7 +26,7 @@ from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import ProcessesInfo, list_ns_processes, list_processes
-from paas_wl.bk_app.processes.entities import Instance, Process
+from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.bk_app.processes.readers import (
     ProcessAPIAdapter,
     instance_kmodel,

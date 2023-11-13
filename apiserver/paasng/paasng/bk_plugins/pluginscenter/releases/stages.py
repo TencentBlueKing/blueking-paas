@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Type, Union
+from typing import Dict, Optional, Type, Union
 
 import cattrs
 import jinja2
@@ -240,11 +240,16 @@ class SubPageStage(BaseStageController):
         stage_def = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
         if not stage_def:
             raise error_codes.STAGE_DEF_NOT_FOUND
-        if page_url := stage_def.pageUrl:
-            page_url = page_url.format(plugin_id=self.plugin.id, version_id=self.release.version)
+
         # 能否进入到下一步
         can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release)
+        page_url = self.format_page_url(stage_def)
         return {**basic_info, "detail": {"page_url": page_url, "can_proceed": can_proceed}}
+
+    def format_page_url(self, stage_def: ReleaseStageDefinition) -> Optional[str]:
+        if page_url := stage_def.pageUrl:
+            page_url = page_url.format(plugin_id=self.plugin.id, version_id=self.release.version)
+        return page_url
 
 
 class BuiltinStage(BaseStageController):

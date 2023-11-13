@@ -66,7 +66,7 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 			}
 		}
 
-		if deployment.Status.UpdatedReplicas == *deployment.Spec.Replicas {
+		if deployment.Status.UpdatedReplicas == replicas {
 			availableCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentAvailable)
 			if availableCond != nil {
 				if availableCond.Status != corev1.ConditionTrue {

@@ -141,7 +141,7 @@ class TestProcInstManager:
     def test_get_logs(self, wl_app, pod):
         # Query process instances
         inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
-        with mock.patch('paas_wl.bk_app.processes.entities.Instance.Meta.kres_class') as kp:
+        with mock.patch('paas_wl.bk_app.processes.kres_entities.Instance.Meta.kres_class') as kp:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 

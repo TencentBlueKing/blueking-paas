@@ -59,7 +59,7 @@
       </template>
 
       <div class="footer-btn-warp">
-        <bk-popover placement="top" :disabled="isAllowPrev && isItsmStage">
+        <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
           <bk-button
             v-if="!isFirstStage"
             theme="default"
@@ -83,6 +83,7 @@
           :disabled="!isAllowNext"
           @click="handlerNext()"
         >
+          <!-- 是否可以进行下一步 -->
           <template v-if="stageId !== 'market'">
             {{ $t('下一步') }}
           </template>
@@ -101,6 +102,7 @@ import marketStage from './release-stages/market';
 import onlineStage from './release-stages/online';
 import itsmStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
+import testStage from './release-stages/test';
 
 export default {
   components: {
@@ -110,6 +112,7 @@ export default {
     online: onlineStage,
     itsm: itsmStage,
     build: buildStage,
+    test: testStage,
   },
   mixins: [pluginBaseMixin],
   data() {
@@ -125,6 +128,7 @@ export default {
       isFinalStage: false,
       // 停止轮询状态
       stopPollingStatus: ['successful', 'failed', 'interrupted'],
+      isPrevious: false,
     };
   },
   computed: {
@@ -177,6 +181,10 @@ export default {
       }
     },
     isAllowNext() {
+      // 测试阶段下一步按钮禁用由接口返回值决定
+      if (this.curStageComponmentType === 'test') {
+        return this.stageData.detail.can_proceed;
+      }
       return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
     },
     // 是否为审批阶段
@@ -212,8 +220,8 @@ export default {
         setTimeout(resolve, 2000);
       });
 
-      // 对应状态，停止轮询
-      if (this.stopPollingStatus.includes(this.stageData.status)) {
+      // 对应状态，停止轮询 / 上一步停止轮询
+      if (this.stopPollingStatus.includes(this.stageData.status) || this.isPrevious) {
         return;
       }
       // 轮询获取发布步骤详情
@@ -400,6 +408,7 @@ export default {
     // 上一步
     async handlerPrev() {
       this.isLoading = true;
+      this.isPrevious = true;
       try {
         const params = {
           pdId: this.pdId,
@@ -418,6 +427,7 @@ export default {
         setTimeout(() => {
           this.isLoading = false;
           this.stepsStatus = '';
+          this.isPrevious = false;
         }, 200);
       }
     },

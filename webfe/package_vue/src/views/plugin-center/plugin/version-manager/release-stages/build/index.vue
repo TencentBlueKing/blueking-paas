@@ -135,7 +135,6 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 99;
   background: #2A2B2F;
   border-bottom: 1px solid #000;
   color: #fff;

@@ -465,7 +465,7 @@ export default {
                 max-width: calc(100% - 100px);
                 margin: 0 50px;
                 .title-warp {
-                    min-width: 1243px;
+                    // min-width: 1243px;
                 }
             }
         }

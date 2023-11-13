@@ -159,8 +159,19 @@
 </script>
 <style lang="scss" scoped>
 .paas-deploy-timeline {
+  overflow-y: auto;
   list-style: none;
   padding: 0;
+  padding-right: 5px;
+  &::-webkit-scrollbar {
+    width: 4px;
+    background-color: lighten(transparent, 80%);
+  }
+  &::-webkit-scrollbar-thumb {
+    height: 5px;
+    border-radius: 2px;
+    background-color: #C4C6CC;
+  }
 
   .paas-timeline-dot {
     position: relative;

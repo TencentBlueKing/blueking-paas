@@ -17,7 +17,9 @@
               </div>
             </div>
             <div
-              :class="['overview-fright-plugin', { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' }]"
+              :class="['overview-fright-plugin',
+                       { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
+                       { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' }]"
               @click="hideQuickNav"
             >
               <router-view

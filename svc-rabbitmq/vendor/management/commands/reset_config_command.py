@@ -48,6 +48,6 @@ class Command(BaseCommand):
                         f'实例配置变化：'
                         f'\n before:(host:{cluster.host} port:{cluster.port} password:{cluster.password}'
                         f' management_api:{cluster.management_api}) \n '
-                        f'after:( host:{host} port:{port} password:{password} management_api:{management_api})'
+                        f'after:( host:{host} port:{port} password:{password} management_api:{management_api}) \n'
                     )
                 )

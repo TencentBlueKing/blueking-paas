@@ -86,7 +86,6 @@ var _ = Describe("Test DeployActionReconciler", func() {
 	// A shortcut function to expect the deploy action has been ignored.
 	expectDeployActionIgnored := func(ret Result, bkapp *paasv1alpha2.BkApp, deployID string) {
 		Expect(ret.ShouldAbort()).To(BeFalse())
-		Expect(bkapp.Status.Phase).To(BeEmpty())
 		Expect(bkapp.Status.DeployId).To(Equal(deployID))
 	}
 

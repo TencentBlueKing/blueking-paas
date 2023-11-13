@@ -3,8 +3,7 @@
     <div class="top-title mb20">
       <h4>{{ $t('日志采集') }}</h4>
       <p class="tips">
-        {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加') }}
-        <a :href="customCollectorData.url" target="_blank">{{ $t('自定义日志采集规则') }}</a>
+        {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加自定义日志采集规则。') }}
       </p>
     </div>
     <!-- 采集规则 -->
@@ -28,6 +27,12 @@
         @page-change="handlePageChange"
         @page-limit-change="handleLimitChange"
       >
+        <div slot="empty">
+          <table-empty
+            :explanation="$t('当前模块部署成功后，才会下发默认的日志采集规则。')"
+            empty
+          />
+        </div>
         <bk-table-column
           :label="$t('采集规则名称')"
           :show-overflow-tooltip="true"
@@ -103,8 +108,9 @@
       @cancel="hanleDataReset"
     >
       <bk-alert
+        class="mb10"
         type="error"
-        :title="$t('如果需要对用户提供上传附件的服务，请先在后台先行配置。')"
+        :title="$t('采集规则新增、编辑后，需要重新部署应用才能生效。')"
       ></bk-alert>
       <bk-form
         :label-width="200"
@@ -128,6 +134,14 @@
               :id="option.collector_config_id"
               :name="option.name_en"
             ></bk-option>
+            <div
+              slot="extension"
+              style="cursor: pointer;text-align: center;"
+              @click="handleToLink(customCollectorData)"
+            >
+              <i class="bk-icon icon-plus-circle"></i>
+              {{ $t('新增采集规则') }}
+            </div>
           </bk-select>
         </bk-form-item>
         <bk-form-item
@@ -139,13 +153,15 @@
         >
           <bk-radio-group v-model="formData.logType">
             <!-- 编辑状态，禁止切换采集对象 -->
-            <bk-radio :value="'json'" :disabled="isDisabledRadio('json')">{{ $t('容器内文件') }}</bk-radio>
-            <bk-radio :value="'stdout'" :disabled="isDisabledRadio('stdout')">{{ $t('标准输出') }}</bk-radio>
+            <bk-radio :value="'json'">{{ $t('容器内文件') }}</bk-radio>
+            <bk-radio :value="'stdout'" :disabled="true">{{ $t('标准输出') }}</bk-radio>
           </bk-radio-group>
         </bk-form-item>
         <!-- 日志采集路径 -->
         <bk-form-item
           :label="$t('日志采集路径')"
+          :desc="$t('只支持星号（*）通配符')"
+          :desc-type="'icon'"
           v-for="(path, index) in formData.logPaths"
           :required="true"
           :rules="rules.path"
@@ -443,14 +459,6 @@ export default {
       console.log('currentLimit', currentLimit);
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
-    },
-
-    // 禁用当前采集对象选项
-    isDisabledRadio(type) {
-      if (!this.collectionRulesConfig.isCreate) { // 编辑
-        return !(this.formData.logType === type);
-      }
-      return false;
     },
 
     handleToLink(row) {

@@ -3,7 +3,7 @@
     <div class="top-title mb20">
       <h4>{{ $t('告警策略') }}</h4>
       <p class="tips">
-        {{ $t('如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
+        {{ $t('告警策略对应用下所有模块都生效，如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
         <a :href="strategyLink" target="_blank">
           <i class="paasng-icon paasng-jump-link"></i>
           {{ $t('配置告警策略') }}
@@ -14,11 +14,17 @@
     <bk-table
       :data="alarmStrategyList"
       size="small"
-      ext-cls="collection-rules-cls"
+      ext-cls="alarm-strategy-cls"
       :outer-border="false"
       :header-border="false"
       :pagination="pagination"
     >
+      <div slot="empty">
+        <table-empty
+          :explanation="$t('应用任意模块部署成功后，将会配置对应环境的告警策略。')"
+          empty
+        />
+      </div>
       <bk-table-column
         :label="$t('策略名')"
         :show-overflow-tooltip="true"
@@ -55,9 +61,12 @@
       </bk-table-column>
       <bk-table-column
         :label="$t('触发条件')"
+        :show-overflow-tooltip="false"
       >
         <template slot-scope="{ row }">
-          {{ row.triggerCondition }}
+          <span v-bk-tooltips="$t(`在 ${row.algorithm} 个周期内累计满足 ${row.cycle} 次检测算法，触发告警通知`)">
+            {{ `${row.cycle || '--'}/${row.algorithm || '--'}` }}
+          </span>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -100,32 +109,13 @@
   </div>
 </template>
 
-<script>
-import { THRESHOLD_MAP, LEVEL_MAP } from '@/common/constants.js';
+<script>import { THRESHOLD_MAP, LEVEL_MAP } from '@/common/constants.js';
 
 export default {
   name: 'AlarmStrategy',
   data() {
     return {
-      alarmStrategyList: [
-        {
-          name_en: '',
-          id: '',
-          name: '',
-          is_enabled: true,
-          labels: [],
-          notice_group_ids: [],
-          detects: [
-            {
-              trigger_config: {
-                // 触发策略，count/check_window = 触发时机
-                count: 1,
-                check_window: 6,
-              },
-            },
-          ],
-        },
-      ],
+      alarmStrategyList: [],
       // 是否需要分页
       pagination: {
         current: 1,
@@ -166,7 +156,8 @@ export default {
           // 触发条件处理
           if (v.detects.length) {
             const config = v.detects[0].trigger_config;
-            v.triggerCondition = `${config.count}/${config.check_window}`;
+            v.cycle = config.count;
+            v.algorithm = config.check_window;
           }
           // 阈值&级别处理
           if (v.items.length) {
@@ -280,6 +271,12 @@ export default {
     &.level3 {
       border-left: 4px solid #3A84FF;
     }
+  }
+}
+
+.alarm-strategy-cls {
+  /deep/ .bk-table-row-last td {
+    border-bottom: none !important;
   }
 }
 </style>

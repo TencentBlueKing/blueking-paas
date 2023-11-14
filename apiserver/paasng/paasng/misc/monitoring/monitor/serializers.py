@@ -22,6 +22,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
+from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
@@ -87,9 +88,11 @@ class AlertSLZ(serializers.Serializer):
     receivers = serializers.ListField(
         child=serializers.CharField(), min_length=1, help_text='告警接收者', source='assignee'
     )
+    labels = serializers.ListField(child=serializers.CharField())
     bk_biz_id = serializers.CharField(help_text='业务id')
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
     module_name = serializers.SerializerMethodField(help_text='模块名称')
+    env = serializers.SerializerMethodField(help_text='环境')
 
     def get_detail_link(self, instance) -> str:
         bk_biz_id = instance['bk_biz_id']
@@ -99,6 +102,15 @@ class AlertSLZ(serializers.Serializer):
         match = MODULE_NAME_PATTERN.search(instance.get('alert_name'))
         if match:
             return match.group(1)
+        return None
+
+    def get_env(self, instance) -> Optional[str]:
+        """从 labels 中获取运行环境信息"""
+        labels = set(instance.get('labels', []))
+        run_envs = set(RUN_ENVS)
+        env = labels & run_envs
+        if len(env) == 1:
+            return list(env)[0]
         return None
 
 

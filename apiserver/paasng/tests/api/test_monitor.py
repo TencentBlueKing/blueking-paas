@@ -54,6 +54,7 @@ class TestListAlertsView:
         )
         assert len(resp.data) == 3
         assert resp.data[0]['status'] in ['ABNORMAL', 'CLOSED', 'RECOVERED']
+        assert resp.data[0]['env'] in ['stag', 'prod']
         assert len(resp.data[0]['receivers']) == 2
 
 

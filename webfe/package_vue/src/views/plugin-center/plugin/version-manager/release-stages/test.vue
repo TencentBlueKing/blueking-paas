@@ -16,10 +16,6 @@ import stageBaseMixin from './stage-base-mixin';
 export default {
   mixins: [stageBaseMixin],
   props: {
-    pluginData: {
-      type: Object,
-      default: () => {},
-    },
     stageData: {
       type: Object,
       default: () => {},
@@ -35,31 +31,27 @@ export default {
       return this.stageData.detail?.page_url;
     },
   },
-  created() {
-    console.log('pluginData', this.pluginData);
-    console.log('stageData', this.stageData);
-  },
 };
 </script>
 
 <style lang="scss" scoped>
-.testing-container{
-  height: calc(100vh - 218px);
-  margin-top: 60px;
+.testing-container {
+  height: calc(100vh - 194px);
+
+  /* resize and min-height are optional, allows user to resize viewable area */
+  -webkit-resize: vertical;
+  -moz-resize: vertical;
+  resize: vertical;
+  min-height: 317px;
 }
 
-#embed{
-    width: 100%;
-    height: 100%;
-    body::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-        background-color: #fafafa;
-    }
-    body::-webkit-scrollbar-thumb {
-        height: 6px;
-        border-radius: 4px;
-        background-color: #ccc;
-    }
+iframe#embed {
+  width: 100%;
+  height: 100%;
+
+  /* resize seems to inherit in at least Firefox */
+  -webkit-resize:none;
+  -moz-resize:none;
+  resize:none;
 }
 </style>

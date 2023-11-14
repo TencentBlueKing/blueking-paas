@@ -22,14 +22,13 @@ from django.conf import settings
 from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
 from .models import AppAlertRule
 
 MODULE_NAME_PATTERN = re.compile(r"\s\[([^\s:]+):(prod|stag)\]")
-RUN_ENVS = AppEnvironment.get_values()
 
 
 class ListAlertRulesSLZ(serializers.Serializer):
@@ -106,6 +105,7 @@ class AlertSLZ(serializers.Serializer):
         return None
 
     def get_env(self, instance) -> Optional[str]:
+        """从 labels 中获取运行环境信息"""
         labels = set(instance.get('labels', []))
         run_envs = set(RUN_ENVS)
         env = labels & run_envs

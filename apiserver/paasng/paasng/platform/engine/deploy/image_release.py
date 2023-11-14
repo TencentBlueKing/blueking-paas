@@ -22,13 +22,13 @@ from celery import shared_task
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.constants import ArtifactType
-from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
+from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.bk_app.cnative.specs.models import AppModelRevision
 from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.image import get_image_credential_refs
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -153,16 +153,16 @@ class ImageReleaseMgr(DeployStep):
                     password=credential.password,
                 )
         else:
-            # TODO: 云原生应用需要增加模型存储 image_credential_name
             application = self.module_environment.application
-            revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
+
+            credential_refs = get_image_credential_refs(self.module_environment.module)
             try:
-                credential_refs = get_references(revision.json_value)
                 validate_references(application, credential_refs)
             except InvalidImageCredentials as e:
                 # message = f"missing credentials {missing_names}"
                 self.stream.write_message(Style.Error(str(e)))
                 raise
+
             if credential_refs:
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 

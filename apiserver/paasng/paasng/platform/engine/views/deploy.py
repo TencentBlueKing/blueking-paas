@@ -34,13 +34,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.applications.models import Build
-from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.accessories.smart_advisor.utils import get_failure_hint
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
-from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.infras.iam.helpers import fetch_user_roles
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
@@ -62,13 +62,13 @@ from paasng.platform.engine.utils.client import get_all_logs
 from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
-from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
+from paasng.platform.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -130,13 +130,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
             build = Build.objects.get(pk=build_id)
 
-        manifest = params.get("manifest", None)
         if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
-            if not manifest:
-                version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
-            else:
-                # v1alpha1 的云原生应用无 version_info, 但部署流程强依赖了 version_info 对象, 因此这里构造一个空对象来兼容部署流程
-                version_info = VersionInfo("", "manifest", "manifest")
+            version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
         else:
             version_info = self._get_version_info(request.user, module, params, build=build)
 
@@ -152,7 +147,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     operator=request.user.pk,
                     version_info=version_info,
                     advanced_options=params["advanced_options"],
-                    manifest=manifest,
                 )
                 coordinator.set_deployment(deployment)
                 # Start a background deploy task

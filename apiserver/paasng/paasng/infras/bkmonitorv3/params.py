@@ -59,8 +59,8 @@ class QueryAlertsParams:
             'start_time': int(self.start_time.timestamp()),
             'end_time': int(self.end_time.timestamp()),
             'bk_biz_ids': [get_bk_biz_id(self.app_code)],
-            'page_size': 1,
-            'page': 500,
+            'page': 1,
+            'page_size': 500,
             # 按照 ID 降序
             'ordering': ['-id'],
         }

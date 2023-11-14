@@ -21,7 +21,7 @@
     >
       <div slot="empty">
         <table-empty
-          :explanation="$t('应用任意模块部署成功后，将会配置对应环境的告警策略。')"
+          :explanation="$t('应用任意模块部署成功后，将会给该应用下相应环境配置的默认告警策略。')"
           empty
         />
       </div>

@@ -29,7 +29,7 @@
       >
         <div slot="empty">
           <table-empty
-            :explanation="$t('当前模块部署成功后，才会下发默认的日志采集规则。')"
+            :explanation="$t('当前模块任意环境部署成功后，将会给该模块配置默认的日志采集规则。')"
             empty
           />
         </div>
@@ -68,7 +68,7 @@
           </template>
         </bk-table-column>
         <bk-table-column
-          label="操作"
+          :label="$t('操作')"
           width="150"
         >
           <template slot-scope="{ row }">
@@ -161,7 +161,7 @@
         <bk-form-item
           :label="$t('日志采集路径')"
           :desc="$t('只支持星号（*）通配符')"
-          :desc-type="'icon'"
+          :desc-type="'border'"
           v-for="(path, index) in formData.logPaths"
           :required="true"
           :rules="rules.path"

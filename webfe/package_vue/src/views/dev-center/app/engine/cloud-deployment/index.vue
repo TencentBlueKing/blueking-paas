@@ -7,6 +7,7 @@
       :cur-module="curAppModule"
       :module-list="curAppModuleList"
       :first-module-name="firstTabActiveName"
+      :active-route-name="activeRouteName"
     />
     <paas-content-loader
       :placeholder="loaderPlaceholder"
@@ -135,6 +136,7 @@ export default {
       envValidate: true,
       isTab: true,
       dialogCloudAppData: [],
+      activeRouteName: '',
     };
   },
   computed: {
@@ -208,6 +210,7 @@ export default {
   methods: {
     handleGoPage(routeName) {
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
+      this.activeRouteName = routeName;
       this.$router.push({
         name: routeName,
       });

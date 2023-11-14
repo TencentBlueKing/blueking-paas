@@ -16,23 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.applications.constants import AppEnvironment
 
+from .entities import AlertCode
+
 RUN_ENVS = AppEnvironment.get_values()
 
 RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get('service_name', 'rabbitmq')
-
-
-class AlertCode(str, StructuredEnum):
-    HIGH_CPU_USAGE = 'high_cpu_usage'
-    HIGH_MEM_USAGE = 'high_mem_usage'
-    POD_RESTART = 'pod_restart'
-    OOM_KILLED = 'oom_killed'
-    HIGH_RABBITMQ_QUEUE_MESSAGES = 'high_rabbitmq_queue_messages'
 
 
 DEFAULT_RULE_CONFIGS = {

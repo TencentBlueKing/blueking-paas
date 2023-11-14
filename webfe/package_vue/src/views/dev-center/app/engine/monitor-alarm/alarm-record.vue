@@ -109,6 +109,12 @@
           <span v-else v-bk-tooltips="row.genre.name">{{ row.genre.name }}</span>
         </template>
       </bk-table-column>
+      <bk-table-column :label="$t('模块')" width="120">
+        <template slot-scope="{ row }">
+          <span v-if="isBkMonitor">{{ row.module_name || '--' }}</span>
+          <span v-else>{{ row.module || '--' }}</span>
+        </template>
+      </bk-table-column>
       <bk-table-column :label="$t('环境')" width="90">
         <template slot-scope="{ row }">
           <span v-if="row.env">{{
@@ -614,6 +620,7 @@ export default {
         offset: this.pagination.limit * (this.pagination.current - 1),
         limit: this.pagination.limit,
       };
+      params.module = '';
       try {
         const res = await this.$store.dispatch('alarm/getAlarmList', params);
         this.pagination.count = res.count;

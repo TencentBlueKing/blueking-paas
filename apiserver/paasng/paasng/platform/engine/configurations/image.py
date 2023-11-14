@@ -106,13 +106,13 @@ class ImageCredentialManager:
 
 
 class ImageCredentialRefManager:
-    """A Helper provide the image credential reference for the given Module"""
+    """A Helper provide the image credential references for the given Module"""
 
     def __init__(self, module: Module):
         self.module = module
 
     def provide(self) -> List[ImageCredentialRef]:
-        """获取有效的用户自定义镜像凭证 reference"""
+        """provide the valid user-defined image credential references"""
         refs = []
 
         try:
@@ -124,7 +124,7 @@ class ImageCredentialRefManager:
                         credential_name=build_config.image_credential_name,
                     )
                 )
-        except Exception:
+        except BuildConfig.DoesNotExist:
             pass
 
         if refs:

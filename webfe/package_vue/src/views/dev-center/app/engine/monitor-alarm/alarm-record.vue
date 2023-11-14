@@ -78,7 +78,7 @@
       </div>
     </section>
     <bk-table
-      v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+      v-bkloading="{ isLoading: tableLoading, extCls: 'alarm-record-loading-cls', opacity: 1 }"
       :data="tableData"
       size="small"
       :ext-cls="tableLoading ? 'is-being-loading' : ''"
@@ -101,7 +101,8 @@
         :render-header="renderTypeHeader"
       />
       <bk-table-column
-        :label="isBkMonitor ? $t('告警名称') : $t('类型')" width="180"
+        :label="isBkMonitor ? $t('告警名称') : $t('类型')"
+        :min-width="220"
         :show-overflow-tooltip="true"
       >
         <template slot-scope="{ row }">
@@ -1219,5 +1220,9 @@ export default {
       }
     }
   }
+}
+
+.alarm-record-loading-cls {
+  width: calc(100% - 1px);
 }
 </style>

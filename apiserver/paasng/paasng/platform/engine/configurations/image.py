@@ -22,13 +22,17 @@ import arrow
 from django.conf import settings
 
 from paas_wl.bk_app.applications.models import Build
+from paas_wl.bk_app.cnative.specs.credentials import split_image
 from paas_wl.bk_app.processes.services import refresh_res_reqs
+from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.modules.models import BuildConfig, Module
+from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.utils import SMartImageManager
@@ -99,6 +103,43 @@ class ImageCredentialManager:
         if repo_full_url and username and password:
             return ImageCredential(registry=repo_full_url, username=username, password=password)
         return None
+
+
+class ImageCredentialRefManager:
+    """A Helper provide the image credential reference for the given Module"""
+
+    def __init__(self, module: Module):
+        self.module = module
+
+    def provide(self) -> List[ImageCredentialRef]:
+        """获取有效的用户自定义镜像凭证 reference"""
+        refs = []
+
+        try:
+            build_config = BuildConfig.objects.get(module=self.module)
+            if build_config.image_repository and build_config.image_credential_name:
+                refs.append(
+                    ImageCredentialRef(
+                        image=split_image(build_config.image_repository),
+                        credential_name=build_config.image_credential_name,
+                    )
+                )
+        except Exception:
+            pass
+
+        if refs:
+            return refs
+
+        # TODO v1alph1 版本迁移完成后, 删除下面的代码并重构当前函数
+        for proc_spec in ModuleProcessSpec.objects.filter(module=self.module):
+            if proc_spec.image and proc_spec.image_credential_name:
+                refs.append(
+                    ImageCredentialRef(
+                        image=split_image(proc_spec.image), credential_name=proc_spec.image_credential_name
+                    )
+                )
+
+        return refs
 
 
 class RuntimeImageInfo:

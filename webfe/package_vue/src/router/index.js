@@ -600,7 +600,7 @@ const router = new Router({
           ],
         },
         {
-          path: ':id/:moduleId/cloud-deploy',
+          path: ':id/:moduleId/module-configs',
           component: cloudAppDeployments,
           name: 'cloudAppDeploy',
           redirect: {
@@ -681,10 +681,11 @@ const router = new Router({
             },
             {
               path: 'module-info',
+              path: 'info',
               component: moduleInfo,
               name: 'moduleInfo',
               meta: {
-                module: 'module-info',
+                module: 'info',
               },
             },
             {

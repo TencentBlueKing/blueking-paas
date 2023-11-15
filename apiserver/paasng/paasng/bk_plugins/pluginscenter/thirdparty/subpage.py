@@ -36,10 +36,9 @@ def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: 
     resp = utils.make_client(sub_stage_definition.api.result).call(
         path_params={"plugin_id": plugin.id, "version_id": version.version}
     )
-    # TODO 计算平台先给的临时 API，后续返回值会变
     if not resp.get('result'):
         logger.error(f"get sub page status error: {resp.get('message')}")
         return False
 
-    status = resp.get('data').get('status')
-    return status == 'running'
+    is_success = resp.get('data').get('is_success')
+    return is_success

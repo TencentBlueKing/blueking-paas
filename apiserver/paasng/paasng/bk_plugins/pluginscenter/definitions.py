@@ -185,6 +185,7 @@ class ReleaseStageDefinition(BaseModel):
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
     itsmServiceName: Optional[str] = Field(description="itsm 服务名称, 类型为 itsm 时必填")
     builtinParams: Optional[Dict] = Field(description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)")
+    nextStepDisabledTips: Optional[str] = Field(description="下一步按钮 Disabled 时的提示，用于辅助展示")
 
 
 @register

@@ -96,14 +96,8 @@ class SMartImageManager:
 
     def get_image_info(self, tag: str = "latest") -> NamedImage:
         """获取当前 S-Mart 应用的镜像信息"""
-        # TODO: bkrepo 支持 https 访问后去除该逻辑.
-        if ":80" in bksmart_settings.registry.host:
-            host = bksmart_settings.registry.host.replace(":80", "")
-        else:
-            host = bksmart_settings.registry.host
-
         return NamedImage(
-            domain=host,
+            domain=bksmart_settings.registry.host,
             name=f"{bksmart_settings.registry.namespace}/{self.module.application.code}/{self.module.name}",
             tag=tag,
         )

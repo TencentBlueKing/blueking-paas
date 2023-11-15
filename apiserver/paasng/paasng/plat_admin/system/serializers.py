@@ -57,8 +57,6 @@ class UniversalAppSLZ(serializers.Serializer):
     developers = serializers.ListField(child=serializers.CharField(), help_text="开发者人员列表")
     creator = serializers.CharField(help_text="应用创建者")
     created = serializers.DateTimeField(help_text="创建时间")
-    # 普通应用的导航地址和云原生应用的导航地址不一致，其他平台如 lesscode 要展示开发者中心的地址链接时，需要根据应用类型来区分
-    type = serializers.CharField(help_text="应用类型", default="default")
 
 
 class ContactInfo(serializers.Serializer):

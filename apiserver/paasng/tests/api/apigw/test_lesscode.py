@@ -26,13 +26,12 @@ from django.conf import settings
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 from tests.utils.helpers import generate_random_string
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
@@ -81,7 +80,6 @@ class TestApiInAPIGW:
         )
         assert response.status_code == 201
         assert response.json()['application']['modules'][0]['source_origin'] == SourceOrigin.BK_LESS_CODE
-        assert response.json()['application']['type'] == ApplicationType.CLOUD_NATIVE.value
 
 
 class TestModuleSourcePackageViewSet:

@@ -3,12 +3,7 @@ from textwrap import dedent
 
 import pytest
 
-from paasng.platform.sourcectl.utils import (
-    DockerIgnore,
-    compress_directory_ext,
-    generate_temp_dir,
-    generate_temp_file,
-)
+from paasng.platform.sourcectl.utils import DockerIgnore, compress_directory_ext, generate_temp_dir, generate_temp_file
 
 
 class TestDockerIgnore:
@@ -149,6 +144,16 @@ class TestDockerIgnore:
         di = DockerIgnore(content)
         assert [di.should_ignore(case) for case in cases] == expected
 
+    @pytest.mark.parametrize("whitelist", [["Dockerfile"], ["./Dockerfile"]])
+    def test_whitelist(self, whitelist):
+        di = DockerIgnore("Dockerfile", whitelist=whitelist)
+        with generate_temp_dir() as workdir, generate_temp_file(suffix=".tar.gz") as dest:
+            (workdir / "Dockerfile").write_text("flag")
+
+            compress_directory_ext(workdir, dest, di.should_ignore)
+            with tarfile.open(dest, mode="r:gz") as tf:
+                assert {m.name for m in tf.getmembers()} == {"Dockerfile"}
+
 
 def test_compress_with_docker_ignore():
     di = DockerIgnore(
@@ -157,8 +162,10 @@ def test_compress_with_docker_ignore():
         !**/*.py
         !**/*.md
         secret/README.md
+        Dockerfile
         """
-        )
+        ),
+        whitelist=["./Dockerfile"],
     )
     with generate_temp_dir() as workdir, generate_temp_file(suffix=".tar.gz") as dest:
         (workdir / "secret").mkdir()
@@ -168,6 +175,7 @@ def test_compress_with_docker_ignore():
         (workdir / "src" / "__init__.py").write_text("")
         (workdir / "src" / "__main__.py").write_text("")
         (workdir / "README.md").write_text("flag")
+        (workdir / "Dockerfile").write_text("flag")
 
         compress_directory_ext(workdir, dest, di.should_ignore)
         with tarfile.open(dest, mode="r:gz") as tf:
@@ -176,4 +184,5 @@ def test_compress_with_docker_ignore():
                 "src/__init__.py",
                 "src/flag.md",
                 "src/__main__.py",
+                "Dockerfile",
             }

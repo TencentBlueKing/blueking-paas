@@ -1,6 +1,22 @@
 <template>
   <div class="paas-monitor-alarm-wrapper">
     <section class="search-wrapper">
+      <div class="search-select" v-if="isSourceSelect">
+        <div class="select mr10">
+          <bk-select
+            v-model="curSourceValue"
+            style="width: 120px"
+            :clearable="false"
+          >
+            <bk-option
+              v-for="option in sourceList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+      </div>
       <div class="search-select">
         <div class="select">
           <bk-select
@@ -12,24 +28,6 @@
               v-for="option in envList"
               :id="option.id"
               :key="option.id"
-              :name="option.name"
-            />
-          </bk-select>
-        </div>
-      </div>
-      <div class="search-select ml">
-        <div class="select">
-          <bk-select
-            v-model="curType"
-            :placeholder="$t('类型')"
-            :loading="selectLoading"
-            :popover-min-width="240"
-            style="width: 240px"
-          >
-            <bk-option
-              v-for="option in typeList"
-              :id="option.uuid"
-              :key="option.uuid"
               :name="option.name"
             />
           </bk-select>
@@ -72,7 +70,7 @@
         </div>
       </div>
       <div
-        :class="['search-action', { 'reset-right': curDateType !== 'custom' }]"
+        :class="['search-action', { 'not-source': !isSourceSelect }, { 'reset-right': curDateType !== 'custom' }]"
       >
         <bk-button theme="primary" @click="handleSearch">
           {{ $t("查询") }}
@@ -80,8 +78,8 @@
       </div>
     </section>
     <bk-table
-      v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
-      :data="alarmRecordList"
+      v-bkloading="{ isLoading: tableLoading, extCls: 'alarm-record-loading-cls', opacity: 1 }"
+      :data="tableData"
       size="small"
       :ext-cls="tableLoading ? 'is-being-loading' : ''"
       :pagination="pagination"
@@ -92,31 +90,44 @@
         <table-empty
           :keyword="tableEmptyConf.keyword"
           :abnormal="tableEmptyConf.isAbnormal"
-          @reacquire="fetchRecordList(true)"
+          @reacquire="getCurrentFun"
           @clear-filter="clearFilter"
         />
       </div>
       <bk-table-column
         :label="$t('告警开始时间')"
-        prop="start"
+        :prop="isBkMonitor ? 'start_time' : 'start'"
         width="160"
         :render-header="renderTypeHeader"
       />
-      <bk-table-column :label="$t('环境')" width="90">
+      <bk-table-column
+        :label="isBkMonitor ? $t('告警名称') : $t('类型')"
+        :width="250"
+        :show-overflow-tooltip="true"
+      >
         <template slot-scope="{ row }">
-          <span>{{
-            row.env === "stag" ? $t("预发布环境") : $t("生产环境")
-          }}</span>
+          <span v-if="isBkMonitor">{{ row.alert_name || '--' }}</span>
+          <span v-else v-bk-tooltips="row.genre.name">{{ row.genre.name }}</span>
         </template>
       </bk-table-column>
-      <bk-table-column :label="$t('类型')" width="200">
+      <bk-table-column :label="$t('模块')" width="120">
         <template slot-scope="{ row }">
-          <span v-bk-tooltips="row.genre.name">{{ row.genre.name }}</span>
+          <span v-if="isBkMonitor">{{ row.module_name || '--' }}</span>
+          <span v-else>{{ row.module || '--' }}</span>
+        </template>
+      </bk-table-column>
+      <bk-table-column :label="$t('环境')" width="90">
+        <template slot-scope="{ row }">
+          <span v-if="row.env">{{
+            row.env === "stag" ? $t("预发布环境") : $t("生产环境")
+          }}</span>
+          <span v-else>--</span>
         </template>
       </bk-table-column>
       <bk-table-column :label="$t('内容')">
         <template slot-scope="{ row }">
-          <span v-bk-tooltips="row.message">{{ row.message || "--" }}</span>
+          <span v-if="isBkMonitor" v-bk-tooltips="row.description">{{ row.description || '--' }}</span>
+          <span v-else v-bk-tooltips="row.message">{{ row.message || "--" }}</span>
         </template>
       </bk-table-column>
       <bk-table-column :label="$t('操作')" width="150">
@@ -186,7 +197,7 @@
             <a
               v-if="
                 curDetailData.genre &&
-                curDetailData.genre.name === 'GCS-MySQL 慢查询'
+                  curDetailData.genre.name === 'GCS-MySQL 慢查询'
               "
               style="line-height: 28px"
               :href="GLOBAL.DOC.CHECK_SQL"
@@ -264,36 +275,35 @@
     </bk-sideslider>
   </div>
 </template>
-<script>
-import _ from "lodash";
-import ECharts from "vue-echarts/components/ECharts.vue";
-import "echarts/lib/chart/line";
-import "echarts/lib/component/tooltip";
-import "echarts/lib/component/markLine";
-import "echarts/lib/component/markPoint";
-import moment from "moment";
-import chartOption from "@/json/alarm-record-chart-option";
-import i18n from "@/language/i18n";
+<script>import _ from 'lodash';
+import ECharts from 'vue-echarts/components/ECharts.vue';
+import 'echarts/lib/chart/line';
+import 'echarts/lib/component/tooltip';
+import 'echarts/lib/component/markLine';
+import 'echarts/lib/component/markPoint';
+import moment from 'moment';
+import chartOption from '@/json/alarm-record-chart-option';
+import i18n from '@/language/i18n';
 
-const initEndDate = moment().format("YYYY-MM-DD HH:mm:ss");
+const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
 const initStartDate = moment()
-  .subtract(1, "days")
-  .format("YYYY-MM-DD HH:mm:ss");
+  .subtract(1, 'days')
+  .format('YYYY-MM-DD HH:mm:ss');
 
 // console.warn(initEndDate)
 // console.warn(initStartDate)
 
-let timeRangeCache = "";
-let timeShortCutText = "";
+let timeRangeCache = '';
+let timeShortCutText = '';
 export default {
-  name: "",
+  name: '',
   components: {
     chart: ECharts,
   },
   data() {
     const dateShortCut = [
       {
-        text: i18n.t("最近5分钟"),
+        text: i18n.t('最近5分钟'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -301,12 +311,12 @@ export default {
           return [start, end];
         },
         onClick(picker) {
-          timeRangeCache = "5m";
-          timeShortCutText = i18n.t("最近5分钟");
+          timeRangeCache = '5m';
+          timeShortCutText = i18n.t('最近5分钟');
         },
       },
       {
-        text: i18n.t("最近1小时"),
+        text: i18n.t('最近1小时'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -314,12 +324,12 @@ export default {
           return [start, end];
         },
         onClick(picker) {
-          timeRangeCache = "1h";
-          timeShortCutText = i18n.t("最近1小时");
+          timeRangeCache = '1h';
+          timeShortCutText = i18n.t('最近1小时');
         },
       },
       {
-        text: i18n.t("最近3小时"),
+        text: i18n.t('最近3小时'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -327,12 +337,12 @@ export default {
           return [start, end];
         },
         onClick(picker) {
-          timeRangeCache = "3h";
-          timeShortCutText = i18n.t("最近3小时");
+          timeRangeCache = '3h';
+          timeShortCutText = i18n.t('最近3小时');
         },
       },
       {
-        text: i18n.t("最近12小时"),
+        text: i18n.t('最近12小时'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -340,12 +350,12 @@ export default {
           return [start, end];
         },
         onClick(picker) {
-          timeRangeCache = "12h";
-          timeShortCutText = i18n.t("最近12小时");
+          timeRangeCache = '12h';
+          timeShortCutText = i18n.t('最近12小时');
         },
       },
       {
-        text: i18n.t("最近1天"),
+        text: i18n.t('最近1天'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -353,12 +363,12 @@ export default {
           return [start, end];
         },
         onClick(picker) {
-          timeRangeCache = "1d";
-          timeShortCutText = i18n.t("最近1天");
+          timeRangeCache = '1d';
+          timeShortCutText = i18n.t('最近1天');
         },
       },
       {
-        text: i18n.t("最近7天"),
+        text: i18n.t('最近7天'),
         value() {
           const end = new Date();
           const start = new Date();
@@ -366,8 +376,8 @@ export default {
           return [start, end];
         },
         onClick(picker) {
-          timeRangeCache = "7d";
-          timeShortCutText = i18n.t("最近7天");
+          timeRangeCache = '7d';
+          timeShortCutText = i18n.t('最近7天');
         },
       },
     ];
@@ -383,22 +393,20 @@ export default {
       },
       curData: {},
       isTypeSort: true,
-      curEnv: "",
+      curEnv: '',
       envList: [
         {
-          name: i18n.t("预发布环境"),
-          id: "stag",
+          name: i18n.t('预发布环境'),
+          id: 'stag',
         },
         {
-          name: i18n.t("生产环境"),
-          id: "prod",
+          name: i18n.t('生产环境'),
+          id: 'prod',
         },
       ],
-      curType: "",
-      typeList: [],
       selectLoading: false,
       currentBackup: 1,
-      keyword: "",
+      keyword: '',
 
       datePickerOption: {
         // 小于今天的都不能选
@@ -406,60 +414,110 @@ export default {
           return date && date.valueOf() > Date.now() - 86400;
         },
       },
-      dateShortCut: dateShortCut,
+      dateShortCut,
       initDateTimeRange: [initStartDate, initEndDate],
       dateParams: {
         start_time: initStartDate,
         end_time: initEndDate,
       },
-      timerDisplay: this.$t("最近1天"),
+      timerDisplay: this.$t('最近1天'),
       isDatePickerOpen: false,
       searchParams: {
-        code: "",
-        module: "",
-        env: "",
-        uuid: "",
-        search: "",
+        code: '',
+        module: '',
+        env: '',
+        uuid: '',
+        search: '',
         is_active: false,
-        genre: "",
+        genre: '',
         start_after: initStartDate,
         start_before: initEndDate,
-        ordering: "-start",
+        ordering: '-start',
       },
       curDetailData: {},
       executorMap: {
-        notify: this.$t("发送通知"),
+        notify: this.$t('发送通知'),
       },
       noticeTypeMap: {
-        qywx: this.$t("企业微信"),
-        email: this.$t("邮件"),
-        wx: this.$t("微信"),
+        qywx: this.$t('企业微信'),
+        email: this.$t('邮件'),
+        wx: this.$t('微信'),
       },
-      curDateType: "custom",
-      requestQueue: ["detail"],
+      curDateType: 'custom',
+      requestQueue: ['detail'],
       isShowMetrics: true,
       alarmMetrics: chartOption,
-      alarmMetricsTitle: "",
+      alarmMetricsTitle: '',
       metricsList: [],
-      metricsThreshold: "",
+      metricsThreshold: '',
       metricsLoading: false,
-      pageRequestQueue: ["type", "list"],
+      pageRequestQueue: ['list'],
       tableEmptyConf: {
-        keyword: "",
+        keyword: '',
         isAbnormal: false,
       },
+      curSourceValue: 'BK',
+      curTableSources: 'BK',
+      sourceList: [
+        { id: 'BK', name: this.$t('蓝鲸监控') },
+        { id: 'BCS', name: this.$t('BCS 监控') },
+      ],
+      bkAlarmRecordList: [],
+      // 默认为升序
+      sortDirection: 'asc',
     };
   },
   computed: {
     sliderLoading() {
       return this.requestQueue.length > 0;
     },
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    // 云原生app
+    isCloudNativeApp() {
+      return this.curAppInfo.application.type === 'cloud_native';
+    },
+    // 是否显示来源
+    isSourceSelect() {
+      // 非云原生 & te
+      return !this.isCloudNativeApp && this.$isInternalVersion;
+    },
+    // 下拉框是否为蓝鲸监控
+    selectValueBK() {
+      return this.curSourceValue === 'BK';
+    },
+    // 数据为蓝鲸监控
+    isBkMonitor() {
+      return this.curTableSources === 'BK';
+    },
+    tableData() {
+      // 蓝鲸监控全量数据前端分页
+      return this.isBkMonitor ? this.curBkPageData : this.alarmRecordList;
+    },
+    // 蓝鲸监控当前页数据
+    curBkPageData() {
+      // 当前页数
+      const page = this.pagination.current;
+      // limit 页容量
+      let startIndex = (page - 1) * this.pagination.limit;
+      let endIndex = page * this.pagination.limit;
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+      if (endIndex > this.bkAlarmRecordList.length) {
+        endIndex = this.bkAlarmRecordList.length;
+      }
+
+      // 默认升序
+      return this.bkAlarmRecordList.slice(startIndex, endIndex).sort((a, b) => (this.sortDirection === 'asc' ? a.start_time.localeCompare(b.start_time) : b.start_time.localeCompare(a.start_time)));
+    },
   },
   watch: {
     $route() {
       this.handleInit();
     },
-    "pagination.current"(value) {
+    'pagination.current'(value) {
       this.currentBackup = value;
     },
     metricsLoading(val) {
@@ -471,7 +529,7 @@ export default {
     },
     pageRequestQueue(value) {
       if (value.length < 1) {
-        this.$emit("data-ready");
+        this.$emit('data-ready');
       }
     },
   },
@@ -480,13 +538,13 @@ export default {
   },
   methods: {
     async handleInit() {
-      this.keyword = "";
+      this.keyword = '';
       this.isTypeSort = true;
       this.pagination.current = 1;
       this.pagination.limit = 10;
-      this.curDateType = "custom";
+      this.curDateType = 'custom';
       this.handleResetSearchParams();
-      await Promise.all([this.fetchRecordType(), this.fetchRecordList(true)]);
+      await this.getCurrentFun();
       // 存在query参数时应先触发打开侧边栏的逻辑
       setTimeout(() => {
         if (this.$route.query.record) {
@@ -495,7 +553,7 @@ export default {
             uuid: this.$route.query.record,
           };
           this.isShowDetailSlider = true;
-          this.requestQueue = ["detail"];
+          this.requestQueue = ['detail'];
           this.fetchAlarmDetail(() => {
             this.fetchAlarmMetrics();
           });
@@ -508,7 +566,7 @@ export default {
     },
 
     handleResetSearchParams() {
-      const query = this.$route.query;
+      const { query } = this.$route;
 
       if (query.start_after && query.start_before) {
         this.initDateTimeRange = [query.start_after, query.start_before];
@@ -517,12 +575,12 @@ export default {
           {
             start_time: query.start_after,
             end_time: query.start_before,
-          }
+          },
         );
         this.timerDisplay = `${query.start_after} - ${query.start_before}`;
         this.searchParams.start_after = query.start_after;
         this.searchParams.start_before = query.start_before;
-        this.curDateType = "date";
+        this.curDateType = 'date';
       } else {
         this.initDateTimeRange = [initStartDate, initEndDate];
         this.dateParams = Object.assign(
@@ -530,63 +588,47 @@ export default {
           {
             start_time: initStartDate,
             end_time: initEndDate,
-          }
+          },
         );
-        this.timerDisplay = this.$t("最近1天");
+        this.timerDisplay = this.$t('最近1天');
         this.searchParams.start_after = initStartDate;
         this.searchParams.start_before = initEndDate;
       }
 
-      timeShortCutText = ""; // 清空
-      timeRangeCache = ""; // 清空
+      timeShortCutText = ''; // 清空
+      timeRangeCache = ''; // 清空
 
-      this.searchParams.env = query.env ? query.env : "";
-      this.curEnv = query.env ? query.env : "";
-      this.searchParams.search = query.search ? query.search : "";
-      this.keyword = query.search ? query.search : "";
-      this.searchParams.genre = query.genre ? query.genre : "";
+      this.searchParams.env = query.env ? query.env : '';
+      this.curEnv = query.env ? query.env : '';
+      this.searchParams.search = query.search ? query.search : '';
+      this.keyword = query.search ? query.search : '';
+      this.searchParams.genre = query.genre ? query.genre : '';
       this.searchParams.code = this.$route.params.id;
-      this.searchParams.module = this.$route.params.moduleId || "";
-      this.pageRequestQueue = ["type", "list"];
+      this.searchParams.module = this.$route.params.moduleId || '';
+      this.pageRequestQueue = ['list'];
     },
 
-    async fetchRecordType() {
-      const params = {
-        appCode: this.searchParams.code,
-        offset: 0,
-        limit: 1000,
-      };
-      this.selectLoading = true;
-      try {
-        const res = await this.$store.dispatch("alarm/getAlarmType", params);
-        this.typeList.splice(0, this.typeList.length, ...(res.results || []));
-        this.curType = this.$route.query.genre || "";
-      } catch (e) {
-        this.$paasMessage({
-          limit: 1,
-          theme: "error",
-          message: `${this.$t("获取告警类型失败： ")}${e.detail}`,
-        });
-      } finally {
-        this.selectLoading = false;
-        this.pageRequestQueue.shift();
-      }
+    async getCurrentFun() {
+      this.selectValueBK ? await this.getBkRecordList() : await this.fetchRecordList(true);
     },
 
+    // 获取BCS监控数据
     async fetchRecordList(isTableLoading = false) {
       this.tableLoading = isTableLoading;
+      this.curTableSources = 'BCS';
       const params = {
         ...this.searchParams,
         offset: this.pagination.limit * (this.pagination.current - 1),
         limit: this.pagination.limit,
       };
+      params.module = '';
       try {
-        const res = await this.$store.dispatch("alarm/getAlarmList", params);
+        const res = await this.$store.dispatch('alarm/getAlarmList', params);
         this.pagination.count = res.count;
         this.alarmRecordList.splice(
           0,
           this.alarmRecordList.length,
-          ...(res.results || [])
+          ...(res.results || []),
         );
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
@@ -594,8 +636,49 @@ export default {
         this.tableEmptyConf.isAbnormal = true;
         this.$paasMessage({
           limit: 1,
-          theme: "error",
-          message: `${this.$t("获取告警记录失败： ")}${e.detail}`,
+          theme: 'error',
+          message: `${this.$t('获取告警记录失败： ')}${e.detail}`,
+        });
+      } finally {
+        this.tableLoading = false;
+        this.pageRequestQueue.shift();
+      }
+    },
+
+    // 获取蓝鲸监控
+    async getBkRecordList() {
+      this.tableLoading = true;
+      // 当前数据源为蓝鲸监控
+      this.curTableSources = 'BK';
+
+      // 请求参数格式化
+      const data = {
+        start_time: this.searchParams.start_after,
+        end_time: this.searchParams.start_before,
+      };
+      if (this.searchParams.env) {
+        data.environment = this.searchParams.env;
+      }
+      if (this.searchParams.search) {
+        data.keyword = this.searchParams.search;
+      }
+      try {
+        const alarmList = await this.$store.dispatch('alarm/getBkAlarmList', {
+          appCode: this.searchParams.code,
+          data,
+        });
+
+        // 全量数据前端分页
+        this.pagination.count = alarmList.length;
+        this.bkAlarmRecordList = alarmList;
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: `${this.$t('获取告警记录失败： ')}${e.detail}`,
         });
       } finally {
         this.tableLoading = false;
@@ -604,26 +687,19 @@ export default {
     },
 
     timestampToTime(timestamp) {
-      let time = "";
+      let time = '';
       if (timestamp) {
         time = new Date(timestamp);
       } else {
         time = new Date();
       }
-      const Y = time.getFullYear() + "-";
-      const M =
-        (time.getMonth() + 1 < 10
-          ? "0" + (time.getMonth() + 1)
-          : time.getMonth() + 1) + "-";
-      const D = time.getDate() < 10 ? "0" + time.getDate() : time.getDate();
-      const h =
-        (time.getHours() < 10 ? "0" + time.getHours() : time.getHours()) + ":";
-      const m =
-        (time.getMinutes() < 10 ? "0" + time.getMinutes() : time.getMinutes()) +
-        ":";
-      const s =
-        time.getSeconds() < 10 ? "0" + time.getSeconds() : time.getSeconds();
-      return Y + M + D + " " + h + m + s;
+      const Y = `${time.getFullYear()}-`;
+      const M = `${time.getMonth() + 1 < 10 ? `0${time.getMonth() + 1}` : time.getMonth() + 1}-`;
+      const D = time.getDate() < 10 ? `0${time.getDate()}` : time.getDate();
+      const h = `${time.getHours() < 10 ? `0${time.getHours()}` : time.getHours()}:`;
+      const m = `${time.getMinutes() < 10 ? `0${time.getMinutes()}` : time.getMinutes()}:`;
+      const s = time.getSeconds() < 10 ? `0${time.getSeconds()}` : time.getSeconds();
+      return `${Y + M + D} ${h}${m}${s}`;
     },
 
     async fetchAlarmMetrics() {
@@ -636,20 +712,20 @@ export default {
       const params = {
         code: app,
         record: uuid,
-        step: "1m",
+        step: '1m',
         start: getTime(-60 * 1000 * 40),
         end: getTime(+60 * 1000 * 20),
       };
       this.metricsLoading = true;
       try {
-        const res = await this.$store.dispatch("alarm/getAlarmMetrics", params);
+        const res = await this.$store.dispatch('alarm/getAlarmMetrics', params);
         this.isShowMetrics = true;
         this.alarmMetricsTitle = res.name;
         this.metricsThreshold = res.threshold;
         this.metricsList.splice(
           0,
           this.metricsList.length,
-          ...(res.results || [])
+          ...(res.results || []),
         );
         // this.$nextTick(() => {
         //     this.handleRenderChart(this.metricsList)
@@ -674,44 +750,43 @@ export default {
       payload.forEach((item) => {
         const { values } = item;
         values.forEach((val) => {
-          xAxisData.push(moment(val[0] * 1000).format("MM-DD HH:mm:ss"));
+          xAxisData.push(moment(val[0] * 1000).format('MM-DD HH:mm:ss'));
           chartData.push(val[1]);
         });
-        const curValues =
-          values.find((val) => val[0] === curTime / 1000) || values[0];
+        const curValues =          values.find(val => val[0] === curTime / 1000) || values[0];
         series.push({
           name: this.alarmMetricsTitle,
-          type: "line",
+          type: 'line',
           smooth: true,
-          symbol: "none",
+          symbol: 'none',
           lineStyle: {
             normal: {
-              color: "#3a84ff",
+              color: '#3a84ff',
               width: 1,
             },
           },
           markLine: {
-            symbol: "none",
+            symbol: 'none',
             data: [
               {
-                name: "",
+                name: '',
                 yAxis: this.metricsThreshold,
               },
             ],
             lineStyle: {
               normal: {
-                color: "#c23531",
+                color: '#c23531',
               },
             },
           },
           markPoint: {
-            symbol: "circle",
+            symbol: 'circle',
             symbolSize: 10,
             data: [
               {
-                name: "",
+                name: '',
                 coord: [
-                  moment(curTime).format("MM-DD HH:mm:ss"),
+                  moment(curTime).format('MM-DD HH:mm:ss'),
                   curValues[1].toFixed(2),
                 ],
                 label: {
@@ -723,7 +798,7 @@ export default {
             ],
             itemStyle: {
               normal: {
-                color: "#1768ef",
+                color: '#1768ef',
               },
             },
           },
@@ -737,15 +812,15 @@ export default {
             data: xAxisData,
           },
         ],
-        series: series,
+        series,
       });
     },
 
     clearChart() {
       const metricsRef = this.$refs.alarmMetrics;
 
-      metricsRef &&
-        metricsRef.mergeOptions({
+      metricsRef
+        && metricsRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -753,13 +828,13 @@ export default {
           ],
           series: [
             {
-              name: "",
-              type: "line",
+              name: '',
+              type: 'line',
               smooth: true,
-              symbol: "none",
+              symbol: 'none',
               lineStyle: {
                 normal: {
-                  color: "#3a84ff",
+                  color: '#3a84ff',
                   width: 1,
                 },
               },
@@ -781,15 +856,15 @@ export default {
         record: uuid,
       };
       try {
-        const res = await this.$store.dispatch("alarm/getAlarmDetail", params);
+        const res = await this.$store.dispatch('alarm/getAlarmDetail', params);
         this.curDetailData = JSON.parse(JSON.stringify(res));
         this.curData.start = this.curDetailData.start;
         callback && callback();
       } catch (e) {
         this.$paasMessage({
           limit: 1,
-          theme: "error",
-          message: `${this.$t("获取告警记录详情失败： ")}${e.detail}`,
+          theme: 'error',
+          message: `${this.$t('获取告警记录详情失败： ')}${e.detail}`,
         });
       } finally {
         this.requestQueue.shift();
@@ -800,17 +875,17 @@ export default {
      * 选择自定义时间
      */
     handlerChange(dates, type) {
-      this.curDateType = !type ? "custom" : type;
+      this.curDateType = !type ? 'custom' : type;
       this.dateParams.start_time = dates[0];
       this.dateParams.end_time = dates[1];
-      this.dateParams.time_range = timeRangeCache || "customized";
+      this.dateParams.time_range = timeRangeCache || 'customized';
       if (timeShortCutText) {
         this.timerDisplay = timeShortCutText;
       } else {
         this.timerDisplay = `${dates[0]} - ${dates[1]}`;
       }
-      timeShortCutText = ""; // 清空
-      timeRangeCache = ""; // 清空
+      timeShortCutText = ''; // 清空
+      timeRangeCache = ''; // 清空
     },
 
     toggleDatePicker() {
@@ -824,67 +899,80 @@ export default {
       this.isDatePickerOpen = false;
     },
 
+    // 查询回调
     handleSearch() {
       this.searchParams.start_after = this.dateParams.start_time;
       this.searchParams.start_before = this.dateParams.end_time;
       this.searchParams.env = this.curEnv;
-      this.searchParams.genre = this.curType;
       this.searchParams.search = this.keyword;
-      this.fetchRecordList(true);
+      this.getCurrentFun();
     },
 
+    // 告警记录排序
     handleTypeSort() {
       if (!this.pagination.count) {
         return;
       }
+      // 蓝鲸监控排序
+      if (this.isBkMonitor) {
+        // 前端排序
+        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        return;
+      }
       this.isTypeSort = !this.isTypeSort;
-      this.searchParams.ordering = this.isTypeSort ? "-start" : "start";
+      this.searchParams.ordering = this.isTypeSort ? '-start' : 'start';
       this.pagination.current = 1;
       this.pagination.limit = 10;
-      this.fetchRecordList(true);
+      this.getCurrentFun();
     },
 
     renderTypeHeader(h, { column }) {
       return h(
-        "div",
+        'div',
         {
           on: {
             click: this.handleTypeSort,
           },
           style: {
-            cursor: this.pagination.count ? "pointer" : "not-allowed",
+            cursor: this.pagination.count ? 'pointer' : 'not-allowed',
           },
         },
         [
-          h("span", {
+          h('span', {
             domProps: {
-              innerHTML: i18n.t("告警开始时间"),
+              innerHTML: i18n.t('告警开始时间'),
             },
           }),
-          h("img", {
+          h('img', {
             style: {
-              position: "relative",
-              top: "1px",
-              left: "1px",
-              transform: this.isTypeSort ? "rotate(0)" : "rotate(180deg)",
+              position: 'relative',
+              top: '1px',
+              left: '1px',
+              transform: this.isTypeSort ? 'rotate(0)' : 'rotate(180deg)',
             },
             attrs: {
-              src: "/static/images/sort-icon.png",
+              src: '/static/images/sort-icon.png',
             },
           }),
-        ]
+        ],
       );
     },
 
     handleDetail(payload) {
+      // 蓝鲸监控，新标签页
+      if (this.isBkMonitor) {
+        window.open(payload.detail_link, '_blank');
+        return;
+      }
+
       this.curData = JSON.parse(JSON.stringify(payload));
       this.isShowDetailSlider = true;
-      this.requestQueue = ["detail"];
+      this.requestQueue = ['detail'];
 
       const metricsRef = this.$refs.alarmMetrics;
 
-      metricsRef &&
-        metricsRef.mergeOptions({
+      metricsRef
+        && metricsRef.mergeOptions({
           xAxis: [
             {
               data: [],
@@ -900,9 +988,9 @@ export default {
     handleSliderAfterClose() {
       this.curData = {};
       this.curDetailData = {};
-      this.alarmMetricsTitle = "";
+      this.alarmMetricsTitle = '';
       this.metricsList = [];
-      this.metricsThreshold = "";
+      this.metricsThreshold = '';
       this.metricsLoading = false;
     },
 
@@ -916,7 +1004,16 @@ export default {
         return;
       }
       this.pagination.current = page;
-      this.fetchRecordList(true);
+      // bcs监控
+      if (!this.isBkMonitor) {
+        this.getCurrentFun();
+      } else {
+        this.tableLoading = true;
+        // 前端视觉分页loading
+        setTimeout(() => {
+          this.tableLoading = false;
+        }, 200);
+      }
     },
 
     /**
@@ -928,26 +1025,35 @@ export default {
     limitChange(currentLimit, prevLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
-      this.fetchRecordList(true);
+      // bcs监控
+      if (!this.isBkMonitor) {
+        this.getCurrentFun();
+      } else {
+        this.tableLoading = true;
+        // 前端视觉分页loading
+        setTimeout(() => {
+          this.tableLoading = false;
+        }, 200);
+      }
     },
 
+    // 清空搜索条件
     clearFilter() {
-      this.keyword = "";
-      this.curType = "";
-      this.curEnv = "";
-      this.fetchRecordList(true);
+      this.keyword = '';
+      this.curEnv = '';
+      this.getCurrentFun();
     },
 
     updateTableEmptyConfig() {
       const time = this.initDateTimeRange.some(Boolean);
-      if (this.keyword || this.curType || this.curEnv) {
-        this.tableEmptyConf.keyword = "placeholder";
+      if (this.keyword || this.curEnv) {
+        this.tableEmptyConf.keyword = 'placeholder';
         return;
-      } else if (time) {
-        this.tableEmptyConf.keyword = "$CONSTANT";
+      } if (time) {
+        this.tableEmptyConf.keyword = '$CONSTANT';
         return;
       }
-      this.tableEmptyConf.keyword = "";
+      this.tableEmptyConf.keyword = '';
     },
   },
 };
@@ -1003,9 +1109,16 @@ export default {
     .search-action {
       position: absolute;
       top: 0;
-      left: 742px;
+      left: 612px;
       &.reset-right {
-        left: 886px;
+        left: 754px;
+
+        &.not-source {
+          left: 624px;
+        }
+      }
+      &.not-source {
+        left: 482px;
       }
     }
   }
@@ -1107,5 +1220,9 @@ export default {
       }
     }
   }
+}
+
+.alarm-record-loading-cls {
+  width: calc(100% - 1px);
 }
 </style>

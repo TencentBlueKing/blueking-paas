@@ -48,7 +48,7 @@
             class="input-wrapper"
           >
             <div class="title-wrapper">
-              <p class="title">{{ $t('初始化插件项目') }}</p>
+              <p class="title">{{ $t('应用初始化模板地址：') }}</p>
               <div
                 class="icon-wrapper"
               >

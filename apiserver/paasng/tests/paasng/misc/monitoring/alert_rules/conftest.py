@@ -26,7 +26,8 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.misc.monitoring.monitor.alert_rules.ascode.client import AsCodeClient
-from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS, AlertCode
+from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
+from paasng.misc.monitoring.monitor.alert_rules.config.entities import AlertCode
 from paasng.misc.monitoring.monitor.models import AppAlertRule
 from tests.utils.helpers import generate_random_string
 

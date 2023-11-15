@@ -379,4 +379,19 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(newHash).To(Not(Equal(value)))
 		})
 	})
+
+	DescribeTable(
+		"test buildImagePullSecrets",
+		func(anno string, expected []corev1.LocalObjectReference) {
+			bkapp.Annotations[paasv1alpha2.ImageCredentialsRefAnnoKey] = anno
+			Expect(buildImagePullSecrets(bkapp)).To(Equal(expected))
+		},
+		Entry(
+			"empty",
+			"",
+			nil,
+		),
+		Entry("legacy", "true", []corev1.LocalObjectReference{{Name: paasv1alpha2.LegacyImagePullSecretName}}),
+		Entry("custom", "image-pull-secret", []corev1.LocalObjectReference{{Name: "image-pull-secret"}}),
+	)
 })

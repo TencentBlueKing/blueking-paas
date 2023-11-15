@@ -21,6 +21,7 @@ from typing import Callable, Dict, Iterable, List, Tuple, Union
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.models.deploy_config import HookList
@@ -39,6 +40,8 @@ class AttrSetter:
 
 
 class ModuleProcessSpecManager:
+    """The manager for ModuleProcessSpec objects."""
+
     def __init__(self, module: Module):
         self.module = module
 
@@ -232,6 +235,15 @@ class ModuleProcessSpecManager:
                     "scaling_config": overlay.get("scaling_config"),
                 },
             )
+
+    def set_replicas(self, proc_name: str, env_name: str, replicas: int):
+        """Set the replicas for the given process and environment."""
+        proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
+        ProcessSpecEnvOverlay.objects.update_or_create(
+            proc_spec=proc_spec,
+            environment_name=AppEnvName(env_name).value,
+            defaults={"target_replicas": replicas},
+        )
 
 
 def sync_hooks(module: Module, hooks: HookList):

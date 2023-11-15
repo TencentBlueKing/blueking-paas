@@ -47,23 +47,22 @@
             v-if="application.config_info.require_templated_source && downloadableAddress"
             class="input-wrapper"
           >
-            <div class="input-item">
-              <span class="url-label">{{ $t('应用初始化模板地址：') }}</span>
-              <input
-                v-model="downloadableAddress"
-                v-bk-tooltips.top="downloadableAddress"
-                :class="['ps-form-control', 'svn-input', localLanguage === 'en' ? 'svn-input-en' : '']"
-                type="text"
-              />
-            </div>
-            <div class="btn-item">
-              <a
-                target="_blank"
-                class="btn-checkout ps-btn ps-btn-primary"
-                :href="downloadableAddress"
+            <div class="title-wrapper">
+              <p class="title">{{ $t('初始化插件项目') }}</p>
+              <div
+                class="icon-wrapper"
               >
-                {{ $t('点击下载') }}
-              </a>
+                <a
+                  target="_blank"
+                  :href="downloadableAddress"
+                >
+                  <i class="paasng-icon paasng-download" />
+                  {{ $t('下载') }}
+                </a>
+              </div>
+            </div>
+            <div class="template-url" v-bk-tooltips.top="downloadableAddress">
+              {{ downloadableAddress }}
             </div>
           </div>
           <div

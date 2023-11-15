@@ -16,13 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.core.resource import CNativeBkAppNameGenerator
+from blue_krill.data_types.enum import StructuredEnum
 
 
-def make_image_pull_secret_name(wl_app: WlApp) -> str:
-    """Return the secret name for image pull credentials"""
-    if wl_app.type == WlAppType.CLOUD_NATIVE:
-        return f"{CNativeBkAppNameGenerator.generate(wl_app)}--dockerconfigjson"
-    return f"{wl_app.scheduler_safe_name}--dockerconfigjson"
+class AlertCode(str, StructuredEnum):
+    HIGH_CPU_USAGE = 'high_cpu_usage'
+    HIGH_MEM_USAGE = 'high_mem_usage'
+    POD_RESTART = 'pod_restart'
+    OOM_KILLED = 'oom_killed'
+    HIGH_RABBITMQ_QUEUE_MESSAGES = 'high_rabbitmq_queue_messages'

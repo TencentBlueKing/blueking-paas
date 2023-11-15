@@ -213,6 +213,10 @@ const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'
   window.showDeployTip(error);
 });
 
+const observabilityConfig = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/observability-config').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/module-info').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -665,6 +669,14 @@ const router = new Router({
               name: 'imageCredential',
               meta: {
                 module: 'ticket',
+              },
+            },
+            {
+              path: 'observability',
+              component: observabilityConfig,
+              name: 'observabilityConfig',
+              meta: {
+                module: 'observability',
               },
             },
             {

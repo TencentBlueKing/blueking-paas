@@ -19,8 +19,6 @@
 package resources
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +45,7 @@ var _ = Describe("HookUtils", func() {
 				Name:      "fake-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					paasv1alpha2.ImageCredentialsRefAnnoKey: "image-pull-secrets",
+					paasv1alpha2.ImageCredentialsRefAnnoKey: "true",
 				},
 			},
 			Spec: paasv1alpha2.AppSpec{
@@ -113,7 +111,7 @@ var _ = Describe("HookUtils", func() {
 			// 镜像拉取密钥
 			Expect(
 				hook.Pod.Spec.ImagePullSecrets[0].Name,
-			).To(Equal(fmt.Sprintf(paasv1alpha2.DefaultImagePullSecretNameTmpl, bkapp.GetName())))
+			).To(Equal(paasv1alpha2.LegacyImagePullSecretName))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 

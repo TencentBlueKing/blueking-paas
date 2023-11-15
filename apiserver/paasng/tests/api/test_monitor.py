@@ -54,6 +54,7 @@ class TestListAlertsView:
         )
         assert len(resp.data) == 3
         assert resp.data[0]['status'] in ['ABNORMAL', 'CLOSED', 'RECOVERED']
+        assert resp.data[0]['env'] in ['stag', 'prod']
         assert len(resp.data[0]['receivers']) == 2
 
 
@@ -63,5 +64,6 @@ class TestAlarmStrategiesView:
         resp = api_client.post(
             f'/api/monitor/applications/{bk_app.code}/alarm_strategies/',
         )
-        assert len(resp.data) == 3
-        assert resp.data[0]['is_enabled'] in [True, False]
+        alarm_strategies = resp.data['strategy_config_list']
+        assert len(alarm_strategies) == 3
+        assert alarm_strategies[0]['is_enabled'] in [True, False]

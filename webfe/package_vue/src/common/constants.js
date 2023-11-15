@@ -85,12 +85,17 @@ export const PLUGIN_VERSION_STATUS = {
  * 自定义工具栏
  */
 export const TOOLBAR_OPTIONS = [
-  ['bold', 'italic', 'underline', 'strike',
+  [
+    'bold',
+    'italic',
+    'underline',
+    'strike',
     { color: [] },
     { background: [] },
     { align: ['', 'center', 'right', 'justify'] },
     'blockquote',
-    { indent: '-1' }, { indent: '+1' },
+    { indent: '-1' },
+    { indent: '+1' },
     { list: 'ordered' },
     { list: 'bullet' },
     'link',
@@ -173,3 +178,14 @@ export const ENV_OVERLAY = {
     },
   },
 };
+
+export const THRESHOLD_MAP = {
+  gte: '>=',
+  eq: '=',
+  lt: '<',
+  lte: '<=',
+  gt: '>',
+  ne: '!=',
+};
+
+export const LEVEL_MAP = ['致命', '预警', '提醒'];

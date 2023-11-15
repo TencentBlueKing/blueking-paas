@@ -47,6 +47,7 @@ import overview from './modules/overview';
 import plugin from './modules/plugin';
 import pluginMembers from './modules/plugin-members';
 import imageManage from './modules/image-manage';
+import observability from './modules/observability';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -420,6 +421,7 @@ export default new Vuex.Store({
     plugin,
     pluginMembers,
     imageManage,
+    observability,
   },
   state,
   getters,

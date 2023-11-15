@@ -20,7 +20,7 @@
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 export default {
-  name: 'cloudAppAnalysis',
+  name: 'CloudAppAnalysis',
   components: {
     cloudAppTopBar,
   },
@@ -36,8 +36,8 @@ export default {
     };
   },
   computed: {
-    curPanels () {
-      return this.panels.filter(item => {
+    curPanels() {
+      return this.panels.filter((item) => {
         const key = item.feature;
         // 接入 feature flag
         if (this.curAppInfo.feature.hasOwnProperty(key)) {
@@ -45,7 +45,7 @@ export default {
         }
         return true;
       });
-    }
+    },
   },
   watch: {
     $route: {
@@ -58,7 +58,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curPanel = this.panels.find((item) => item.name === name);
+      const curPanel = this.panels.find(item => item.name === name);
       this.$router.push({
         name: curPanel.routeName,
         params: {

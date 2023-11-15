@@ -260,8 +260,8 @@ export default {
   props: {
     appType: {
       type: String,
-      default: 'normal'
-    }
+      default: 'normal',
+    },
   },
   data() {
     return {

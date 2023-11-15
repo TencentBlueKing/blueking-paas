@@ -258,10 +258,9 @@ export default {
       this.isTableLoading = true;
       try {
         const list = await this.$store.dispatch('observability/getLogCollectionRuleList', {
-          // appCode: this.appCode,
-          // moduleId: this.curModuleId,
-          appCode: 'test-fastapi',
-          moduleId: 'default',
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          // appCode: 'test-fastapi',
         });
         this.logCollectionList = list;
       } catch (e) {
@@ -271,24 +270,6 @@ export default {
         });
       } finally {
         this.isTableLoading = false;
-      }
-    },
-
-    // 获取采集规则
-    async getCollectionRules() {
-      try {
-        const list = await this.$store.dispatch('observability/getCollectionRules', {
-          // appCode: this.appCode,
-          // moduleId: this.curModuleId,
-          appCode: 'test-fastapi',
-          moduleId: 'default',
-        });
-        this.collectionRules = list;
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
       }
     },
 
@@ -302,13 +283,10 @@ export default {
         log_paths: paths,
         log_type: this.formData.logType,
       };
-      console.log('params', params);
       try {
         await this.$store.dispatch('observability/editorCollectionRule', {
-          // appCode: this.appCode,
-          // moduleId: this.curModuleId,
-          appCode: 'test-fastapi',
-          moduleId: 'default',
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
           data: params,
         });
         this.$bkMessage({
@@ -331,10 +309,8 @@ export default {
     async deleteCollectionRule(name) {
       try {
         await this.$store.dispatch('observability/deleteCollectionRule', {
-          // appCode: this.appCode,
-          // moduleId: this.curModuleId,
-          appCode: 'test-fastapi',
-          moduleId: 'default',
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
           name,
         });
         this.$bkMessage({
@@ -354,12 +330,11 @@ export default {
     async getCustomLogCollectionRule() {
       try {
         const res = await this.$store.dispatch('observability/getCustomLogCollectionRule', {
-          // appCode: this.appCode,
-          // moduleId: this.curModuleId,
-          appCode: 'test-fastapi',
-          moduleId: 'default',
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
         });
         this.customCollectorData = res;
+        this.collectionRules = res.options;
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -370,7 +345,7 @@ export default {
 
     // 新增采集规则
     handleAddCollectionRule() {
-      this.getCollectionRules();
+      this.getCustomLogCollectionRule();
       this.collectionRulesConfig.visible = true;
       this.collectionRulesConfig.isCreate = true;
     },
@@ -444,15 +419,18 @@ export default {
 
     // form表单数据重置
     hanleDataReset() {
-      this.formData = {
-        ruleId: '',
-        logType: 'json',
-        logPaths: [
-          { value: '' },
-        ],
-      };
       // 清除错误提示
       this.$refs.validateForm?.clearError();
+      // 定时器解决 dialog 动画消失时，radio切换视觉问题
+      setTimeout(() => {
+        this.formData = {
+          ruleId: '',
+          logType: 'json',
+          logPaths: [
+            { value: '' },
+          ],
+        };
+      }, 300);
     },
 
     // 页码变化回调

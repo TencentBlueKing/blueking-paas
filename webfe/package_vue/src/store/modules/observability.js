@@ -36,14 +36,6 @@ export default {
     },
 
     /**
-     * 获取采集规则
-     */
-    getCollectionRules({}, { appCode, moduleId }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector-metadata/`;
-      return http.get(url);
-    },
-
-    /**
      * 新建、编辑采集规则
      */
     editorCollectionRule({}, { appCode, moduleId, data }, config = {}) {
@@ -60,7 +52,7 @@ export default {
     },
 
     /**
-     * 获取自定义日志采集规则
+     * 获取日志采集规则
      */
     getCustomLogCollectionRule({}, { appCode, moduleId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/custom-collector-metadata/`;

@@ -28,7 +28,7 @@
         <template slot-scope="{ row }">
           <div
             v-if="row.labels.length"
-            v-bk-tooltips="row.labels.join(', ')"
+            v-bk-overflow-tips="{ content: row.labels.join(', ') }"
           >
             <span
               v-for="item in row.labels"
@@ -43,24 +43,46 @@
       </bk-table-column>
       <bk-table-column
         :label="$t('阈值')"
-        prop="name_en"
-      ></bk-table-column>
-      <bk-table-column
-        :label="$t('触发条件')"
-        prop="name_en"
-      ></bk-table-column>
-      <bk-table-column
-        :label="$t('级别')"
-        prop="name_en"
       >
         <template slot-scope="{ row }">
-          <span class="left-border">{{ row.name_en }}</span>
+          {{ row.maxThresholdConfig && row.maxThresholdConfig.text }}
+        </template>
+      </bk-table-column>
+      <bk-table-column
+        :label="$t('触发条件')"
+      >
+        <template slot-scope="{ row }">
+          {{ row.triggerCondition }}
+        </template>
+      </bk-table-column>
+      <bk-table-column
+        :label="$t('级别')"
+      >
+        <template slot-scope="{ row }">
+          <span :class="['level-border', `level${row.levelText.id}`]">
+            {{ row.levelText && $t(row.levelText.text) }}
+          </span>
         </template>
       </bk-table-column>
       <bk-table-column
         :label="$t('通知组')"
-        prop="notice_group_ids"
-      ></bk-table-column>
+      >
+        <template slot-scope="{ row }">
+          <div
+            v-if="row.noticeGroupNames.length"
+            v-bk-overflow-tips="{ content: row.noticeGroupNames.join(', ') }"
+          >
+            <span
+              v-for="item in row.noticeGroupNames"
+              :key="item"
+              class="td-tag"
+            >
+              <template v-if="item !== null">{{ item }}</template>
+            </span>
+          </div>
+          <span v-else>--</span>
+        </template>
+      </bk-table-column>
       <bk-table-column
         :label="$t('是否启用')"
         prop="is_enabled"
@@ -74,21 +96,20 @@
 </template>
 
 <script>
+import { THRESHOLD_MAP, LEVEL_MAP } from '@/common/constants.js';
+
 export default {
   name: 'AlarmStrategy',
   data() {
     return {
       alarmStrategyList: [
         {
-          name_en: '致命',
-          id: 'ociv0m',
-          name: 'w91odi',
+          name_en: '',
+          id: '',
+          name: '',
           is_enabled: true,
-          labels: ['qx2prd', 'pblq1y', '9fs4a3', '7wb4el'],
-          notice_group_ids: [
-            //通知组列表
-            2,
-          ],
+          labels: [],
+          notice_group_ids: [],
           detects: [
             {
               trigger_config: {
@@ -107,6 +128,82 @@ export default {
         limit: 10,
       },
     };
+  },
+  computed: {
+    appCode() {
+      return this.$route.params.id;
+    },
+  },
+  created() {
+    this.getAlarmStrategies();
+  },
+  methods: {
+    // 获取告警策略
+    async getAlarmStrategies() {
+      try {
+        const { strategy_config_list: strategyList, user_group_list } = await this.$store.dispatch('alarm/getAlarmStrategies', {
+          appCode: this.appCode,
+        });
+
+        strategyList.forEach((v) => {
+          // 用户组处理
+          v.noticeGroupNames = v.notice_group_ids.map((id) => {
+            // eslint-disable-next-line camelcase
+            const foundItem = user_group_list.find(userItem => +userItem.user_group_id === id);
+            return foundItem ? foundItem.user_group_name : null;
+          });
+
+          // 触发条件处理
+          if (v.detects.length) {
+            const config = v.detects[0].trigger_config;
+            v.triggerCondition = `${config.count}/${config.check_window}`;
+          }
+          // 阈值&级别处理
+          if (v.items.length) {
+            // 最大阈值
+            let maxThreshold = -1;
+            // 最大阈值config
+            let maxThresholdConfig = {};
+            // 级别
+            let level = {};
+
+            v.items.forEach((item) => {
+              // 算法 1: N
+              const { algorithms } = item;
+              algorithms.forEach((algorithmItem) => {
+                // 级别转换
+                level = { id: algorithmItem.level, text: LEVEL_MAP[algorithmItem.level - 1] };
+
+                // type 为 Threshold 才展示阈值
+                if (algorithmItem.type === 'Threshold') {
+                  // 算法配置 [[{配置}]]
+                  const { config } = algorithmItem;
+                  config.forEach((innerArray) => {
+                    innerArray.forEach((obj) => {
+                      if (obj.threshold && obj.threshold > maxThreshold) {
+                        maxThreshold = innerArray[0].threshold;
+                        // eslint-disable-next-line prefer-destructuring
+                        maxThresholdConfig = innerArray[0];
+                      }
+                    });
+                  });
+                }
+              });
+            });
+
+            maxThresholdConfig.text = maxThreshold === -1 ? '--' : `${THRESHOLD_MAP[maxThresholdConfig.method]}${maxThresholdConfig.threshold}`;
+            v.maxThresholdConfig = maxThresholdConfig;
+            v.levelText = level;
+          }
+        });
+        this.alarmStrategyList = strategyList;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
@@ -146,11 +243,6 @@ export default {
     }
   }
 
-  .left-border {
-    border-left: 4px solid #EA3636;
-    padding-left: 3px;
-  }
-
   .tag {
     display: inline-block;
     height: 22px;
@@ -165,6 +257,20 @@ export default {
     &.enable {
       color: #18B456;
       background: #DCFFE2;
+    }
+  }
+
+  .level-border {
+    padding-left: 4px;
+
+    &.level1 {
+      border-left: 4px solid #EA3636;
+    }
+    &.level2 {
+      border-left: 4px solid #FF9C01;
+    }
+    &.level3 {
+      border-left: 4px solid #3A84FF;
     }
   }
 }

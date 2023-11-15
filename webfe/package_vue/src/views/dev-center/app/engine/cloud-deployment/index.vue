@@ -131,7 +131,6 @@ export default {
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
         { name: 'observabilityConfig', label: this.$t('可观测性配置'), ref: 'observability' },
         { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
-        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'info' },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,

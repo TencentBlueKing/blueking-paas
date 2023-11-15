@@ -8,7 +8,6 @@
       :title="$t('告警记录')"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
-      :module-list="curAppModuleList"
     >
       <div
         slot="right"
@@ -30,7 +29,6 @@
       :module-id="curModuleId"
       :app-code="appCode"
       :cur-module="curAppModule"
-      :module-list="curAppModuleList"
     >
       <div
         slot="right"
@@ -56,8 +54,7 @@
     </paas-content-loader>
   </div>
 </template>
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import AlarmRecord from './alarm-record';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';

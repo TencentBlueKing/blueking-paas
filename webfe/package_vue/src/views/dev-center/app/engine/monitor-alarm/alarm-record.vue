@@ -102,7 +102,7 @@
       />
       <bk-table-column
         :label="isBkMonitor ? $t('告警名称') : $t('类型')"
-        :min-width="220"
+        :width="250"
         :show-overflow-tooltip="true"
       >
         <template slot-scope="{ row }">

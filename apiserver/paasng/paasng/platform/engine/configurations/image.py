@@ -71,6 +71,33 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     return "-".join(parts)
 
 
+def get_credential_refs(module: Module) -> List[ImageCredentialRef]:
+    """get the valid user-defined image credential references"""
+
+    try:
+        build_config = BuildConfig.objects.get(module=module)
+    except BuildConfig.DoesNotExist:
+        pass
+    else:
+        if build_config.image_repository and build_config.image_credential_name:
+            return [
+                ImageCredentialRef(
+                    image=split_image(build_config.image_repository),
+                    credential_name=build_config.image_credential_name,
+                )
+            ]
+
+    # TODO v1alph1 版本迁移完成后, 删除下面的代码并重构当前函数
+    refs = []
+    for proc_spec in ModuleProcessSpec.objects.filter(module=module):
+        if proc_spec.image and proc_spec.image_credential_name:
+            refs.append(
+                ImageCredentialRef(image=split_image(proc_spec.image), credential_name=proc_spec.image_credential_name)
+            )
+
+    return refs
+
+
 @dataclass
 class ImageCredential:
     registry: str
@@ -103,43 +130,6 @@ class ImageCredentialManager:
         if repo_full_url and username and password:
             return ImageCredential(registry=repo_full_url, username=username, password=password)
         return None
-
-
-class ImageCredentialRefManager:
-    """A Helper provide the image credential references for the given Module"""
-
-    def __init__(self, module: Module):
-        self.module = module
-
-    def provide(self) -> List[ImageCredentialRef]:
-        """provide the valid user-defined image credential references"""
-        refs = []
-
-        try:
-            build_config = BuildConfig.objects.get(module=self.module)
-            if build_config.image_repository and build_config.image_credential_name:
-                refs.append(
-                    ImageCredentialRef(
-                        image=split_image(build_config.image_repository),
-                        credential_name=build_config.image_credential_name,
-                    )
-                )
-        except BuildConfig.DoesNotExist:
-            pass
-
-        if refs:
-            return refs
-
-        # TODO v1alph1 版本迁移完成后, 删除下面的代码并重构当前函数
-        for proc_spec in ModuleProcessSpec.objects.filter(module=self.module):
-            if proc_spec.image and proc_spec.image_credential_name:
-                refs.append(
-                    ImageCredentialRef(
-                        image=split_image(proc_spec.image), credential_name=proc_spec.image_credential_name
-                    )
-                )
-
-        return refs
 
 
 class RuntimeImageInfo:

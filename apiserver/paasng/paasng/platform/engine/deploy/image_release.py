@@ -32,11 +32,7 @@ from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.engine.configurations.image import (
-    ImageCredentialManager,
-    ImageCredentialRefManager,
-    RuntimeImageInfo,
-)
+from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
@@ -156,8 +152,7 @@ class ImageReleaseMgr(DeployStep):
                     password=credential.password,
                 )
         else:
-            ref_mgr = ImageCredentialRefManager(self.module_environment.module)
-            credential_refs = ref_mgr.provide()
+            credential_refs = get_credential_refs(self.module_environment.module)
             if credential_refs:
                 application = self.module_environment.application
                 try:

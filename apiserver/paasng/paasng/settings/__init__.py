@@ -1117,7 +1117,7 @@ BK_DOC_APP_ID = settings.get('BK_DOC_APP_ID', 'bk_docs_center')
 BK_DOCS_URL_PREFIX = settings.get('BK_DOCS_URL_PREFIX', 'https://bk.tencent.com/docs')
 
 # 平台FAQ 地址
-PLATFORM_FAQ_URL = settings.get('PLATFORM_FAQ_URL', f'{BK_DOCS_URL_PREFIX}/markdown/PaaS3.0/faq')
+PLATFORM_FAQ_URL = settings.get('PLATFORM_FAQ_URL', f'{BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide/faq')
 
 # 是否有人工客服
 SUPPORT_LIVE_AGENT = settings.get('SUPPORT_LIVE_AGENT', False)

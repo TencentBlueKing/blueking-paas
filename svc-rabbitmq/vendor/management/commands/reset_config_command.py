@@ -21,7 +21,7 @@ from vendor.models import Cluster
 
 
 class Command(BaseCommand):
-    help = '批量修改已分配 mysql 实例配置信息'
+    help = '批量修改已分配 rabbitmq 实例配置信息'
 
     def add_arguments(self, parser):
         parser.add_argument("--host", dest="host", help="host", default="", required=False)

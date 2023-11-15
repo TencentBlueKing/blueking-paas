@@ -37,6 +37,7 @@ from paasng.plat_admin.system.applications import (
     query_uni_apps_by_keyword,
     str_username,
 )
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.operators import get_contact_info
 from paasng.platform.engine.constants import OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
@@ -89,7 +90,9 @@ class TestQueryUniApps:
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
         assert results[bk_app.code].name_en == bk_app.name_en
+        assert results[bk_app.code].type == ApplicationType.DEFAULT.value
         assert results[legacy_app.code].name == legacy_app.name
+        assert results[legacy_app.code].type == ApplicationType.DEFAULT.value
 
     @pytest.mark.parametrize(
         "keyword, expected_count, language,name_field",

@@ -16,7 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Process related functions"""
-from .procs import CNativeProcSpec, get_proc_specs, parse_proc_specs
-
-__all__ = ['get_proc_specs', 'CNativeProcSpec', 'parse_proc_specs']

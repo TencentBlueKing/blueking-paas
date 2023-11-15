@@ -20,8 +20,7 @@
   </div>
 </template>
 
-<script>
-import ByUserLoading from './loading/by-user';
+<script>import ByUserLoading from './loading/by-user';
 import LogLoading from './loading/log';
 import ProcessLoading from './loading/process';
 import IndexLoading from './loading/index';
@@ -81,6 +80,7 @@ import EventListLoading from './loading/event-list.vue';
 import BuildConfigLoading from './loading/clound-build-config.vue';
 import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
 import ImageManageLoading from './loading/image-manage.vue';
+import ProcessServiceLoading from './loading/process-service.vue';
 export default {
   components: {
     ByUserLoading,
@@ -143,6 +143,7 @@ export default {
     BuildConfigLoading,
     DeployModuleInfoLoading,
     ImageManageLoading,
+    ProcessServiceLoading,
   },
   props: {
     isLoading: {

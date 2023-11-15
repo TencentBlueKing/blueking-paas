@@ -136,8 +136,10 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
                 MODULE_NAME_ANNO_KEY: module.name,
             }
         )
-        # Set the annotation to inform operator that the secret has been created.
-        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
+        # Set the annotation to inform operator what the image pull secret name is
+        model_res.metadata.annotations[
+            IMAGE_CREDENTIALS_REF_ANNO_KEY
+        ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
 
         # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
         # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注
@@ -269,14 +271,16 @@ class ProcessesManifestConstructor(ManifestConstructor):
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
                 return quota_plan
-        return quota_plan_memory[-1][0]
+        return quota_plan_memory[-1][1]
 
-    @staticmethod
-    def get_command_and_args(module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
-        """Get K8s COMMAND/ARGS pair from process_spec"""
+    def get_command_and_args(self, module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
+        """Get the command and args from the process_spec object.
+
+        :return: (command, args)
+        """
         # 仅托管镜像的应用目前会在页面上配置 command/args 字段, 其余类型的应用使用 proc_command 声明启动命令
         if process_spec.command or process_spec.args:
-            return process_spec.command or [], process_spec.args or []
+            return self._sanitize_args(process_spec.command or []), self._sanitize_args(process_spec.args or [])
 
         mgr = ModuleRuntimeManager(module)
         if mgr.build_config.build_method == RuntimeType.BUILDPACK:
@@ -285,10 +289,20 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 return [process_spec.name], []
             # 普通应用的启动命令固定了 entrypoint
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", process_spec.name]
-        elif mgr.build_config.build_method == RuntimeType.DOCKERFILE:
-            o = shlex.split(process_spec.proc_command)
+
+        if mgr.build_config.build_method == RuntimeType.DOCKERFILE:
+            o = self._sanitize_args(shlex.split(process_spec.proc_command))
             return [o[0]], o[1:]
-        raise ValueError
+        raise ValueError('Error getting command and args')
+
+    @staticmethod
+    def _sanitize_args(input: List[str]) -> List[str]:
+        """Sanitize the command and arg list, replace some special expressions which can't
+        be interpreted by the operator.
+        """
+        # '${PORT:-5000}' is massively used by the app framework, while it can not be used
+        # in the spec directly, replace it with normal env var expression.
+        return [s.replace('${PORT:-5000}', '${PORT}') for s in input]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):
@@ -409,13 +423,17 @@ def get_bkapp_resource(module: Module) -> BkAppResource:
 
 
 def get_bkapp_resource_for_deploy(
-    env: ModuleEnvironment, deploy_id: str, force_image: Optional[str] = None
+    env: ModuleEnvironment,
+    deploy_id: str,
+    force_image: Optional[str] = None,
+    image_pull_policy: Optional[str] = None,
 ) -> BkAppResource:
     """Get the BkApp manifest for deploy.
 
     :param env: The environment object.
     :param deploy_id: The ID of the AppModelDeploy object.
     :param force_image: If given, set the image of the application to this value.
+    :param image_pull_policy: If given, set the imagePullPolicy to this value.
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)
@@ -424,6 +442,11 @@ def get_bkapp_resource_for_deploy(
         if not model_res.spec.build:
             model_res.spec.build = BkAppBuildConfig()
         model_res.spec.build.image = force_image
+
+    if image_pull_policy:
+        if not model_res.spec.build:
+            model_res.spec.build = BkAppBuildConfig()
+        model_res.spec.build.imagePullPolicy = image_pull_policy
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

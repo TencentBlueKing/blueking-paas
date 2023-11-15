@@ -22,10 +22,9 @@ from celery import shared_task
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.constants import ArtifactType
-from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
+from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.bk_app.cnative.specs.models import AppModelRevision
-from paas_wl.bk_app.processes.shim import ProcessManager, ProcessTmpl
+from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
@@ -33,7 +32,7 @@ from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
+from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
@@ -98,8 +97,8 @@ class ImageReleaseMgr(DeployStep):
                         ProcessTmpl(
                             name=proc_spec.name,
                             command=proc_spec.get_proc_command(),
-                            replicas=proc_spec.target_replicas,
-                            plan=proc_spec.plan_name,
+                            replicas=proc_spec.get_target_replicas(self.module_environment.environment),
+                            plan=proc_spec.get_plan_name(self.module_environment.environment),
                         )
                         for proc_spec in ModuleProcessSpec.objects.filter(module=module)
                     ]
@@ -114,7 +113,6 @@ class ImageReleaseMgr(DeployStep):
                     artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
                 )
 
-            ProcessManager(self.engine_app.env).sync_processes_specs(processes=processes)
             self.deployment.update_fields(
                 processes={p.name: p for p in processes}, build_status=JobStatus.SUCCESSFUL, build_id=build_id
             )
@@ -154,17 +152,16 @@ class ImageReleaseMgr(DeployStep):
                     password=credential.password,
                 )
         else:
-            # TODO: 云原生应用需要增加模型存储 image_credential_name
-            application = self.module_environment.application
-            revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
-            try:
-                credential_refs = get_references(revision.json_value)
-                validate_references(application, credential_refs)
-            except InvalidImageCredentials as e:
-                # message = f"missing credentials {missing_names}"
-                self.stream.write_message(Style.Error(str(e)))
-                raise
+            credential_refs = get_credential_refs(self.module_environment.module)
             if credential_refs:
+                application = self.module_environment.application
+                try:
+                    validate_references(application, credential_refs)
+                except InvalidImageCredentials as e:
+                    # message = f"missing credentials {missing_names}"
+                    self.stream.write_message(Style.Error(str(e)))
+                    raise
+
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
     def _handle_app_description(self):

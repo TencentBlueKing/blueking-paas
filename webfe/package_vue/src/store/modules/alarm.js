@@ -29,10 +29,10 @@ export default {
   mutations: {},
   actions: {
     /**
-         * 获取告警记录列表
-         * @param {Object} params 请求参数
-         */
-    getAlarmList ({ commit, state }, params, config = {}) {
+     * 获取告警记录列表
+     * @param {Object} params 请求参数
+     */
+    getAlarmList({}, params, config = {}) {
       const requestParams = JSON.parse(JSON.stringify(params));
       delete requestParams.code;
       if (requestParams.search === '') {
@@ -64,10 +64,10 @@ export default {
     },
 
     /**
-         * 获取告警类型
-         * @param {Object} params 请求参数
-         */
-    getAlarmType ({ commit, state }, params, config = {}) {
+     * 获取告警类型
+     * @param {Object} params 请求参数
+     */
+    getAlarmType({}, params, config = {}) {
       const requestParams = JSON.parse(JSON.stringify(params));
       delete requestParams.appCode;
       const url = `${BACKEND_URL}/api/monitor/applications/${params.appCode}/genre/?${json2Query(requestParams)}`;
@@ -75,28 +75,28 @@ export default {
     },
 
     /**
-         * 获取告警记录详情
-         * @param {Object} params 请求参数: appCode, record
-         */
-    getAlarmDetail ({ commit, state }, { appCode, record }, config = {}) {
+     * 获取告警记录详情
+     * @param {Object} params 请求参数: appCode, record
+     */
+    getAlarmDetail({}, { appCode, record }, config = {}) {
       const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/record/${record}/`;
       return http.get(url, config);
     },
 
     /**
-         * 获取个人应用告警
-         * @param {Object} params 请求参数
-         */
-    getPersonalMonitor ({ commit, state }, params, config = {}) {
+     * 获取个人应用告警
+     * @param {Object} params 请求参数
+     */
+    getPersonalMonitor({}, params, config = {}) {
       const url = `${BACKEND_URL}/api/monitor/record/applications/summary/?${json2Query(params)}`;
       return http.get(url, config);
     },
 
     /**
-         * 获取告警记录列表
-         * @param {Object} params 请求参数
-         */
-    getPersonalAlarmList ({ commit, state }, params, config = {}) {
+     * 获取告警记录列表
+     * @param {Object} params 请求参数
+     */
+    getPersonalAlarmList({}, params, config = {}) {
       const requestParams = JSON.parse(JSON.stringify(params));
       delete requestParams.code;
       const url = `${BACKEND_URL}/api/monitor/applications/${params.code}/record/query/`;
@@ -104,15 +104,34 @@ export default {
     },
 
     /**
-         * 获取告警记录指标趋势
-         * @param {Object} params 请求参数
-         */
-    getAlarmMetrics ({ commit, state }, params, config = {}) {
+     * 获取告警记录指标趋势
+     * @param {Object} params 请求参数
+     */
+    getAlarmMetrics({}, params, config = {}) {
       const requestParams = JSON.parse(JSON.stringify(params));
       delete requestParams.code;
       delete requestParams.record;
       const url = `${BACKEND_URL}/api/monitor/applications/${params.code}/record_metrics/${params.record}/?${json2Query(requestParams)}`;
       return http.get(url, config);
-    }
-  }
+    },
+
+    /**
+     * 获取蓝鲸监控数据
+     * @param {Object} params 请求参数
+     */
+    getBkAlarmList({}, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/alerts/`;
+      return http.post(url, data, config);
+    },
+
+    /*
+     * 获取告警策略
+     * @param {Object} appCode 请求参数
+     */
+    getAlarmStrategies({}, { appCode }, config = {}) {
+      // `${BACKEND_URL}/api/monitor/applications/{bk_app.code}/alarm_strategies/?${json2Query(params)}`
+      const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/alarm_strategies/`;
+      return http.post(url, config);
+    },
+  },
 };

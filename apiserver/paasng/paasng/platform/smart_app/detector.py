@@ -33,13 +33,13 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from yaml import YAMLError
 
-from paasng.platform.sourcectl.models import SPStat
-from paasng.platform.sourcectl.package.client import BinaryTarClient, ZipClient
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.path import PathProtocol
+from paasng.platform.sourcectl.models import SPStat
+from paasng.platform.sourcectl.package.client import BinaryTarClient, ZipClient
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class SourcePackageStatReader:
 
             return relative_path, meta_info
 
-    def _extract_version(self, meta_info: Dict) -> Optional[str]:
+    def _try_extract_version(self, meta_info: Dict) -> Optional[str]:
         """Try extracting version from meta info"""
         if not meta_info:
             return None
@@ -139,7 +139,8 @@ class SourcePackageStatReader:
         try:
             desc = get_desc_handler(meta_info).app_desc
         except DescriptionValidationError as e:
-            raise ValidationError(str(e))
+            logger.warning("failed to extract version from app_desc, detail: %s", e)
+            return None
         # smart version was stored as one of app's plugin
         plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)
         return plugin['data'] if plugin else None
@@ -157,7 +158,8 @@ class SourcePackageStatReader:
         """Return source package's stats object"""
         logger.debug("parsing source package's stats object.")
         relative_path, meta_info = self.get_meta_info()
-        version = self._extract_version(meta_info) or ''
+        # 当从源码包解析 app version 失败时, 需要由其他途径保证能获取到 version. 例如上传源码包的接口中的 version 参数
+        version = self._try_extract_version(meta_info) or ''
         return SPStat(
             name=self.path.name,
             version=version,

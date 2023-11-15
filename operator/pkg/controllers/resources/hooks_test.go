@@ -45,7 +45,7 @@ var _ = Describe("HookUtils", func() {
 				Name:      "fake-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					paasv1alpha2.ImageCredentialsRefAnnoKey: "image-pull-secrets",
+					paasv1alpha2.ImageCredentialsRefAnnoKey: "true",
 				},
 			},
 			Spec: paasv1alpha2.AppSpec{
@@ -109,12 +109,14 @@ var _ = Describe("HookUtils", func() {
 			).To(Equal(config.Global.GetProcDefaultMemLimits()))
 
 			// 镜像拉取密钥
-			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(paasv1alpha2.DefaultImagePullSecretName))
+			Expect(
+				hook.Pod.Spec.ImagePullSecrets[0].Name,
+			).To(Equal(paasv1alpha2.LegacyImagePullSecretName))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 
-		It("complex case - override Pod.name by Revision and Status.Phase by PreRelease.Status", func() {
-			bkapp.Status.Revision = &paasv1alpha2.Revision{Revision: 100}
+		It("complex case - override Pod.name by DeployID and Status.Phase by PreRelease.Status", func() {
+			bkapp.Status.DeployId = "100"
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
 			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))

@@ -23,8 +23,12 @@ from pathlib import Path
 import pytest
 from filelock import FileLock
 
-from paasng.infras.bkmonitorv3.params import QueryAlertsParams
-from tests.utils.helpers import generate_random_string
+from paasng.infras.bkmonitorv3.constants import SpaceType
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
+from tests.utils.helpers import create_app, generate_random_string
+
+pytestmark = pytest.mark.django_db
 
 fn = Path(__file__).parent / ".random"
 with FileLock(str(fn.absolute()) + ".lock"):
@@ -51,6 +55,24 @@ AppQueryAlertsParams = partial(
     QueryAlertsParams, app_code=FAKE_APP_CODE, start_time=datetime.now(), end_time=datetime.now()
 )
 
+AppQueryAlarmStrategiesParams = partial(QueryAlarmStrategiesParams, app_code=FAKE_APP_CODE)
+
+
+@pytest.fixture
+def bk_monitor_space():
+    app = create_app()
+    app.code = FAKE_APP_CODE
+    app.save()
+
+    return BKMonitorSpace.objects.create(
+        application=app,
+        id=40000,
+        space_type_id=SpaceType.SAAS,
+        space_id='100',
+        space_name='蓝鲸应用-test',
+        extra_info={'test': 'test'},
+    )
+
 
 class TestQueryAlertsParams:
     @pytest.mark.parametrize(
@@ -58,25 +80,63 @@ class TestQueryAlertsParams:
         [
             (
                 AppQueryAlertsParams(),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_*)',
+                None,
             ),
             (
                 AppQueryAlertsParams(environment='stag'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*stag_*)',
+                'labels:(stag)',
             ),
             (
                 AppQueryAlertsParams(environment='stag', alert_code='high_cpu_usage'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*stag_high_cpu_usage)',
+                'labels:(stag AND high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(alert_code='high_cpu_usage'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_high_cpu_usage)',
+                'labels:(high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_*) AND alert_name:*{SEARCH_KEYWORD}*',
+                f'alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)',
             ),
         ],
     )
-    def test_to_dict(self, query_params, expected_query_string):
-        assert query_params.to_dict()['query_string'] == expected_query_string
+    def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
+        result = query_params.to_dict()
+        assert result['bk_biz_ids'] == [bk_monitor_space.iam_resource_id]
+        if query_string := result.get('query_string'):
+            assert query_string == expected_query_string
+
+
+class TestQueryAlarmStrategiesParams:
+    @pytest.mark.parametrize(
+        'query_params, expected_query_string',
+        [
+            (
+                AppQueryAlarmStrategiesParams(),
+                [{'key': 'label_name', 'value': []}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(environment='stag'),
+                [{'key': 'label_name', 'value': ['stag']}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(environment='stag', alert_code='high_cpu_usage'),
+                [{'key': 'label_name', 'value': ['stag', 'high_cpu_usage']}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(alert_code='high_cpu_usage'),
+                [{'key': 'label_name', 'value': ['high_cpu_usage']}],
+            ),
+            (
+                AppQueryAlarmStrategiesParams(keyword=SEARCH_KEYWORD),
+                [
+                    {'key': 'strategy_name', 'value': SEARCH_KEYWORD},
+                    {'key': 'label_name', 'value': []},
+                ],
+            ),
+        ],
+    )
+    def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
+        result = query_params.to_dict()
+        assert result['bk_biz_id'] == bk_monitor_space.iam_resource_id
+        assert result['conditions'] == expected_query_string

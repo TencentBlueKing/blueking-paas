@@ -27,7 +27,6 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.infras.accounts.utils import get_user_avatar
 from paasng.bk_plugins.pluginscenter.constants import (
     LogTimeChoices,
     PluginReleaseVersionRule,
@@ -45,6 +44,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
+from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
 
@@ -261,6 +261,9 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
 
 def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a array according to the given field_schema"""
+    # 如果没有定义 items，则默认为：List[str]
+    if not field_schema.items:
+        return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
     child_field_schema = cattr.structure(field_schema.items, FieldSchema)
     child_field = make_json_schema_field(child_field_schema)
     return serializers.ListField(child=child_field)

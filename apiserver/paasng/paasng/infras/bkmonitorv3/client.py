@@ -31,7 +31,7 @@ from paasng.infras.bkmonitorv3.exceptions import (
     BkMonitorGatewayServiceError,
     BkMonitorSpaceDoesNotExist,
 )
-from paasng.infras.bkmonitorv3.params import QueryAlertsParams
+from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,9 @@ class BkMonitorBackend(Protocol):
         ...
 
     def search_alert(self, *args, **kwargs) -> Dict:
+        ...
+
+    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict:
         ...
 
     def promql_query(self, *args, **kwargs) -> Dict:
@@ -170,8 +173,27 @@ class BkMonitorClient:
 
         if not resp.get('result'):
             raise BkMonitorApiError(resp['message'])
-
         return resp.get('data', {}).get('alerts', [])
+
+    def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
+        """查询告警策略
+
+        :param query_params: 查询告警策略的条件参数
+        """
+        query_params_dict = query_params.to_dict()
+        try:
+            resp = self.client.search_alarm_strategy_v3(json=query_params_dict)
+        except APIGatewayResponseError:
+            # 详细错误信息 bkapi_client_core 会自动记录
+            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+
+        if not resp.get('result'):
+            raise BkMonitorApiError(resp['message'])
+        data = resp.get('data', {})
+        data[
+            'strategy_config_link'
+        ] = f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        return data
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """

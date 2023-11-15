@@ -22,6 +22,9 @@ from django.utils.translation import gettext_lazy as _
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = '500m'
 DEFAULT_PROC_MEM = '256Mi'
+# Default resource request for each process
+DEFAULT_PROC_CPU_REQUEST = '125m'
+DEFAULT_PROC_MEM_REQUEST = '126Mi'
 
 DEFAULT_PROCESS_NAME = 'web'
 
@@ -125,6 +128,12 @@ class ScalingPolicy(str, StructuredEnum):
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")
 
+    # simulate `ReprEnum` behavior to work well with DRF serializer
+    # see also:
+    # - https://docs.python.org/3/library/enum.html#enum.ReprEnum
+    # - https://docs.python.org/3/library/enum.html#enum.Enum.__str__
+    __str__ = str.__str__
+
 
 class ResQuotaPlan(str, StructuredEnum):
     """ResQuotaPlan is used to specify process resource quota"""
@@ -137,6 +146,12 @@ class ResQuotaPlan(str, StructuredEnum):
     P_4C1G = EnumField("4C1G", label="4C1G")
     P_4C2G = EnumField("4C2G", label="4C2G")
     P_4C4G = EnumField("4C4G", label="4C4G")
+
+    # simulate `ReprEnum` behavior to work well with DRF serializer
+    # see also:
+    # - https://docs.python.org/3/library/enum.html#enum.ReprEnum
+    # - https://docs.python.org/3/library/enum.html#enum.Enum.__str__
+    __str__ = str.__str__
 
 
 class MountEnvName(str, StructuredEnum):

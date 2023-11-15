@@ -39,6 +39,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConf
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS, VolumeSource
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
+from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
@@ -155,7 +156,10 @@ class TestBuiltinAnnotsManifestConstructor:
         BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
 
         annots = blank_resource.metadata.annotations
-        assert annots['bkapp.paas.bk.tencent.com/image-credentials'] == 'true'
+        assert (
+            annots['bkapp.paas.bk.tencent.com/image-credentials']
+            == f'{CNativeBkAppNameGenerator.generate(bk_module)}--dockerconfigjson'
+        )
         assert annots['bkapp.paas.bk.tencent.com/module-name'] == bk_module.name
         assert annots['bkapp.paas.bk.tencent.com/name'] == app.name
         assert annots['bkapp.paas.bk.tencent.com/region'] == app.region
@@ -193,6 +197,19 @@ class TestProcessesManifestConstructor:
         with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
             assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
 
+    def test_get_command_and_args_invalid_var_expr(self, bk_module):
+        """Test get_command_and_args() when there is an invalid env var expression."""
+        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+        cfg.build_method = RuntimeType.DOCKERFILE
+        cfg.save(update_fields=['build_method'])
+
+        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}", image=None)
+
+        assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
+            ['start'],
+            ['-b', '${PORT}'],
+        ), "The ${PORT:-5000} should be replaced."
+
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
@@ -207,10 +224,10 @@ class TestProcessesManifestConstructor:
                     "targetPort": 8000,
                     "resQuotaPlan": "default",
                     "autoscaling": None,
-                    "cpu": "500m",
-                    "memory": "256Mi",
+                    "cpu": None,
+                    "memory": None,
                     "image": None,
-                    "imagePullPolicy": "IfNotPresent",
+                    "imagePullPolicy": None,
                 }
             ],
             "envOverlay": {

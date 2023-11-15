@@ -115,6 +115,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(webDeploy.Labels).To(Equal(labels.Deployment(bkapp, "web")))
 			Expect(webDeploy.OwnerReferences[0].Kind).To(Equal(bkapp.Kind))
 			Expect(webDeploy.OwnerReferences[0].Name).To(Equal(bkapp.Name))
+			Expect(webDeploy.Annotations[paasv1alpha2.DeployContentHashAnnoKey]).To(Not(BeEmpty()))
 			Expect(len(webDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
 			Expect(*webDeploy.Spec.Template.Spec.AutomountServiceAccountToken).To(Equal(false))
 
@@ -365,4 +366,32 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(c.Args).To(BeNil())
 		}
 	})
+
+	Context("Test ComputeDeploymentHash", func() {
+		It("Test normal", func() {
+			deployment := GetWantedDeploys(bkapp)[0]
+			value := ComputeDeploymentHash(deployment)
+			Expect(value).To(Not(BeEmpty()))
+
+			// Change a field and the hash value should change
+			*deployment.Spec.Replicas = *deployment.Spec.Replicas + 1
+			newHash := ComputeDeploymentHash(deployment)
+			Expect(newHash).To(Not(Equal(value)))
+		})
+	})
+
+	DescribeTable(
+		"test buildImagePullSecrets",
+		func(anno string, expected []corev1.LocalObjectReference) {
+			bkapp.Annotations[paasv1alpha2.ImageCredentialsRefAnnoKey] = anno
+			Expect(buildImagePullSecrets(bkapp)).To(Equal(expected))
+		},
+		Entry(
+			"empty",
+			"",
+			nil,
+		),
+		Entry("legacy", "true", []corev1.LocalObjectReference{{Name: paasv1alpha2.LegacyImagePullSecretName}}),
+		Entry("custom", "image-pull-secret", []corev1.LocalObjectReference{{Name: "image-pull-secret"}}),
+	)
 })

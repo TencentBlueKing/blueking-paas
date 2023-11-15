@@ -22,8 +22,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
-from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
 from paasng.utils.structure import register
@@ -160,11 +160,14 @@ class CustomCollectorConfig(UuidAuditedModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False, db_index=True)
 
     name_en = models.CharField(
-        _("自定义采集项名称"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, unique=True
+        _("自定义采集项名称"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, db_index=True
     )
-    collector_config_id = models.BigIntegerField(_("采集配置ID"), help_text="采集配置ID", unique=True)
+    collector_config_id = models.BigIntegerField(_("采集配置ID"), help_text="采集配置ID", db_index=True)
     index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用", null=True)
     bk_data_id = models.BigIntegerField(_("数据管道ID"))
 
     log_paths = models.JSONField(_("日志文件的绝对路径，可使用 通配符;"))
     log_type = models.CharField(_("日志类型"), max_length=32)
+
+    class Meta:
+        unique_together = ("module", "name_en")

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import functools
 import logging
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from kubernetes.client.apis import VersionApi
 
@@ -28,13 +28,17 @@ from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.modules.constants import ModuleName
 
 from .constants import RABBITMQ_SERVICE_NAME
 
 logger = logging.getLogger(__name__)
 
 
-def get_vhost(app_code: str, run_env: str, module_name: str) -> str:
+def get_vhost(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    if not module_name:
+        raise ValueError(f'get_vhost(app_code: {app_code}): module_name is required')
+
     app = Application.objects.get(code=app_code)
 
     try:
@@ -51,11 +55,13 @@ def get_vhost(app_code: str, run_env: str, module_name: str) -> str:
     return ''
 
 
-def get_namespace(app_code: str, run_env: str, module_name: str) -> str:
+def get_namespace(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
+    module_name = module_name or ModuleName.DEFAULT.value
     return _get_namespace_cache(app_code, run_env, module_name)
 
 
-def get_cluster_id(app_code: str, run_env: str, module_name: str) -> str:
+def get_cluster_id(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
     """
     获取集群 ID
 
@@ -64,6 +70,8 @@ def get_cluster_id(app_code: str, run_env: str, module_name: str) -> str:
     :param module_name: 模块名
     :raises NotImplementedError: 集群版本低于 1.12
     """
+    # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
+    module_name = module_name or ModuleName.DEFAULT.value
     cluster_info = _get_cluster_info_cache(app_code, run_env, module_name)
     version = cluster_info['version']
     if (int(version.major), int(version.minor.rstrip('+'))) < (1, 12):
@@ -93,14 +101,16 @@ def _get_cluster_info_cache(app_code: str, run_env: str, module_name: str) -> di
     }
 
 
-LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[..., str]] = {
+LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
     'namespace': get_namespace,
     'vhost': get_vhost,
     'bcs_cluster_id': get_cluster_id,
 }
 
 
-def get_metric_labels(metric_names: List[str], app_code: str, run_env: str, module_name: str) -> Dict[str, str]:
+def get_metric_labels(
+    metric_names: List[str], app_code: str, run_env: str, module_name: Optional[str] = None
+) -> Dict[str, str]:
     """Get metric labels based on the provided metric names"""
     labels: Dict[str, str] = {}
     for name in metric_names:

@@ -50,7 +50,9 @@ class ScalingConfigSLZ(serializers.Serializer):
     metrics = serializers.ListField(
         child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
     )
-    policy = serializers.CharField(help_text="扩缩容策略", default=ScalingPolicy.DEFAULT)
+    policy = serializers.ChoiceField(
+        default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices(), help_text="扩缩容策略"
+    )
 
 
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):

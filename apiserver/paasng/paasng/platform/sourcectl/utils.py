@@ -23,7 +23,7 @@ import subprocess
 import tarfile
 import tempfile
 from contextlib import contextmanager
-from pathlib import Path, PureWindowsPath
+from pathlib import Path, PurePath, PureWindowsPath
 from typing import Callable, ContextManager, Iterator, List, Optional, Tuple, Union
 
 from paasng.utils.patternmatcher import Pattern
@@ -33,10 +33,17 @@ ExcludeChecker = Callable[[str], bool]
 
 
 class DockerIgnore:
-    def __init__(self, content: str):
+    """DockerIgnore provide a test for whether to ignore a file.
+
+    :param content: content of .dockerignore
+    :param whitelist: if something match .dockerignore but also in whitelist, will not be ignored.
+    """
+
+    def __init__(self, content: str, whitelist: Optional[List[str]] = None):
         self.raw_content = content
         self.content = self._parse_content(content)
         self.patterns: List[Tuple[bool, Pattern]] = []
+        self.whitelist = [PurePath(path) for path in (whitelist or [])]
         for pattern_str in self.content:
             invert = pattern_str.startswith("!")
             if invert:
@@ -47,6 +54,9 @@ class DockerIgnore:
         """detect whether to ignore given filename,
         return True to ignore, False to include
         """
+        if PurePath(filename) in self.whitelist:
+            return False
+
         should_ignore = False
         for invert, pattern in self.patterns:
             matched = pattern.match(filename)

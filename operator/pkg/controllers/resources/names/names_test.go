@@ -42,14 +42,14 @@ var _ = Describe("Get resource names", func() {
 	})
 
 	Context("pre-release hook", func() {
-		It("No revision", func() {
+		It("No DeployID", func() {
 			Expect(PreReleaseHook(bkapp)).To(Equal("pre-rel-foo-app-1"))
 		})
 
-		It("Has revision", func() {
-			revision := GinkgoRandomSeed()
-			bkapp.Status.SetRevision(revision, "")
-			Expect(PreReleaseHook(bkapp)).To(Equal(fmt.Sprintf("pre-rel-foo-app-%d", revision)))
+		It("Has DeployID", func() {
+			deployID := fmt.Sprintf("%d", GinkgoRandomSeed())
+			bkapp.Status.SetDeployID(deployID)
+			Expect(PreReleaseHook(bkapp)).To(Equal(fmt.Sprintf("pre-rel-foo-app-%s", deployID)))
 		})
 	})
 

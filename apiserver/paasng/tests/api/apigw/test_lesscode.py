@@ -23,15 +23,17 @@ from unittest import mock
 import pytest
 import yaml
 from django.conf import settings
+from django.test.utils import override_settings
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 from tests.utils.helpers import generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 @pytest.fixture
@@ -56,6 +58,10 @@ def lesscode_public_params():
 class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
+    @pytest.mark.parametrize(
+        "is_lesscode_app_cloud_native, app_type",
+        [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
+    )
     def test_create_lesscode_api(
         self,
         bk_user,
@@ -65,6 +71,8 @@ class TestApiInAPIGW:
         bk_app_code,
         bk_app_name,
         init_tmpls,
+        is_lesscode_app_cloud_native,
+        app_type,
     ):
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
         lesscode_public_params.update(
@@ -74,12 +82,14 @@ class TestApiInAPIGW:
                 'name': bk_app_name,
             }
         )
-        response = api_client.post(
-            '/apigw/api/bkapps/applications/',
-            data=lesscode_public_params,
-        )
+        with override_settings(IS_LESSCODE_APP_CLOUD_NATIVE=is_lesscode_app_cloud_native):
+            response = api_client.post(
+                '/apigw/api/bkapps/applications/',
+                data=lesscode_public_params,
+            )
         assert response.status_code == 201
         assert response.json()['application']['modules'][0]['source_origin'] == SourceOrigin.BK_LESS_CODE
+        assert response.json()['application']['type'] == app_type
 
 
 class TestModuleSourcePackageViewSet:

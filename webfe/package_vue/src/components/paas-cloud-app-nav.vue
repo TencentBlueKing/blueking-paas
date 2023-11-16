@@ -93,7 +93,7 @@ export default {
       roleAllowRouters: {
         administrator: [
           // 概览
-          'appSummary',
+          'cloudAppSummary',
           // 应用编排
           'cloudAppDeploy',
           // 应用编排 - 构建配置
@@ -155,7 +155,7 @@ export default {
         ],
         developer: [
           // 概览
-          'appSummary',
+          'cloudAppSummary',
           // 应用编排
           'cloudAppDeploy',
           // 应用编排 - 构建配置
@@ -505,9 +505,9 @@ export default {
         });
       } catch (e) {
         console.warn('error', e);
-        if (e && e.name === 'appSummary') {
+        if (e && e.name === 'cloudAppSummary') {
           this.$router.push({
-            name: 'appSummary',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
               moduleId: 'default',
@@ -515,7 +515,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appSummary',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
             },
@@ -665,9 +665,9 @@ export default {
         };
         this.$router.push(routeConf);
       } catch (e) {
-        if (e && e.name === 'appSummary') {
+        if (e && e.name === 'cloudAppSummary') {
           this.$router.push({
-            name: 'appSummary',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
               moduleId: 'default',
@@ -675,7 +675,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appBaseInfo',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
             },

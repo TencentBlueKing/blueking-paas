@@ -58,7 +58,7 @@
           :show-overflow-tooltip="true"
         >
           <template slot-scope="{ row }">
-            <div v-if="row.log_paths.length">{{ row.log_paths.join('; ') }}</div>
+            <div v-if="row.log_paths && row.log_paths.length">{{ row.log_paths.join('; ') }}</div>
             <span v-else>--</span>
           </template>
         </bk-table-column>
@@ -278,7 +278,7 @@ export default {
           moduleId: this.curModuleId,
           // appCode: 'test-fastapi',
         });
-        this.logCollectionList = list;
+        this.logCollectionList = list || [];
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -350,7 +350,7 @@ export default {
           moduleId: this.curModuleId,
         });
         this.customCollectorData = res;
-        this.collectionRules = res.options;
+        this.collectionRules = res.options || [];
       } catch (e) {
         this.$bkMessage({
           theme: 'error',

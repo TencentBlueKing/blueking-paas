@@ -74,6 +74,10 @@ const appSummary = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev
   window.showDeployTip(error);
 });
 
+const cloudAppSummary = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev-center/app/summary').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appSummaryNotDeployed = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev-center/app/summary/not-deployed').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -440,8 +444,8 @@ const router = new Router({
         },
         {
           path: ':id/summary',
-          component: appSummary,
-          name: 'appSummaryWithModule',
+          component: cloudAppSummary,
+          name: 'cloudAppSummary',
           meta: {
             capture403Error: false,
           },
@@ -476,7 +480,7 @@ const router = new Router({
           },
         },
         {
-          path: ':id/app-configs',
+          path: ':id/settings/application',
           component: appConfigs,
           name: 'appConfigs',
           redirect: {
@@ -510,13 +514,13 @@ const router = new Router({
           ],
         },
         {
-          path: ':id/:moduleId/event-query',
+          path: ':id/:moduleId/events',
           component: cloudAppEventQuery,
           name: 'cloudAppEventQuery',
         },
         // 云原生访问统计
         {
-          path: ':id/cloud-analysis',
+          path: ':id/analysis',
           component: cloudAppAnalysis,
           name: 'cloudAppAnalysis',
           redirect: {
@@ -524,7 +528,7 @@ const router = new Router({
           },
           children: [
             {
-              path: ':moduleId/web-analysis',
+              path: ':moduleId/web',
               component: appWebAnalysis,
               name: 'cloudAppWebAnalysis',
               meta: {
@@ -532,7 +536,7 @@ const router = new Router({
               },
             },
             {
-              path: ':moduleId/log-analysis',
+              path: ':moduleId/log',
               component: appLogAnalysis,
               name: 'cloudAppLogAnalysis',
               meta: {
@@ -540,7 +544,7 @@ const router = new Router({
               },
             },
             {
-              path: ':moduleId/event-analysis',
+              path: ':moduleId/events',
               component: appEventAnalysis,
               name: 'cloudAppEventAnalysis',
               meta: {
@@ -600,7 +604,7 @@ const router = new Router({
           ],
         },
         {
-          path: ':id/:moduleId/cloud-deploy',
+          path: ':id/:moduleId/settings/modules',
           component: cloudAppDeployments,
           name: 'cloudAppDeploy',
           redirect: {
@@ -681,10 +685,11 @@ const router = new Router({
             },
             {
               path: 'module-info',
+              path: 'info',
               component: moduleInfo,
               name: 'moduleInfo',
               meta: {
-                module: 'module-info',
+                module: 'info',
               },
             },
             {
@@ -728,7 +733,7 @@ const router = new Router({
           name: 'appProcess',
         },
         {
-          path: ':id/clound-image-manage',
+          path: ':id/images',
           component: cloudAppImageManage,
           name: 'cloudAppImageManage',
           redirect: {
@@ -736,12 +741,12 @@ const router = new Router({
           },
           children: [
             {
-              path: 'image-list',
+              path: '',
               component: cloudAppImageList,
               name: 'cloudAppImageList',
             },
             {
-              path: 'build-history',
+              path: 'history',
               component: cloudAppBuildHistory,
               name: 'cloudAppBuildHistory',
               meta: {
@@ -752,7 +757,7 @@ const router = new Router({
         },
         // 云原生部署管理
         {
-          path: ':id/cloud-deploy-manage',
+          path: ':id/deployments',
           component: cloudAppDeployManage,
           name: 'cloudAppDeployManage',
           redirect: {
@@ -776,7 +781,7 @@ const router = new Router({
               },
             },
             {
-              path: 'deploy-history',
+              path: 'history',
               component: cloudAppDeployHistory,
               name: 'cloudAppDeployHistory',
               meta: {
@@ -817,24 +822,14 @@ const router = new Router({
           name: 'appEntryConfig',
         },
         {
-          path: ':id/:moduleId/log',
+          path: ':id/:moduleId/logging',
           component: appLog,
           name: 'appLog',
         },
         {
-          path: ':id/log',
-          component: appLog,
-          name: 'appLogWithModule',
-        },
-        {
-          path: ':id/:moduleId/monitor-alarm',
+          path: ':id/:moduleId/alerts',
           component: monitorAlarm,
           name: 'monitorAlarm',
-        },
-        {
-          path: ':id/monitor-alarm',
-          component: monitorAlarm,
-          name: 'monitorAlarmWithModule',
         },
         {
           path: ':id/:moduleId/web-analysis',
@@ -927,7 +922,7 @@ const router = new Router({
           name: 'appServiceConfig',
         },
         {
-          path: ':id/docu-management',
+          path: ':id/doc_mgt',
           component: docuManagement,
           name: 'docuManagement',
         },

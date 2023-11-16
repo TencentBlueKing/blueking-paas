@@ -102,7 +102,7 @@
       />
       <bk-table-column
         :label="isBkMonitor ? $t('告警名称') : $t('类型')"
-        :min-width="220"
+        :width="250"
         :show-overflow-tooltip="true"
       >
         <template slot-scope="{ row }">
@@ -670,7 +670,7 @@ export default {
 
         // 全量数据前端分页
         this.pagination.count = alarmList.length;
-        this.bkAlarmRecordList = alarmList;
+        this.bkAlarmRecordList = alarmList || [];
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -753,7 +753,7 @@ export default {
           xAxisData.push(moment(val[0] * 1000).format('MM-DD HH:mm:ss'));
           chartData.push(val[1]);
         });
-        const curValues =          values.find(val => val[0] === curTime / 1000) || values[0];
+        const curValues = values.find(val => val[0] === curTime / 1000) || values[0];
         series.push({
           name: this.alarmMetricsTitle,
           type: 'line',

@@ -685,6 +685,7 @@ export const PAAS_STATIC_CONFIG = {
                             "cloudAppDeployForHook",
                             "cloudAppDeployForResource",
                             'imageCredential',
+                            'observabilityConfig',
                             'moduleInfo',
                             'appServices',
                             'appServiceInnerShared',

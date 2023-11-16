@@ -7,6 +7,7 @@
       :cur-module="curAppModule"
       :module-list="curAppModuleList"
       :first-module-name="firstTabActiveName"
+      :active-route-name="activeRouteName"
     />
     <paas-content-loader
       :placeholder="loaderPlaceholder"
@@ -128,12 +129,14 @@ export default {
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env' },
         { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
+        { name: 'observabilityConfig', label: this.$t('可观测性配置'), ref: 'observability' },
         { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,
       isTab: true,
       dialogCloudAppData: [],
+      activeRouteName: '',
     };
   },
   computed: {
@@ -207,6 +210,7 @@ export default {
   methods: {
     handleGoPage(routeName) {
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
+      this.activeRouteName = routeName;
       this.$router.push({
         name: routeName,
       });

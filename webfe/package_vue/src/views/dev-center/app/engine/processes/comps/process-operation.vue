@@ -250,7 +250,6 @@
         :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
-        :before-close="handleBeforeClose"
       >
         <div
           id="log-container"
@@ -335,7 +334,6 @@
         :is-show.sync="chartSlider.isShow"
         :title="chartSlider.title"
         :quick-close="true"
-        :before-close="handleChartBeforeClose"
         @hidden="handlerChartHide"
       >
         <div
@@ -629,7 +627,7 @@
   </div>
 </template>
 
-<script> import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -2159,15 +2157,6 @@ export default {
         return instance.state;
       }
       return instance.state_message;
-    },
-
-    async handleBeforeClose() {
-      return this.$isSidebarClosed(JSON.stringify(this.curLogTimeRange));
-    },
-
-    async handleChartBeforeClose() {
-      const time = this.initDateTimeRange.map(time => moment(time).format('YYYY-MM-DD HH:mm:ss'));
-      return this.$isSidebarClosed(JSON.stringify(time));
     },
 
     async getAutoScalFlag() {

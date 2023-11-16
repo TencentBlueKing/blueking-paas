@@ -28,6 +28,9 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.db.models import Model
 
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, RepositoryInstance, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager, promote_repo_privilege_temporary
@@ -37,9 +40,6 @@ from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.templater import Templater
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.models import Module
-from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.utils.basic import get_username_by_bkpaas_user_id, unique_id_generator
 from paasng.utils.blobstore import BlobStore, make_blob_store
 
@@ -305,7 +305,7 @@ class BlobStoreSyncProcedure:
     blob_store: BlobStore
     key: str
 
-    downloadable_address_expires_in = 3600
+    downloadable_address_expires_in = 3600 * 4
 
     def run(self, source_path: str) -> SourceSyncResult:
         """Compress the source_path and upload the content to given key"""
@@ -340,7 +340,7 @@ def get_repo_connector(repo_type: str, module: Module) -> ModuleRepoConnector:
 def generate_downloadable_app_template(module: Module, context: Optional[Dict[str, Any]] = None) -> SourceSyncResult:
     """Generate a downloadable URL for templated app source code
 
-    :param context: Context for renderting source code
+    :param context: Context for rendering the source code
     """
     application = module.application
     if context is None:

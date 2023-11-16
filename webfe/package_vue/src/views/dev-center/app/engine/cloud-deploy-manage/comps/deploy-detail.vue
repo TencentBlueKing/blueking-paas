@@ -398,9 +398,8 @@
                     style="min-width: 140px;"
                   >{{ log.timestamp }}</span>
                   <span class="pod-name">{{ log.podShortName }}</span>
-                  <pre
-                    class="message"
-                    v-html="log.message || '--'"
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <pre class="message" v-html="log.message || '--'"
                   />
                 </li>
               </ul>

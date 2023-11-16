@@ -570,13 +570,13 @@ export const PAAS_STATIC_CONFIG = {
         "message": staticI18n.$t("应用左侧导航"),
         "cloudList": [
             {
-                "name": "appSummary",
+                "name": "cloudAppSummary",
                 "label": staticI18n.$t("概览"),
-                "matchRouters": ["appSummaryEmpty", "appSummary"],
+                "matchRouters": ["appSummaryEmpty", "cloudAppSummary"],
                 "iconfontName": "metrics",
                 "supportModule": true,
                 "destRoute": {
-                  "name": "appSummary"
+                  "name": "cloudAppSummary"
                 },
                 "children": []
             },

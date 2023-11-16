@@ -314,6 +314,9 @@ export default {
     },
     handleChangePanel(payload) {
       payload.isExpand = !payload.isExpand;
+      if (payload.isExpand) {
+        this.handleRefresh();
+      }
       // this.$set(this, 'deploymentInfoData', res.data);
       //   this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
       this.curDeploymentInfoItem = payload || {};
@@ -373,7 +376,7 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      if (this.intervalTimer) true;  // 如果已经有了timer则return
+      if (this.intervalTimer) return;  // 如果已经有了timer则return
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {

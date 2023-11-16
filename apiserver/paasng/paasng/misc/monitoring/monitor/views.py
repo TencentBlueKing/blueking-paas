@@ -255,7 +255,8 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         try:
             alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
         except BkMonitorSpaceDoesNotExist:
-            return Response()
+            # BkMonitorSpace 不存在（应用未部署）时，返回空列表
+            return Response([])
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
@@ -275,7 +276,8 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
         try:
             alarm_strategies = make_bk_monitor_client().query_alarm_strategies(serializer.validated_data)
         except BkMonitorSpaceDoesNotExist:
-            return Response()
+            # BkMonitorSpace 不存在（应用未部署）时，返回空字典
+            return Response({})
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALARM_STRATEGIES_FAILED.f(str(e))
 

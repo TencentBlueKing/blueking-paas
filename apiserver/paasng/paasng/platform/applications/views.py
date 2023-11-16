@@ -437,7 +437,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
 
     @transaction.atomic
-    @swagger_auto_schema(request_body=slzs.CreateCloudNativeApplicationSLZ, tags=["创建蓝鲸可视化开发平台应用"])
+    @swagger_auto_schema(request_body=slzs.CreateApplicationV2SLZ, tags=["创建蓝鲸可视化开发平台应用"])
     def create_lesscode_app(self, request):
         """注册在 APIGW 上给 bk_lesscode 平台调用，调用参数如下:
         {
@@ -454,9 +454,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             }
         }
         """
-        serializer = slzs.CreateCloudNativeApplicationSLZ(
-            data=request.data, context={"region": request.data["region"]}
-        )
+        # 根据配置判断新建的 lesscode 应用是否为云原生应用
+        if settings.IS_LESSCODE_APP_CLOUD_NATIVE:
+            serializer_class = slzs.CreateCloudNativeApplicationSLZ
+        else:
+            serializer_class = slzs.CreateApplicationV2SLZ
+
+        serializer = serializer_class(data=request.data, context={"region": request.data["region"]})
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 

@@ -108,8 +108,10 @@ class ModuleDeployHookSLZ(serializers.Serializer):
 class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     """A service discovery entry that represents an application and an optional module."""
 
-    bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20)
-    module_name = serializers.CharField(help_text='被服务发现的应用模块', max_length=20, default=ModuleName.DEFAULT.value)
+    bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20, source="bkAppCode")
+    module_name = serializers.CharField(
+        help_text='被服务发现的应用模块', max_length=20, default=ModuleName.DEFAULT.value, source="moduleName"
+    )
 
     def validate(self, attrs):
         """ 校验应用和模块存在，否则抛出异常 """
@@ -119,27 +121,6 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
             raise serializers.ValidationError(_(f'应用{attrs["bkAppCode"]}或模块{attrs["moduleName"]}不存在'))
 
         return attrs
-
-    def to_internal_value(self, data):
-        internal_data = super().to_internal_value(data)
-
-        bk_app_code = internal_data.pop('bk_app_code')
-        module_name = internal_data.pop('module_name')
-
-        internal_data['bkAppCode'] = bk_app_code
-        internal_data['moduleName'] = module_name
-        return internal_data
-
-    def to_representation(self, instance):
-        bk_app_code = instance.bkAppCode
-        module_name = instance.moduleName
-        instance = {
-            'bk_app_code': bk_app_code,
-            'module_name': module_name,
-        }
-        representation_data = super().to_representation(instance)
-
-        return representation_data
 
 
 class SvcDiscConfigSLZ(serializers.Serializer):

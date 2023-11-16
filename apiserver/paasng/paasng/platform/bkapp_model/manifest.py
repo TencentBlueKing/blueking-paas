@@ -368,23 +368,29 @@ class MountsManifestConstructor(ManifestConstructor):
 
 
 class SvcDiscoveryManifestConstructor(ManifestConstructor):
-    """Construct the mounts part."""
+    """Construct the svc discovery part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        if queryset := SvcDiscConfig.objects.filter(application=module.application):
-            svc_disc_config = queryset.first()
-            model_res.spec.svcDiscovery = SvcDiscConfigSpec(bkSaaS=svc_disc_config.bk_saas)
+        try:
+            svc_disc_config = SvcDiscConfig.objects.get(application=module.application)
+        except SvcDiscConfig.DoesNotExist:
+            return
+
+        model_res.spec.svcDiscovery = SvcDiscConfigSpec(bkSaaS=svc_disc_config.bk_saas)
 
 
 class DomainResolutionManifestConstructor(ManifestConstructor):
-    """Construct the mounts part."""
+    """Construct the domain resolution part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        if queryset := DomainResolution.objects.filter(application=module.application):
-            domain_res = queryset.first()
-            model_res.spec.domainResolution = DomainResolutionSpec(
-                nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases
-            )
+        try:
+            domain_res = DomainResolution.objects.get(application=module.application)
+        except DomainResolution.DoesNotExist:
+            return
+
+        model_res.spec.domainResolution = DomainResolutionSpec(
+            nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases
+        )
 
 
 def get_manifest(module: Module) -> List[Dict]:

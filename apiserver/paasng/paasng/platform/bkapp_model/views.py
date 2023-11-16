@@ -277,6 +277,5 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
 
         domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)
 
-        domain_resolution.save()
-
+        domain_resolution.refresh_from_db()
         return Response(DomainResolutionSLZ(domain_resolution).data, status=status.HTTP_200_OK)

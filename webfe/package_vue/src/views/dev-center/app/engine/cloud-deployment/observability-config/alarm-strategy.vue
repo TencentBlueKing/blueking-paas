@@ -39,7 +39,7 @@
       <bk-table-column :label="$t('标签')">
         <template slot-scope="{ row }">
           <div
-            v-if="row.labels && row.labels.length"
+            v-if="row.labels?.length"
             v-bk-overflow-tips="{ content: row.labels.join(', ') }"
           >
             <span

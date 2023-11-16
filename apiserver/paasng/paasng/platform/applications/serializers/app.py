@@ -70,6 +70,13 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
             raise ValidationError(_('engine_params.source_init_template: 必须选择一个应用模板'))
 
 
+class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
+    def to_internal_value(self, data: Dict):
+        data = super().to_internal_value(data)
+        data['type'] = ApplicationType.CLOUD_NATIVE.value
+        return data
+
+
 class CreateThirdPartyApplicationSLZ(AppBasicInfoMixin):
     """创建外链应用的表单"""
 

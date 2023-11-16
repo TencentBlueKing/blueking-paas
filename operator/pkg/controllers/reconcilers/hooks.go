@@ -98,11 +98,8 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Disabled",
 		Message:            "Pre-Release-Hook feature not turned on",
-		ObservedGeneration: bkapp.Status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
-	if err := r.Client.Status().Update(ctx, bkapp); err != nil {
-		return r.Result.withError(err)
-	}
 	return r.Result
 }
 
@@ -131,7 +128,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 			Status:             metav1.ConditionFalse,
 			Reason:             "Progressing",
 			Message:            "The pre-release hook is executing.",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	}
 
@@ -176,9 +173,9 @@ func (r *HookReconciler) ExecuteHook(
 		Status:             metav1.ConditionFalse,
 		Reason:             "Progressing",
 		Message:            "The pre-release hook is executing.",
-		ObservedGeneration: bkapp.Status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }
 
 // UpdateStatus will update bkapp hook status from the given instance status
@@ -200,14 +197,14 @@ func (r *HookReconciler) UpdateStatus(
 				"PreReleaseHook execute timeout, last message: %s",
 				instance.Status.Message,
 			),
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	case instance.Succeeded():
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Finished",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	case instance.Failed():
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
@@ -216,10 +213,10 @@ func (r *HookReconciler) UpdateStatus(
 			Status:             metav1.ConditionFalse,
 			Reason:             "Failed",
 			Message:            fmt.Sprintf("PreReleaseHook fail to succeed: %s", instance.Status.Message),
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	}
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态

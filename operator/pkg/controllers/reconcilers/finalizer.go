@@ -63,11 +63,8 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			Status:             metav1.ConditionFalse,
 			Reason:             "Terminating",
 			Message:            "Deletion request was issued, but hooks are not finished.",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
-		if err = r.Client.Status().Update(ctx, bkapp); err != nil {
-			return r.Result.withError(errors.Wrap(err, "failed to update condition status"))
-		}
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	if err = r.deleteResources(ctx, bkapp); err != nil {

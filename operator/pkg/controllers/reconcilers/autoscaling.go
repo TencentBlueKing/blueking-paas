@@ -129,9 +129,9 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 			Status:             metav1.ConditionUnknown,
 			Reason:             "Disabled",
 			Message:            "Process autoscaling feature not turned on",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
-		return r.Client.Status().Update(ctx, bkapp)
+		return nil
 	}
 
 	for _, gpa := range current {
@@ -142,9 +142,9 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 				Status:             metav1.ConditionFalse,
 				Reason:             "AutoscalerFailure",
 				Message:            gpa.Name + ": " + healthStatus.Message,
-				ObservedGeneration: bkapp.Status.ObservedGeneration,
+				ObservedGeneration: bkapp.Generation,
 			})
-			return r.Client.Status().Update(ctx, bkapp)
+			return nil
 		}
 	}
 
@@ -152,7 +152,7 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 		Type:               paasv1alpha2.AutoscalingAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             "AutoscalingAvailable",
-		ObservedGeneration: bkapp.Status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }

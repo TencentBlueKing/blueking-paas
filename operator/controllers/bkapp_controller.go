@@ -112,6 +112,14 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
+	if app.Generation > app.Status.ObservedGeneration {
+		app.Status.Phase = paasv1alpha2.AppPending
+		if err = r.client.Status().Update(ctx, app); err != nil {
+			log.Error(err, "Unable to update bkapp status when generation changed")
+			return reconcile.Result{}, err
+		}
+	}
+
 	var ret reconcilers.Result
 	for _, reconciler := range []reconcilers.Reconciler{
 		// NOTE: The order of these reconcilers is important.
@@ -132,9 +140,11 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 		ret = reconciler.Reconcile(ctx, app)
 		if ret.ShouldAbort() {
+			ret = reconcilers.UpdateStatus(ctx, r.client, app, ret)
 			return ret.ToRepresentation()
 		}
 	}
+	ret = reconcilers.UpdateStatus(ctx, r.client, app, ret)
 	return ret.End().ToRepresentation()
 }
 

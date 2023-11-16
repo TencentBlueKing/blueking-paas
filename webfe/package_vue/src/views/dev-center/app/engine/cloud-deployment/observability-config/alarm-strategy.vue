@@ -4,7 +4,8 @@
       <h4>{{ $t('告警策略') }}</h4>
       <p class="tips">
         {{ $t('告警策略对应用下所有模块都生效，如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
-        <a :href="strategyLink" target="_blank">
+        <!-- 未部署不展示 -->
+        <a v-if="strategyLink" :href="strategyLink" target="_blank">
           <i class="paasng-icon paasng-jump-link"></i>
           {{ $t('配置告警策略') }}
         </a>
@@ -38,7 +39,7 @@
       <bk-table-column :label="$t('标签')">
         <template slot-scope="{ row }">
           <div
-            v-if="row.labels.length"
+            v-if="row.labels && row.labels.length"
             v-bk-overflow-tips="{ content: row.labels.join(', ') }"
           >
             <span
@@ -137,19 +138,20 @@ export default {
     // 获取告警策略
     async getAlarmStrategies() {
       try {
-        const {
-          strategy_config_list: strategyList,
-          user_group_list,
-          strategy_config_link,
-        } = await this.$store.dispatch('alarm/getAlarmStrategies', {
+        const res = await this.$store.dispatch('alarm/getAlarmStrategies', {
           appCode: this.appCode,
         });
 
-        strategyList.forEach((v) => {
+        // 未部署处理
+        const strategyList = res.strategy_config_list || [];
+        const userGroupList = res.user_group_list || [];
+        const strategyConfigLink = res.strategy_config_link || '';
+
+        strategyList.length && strategyList.forEach((v) => {
           // 用户组处理
           v.noticeGroupNames = v.notice_group_ids.map((id) => {
             // eslint-disable-next-line camelcase
-            const foundItem = user_group_list.find(userItem => +userItem.user_group_id === id);
+            const foundItem = userGroupList.find(userItem => +userItem.user_group_id === id);
             return foundItem ? foundItem.user_group_name : null;
           });
 
@@ -199,7 +201,7 @@ export default {
         });
         this.alarmStrategyList = strategyList;
         // eslint-disable-next-line camelcase
-        this.strategyLink = strategy_config_link;
+        this.strategyLink = strategyConfigLink;
       } catch (e) {
         this.$bkMessage({
           theme: 'error',

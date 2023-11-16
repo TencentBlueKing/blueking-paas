@@ -263,8 +263,8 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         self._ensure_source_origin_available(request.user, source_origin)
 
         # 初始化应用镜像凭证信息
-        if image_credentials := data['bkapp_spec'].get('image_credentials'):
-            self._init_image_credentials(application, image_credentials)
+        if image_credential := data['bkapp_spec']['build_config'].get('image_credential'):
+            self._init_image_credential(application, image_credential)
 
         module_src_cfg['source_origin'] = source_origin
         # 如果指定模板信息，则需要提取并保存
@@ -317,9 +317,9 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
                 raise ValidationError(_('你无法使用非默认的源码来源'))
 
-    def _init_image_credentials(self, application: Application, image_credentials: Dict):
+    def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
-            AppUserCredential.objects.create(application_id=application.id, **image_credentials)
+            AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 

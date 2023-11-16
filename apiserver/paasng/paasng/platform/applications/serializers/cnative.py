@@ -40,9 +40,10 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
 
         validate_build_method(build_config.build_method, source_config['source_origin'])
 
-        if build_config.build_method == RuntimeType.CUSTOM_IMAGE and build_config.image != source_config.get(
-            'source_repo_url'
+        if (
+            build_config.build_method == RuntimeType.CUSTOM_IMAGE
+            and build_config.image_repository != source_config.get('source_repo_url')
         ):
-            raise ValidationError('image is not consistent with source_repo_url')
+            raise ValidationError('image_repository is not consistent with source_repo_url')
 
         return attrs

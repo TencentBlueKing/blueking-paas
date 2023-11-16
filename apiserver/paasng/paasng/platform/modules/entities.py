@@ -36,7 +36,9 @@ class BuildConfig:
     build_method: RuntimeType
     tag_options: ImageTagOptions
 
-    image: Optional[str] = None
+    image_repository: Optional[str] = None
+    image_credential: Optional[Dict] = None
+
     dockerfile_path: Optional[str] = None
     docker_build_args: Optional[Dict] = None
 

@@ -33,7 +33,7 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppBuildConfig
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService
@@ -45,10 +45,7 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.bkapp_model.importer.build import import_build
-from paasng.platform.bkapp_model.importer.env_overlays import import_env_overlays
-from paasng.platform.bkapp_model.importer.hooks import import_hooks
-from paasng.platform.bkapp_model.importer.processes import import_processes
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -287,21 +284,45 @@ class ModuleInitializer:
         if not bkapp_spec or bkapp_spec['build_config'].build_method != RuntimeType.CUSTOM_IMAGE:
             return
 
-        build_params = {'image': bkapp_spec['build_config'].image}
-        if image_credentials := bkapp_spec.get('image_credentials'):
-            build_params['imageCredentialsName'] = image_credentials['name']
-        import_build(self.module, BkAppBuildConfig(**build_params))
+        # 镜像交付的应用需要将模块配置导入到 DB(bkapp model)
+        # 导入 BuildConfig
+        build_config = bkapp_spec['build_config']
+        config_obj = BuildConfig.objects.get_or_create_by_module(self.module)
+        build_params = {
+            "image_repository": build_config.image_repository,
+        }
+        if image_credential := build_config.image_credential:
+            build_params['image_credential_name'] = image_credential['name']
+        update_build_config_with_method(config_obj, build_method=build_config.build_method, data=build_params)
 
-        import_processes(self.module, processes=bkapp_spec['processes'])
+        # 导入进程配置
+        processes = [
+            BkAppProcess(
+                name=proc["name"],
+                command=proc["command"],
+                args=proc["args"],
+                targetPort=proc.get("port", None),
+            )
+            for proc in bkapp_spec['processes']
+        ]
+        image_credential_names = (
+            {proc["name"]: image_credential['name'] for proc in bkapp_spec['processes']} if image_credential else {}
+        )
 
-        if hooks := bkapp_spec.get('hooks'):
-            import_hooks(self.module, hooks)
+        mgr = ModuleProcessSpecManager(self.module)
+        mgr.sync_from_bkapp(processes, image_credential_names)
+        for proc in bkapp_spec['processes']:
+            if env_overlay := proc.get("env_overlay"):
+                mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
 
-        if env_overlay := bkapp_spec.get('envOverlay', {}):
-            overlay_replicas = env_overlay.get('replicas', [])
-            overlay_res_quotas = env_overlay.get('resQuotas', [])
-            overlay_autoscaling = env_overlay.get('autoscaling', [])
-            import_env_overlays(self.module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)
+        # 导入 hook 配置
+        if hook := bkapp_spec['hooks']:
+            self.module.deploy_hooks.enable_hook(
+                type_=hook['type'],
+                proc_command=hook.get('proc_command'),
+                command=hook.get('command'),
+                args=hook.get('args'),
+            )
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""

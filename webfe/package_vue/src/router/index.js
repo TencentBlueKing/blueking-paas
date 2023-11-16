@@ -74,6 +74,10 @@ const appSummary = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev
   window.showDeployTip(error);
 });
 
+const cloudAppSummary = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev-center/app/summary').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appSummaryNotDeployed = () => import(/* webpackChunkName: 'app-sumary' */'@/views/dev-center/app/summary/not-deployed').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -440,8 +444,8 @@ const router = new Router({
         },
         {
           path: ':id/summary',
-          component: appSummary,
-          name: 'appSummaryWithModule',
+          component: cloudAppSummary,
+          name: 'cloudAppSummary',
           meta: {
             capture403Error: false,
           },
@@ -918,7 +922,7 @@ const router = new Router({
           name: 'appServiceConfig',
         },
         {
-          path: ':id/docsments',
+          path: ':id/doc_mgt',
           component: docuManagement,
           name: 'docuManagement',
         },

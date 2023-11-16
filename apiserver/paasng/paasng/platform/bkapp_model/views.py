@@ -270,9 +270,11 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         validated_data = slz.validated_data
 
         defaults = {}
-        if nameservers := validated_data.get('nameservers'):
+        nameservers = validated_data.get('nameservers')
+        if nameservers is not None:
             defaults['nameservers'] = nameservers
-        if host_aliases := validated_data.get('host_aliases'):
+        host_aliases = validated_data.get('host_aliases')
+        if host_aliases is not None:
             defaults['host_aliases'] = host_aliases
 
         domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)

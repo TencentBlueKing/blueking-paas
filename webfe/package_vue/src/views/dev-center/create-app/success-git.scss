@@ -102,6 +102,10 @@
                 background: #F5F7FA;
                 padding: 12px 16px;
                 border-radius: 2px;
+                font-family: MicrosoftYaHei;
+                line-height: 22px;
+                font-size: 14px;
+                color: #313238;
             }
         }
         .log-title {
@@ -188,7 +192,7 @@
             background-color: transparent;
             border: 0;
             font-size: 100%;
-            word-break: normal;
+            word-break: break-all;
             white-space: pre-line;
             background: 0 0;
             box-sizing: inherit;

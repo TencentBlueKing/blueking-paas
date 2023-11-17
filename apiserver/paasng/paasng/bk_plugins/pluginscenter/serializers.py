@@ -281,7 +281,7 @@ def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
         return make_array_field(field_schema)
     elif type_ == "string":
         return make_string_field(field_schema)
-    elif type == "boolean":
+    elif type_ == "boolean":
         return make_bool_field(field_schema)
     raise NotImplementedError(f"NotImplemented field type: {type_} for plugin's extraFields")
 

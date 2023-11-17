@@ -189,7 +189,6 @@ export default {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
   },
@@ -211,6 +210,7 @@ export default {
     handleGoPage(routeName) {
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.activeRouteName = routeName;
+      this.active = routeName;
       this.$router.push({
         name: routeName,
       });

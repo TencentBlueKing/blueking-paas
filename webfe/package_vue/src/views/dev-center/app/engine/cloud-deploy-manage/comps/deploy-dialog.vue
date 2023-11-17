@@ -18,8 +18,7 @@
       <div v-if="isSourceCodeBuild">
         <div class="code-depot mb10" v-if="deploymentInfoBackUp.repo_url">
           <span class="pr20">
-            {{ deploymentInfoBackUp.build_method === 'dockerfile' ?
-              $t('代码仓库') : $t('镜像仓库') }}
+            {{ $t('代码仓库') }}：
           </span>
           {{ deploymentInfoBackUp.repo_url }}
         </div>
@@ -125,14 +124,14 @@
         <div v-if="!allowMultipleImage">
           <div class="code-depot mb15">
             <span class="pr20">
-              {{ $t('镜像仓库') }}
+              {{ $t('镜像仓库') }}：
             </span>
             {{ deploymentInfoBackUp.repo_url }}
           </div>
           <div>
             <bk-form :model="tagData" ref="imageFormRef" form-type="vertical">
               <bk-form-item
-                label="镜像Tag"
+                :label="$t('镜像Tag')"
                 :rules="rules.tag"
                 :required="true"
                 :property="'tagValue'"
@@ -184,7 +183,8 @@
           </div>
         </div>
       </div>
-      <div class="v1-container">
+      <!-- 已构建镜像展示 -->
+      <div class="v1-container" v-if="buttonActive === 'image'">
         <div class="image-pull-strategy" :class="(isSourceCodeBuild || !allowMultipleImage) ? '' : 'flex-row'">
           <label>{{ $t('镜像拉取策略') }}<span v-if="!isSourceCodeBuild && allowMultipleImage">：</span></label>
           <bk-radio-group v-model="imagePullStrategy">
@@ -248,7 +248,7 @@ export default {
         visiable: false,
         isLoading: false,
       },
-      imageSourceData: [{ value: 'branch', label: '从源码构建' }, { value: 'image', label: '已构建镜像' }],
+      imageSourceData: [{ value: 'branch', label: this.$t('从源码构建') }, { value: 'image', label: this.$t('已构建镜像') }],
       buttonActive: 'branch',
       branchList: [],
       branchesData: [],
@@ -731,8 +731,9 @@ export default {
     font-size: 12px;
   }
 .btn-container{
+  display: flex;
   .btn-item{
-    padding: 0 82px;
+    flex: 1;
   }
 }
 .v1-container{

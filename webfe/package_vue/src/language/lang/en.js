@@ -2406,4 +2406,6 @@ export default {
   通知组: 'Notification group',
   是否启用: 'Enable',
   '主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通': 'The main module cannot be deleted, and the deletion operation cannot be undone. Please communicate with other members of the application before deleting it.',
+  从源码构建: 'Build from source',
+  已构建镜像: 'Built image',
 };

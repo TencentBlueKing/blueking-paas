@@ -49,7 +49,7 @@ func (d defaultConfig) GetProcDefaultCpuLimits() string {
 }
 
 func (d defaultConfig) GetProcDefaultMemLimits() string {
-	return "768Mi"
+	return "1Gi"
 }
 
 func (d defaultConfig) GetIngressClassName() string {

@@ -192,7 +192,7 @@ type Mount struct {
 type ResQuotaPlan string
 
 const (
-	// ResQuotaPlanDefault is default quota plan，means 2000m cpu & 768Mi memory
+	// ResQuotaPlanDefault is default quota plan，means 4000m cpu & 1024Mi memory
 	ResQuotaPlanDefault ResQuotaPlan = "default"
 
 	// ResQuotaPlan4C1G means 4 cpu & 1Gi memory

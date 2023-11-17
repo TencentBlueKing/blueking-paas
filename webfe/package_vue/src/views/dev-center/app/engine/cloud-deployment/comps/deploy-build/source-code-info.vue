@@ -183,7 +183,7 @@ export default {
     handlePageLimitChange(limit) {
       this.pagination.limit = limit;
       this.pagination.current = 1;
-      this.getPackageList(this.pagination.current);
+      this.getPackageList();
     },
     handlePageChange(newPage) {
       this.pagination.current = newPage;

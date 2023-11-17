@@ -53,7 +53,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	expected := resources.GetWantedDeploys(bkapp)
 	if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ok {
@@ -65,18 +65,18 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
 			if err = r.Client.Delete(ctx, deploy); err != nil {
-				return r.Result.withError(err)
+				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
 		if err = r.deploy(ctx, deploy); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
 	if bkapp.Status.Phase == paasv1alpha2.AppPending {

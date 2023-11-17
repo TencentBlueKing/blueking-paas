@@ -58,28 +58,28 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log.V(4).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
 		if err := r.UpdateStatus(ctx, bkapp, current, resources.HookExecuteTimeoutThreshold); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 
 		switch {
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
+				return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
-			return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
+			return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
 		case current.Progressing():
 			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 		case current.Succeeded():
 			return r.Result
 		case current.FailedUntilTimeout(resources.HookExecuteFailedTimeoutThreshold):
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
+				return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
 			}
 			// Pod 在超时时间内一直失败, 终止调和循环
-			return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully)).End()
+			return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully)).End()
 		default:
-			return r.Result.withError(
+			return r.Result.WithError(
 				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),
 			)
 		}
@@ -87,7 +87,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)); hook != nil {
 		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环
 		return r.Result.End()

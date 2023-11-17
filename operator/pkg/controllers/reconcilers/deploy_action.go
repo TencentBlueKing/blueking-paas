@@ -77,7 +77,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// hook triggered by older deploy is not finished yet?
 	if bkapp.Status.DeployId != "" {
 		if err = r.validateNoRunningHooks(ctx, bkapp); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 
@@ -89,7 +89,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 
 	if err = r.Client.Status().Update(ctx, bkapp); err != nil {
 		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 
 	return r.Result

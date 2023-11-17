@@ -53,7 +53,7 @@ type AutoscalingReconciler struct {
 func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	expected := resources.GetWantedGPAs(bkapp)
 	outdated := FindExtraByName(current, expected)
@@ -61,18 +61,18 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alph
 	if len(outdated) != 0 {
 		for _, gpa := range outdated {
 			if err = r.Client.Delete(ctx, gpa); err != nil {
-				return r.Result.withError(err)
+				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, gpa := range expected {
 		if err = r.deploy(ctx, gpa); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	return r.Result
 }

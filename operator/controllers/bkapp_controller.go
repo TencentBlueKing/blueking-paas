@@ -20,6 +20,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
@@ -140,12 +141,36 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 		ret = reconciler.Reconcile(ctx, app)
 		if ret.ShouldAbort() {
-			ret = reconcilers.UpdateStatus(ctx, r.client, app, ret)
+			if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+				ret = ret.WithError(err)
+			}
 			return ret.ToRepresentation()
 		}
 	}
-	ret = reconcilers.UpdateStatus(ctx, r.client, app, ret)
+
+	if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+		ret = ret.WithError(err)
+	}
 	return ret.End().ToRepresentation()
+}
+
+func (r *BkAppReconciler) updateStatus(ctx context.Context, bkapp *paasv1alpha2.BkApp, reconcileErr error) error {
+	if reconcileErr == nil {
+		// 更新 ObservedGeneration, 表示成功完成了一次新版本的调和流程
+		bkapp.Status.ObservedGeneration = bkapp.Generation
+	}
+
+	if err := r.client.Status().Update(ctx, bkapp); err != nil {
+		syncErr := errors.Wrap(err, "failed to update bkapp status")
+		if reconcileErr == nil {
+			return syncErr
+		} else {
+			// 与调和错误拼接
+			return fmt.Errorf("%s; %s", syncErr, reconcileErr)
+		}
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

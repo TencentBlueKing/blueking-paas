@@ -29,8 +29,9 @@
           <div
             class="summary-content"
           >
-            <!-- 访问日志 -->
+            <!-- 访问日志，云原生不展示 -->
             <bk-collapse
+              v-if="!isCloudNativeApp"
               v-model="activeName"
               :accordion="true"
               class="paas-module-warp"
@@ -61,7 +62,9 @@
                     class="header-info"
                   >
                     <span class="header-env">{{ k === 'stag' ? $t('预发布环境') : $t('生产环境') }}:</span>
-                    <span :class="['header-env', 'pl10', { 'not-deployed': !data.is_deployed }]">{{ data.is_deployed ? $t('已部署') : $t('未部署') }}</span>
+                    <span :class="['header-env', 'pl10', { 'not-deployed': !data.is_deployed }]">
+                      {{ data.is_deployed ? $t('已部署') : $t('未部署') }}
+                    </span>
                     <bk-button
                       v-if="data.is_deployed"
                       class="pl10"
@@ -248,12 +251,14 @@
                 <div
                   slot="content"
                   class="middle pl10 pr10"
+                  :class="{ 'pb20': isCloudNativeApp }"
                 >
                   <div data-test-id="summary_box_cpuCharts">
                     <!-- 使用v-show是因为需要及时获取ref并调用 -->
                     <div
                       v-show="isProcessDataReady || isChartLoading"
                       class="resource-charts active"
+                      :class="{ 'cloud-resource-charts': isCloudNativeApp }"
                     >
                       <div class="chart-box summary-chart-box">
                         <div class="type-title">
@@ -321,7 +326,7 @@
   </div>
 </template>
 
-<script> import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import overviewTopInfo from './comps/overview-top-info';
@@ -507,9 +512,9 @@ export default {
     userFeature() {
       return this.$store.state.userFeature;
     },
-    isResourceMetrics () {
+    isResourceMetrics() {
       return this.curAppInfo.feature.RESOURCE_METRICS;
-    }
+    },
   },
   watch: {
     '$route'() {
@@ -608,7 +613,8 @@ export default {
     },
     getPrcessData() {
       this.$nextTick(() => {
-        this.handleCollapseClick(this.activeName);
+        // 云原生不展示模块列表，无需获取
+        !this.isCloudNativeApp && this.handleCollapseClick(this.activeName);
         // 显示图标loading
         this.showProcessLoading();
         this.isResourceChartLine = true;

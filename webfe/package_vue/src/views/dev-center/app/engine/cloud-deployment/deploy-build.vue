@@ -8,8 +8,10 @@
       :is-transition="false"
       class="middle"
     >
+      <!-- lesscode 源码信息 -->
+      <source-code-info v-if="isLesscodeApp" />
       <!-- 代码源 -->
-      <code-source />
+      <code-source v-else />
       <!-- 镜像信息 -->
       <mirror @close-content-loader="closeContentLoader" />
     </paas-content-loader>
@@ -19,6 +21,7 @@
 <script>
 import codeSource from './comps/deploy-build/code-source.vue';
 import mirror from './comps/deploy-build/mirror.vue';
+import sourceCodeInfo from './comps/deploy-build/source-code-info.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
@@ -26,6 +29,7 @@ export default {
   components: {
     codeSource,
     mirror,
+    sourceCodeInfo,
   },
   mixins: [appBaseMixin],
   data() {

@@ -21,7 +21,7 @@ from typing import Any, Dict
 import pytest
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.infras.resources.base import crd
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import GVKConfig

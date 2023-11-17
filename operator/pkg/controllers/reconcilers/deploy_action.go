@@ -77,21 +77,21 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// hook triggered by older deploy is not finished yet?
 	if bkapp.Status.DeployId != "" {
 		if err = r.validateNoRunningHooks(ctx, bkapp); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 
 	log.Info("New deploy action found.", "name", bkapp.Name, "deployID", currentDeployID)
 	bkapp.Status.Phase = paasv1alpha2.AppPending
 	bkapp.Status.HookStatuses = nil
-	bkapp.Status.ObservedGeneration = bkapp.Generation
 	bkapp.Status.SetDeployID(currentDeployID)
-	SetDefaultConditions(&bkapp.Status)
+	SetDefaultConditions(bkapp)
 
 	if err = r.Client.Status().Update(ctx, bkapp); err != nil {
-		log.Error(err, "Unable to update app status.")
-		return r.Result.withError(err)
+		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
+		return r.Result.WithError(err)
 	}
+
 	return r.Result
 }
 
@@ -110,7 +110,9 @@ func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bka
 }
 
 // SetDefaultConditions set all conditions to initial value
-func SetDefaultConditions(status *paasv1alpha2.AppStatus) {
+func SetDefaultConditions(bkapp *paasv1alpha2.BkApp) {
+	status := &bkapp.Status
+
 	availableMessage := "rolling upgrade"
 	availableStatus := metav1.ConditionUnknown
 	latestAvailableCond := apimeta.FindStatusCondition(status.Conditions, paasv1alpha2.AppAvailable)
@@ -124,24 +126,24 @@ func SetDefaultConditions(status *paasv1alpha2.AppStatus) {
 		Status:             availableStatus,
 		Reason:             "NewDeploy",
 		Message:            availableMessage,
-		ObservedGeneration: status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.AppProgressing,
 		Status:             metav1.ConditionTrue,
 		Reason:             "NewDeploy",
-		ObservedGeneration: status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.AddOnsProvisioned,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Initial",
-		ObservedGeneration: status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Initial",
-		ObservedGeneration: status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
 }

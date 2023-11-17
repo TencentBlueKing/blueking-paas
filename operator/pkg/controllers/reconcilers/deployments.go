@@ -53,7 +53,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	expected := resources.GetWantedDeploys(bkapp)
 	if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ok {
@@ -65,18 +65,18 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
 			if err = r.Client.Delete(ctx, deploy); err != nil {
-				return r.Result.withError(err)
+				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
 		if err = r.deploy(ctx, deploy); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
 	if bkapp.Status.Phase == paasv1alpha2.AppPending {
@@ -147,9 +147,9 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 			Status:             metav1.ConditionFalse,
 			Reason:             "Teardown",
 			Message:            "no running processes",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
-		return r.Client.Status().Update(ctx, bkapp)
+		return nil
 	}
 
 	availableCount := 0
@@ -177,7 +177,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 				Status:             metav1.ConditionFalse,
 				Reason:             "ReplicaFailure",
 				Message:            failMessage,
-				ObservedGeneration: bkapp.Status.ObservedGeneration,
+				ObservedGeneration: bkapp.Generation,
 			})
 			break
 		}
@@ -193,7 +193,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 				Type:               paasv1alpha2.AppAvailable,
 				Status:             metav1.ConditionTrue,
 				Reason:             "AppAvailable",
-				ObservedGeneration: bkapp.Status.ObservedGeneration,
+				ObservedGeneration: bkapp.Generation,
 			})
 		} else {
 			bkapp.Status.Phase = paasv1alpha2.AppPending
@@ -204,9 +204,9 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 				Message: fmt.Sprintf(
 					"Waiting for deployment finish: %d/%d Process are available...", availableCount, len(current),
 				),
-				ObservedGeneration: bkapp.Status.ObservedGeneration,
+				ObservedGeneration: bkapp.Generation,
 			})
 		}
 	}
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }

@@ -32,14 +32,14 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
-from paas_wl.bk_app.processes.drf_serializers import (
+from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.bk_app.processes.serializers import (
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
     UpdateProcessSLZ,
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
-from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.bk_app.processes.watch import ProcInstByModuleEnvListWatcher, WatchEvent
 from paas_wl.core.signals import new_operation_happened

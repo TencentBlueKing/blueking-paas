@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
-from paas_wl.bk_app.processes.drf_serializers import MetricSpecSLZ
+from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paasng.platform.modules.constants import DeployHookType
 
 DEFAULT_METRICS = [

@@ -238,7 +238,7 @@ class TestProcessesManifestConstructor:
                         "envName": "stag",
                         "process": "web",
                         # The plan name should have been transformed.
-                        "plan": "2C1G",
+                        "plan": "4C1G",
                     }
                 ],
             },

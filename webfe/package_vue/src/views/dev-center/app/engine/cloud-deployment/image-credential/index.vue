@@ -317,7 +317,6 @@ export default {
     color: #313238;
     font-size: 14px;
     font-weight: bold;
-    width: 70px;
     text-align: right;
   }
   .add-container{
@@ -331,7 +330,6 @@ export default {
   }
 
   .credential-tips {
-    padding: 0 15px;
     margin-top: 8px;
     color: #979BA5;
     font-size: 12px;
@@ -339,7 +337,6 @@ export default {
 }
 .mirror-table-cls {
   margin-top: 20px;
-  padding: 0 15px;
   /deep/ .bk-table-row-last td {
     border-bottom: none !important;
   }

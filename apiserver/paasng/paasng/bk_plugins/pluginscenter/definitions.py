@@ -84,6 +84,7 @@ class PluginReleaseAPI(BaseModel):
     release: Optional[PluginBackendAPIResource] = Field(description="部署/构建操作")
     result: PluginBackendAPIResource = Field(description="查询是否可进入下一步")
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
+    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令")
 
 
 @register

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import Dict, Optional, Type, Union
 
 import cattrs
@@ -33,9 +34,13 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status
 from paasng.bk_plugins.pluginscenter.models import PluginReleaseStage
 from paasng.bk_plugins.pluginscenter.serializers import ItsmTicketInfoSlz, PluginMarketInfoSLZ
 from paasng.bk_plugins.pluginscenter.sourcectl import get_plugin_repo_accessor
+from paasng.bk_plugins.pluginscenter.thirdparty import utils
+from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import PluginBuildInfoSLZ
 from paasng.bk_plugins.pluginscenter.thirdparty.deploy import check_deploy_result, deploy_version, get_deploy_logs
 from paasng.bk_plugins.pluginscenter.thirdparty.market import read_market_info
 from paasng.bk_plugins.pluginscenter.thirdparty.subpage import can_enter_next_stage
+
+logger = logging.getLogger(__name__)
 
 
 class BaseStageController:
@@ -176,16 +181,24 @@ class PipelineStage(BaseStageController):
             return False
         status = self.ctl.retrieve_build_status(build=self.build)
         if status.status == PipelineBuildStatus.SUCCEED:
-            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+            # 部分插件需要在构建成功后，回调第三方API来获取构建产物等
+            is_success = self.execute_post_command()
+            if not is_success:
+                self.stage.update_status(
+                    constants.PluginReleaseStatus.FAILED,
+                    next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建回调失败")),
+                )
+            else:
+                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         elif status.status == PipelineBuildStatus.FAILED:
             self.stage.update_status(
                 constants.PluginReleaseStatus.FAILED,
-                next((i.showMsg for i in status.stageStatus if i.showMsg), "构建失败"),
+                next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建失败")),
             )
         elif status.status == PipelineBuildStatus.CANCELED:
             self.stage.update_status(
                 constants.PluginReleaseStatus.INTERRUPTED,
-                next((i.showMsg for i in status.stageStatus if i.showMsg), "构建失败"),
+                next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建失败")),
             )
         return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
@@ -226,6 +239,38 @@ class PipelineStage(BaseStageController):
             key: jinja2.Template(value).render(context) for key, value in stage_definition.pipelineParams.items()
         }
         return pipeline_params
+
+    def execute_post_command(self) -> bool:
+        """构建成功后执行后置命令 - 回调第三方系统
+
+        - 仅插件定义中声明了回调 API 时才会触发回调
+        """
+        if self.build is None:
+            return False
+
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        if stage_definition is None:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
+
+        if not stage_definition.api or not stage_definition.api.postCommand:
+            return True
+
+        slz = PluginBuildInfoSLZ(
+            {
+                "pipeline_id": self.build.pipelineId,
+                "build_id": self.build.buildId,
+                "version": self.release.version,
+                "version_with_underscores": self.release.version.replace('.', '_'),
+                "bk_username": "admin",
+            }
+        )
+        data = slz.data
+        resp = utils.make_client(stage_definition.api.postCommand).call(
+            data=data, path_params={"plugin_id": self.plugin.id}
+        )
+        if result := resp.get("result"):
+            logger.error(f"create release error: {resp}")
+        return result
 
 
 class SubPageStage(BaseStageController):

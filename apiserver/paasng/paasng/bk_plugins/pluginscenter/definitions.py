@@ -36,14 +36,14 @@ class UIComponent(BaseModel):
 class UIProps(BaseModel):
     """ui属性"""
 
-    required: bool
+    tips: str
 
 
 @register(exclude_none=True)
 class FieldSchema(BaseModel):
     """字段定义"""
 
-    type: Literal["string", "array"] = Field(default="string", description="字段类型")
+    type: Literal["string", "array", "boolean"] = Field(default="string", description="字段类型")
     title: str = Field(default="", description="字段标题")
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")

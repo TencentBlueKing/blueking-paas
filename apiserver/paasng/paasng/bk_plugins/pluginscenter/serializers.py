@@ -269,6 +269,11 @@ def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     return serializers.ListField(child=child_field)
 
 
+def make_bool_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate a Field for verifying a bool according to the given field_schema"""
+    return serializers.BooleanField(default=field_schema.default)
+
+
 def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate fields for validating data according to the given field_schema"""
     type_ = field_schema.type
@@ -276,6 +281,8 @@ def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
         return make_array_field(field_schema)
     elif type_ == "string":
         return make_string_field(field_schema)
+    elif type == "boolean":
+        return make_bool_field(field_schema)
     raise NotImplementedError(f"NotImplemented field type: {type_} for plugin's extraFields")
 
 

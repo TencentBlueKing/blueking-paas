@@ -250,14 +250,14 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 			// Check resource requirements for "web"
 			cWebRes := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0].Resources
-			Expect(cWebRes.Requests.Cpu().String()).To(Equal("250m"))
+			Expect(cWebRes.Requests.Cpu().String()).To(Equal("200m"))
 			Expect(cWebRes.Limits.Cpu().String()).To(Equal("1"))
-			Expect(cWebRes.Requests.Memory().String()).To(Equal("512Mi"))
+			Expect(cWebRes.Requests.Memory().String()).To(Equal("256Mi"))
 			Expect(cWebRes.Limits.Memory().String()).To(Equal("1Gi"))
 
 			// Check resource requirements for "worker"
 			cWorkerRes := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0].Resources
-			Expect(cWorkerRes.Requests.Cpu().String()).To(Equal("500m"))
+			Expect(cWorkerRes.Requests.Cpu().String()).To(Equal("200m"))
 			Expect(cWorkerRes.Limits.Cpu().String()).To(Equal("2"))
 			Expect(cWorkerRes.Requests.Memory().String()).To(Equal("1Gi"))
 			Expect(cWorkerRes.Limits.Memory().String()).To(Equal("2Gi"))

@@ -229,10 +229,10 @@ var _ = Describe("Environment overlay related functions", func() {
 	Context("Test ProcResourcesGetter", func() {
 		It("Get Default", func() {
 			resReq := NewProcResourcesGetter(bkapp).Default()
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
-			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("192Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("768Mi"))).To(BeTrue())
 		})
 
 		It("Get Legacy", func() {
@@ -243,7 +243,7 @@ var _ = Describe("Environment overlay related functions", func() {
 			)
 			getter := NewProcResourcesGetter(bkapp)
 			resReq, _ := getter.GetByProc("web")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
@@ -253,15 +253,15 @@ var _ = Describe("Environment overlay related functions", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
 			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
 				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
-					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C1G},
 				},
 			}
 			getter := NewProcResourcesGetter(bkapp)
 
 			resReq, _ := getter.GetByProc("web")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 		})
 
@@ -270,13 +270,13 @@ var _ = Describe("Environment overlay related functions", func() {
 			getter := NewProcResourcesGetter(bkapp)
 
 			resReq, _ := getter.GetByProc("web")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("250m"))).To(BeTrue())
-			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
-			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
-			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("192Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("768Mi"))).To(BeTrue())
 
 			resReq, _ = getter.GetByProc("worker")
-			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("1"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())

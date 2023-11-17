@@ -11,7 +11,7 @@
           <a
             :href="GLOBAL.DOC.APP_ENTRY_INTRO"
             target="blank"
-          > {{ $t('详细使用说明') }} </a>
+          > {{ $t('详细使用说明-simple') }} </a>
         </div>
         <div
           v-if="isIpConsistent"
@@ -325,18 +325,18 @@ export default {
         allowHtml: true,
         content: this.$t('提示信息'),
         html: `<div style="padding: 10px 0px;color: #313238;">
-          <div>IP 信息：</div>
+          <div>${this.$t('IP 信息：')}</div>
           <div
             class="mt10 ip-view-wrapper"
             style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px;">
             ${this.defaultIp}
             <i class="paasng-icon paasng-general-copy ip-icon-customize-cls"></i>
           </div>
-          <div class="mt10 mb10" style="color: #979BA5;">推荐操作流程: </div>
-          <div>1. 首先在页面上添加好自定义访问地址</div>
-          <div>2. 修改本机 Hosts 文件，将域名解析到表格中的 IP </div>
-          <div>3. 打开浏览器，测试访问是否正常 </div>
-          <div>4. 修改域名解析记录，将其永久解析到目标 IP </div>
+          <div class="mt10 mb10" style="color: #979BA5;">${this.$t('推荐操作流程: ')}</div>
+          <div>1. ${this.$t('首先在页面上添加好自定义访问地址')} </div>
+          <div>2. ${this.$t('修改本机 Hosts 文件，将域名解析到表格中的 IP')} </div>
+          <div>3. ${this.$t('打开浏览器，测试访问是否正常')} </div>
+          <div>4. ${this.$t('修改域名解析记录，将其永久解析到目标 IP')} </div>
           </div>`,
         placements: ['bottom'],
         onHidden: () => {
@@ -798,6 +798,7 @@ export default {
       }
 
       .ip-tips {
+        white-space: nowrap;
         cursor: pointer;
         font-size: 12px;
         color: #63656E;

@@ -107,7 +107,7 @@
             <!-- v1alpha2 镜像仓库不带tag -->
             <bk-form-item
               :label="$t('镜像仓库')"
-              :label-width="120"
+              :label-width="labelWidth"
               v-if="!allowMultipleImage"
             >
               {{ formData.image || '--' }}
@@ -120,7 +120,7 @@
             <bk-form-item
               :label="$t('镜像地址')"
               :required="true"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'image'"
               :rules="rules.image"
               v-else-if="isCustomImage && allowMultipleImage"
@@ -157,7 +157,7 @@
 
             <bk-form-item
               :label="$t('镜像凭证')"
-              :label-width="120"
+              :label-width="labelWidth"
               v-if="!allowMultipleImage"
             >
               {{ formData.image_credential_name || '--' }}
@@ -167,7 +167,7 @@
             <bk-form-item
               v-if="panels[panelActive] && allowMultipleImage"
               :label="$t('镜像凭证')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'command'"
             >
               <bk-select
@@ -200,7 +200,7 @@
 
             <bk-form-item
               :label="$t('启动命令')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'command'"
             >
               <bk-tag-input
@@ -221,7 +221,7 @@
 
             <bk-form-item
               :label="$t('命令参数')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'args'"
             >
               <bk-tag-input
@@ -241,7 +241,7 @@
 
             <bk-form-item
               :label="$t('容器端口')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'port'"
             >
               <bk-input
@@ -277,7 +277,7 @@
             <bk-form-item
               v-if="ifopen"
               :label="$t('配置环境')"
-              :label-width="120"
+              :label-width="labelWidth"
             >
               <!-- <bk-radio-group v-model="envName">
                 <bk-radio-button
@@ -302,7 +302,7 @@
                 >
                   <bk-form-item
                     :label="$t('资源配额方案')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
@@ -329,7 +329,7 @@
                   </bk-form-item>
                   <bk-form-item
                     :label="$t('扩缩容方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <section :class="{ 'flex-row': localLanguage !== 'en' }">
                       <bk-radio-group
@@ -378,7 +378,7 @@
                   <bk-form-item
                     v-if="formData.env_overlay.stag.autoscaling"
                     :label="$t('触发方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                     class="desc-form-item"
                   >
                     <div class="desc-container flex-row">
@@ -411,7 +411,7 @@
                   >
                     <bk-form-item
                       :label="$t('最小副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.min_replicas'"
                       :rules="rules.stagMinReplicas"
@@ -426,7 +426,7 @@
                     </bk-form-item>
                     <bk-form-item
                       :label="$t('最大副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.max_replicas'"
                       :rules="rules.stagMaxReplicas"
@@ -446,7 +446,7 @@
                   >
                     <bk-form-item
                       :label="$t('副本数量')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'target_replicas'"
                       :rules="rules.formReplicas"
@@ -476,7 +476,7 @@
                 >
                   <bk-form-item
                     :label="$t('资源配额方案')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
@@ -503,7 +503,7 @@
                   </bk-form-item>
                   <bk-form-item
                     :label="$t('扩缩容方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <section :class="{ 'flex-row': localLanguage !== 'en' }">
                       <bk-radio-group
@@ -552,7 +552,7 @@
                   <bk-form-item
                     v-if="formData.env_overlay.prod.autoscaling"
                     :label="$t('触发方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                     class="desc-form-item"
                   >
                     <div class="desc-container flex-row">
@@ -585,7 +585,7 @@
                   >
                     <bk-form-item
                       :label="$t('最小副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.min_replicas'"
                       :rules="rules.prodMinReplicas"
@@ -600,7 +600,7 @@
                     </bk-form-item>
                     <bk-form-item
                       :label="$t('最大副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.max_replicas'"
                       :rules="rules.prodMaxReplicas"
@@ -620,7 +620,7 @@
                   >
                     <bk-form-item
                       :label="$t('副本数量')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'target_replicas'"
                       :rules="rules.formReplicas"
@@ -646,7 +646,7 @@
         class="form-detail mt20"
         v-else
       >
-        <bk-form :model="formData">
+        <bk-form :model="formData" :label-width="viewLabelWidth">
           <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
           <bk-form-item
             v-if="!allowMultipleImage"
@@ -1065,6 +1065,12 @@ export default {
     // 镜像
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 190 : 120;
+    },
+    viewLabelWidth() {
+      return this.localLanguage === 'en' ? 190 : 150;
     },
   },
   watch: {

@@ -472,6 +472,7 @@ class TestCreateCloudNativeApp:
     def test_create_with_image(self, api_client):
         """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)
+        image_credential_name = generate_random_string(length=6)
         image_repository = "strm/helloworld-http"
         response = api_client.post(
             "/api/bkapps/cloud-native/",
@@ -480,7 +481,11 @@ class TestCreateCloudNativeApp:
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
                 "bkapp_spec": {
-                    "build_config": {"build_method": "custom_image", "image_repository": image_repository},
+                    "build_config": {
+                        "build_method": "custom_image",
+                        "image_repository": image_repository,
+                        "image_credential": {"name": image_credential_name, "password": "123456", "username": "test"},
+                    },
                     'processes': [
                         {
                             "name": "web",
@@ -510,6 +515,7 @@ class TestCreateCloudNativeApp:
         process_spec = ModuleProcessSpec.objects.get(module=module, name='web')
         assert process_spec.image is None
         assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.image_credential_name == image_credential_name
         assert process_spec.get_target_replicas('stag') == 1
         assert process_spec.get_target_replicas('prod') == 2
 

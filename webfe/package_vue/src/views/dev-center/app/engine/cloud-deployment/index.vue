@@ -130,7 +130,7 @@ export default {
         { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
         { name: 'observabilityConfig', label: this.$t('可观测性配置'), ref: 'observability' },
-        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
+        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'info' },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,
@@ -198,7 +198,7 @@ export default {
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
         ...this.$route,
-        name: this.firstTabActiveName,
+        name: this.active || this.firstTabActiveName,
       });
     }
   },

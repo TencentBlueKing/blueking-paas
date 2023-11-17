@@ -506,7 +506,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         module = create_default_module(application, **module_src_cfg)
 
         # 初始化应用镜像凭证信息
-        if image_credential := params['bkapp_spec']['build_config'].get('image_credential'):
+        if image_credential := params['bkapp_spec']['build_config'].image_credential:
             self._init_image_credential(application, image_credential)
 
         source_init_result = init_module_in_view(

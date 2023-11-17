@@ -30,8 +30,11 @@ from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
@@ -466,9 +469,10 @@ class TestCreateCloudNativeApp:
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
-    def test_create_with_manifest(self, api_client):
-        """托管方式：仅镜像（提供 manifest）"""
+    def test_create_with_image(self, api_client):
+        """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)
+        image_repository = "strm/helloworld-http"
         response = api_client.post(
             "/api/bkapps/cloud-native/",
             data={
@@ -476,18 +480,21 @@ class TestCreateCloudNativeApp:
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
                 "bkapp_spec": {
-                    "build_config": {"build_method": "custom_image", "image": "strm/helloworld-http"},
-                    'processes': [{"name": "web", "replicas": 1}],
+                    "build_config": {"build_method": "custom_image", "image_repository": image_repository},
+                    'processes': [
+                        {
+                            "name": "web",
+                            "command": ["bash", "/app/start_web.sh"],
+                            "env_overlay": {
+                                'stag': {'environment_name': 'stag', 'target_replicas': 1, 'plan_name': '2C1G'},
+                                'prod': {'environment_name': 'prod', 'target_replicas': 2, 'plan_name': '2C1G'},
+                            },
+                        }
+                    ],
                 },
                 "source_config": {
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
-                    "source_repo_url": "strm/helloworld-http",
-                },
-                "manifest": {
-                    "spec": {
-                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
-                        "processes": [{"name": "web", "replicas": 1}],
-                    },
+                    "source_repo_url": image_repository,
                 },
             },
         )
@@ -496,6 +503,15 @@ class TestCreateCloudNativeApp:
         assert app_data['type'] == 'cloud_native'
         assert app_data['modules'][0]['web_config']['build_method'] == 'custom_image'
         assert app_data['modules'][0]['web_config']['artifact_type'] == 'none'
+
+        module = Module.objects.get(id=app_data['modules'][0]['id'])
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        assert cfg.image_repository == image_repository
+        process_spec = ModuleProcessSpec.objects.get(module=module, name='web')
+        assert process_spec.image is None
+        assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.get_target_replicas('stag') == 1
+        assert process_spec.get_target_replicas('prod') == 2
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
     @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')

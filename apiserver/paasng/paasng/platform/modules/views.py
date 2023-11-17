@@ -263,7 +263,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         self._ensure_source_origin_available(request.user, source_origin)
 
         # 初始化应用镜像凭证信息
-        if image_credential := data['bkapp_spec']['build_config'].get('image_credential'):
+        if image_credential := data['bkapp_spec']['build_config'].image_credential:
             self._init_image_credential(application, image_credential)
 
         module_src_cfg['source_origin'] = source_origin

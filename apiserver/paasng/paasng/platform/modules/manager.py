@@ -46,7 +46,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import ImagePullPolicy, RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
@@ -290,6 +290,7 @@ class ModuleInitializer:
         config_obj = BuildConfig.objects.get_or_create_by_module(self.module)
         build_params = {
             "image_repository": build_config.image_repository,
+            'image_credential_name': None,
         }
         if image_credential := build_config.image_credential:
             build_params['image_credential_name'] = image_credential['name']
@@ -302,6 +303,7 @@ class ModuleInitializer:
                 command=proc["command"],
                 args=proc["args"],
                 targetPort=proc.get("port", None),
+                imagePullPolicy=ImagePullPolicy.IF_NOT_PRESENT,
             )
             for proc in bkapp_spec['processes']
         ]
@@ -316,7 +318,7 @@ class ModuleInitializer:
                 mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
 
         # 导入 hook 配置
-        if hook := bkapp_spec['hooks']:
+        if hook := bkapp_spec.get('hooks'):
             self.module.deploy_hooks.enable_hook(
                 type_=hook['type'],
                 proc_command=hook.get('proc_command'),

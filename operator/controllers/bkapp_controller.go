@@ -20,6 +20,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
@@ -112,6 +113,14 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
+	if app.Generation > app.Status.ObservedGeneration {
+		app.Status.Phase = paasv1alpha2.AppPending
+		if err = r.client.Status().Update(ctx, app); err != nil {
+			log.Error(err, "Unable to update bkapp status when generation changed")
+			return reconcile.Result{}, err
+		}
+	}
+
 	var ret reconcilers.Result
 	for _, reconciler := range []reconcilers.Reconciler{
 		// NOTE: The order of these reconcilers is important.
@@ -132,10 +141,36 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 		ret = reconciler.Reconcile(ctx, app)
 		if ret.ShouldAbort() {
+			if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+				ret = ret.WithError(err)
+			}
 			return ret.ToRepresentation()
 		}
 	}
+
+	if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+		ret = ret.WithError(err)
+	}
 	return ret.End().ToRepresentation()
+}
+
+func (r *BkAppReconciler) updateStatus(ctx context.Context, bkapp *paasv1alpha2.BkApp, reconcileErr error) error {
+	if reconcileErr == nil {
+		// 更新 ObservedGeneration, 表示成功完成了一次新版本的调和流程
+		bkapp.Status.ObservedGeneration = bkapp.Generation
+	}
+
+	if err := r.client.Status().Update(ctx, bkapp); err != nil {
+		syncErr := errors.Wrap(err, "failed to update bkapp status")
+		if reconcileErr == nil {
+			return syncErr
+		} else {
+			// 与调和错误拼接
+			return fmt.Errorf("%s; %s", syncErr, reconcileErr)
+		}
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

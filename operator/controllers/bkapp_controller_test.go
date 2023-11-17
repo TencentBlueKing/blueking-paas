@@ -20,12 +20,14 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -40,6 +42,8 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("", func() {
@@ -317,5 +321,55 @@ var _ = Describe("", func() {
 		Eventually(func() bool {
 			return podCounter() == 0 && !isSvcExists(serviceLookupKey)
 		}, timeout, interval).Should(BeTrue())
+	})
+})
+
+var _ = Describe("Test Status", func() {
+	var bkapp *paasv1alpha2.BkApp
+	var builder *fake.ClientBuilder
+	var scheme *runtime.Scheme
+	var ctx context.Context
+	var oldGeneration int64 = 1
+	var newGeneration int64 = 2
+
+	BeforeEach(func() {
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Generation:  newGeneration,
+				Name:        "bkapp-sample",
+				Namespace:   "default",
+				Annotations: map[string]string{},
+			},
+			Spec: paasv1alpha2.AppSpec{Addons: []paasv1alpha2.Addon{{Name: "foo-service"}}},
+			Status: paasv1alpha2.AppStatus{
+				ObservedGeneration: oldGeneration,
+			},
+		}
+
+		builder = fake.NewClientBuilder()
+		scheme = runtime.NewScheme()
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
+		builder.WithScheme(scheme)
+		ctx = context.Background()
+	})
+
+	It("test update ObservedGeneration", func() {
+		Expect(bkapp.Status.ObservedGeneration).To(Equal(oldGeneration))
+
+		reconciler := NewBkAppReconciler(builder.WithObjects(bkapp).Build(), scheme)
+		_ = reconciler.updateStatus(ctx, bkapp, nil)
+		Expect(bkapp.Status.ObservedGeneration).To(Equal(newGeneration))
+	})
+
+	It("test not update ObservedGeneration", func() {
+		Expect(bkapp.Status.ObservedGeneration).To(Equal(oldGeneration))
+
+		reconciler := NewBkAppReconciler(builder.WithObjects(bkapp).Build(), scheme)
+		_ = reconciler.updateStatus(ctx, bkapp, errors.New("failed to reconcile hook"))
+		Expect(bkapp.Status.ObservedGeneration).To(Equal(oldGeneration))
 	})
 })

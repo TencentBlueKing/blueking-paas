@@ -21,10 +21,11 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.processes.controllers import list_processes
+from paas_wl.bk_app.processes.entities import Runtime
+from paas_wl.bk_app.processes.kres_entities import Instance, Process, Schedule
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import ResourceField, ResourceList
-from paas_wl.bk_app.processes.controllers import list_processes
-from paas_wl.bk_app.processes.entities import Instance, Process, Runtime, Schedule
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

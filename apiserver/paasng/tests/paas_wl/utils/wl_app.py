@@ -25,7 +25,7 @@ from django.utils.crypto import get_random_string
 
 from paas_wl.bk_app.applications.models import Build, Release, WlApp
 from paas_wl.bk_app.applications.models.config import Config
-from paas_wl.bk_app.processes.entities import Instance
+from paas_wl.bk_app.processes.kres_entities import Instance
 from tests.utils.auth import create_user
 
 

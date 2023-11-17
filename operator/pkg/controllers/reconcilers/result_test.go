@@ -41,10 +41,10 @@ var _ = Describe("Test Result", func() {
 		Expect(err).To(errMatcher)
 	},
 		Entry("normal case", Result{}, ctrl.Result{RequeueAfter: paasv1alpha2.DefaultRequeueAfter}, BeNil()),
-		Entry("with error", Result{}.withError(errors.New("")), ctrl.Result{}, HaveOccurred()),
+		Entry("with error", Result{}.WithError(errors.New("")), ctrl.Result{}, HaveOccurred()),
 		Entry("requeue", Result{}.requeue(time.Second*60), ctrl.Result{RequeueAfter: time.Second * 60}, BeNil()),
 		Entry("End", Result{}.End(), ctrl.Result{}, BeNil()),
-		Entry("End with error", Result{}.withError(errors.New("")).End(), ctrl.Result{}, HaveOccurred()),
+		Entry("End with error", Result{}.WithError(errors.New("")).End(), ctrl.Result{}, HaveOccurred()),
 		Entry("End requeue", Result{}.requeue(time.Second*60).End(), ctrl.Result{}, BeNil()),
 	)
 
@@ -54,10 +54,10 @@ var _ = Describe("Test Result", func() {
 		Expect(ret.ShouldAbort()).To(Equal(shouldHangUp))
 	},
 		Entry("normal case", Result{}, false),
-		Entry("with error", Result{}.withError(errors.New("")), true),
+		Entry("with error", Result{}.WithError(errors.New("")), true),
 		Entry("requeue", Result{}.requeue(time.Second*60), true),
 		Entry("End", Result{}.End(), true),
-		Entry("End with error", Result{}.withError(errors.New("")).End(), true),
+		Entry("End with error", Result{}.WithError(errors.New("")).End(), true),
 		Entry("End requeue", Result{}.requeue(time.Second*60).End(), true),
 	)
 })

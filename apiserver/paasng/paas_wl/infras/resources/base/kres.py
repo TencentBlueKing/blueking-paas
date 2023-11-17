@@ -245,20 +245,30 @@ class NameBasedOperations(BaseOperations):
             return self.resource.get(name=name, namespace=namespace, **self.default_kwargs)
 
     def patch(
-        self, name: str, body: Manifest, namespace: Namespace = None, ptype: PatchType = PatchType.STRATEGIC, **kwargs
+        self,
+        name: str,
+        body: Manifest,
+        namespace: Namespace = None,
+        ptype: PatchType = PatchType.STRATEGIC,
+        subresource: Optional[str] = None,
+        **kwargs,
     ) -> ResourceInstance:
         """Patch a resource by name
 
-        :param ptype: Patch type, default to "strategic"
+        :param ptype: Patch type, default to "strategic".
+        :param subresource: subresource name.
         :return: Updated instance
         :raises: ResourceMissing when resource can not be found
         """
         extra_kwargs = self.default_kwargs.copy()
         extra_kwargs.update(kwargs)
         extra_kwargs['content_type'] = ptype.to_content_type()
+        res = self.resource
+        if subresource:
+            res = getattr(self.resource, subresource)
 
         with wrap_missing_exc(namespace, name):
-            obj = self.resource.patch(name=name, body=body, namespace=namespace, **extra_kwargs)
+            obj = res.patch(name=name, body=body, namespace=namespace, **extra_kwargs)
         return obj
 
     def replace_or_patch(

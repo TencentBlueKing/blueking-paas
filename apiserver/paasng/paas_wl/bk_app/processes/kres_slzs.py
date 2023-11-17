@@ -227,6 +227,7 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
             start_time=pod.status.get('startTime', None),
             state=instance_state,
             state_message=state_message,
+            rich_status=self.extract_rich_status(pod.status.phase, c_status),
             image=target_container.image if target_container else "",
             envs=envs,
             ready=health_status.status == HealthStatusType.HEALTHY,
@@ -265,6 +266,26 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
             return process_type
 
         raise UnknownProcessTypeError(res=pod, msg="No process_type found in resource")
+
+    @staticmethod
+    def extract_rich_status(pod_phase: str, first_container_status: Optional[ResourceField] = None) -> str:
+        """Extracts the status of a instance based on the pod's phase and the first container's
+        status. The result string is not enumerable and should only be used for display.
+
+        :param pod_phase: The phase of the pod.
+        :param first_container_status: The status of the first container in the pod, defaults to None.
+        :return: The rich status of the pod.
+        """
+        if pod_phase == "Pending" or not first_container_status:
+            return 'Pending'
+        c_status = first_container_status
+        if c_status.state.get('running'):
+            return "Running"
+        if c_status.state.get('terminated'):
+            return c_status.state.terminated.get('reason', "Terminated")
+        if c_status.state.get('waiting'):
+            return c_status.state.waiting.get('reason', "Waiting")
+        return "UnknownStatus"
 
     @staticmethod
     def parse_instance_state(pod_phase: str, health_status: HealthStatus) -> Tuple[str, str]:

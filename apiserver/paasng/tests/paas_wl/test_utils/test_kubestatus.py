@@ -27,6 +27,7 @@ from paas_wl.utils.kubestatus import (
     get_any_container_fail_message,
     parse_pod,
 )
+from tests.paas_wl.utils.basic import make_container_status
 
 
 def make_status(
@@ -64,18 +65,6 @@ def test_parse_pod(instance, expected):
 )
 def test_extract_exit_code(health_status, expected):
     assert extract_exit_code(health_status) == expected
-
-
-def make_container_status(state: dict, last_state: dict):
-    return {
-        "image": "",
-        "imageID": "",
-        "name": "",
-        "ready": True,
-        "restartCount": 0,
-        "state": state,
-        "lastState": last_state,
-    }
 
 
 @pytest.mark.parametrize(

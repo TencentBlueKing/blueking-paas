@@ -70,7 +70,7 @@ class ImageReleaseMgr(DeployStep):
         module = self.module_environment.module
         is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure('更新进程配置', phase=preparation_phase):
+        with self.procedure('解析应用进程信息', phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id
             if build_id:
                 # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空

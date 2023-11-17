@@ -21,9 +21,9 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.bk_app.processes.kres_entities import Process
+from paas_wl.bk_app.processes.kres_slzs import extract_type_from_name
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
-from paas_wl.bk_app.processes.serializers import extract_type_from_name
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
@@ -141,7 +141,7 @@ class TestProcInstManager:
     def test_get_logs(self, wl_app, pod):
         # Query process instances
         inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
-        with mock.patch('paas_wl.bk_app.processes.entities.Instance.Meta.kres_class') as kp:
+        with mock.patch('paas_wl.bk_app.processes.kres_entities.Instance.Meta.kres_class') as kp:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 

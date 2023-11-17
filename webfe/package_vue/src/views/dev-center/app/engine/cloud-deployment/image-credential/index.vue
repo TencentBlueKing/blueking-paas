@@ -178,6 +178,8 @@ export default {
         });
         this.$refs.credentialDialog.handleCancel();
         this.getCredentialList();
+        // 重新获取镜像凭证列表
+        this.$emit('reacquire');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -200,6 +202,7 @@ export default {
         });
         this.$refs.credentialDialog.handleCancel();
         this.getCredentialList();
+        this.$emit('reacquire');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -219,6 +222,7 @@ export default {
         });
         this.visiableDialogConfig.visiable = false;
         this.getCredentialList();
+        this.$emit('reacquire');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

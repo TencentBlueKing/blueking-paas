@@ -105,7 +105,7 @@
       </div>
 
       <!-- 镜像凭证 -->
-      <div class="mirror-credentials-container">
+      <div class="mirror-credentials-container" v-if="isCustomImage && !allowMultipleImage">
         <image-credential :list="credentialList" @reacquire="getCredentialList"></image-credential>
       </div>
 

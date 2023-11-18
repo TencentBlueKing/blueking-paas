@@ -36,9 +36,11 @@ class PluginReleaseExecutor:
         """初始化版本发布并执行第一个发布阶段"""
         self.release.initial_stage_set()
 
-        release_api.create_release(
+        is_success = release_api.create_release(
             pd=self.release.plugin.pd, instance=self.release.plugin, version=self.release, operator=operator
         )
+        if not is_success:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("同步版本信息失败, 不能新建版本"))
 
         self.execute_current_stage(operator=operator)
 

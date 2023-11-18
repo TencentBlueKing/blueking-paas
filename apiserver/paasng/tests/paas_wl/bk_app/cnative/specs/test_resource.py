@@ -67,7 +67,7 @@ class TestMresConditionDetector:
                     ],
                     MResPhaseType.AppFailed,
                 ),
-                DeployStatus.READY,
+                DeployStatus.ERROR,
             ),
         ],
     )

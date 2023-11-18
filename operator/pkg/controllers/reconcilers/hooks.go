@@ -58,28 +58,28 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log.V(4).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
 		if err := r.UpdateStatus(ctx, bkapp, current, resources.HookExecuteTimeoutThreshold); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 
 		switch {
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
+				return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
-			return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
+			return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
 		case current.Progressing():
 			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 		case current.Succeeded():
 			return r.Result
 		case current.FailedUntilTimeout(resources.HookExecuteFailedTimeoutThreshold):
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
+				return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
 			}
 			// Pod 在超时时间内一直失败, 终止调和循环
-			return r.Result.withError(errors.WithStack(resources.ErrPodEndsUnsuccessfully)).End()
+			return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully)).End()
 		default:
-			return r.Result.withError(
+			return r.Result.WithError(
 				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),
 			)
 		}
@@ -87,7 +87,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)); hook != nil {
 		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环
 		return r.Result.End()
@@ -98,11 +98,8 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Disabled",
 		Message:            "Pre-Release-Hook feature not turned on",
-		ObservedGeneration: bkapp.Status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
-	if err := r.Client.Status().Update(ctx, bkapp); err != nil {
-		return r.Result.withError(err)
-	}
 	return r.Result
 }
 
@@ -131,7 +128,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 			Status:             metav1.ConditionFalse,
 			Reason:             "Progressing",
 			Message:            "The pre-release hook is executing.",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	}
 
@@ -176,9 +173,9 @@ func (r *HookReconciler) ExecuteHook(
 		Status:             metav1.ConditionFalse,
 		Reason:             "Progressing",
 		Message:            "The pre-release hook is executing.",
-		ObservedGeneration: bkapp.Status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }
 
 // UpdateStatus will update bkapp hook status from the given instance status
@@ -200,14 +197,14 @@ func (r *HookReconciler) UpdateStatus(
 				"PreReleaseHook execute timeout, last message: %s",
 				instance.Status.Message,
 			),
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	case instance.Succeeded():
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Finished",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	case instance.Failed():
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
@@ -216,10 +213,10 @@ func (r *HookReconciler) UpdateStatus(
 			Status:             metav1.ConditionFalse,
 			Reason:             "Failed",
 			Message:            fmt.Sprintf("PreReleaseHook fail to succeed: %s", instance.Status.Message),
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
 	}
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态

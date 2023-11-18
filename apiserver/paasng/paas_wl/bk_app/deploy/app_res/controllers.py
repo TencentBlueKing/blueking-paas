@@ -28,7 +28,7 @@ from django.conf import settings
 from django.utils.timezone import localtime
 from kubernetes.client.rest import ApiException
 
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     PodAbsentError,

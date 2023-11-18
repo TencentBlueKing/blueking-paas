@@ -93,13 +93,21 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		return r.Result.End()
 	}
 
+	hookCond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+	var observedGeneration int64
+	if hookCond != nil {
+		observedGeneration = hookCond.ObservedGeneration
+	} else {
+		observedGeneration = bkapp.Generation
+	}
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Disabled",
 		Message:            "Pre-Release-Hook feature not turned on",
-		ObservedGeneration: bkapp.Generation,
+		ObservedGeneration: observedGeneration,
 	})
+
 	return r.Result
 }
 

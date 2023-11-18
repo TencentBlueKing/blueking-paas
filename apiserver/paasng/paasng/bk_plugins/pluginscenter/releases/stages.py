@@ -269,7 +269,8 @@ class PipelineStage(BaseStageController):
             data=data, path_params={"plugin_id": self.plugin.id}
         )
         if result := resp.get("result"):
-            logger.error(f"create release error: {resp}")
+            logger.error(f"execute post command [plugin_id: {self.plugin.id}, data:{data}], error: {resp}")
+        logger.info(f"execute post command success,resp: {resp}")
         return result
 
 

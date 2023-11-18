@@ -32,7 +32,11 @@ from jsonfield import JSONField
 from kubernetes.client import Configuration
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
-from paas_wl.infras.cluster.exceptions import DuplicatedDefaultClusterError, NoDefaultClusterError, SwitchDefaultClusterError
+from paas_wl.infras.cluster.exceptions import (
+    DuplicatedDefaultClusterError,
+    NoDefaultClusterError,
+    SwitchDefaultClusterError,
+)
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
 from paas_wl.utils.models import UuidAuditedModel, make_json_field

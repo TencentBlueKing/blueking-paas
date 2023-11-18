@@ -43,3 +43,25 @@ class TestModuleProcessSpecManager:
         # Update existent data
         ModuleProcessSpecManager(bk_module).set_replicas('web', 'prod', 2)
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').target_replicas == 2
+
+    def test_set_autoscaling_integrated(self, bk_module, process_web):
+        assert not ProcessSpecEnvOverlay.objects.filter(proc_spec=process_web).exists()
+
+        # Set replicas for both environments
+        ModuleProcessSpecManager(bk_module).set_autoscaling('web', 'stag', False)
+        ModuleProcessSpecManager(bk_module).set_autoscaling('web', 'prod', True, {'minReplicas': 1, 'maxReplicas': 3})
+        assert ProcessSpecEnvOverlay.objects.filter(proc_spec=process_web).count() == 2
+        assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='stag').autoscaling is False
+        assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').autoscaling is True
+        assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').scaling_config == {
+            'minReplicas': 1,
+            'maxReplicas': 3,
+        }
+
+        # Update existent data
+        ModuleProcessSpecManager(bk_module).set_autoscaling('web', 'prod', False)
+        assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').autoscaling is False
+        assert (
+            ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').scaling_config
+            is not None
+        ), 'The config should have been preserved as it is'

@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Callable, Dict, Iterable, List, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
@@ -243,6 +243,19 @@ class ModuleProcessSpecManager:
             proc_spec=proc_spec,
             environment_name=AppEnvName(env_name).value,
             defaults={"target_replicas": replicas},
+        )
+
+    def set_autoscaling(self, proc_name: str, env_name: str, enabled: bool, config: Optional[Dict] = None):
+        """Set the autoscaling for the given process and environment."""
+        proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
+        defaults: Dict[str, Union[bool, Dict, None]] = {"autoscaling": enabled}
+        if config is not None:
+            defaults.update(scaling_config=config)
+
+        ProcessSpecEnvOverlay.objects.update_or_create(
+            proc_spec=proc_spec,
+            environment_name=AppEnvName(env_name).value,
+            defaults=defaults,
         )
 
 

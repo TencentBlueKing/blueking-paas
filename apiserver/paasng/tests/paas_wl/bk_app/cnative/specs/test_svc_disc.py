@@ -42,12 +42,14 @@ class TestApplyConfigmap:
         )
         return resource
 
-    def test_normal(self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc):
+    def test_normal(self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc, with_stag_ns):
         apply_configmap(bk_stag_env, res_with_svc_disc)
         mgr = ConfigMapManager(bk_stag_env, bk_app_name=bk_app.name)
         assert mgr.read_data()[mgr.key_bk_saas] != ''
 
-    def test_deletion(self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc, res_without_svc_disc):
+    def test_deletion(
+        self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc, res_without_svc_disc, with_stag_ns
+    ):
         apply_configmap(bk_stag_env, res_with_svc_disc)
         mgr = ConfigMapManager(bk_stag_env, bk_app_name=bk_app.name)
         assert mgr.exists()

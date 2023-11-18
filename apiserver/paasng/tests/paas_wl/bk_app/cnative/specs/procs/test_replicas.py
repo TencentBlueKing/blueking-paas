@@ -20,14 +20,15 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.models import create_app_resource, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotDeployed, ProcNotFoundInRes
-from paas_wl.bk_app.cnative.specs.procs.replicas import ProcReplicas
+from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
 from paas_wl.bk_app.cnative.specs.resource import deploy
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
-def deploy_stag_env(bk_stag_env, bk_stag_wl_app, mock_knamespace):
+def deploy_stag_env(bk_stag_env, bk_stag_wl_app, with_stag_ns):
     """Deploy a default payload to cluster for stag environment"""
     resource = create_app_resource(generate_bkapp_name(bk_stag_env), 'nginx:latest')
     deploy(bk_stag_env, resource.to_deployable())
@@ -35,19 +36,49 @@ def deploy_stag_env(bk_stag_env, bk_stag_wl_app, mock_knamespace):
 
 
 @pytest.mark.skip_when_no_crds
-class TestProcReplicas:
-    def test_not_deployed(self, bk_stag_env, bk_stag_wl_app):
+class TestBkAppProcScaler:
+    def test_scale_not_deployed(self, bk_stag_env, bk_stag_wl_app):
         with pytest.raises(ProcNotDeployed):
-            ProcReplicas(bk_stag_env).scale('web', 1)
+            BkAppProcScaler(bk_stag_env).set_replicas('web', 1)
 
-    def test_proc_not_found(self, bk_stag_env, deploy_stag_env):
+    def test_scale_proc_not_found(self, bk_stag_env, deploy_stag_env):
         with pytest.raises(ProcNotFoundInRes):
-            ProcReplicas(bk_stag_env).scale('invalid-name', 1)
+            BkAppProcScaler(bk_stag_env).set_replicas('invalid-name', 1)
 
-    def test_get(self, bk_stag_env, deploy_stag_env):
-        assert ProcReplicas(bk_stag_env).get('web') == 1
+    def test_scale_integrated(self, bk_stag_env, deploy_stag_env):
+        assert BkAppProcScaler(bk_stag_env).get_replicas('web') == 1
+        BkAppProcScaler(bk_stag_env).set_replicas('web', 2)
+        assert BkAppProcScaler(bk_stag_env).get_replicas('web') == 2
 
-    def test_get_with_overlay_integrated(self, bk_stag_env, deploy_stag_env):
-        assert ProcReplicas(bk_stag_env).get_with_overlay('web') == (1, False)
-        ProcReplicas(bk_stag_env).scale('web', 2)
-        assert ProcReplicas(bk_stag_env).get_with_overlay('web') == (2, True)
+    def test_set_autoscaling_not_deployed(self, bk_stag_env, bk_stag_wl_app):
+        with pytest.raises(ProcNotDeployed):
+            BkAppProcScaler(bk_stag_env).set_autoscaling(
+                'invalid-name', True, AutoscalingConfig(min_replicas=1, max_replicas=1, metrics=[])
+            )
+
+    def test_set_autoscaling_integrated(self, bk_stag_env, bk_stag_wl_app, deploy_stag_env):
+        assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') is None
+
+        # Enable the autoscaling
+        BkAppProcScaler(bk_stag_env).set_autoscaling(
+            'web', True, AutoscalingConfig(min_replicas=1, max_replicas=1, metrics=[])
+        )
+        assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') == {
+            'min_replicas': 1,
+            'max_replicas': 1,
+            'policy': 'default',
+        }
+
+        # Update the autoscaling config
+        BkAppProcScaler(bk_stag_env).set_autoscaling(
+            'web', True, AutoscalingConfig(min_replicas=2, max_replicas=2, metrics=[])
+        )
+        assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') == {
+            'min_replicas': 2,
+            'max_replicas': 2,
+            'policy': 'default',
+        }
+
+        # Disable the autoscaling
+        BkAppProcScaler(bk_stag_env).set_autoscaling('web', False, None)
+        assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') is None

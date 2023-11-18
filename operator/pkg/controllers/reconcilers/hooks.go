@@ -107,6 +107,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		Message:            "Pre-Release-Hook feature not turned on",
 		ObservedGeneration: observedGeneration,
 	})
+	r.updateAppProgressingStatus(bkapp, metav1.ConditionTrue)
 
 	return r.Result
 }

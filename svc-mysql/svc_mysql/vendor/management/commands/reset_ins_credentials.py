@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
+from typing import Optional
 
 from django.core.management.base import BaseCommand
 from paas_service.models import ServiceInstance
@@ -26,26 +27,35 @@ class Command(BaseCommand):
     help = '批量修改已分配 mysql 实例配置信息'
 
     def add_arguments(self, parser):
-        parser.add_argument("--host", dest="host", help="实例 host", default="", required=False)
-        parser.add_argument("--port", dest="port", help="实例 port", default="", required=False)
-        parser.add_argument("--password", dest="password", help="实例 paasword", default="", required=False)
+        parser.add_argument("--host", dest="host", help="实例 host，不填则不更新", default=None, required=False)
+        parser.add_argument("--port", dest="port", help="实例 port，不填则不更新", default=None, required=False)
+        parser.add_argument("--password", dest="password", help="实例 paasword，不填则不更新", default=None, required=False)
 
         parser.add_argument(
             "--no-dry-run", dest="dry_run", default=True, action="store_false", help="是否只打印实例 credentials 信息"
         )
 
-    def handle(self, host, port, password, dry_run, **options):
+    def handle(self, host: Optional[str], port: Optional[str], password: Optional[str], dry_run: bool, **options):
         svc_objs = ServiceInstance.objects.all()
         for obj in svc_objs:
             credentials = obj.get_credentials()
-            credentials["host"] = host or credentials["host"]
-            credentials["port"] = port or credentials["port"]
-            credentials["password"] = password or credentials["password"]
+
+            has_changed = False
+            if host:
+                credentials["host"] = host
+                has_changed = True
+
+            if port:
+                credentials["port"] = port
+                has_changed = True
+
+            if password:
+                credentials["password"] = password
+                has_changed = True
 
             if not dry_run:
                 obj.credentials = json.dumps(credentials)
-                obj.save(update_fields=["credentials"])
-            else:
-                self.stdout.write(
-                    self.style.NOTICE(f'实例配置变化：\n before:{obj.get_credentials()} \n after:{credentials} \n')
-                )
+                if has_changed:
+                    obj.save(update_fields=["credentials"])
+
+            self.stdout.write(self.style.NOTICE(f'实例配置变化：\n before:{obj.get_credentials()} \n after:{credentials} \n'))

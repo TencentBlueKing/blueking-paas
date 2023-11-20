@@ -22,14 +22,14 @@ from typing import Any, Dict, List
 
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KConfigMap
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,6 @@ def apply_configmap(env: ModuleEnvironment, bk_app_res: BkAppResource):
     """Apply the ConfigMap resource that contains the service discovery data to the
     given environment, the ConfigMap might be deleted if the service discovery config
     is absent.
-
     :param env: The environment to apply the ConfigMap.
     :param bk_app_res: The BkAppResource object.
     """

@@ -48,4 +48,14 @@ urlpatterns = [
         views.ModuleDeployHookViewSet.as_view({"get": "retrieve"}),
         name='api.bkapp_model.deploy_hooks.detail',
     ),
+    re_path(
+        r'api/bkapps/applications/(?P<code>[^/]+)/svc_disc/$',
+        views.SvcDiscConfigViewSet.as_view({'get': 'retrieve', 'post': 'upsert'}),
+        name='api.applications.svc_disc',
+    ),
+    re_path(
+        r'api/bkapps/applications/(?P<code>[^/]+)/domain_resolution/$',
+        views.DomainResolutionViewSet.as_view({'get': 'retrieve', 'post': 'upsert'}),
+        name='api.applications.domain_resolution',
+    ),
 ]

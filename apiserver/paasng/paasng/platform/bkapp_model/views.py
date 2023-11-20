@@ -22,8 +22,9 @@ import logging
 import yaml
 from django.db.transaction import atomic
 from django.http.response import HttpResponse
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -35,12 +36,14 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.manifest import get_manifest
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.bkapp_model.serializers import (
+    DomainResolutionSLZ,
     GetManifestInputSLZ,
     ModuleDeployHookSLZ,
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
+    SvcDiscConfigSLZ,
     default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
@@ -218,3 +221,63 @@ class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             module.deploy_hooks.disable_hook(type_=data["type"])
         return Response(ModuleDeployHookSLZ(module.deploy_hooks.get_by_type(data["type"])).data)
+
+
+class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()})
+    def retrieve(self, request, code):
+        application = self.get_application()
+
+        svc_disc = get_object_or_404(SvcDiscConfig, application_id=application.id)
+        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
+    def upsert(self, request, code):
+        application = self.get_application()
+
+        slz = SvcDiscConfigSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        svc_disc, _ = SvcDiscConfig.objects.update_or_create(
+            application_id=application.id,
+            defaults={
+                'bk_saas': validated_data['bk_saas'],
+            },
+        )
+        svc_disc.refresh_from_db()
+        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
+
+
+class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(responses={200: DomainResolutionSLZ()})
+    def retrieve(self, request, code):
+        application = self.get_application()
+
+        domain_res = get_object_or_404(DomainResolution, application_id=application.id)
+        return Response(DomainResolutionSLZ(domain_res).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
+    def upsert(self, request, code):
+        application = self.get_application()
+
+        slz = DomainResolutionSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        defaults = {}
+        nameservers = validated_data.get('nameservers')
+        if nameservers is not None:
+            defaults['nameservers'] = nameservers
+        host_aliases = validated_data.get('host_aliases')
+        if host_aliases is not None:
+            defaults['host_aliases'] = host_aliases
+
+        domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)
+
+        domain_resolution.refresh_from_db()
+        return Response(DomainResolutionSLZ(domain_resolution).data, status=status.HTTP_200_OK)

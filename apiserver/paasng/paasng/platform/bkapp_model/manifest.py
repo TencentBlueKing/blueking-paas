@@ -52,19 +52,23 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     BkAppProcess,
     BkAppResource,
     BkAppSpec,
-    EnvOverlay,
-    EnvVar,
-    EnvVarOverlay,
-    Hook,
 )
+from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvOverlay, EnvVar, EnvVarOverlay, Hook
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, ReplicasOverlay, ResQuotaOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
 from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import (
+    DomainResolution,
+    ModuleProcessSpec,
+    ProcessSpecEnvOverlay,
+    SvcDiscConfig,
+)
 from paasng.platform.bkapp_model.utils import merge_env_vars
 from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
@@ -74,7 +78,6 @@ from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
 
 logger = logging.getLogger(__name__)
-
 
 # legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ['bash', '/runner/init']
@@ -364,6 +367,32 @@ class MountsManifestConstructor(ManifestConstructor):
         model_res.spec.envOverlay = overlay
 
 
+class SvcDiscoveryManifestConstructor(ManifestConstructor):
+    """Construct the svc discovery part."""
+
+    def apply_to(self, model_res: BkAppResource, module: Module):
+        try:
+            svc_disc_config = SvcDiscConfig.objects.get(application=module.application)
+        except SvcDiscConfig.DoesNotExist:
+            return
+
+        model_res.spec.svcDiscovery = SvcDiscConfigSpec(bkSaaS=svc_disc_config.bk_saas)
+
+
+class DomainResolutionManifestConstructor(ManifestConstructor):
+    """Construct the domain resolution part."""
+
+    def apply_to(self, model_res: BkAppResource, module: Module):
+        try:
+            domain_res = DomainResolution.objects.get(application=module.application)
+        except DomainResolution.DoesNotExist:
+            return
+
+        model_res.spec.domainResolution = DomainResolutionSpec(
+            nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases
+        )
+
+
 def get_manifest(module: Module) -> List[Dict]:
     """Get the manifest of current module, the result might contain multiple items."""
     return [
@@ -386,6 +415,8 @@ def get_bkapp_resource(module: Module) -> BkAppResource:
         BuildConfigManifestConstructor(),
         EnvVarsManifestConstructor(),
         MountsManifestConstructor(),
+        SvcDiscoveryManifestConstructor(),
+        DomainResolutionManifestConstructor(),
     ]
     obj = BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,

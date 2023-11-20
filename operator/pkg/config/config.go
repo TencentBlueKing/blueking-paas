@@ -45,7 +45,7 @@ func (d defaultConfig) GetProcMaxReplicas() int32 {
 }
 
 func (d defaultConfig) GetProcDefaultCpuLimits() string {
-	return "1"
+	return "4"
 }
 
 func (d defaultConfig) GetProcDefaultMemLimits() string {

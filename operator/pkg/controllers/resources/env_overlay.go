@@ -223,7 +223,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 		paasv1alpha2.LegacyProcResAnnoKey,
 	)
 	if cfg, ok := legacyProcResourcesConfig[name]; ok {
-		return r.fromRawString(cfg["cpu"], cfg["memory"]), nil
+		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
 	}
 
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
@@ -247,14 +247,6 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) corev1.ResourceRequirements {
 	var cpuRaw, memRaw string
 	switch plan {
-	case paasv1alpha2.ResQuotaPlan1C512M:
-		cpuRaw, memRaw = "1000m", "512Mi"
-	case paasv1alpha2.ResQuotaPlan2C1G:
-		cpuRaw, memRaw = "2000m", "1024Mi"
-	case paasv1alpha2.ResQuotaPlan2C2G:
-		cpuRaw, memRaw = "2000m", "2048Mi"
-	case paasv1alpha2.ResQuotaPlan2C4G:
-		cpuRaw, memRaw = "2000m", "4096Mi"
 	case paasv1alpha2.ResQuotaPlan4C1G:
 		cpuRaw, memRaw = "4000m", "1024Mi"
 	case paasv1alpha2.ResQuotaPlan4C2G:
@@ -264,19 +256,28 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 	default:
 		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimits(), config.Global.GetProcDefaultMemLimits()
 	}
-	return r.fromRawString(cpuRaw, memRaw)
+	return r.calculateResources(cpuRaw, memRaw)
 }
 
-// fromRawString build the resource requirements from raw string
-func (r *ProcResourcesGetter) fromRawString(cpu, memory string) corev1.ResourceRequirements {
+// calculateResources build the resource requirements from raw string
+// 目前 Requests 配额策略：CPU 为固定值 200m (超卖)，内存按照以下规则计算:
+// 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
+func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.ResourceRequirements {
 	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
 	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
 
+	minCpuQuota, _ := quota.NewQuantity("200m", quota.CPU)
+
+	var divisor int64 = 2
+	medMemQuota, _ := quota.NewQuantity("2048Mi", quota.Memory)
+	if memQuota.Cmp(*medMemQuota) == -1 {
+		divisor = 4
+	}
+
 	return corev1.ResourceRequirements{
-		// 目前 Requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    *quota.Div(cpuQuota, 4),
-			corev1.ResourceMemory: *quota.Div(memQuota, 2),
+			corev1.ResourceCPU:    *minCpuQuota,
+			corev1.ResourceMemory: *quota.Div(memQuota, divisor),
 		},
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:    *cpuQuota,

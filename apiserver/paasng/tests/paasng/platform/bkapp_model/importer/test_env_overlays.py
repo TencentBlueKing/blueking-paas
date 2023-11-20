@@ -44,7 +44,7 @@ class Test__import_env_overlays:
             proc_spec=proc_celery,
             environment_name="prod",
             target_replicas=1,
-            plan_name=ResQuotaPlan.P_2C2G,
+            plan_name=ResQuotaPlan.P_4C2G,
             autoscaling=False,
         )
 

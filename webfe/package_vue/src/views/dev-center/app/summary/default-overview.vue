@@ -580,7 +580,7 @@ export default {
         this.trunkUrl = this.curAppModule.repo.trunk_url || '';
         this.sourceType = this.curAppModule.repo.source_type || '';
       }
-      if (this.userFeature.PHALANX && !this.isCloudApp) {
+      if (this.userFeature.PHALANX) {
         this.getAlarmData();
       }
     },

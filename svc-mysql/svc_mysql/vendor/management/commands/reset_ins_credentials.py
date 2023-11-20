@@ -27,9 +27,9 @@ class Command(BaseCommand):
     help = '批量修改已分配 mysql 实例配置信息'
 
     def add_arguments(self, parser):
-        parser.add_argument("--host", dest="host", help="实例 host，不填则不更新", default=None, required=False)
-        parser.add_argument("--port", dest="port", help="实例 port，不填则不更新", default=None, required=False)
-        parser.add_argument("--password", dest="password", help="实例 paasword，不填则不更新", default=None, required=False)
+        parser.add_argument("--host", dest="host", help="实例 host，不填则不更新", default=None)
+        parser.add_argument("--port", dest="port", help="实例 port，不填则不更新", default=None)
+        parser.add_argument("--password", dest="password", help="实例 paasword，不填则不更新", default=None)
 
         parser.add_argument(
             "--no-dry-run", dest="dry_run", default=True, action="store_false", help="是否只打印实例 credentials 信息"

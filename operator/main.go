@@ -33,7 +33,6 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,7 +52,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	//+kubebuilder:scaffold:imports
 
@@ -71,9 +69,6 @@ func init() {
 	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
-
-	// init metric
-	metric.InitMetric(prometheus.DefaultRegisterer)
 }
 
 func main() {

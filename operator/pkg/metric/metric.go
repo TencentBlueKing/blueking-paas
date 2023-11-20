@@ -19,8 +19,9 @@
 package metric
 
 import (
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"time"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // ReportHooksFinishedErrors ...
@@ -59,13 +60,14 @@ func ReportProvisionAddonInstanceErrors(bkapp *paasv1alpha2.BkApp) {
 }
 
 // ReportQueryAddonSpecsErrors ...
-func ReportQueryAddonSpecsErrors(appCode string, moduleName string, svcID string) {
+func ReportQueryAddonSpecsErrors(appCode, moduleName, svcID string) {
 	QueryAddonSpecsErrors.WithLabelValues(appCode, moduleName, svcID).Inc()
 }
 
 // ReportQueryAddonSpecsDuration ...
-func ReportQueryAddonSpecsDuration(appCode string, moduleName string, svcID string, started time.Time) {
-	QueryAddonSpecsDuration.WithLabelValues(appCode, moduleName, svcID).Observe(float64(time.Since(started).Milliseconds()))
+func ReportQueryAddonSpecsDuration(appCode, moduleName, svcID string, started time.Time) {
+	QueryAddonSpecsDuration.WithLabelValues(appCode, moduleName, svcID).
+		Observe(float64(time.Since(started).Milliseconds()))
 }
 
 // ReportDeleteOutdatedServiceErrors ...
@@ -104,6 +106,7 @@ func ReportGetBkappErrors(namespace string) {
 }
 
 // ReportBkappReconcileDuration ...
-func ReportBkappReconcileDuration(bkapp *paasv1alpha2.BkApp, started time.Time) {
-	BkappReconcileDuration.WithLabelValues(bkapp.Name, bkapp.Namespace).Observe(float64(time.Since(started).Milliseconds()))
+func ReportBkappReconcileDuration(namespace string, started time.Time) {
+	BkappReconcileDuration.WithLabelValues(namespace).
+		Observe(float64(time.Since(started).Milliseconds()))
 }

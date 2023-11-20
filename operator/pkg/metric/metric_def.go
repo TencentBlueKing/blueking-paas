@@ -43,6 +43,10 @@ var (
 	BkappReconcileDuration              *prometheus.HistogramVec
 )
 
+func init() {
+	InitMetric(prometheus.DefaultRegisterer)
+}
+
 // InitMetric ...
 func InitMetric(register prometheus.Registerer) {
 	HooksFinishedErrors = prometheus.NewCounterVec(
@@ -159,7 +163,7 @@ func InitMetric(register prometheus.Registerer) {
 			Name: "bkapp_metrics_get_bkapp_errors",
 			Help: "Errors when GetBkapp",
 		},
-		[]string{"bkappName", "namespace"},
+		[]string{"namespaceName"},
 	)
 
 	BkappReconcileDuration = prometheus.NewHistogramVec(
@@ -168,7 +172,7 @@ func InitMetric(register prometheus.Registerer) {
 			Help:    "Duration of bkapp reconcile",
 			Buckets: prometheus.ExponentialBuckets(1, 2, 12),
 		},
-		[]string{"bkappName", "namespace"},
+		[]string{"namespaceName"},
 	)
 
 	register.MustRegister(HooksFinishedErrors)

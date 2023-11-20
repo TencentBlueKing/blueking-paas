@@ -19,8 +19,9 @@
 package reconcilers
 
 import (
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"context"
+
+	"bk.tencent.com/paas-app-operator/pkg/metric"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"

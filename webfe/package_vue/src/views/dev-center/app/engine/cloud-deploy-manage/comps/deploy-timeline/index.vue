@@ -179,8 +179,8 @@ export default {
     },
 
     /**
-             * 部署发生错误结束时，获取失败的进程
-             */
+     * 部署发生错误结束时，获取失败的进程
+     */
     handleGetFailed() {
       const pendingItem = this.list.find(item => item.status === 'failed');
       return pendingItem || {};
@@ -209,7 +209,6 @@ export default {
 
     editNodeStatus(name, status, content) {
       const isMainStage = ['build', 'release', 'preparation'].includes(name);
-      // console.log('this.list', this.list, name, status);
       const curNode = this.list.find(item => item.name === name);
       if (curNode) {
         curNode.status = status;
@@ -231,6 +230,13 @@ export default {
             if (buildStage && buildStage.status === 'pending') {
               buildStage.loading = false;
               buildStage.status = 'successful';
+            }
+          }
+          if (name === 'preparation') {
+            const preparationStage = this.list.find(item => item.stage === 'preparation');
+            if (preparationStage && preparationStage.status === 'pending') {
+              preparationStage.loading = false;
+              preparationStage.status = 'successful';
             }
           }
         } else {

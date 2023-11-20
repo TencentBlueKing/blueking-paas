@@ -281,11 +281,17 @@ export default {
     deploymentId: {
       handler(v) {
         this.$nextTick(() => {
-          this.watchDeployStatus(v);
+          // 延迟一秒 等待getPreDeployDetail方法执行完
+          setTimeout(() => {
+            this.watchDeployStatus(v);
+          }, 1000);
         });
       },
       immediate: true,
     },
+  },
+  created() {
+    this.init();
   },
   mounted() {
     // 初始化日志彩色组件
@@ -306,7 +312,6 @@ export default {
     });
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
-    this.init();
   },
   beforeDestroy() {
     // 页面销毁 关闭stream
@@ -415,7 +420,10 @@ export default {
           if (item.status === 'successful' && item.name === this.$t('检测部署结果')) {
             this.serverProcessEvent.close();  // 关闭进程的watch事件流
           }
-          this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+          this.$nextTick(() => {
+            // eslint-disable-next-line max-len
+            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+          });
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.$forceUpdate();
         });
 

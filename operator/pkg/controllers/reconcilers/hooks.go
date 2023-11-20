@@ -93,13 +93,22 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		return r.Result.End()
 	}
 
+	hookCond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+	var observedGeneration int64
+	if hookCond != nil {
+		observedGeneration = hookCond.ObservedGeneration
+	} else {
+		observedGeneration = bkapp.Generation
+	}
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Disabled",
 		Message:            "Pre-Release-Hook feature not turned on",
-		ObservedGeneration: bkapp.Generation,
+		ObservedGeneration: observedGeneration,
 	})
+	r.updateAppProgressingStatus(bkapp, metav1.ConditionTrue)
+
 	return r.Result
 }
 
@@ -186,6 +195,15 @@ func (r *HookReconciler) UpdateStatus(
 	timeoutThreshold time.Duration,
 ) error {
 	bkapp.Status.SetHookStatus(*instance.Status)
+
+	hookCond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
+	var observedGeneration int64
+	if hookCond != nil {
+		observedGeneration = hookCond.ObservedGeneration
+	} else {
+		observedGeneration = bkapp.Generation
+	}
+
 	switch {
 	case instance.Timeout(timeoutThreshold):
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
@@ -197,15 +215,19 @@ func (r *HookReconciler) UpdateStatus(
 				"PreReleaseHook execute timeout, last message: %s",
 				instance.Status.Message,
 			),
-			ObservedGeneration: bkapp.Generation,
+			ObservedGeneration: observedGeneration,
 		})
+		r.updateAppProgressingStatus(bkapp, metav1.ConditionFalse)
+
 	case instance.Succeeded():
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Finished",
-			ObservedGeneration: bkapp.Generation,
+			ObservedGeneration: observedGeneration,
 		})
+		r.updateAppProgressingStatus(bkapp, metav1.ConditionTrue)
+
 	case instance.Failed():
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
@@ -213,10 +235,25 @@ func (r *HookReconciler) UpdateStatus(
 			Status:             metav1.ConditionFalse,
 			Reason:             "Failed",
 			Message:            fmt.Sprintf("PreReleaseHook fail to succeed: %s", instance.Status.Message),
+			ObservedGeneration: observedGeneration,
+		})
+		r.updateAppProgressingStatus(bkapp, metav1.ConditionFalse)
+	}
+
+	return nil
+}
+
+func (r *HookReconciler) updateAppProgressingStatus(bkapp *paasv1alpha2.BkApp, status metav1.ConditionStatus) {
+	// 新部署时, 根据钩子执行结果, 更新 AppProgressing 的状态
+	AppProgressingCond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AppProgressing)
+	if AppProgressingCond != nil && AppProgressingCond.Status == metav1.ConditionUnknown {
+		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
+			Type:               paasv1alpha2.AppProgressing,
+			Status:             status,
+			Reason:             "NewDeploy",
 			ObservedGeneration: bkapp.Generation,
 		})
 	}
-	return nil
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态

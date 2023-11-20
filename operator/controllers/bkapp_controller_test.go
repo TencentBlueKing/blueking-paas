@@ -284,7 +284,8 @@ var _ = Describe("", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)
-		Expect(condAvailable.Status).To(Equal(metav1.ConditionUnknown))
+		// 上一个部署后, AppAvailable 的 status 是 True
+		Expect(condAvailable.Status).To(Equal(metav1.ConditionTrue))
 		Expect(podCounter()).To(Equal(2))
 
 		By("By update the pre-release-hook pod Status.Phase to Running to block the BkApp finalizer", func() {

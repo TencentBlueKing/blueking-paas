@@ -143,6 +143,11 @@ export default {
     routeName() {
       return this.$route.name;
     },
+
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+
     loaderPlaceholder() {
       if (this.routeName === 'appDeployForStag' || this.routeName === 'appDeployForProd') {
         return 'deploy-loading';
@@ -172,6 +177,10 @@ export default {
     },
 
     curTabPanels() {
+      // 可观测性配置接入featureflag
+      if (!this.userFeature.PHALANX) {
+        this.panels = this.panels.filter(v => v.ref !== 'observability');
+      }
       if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }

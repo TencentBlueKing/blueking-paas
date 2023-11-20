@@ -161,11 +161,11 @@ class TestProcessesManifestConstructor:
         "plan_name, expected",
         [
             ("", ResQuotaPlan.P_DEFAULT),
-            (settings.DEFAULT_PROC_SPEC_PLAN, ResQuotaPlan.P_2C1G),
-            (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_2C2G),
+            (settings.DEFAULT_PROC_SPEC_PLAN, ResQuotaPlan.P_DEFAULT),
+            (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_4C2G),
             # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-            (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_2C4G),
-            (ResQuotaPlan.P_2C1G, ResQuotaPlan.P_2C1G),
+            (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_4C4G),
+            (ResQuotaPlan.P_4C1G, ResQuotaPlan.P_4C1G),
         ],
     )
     def test_get_quota_plan(self, plan_name, expected):
@@ -238,7 +238,7 @@ class TestProcessesManifestConstructor:
                         "envName": "stag",
                         "process": "web",
                         # The plan name should have been transformed.
-                        "plan": "2C1G",
+                        "plan": "default",
                     }
                 ],
             },

@@ -22,9 +22,8 @@ from celery import shared_task
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.constants import ArtifactType
-from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
+from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.bk_app.cnative.specs.models import AppModelRevision
 from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -33,7 +32,7 @@ from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
+from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
@@ -71,7 +70,7 @@ class ImageReleaseMgr(DeployStep):
         module = self.module_environment.module
         is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure('更新进程配置', phase=preparation_phase):
+        with self.procedure('解析应用进程信息', phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id
             if build_id:
                 # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空
@@ -153,17 +152,16 @@ class ImageReleaseMgr(DeployStep):
                     password=credential.password,
                 )
         else:
-            # TODO: 云原生应用需要增加模型存储 image_credential_name
-            application = self.module_environment.application
-            revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
-            try:
-                credential_refs = get_references(revision.json_value)
-                validate_references(application, credential_refs)
-            except InvalidImageCredentials as e:
-                # message = f"missing credentials {missing_names}"
-                self.stream.write_message(Style.Error(str(e)))
-                raise
+            credential_refs = get_credential_refs(self.module_environment.module)
             if credential_refs:
+                application = self.module_environment.application
+                try:
+                    validate_references(application, credential_refs)
+                except InvalidImageCredentials as e:
+                    # message = f"missing credentials {missing_names}"
+                    self.stream.write_message(Style.Error(str(e)))
+                    raise
+
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
     def _handle_app_description(self):

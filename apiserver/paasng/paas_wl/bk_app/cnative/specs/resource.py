@@ -146,15 +146,13 @@ class MresConditionParser:
 
     def detect_state(self) -> ModelResState:
         """Detect the final state from status.conditions"""
-        if self.mres.metadata.generation > self.mres.status.observedGeneration:
-            return ModelResState(DeployStatus.PENDING, "Pending", "waiting for the controller to process this BkApp")
-
         if not self.mres.status.conditions:
             return ModelResState(DeployStatus.PENDING, "Pending", "state not initialized")
 
-        available = self._find_condition(MResConditionType.APP_AVAILABLE)
-        if available and available.status == ConditionStatus.TRUE:
-            return ModelResState(DeployStatus.READY, available.reason, available.message)
+        if self.mres.status.phase == MResPhaseType.AppRunning:
+            available = self._find_condition(MResConditionType.APP_AVAILABLE)
+            if available and available.status == ConditionStatus.TRUE:
+                return ModelResState(DeployStatus.READY, available.reason, available.message)
 
         if self.mres.status.phase == MResPhaseType.AppFailed:
             for cond in self.mres.status.conditions:

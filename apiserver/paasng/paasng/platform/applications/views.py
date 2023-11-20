@@ -454,7 +454,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             }
         }
         """
-        serializer = slzs.CreateApplicationV2SLZ(data=request.data, context={"region": request.data["region"]})
+        # 根据配置判断新建的 lesscode 应用是否为云原生应用
+        if settings.IS_LESSCODE_APP_CLOUD_NATIVE:
+            serializer_class = slzs.CreateCloudNativeApplicationSLZ
+        else:
+            serializer_class = slzs.CreateApplicationV2SLZ
+
+        serializer = serializer_class(data=request.data, context={"region": request.data["region"]})
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 

@@ -28,7 +28,7 @@ from paasng.platform.engine.constants import AppInfoBuiltinEnv
 from paasng.platform.engine.utils.query import DeploymentGetter
 
 if typing.TYPE_CHECKING:
-    from paas_wl.bk_app.processes.entities import Instance
+    from paas_wl.bk_app.processes.kres_entities import Instance
 
 
 def get_latest_deployed_at(env: ModuleEnvironment) -> Optional[datetime]:

@@ -29,7 +29,6 @@ var (
 	DeployActionUpdateBkappStatusErrors *prometheus.CounterVec
 	DeleteOutdatedDeployErrors          *prometheus.CounterVec
 	DeployExpectedDeployErrors          *prometheus.CounterVec
-	AddonClearHistoryErrors             *prometheus.CounterVec
 	GetBkappInfoErrors                  *prometheus.CounterVec
 	ProvisionAddonInstanceErrors        *prometheus.CounterVec
 	QueryAddonSpecsErrors               *prometheus.CounterVec
@@ -80,13 +79,6 @@ func InitMetric(register prometheus.Registerer) {
 			Help: "Errors when deploying expected deploy",
 		},
 		[]string{"bkappName", "namespace", "deployName"},
-	)
-	AddonClearHistoryErrors = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "bkapp_metrics_addon_clear_history_errors",
-			Help: "Errors when clearing addon history without addon service config",
-		},
-		[]string{"bkappName", "namespace"},
 	)
 	GetBkappInfoErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -184,7 +176,6 @@ func InitMetric(register prometheus.Registerer) {
 	register.MustRegister(DeployActionUpdateBkappStatusErrors)
 	register.MustRegister(DeleteOutdatedDeployErrors)
 	register.MustRegister(DeployExpectedDeployErrors)
-	register.MustRegister(AddonClearHistoryErrors)
 	register.MustRegister(GetBkappInfoErrors)
 	register.MustRegister(ProvisionAddonInstanceErrors)
 	register.MustRegister(QueryAddonSpecsErrors)

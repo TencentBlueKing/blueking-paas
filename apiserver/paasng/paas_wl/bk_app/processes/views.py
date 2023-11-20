@@ -27,7 +27,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.processes.drf_serializers import (
+from paas_wl.bk_app.processes.serializers import (
     ModuleScopedData,
     ModuleState,
     NamespaceScopedListWatchRespSLZ,
@@ -62,7 +62,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(response_serializer=NamespaceScopedListWatchRespSLZ)
     def list(self, request, code, environment):
-        """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
+        """获取当前进程与进程实例"""
         application = self.get_application()
         module_envs = application.envs.filter(environment=environment)
 

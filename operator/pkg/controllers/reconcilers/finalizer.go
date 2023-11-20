@@ -57,7 +57,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	finished, err := r.hooksFinished(ctx, bkapp)
 	if err != nil {
 		metric.ReportHooksFinishedErrors(bkapp)
-		return r.Result.withError(errors.Wrap(err, "failed to check hook status"))
+		return r.Result.WithError(errors.Wrap(err, "failed to check hook status"))
 	}
 	if !finished {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
@@ -65,24 +65,21 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			Status:             metav1.ConditionFalse,
 			Reason:             "Terminating",
 			Message:            "Deletion request was issued, but hooks are not finished.",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
-		if err = r.Client.Status().Update(ctx, bkapp); err != nil {
-			return r.Result.withError(errors.Wrap(err, "failed to update condition status"))
-		}
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	if err = r.deleteResources(ctx, bkapp); err != nil {
 		metric.ReportDeleteResourcesErrors(bkapp)
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
-		return r.Result.withError(errors.Wrap(err, "failed to delete external resources"))
+		return r.Result.WithError(errors.Wrap(err, "failed to delete external resources"))
 	}
 
 	// remove our finalizer from the finalizers list and update it.
 	controllerutil.RemoveFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)
 	if err = r.Client.Update(ctx, bkapp); err != nil {
-		return r.Result.withError(errors.Wrap(err, "failed to remove finalizer for app"))
+		return r.Result.WithError(errors.Wrap(err, "failed to remove finalizer for app"))
 	}
 	return r.Result.End()
 }

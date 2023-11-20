@@ -31,7 +31,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
     ProcessesHandler,
 )
 from paas_wl.bk_app.monitoring.app_monitor.utils import build_monitor_port
-from paas_wl.bk_app.processes.entities import Process
+from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import set_default_options
 from paas_wl.infras.resources.generation.version import get_mapper_version

@@ -118,8 +118,7 @@
     </bk-dialog>
   </div>
 </template>
-<script>
-import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
+<script>import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
 import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
@@ -153,6 +152,10 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    activeRouteName: {
+      type: String,
+      default: '',
+    },
   },
   setup(props) {
     const route = router.currentRoute;
@@ -179,7 +182,7 @@ export default defineComponent({
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
 
-      const name = props.firstModuleName || route.name;
+      const name = props.activeRouteName || props.firstModuleName;
       let { query } = route;
       if (name === 'appLog') {
         query = {

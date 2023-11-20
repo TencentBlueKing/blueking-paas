@@ -49,7 +49,7 @@ type ServiceReconciler struct {
 func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	current, err := r.listCurrentServices(ctx, bkapp)
 	if err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 
 	expected := r.getWantedService(bkapp)
@@ -59,14 +59,14 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.B
 		for _, svc := range outdated {
 			if err = r.Client.Delete(ctx, svc); err != nil {
 				metric.ReportDeleteOutdatedServiceErrors(bkapp, svc.Name)
-				return r.Result.withError(err)
+				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, svc := range expected {
 		if err = r.applyService(ctx, svc); err != nil {
 			metric.ReportDeployExpectedServiceErrors(bkapp, svc.Name)
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 	return r.Result

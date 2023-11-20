@@ -55,9 +55,15 @@ func (r Result) ToRepresentation() (result ctrl.Result, err error) {
 	return ctrl.Result{RequeueAfter: duration}, nil
 }
 
-func (r Result) withError(err error) Result {
+// WithError sets the error
+func (r Result) WithError(err error) Result {
 	r.err = err
 	return r
+}
+
+// GetError get the error
+func (r Result) GetError() error {
+	return r.err
 }
 
 // requeue 设置下次触发调和循环的间隔

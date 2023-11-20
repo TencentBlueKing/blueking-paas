@@ -54,7 +54,7 @@ type AutoscalingReconciler struct {
 func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	expected := resources.GetWantedGPAs(bkapp)
 	outdated := FindExtraByName(current, expected)
@@ -63,20 +63,20 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alph
 		for _, gpa := range outdated {
 			if err = r.Client.Delete(ctx, gpa); err != nil {
 				metric.ReportDeleteOutdatedGpaErrors(bkapp, gpa.Name)
-				return r.Result.withError(err)
+				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, gpa := range expected {
 		if err = r.deploy(ctx, gpa); err != nil {
 			metric.ReportDeployExpectedGpaErrors(bkapp, gpa.Name)
-			return r.Result.withError(err)
+			return r.Result.WithError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
 		metric.ReportAutoscaleUpdateBkappStatusErrors(bkapp)
-		return r.Result.withError(err)
+		return r.Result.WithError(err)
 	}
 	return r.Result
 }
@@ -133,9 +133,9 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 			Status:             metav1.ConditionUnknown,
 			Reason:             "Disabled",
 			Message:            "Process autoscaling feature not turned on",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
+			ObservedGeneration: bkapp.Generation,
 		})
-		return r.Client.Status().Update(ctx, bkapp)
+		return nil
 	}
 
 	for _, gpa := range current {
@@ -146,9 +146,9 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 				Status:             metav1.ConditionFalse,
 				Reason:             "AutoscalerFailure",
 				Message:            gpa.Name + ": " + healthStatus.Message,
-				ObservedGeneration: bkapp.Status.ObservedGeneration,
+				ObservedGeneration: bkapp.Generation,
 			})
-			return r.Client.Status().Update(ctx, bkapp)
+			return nil
 		}
 	}
 
@@ -156,7 +156,7 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 		Type:               paasv1alpha2.AutoscalingAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             "AutoscalingAvailable",
-		ObservedGeneration: bkapp.Status.ObservedGeneration,
+		ObservedGeneration: bkapp.Generation,
 	})
-	return r.Client.Status().Update(ctx, bkapp)
+	return nil
 }

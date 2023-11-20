@@ -48,11 +48,6 @@ func ReportDeployExpectedDeployErrors(bkapp *paasv1alpha2.BkApp, deploymentName 
 	DeployExpectedDeployErrors.WithLabelValues(bkapp.Name, bkapp.Namespace, deploymentName).Inc()
 }
 
-// ReportAddonClearHistoryErrors ...
-func ReportAddonClearHistoryErrors(bkapp *paasv1alpha2.BkApp) {
-	AddonClearHistoryErrors.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()
-}
-
 // ReportGetBkappInfoErrors ...
 func ReportGetBkappInfoErrors(bkapp *paasv1alpha2.BkApp) {
 	GetBkappInfoErrors.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()

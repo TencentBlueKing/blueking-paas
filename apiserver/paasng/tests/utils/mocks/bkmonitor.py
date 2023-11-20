@@ -35,6 +35,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
             'end_time': end_time,
             'stage_display': random.choice(['已通知', '未处理']),
             'assignee': [generate_random_string(6), generate_random_string(6)],
+            'labels': [random.choice(['stag', 'prod'])],
         }
         for _ in range(3)
     ]

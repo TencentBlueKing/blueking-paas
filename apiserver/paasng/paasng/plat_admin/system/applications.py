@@ -30,6 +30,7 @@ from django.utils.translation import get_language
 
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, UserApplicationFilter
 
 from .constants import SimpleAppSource
@@ -62,6 +63,7 @@ class UniSimpleApp:
     developers: List[str]
     created: datetime.datetime
     creator: str
+    type: str
 
     _db_object: Optional[Any] = None
 
@@ -80,6 +82,7 @@ def get_simple_app_by_default_app(app: Application) -> UniSimpleApp:
         created=app.created,
         creator=str_username(app.creator),
         developers=app.get_developers(),
+        type=app.type,
         _db_object=app,
     )
     return simple_app
@@ -104,6 +107,8 @@ def get_simple_app_by_legacy_app(app: LApplication) -> Optional[UniSimpleApp]:
         created=app.created_date,
         creator=normalizer.get_creator(),
         developers=normalizer.get_developers(),
+        # PaaS2.0 的应用都为普通应用
+        type=ApplicationType.DEFAULT.value,
         _db_object=app,
     )
     return simple_app

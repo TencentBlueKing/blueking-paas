@@ -146,7 +146,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 			Type:               paasv1alpha2.AppAvailable,
 			Status:             metav1.ConditionFalse,
 			Reason:             "Teardown",
-			Message:            "no running processes",
+			Message:            "No running processes",
 			ObservedGeneration: bkapp.Generation,
 		})
 		return nil
@@ -193,6 +193,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 				Type:               paasv1alpha2.AppAvailable,
 				Status:             metav1.ConditionTrue,
 				Reason:             "AppAvailable",
+				Message:            "Rolling upgrade",
 				ObservedGeneration: bkapp.Generation,
 			})
 		} else {

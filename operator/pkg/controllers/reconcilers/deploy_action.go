@@ -113,24 +113,20 @@ func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bka
 func SetDefaultConditions(bkapp *paasv1alpha2.BkApp) {
 	status := &bkapp.Status
 
-	availableMessage := "rolling upgrade"
-	availableStatus := metav1.ConditionUnknown
 	latestAvailableCond := apimeta.FindStatusCondition(status.Conditions, paasv1alpha2.AppAvailable)
 	if latestAvailableCond == nil {
-		availableMessage = "First time deployment, service unavailable"
-		availableStatus = metav1.ConditionFalse
+		apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			Type:               paasv1alpha2.AppAvailable,
+			Status:             metav1.ConditionFalse,
+			Reason:             "NewDeploy",
+			Message:            "First time deployment, service unavailable",
+			ObservedGeneration: bkapp.Generation,
+		})
 	}
 
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:               paasv1alpha2.AppAvailable,
-		Status:             availableStatus,
-		Reason:             "NewDeploy",
-		Message:            availableMessage,
-		ObservedGeneration: bkapp.Generation,
-	})
-	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               paasv1alpha2.AppProgressing,
-		Status:             metav1.ConditionTrue,
+		Status:             metav1.ConditionUnknown,
 		Reason:             "NewDeploy",
 		ObservedGeneration: bkapp.Generation,
 	})

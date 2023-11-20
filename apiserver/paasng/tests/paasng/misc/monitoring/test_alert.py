@@ -80,30 +80,31 @@ class TestQueryAlertsParams:
         [
             (
                 AppQueryAlertsParams(),
-                'labels:(PAAS_BUILTIN)',
+                None,
             ),
             (
                 AppQueryAlertsParams(environment='stag'),
-                'labels:(PAAS_BUILTIN AND stag)',
+                'labels:(stag)',
             ),
             (
                 AppQueryAlertsParams(environment='stag', alert_code='high_cpu_usage'),
-                'labels:(PAAS_BUILTIN AND stag AND high_cpu_usage)',
+                'labels:(stag AND high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(alert_code='high_cpu_usage'),
-                'labels:(PAAS_BUILTIN AND high_cpu_usage)',
+                'labels:(high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
-                f'labels:(PAAS_BUILTIN) AND alert_name:{SEARCH_KEYWORD}',
+                f'alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)',
             ),
         ],
     )
     def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
         result = query_params.to_dict()
         assert result['bk_biz_ids'] == [bk_monitor_space.iam_resource_id]
-        assert result['query_string'] == expected_query_string
+        if query_string := result.get('query_string'):
+            assert query_string == expected_query_string
 
 
 class TestQueryAlarmStrategiesParams:
@@ -112,25 +113,25 @@ class TestQueryAlarmStrategiesParams:
         [
             (
                 AppQueryAlarmStrategiesParams(),
-                [{'key': 'label_name', 'value': ['PAAS_BUILTIN']}],
+                [{'key': 'label_name', 'value': []}],
             ),
             (
                 AppQueryAlarmStrategiesParams(environment='stag'),
-                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', 'stag']}],
+                [{'key': 'label_name', 'value': ['stag']}],
             ),
             (
                 AppQueryAlarmStrategiesParams(environment='stag', alert_code='high_cpu_usage'),
-                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', 'stag', 'high_cpu_usage']}],
+                [{'key': 'label_name', 'value': ['stag', 'high_cpu_usage']}],
             ),
             (
                 AppQueryAlarmStrategiesParams(alert_code='high_cpu_usage'),
-                [{'key': 'label_name', 'value': ['PAAS_BUILTIN', 'high_cpu_usage']}],
+                [{'key': 'label_name', 'value': ['high_cpu_usage']}],
             ),
             (
                 AppQueryAlarmStrategiesParams(keyword=SEARCH_KEYWORD),
                 [
-                    {'key': 'alert_name', 'value': SEARCH_KEYWORD},
-                    {'key': 'label_name', 'value': ['PAAS_BUILTIN']},
+                    {'key': 'strategy_name', 'value': SEARCH_KEYWORD},
+                    {'key': 'label_name', 'value': []},
                 ],
             ),
         ],

@@ -45,7 +45,7 @@ var _ = Describe("HookUtils", func() {
 				Name:      "fake-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					paasv1alpha2.ImageCredentialsRefAnnoKey: "image-pull-secrets",
+					paasv1alpha2.ImageCredentialsRefAnnoKey: "true",
 				},
 			},
 			Spec: paasv1alpha2.AppSpec{
@@ -109,7 +109,9 @@ var _ = Describe("HookUtils", func() {
 			).To(Equal(config.Global.GetProcDefaultMemLimits()))
 
 			// 镜像拉取密钥
-			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(paasv1alpha2.DefaultImagePullSecretName))
+			Expect(
+				hook.Pod.Spec.ImagePullSecrets[0].Name,
+			).To(Equal(paasv1alpha2.LegacyImagePullSecretName))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 

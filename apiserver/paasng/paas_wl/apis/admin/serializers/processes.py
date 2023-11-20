@@ -20,8 +20,8 @@ from rest_framework import serializers
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.bk_app.processes.drf_serializers import HumanizeDateTimeField, InstanceForDisplaySLZ
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
+from paas_wl.bk_app.processes.serializers import HumanizeDateTimeField, InstanceForDisplaySLZ
 
 
 class ProcessSpecBoundInfoSLZ(serializers.Serializer):

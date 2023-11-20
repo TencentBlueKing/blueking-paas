@@ -20,8 +20,11 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 # Default resource limitations for each process
-DEFAULT_PROC_CPU = '500m'
-DEFAULT_PROC_MEM = '256Mi'
+DEFAULT_PROC_CPU = '4000m'
+DEFAULT_PROC_MEM = '1024Mi'
+# Default resource request for each process
+DEFAULT_PROC_CPU_REQUEST = '200m'
+DEFAULT_PROC_MEM_REQUEST = '256Mi'
 
 DEFAULT_PROCESS_NAME = 'web'
 
@@ -136,10 +139,6 @@ class ResQuotaPlan(str, StructuredEnum):
     """ResQuotaPlan is used to specify process resource quota"""
 
     P_DEFAULT = EnumField("default", label="default")
-    P_1C512M = EnumField("1C512M", label="1C512M")
-    P_2C1G = EnumField("2C1G", label="2C1G")
-    P_2C2G = EnumField("2C2G", label="2C2G")
-    P_2C4G = EnumField("2C4G", label="2C4G")
     P_4C1G = EnumField("4C1G", label="4C1G")
     P_4C2G = EnumField("4C2G", label="4C2G")
     P_4C4G = EnumField("4C4G", label="4C4G")

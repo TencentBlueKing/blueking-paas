@@ -17,16 +17,23 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import string
+from pathlib import Path
+from unittest import mock
 
 import pytest
+import yaml
 from django.conf import settings
+from django.test.utils import override_settings
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.utils import generate_temp_file
+from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 from tests.utils.helpers import generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 @pytest.fixture
@@ -51,6 +58,10 @@ def lesscode_public_params():
 class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
+    @pytest.mark.parametrize(
+        "is_lesscode_app_cloud_native, app_type",
+        [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
+    )
     def test_create_lesscode_api(
         self,
         bk_user,
@@ -60,6 +71,8 @@ class TestApiInAPIGW:
         bk_app_code,
         bk_app_name,
         init_tmpls,
+        is_lesscode_app_cloud_native,
+        app_type,
     ):
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
         lesscode_public_params.update(
@@ -69,9 +82,54 @@ class TestApiInAPIGW:
                 'name': bk_app_name,
             }
         )
-        response = api_client.post(
-            '/apigw/api/bkapps/applications/',
-            data=lesscode_public_params,
-        )
+        with override_settings(IS_LESSCODE_APP_CLOUD_NATIVE=is_lesscode_app_cloud_native):
+            response = api_client.post(
+                '/apigw/api/bkapps/applications/',
+                data=lesscode_public_params,
+            )
         assert response.status_code == 201
         assert response.json()['application']['modules'][0]['source_origin'] == SourceOrigin.BK_LESS_CODE
+        assert response.json()['application']['type'] == app_type
+
+
+class TestModuleSourcePackageViewSet:
+    """测试源码包上传的接口"""
+
+    @pytest.fixture
+    def contents(self):
+        """The default contents for making tar file."""
+        app_desc = {
+            'spec_version': 2,
+            "module": {"is_default": True, "processes": {"web": {"command": "npm run online"}}, "language": "NodeJS"},
+        }
+        return {"app.yaml": yaml.safe_dump(app_desc)}
+
+    @pytest.fixture
+    def tar_path(self, contents):
+        with generate_temp_file() as file_path:
+            gen_tar(file_path, contents)
+            yield file_path
+
+    def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path):
+        bk_module.source_origin = SourceOrigin.BK_LESS_CODE
+        bk_module.save()
+        url = "/api/bkapps/applications/{code}/modules/{module_name}/source_package/link/".format(
+            code=bk_app.code, module_name=bk_module.name
+        )
+
+        def download_file_via_url(url, local_path: Path):
+            local_path.write_bytes(tar_path.read_bytes())
+
+        with mock.patch(
+            "paasng.platform.sourcectl.package.uploader.download_file_via_url", side_effect=download_file_via_url
+        ):
+            response = api_client.post(
+                url,
+                data={
+                    "package_url": "https://example.com",
+                    "version": "0.0.1",
+                    "allow_overwrite": True,
+                },
+            )
+
+        assert response.status_code == 200

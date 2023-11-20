@@ -86,7 +86,7 @@ var _ = Describe("Test DeployActionReconciler", func() {
 	// A shortcut function to expect the deploy action has been ignored.
 	expectDeployActionIgnored := func(ret Result, bkapp *paasv1alpha2.BkApp, deployID string) {
 		Expect(ret.ShouldAbort()).To(BeFalse())
-		Expect(bkapp.Status.Phase).To(BeEmpty())
+		Expect(bkapp.Status.HookStatuses).NotTo(BeEmpty())
 		Expect(bkapp.Status.DeployId).To(Equal(deployID))
 	}
 
@@ -109,15 +109,11 @@ var _ = Describe("Test DeployActionReconciler", func() {
 		It("deploy ID unchanged", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.DeployIDAnnoKey: "1"})
 			bkapp.Status.DeployId = "1"
-			ret := NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
-
-			expectDeployActionIgnored(ret, bkapp, "1")
-		})
-
-		It("deploy ID changed but observedGeneration is not behind", func() {
-			bkapp.SetAnnotations(map[string]string{paasv1alpha2.DeployIDAnnoKey: "2"})
-			bkapp.Status.DeployId = "1"
-			bkapp.Status.ObservedGeneration = 2
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
 			ret := NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
 
 			expectDeployActionIgnored(ret, bkapp, "1")

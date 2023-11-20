@@ -221,6 +221,7 @@ auth.requestCurrentUser().then((user) => {
         break;
       default:
         document.title = i18n.t('开发者中心 | 蓝鲸');
+        Vue.prototype.$isInternalVersion = true;
     }
 
     Vue.config.productionTip = false;

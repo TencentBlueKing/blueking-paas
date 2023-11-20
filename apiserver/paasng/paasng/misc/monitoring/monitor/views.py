@@ -29,7 +29,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
-from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
@@ -254,6 +254,9 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 
         try:
             alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
+        except BkMonitorSpaceDoesNotExist:
+            # BkMonitorSpace 不存在（应用未部署）时，返回空列表
+            return Response([])
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
@@ -264,7 +267,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategySLZ(many=True)})
+    @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategySLZ})
     def list(self, request, code):
         """查询告警策略"""
         serializer = ListAlarmStrategiesSLZ(data=request.data, context={'app_code': code})
@@ -272,8 +275,11 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
 
         try:
             alarm_strategies = make_bk_monitor_client().query_alarm_strategies(serializer.validated_data)
+        except BkMonitorSpaceDoesNotExist:
+            # BkMonitorSpace 不存在（应用未部署）时，返回空字典
+            return Response({})
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALARM_STRATEGIES_FAILED.f(str(e))
 
-        serializer = AlarmStrategySLZ(alarm_strategies, many=True)
+        serializer = AlarmStrategySLZ(alarm_strategies)
         return Response(serializer.data)

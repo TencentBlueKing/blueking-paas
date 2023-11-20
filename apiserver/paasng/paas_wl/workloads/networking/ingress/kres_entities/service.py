@@ -99,13 +99,22 @@ class ProcessServiceDeserializer(AppEntityDeserializer['ProcessService']):
             try:
                 process_type = annotations['process_type']
             except KeyError:
-                raise ValueError(f'Unable to extract process_type from process service {res_name}')
+                # Backward-compatibility
+                process_type = self.extract_process_type_from_name(app, res_name)
 
         ports = [
             PServicePortPair(name=p.name, protocol=p.protocol, port=p.port, target_port=p.targetPort)
             for p in kube_data.spec.ports
         ]
         return ProcessService(name=res_name, app=app, process_type=process_type, ports=ports)
+
+    @staticmethod
+    def extract_process_type_from_name(app: WlApp, name: str) -> str:
+        """Try to extract the process_type from service name"""
+        default_prefix = f"{app.region}-{app.scheduler_safe_name}"
+        if not name.startswith(default_prefix):
+            raise ValueError('Unable to extract process_type')
+        return name[len(default_prefix) + 1 :]
 
 
 @define

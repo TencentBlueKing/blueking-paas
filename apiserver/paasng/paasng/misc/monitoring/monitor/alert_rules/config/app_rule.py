@@ -29,7 +29,8 @@ from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.misc.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
-from .constants import DEFAULT_RULE_CONFIGS, RUN_ENVS, AlertCode
+from .constants import DEFAULT_RULE_CONFIGS, RUN_ENVS
+from .entities import AlertCode
 from .metric_label import get_metric_labels
 
 logger = logging.getLogger(__name__)
@@ -132,12 +133,19 @@ class AppScopedRuleConfig:
     def __attrs_post_init__(self):
         self.alert_rule_name = f'{self.app_code}-{self.run_env}-{self.alert_code}'
 
-        display_name = DEFAULT_RULE_CONFIGS[self.alert_code]['display_name']
+        r_configs = DEFAULT_RULE_CONFIGS[self.alert_code]
+
         if not self.alert_rule_display_name:
-            self.alert_rule_display_name = f"{display_name} [{self.run_env}]"
+            self.alert_rule_display_name = f"{r_configs['display_name']} [{self.run_env}]"
 
         if not self.metric_labels:
-            self.metric_labels = {'app_code': self.app_code, 'run_env': self.run_env}
+            try:
+                self.metric_labels = get_metric_labels(r_configs['metric_label_names'], self.app_code, self.run_env)
+            except BKMonitorNotSupportedError as e:
+                logger.info(f'generate metric labels failed: {e}')
+                self.metric_labels = {}
+
+        self.metric_labels.update({'app_code': self.app_code, 'run_env': self.run_env})
 
     @classmethod
     def from_alert_rule_obj(

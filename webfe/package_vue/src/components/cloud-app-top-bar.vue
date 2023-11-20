@@ -67,8 +67,7 @@
     </div>
   </div>
 </template>
-<script>
-import { defineComponent, ref } from 'vue';
+<script>import { defineComponent, ref, watch } from 'vue';
 import store from '@/store';
 import router from '@/router';
 
@@ -126,7 +125,7 @@ export default defineComponent({
     };
 
     const handleChangeModule = (moduleName) => {
-      const module = props.moduleList.find((item) => item.name === moduleName) || {};
+      const module = props.moduleList.find(item => item.name === moduleName) || {};
       emit('change-module', module);
       store.commit('updateCurAppModule', module);
       // 根据模块刷新当前路由
@@ -136,9 +135,14 @@ export default defineComponent({
           id: props.appCode,
           moduleId: moduleName,
         },
-        query: route.query
+        query: route.query,
       });
     };
+
+    watch(() => props.navList, (list) => {
+      // 通过路径高亮tab
+      curActive.value = props.active || list[0]?.name;
+    });
 
     return {
       curActive,

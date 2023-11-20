@@ -32,7 +32,11 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
-from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.declarative.exceptions import (
+    AppDescriptionNotFoundError,
+    ControllerError,
+    DescriptionValidationError,
+)
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
 from paasng.platform.engine.configurations.config_var import get_env_variables
@@ -145,15 +149,14 @@ class BaseBuilder(DeployStep):
         """
         try:
             self._handle_app_description()
-        except FileNotFoundError as e:
-            logger.debug("App description file is not defined, do not process.")
+        except AppDescriptionNotFoundError as e:
             if raise_exception:
-                raise HandleAppDescriptionError("App description file is not defined") from e
+                raise HandleAppDescriptionError("App description file(app_desc.yaml) is not defined") from e
+            logger.debug("App description file(app_desc.yaml) is not defined, skip.")
         except DescriptionValidationError as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
-            else:
-                logger.exception("Exception while parsing app description file, skip.")
+            logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=e.message) from e
@@ -170,21 +173,16 @@ class BaseBuilder(DeployStep):
         operator = self.deployment.operator
         version_info = self.deployment.version_info
         relative_source_dir = self.deployment.get_source_dir()
+        is_cnative_app = application.type == ApplicationType.CLOUD_NATIVE
 
-        if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION):
+        # 仅非云原生应用可以禁用应用描述文件
+        if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION) and not is_cnative_app:
             logger.debug("App description disabled.")
             return
 
         handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
-        if not handler:
-            logger.debug("No valid app description file found.")
-            return
-
-        if not isinstance(handler, AppDescriptionHandler):
-            logger.debug(
-                "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
-            )
-            return
+        if handler is None or not isinstance(handler, AppDescriptionHandler):
+            raise AppDescriptionNotFoundError("No valid app description file found.")
 
         handler.handle_deployment(self.deployment)
 

@@ -16,7 +16,7 @@
         {{ $t('访问管理') }}
       </h2>
     </div>
-    <section :class="['visit-container', { 'cloud-cls': isCloudNativeApp && active === 'moduleAddress' }]">
+    <section :class="['visit-container', { 'cloud-cls': isCustomBackground }]">
       <bk-tab
         v-show="!isCloudNativeApp"
         :active.sync="active"
@@ -40,14 +40,15 @@
           :offset-top="20"
         >
           <section v-show="!isLoading">
-            <visit-config
-              @data-ready="handlerDataReady"
-            />
+            <visit-config @data-ready="handlerDataReady" />
           </section>
         </paas-content-loader>
       </div>
       <div v-else-if="active === 'user_access_control'">
         <accessUser></accessUser>
+      </div>
+      <div v-else-if="active === 'process_service_manage'">
+        <access-process></access-process>
       </div>
       <div v-else-if="active === 'ip_access_control'">
         <accessIp></accessIp>
@@ -59,11 +60,11 @@
   </div>
 </template>
 
-<script>
-import visitConfig from './comps/visit-config';
+<script>import visitConfig from './comps/visit-config';
 import accessUser from './comps/access-user';
 import accessIp from './comps/access-ip';
 import accessAudit from './comps/access-audit';
+import accessProcess from './comps/access-process';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 
@@ -73,6 +74,7 @@ export default {
     accessUser,
     accessIp,
     accessAudit,
+    accessProcess,
     cloudAppTopBar,
   },
   mixins: [appBaseMixin],
@@ -86,10 +88,14 @@ export default {
   computed: {
     accessControl() {
       return this.$store.state.region?.access_control
-        ? this.$store.state.region?.access_control?.module?.map(e => e) : [];
+        ? this.$store.state.region?.access_control?.module?.map(e => e)
+        : [];
     },
     panels() {
-      let panelsData = [{ name: 'moduleAddress', label: this.$t('访问地址') }];
+      let panelsData = [
+        { name: 'moduleAddress', label: this.$t('访问地址') },
+        { name: 'process_service_manage', label: this.$t('进程服务管理') },
+      ];
       // 运营者不需要访问地址
       if (this.curAppInfo.role.name === 'operator') {
         panelsData = [];
@@ -109,9 +115,15 @@ export default {
       }
       return panelsData;
     },
+    isCustomBackground() {
+      if (this.isCloudNativeApp) {
+        return this.active === 'moduleAddress' || this.active === 'process_service_manage';
+      }
+      return false;
+    },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.$nextTick(() => {
         if (this.curAppInfo.role.name !== 'operator') {
           this.active = 'moduleAddress';
@@ -156,46 +168,46 @@ export default {
       const r = window.location.search.substr(1).match(reg);
       if (r != null) {
         return decodeURIComponent(r[2]);
-      };
+      }
       return null;
     },
   },
 };
 </script>
 <style lang="scss" scoped>
-.right-main{
-        .visit-container{
-          background: #fff;
-          margin: 20px 24px 0 24px;
-          padding-bottom: 20px;
-          &.cloud-cls {
-            background: #F5F7FA;
-          }
-        }
-    .domain-tab-cls {
-        min-height: auto;
-        margin: 0 24px;
-        padding-top: 0px !important;
-        background: #fff;
-        /deep/ .bk-tab-section {
-            padding: 0 !important;
-        }
+.right-main {
+  .visit-container {
+    background: #fff;
+    margin: 20px 24px 0 24px;
+    padding-bottom: 20px;
+    &.cloud-cls {
+      background: #f5f7fa;
     }
-    .controller{
-      background: #fff;
-      min-height: calc(100% - 50px);
-      width: calc(100% - 38px);
-      margin: 15px auto 0;
-      .entry-bar{
-        /deep/ .bar-container{
-          border: none !important;
-        }
+  }
+  .domain-tab-cls {
+    min-height: auto;
+    margin: 0 24px;
+    padding-top: 0px !important;
+    background: #fff;
+    /deep/ .bk-tab-section {
+      padding: 0 !important;
+    }
+  }
+  .controller {
+    background: #fff;
+    min-height: calc(100% - 50px);
+    width: calc(100% - 38px);
+    margin: 15px auto 0;
+    .entry-bar {
+      /deep/ .bar-container {
+        border: none !important;
       }
     }
-    .ps-entry-container{
-      background: #fff;
-      margin: 16px 24px 0 24px;
-      padding: 16px 24px;
-    }
+  }
+  .ps-entry-container {
+    background: #fff;
+    margin: 16px 24px 0 24px;
+    padding: 16px 24px;
+  }
 }
 </style>

@@ -71,6 +71,7 @@ export default {
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
         'imageCredential',
+        'observabilityConfig',
         'moduleInfo',
         'appServices',
         'appServiceInnerShared',
@@ -92,7 +93,7 @@ export default {
       roleAllowRouters: {
         administrator: [
           // 概览
-          'appSummary',
+          'cloudAppSummary',
           // 应用编排
           'cloudAppDeploy',
           // 应用编排 - 构建配置
@@ -149,10 +150,12 @@ export default {
           'cloudAppImageList',
           // 构建历史
           'cloudAppBuildHistory',
+          // 模块配置-可观测性配置
+          'observabilityConfig',
         ],
         developer: [
           // 概览
-          'appSummary',
+          'cloudAppSummary',
           // 应用编排
           'cloudAppDeploy',
           // 应用编排 - 构建配置
@@ -207,6 +210,8 @@ export default {
           'cloudAppImageList',
           // 构建历史
           'cloudAppBuildHistory',
+          // 模块配置-可观测性配置
+          'observabilityConfig',
         ],
         operator: [
           // 权限管理
@@ -411,6 +416,7 @@ export default {
         'cloudAppDeployForHook',
         'cloudAppDeployForResource',
         'imageCredential',
+        'observabilityConfig',
         'moduleInfo',
         'appServices',
         'appServiceInnerShared',
@@ -499,9 +505,9 @@ export default {
         });
       } catch (e) {
         console.warn('error', e);
-        if (e && e.name === 'appSummary') {
+        if (e && e.name === 'cloudAppSummary') {
           this.$router.push({
-            name: 'appSummary',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
               moduleId: 'default',
@@ -509,7 +515,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appSummary',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
             },
@@ -659,9 +665,9 @@ export default {
         };
         this.$router.push(routeConf);
       } catch (e) {
-        if (e && e.name === 'appSummary') {
+        if (e && e.name === 'cloudAppSummary') {
           this.$router.push({
-            name: 'appSummary',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
               moduleId: 'default',
@@ -669,7 +675,7 @@ export default {
           });
         } else {
           this.$router.push({
-            name: 'appBaseInfo',
+            name: 'cloudAppSummary',
             params: {
               id: this.curAppInfo.application.code,
             },

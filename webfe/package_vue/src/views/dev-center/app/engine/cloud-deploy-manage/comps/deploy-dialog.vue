@@ -287,7 +287,7 @@ export default {
       imagePullStrategy: 'IfNotPresent',
       alwaysTooltipsConfig: {
         content: this.$t('总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项'),
-        placements: ['bottom-start'],
+        placements: ['right'],
         width: 300,
       },
       ifNotPresentTooltipsConfig: {
@@ -296,6 +296,7 @@ export default {
       },
       processesData: [],
       allowMultipleImage: false,
+      curModulemirrorTag: '',
     };
   },
   computed: {
@@ -361,7 +362,7 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
-      console.log('this.deploymentInfoBackUp', this.deploymentInfoBackUp);
+      this.curModulemirrorTag = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info?.version_name;
     },
   },
   methods: {
@@ -622,8 +623,8 @@ export default {
         });
         this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
         this.imageTagListCount = res.count;
-        // 默认选中第一个
-        this.tagData.tagValue = this.imageTagList[0]?.id || '';
+        // 默认选中已部署成功的 Tag, 否则选中第一个
+        this.tagData.tagValue = (this.curModulemirrorTag || this.imageTagList[0]?.id) || '';
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -644,10 +645,9 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        console.log('res', res);
         this.customImageTagList.splice(0, this.customImageTagList.length, ...(res || []));
-        // 默认选中第一个
-        this.tagData.tagValue = this.customImageTagList[0]?.name || '';
+        // 默认选中已部署成功的 Tag, 否则选中第一个
+        this.tagData.tagValue = (this.curModulemirrorTag || this.customImageTagList[0]?.name) || '';
       } catch (e) {
         this.tagUrl = e?.data?.url;
         this.errorTips = e.message;

@@ -52,6 +52,8 @@ class ResourceType(str, StructuredEnum):
     BkMonitorSpace = 'space'
     # 蓝鲸监控：APM 应用
     BkMonitorApm = 'apm_application'
+    # 蓝鲸监控：仪表盘
+    BkMonitorDashBoard = 'grafana_dashboard'
     # 蓝鲸日志：索引集
     BkLogIndices = 'indices'
     # 蓝鲸日志：采集项
@@ -92,8 +94,7 @@ APP_MINI_ACTIONS_IN_BK_MONITOR = {
         'manage_custom_metric_v2',
         'view_custom_event_v2',
         'manage_custom_event_v2',
-        'view_dashboard_v2',
-        'manage_dashboard_v2',
+        'new_dashboard',
         'manage_datasource_v2',
         'export_config_v2',
         'import_config_v2',
@@ -101,6 +102,10 @@ APP_MINI_ACTIONS_IN_BK_MONITOR = {
     ResourceType.BkMonitorApm: [
         'view_apm_application_v2',
         'manage_apm_application_v2',
+    ],
+    ResourceType.BkMonitorDashBoard: [
+        'view_single_dashboard',
+        'edit_single_dashboard',
     ],
 }
 
@@ -114,8 +119,6 @@ APP_MINI_ACTIONS_IN_BK_LOG = {
             'create_collection_v2',
             'create_es_source_v2',
             'create_indices_v2',
-            'view_dashboard_v2',
-            'manage_dashboard_v2',
             'manage_extract_config_v2',
         ],
     },

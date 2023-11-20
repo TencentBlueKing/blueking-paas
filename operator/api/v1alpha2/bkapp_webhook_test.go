@@ -221,7 +221,7 @@ var _ = Describe("test webhook.Validator", func() {
 		It("resource quota plan unsupported", func() {
 			bkapp.Spec.Processes[0].ResQuotaPlan = "fake"
 			err := bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"1C512M\""))
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"4C1G\""))
 		})
 	})
 
@@ -448,7 +448,7 @@ var _ = Describe("test webhook.Validator", func() {
 					{EnvName: "stag", Process: "web", Count: 1},
 				},
 				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
-					{EnvName: "prod", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+					{EnvName: "prod", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C1G},
 				},
 				EnvVariables: []paasv1alpha2.EnvVarOverlay{
 					{EnvName: "stag", Name: "foo", Value: "foo-value"},
@@ -492,14 +492,14 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 		It("[resQuota] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
-				{EnvName: "invalid-env", Process: "web", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+				{EnvName: "invalid-env", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C1G},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
 		It("[resQuota] invalid process name", func() {
 			bkapp.Spec.EnvOverlay.ResQuotas = []paasv1alpha2.ResQuotaOverlay{
-				{EnvName: "stag", Process: "invalid-proc", Plan: paasv1alpha2.ResQuotaPlan2C1G},
+				{EnvName: "stag", Process: "invalid-proc", Plan: paasv1alpha2.ResQuotaPlan4C1G},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
@@ -509,7 +509,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{EnvName: "stag", Process: "web", Plan: "invalid-plan"},
 			}
 			err := bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"1C512M\""))
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"4C1G\""))
 		})
 		It("[envVariables] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{

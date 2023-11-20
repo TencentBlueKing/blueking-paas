@@ -543,15 +543,15 @@ input::-webkit-input-placeholder {
   display: flex;
   margin: 20px 0;
   .form-label {
+    flex-shrink: 0;
     color: #63656e;
     line-height: 32px;
     font-size: 14px;
     padding-top: 10px;
-    width: 115px;
+    width: 100px;
     text-align: right;
-    margin-right: 10px;
     font-weight: 400;
-    padding-right: 8px;
+    padding-right: 18px;
   }
   &-item {
     width: 145px;

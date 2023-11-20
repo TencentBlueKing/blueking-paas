@@ -166,7 +166,7 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('进程操作')"
-          width="170"
+          :width="195"
           class-name="table-colum-operation-cls default-background"
         >
           <template slot-scope="{ row }">
@@ -179,7 +179,7 @@
                   src="/static/images/btn_loading.gif"
                   class="loading"
                 >
-                <span class="pl10">
+                <span class="pl10" style="white-space: nowrap;">
                   {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
                 </span>
               </div>
@@ -213,8 +213,7 @@
                 v-bk-tooltips="$t('进程详情')"
                 class="paasng-icon paasng-log-2 detail mr10"
                 @click="showProcessDetailDialog(row)"></i>
-              <!-- 暂时不展示 -->
-              <!-- <bk-popover
+              <bk-popover
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom">
@@ -222,7 +221,7 @@
                 <div slot="content" style="white-space: normal;">
                   <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
                 </div>
-              </bk-popover> -->
+              </bk-popover>
             </div>
           </template>
         </bk-table-column>
@@ -399,9 +398,8 @@
                     style="min-width: 140px;"
                   >{{ log.timestamp }}</span>
                   <span class="pod-name">{{ log.podShortName }}</span>
-                  <pre
-                    class="message"
-                    v-html="log.message || '--'"
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <pre class="message" v-html="log.message || '--'"
                   />
                 </li>
               </ul>
@@ -446,11 +444,12 @@
     <!-- 无法使用控制台 end -->
 
     <!-- 扩缩容 -->
-    <!-- <scale-dialog
-      :key="moduleName" :ref="`${moduleName}ScaleDialog`"
+    <scale-dialog
+      :key="moduleName"
+      :ref="`${moduleName}ScaleDialog`"
       @updateStatus="handleProcessStatus"
     >
-    </scale-dialog> -->
+    </scale-dialog>
   </div>
 </template>
 
@@ -459,7 +458,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
 import ECharts from 'vue-echarts/components/ECharts.vue';
-// import scaleDialog from './scale-dialog';
+import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 
@@ -474,7 +473,7 @@ let timeShortCutText = '';
 export default {
   components: {
     chart: ECharts,
-    // scaleDialog,
+    scaleDialog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -699,7 +698,7 @@ export default {
     handleExpansionAndContraction(row) {
       this.curUpdateProcess = row;    // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
-      this.$refs[refName].handleShowDialog(row, this.environment);
+      this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
     },
     // 处理进程与实例的关系
     // handleDeployInstanceData() {
@@ -1455,7 +1454,7 @@ export default {
     // 处理进程状态
     handleProcessStatus() {
       // 进程之后请求列表数据
-      // bus.$emit('get-release-info');
+      bus.$emit('get-release-info');
     },
 
     handleMouseEnter(name) {

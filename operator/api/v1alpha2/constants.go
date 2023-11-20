@@ -108,8 +108,8 @@ const (
 	// BkAppFinalizerName BkApp 的 finalizer 标记
 	BkAppFinalizerName = "bkapp.paas.bk.tencent.com/finalizer"
 
-	// DefaultImagePullSecretName 平台默认的 pullImageSecret 名称
-	DefaultImagePullSecretName = "bkapp-dockerconfigjson"
+	// LegacyImagePullSecretName 支持多模块前的 pullImageSecret 名称
+	LegacyImagePullSecretName = "bkapp-dockerconfigjson"
 )
 
 const (
@@ -124,10 +124,6 @@ var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}
 // AllowedResQuotaPlans 允许使用的资源配额方案
 var AllowedResQuotaPlans = []ResQuotaPlan{
 	ResQuotaPlanDefault,
-	ResQuotaPlan1C512M,
-	ResQuotaPlan2C1G,
-	ResQuotaPlan2C2G,
-	ResQuotaPlan2C4G,
 	ResQuotaPlan4C1G,
 	ResQuotaPlan4C2G,
 	ResQuotaPlan4C4G,

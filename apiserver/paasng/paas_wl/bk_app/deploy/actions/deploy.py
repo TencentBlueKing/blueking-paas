@@ -26,16 +26,16 @@ from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.infras.resources.base.exceptions import KubeException
-from paas_wl.utils.command import get_command_name
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.bk_app.processes.managers import AppProcessManager
+from paas_wl.infras.resources.base.exceptions import KubeException
+from paas_wl.utils.command import get_command_name
 from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
     from paas_wl.bk_app.applications.models import Release
-    from paas_wl.bk_app.processes.entities import Process
+    from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
+    from paas_wl.bk_app.processes.kres_entities import Process
 
 logger = logging.getLogger(__name__)
 

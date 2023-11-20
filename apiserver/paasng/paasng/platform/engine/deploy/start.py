@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, Optional
 
-from paas_wl.bk_app.cnative.specs.models import AppModelResource, update_app_resource
+from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import OperationTypes, RuntimeType
@@ -44,7 +44,6 @@ def initialize_deployment(
     operator: str,
     version_info: VersionInfo,
     advanced_options: Optional[Dict] = None,
-    manifest: Optional[Dict] = None,
 ) -> Deployment:
     """初始化 Deployment 对象, 并记录该次部署事件.
 
@@ -52,7 +51,6 @@ def initialize_deployment(
     :param operator: 当前 operator 的 user id
     :param version_info: 需要部署的源码版本信息
     :param advanced_options: AdvancedOptionsField, 部署的高级选项.
-    :param manifest: BkApp 配置信息
 
     :raise: `ValidationError`、`ValueError` from update_app_resource
     """
@@ -66,8 +64,6 @@ def initialize_deployment(
 
     bkapp_revision_id = None
     if application.type == ApplicationType.CLOUD_NATIVE:
-        if manifest:
-            update_app_resource(application, module, manifest)
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         bkapp_revision_id = model_resource.revision.id

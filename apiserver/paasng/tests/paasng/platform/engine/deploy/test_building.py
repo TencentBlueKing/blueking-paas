@@ -167,8 +167,8 @@ class TestCloudNative:
 
     def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full, model_resource):
         with mock.patch(
-            'paasng.platform.engine.utils.source.get_metadata_reader', new=mock.MagicMock()
-        ) as reader, mock.patch(
+            'paasng.platform.engine.utils.source.get_metadata_reader',
+        ), mock.patch.object(builder_class, "handle_app_description"), mock.patch(
             'paasng.platform.engine.deploy.building.{}.compress_and_upload'.format(builder_class.__name__)
         ), mock.patch(
             'paasng.platform.engine.deploy.building.BuildProcessPoller'
@@ -177,7 +177,6 @@ class TestCloudNative:
         ) as mocked_stream, mock.patch(
             'paasng.platform.engine.deploy.building.{}.launch_build_processes'.format(builder_class.__name__)
         ) as launch_build_processes:
-            reader().get_app_desc.return_value = {}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
             launch_build_processes.return_value = faked_build_process_id

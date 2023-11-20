@@ -479,8 +479,9 @@ export default {
 
     .overview-slidedown .application-search {
         width: 100%;
-        height: 30px;
-        line-height: 30px;
+        height: 32px;
+        line-height: 32px;
+        font-size: 12px;
     }
 
     .overview-slidedown .application-search input[type="text"] {

@@ -47,23 +47,22 @@
             v-if="application.config_info.require_templated_source && downloadableAddress"
             class="input-wrapper"
           >
-            <div class="input-item">
-              <span class="url-label">{{ $t('应用初始化模板地址：') }}</span>
-              <input
-                v-model="downloadableAddress"
-                v-bk-tooltips.top="downloadableAddress"
-                :class="['ps-form-control', 'svn-input', localLanguage === 'en' ? 'svn-input-en' : '']"
-                type="text"
-              />
-            </div>
-            <div class="btn-item">
-              <a
-                target="_blank"
-                class="btn-checkout ps-btn ps-btn-primary"
-                :href="downloadableAddress"
+            <div class="title-wrapper">
+              <p class="title">{{ $t('应用初始化模板地址：') }}</p>
+              <div
+                class="icon-wrapper"
               >
-                {{ $t('点击下载') }}
-              </a>
+                <a
+                  target="_blank"
+                  :href="downloadableAddress"
+                >
+                  <i class="paasng-icon paasng-download" />
+                  {{ $t('下载') }}
+                </a>
+              </div>
+            </div>
+            <div class="template-url" v-bk-tooltips.top="downloadableAddress">
+              {{ downloadableAddress }}
             </div>
           </div>
           <div
@@ -109,7 +108,7 @@
             </div>
           </div>
           <div
-            v-if="application.type !== 'bk_plugin' && isShowTips"
+            v-if="isShowGitBash"
             class="btn-check-svn spacing-x4"
           >
             <p class="log-title">
@@ -177,8 +176,7 @@
   </div>
 </template>
 
-<script>
-import topBar from './comps/top-bar.vue';
+<script>import topBar from './comps/top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import auth from '@/auth';
 export default {
@@ -239,6 +237,14 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    isShowGitBash() {
+      const isDockerfile = this.$route.query.method === 'dockerfile';
+      // dockerfile构建方式，蓝鲸插件不展示GitBash
+      if (!isDockerfile && this.application.type !== 'bk_plugin' && this.isShowTips) {
+        return true;
+      }
+      return false;
+    },
   },
   created() {
     const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
@@ -252,7 +258,7 @@ export default {
 
       if (modules && modules.length) {
         this.trunkURL = modules[0].repo?.trunk_url;
-        const defaultModule = modules.find((item) => item.name === 'default');
+        const defaultModule = modules.find(item => item.name === 'default');
         this.isShowTips = defaultModule.source_origin === 1;
         this.isRuntimeType = modules[0].web_config?.runtime_type !== 'custom_image';
       }
@@ -293,10 +299,10 @@ export default {
       });
     },
     hideNotChildElement(el) {
-      const childNodes = el.childNodes;
+      const { childNodes } = el;
 
       // 判断子元素是否存在
-      const allChildNodes = Array.from(childNodes).filter((node) => node.nodeType !== 8); // 过滤掉注释节点
+      const allChildNodes = Array.from(childNodes).filter(node => node.nodeType !== 8); // 过滤掉注释节点
       if (allChildNodes.length === 0) {
         el.style.display = 'none'; // 隐藏当前元素
       }

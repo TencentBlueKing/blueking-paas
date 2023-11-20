@@ -180,596 +180,593 @@
   </div>
 </template>
 
-<script>
-    import moment from 'moment';
-    import xss from 'xss';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import logFilter from './comps/log-filter.vue';
-    import { formatDate } from '@/common/tools';
+<script>import moment from 'moment';
+import xss from 'xss';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import logFilter from './comps/log-filter.vue';
+import { formatDate } from '@/common/tools';
 
-    const xssOptions = {
-        whiteList: {
-            'bk-highlight-mark': []
-        }
+const xssOptions = {
+  whiteList: {
+    'bk-highlight-mark': [],
+  },
+};
+const logXss = new xss.FilterXSS(xssOptions);
+const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
+const EXIST_LOG_KEY = ['timestamp', 'method', 'path', 'status_code', 'response_time'];
+export default {
+  components: {
+    logFilter,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      name: 'log-component',
+      filterKeyword: '',
+      contentHeight: 400,
+      tabChangeIndex: 0,
+      renderIndex: 0,
+      renderFilter: 0,
+      routeChangeIndex: 0,
+      isLoading: true,
+      tableMaxWidth: 700,
+      isShowDate: true,
+      lastScrollId: '',
+      initDateTimeRange: [initStartDate, initEndDate],
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 20,
+      },
+      tableSortTypes: {},
+      autoTimer: 0,
+      fieldChecked: {},
+      fieldPopoverShow: {},
+      fieldCheckedList: [],
+      isChartLoading: false,
+      isLogListLoading: false,
+      logList: [],
+      streamLogList: [],
+      searchFilterKey: [],
+      tableFilters: [],
+      streamLogFilters: [],
+      envList: [],
+      processList: [],
+      filterData: [],
+      streamList: [],
+      fieldList: [],
+      logParams: {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        levelname: '',
+        time_range: '1h',
+      },
+      fieldSelectedList: [],
+      isFilter: false,
+      logs: [],
+      logKeyList: [],
+      existFieldList: EXIST_LOG_KEY,
+      tableEmptyConf: {
+        isAbnormal: false,
+        keyword: '',
+      },
     };
-    const logXss = new xss.FilterXSS(xssOptions);
-    const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
-    const EXIST_LOG_KEY = ['timestamp', 'method', 'path', 'status_code', 'response_time'];
-    export default {
-        components: {
-            logFilter
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-                name: 'log-component',
-                filterKeyword: '',
-                contentHeight: 400,
-                tabChangeIndex: 0,
-                renderIndex: 0,
-                renderFilter: 0,
-                routeChangeIndex: 0,
-                isLoading: true,
-                tableMaxWidth: 700,
-                isShowDate: true,
-                lastScrollId: '',
-                initDateTimeRange: [initStartDate, initEndDate],
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 20
-                },
-                tableSortTypes: {},
-                autoTimer: 0,
-                fieldChecked: {},
-                fieldPopoverShow: {},
-                fieldCheckedList: [],
-                isChartLoading: false,
-                isLogListLoading: false,
-                logList: [],
-                streamLogList: [],
-                searchFilterKey: [],
-                tableFilters: [],
-                streamLogFilters: [],
-                envList: [],
-                processList: [],
-                filterData: [],
-                streamList: [],
-                fieldList: [],
-                logParams: {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    levelname: '',
-                    time_range: '1h'
-                },
-                fieldSelectedList: [],
-                isFilter: false,
-                logs: [],
-                logKeyList: [],
-                existFieldList: EXIST_LOG_KEY,
-                tableEmptyConf: {
-                    isAbnormal: false,
-                    keyword: ''
-                }
-            };
-        },
-        computed: {
-            chartData () {
-                const data = this.$store.state.plugin.chartData;
-                return data;
-            },
-            tableFormatFilters () {
-                const results = [];
-                const obj = {};
-                // 重复key聚合
-                this.tableFilters.forEach(item => {
-                    if (!obj[item.key]) {
-                        obj[item.key] = [];
-                    }
-                    obj[item.key].push(item.value);
-                });
-                for (const key in obj) {
-                    results.push({
-                        key: key,
-                        value: obj[key].join(' | ')
-                    });
-                }
-                return results;
-            },
-            fieldOptions () {
-                const options = {};
-                const fieldList = this.fieldList;
-                fieldList.forEach(field => {
-                    options[field.name] = [];
-                    if (field.name !== 'response_time') {
-                        field.list.forEach(item => {
-                            options[field.name].push({
-                                text: item.text,
-                                value: item.id
-                            });
-                        });
-                    }
-                });
-                return options;
-            },
-            fieldMap () {
-                const obj = {};
-                const fieldList = this.fieldList;
-                fieldList.forEach(field => {
-                    obj[field.name] = field.id;
-                });
-                return obj;
-            },
-            hasChartData () {
-                if (this.chartData.series.length && this.chartData.series[0].data.length) {
-                    return true;
-                }
-                return false;
-            }
-        },
-        watch: {
-            'logParams.keyword' (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    if (this.isFilter) {
-                        this.loadData(false);
-                        this.isFilter = false;
-                    }
-                }
-            },
-            '$route.params' (newVal, oldVal) {
-                if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
-                    this.isLoading = true;
-                    this.renderIndex++;
-                    this.routeChangeIndex++;
-                    this.resetParams();
-                    this.loadData();
-                }
-            }
-        },
-        beforeRouteLeave (to, from, next) {
-            clearInterval(this.autoTimer);
-            this.resetParams();
-            next(true);
-        },
-        created () {
-            const query = this.$route.query || {};
-            this.logParams = {
-                start_time: query.start_time || initStartDate,
-                end_time: query.end_time || initEndDate,
-                environment: query.environment || '',
-                process_id: query.process_id || '',
-                stream: query.stream || '',
-                keyword: query.keyword || '',
-                levelname: query.levelname || '',
-                time_range: query.time_range || '1h'
-            };
-        },
-        mounted () {
-            this.isLogListLoading = false;
-            this.isLoading = false;
-            this.init();
-        },
-        methods: {
-            /**
+  },
+  computed: {
+    chartData() {
+      const data = this.$store.state.plugin.chartData;
+      return data;
+    },
+    tableFormatFilters() {
+      const results = [];
+      const obj = {};
+      // 重复key聚合
+      this.tableFilters.forEach((item) => {
+        if (!obj[item.key]) {
+          obj[item.key] = [];
+        }
+        obj[item.key].push(item.value);
+      });
+      for (const key in obj) {
+        results.push({
+          key,
+          value: obj[key].join(' | '),
+        });
+      }
+      return results;
+    },
+    fieldOptions() {
+      const options = {};
+      const { fieldList } = this;
+      fieldList.forEach((field) => {
+        options[field.name] = [];
+        if (field.name !== 'response_time') {
+          field.list.forEach((item) => {
+            options[field.name].push({
+              text: item.text,
+              value: item.id,
+            });
+          });
+        }
+      });
+      return options;
+    },
+    fieldMap() {
+      const obj = {};
+      const { fieldList } = this;
+      fieldList.forEach((field) => {
+        obj[field.name] = field.id;
+      });
+      return obj;
+    },
+    hasChartData() {
+      if (this.chartData.series.length && this.chartData.series[0].data.length) {
+        return true;
+      }
+      return false;
+    },
+  },
+  watch: {
+    'logParams.keyword'(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        if (this.isFilter) {
+          this.loadData(false);
+          this.isFilter = false;
+        }
+      }
+    },
+    '$route.params'(newVal, oldVal) {
+      if (newVal.id !== oldVal.id || newVal.moduleId !== oldVal.moduleId) {
+        this.isLoading = true;
+        // eslint-disable-next-line no-plusplus
+        this.renderIndex++;
+        // eslint-disable-next-line no-plusplus
+        this.routeChangeIndex++;
+        this.resetParams();
+        this.loadData();
+      }
+    },
+  },
+  beforeRouteLeave(to, from, next) {
+    clearInterval(this.autoTimer);
+    this.resetParams();
+    next(true);
+  },
+  created() {
+    const query = this.$route.query || {};
+    this.logParams = {
+      start_time: query.start_time || initStartDate,
+      end_time: query.end_time || initEndDate,
+      environment: query.environment || '',
+      process_id: query.process_id || '',
+      stream: query.stream || '',
+      keyword: query.keyword || '',
+      levelname: query.levelname || '',
+      time_range: query.time_range || '1h',
+    };
+  },
+  mounted() {
+    this.isLogListLoading = false;
+    this.isLoading = false;
+    this.init();
+  },
+  methods: {
+    /**
              * 初始化入口
              */
-            init () {
-                this.isLoading = true;
-                this.loadData();
+    init() {
+      this.isLoading = true;
+      this.loadData();
 
-                const winHeight = document.body.scrollHeight || window.innerHeight;
-                const height = winHeight - 400;
-                if (height > 400) {
-                    this.contentHeight = height;
-                }
-                this.initTableBox();
-                window.onresize = () => {
-                    this.initTableBox();
-                };
-            },
+      const winHeight = document.body.scrollHeight || window.innerHeight;
+      const height = winHeight - 400;
+      if (height > 400) {
+        this.contentHeight = height;
+      }
+      this.initTableBox();
+      window.onresize = () => {
+        this.initTableBox();
+      };
+    },
 
-            initTableBox () {
-                setTimeout(() => {
-                    const width = this.$refs.logMain.getBoundingClientRect().width - 220;
-                    this.$refs.tableBox.style.width = width + 'px';
-                    this.$refs.tableBox.style.maxWidth = width + 'px';
-                }, 1000);
-            },
+    initTableBox() {
+      setTimeout(() => {
+        const width = this.$refs.logMain.getBoundingClientRect().width - 220;
+        this.$refs.tableBox.style.width = `${width}px`;
+        this.$refs.tableBox.style.maxWidth = `${width}px`;
+      }, 1000);
+    },
 
-            /**
+    /**
              * 选择自定义时间，并确定
              */
-            handlePickSuccess (params) {
-                this.logParams = params;
-                this.resetStreamLog();
-                this.loadData();
-            },
+    handlePickSuccess(params) {
+      this.logParams = params;
+      this.resetStreamLog();
+      this.loadData();
+    },
 
-            /**
+    /**
              * 清空查询参数
              */
-            removeFilterParams () {
-                if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
-                    this.$refs.bkSearcher.removeAllParams();
-                }
-            },
+    removeFilterParams() {
+      if (this.$refs.bkSearcher && this.$refs.bkSearcher.removeAllParams) {
+        this.$refs.bkSearcher.removeAllParams();
+      }
+    },
 
-            toggleDetail (log) {
-                log.isToggled = !log.isToggled;
-                const list = JSON.parse(JSON.stringify(this.logList));
-                this.logList.splice(0, this.logList.length, ...list);
-                this.hideAllFilterPopover();
-            },
+    toggleDetail(log) {
+      log.isToggled = !log.isToggled;
+      const list = JSON.parse(JSON.stringify(this.logList));
+      this.logList.splice(0, this.logList.length, ...list);
+      this.hideAllFilterPopover();
+    },
 
-            getParams () {
-                return {
-                    start_time: this.logParams.start_time,
-                    end_time: this.logParams.end_time,
-                    time_range: this.logParams.time_range
-                };
-            },
+    getParams() {
+      return {
+        start_time: this.logParams.start_time,
+        end_time: this.logParams.end_time,
+        time_range: this.logParams.time_range,
+      };
+    },
 
-            /**
+    /**
              * 构建过滤参数
              */
-            getFilterParams () {
-                const params = {
-                    query: {
-                        query_string: this.logParams.keyword
-                    }
-                };
+    getFilterParams() {
+      const params = {
+        query: {
+          query_string: this.logParams.keyword,
+        },
+      };
 
-                const filters = this.tableFilters;
-                filters.forEach(filter => {
-                    const filterKey = this.fieldMap[filter.key] || filter.key;
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
+      const filters = this.tableFilters;
+      filters.forEach((filter) => {
+        const filterKey = this.fieldMap[filter.key] || filter.key;
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
 
-                    if (!params.query.terms[filterKey]) {
-                        params.query.terms[filterKey] = [];
-                    }
+        if (!params.query.terms[filterKey]) {
+          params.query.terms[filterKey] = [];
+        }
 
-                    params.query.terms[filterKey].push(filter.value);
-                });
+        params.query.terms[filterKey].push(filter.value);
+      });
 
-                if (this.logParams.process_id) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['process_id'] = [this.logParams.process_id];
-                }
+      if (this.logParams.process_id) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.process_id = [this.logParams.process_id];
+      }
 
-                if (this.logParams.environment) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['environment'] = [this.logParams.environment];
-                }
+      if (this.logParams.environment) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.environment = [this.logParams.environment];
+      }
 
-                if (this.logParams.stream) {
-                    if (!params.query.terms) {
-                        params.query.terms = {};
-                    }
-                    params.query.terms['stream'] = [this.logParams.stream];
-                }
+      if (this.logParams.stream) {
+        if (!params.query.terms) {
+          params.query.terms = {};
+        }
+        params.query.terms.stream = [this.logParams.stream];
+      }
 
-                // response_time排序
-                if (this.tableSortTypes['response_time']) {
-                    params.sort = {
-                        response_time: this.tableSortTypes['response_time']
-                    };
-                }
-                return params;
-            },
+      // response_time排序
+      if (this.tableSortTypes.response_time) {
+        params.sort = {
+          response_time: this.tableSortTypes.response_time,
+        };
+      }
+      return params;
+    },
 
-            /**
+    /**
              * 加载所有数据
              */
-            loadData (isLoadFilter = true) {
-                this.tableSortTypes = {};
-                this.$refs.accessLogFilter.setAutoLoad();
-                this.pagination.current = 1;
-                this.getLogList();
-                this.getChartData();
-            },
+    loadData(isLoadFilter = true) {
+      this.tableSortTypes = {};
+      this.$refs.accessLogFilter.setAutoLoad();
+      this.pagination.current = 1;
+      this.getLogList();
+      this.getChartData();
+    },
 
-            /**
+    /**
              * 重围搜索参数
              */
-            resetParams () {
-                this.initDateTimeRange = [initStartDate, initEndDate];
-                this.lastScrollId = '';
-                this.tableFilters = [];
-                this.fieldSelectedList = [];
-                this.fieldList = [];
-                this.envList = [];
-                this.filterData = [];
-                this.streamList = [];
-                this.processList = [];
-                this.logList = [];
-                this.streamLogList = [];
-                this.streamLogFilters = [];
-                this.pagination = {
-                    current: 1,
-                    count: 0,
-                    limit: 20
-                };
-                this.logParams = {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    time_range: '1h',
-                    levelname: ''
-                };
-                this.tableSortTypes = {};
-            },
+    resetParams() {
+      this.initDateTimeRange = [initStartDate, initEndDate];
+      this.lastScrollId = '';
+      this.tableFilters = [];
+      this.fieldSelectedList = [];
+      this.fieldList = [];
+      this.envList = [];
+      this.filterData = [];
+      this.streamList = [];
+      this.processList = [];
+      this.logList = [];
+      this.streamLogList = [];
+      this.streamLogFilters = [];
+      this.pagination = {
+        current: 1,
+        count: 0,
+        limit: 20,
+      };
+      this.logParams = {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        time_range: '1h',
+        levelname: '',
+      };
+      this.tableSortTypes = {};
+    },
 
-            /**
+    /**
              * 关键字高亮
              * @param {String} text 匹配字符串
              */
-            setKeywordHight (text) {
-                const keywords = this.logParams.keyword.split(';');
-                if (keywords.length) {
-                    keywords.forEach(keyword => {
-                        keyword = keyword.trim();
-                        if (keyword) {
-                            const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
-                            const strReg = new RegExp(keyword, 'ig');
-                            text = text.replace(strReg, tpl);
-                        }
-                    });
-                    return text;
-                } else {
-                    return text;
-                }
-            },
+    setKeywordHight(text) {
+      const keywords = this.logParams.keyword.split(';');
+      if (keywords.length) {
+        keywords.forEach((keyword) => {
+          keyword = keyword.trim();
+          if (keyword) {
+            const tpl = `<span class="ps-keyword-hightlight">${keyword}</span>`;
+            const strReg = new RegExp(keyword, 'ig');
+            text = text.replace(strReg, tpl);
+          }
+        });
+        return text;
+      }
+      return text;
+    },
 
-            /**
+    /**
              * 获取图表数据
              */
-            async getChartData () {
-                const params = this.getParams();
-                const filter = this.getFilterParams();
-                this.isLogListLoading = true;
-                this.isChartLoading = true;
-                try {
-                    const res = await this.$store.dispatch('plugin/getLogChartData', {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        pageParams: params,
-                        data: filter
-                    });
-                    this.$store.commit('plugin/updateChartData', res);
-                } catch (res) {
-                    this.$store.commit('plugin/updateChartData', {
-                        series: [],
-                        timestamps: []
-                    });
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isChartLoading = false;
-                        this.isLoading = false;
-                    }, 1000);
-                }
-            },
+    async getChartData() {
+      const params = this.getParams();
+      const filter = this.getFilterParams();
+      this.isLogListLoading = true;
+      this.isChartLoading = true;
+      try {
+        const res = await this.$store.dispatch('plugin/getLogChartData', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          pageParams: params,
+          data: filter,
+        });
+        this.$store.commit('plugin/updateChartData', res);
+      } catch (res) {
+        this.$store.commit('plugin/updateChartData', {
+          series: [],
+          timestamps: [],
+        });
+      } finally {
+        setTimeout(() => {
+          this.isChartLoading = false;
+          this.isLoading = false;
+        }, 1000);
+      }
+    },
 
-            /**
+    /**
              * 修改页数目回调
              * @param  {Number} pageSize 每页数目
              */
-            handlePageSizeChange (pageSize) {
-                this.pagination.current = 1;
-                this.pagination.limit = pageSize;
-                this.$nextTick(() => {
-                    this.getLogList();
-                });
-            },
+    handlePageSizeChange(pageSize) {
+      this.pagination.current = 1;
+      this.pagination.limit = pageSize;
+      this.$nextTick(() => {
+        this.getLogList();
+      });
+    },
 
-            handlePageChange (page = 1) {
-                this.getLogList(page);
-            },
+    handlePageChange(page = 1) {
+      this.getLogList(page);
+    },
 
-            highlight (message) {
-                return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
-            },
+    highlight(message) {
+      return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
+    },
 
-            pageChange (newPage) {
-                this.pagination.current = newPage;
-                this.getLogList(newPage);
-            },
+    pageChange(newPage) {
+      this.pagination.current = newPage;
+      this.getLogList(newPage);
+    },
 
-            limitChange (limit) {
-                this.pagination.limit = limit;
-                this.pagination.current = 1;
-                this.getLogList(this.pagination.current);
-            },
+    limitChange(limit) {
+      this.pagination.limit = limit;
+      this.pagination.current = 1;
+      this.getLogList(this.pagination.current);
+    },
 
-            /**
+    /**
              * 获取日志数据
              * @param  {Number} page 第几页数据
              */
-            async getLogList (page = 1) {
-                const curPage = page || this.pagination.current;
-                const params = this.getParams();
-                // const pageSize = this.pagination.limit;
-                params.limit = this.pagination.limit;
-                params.offset = this.pagination.limit * (curPage - 1);
-                const filter = this.getFilterParams();
-                this.isLogListLoading = true;
-                try {
-                    const res = await this.$store.dispatch('plugin/getAccessLogList', {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        pageParams: params,
-                        data: filter
-                    });
-                    const data = res.logs;
-                    if (data.length) {
-                        this.logKeyList = Object.keys(res.logs[0]);
-                        // 字段列表
-                        this.fieldList = this.logKeyList.map(logKey => {
-                            if (!this.existFieldList.includes(logKey)) {
-                                return {
-                                    name: logKey
-                                };
-                            }
-                            return false;
-                        });
-                        this.fieldList = this.fieldList.filter(item => item);
-                    }
-                    data.forEach((item) => {
-                        item.message = this.highlight(logXss.process(item.message));
-                        item.timestamp = this.formatTime(item.timestamp);
-                        if (item.detail) {
-                            for (const key in item.detail) {
-                                item.detail[key] = this.highlight(logXss.process(item.detail[key]));
-                            }
-                        }
-                        item.isToggled = false;
-                    });
-                    this.logs = data;
-                    this.logList.splice(0, this.logList.length, ...data);
-                    this.pagination.count = res.total;
-                    this.pagination.current = page;
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (res) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                    this.pagination.count = 0;
-                } finally {
-                    setTimeout(() => {
-                        this.isLogListLoading = false;
-                        this.isLoading = false;
-                    }, 500);
-                }
-            },
-
-            handleLogSearch (params) {
-                this.logParams = params;
-                this.loadData(params.isDateChange);
-                const query = Object.assign({}, this.$route.query, params);
-                this.$router.push({
-                    // name: 'appLog',
-                    params: this.$route.params,
-                    query: query
-                });
-            },
-
-            handleLogReload (params) {
-                this.loadData(false);
-            },
-
-            searchLog (params) {
-                this.logParams.environment = '';
-                this.logParams.process_id = '';
-                this.logParams.stream = '';
-                this.logParams.levelname = '';
-
-                params.forEach(item => {
-                    const type = item.id;
-                    const selectItem = item.value;
-                    this.logParams[type] = selectItem.id;
-                });
-                this.loadData(false);
-            },
-
-            handleFilterChange (field) {
-                const list = [];
-                for (const key in this.fieldChecked) {
-                    this.fieldChecked[key].forEach(field => {
-                        const params = field.split(':');
-                        list.push({
-                            key: params[0],
-                            value: params[1]
-                        });
-                    });
-                }
-                this.tableFilters = list;
-                this.fieldPopoverShow[field] = false;
-                this.loadData(false);
-            },
-
-            handleCancelFilterChange (field) {
-                this.fieldPopoverShow[field] = false;
-                this.renderIndex++;
-            },
-
-            handleRemoveFilter (filter, index) {
-                this.tableFilters.splice(index, 1);
-            },
-
-            handleClearFilters () {
-                this.tableFilters = [];
-                this.renderIndex++;
-                // 清空筛选
-                for (const key in this.fieldChecked) {
-                    this.fieldChecked[key] = [];
-                }
-                this.loadData(false);
-            },
-
-            handleExpandRow (row) {
-                this.$refs.logList.toggleRowExpansion(row);
-            },
-
-            handleShowFilter (field) {
-                if (!this.fieldPopoverShow[field]) {
-                    for (const key in this.fieldPopoverShow) {
-                        this.fieldPopoverShow[key] = false;
-                    }
-                    this.fieldPopoverShow[field] = true;
-                    this.filterKeyword = '';
-                    this.renderIndex++;
-                }
-            },
-
-            hideAllFilterPopover (el) {
-                for (const key in this.fieldPopoverShow) {
-                    this.fieldPopoverShow[key] = false;
-                }
-                this.renderFilter++;
-            },
-
-            handleHideFilter (field) {
-                this.fieldPopoverShow[field] = false;
-            },
-
-            formatTime (time) {
-                return time ? formatDate(time * 1000) : '--';
-            },
-
-            clearFilterKey () {
-                this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
-            },
-
-            updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.logParams.keyword;
+    async getLogList(page = 1) {
+      const curPage = page || this.pagination.current;
+      const params = this.getParams();
+      // const pageSize = this.pagination.limit;
+      params.limit = this.pagination.limit;
+      params.offset = this.pagination.limit * (curPage - 1);
+      const filter = this.getFilterParams();
+      this.isLogListLoading = true;
+      try {
+        const res = await this.$store.dispatch('plugin/getAccessLogList', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          pageParams: params,
+          data: filter,
+        });
+        const data = res.logs;
+        if (data.length) {
+          this.logKeyList = Object.keys(res.logs[0]);
+          // 字段列表
+          this.fieldList = this.logKeyList.map((logKey) => {
+            if (!this.existFieldList.includes(logKey)) {
+              return {
+                name: logKey,
+              };
             }
+            return false;
+          });
+          this.fieldList = this.fieldList.filter(item => item);
         }
-    };
+        data.forEach((item) => {
+          item.message = this.highlight(logXss.process(item.message));
+          item.timestamp = this.formatTime(item.timestamp);
+          if (item.detail) {
+            for (const key in item.detail) {
+              item.detail[key] = this.highlight(logXss.process(item.detail[key]));
+            }
+          }
+          item.isToggled = false;
+        });
+        this.logs = data;
+        this.logList.splice(0, this.logList.length, ...data);
+        this.pagination.count = res.total;
+        this.pagination.current = page;
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (res) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.pagination.count = 0;
+      } finally {
+        setTimeout(() => {
+          this.isLogListLoading = false;
+          this.isLoading = false;
+        }, 500);
+      }
+    },
+
+    handleLogSearch(params) {
+      this.logParams = params;
+      this.loadData(params.isDateChange);
+      const query = Object.assign({}, this.$route.query, params);
+      this.$router.push({
+        // name: 'appLog',
+        params: this.$route.params,
+        query,
+      });
+    },
+
+    handleLogReload(params) {
+      this.loadData(false);
+    },
+
+    searchLog(params) {
+      this.logParams.environment = '';
+      this.logParams.process_id = '';
+      this.logParams.stream = '';
+      this.logParams.levelname = '';
+
+      params.forEach((item) => {
+        const type = item.id;
+        const selectItem = item.value;
+        this.logParams[type] = selectItem.id;
+      });
+      this.loadData(false);
+    },
+
+    handleFilterChange(field) {
+      const list = [];
+      for (const key in this.fieldChecked) {
+        this.fieldChecked[key].forEach((field) => {
+          const params = field.split(':');
+          list.push({
+            key: params[0],
+            value: params[1],
+          });
+        });
+      }
+      this.tableFilters = list;
+      this.fieldPopoverShow[field] = false;
+      this.loadData(false);
+    },
+
+    handleCancelFilterChange(field) {
+      this.fieldPopoverShow[field] = false;
+      // eslint-disable-next-line no-plusplus
+      this.renderIndex++;
+    },
+
+    handleRemoveFilter(filter, index) {
+      this.tableFilters.splice(index, 1);
+    },
+
+    handleClearFilters() {
+      this.tableFilters = [];
+      // eslint-disable-next-line no-plusplus
+      this.renderIndex++;
+      // 清空筛选
+      for (const key in this.fieldChecked) {
+        this.fieldChecked[key] = [];
+      }
+      this.loadData(false);
+    },
+
+    handleExpandRow(row) {
+      this.$refs.logList.toggleRowExpansion(row);
+    },
+
+    handleShowFilter(field) {
+      if (!this.fieldPopoverShow[field]) {
+        for (const key in this.fieldPopoverShow) {
+          this.fieldPopoverShow[key] = false;
+        }
+        this.fieldPopoverShow[field] = true;
+        this.filterKeyword = '';
+        // eslint-disable-next-line no-plusplus
+        this.renderIndex++;
+      }
+    },
+
+    hideAllFilterPopover(el) {
+      for (const key in this.fieldPopoverShow) {
+        this.fieldPopoverShow[key] = false;
+      }
+      // eslint-disable-next-line no-plusplus
+      this.renderFilter++;
+    },
+
+    handleHideFilter(field) {
+      this.fieldPopoverShow[field] = false;
+    },
+
+    formatTime(time) {
+      return time ? formatDate(time * 1000) : '--';
+    },
+
+    clearFilterKey() {
+      this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
+    },
+
+    updateTableEmptyConfig() {
+      this.tableEmptyConf.keyword = this.logParams.keyword;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/ellipsis.scss';
-    
+
     .result {
         position: relative;
     }

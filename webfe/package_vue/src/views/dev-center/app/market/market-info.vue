@@ -347,7 +347,7 @@ export default {
       moduleList: [],
       sourceUrlLocal: '',
       curAddressType: '',
-      oldAddress: ''
+      oldAddress: '',
     };
   },
   computed: {
@@ -423,7 +423,7 @@ export default {
     '$route'() {
       this.init();
       this.handlerCancel();
-      this.oldAddress = ''
+      this.oldAddress = '';
     },
   },
   mounted() {
@@ -528,7 +528,7 @@ export default {
           // 应用未在生产环境成功部署
         case 'deploy_prod_env':
           // eslint-disable-next-line no-case-declarations
-          const name = this.isCloudApp ? 'cloudAppDeployForProcess' : 'appDeployForProd';
+          const name = this.isCloudApp ? 'cloudAppDeployManageProd' : 'appDeployForProd';
           this.$router.push({
             name,
             params: {
@@ -695,7 +695,7 @@ export default {
     handlerCancel() {
       this.isEditAddress = false;
       this.curAddress = this.oldAddress;
-    }
+    },
   },
 };
 </script>

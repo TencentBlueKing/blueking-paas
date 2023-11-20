@@ -95,11 +95,12 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	st := time.Now()
+	defer metric.ReportBkappReconcileDuration(req.NamespacedName.String(), st)
+
 	log := logf.FromContext(ctx)
 
 	app := &paasv1alpha2.BkApp{}
 	err := r.client.Get(ctx, req.NamespacedName, app)
-	defer metric.ReportBkappReconcileDuration(req.NamespacedName.String(), st)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
 		metric.ReportGetBkappErrors(req.NamespacedName.String())

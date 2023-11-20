@@ -49,6 +49,7 @@ func init() {
 
 // InitMetric ...
 func InitMetric(register prometheus.Registerer) {
+	// bkapp finalizer metrics
 	HooksFinishedErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_hooks_finished_errors",
@@ -63,6 +64,8 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"bkappName", "namespace"},
 	)
+
+	// deploy action reconcile metrics
 	DeployActionUpdateBkappStatusErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_deploy_action_update_bkapp_status_errors",
@@ -70,6 +73,8 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"bkappName", "namespace", "deployID"},
 	)
+
+	// deployment reconcile metrics
 	DeleteOutdatedDeployErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_delete_outdated_deploy_errors",
@@ -84,6 +89,8 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"bkappName", "namespace", "deployName"},
 	)
+
+	// addon reconcile metrics
 	GetBkappInfoErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_get_bkapp_info_errors",
@@ -113,6 +120,8 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"appCode", "moduleName", "svcID"},
 	)
+
+	// service reconcile metrics
 	DeleteOutdatedServiceErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_delete_outdated_service_errors",
@@ -127,6 +136,8 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"bkappName", "namespace", "svcName"},
 	)
+
+	// autoscale reconcile metrics
 	DeleteOutdatedGpaErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_delete_outdated_gpa_errors",
@@ -141,7 +152,6 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"bkappName", "namespace", "gpaName"},
 	)
-
 	AutoscaleUpdateBkappStatusErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_autoscale_update_bkapp_status_errors",
@@ -150,6 +160,7 @@ func InitMetric(register prometheus.Registerer) {
 		[]string{"bkappName", "namespace"},
 	)
 
+	// bkapp reconcile metrics
 	AddFinalizerErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_add_finalizer_errors",
@@ -157,7 +168,6 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"bkappName", "namespace"},
 	)
-
 	GetBkappErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_get_bkapp_errors",
@@ -165,7 +175,6 @@ func InitMetric(register prometheus.Registerer) {
 		},
 		[]string{"namespaceName"},
 	)
-
 	BkappReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "bkapp_metrics_bkapp_reconcile_duration",

@@ -20,6 +20,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
@@ -40,6 +41,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
+	"bk.tencent.com/paas-app-operator/pkg/metric"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
@@ -91,12 +93,15 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	st := time.Now()
 	log := logf.FromContext(ctx)
 
 	app := &paasv1alpha2.BkApp{}
 	err := r.client.Get(ctx, req.NamespacedName, app)
+	defer metric.ReportBkappReconcileDuration(app, st)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
+		metric.ReportGetBkappErrors(req.NamespacedName.String())
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -107,6 +112,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		if !controllerutil.ContainsFinalizer(app, paasv1alpha2.BkAppFinalizerName) {
 			controllerutil.AddFinalizer(app, paasv1alpha2.BkAppFinalizerName)
 			if err = r.client.Update(ctx, app); err != nil {
+				metric.ReportAddFinalizerErrors(app)
 				return reconcile.Result{}, err
 			}
 		}

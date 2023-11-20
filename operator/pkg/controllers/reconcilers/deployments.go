@@ -33,6 +33,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
+	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
@@ -65,12 +66,14 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
 			if err = r.Client.Delete(ctx, deploy); err != nil {
+				metric.ReportDeleteOutdatedDeployErrors(bkapp, deploy.Name)
 				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
 		if err = r.deploy(ctx, deploy); err != nil {
+			metric.ReportDeployExpectedDeployErrors(bkapp, deploy.Name)
 			return r.Result.withError(err)
 		}
 	}

@@ -19,6 +19,7 @@
 package reconcilers
 
 import (
+	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"context"
 
 	"github.com/pkg/errors"
@@ -55,6 +56,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	// our finalizer is present, so lets handle any external dependency
 	finished, err := r.hooksFinished(ctx, bkapp)
 	if err != nil {
+		metric.ReportHooksFinishedErrors(bkapp)
 		return r.Result.withError(errors.Wrap(err, "failed to check hook status"))
 	}
 	if !finished {
@@ -71,6 +73,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	if err = r.deleteResources(ctx, bkapp); err != nil {
+		metric.ReportDeleteResourcesErrors(bkapp)
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
 		return r.Result.withError(errors.Wrap(err, "failed to delete external resources"))

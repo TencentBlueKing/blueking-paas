@@ -146,3 +146,11 @@ class PluginRoleSLZ(serializers.Serializer):
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
+
+
+class PluginBuildInfoSLZ(serializers.Serializer):
+    pipeline_id = serializers.CharField(help_text="蓝盾流水线 ID")
+    build_id = serializers.CharField(help_text="蓝盾流水线构建 ID")
+    version = serializers.CharField(help_text="版本号")
+    version_with_underscores = serializers.CharField(help_text="将版本号中点(.)替换为下划线(_)")
+    bk_username = serializers.CharField(help_text="操作人")

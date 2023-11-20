@@ -53,34 +53,43 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 			return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, failureCond)
 		}
 
+		replicas := *deployment.Spec.Replicas
+
 		progressingCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentProgressing)
-		if progressingCond != nil && progressingCond.Status == corev1.ConditionFalse {
-			return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, progressingCond)
+		if progressingCond != nil {
+			if progressingCond.Status == corev1.ConditionFalse {
+				return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, progressingCond)
+			}
+			// Deployment 正在滚动更新
+			if deployment.Status.Replicas != replicas {
+				return makeStatusFromDeploymentCondition(paasv1alpha2.HealthProgressing, progressingCond)
+			}
 		}
 
-		// 只有当前就绪的副本数等于需要的副本数时, Deployment 才完成滚动更新
-		if deployment.Status.UpdatedReplicas == *deployment.Spec.Replicas {
+		if deployment.Status.UpdatedReplicas == replicas {
 			availableCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentAvailable)
 			if availableCond != nil {
 				if availableCond.Status != corev1.ConditionTrue {
 					return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, availableCond)
 				}
-				return makeStatusFromDeploymentCondition(paasv1alpha2.HealthHealthy, availableCond)
+				if deployment.Status.Replicas == replicas {
+					return makeStatusFromDeploymentCondition(paasv1alpha2.HealthHealthy, availableCond)
+				}
 			}
 		}
 
 		var message string
-		if deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
+		if deployment.Status.UpdatedReplicas < replicas {
 			// Deployment 未完成滚动更新
 			message = fmt.Sprintf(
 				"Waiting for rollout to finish: %d/%d replicas are updated...",
-				deployment.Status.UpdatedReplicas, deployment.Spec.Replicas,
+				deployment.Status.UpdatedReplicas, replicas,
 			)
 		} else {
 			// Deployment 等待最新的 Pod 就绪
 			message = fmt.Sprintf(
 				"Waiting for rollout to finish: %d/%d replicas are available...",
-				deployment.Status.AvailableReplicas, deployment.Spec.Replicas,
+				deployment.Status.AvailableReplicas, replicas,
 			)
 		}
 

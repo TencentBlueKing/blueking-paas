@@ -17,18 +17,22 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+import logging
+
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance, PluginRelease
 from paasng.bk_plugins.pluginscenter.thirdparty import utils
 from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import PluginReleaseAPIRequestSLZ
 
+logger = logging.getLogger(__name__)
 
-def create_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str):
+
+def create_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
     """创建发布版本 - 回调第三方系统
 
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
     if not pd.release_revision.api or not pd.release_revision.api.create:
-        return
+        return True
 
     slz = PluginReleaseAPIRequestSLZ(
         {
@@ -41,7 +45,9 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     )
     data = slz.data
     resp = utils.make_client(pd.release_revision.api.create).call(data=data, path_params={"plugin_id": instance.id})
-    return resp
+    if result := resp.get("result"):
+        logger.error(f"create release error: {resp}")
+    return result
 
 
 def update_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str):

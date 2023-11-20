@@ -106,7 +106,7 @@
 
       <!-- 镜像凭证 -->
       <div class="mirror-credentials-container">
-        <image-credential :list="credentialList"></image-credential>
+        <image-credential :list="credentialList" @reacquire="getCredentialList"></image-credential>
       </div>
 
       <!-- 部署限制 -->

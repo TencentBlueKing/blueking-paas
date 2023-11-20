@@ -21,8 +21,7 @@ from dataclasses import dataclass
 from typing import Iterable, Optional
 
 from paas_wl.bk_app.applications.models import Release, WlApp
-
-from .entities import Process
+from paas_wl.bk_app.processes.kres_entities import Process
 
 logger = logging.getLogger(__name__)
 

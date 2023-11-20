@@ -36,14 +36,14 @@ class UIComponent(BaseModel):
 class UIProps(BaseModel):
     """ui属性"""
 
-    required: bool
+    tips: str
 
 
 @register(exclude_none=True)
 class FieldSchema(BaseModel):
     """字段定义"""
 
-    type: Literal["string", "array"] = Field(default="string", description="字段类型")
+    type: Literal["string", "array", "boolean"] = Field(default="string", description="字段类型")
     title: str = Field(default="", description="字段标题")
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
@@ -82,8 +82,9 @@ class PluginReleaseAPI(BaseModel):
     """插件发布操作集"""
 
     release: Optional[PluginBackendAPIResource] = Field(description="部署/构建操作")
-    result: PluginBackendAPIResource = Field(description="查询是否可进入下一步")
+    result: Optional[PluginBackendAPIResource] = Field(description="查询是否可进入下一步")
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
+    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令")
 
 
 @register
@@ -185,6 +186,7 @@ class ReleaseStageDefinition(BaseModel):
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
     itsmServiceName: Optional[str] = Field(description="itsm 服务名称, 类型为 itsm 时必填")
     builtinParams: Optional[Dict] = Field(description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)")
+    nextStepDisabledTips: Optional[str] = Field(description="下一步按钮 Disabled 时的提示，用于辅助展示")
 
 
 @register

@@ -73,7 +73,7 @@ var _ = Describe("test conversion back and forth", func() {
 						{
 							EnvName: "stag",
 							Process: "web",
-							Plan:    paasv1alpha2.ResQuotaPlan2C1G,
+							Plan:    paasv1alpha2.ResQuotaPlan4C1G,
 						},
 					},
 					EnvVariables: []EnvVarOverlay{
@@ -177,7 +177,7 @@ var _ = Describe("test conversion back and forth", func() {
 						{
 							EnvName: "stag",
 							Process: "web",
-							Plan:    paasv1alpha2.ResQuotaPlan2C1G,
+							Plan:    paasv1alpha2.ResQuotaPlan4C1G,
 						},
 					},
 					EnvVariables: []paasv1alpha2.EnvVarOverlay{

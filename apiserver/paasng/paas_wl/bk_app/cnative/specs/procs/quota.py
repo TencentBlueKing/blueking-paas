@@ -39,28 +39,20 @@ PLAN_TO_LIMIT_QUOTA_MAP = {
         cpu=DEFAULT_PROC_CPU,
         memory=DEFAULT_PROC_MEM,
     ),
-    ResQuotaPlan.P_1C512M: ResourceQuota(cpu="1000m", memory="512Mi"),
-    ResQuotaPlan.P_2C1G: ResourceQuota(cpu="2000m", memory="1024Mi"),
-    ResQuotaPlan.P_2C2G: ResourceQuota(cpu="2000m", memory="2048Mi"),
-    ResQuotaPlan.P_2C4G: ResourceQuota(cpu="2000m", memory="4096Mi"),
     ResQuotaPlan.P_4C1G: ResourceQuota(cpu="4000m", memory="1024Mi"),
     ResQuotaPlan.P_4C2G: ResourceQuota(cpu="4000m", memory="2048Mi"),
     ResQuotaPlan.P_4C4G: ResourceQuota(cpu="4000m", memory="4096Mi"),
 }
 
 # 资源配额方案到资源请求的映射表
-# CPU REQUEST = CPU LIMIT / 4
-# MEMORY REQUEST = MEMORY LIMIT / 2
+# CPU REQUEST = 200m
+# MEMORY REQUEST 的计算规则: 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
 PLAN_TO_REQUEST_QUOTA_MAP = {
     ResQuotaPlan.P_DEFAULT: ResourceQuota(
         cpu=DEFAULT_PROC_CPU_REQUEST,
         memory=DEFAULT_PROC_MEM_REQUEST,
     ),
-    ResQuotaPlan.P_1C512M: ResourceQuota(cpu="256m", memory="256Mi"),
-    ResQuotaPlan.P_2C1G: ResourceQuota(cpu="512m", memory="512Mi"),
-    ResQuotaPlan.P_2C2G: ResourceQuota(cpu="512m", memory="1024Mi"),
-    ResQuotaPlan.P_2C4G: ResourceQuota(cpu="512m", memory="2048Mi"),
-    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="1000m", memory="512Mi"),
-    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="1000m", memory="1024Mi"),
-    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="1000m", memory="2048Mi"),
+    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="200m", memory="256Mi"),
+    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="200m", memory="1024Mi"),
+    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="200m", memory="2048Mi"),
 }

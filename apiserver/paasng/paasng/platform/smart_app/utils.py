@@ -28,19 +28,19 @@ from moby_distribution.registry.utils import NamedImage, parse_image
 from rest_framework.exceptions import ValidationError
 
 from paasng.infras.accounts.models import User
-from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
-from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
-from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.modules.models.module import Module
+from paasng.platform.modules.models.runtime import AppSlugRunner
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.smart_app.patcher import SourceCodePatcher
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.models.module import Module
-from paasng.platform.modules.models.runtime import AppSlugRunner
+from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
+from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
+from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
 
 logger = logging.getLogger(__name__)
 
@@ -96,14 +96,8 @@ class SMartImageManager:
 
     def get_image_info(self, tag: str = "latest") -> NamedImage:
         """获取当前 S-Mart 应用的镜像信息"""
-        # TODO: bkrepo 支持 https 访问后去除该逻辑.
-        if ":80" in bksmart_settings.registry.host:
-            host = bksmart_settings.registry.host.replace(":80", "")
-        else:
-            host = bksmart_settings.registry.host
-
         return NamedImage(
-            domain=host,
+            domain=bksmart_settings.registry.host,
             name=f"{bksmart_settings.registry.namespace}/{self.module.application.code}/{self.module.name}",
             tag=tag,
         )

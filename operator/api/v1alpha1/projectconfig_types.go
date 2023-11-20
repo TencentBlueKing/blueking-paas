@@ -102,8 +102,8 @@ func NewProjectConfig() *ProjectConfig {
 	}
 
 	// 资源预设默认值
-	conf.ResLimit.ProcDefaultCPULimits = "500m"
-	conf.ResLimit.ProcDefaultMemLimits = "256Mi"
+	conf.ResLimit.ProcDefaultCPULimits = "4000m"
+	conf.ResLimit.ProcDefaultMemLimits = "1024Mi"
 	conf.ResLimit.MaxReplicas = 5
 
 	conf.MaxProcesses = 8

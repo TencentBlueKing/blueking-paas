@@ -23,10 +23,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.utils.models import TimestampedModel
+from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaaS
+from paas_wl.utils.models import AuditedModel, TimestampedModel
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
+from paasng.utils.models import make_json_field
 
 
 def env_overlay_getter_factory(field_name: str):
@@ -194,3 +197,25 @@ class ModuleDeployHook(TimestampedModel):
         if self.proc_command is not None:
             return shlex.split(self.proc_command)[1:]
         return self.args or []
+
+
+BkSaaSField = make_json_field("BkSaaSField", List[SvcDiscEntryBkSaaS])
+NameServersField = make_json_field("NameServersField", List[str])
+HostAliasesField = make_json_field("HostAliasesField", List[HostAlias])
+
+
+class SvcDiscConfig(AuditedModel):
+    """" 服务发现配置 """
+
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
+
+    bk_saas: List[SvcDiscEntryBkSaaS] = BkSaaSField(default=list, help_text="")
+
+
+class DomainResolution(AuditedModel):
+    """ 域名解析配置 """
+
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
+
+    nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
+    host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")

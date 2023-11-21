@@ -46,6 +46,7 @@ class Instance(AppEntity):
     :param start_time: 启动时间
     :param state: Pod 的状态
     :param state_message: Pod 处于 Terminated, Waiting 的原因
+    :param rich_status: 相比 state 提供更丰富的 Pod 状态，包含 Terminated 等容器级别的状态
     :param image: 当前进程使用的镜像, 即主容器使用的镜像
     :param envs: 直接在 Pod 中声明的环境变量
     :param ready: 进程实例是否就绪
@@ -58,6 +59,7 @@ class Instance(AppEntity):
     start_time: str = ""
     state: str = ""
     state_message: str = ""
+    rich_status: str = ""
     image: str = ""
     envs: Dict[str, str] = field(default_factory=dict)
     ready: bool = True

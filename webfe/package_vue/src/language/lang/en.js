@@ -2427,4 +2427,6 @@ export default {
   标签: 'Tags',
   未发布: 'Unpublished',
   '只支持星号（*）通配符': 'Only supports asterisk (*) wildcard',
+  未完善应用基本信息: 'Basic application information is not complete',
+  告警名称: 'Alarm name',
 };

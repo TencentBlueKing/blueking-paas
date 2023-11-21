@@ -372,7 +372,7 @@ export default {
             this.deployEndTimeQueue.push(item.complete_time);
           }
 
-          if (item.name === 'release' && ['failed', 'successful'].includes(item.status)) {
+          if ((item.name === 'release' || item.name === 'build') && ['failed', 'successful'].includes(item.status)) {
             content = this.computedDeployTime(item.start_time, item.complete_time);
           }
 
@@ -600,7 +600,6 @@ export default {
           moduleId: this.curModuleId,
           deployId,
         });
-        console.log('res', res);
         this.curDeployResult.result = res.status;
         this.curDeployResult.logs = res.logs;
         if (res.status === 'successful') {
@@ -901,7 +900,6 @@ export default {
         const data = JSON.parse(event.data);
         console.warn(data);
         if (data.object_type === 'process') {
-          console.log('data', data);
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {

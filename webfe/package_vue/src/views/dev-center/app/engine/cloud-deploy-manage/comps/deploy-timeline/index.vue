@@ -220,9 +220,14 @@ export default {
           curNode.loading = curNode.status !== 'failed' && isAllDefault;
           if (name === 'build') {
             const preparationStage = this.list.find(item => item.stage === 'preparation');
+            const buildStage = this.list.find(item => item.stage === 'build');
             if (preparationStage && preparationStage.status === 'pending') {
               preparationStage.loading = false;
               preparationStage.status = 'successful';
+            }
+            if (status === 'successful') {
+              buildStage.loading = false;
+              buildStage.status = 'successful';
             }
           }
           if (name === 'release') {

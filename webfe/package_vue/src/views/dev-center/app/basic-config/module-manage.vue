@@ -1048,7 +1048,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },
@@ -1071,7 +1071,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },
@@ -1131,7 +1131,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.setModuleLoading = false;
@@ -1177,7 +1177,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },
@@ -1197,7 +1197,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },
@@ -1268,7 +1268,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.switchLoading = false;
@@ -1359,7 +1359,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.isLoading = false;
@@ -1396,7 +1396,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.isRepoInfoEdited = false;
@@ -1522,7 +1522,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
         this.delAppDialog.visiable = false;
       }

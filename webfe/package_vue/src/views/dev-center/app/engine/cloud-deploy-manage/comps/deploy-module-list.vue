@@ -270,7 +270,7 @@ export default {
 
   watch: {
     modelName(value) {
-      if (value === '全部模块' || value === '') {
+      if (value === this.$t('全部模块') || value === '') {
         this.deploymentInfoData = this.deploymentInfoDataBackUp;
       } else {
         this.deploymentInfoData = this.deploymentInfoDataBackUp
@@ -286,14 +286,15 @@ export default {
       }
     },
 
-    isWatctDeploying(value) {
-      if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
-        this.$paasMessage({
-          theme: 'primary',
-          message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
-        });
-      }
-    },
+    // 云原生应用不会默认展示部署进程
+    // isWatctDeploying(value) {
+    //   if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
+    //     this.$paasMessage({
+    //       theme: 'primary',
+    //       message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
+    //     });
+    //   }
+    // },
   },
 
   created() {
@@ -394,7 +395,7 @@ export default {
         });
         this.$nextTick(() => {
           this.$set(this, 'deploymentInfoData', res.data);
-          if (this.modelName && this.modelName !== '全部模块') {
+          if (this.modelName && this.modelName !== this.$t('全部模块')) {
             this.deploymentInfoData = this.deploymentInfoData
               .filter(module => module.module_name === this.modelName);
           }

@@ -520,7 +520,7 @@
   </div>
 </template>
 
-<script> import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -967,7 +967,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.isLogsLoading = false;
@@ -1019,7 +1019,7 @@ export default {
         } else {
           this.$paasMessage({
             theme: 'error',
-            message: e.message,
+            message: e.detail || e.message || this.$t('接口异常'),
           });
         }
       }
@@ -1150,7 +1150,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
         this.clearChart();
       } finally {

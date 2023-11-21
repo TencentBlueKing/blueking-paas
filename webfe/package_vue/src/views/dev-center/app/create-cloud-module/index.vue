@@ -119,7 +119,7 @@
                     v-model="mirrorData.url"
                     style="width: 520px;"
                     clearable
-                    :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
+                    :placeholder="mirrorExamplePlaceholder"
                   >
 
                     <template slot="append">
@@ -547,6 +547,7 @@ import appPreloadMixin from '@/mixins/app-preload';
 import collapseContent from './comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
+import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 
 export default {
   components: {
@@ -742,6 +743,10 @@ export default {
     },
     isShowAppTemplate() {
       return this.sourceOrigin !== this.GLOBAL.APP_TYPES.CNATIVE_IMAGE && this.curStep === 1 && this.formData.buildMethod === 'buildpack';
+    },
+    // 示例镜像 placeholder
+    mirrorExamplePlaceholder() {
+      return `${this.$t('示例镜像：')}${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
     },
   },
   watch: {
@@ -1128,10 +1133,10 @@ export default {
             moduleId: res.module.name,
           },
         });
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: res.message,
+          message: e.message || e.detail || this.$t('接口异常'),
         });
       } finally {
         this.formLoading = false;
@@ -1177,7 +1182,7 @@ export default {
 
     // 处理应用示例填充
     handleSetMirrorUrl() {
-      this.mirrorData.url = 'mirrors.tencent.com/bkpaas/django-helloworld';
+      this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
       this.$refs.validate2.clearError();
     },
 

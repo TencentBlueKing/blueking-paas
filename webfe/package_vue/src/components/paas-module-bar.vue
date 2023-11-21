@@ -50,7 +50,7 @@
       <bk-alert
         class="mb20"
         type="error"
-        :title="$t('删除操作无法撤回，请在删除前与应用其他成员沟通')"
+        :title="$t('主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通')"
       ></bk-alert>
       <bk-button
         theme="primary"
@@ -68,7 +68,14 @@
         @mouseenter="handleMouseEnter(index)"
         @mouseleave="moduleItemIndex = ''"
       >
-        {{ panel.name }}
+        <div class="module-name">
+          {{ panel.name }}
+          <img
+            v-if="panel.is_default"
+            :class="['module-default', 'ml10', { en: localLanguage === 'en' }]"
+            :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png' }`"
+          >
+        </div>
         <i
           v-if="index === moduleItemIndex && !panel.is_default"
           class="icon paasng-icon paasng-delete delete-module-icon"
@@ -177,6 +184,9 @@ export default defineComponent({
     // 输入的文案和选中模块相同
     const formRemoveValidated = computed(() => curAppModuleName.value === formRemoveConfirmCode.value);
 
+    // 当前语言
+    const localLanguage = computed(() => store.state.localLanguage);
+
     // 切换tab
     const handleTabChange = async () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
@@ -278,6 +288,7 @@ export default defineComponent({
       hookAfterClose,
       curAppModuleName,
       formRemoveConfirmCode,
+      localLanguage,
     };
   },
 });
@@ -350,5 +361,17 @@ export default defineComponent({
 }
 .module-item-active {
   background: #f0f1f5;
+}
+.module-name {
+  display: flex;
+  align-items: center;
+  .module-default{
+    transform: translateY(0);
+    height: 22px;
+    width: 38px;
+    &.en {
+      width: 81px;
+    }
+  }
 }
 </style>

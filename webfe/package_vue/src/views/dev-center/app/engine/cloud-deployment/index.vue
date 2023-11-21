@@ -130,7 +130,7 @@ export default {
         { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
         { name: 'observabilityConfig', label: this.$t('可观测性配置'), ref: 'observability' },
-        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'module-info' },
+        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'info' },
       ],
       active: 'cloudAppDeployForProcess',
       envValidate: true,
@@ -143,6 +143,11 @@ export default {
     routeName() {
       return this.$route.name;
     },
+
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+
     loaderPlaceholder() {
       if (this.routeName === 'appDeployForStag' || this.routeName === 'appDeployForProd') {
         return 'deploy-loading';
@@ -172,6 +177,10 @@ export default {
     },
 
     curTabPanels() {
+      // 可观测性配置接入featureflag
+      if (!this.userFeature.PHALANX) {
+        this.panels = this.panels.filter(v => v.ref !== 'observability');
+      }
       if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
         return this.panels;
       }
@@ -189,7 +198,6 @@ export default {
     '$route'() {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
-      this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
   },
@@ -199,7 +207,7 @@ export default {
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
         ...this.$route,
-        name: this.firstTabActiveName,
+        name: this.active || this.firstTabActiveName,
       });
     }
   },
@@ -211,6 +219,7 @@ export default {
     handleGoPage(routeName) {
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.activeRouteName = routeName;
+      this.active = routeName;
       this.$router.push({
         name: routeName,
       });

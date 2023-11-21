@@ -79,8 +79,7 @@
     </bk-dialog>
   </div>
 </template>
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import RenderStage from '../render-deploy-stage';
 import StatusItem from './render-status-item';
 import { formatDate } from '@/common/tools';
@@ -152,7 +151,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.instanceLogLoading = false;

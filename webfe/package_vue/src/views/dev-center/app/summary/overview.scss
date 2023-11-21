@@ -403,6 +403,10 @@ a.btn-deploy-panel-action {
       font-weight: normal;
       margin-bottom: 5px;
   }
+
+  &.cloud-resource-charts {
+    display: unset;
+  }
 }
 
 .amount-number {

@@ -906,10 +906,10 @@ export default {
             moduleId: res.module.name,
           },
         });
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: res.message,
+          message: e.message || e.detail || this.$t('接口异常'),
         });
       } finally {
         this.formLoading = false;

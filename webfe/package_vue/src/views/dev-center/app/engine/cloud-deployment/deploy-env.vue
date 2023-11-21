@@ -112,6 +112,7 @@
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
             :sortable="!isPageEdit"
+            :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row, $index }">
               <div
@@ -146,6 +147,7 @@
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
+            :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit || row.isEdit">

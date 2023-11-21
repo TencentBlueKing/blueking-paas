@@ -51,7 +51,7 @@ export default {
 
   data() {
     return {
-      moduleValue: '全部模块',
+      moduleValue: this.$t('全部模块'),
       showModuleList: [],
       isExpand: false,
     };
@@ -61,7 +61,7 @@ export default {
     moduleList() {
       const appModuleList = [{
         id: 'all',
-        name: '全部模块',
+        name: this.$t('全部模块'),
       }, ...this.curAppModuleList];
       return appModuleList;
     },
@@ -80,7 +80,7 @@ export default {
 
   watch: {
     moduleValue(value) {
-      if (value === '全部模块' || value === '') {
+      if (value === this.$t('全部模块') || value === '') {
         this.showModuleList = this.moduleInfoList;
       } else {
         this.showModuleList = this.moduleInfoList.filter(module => module.name === this.moduleValue);

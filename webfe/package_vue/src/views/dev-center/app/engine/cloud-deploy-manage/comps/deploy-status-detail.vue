@@ -281,11 +281,17 @@ export default {
     deploymentId: {
       handler(v) {
         this.$nextTick(() => {
-          this.watchDeployStatus(v);
+          // 延迟一秒 等待getPreDeployDetail方法执行完
+          setTimeout(() => {
+            this.watchDeployStatus(v);
+          }, 1000);
         });
       },
       immediate: true,
     },
+  },
+  created() {
+    this.init();
   },
   mounted() {
     // 初始化日志彩色组件
@@ -306,7 +312,6 @@ export default {
     });
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
-    this.init();
   },
   beforeDestroy() {
     // 页面销毁 关闭stream
@@ -315,6 +320,7 @@ export default {
   methods: {
     init() {
       this.getPreDeployDetail();
+      this.getModuleProcessList();
     },
     /**
      * 监听部署进度，打印日志
@@ -366,7 +372,7 @@ export default {
             this.deployEndTimeQueue.push(item.complete_time);
           }
 
-          if (item.name === 'release' && ['failed', 'successful'].includes(item.status)) {
+          if ((item.name === 'release' || item.name === 'build') && ['failed', 'successful'].includes(item.status)) {
             content = this.computedDeployTime(item.start_time, item.complete_time);
           }
 
@@ -398,7 +404,7 @@ export default {
 
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
-            this.releaseId = item.release_id;
+            this.releaseId = item.bk_release_id;
             this.getModuleProcessList(true);
 
             // 发起服务监听
@@ -415,7 +421,10 @@ export default {
           if (item.status === 'successful' && item.name === this.$t('检测部署结果')) {
             this.serverProcessEvent.close();  // 关闭进程的watch事件流
           }
-          this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+          this.$nextTick(() => {
+            // eslint-disable-next-line max-len
+            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+          });
           this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.$forceUpdate();
         });
 
@@ -591,7 +600,6 @@ export default {
           moduleId: this.curModuleId,
           deployId,
         });
-        console.log('res', res);
         this.curDeployResult.result = res.status;
         this.curDeployResult.logs = res.logs;
         if (res.status === 'successful') {
@@ -800,6 +808,7 @@ export default {
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
           env: this.environment,
+          deployId: this.deploymentId,
         });
         this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
         this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
@@ -870,7 +879,8 @@ export default {
         });
         allProcesses.push(process);
       });
-      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      // this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      this.$set(this, 'allProcesses', JSON.parse(JSON.stringify(allProcesses)));
       console.log('this.allProcesses', this.allProcesses);
     },
 
@@ -890,7 +900,6 @@ export default {
         const data = JSON.parse(event.data);
         console.warn(data);
         if (data.object_type === 'process') {
-          console.log('data', data);
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
@@ -944,7 +953,7 @@ export default {
         this.getModuleProcessList(false);
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
-          if (process.name === processData.type) {
+          if (process.name === processData.type && process.version === this.releaseId) {
             process.available_instance_count = processData.success;
             process.desired_replicas = processData.replicas;
             process.failed = processData.failed;

@@ -879,7 +879,8 @@ export default {
         });
         allProcesses.push(process);
       });
-      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      // this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      this.$set(this, 'allProcesses', JSON.parse(JSON.stringify(allProcesses)));
       console.log('this.allProcesses', this.allProcesses);
     },
 

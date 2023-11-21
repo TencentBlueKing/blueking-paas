@@ -807,11 +807,11 @@ export default {
         this.buttonActive = languagesKeysData[0] || 'Python';
         this.languagesList = this.languagesData[this.buttonActive];
         this.formData.sourceInitTemplate = this.languagesList[0].name;
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.isLoading = false;

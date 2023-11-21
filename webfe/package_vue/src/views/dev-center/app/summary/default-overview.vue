@@ -931,10 +931,10 @@ export default {
         }
         // 初始化环境下拉框数据
         this.curProcessEnvList = this.getProcessList();
-      } catch (error) {
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: error.detail,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         setTimeout(() => {

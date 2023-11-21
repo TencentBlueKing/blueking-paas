@@ -601,11 +601,11 @@ export default {
             prod: false,
           };
         }
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -629,11 +629,11 @@ export default {
           theme: 'success',
           message: this.$t('操作成功'),
         });
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.pageLoading = false;

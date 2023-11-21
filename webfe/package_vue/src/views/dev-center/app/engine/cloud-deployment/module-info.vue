@@ -105,23 +105,24 @@
       </div>
 
       <!-- 镜像凭证 -->
-      <div class="mirror-credentials-container">
+      <div class="mirror-credentials-container" v-if="isCustomImage && !allowMultipleImage">
         <image-credential :list="credentialList" @reacquire="getCredentialList"></image-credential>
       </div>
 
       <!-- 部署限制 -->
       <div class="base-info-container">
-        <div class="flex-row align-items-center mt20">
-          <span class="base-info-title">
-            {{ $t('部署限制') }}
-          </span>
-          <div class="edit-container" @click="handleEdit('isDeployLimitEdit')" v-if="!isDeployLimitEdit">
-            <i class="paasng-icon paasng-edit-2 pl10" />
-            {{ $t('编辑') }}
+        <div class="mt20">
+          <div class="title-wrapper">
+            <span class="base-info-title">
+              {{ $t('部署限制') }}
+            </span>
+            <div class="edit-container" @click="handleEdit('isDeployLimitEdit')" v-if="!isDeployLimitEdit">
+              <i class="paasng-icon paasng-edit-2 pl10" />
+              {{ $t('编辑') }}
+            </div>
           </div>
 
-          <div class="info flex-row align-items-center pl20">
-            <bk-icon type="info-circle" class="mr5" v-if="!isDeployLimitEdit" />
+          <div class="info flex-row align-items-center mt8">
             {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
         </div>
@@ -164,17 +165,18 @@
 
       <!-- 出口IP -->
       <div class="base-info ip-info-container">
-        <div class="flex-row align-items-center mt20">
-          <span class="base-info-title">
-            {{ $t('出口IP') }}
-          </span>
-          <div class="edit-container" @click="handleEdit('isIpInfoEdit')" v-if="!isIpInfoEdit">
-            <i class="paasng-icon paasng-edit-2 pl10" />
-            {{ $t('编辑') }}
+        <div class="mt20">
+          <div class="title-wrapper">
+            <span class="base-info-title">
+              {{ $t('出口IP') }}
+            </span>
+            <div class="edit-container" @click="handleEdit('isIpInfoEdit')" v-if="!isIpInfoEdit">
+              <i class="paasng-icon paasng-edit-2 pl10" />
+              {{ $t('编辑') }}
+            </div>
           </div>
 
-          <div class="info pl20 flex-row align-items-center">
-            <bk-icon type="info-circle mr5" v-if="!isIpInfoEdit" />
+          <div class="info flex-row align-items-center mt8">
             {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
           </div>
         </div>
@@ -599,11 +601,11 @@ export default {
             prod: false,
           };
         }
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -627,11 +629,11 @@ export default {
           theme: 'success',
           message: this.$t('操作成功'),
         });
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.pageLoading = false;
@@ -815,7 +817,6 @@ export default {
       color: #313238;
       font-size: 14px;
       font-weight: bold;
-      width: 70px;
       text-align: right;
     }
     .edit-container{
@@ -1005,6 +1006,14 @@ export default {
       &-text{
         width: 140px;
       }
+    }
+
+    .title-wrapper {
+      display: flex;
+      align-items: center;
+    }
+    .mt8 {
+      margin-top: 8px;
     }
   }
 </style>

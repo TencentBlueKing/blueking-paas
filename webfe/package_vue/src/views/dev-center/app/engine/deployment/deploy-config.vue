@@ -346,7 +346,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.isLoading = false;
@@ -416,7 +416,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -438,7 +438,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },

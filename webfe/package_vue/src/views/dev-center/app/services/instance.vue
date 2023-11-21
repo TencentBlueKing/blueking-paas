@@ -418,11 +418,11 @@ export default {
           serviceId: this.service,
         });
         this.delAppDialog.moduleList = [...res];
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.requestQueue.shift();
@@ -527,11 +527,11 @@ export default {
         this.definitions = [...res.definitions];
         this.values = [...res.values];
         this.showConfigInfo = false;
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.editLoading = false;
@@ -632,11 +632,11 @@ export default {
         });
         this.specifications = specifications;
         this.showConfigInfo = true;
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.saveLoading = false;

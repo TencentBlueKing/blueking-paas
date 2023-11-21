@@ -1,23 +1,13 @@
 <template>
   <div class="clund-image-list">
     <section class="top-action-bar">
-      <div class="right">
-        <!-- 构建历史 -->
-        <div class="deploy-history flex-row align-items-center" @click="handleDeploymentHistory">
-          <i class="paasng-icon paasng-lishijilu"></i>
-          <p>{{ $t('构建历史') }}</p>
-        </div>
-        <bk-input
-          class="ml10"
-          style="width: 320px"
-          v-model="searchValue"
-          right-icon="paasng-icon paasng-search"
-          @enter="handleSearch"
-        ></bk-input>
+      <div class="left">
         <bk-select
           v-model="moduleName"
           style="width: 150px"
           :clearable="false"
+          ext-cls="module-select-custom"
+          prefix-icon="paasng-icon paasng-project"
           @selected="handleChangeModule"
         >
           <bk-option
@@ -27,6 +17,20 @@
             :name="option.name"
           ></bk-option>
         </bk-select>
+        <bk-input
+          class="ml10"
+          style="width: 320px"
+          v-model="searchValue"
+          right-icon="paasng-icon paasng-search"
+          @enter="handleSearch"
+        ></bk-input>
+      </div>
+      <div class="right">
+        <!-- 构建历史 -->
+        <div class="deploy-history flex-row align-items-center" @click="handleDeploymentHistory">
+          <i class="paasng-icon paasng-lishijilu"></i>
+          <p>{{ $t('构建历史') }}</p>
+        </div>
       </div>
     </section>
     <div class="table-wrapper mt15">
@@ -314,11 +318,13 @@ export default {
   padding: 24px;
 
   .top-action-bar {
-    .right {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .left {
       display: flex;
-      flex-direction: row-reverse;
-      align-items: center;
-
+    }
+    .right {
       .deploy-history {
         cursor: pointer;
         font-size: 14px;
@@ -420,6 +426,11 @@ export default {
     height: 48px;
     overflow: hidden;
     color: #63656e;
+  }
+}
+.module-select-custom {
+  /deep/ i.paasng-project {
+    color: #a3c5fd;
   }
 }
 </style>

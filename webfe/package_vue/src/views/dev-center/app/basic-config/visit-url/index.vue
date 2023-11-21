@@ -494,7 +494,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.setModuleLoading = false;

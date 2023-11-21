@@ -808,6 +808,7 @@ export default {
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
           appCode: this.appCode,
           env: this.environment,
+          deployId: this.deploymentId,
         });
         this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
         this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接

@@ -170,6 +170,7 @@
               v-model="activeResource"
               :accordion="true"
               class="paas-module-warp mt20"
+              :class="{ 'resource-usage': isCloudNativeApp }"
             >
               <div
                 v-if="isProcessDataReady && !isChartLoading"
@@ -314,6 +315,7 @@
 
           <div
             class="overview-sub-fright"
+            :class="{ 'mt20': isCloudNativeApp }"
             data-test-id="summary_content_detail"
           >
             <dynamic-state
@@ -1330,28 +1332,33 @@ export default {
 </script>
 
 <style scoped lang="scss">
-    @import './overview.scss';
-    .ps-default-container{
-      margin: 0px 24px 30px 24px !important;
-    }
+@import './overview.scss';
+.ps-default-container{
+  margin: 0px 24px 30px 24px !important;
+}
 </style>
 
 <!-- 折叠板内部样式 -->
 <style lang="scss">
-    .paas-module-warp{
-        .paas-module-item {
-            margin-top: 16px;
-            border: solid 1px #e6e9ea;
-            background: #fff;
-            .icon-angle-right{
-                display: none;
-            }
-        }
-        .collapse-select{
-           background: F5F7FA !important;
-        }
-        .search-chart-wrap .bk-select .bk-select-name {
-            padding: 0 18px 0 3px;
-        }
+.paas-module-warp{
+  .paas-module-item {
+    margin-top: 16px;
+    border: solid 1px #e6e9ea;
+    background: #fff;
+    .icon-angle-right{
+      display: none;
     }
+  }
+  .collapse-select{
+    background: F5F7FA !important;
+  }
+  .search-chart-wrap .bk-select .bk-select-name {
+    padding: 0 18px 0 3px;
+  }
+  &.resource-usage {
+    .paas-module-item {
+      height: 741px;
+    }
+  }
+}
 </style>

@@ -183,8 +183,7 @@
           </div>
         </div>
       </div>
-      <!-- 已构建镜像展示 -->
-      <div class="v1-container" v-if="buttonActive === 'image'">
+      <div class="v1-container" v-if="isShowImagePullStrategy">
         <div class="image-pull-strategy" :class="(isSourceCodeBuild || !allowMultipleImage) ? '' : 'flex-row'">
           <label>{{ $t('镜像拉取策略') }}<span v-if="!isSourceCodeBuild && allowMultipleImage">：</span></label>
           <bk-radio-group v-model="imagePullStrategy">
@@ -338,6 +337,15 @@ export default {
 
     isShowNext() {
       return this.imageTagListCount > 10;
+    },
+
+    // 是否展示镜像拉取策略
+    isShowImagePullStrategy() {
+      // 镜像来源展示时, 选择以构建镜像才展示
+      if (this.isSourceCodeBuild) {
+        return this.buttonActive === 'image';
+      }
+      return !this.allowMultipleImage;
     },
   },
   watch: {

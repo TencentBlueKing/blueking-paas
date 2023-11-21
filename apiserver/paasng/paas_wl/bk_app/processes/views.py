@@ -116,8 +116,11 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             module_name = process.app.module_name
             container = grouped_data[module_name]
             container.processes.append(process)
-            if bkapp_release_id:
-                container.instances.extend([inst for inst in process.instances if inst.version == bkapp_release_id])
+            if deployment_id:
+                if bkapp_release_id:
+                    container.instances.extend(
+                        [inst for inst in process.instances if inst.version == bkapp_release_id]
+                    )
             else:
                 container.instances.extend(process.instances)
 

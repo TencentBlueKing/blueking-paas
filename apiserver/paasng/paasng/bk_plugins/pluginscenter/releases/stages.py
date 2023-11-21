@@ -287,9 +287,12 @@ class SubPageStage(BaseStageController):
         if not stage_def:
             raise error_codes.STAGE_DEF_NOT_FOUND
 
-        # 能否进入到下一步
         page_url = self.format_page_url(stage_def)
+
+        # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
         can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release)
+        if can_proceed:
+            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         return {
             **basic_info,
             "detail": {

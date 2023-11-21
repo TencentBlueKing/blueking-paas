@@ -269,9 +269,8 @@ class PipelineStage(BaseStageController):
         resp = utils.make_client(stage_definition.api.postCommand).call(
             data=data, path_params={"plugin_id": self.plugin.id}
         )
-        if result := resp.get("result"):
+        if not (result := resp.get("result")):
             logger.error(f"execute post command [plugin_id: {self.plugin.id}, data:{data}], error: {resp}")
-        logger.info(f"execute post command success,resp: {resp}")
         return result
 
 

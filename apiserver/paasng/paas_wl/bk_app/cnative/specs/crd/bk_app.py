@@ -203,6 +203,7 @@ class BkAppAddon(BaseModel):
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
 
 
+@register
 class HostAlias(BaseModel):
     """A host alias entry"""
 
@@ -210,6 +211,7 @@ class HostAlias(BaseModel):
     hostnames: List[str]
 
 
+@register
 class DomainResolution(BaseModel):
     """Domain resolution config"""
 
@@ -217,6 +219,7 @@ class DomainResolution(BaseModel):
     hostAliases: List[HostAlias] = Field(default_factory=list)
 
 
+@register
 class SvcDiscEntryBkSaaS(BaseModel):
     """A service discovery entry that represents an application and an optional module."""
 

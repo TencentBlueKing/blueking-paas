@@ -75,6 +75,7 @@ from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
@@ -186,6 +187,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # TODO: 当 manifest 提供时，检查 manifest 是否有变化
         if manifest := serializer.validated_data.get("manifest"):
             update_app_resource(application, module, manifest)
+            import_manifest(module, manifest)
 
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)

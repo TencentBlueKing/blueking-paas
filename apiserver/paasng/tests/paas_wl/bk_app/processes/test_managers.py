@@ -28,6 +28,7 @@ from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from tests.paas_wl.utils.basic import make_container_status
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.auto_create_ns]
@@ -79,12 +80,31 @@ class TestProcInstManager:
         pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
         return pod
 
+    @pytest.fixture
+    def terminated_pod(self, pod, client):
+        new_status = {
+            'status': {
+                'phase': 'Running',
+                'containerStatuses': [make_container_status({"terminated": {"reason": "", "exitCode": 1}}, {})],
+            }
+        }
+        KPod(client).patch(
+            name=pod.metadata.name, namespace=pod.metadata.namespace, body=new_status, subresource='status'
+        )
+
     def test_query_instances(self, wl_app, pod):
         # Query process instances
         insts = instance_kmodel.list_by_process_type(wl_app, 'web')
         assert len(insts) == 1
         assert insts[0].process_type == 'web'
+        assert insts[0].state == 'Pending'
+        assert insts[0].rich_status == 'Pending'
         assert insts[0].envs
+
+    def test_query_instances_terminated(self, wl_app, terminated_pod):
+        inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
+        assert inst.state == 'Failed'
+        assert inst.rich_status == 'Terminated'
 
     def test_query_instances_without_process_id_label(self, client, wl_app, pod):
         # Delete `process_id` label to simulate resources created by legacy engine versions

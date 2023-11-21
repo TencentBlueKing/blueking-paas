@@ -403,7 +403,7 @@ export default {
 
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
-            this.releaseId = item.release_id;
+            this.releaseId = item.bk_release_id;
             this.getModuleProcessList(true);
 
             // 发起服务监听
@@ -953,7 +953,7 @@ export default {
         this.getModuleProcessList(false);
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
-          if (process.name === processData.type) {
+          if (process.name === processData.type && process.version === this.releaseId) {
             process.available_instance_count = processData.success;
             process.desired_replicas = processData.replicas;
             process.failed = processData.failed;

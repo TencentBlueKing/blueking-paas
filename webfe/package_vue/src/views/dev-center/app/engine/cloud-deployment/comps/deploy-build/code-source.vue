@@ -40,6 +40,14 @@
             <bk-form-item :label="`${$t('构建目录')}：`">
               <span class="form-text">{{curAppModule.repo?.source_dir || '--'}}</span>
             </bk-form-item>
+            <bk-form-item :label="`${$t('初始化模板')}：`">
+              <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
+              <a
+                class="download"
+                href="javascript: void(0);"
+                @click="handleDownloadTemplate"
+              > <i class="paasng-icon paasng-download"></i>{{ $t('下载') }} </a>
+            </bk-form-item>
           </bk-form>
         </div>
       </div>
@@ -614,6 +622,25 @@ export default {
     handleToggleSideslider() {
       this.defaultSettings.isShow = true;
     },
+
+    // 下载初始化模板
+    handleDownloadTemplate() {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/sourcectl/init_template/`;
+      this.$http.post(url).then((resp) => {
+        const downloadUrl = resp.downloadable_address;
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, (resp) => {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
+        });
+      });
+    },
   },
 };
 </script>
@@ -735,7 +762,7 @@ export default {
     justify-content: center;
     align-items: center;
     width: 190px;
-    height: 116px;
+    height: 158px;
     background: #F5F7FA;
     border-radius: 2px;
     text-align: center;
@@ -841,6 +868,15 @@ export default {
   .footer-operate {
     margin-top: 24px;
     margin-left: 150px;
+  }
+
+  .download {
+    cursor: pointer;
+    color: #3A84FF;
+    margin-left: 10px;
+    i {
+      font-size: 16px;
+    }
   }
 </style>
 <style lang="scss">

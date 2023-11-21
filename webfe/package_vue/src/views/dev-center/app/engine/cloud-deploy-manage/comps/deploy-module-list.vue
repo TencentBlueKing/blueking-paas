@@ -286,14 +286,15 @@ export default {
       }
     },
 
-    isWatctDeploying(value) {
-      if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
-        this.$paasMessage({
-          theme: 'primary',
-          message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
-        });
-      }
-    },
+    // 云原生应用不会默认展示部署进程
+    // isWatctDeploying(value) {
+    //   if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
+    //     this.$paasMessage({
+    //       theme: 'primary',
+    //       message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
+    //     });
+    //   }
+    // },
   },
 
   created() {

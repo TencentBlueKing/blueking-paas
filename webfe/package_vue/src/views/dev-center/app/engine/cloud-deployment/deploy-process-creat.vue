@@ -1123,13 +1123,8 @@ export default {
           this.formData = this.processData[this.btnIndex];
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
           if (this.isCreate) {
-            // 使用示例镜像，启动命令默认值
-            if (this.buildData.image === 'mirrors.tencent.com/bkpaas/django-helloworld') {
-              this.formData.command = ['bash', '/app/start_web.sh'];
-            } else {
-              this.formData.command = [];
-              this.formData.targetPort = '';
-            }
+            // 根据版本，填充示例镜像，启动命令默认值
+            this.useExample();
           }
         }
         this.panels = _.cloneDeep(this.processData);
@@ -1324,7 +1319,7 @@ export default {
 
     useExample() {
       this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
-      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
+      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx') {
         this.formData.command = [];
         this.formData.args = [];
         this.formData.targetPort = 80;

@@ -1181,7 +1181,7 @@ export default {
 
     useExample() {
       this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
-      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
+      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx') {
         this.formData.command = [];
         this.formData.args = [];
         this.formData.port = 80;

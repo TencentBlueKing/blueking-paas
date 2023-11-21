@@ -99,7 +99,7 @@
             v-model="formData.url"
             class="form-input-width"
             clearable
-            :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
+            :placeholder="`${$t('示例镜像：')}${GLOBAL.CONFIG.MIRROR_EXAMPLE}`"
           >
 
             <template slot="append">
@@ -1124,7 +1124,7 @@ export default {
 
     // 处理应用示例填充
     handleSetMirrorUrl() {
-      this.formData.url = 'mirrors.tencent.com/bkpaas/django-helloworld';
+      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
       this.$refs.formImageRef.clearError();
     },
 

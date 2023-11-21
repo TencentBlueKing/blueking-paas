@@ -320,6 +320,7 @@ export default {
   methods: {
     init() {
       this.getPreDeployDetail();
+      this.getModuleProcessList();
     },
     /**
      * 监听部署进度，打印日志

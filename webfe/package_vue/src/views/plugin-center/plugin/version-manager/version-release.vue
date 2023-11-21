@@ -100,7 +100,10 @@ import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import deployStage from './release-stages/deploy';
 import marketStage from './release-stages/market';
 import onlineStage from './release-stages/online';
+// eslint-disable-next-line import/no-duplicates
 import itsmStage from './release-stages/itsm';
+// eslint-disable-next-line import/no-duplicates
+import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
 
@@ -111,6 +114,8 @@ export default {
     market: marketStage,
     online: onlineStage,
     itsm: itsmStage,
+    // 上线审批
+    approval1: approvalStage,
     build: buildStage,
     test: testStage,
   },

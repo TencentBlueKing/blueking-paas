@@ -35,8 +35,9 @@
         >
           {{ item.tag }}
         </div>
+        <!-- 当前耗时 -->
         <div
-          v-if="item.content && !hideTime.includes(item.status)"
+          v-if="item.content && item.status && !hideTime.includes(item.status)"
           class="paas-timeline-content"
         >
           {{ item.content }}

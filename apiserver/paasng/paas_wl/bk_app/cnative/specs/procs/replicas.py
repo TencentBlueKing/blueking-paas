@@ -21,7 +21,7 @@ import copy
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion, ScalingPolicy
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import AutoscalingOverlay, BkAppResource, ReplicasOverlay
 from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
 from paas_wl.infras.resources.base import crd
@@ -97,7 +97,8 @@ class BkAppProcScaler:
     def get_autoscaling(self, proc_type: str) -> Optional[Dict]:
         """Get the autoscaling config for the given process type.
 
-        NOTE: The return type might change in the future.
+        NOTE: The return value is currently only used in unit tests, it's type may
+        change in the future.
 
         :raises ProcNotFoundInRes: when the process can not be found.
         :return: None when autoscaling is not enabled.
@@ -187,6 +188,7 @@ class BkAppProcScaler:
             if item_copy.envName == env_name and item_copy.process == proc_type:
                 item_copy.minReplicas = config.min_replicas
                 item_copy.maxReplicas = config.max_replicas
+                item_copy.policy = config.policy
                 # Other properties such as "metrics" are not supported yet
                 found = True
             results.append(item_copy)
@@ -198,7 +200,7 @@ class BkAppProcScaler:
                     process=proc_type,
                     minReplicas=config.min_replicas,
                     maxReplicas=config.max_replicas,
-                    policy=ScalingPolicy.DEFAULT.value,
+                    policy=config.policy,
                 )
             )
         return results
@@ -249,8 +251,7 @@ class AutoscalingReader:
         """Read all autoscaling config defined
 
         :param env_name: Environment name
-        :return: A dict contains autoscaling config for all processes, value format:
-            (config, whether the config was defined in "envOverlay")
+        :return: Dict[name of process, (config, whether the config was defined in "envOverlay")]
         """
         # Read value from main configuration
         results = {

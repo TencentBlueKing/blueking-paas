@@ -30,6 +30,7 @@ from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -44,12 +45,14 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
-    default_scaling_config,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 
 logger = logging.getLogger(__name__)
+
+# The default scaling config value object when autoscaling config is absent.
+default_scaling_config = AutoscalingConfig(min_replicas=1, max_replicas=1, policy='default')
 
 
 # TODO: Remove this API entirely because if become stale
@@ -133,7 +136,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                         "plan_name": proc_spec.get_plan_name(environment_name),
                         "target_replicas": proc_spec.get_target_replicas(environment_name),
                         "autoscaling": bool(proc_spec.get_autoscaling(environment_name)),
-                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config(),
+                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config,
                     }
                     for environment_name in AppEnvName
                 },

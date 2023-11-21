@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django_dynamic_fixture import G
 
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 
@@ -49,13 +50,16 @@ class TestModuleProcessSpecManager:
 
         # Set replicas for both environments
         ModuleProcessSpecManager(bk_module).set_autoscaling('web', 'stag', False)
-        ModuleProcessSpecManager(bk_module).set_autoscaling('web', 'prod', True, {'minReplicas': 1, 'maxReplicas': 3})
+        ModuleProcessSpecManager(bk_module).set_autoscaling(
+            'web', 'prod', True, AutoscalingConfig(min_replicas=1, max_replicas=3, policy='default')
+        )
         assert ProcessSpecEnvOverlay.objects.filter(proc_spec=process_web).count() == 2
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='stag').autoscaling is False
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').autoscaling is True
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name='prod').scaling_config == {
-            'minReplicas': 1,
-            'maxReplicas': 3,
+            'min_replicas': 1,
+            'max_replicas': 3,
+            'policy': 'default',
         }
 
         # Update existent data

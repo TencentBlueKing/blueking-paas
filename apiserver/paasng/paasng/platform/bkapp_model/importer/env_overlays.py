@@ -50,8 +50,8 @@ def _upsert_autoacaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverla
         defaults={
             "autoscaling": True,
             "scaling_config": {
-                "minReplicas": input_p.minReplicas,
-                "maxReplicas": input_p.maxReplicas,
+                "min_replicas": input_p.minReplicas,
+                "max_replicas": input_p.maxReplicas,
                 "policy": input_p.policy,
             },
         },

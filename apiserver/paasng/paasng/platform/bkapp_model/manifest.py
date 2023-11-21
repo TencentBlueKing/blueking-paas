@@ -46,6 +46,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     AutoscalingOverlay,
+    AutoscalingSpec,
     BkAppAddon,
     BkAppBuildConfig,
     BkAppHooks,
@@ -179,6 +180,13 @@ class ProcessesManifestConstructor(ManifestConstructor):
             except ValueError:
                 logger.warning("模块<%s>的 %s 进程 未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
                 command, args = [], []
+
+            autoscaling_spec = None
+            if process_spec.autoscaling and (_c := process_spec.scaling_config):
+                autoscaling_spec = AutoscalingSpec(
+                    minReplicas=_c['min_replicas'], maxReplicas=_c['max_replicas'], policy=_c['policy']
+                )
+
             processes.append(
                 BkAppProcess(
                     name=process_spec.name,
@@ -188,7 +196,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     targetPort=process_spec.port,
                     # TODO?: 是否需要使用 LEGACY_PROC_RES_ANNO_KEY 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
-                    autoscaling=process_spec.scaling_config if process_spec.autoscaling else None,
+                    autoscaling=autoscaling_spec,
                 )
             )
             # deprecated: support v1alpha1
@@ -231,7 +239,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     overlay.append_item(
                         'autoscaling',
                         AutoscalingOverlay(
-                            envName=item.environment_name, process=proc_spec.name, **item.scaling_config
+                            envName=item.environment_name,
+                            process=proc_spec.name,
+                            minReplicas=item.scaling_config['min_replicas'],
+                            maxReplicas=item.scaling_config['max_replicas'],
+                            policy=item.scaling_config['policy'],
                         ),
                     )
                 if item.plan_name and item.plan_name != proc_spec.plan_name:

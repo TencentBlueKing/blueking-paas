@@ -106,8 +106,8 @@ def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
         plan_name='Starter',
         autoscaling=True,
         scaling_config={
-            "minReplicas": 1,
-            "maxReplicas": 5,
+            "min_replicas": 1,
+            "max_replicas": 5,
             "policy": 'default',
         },
     )
@@ -167,6 +167,14 @@ class TestBuiltinAnnotsManifestConstructor:
 
 
 class TestProcessesManifestConstructor:
+    @pytest.fixture
+    def process_web_autoscaling(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with autoscaling enabled"""
+        process_web.autoscaling = True
+        process_web.scaling_config = {'min_replicas': 1, 'max_replicas': 2, 'policy': 'default'}
+        process_web.save()
+        return process_web
+
     @pytest.mark.parametrize(
         "plan_name, expected",
         [
@@ -252,6 +260,16 @@ class TestProcessesManifestConstructor:
                     }
                 ],
             },
+        }
+
+    def test_integrated_autoscaling(self, bk_module, blank_resource, process_web_autoscaling):
+        initialize_default_proc_spec_plans()
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(include={"processes"})['processes'][0]
+        assert data['autoscaling'] == {
+            'minReplicas': 1,
+            'maxReplicas': 2,
+            'policy': 'default',
         }
 
     @pytest.fixture

@@ -64,7 +64,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["env_overlay"]["stag"]["scaling_config"] == {
             'min_replicas': 1,
             'max_replicas': 1,
-            'metrics': [{'type': 'Resource', 'metric': 'cpuUtilization', 'value': '85%'}],
+            'metrics': [{'type': 'Resource', 'metric': 'cpuUtilization', 'value': '85'}],
             'policy': 'default',
         }
 
@@ -105,9 +105,9 @@ class TestModuleProcessSpecViewSet:
             environment_name="stag",
             autoscaling=True,
             scaling_config={
-                "minReplicas": 1,
-                "maxReplicas": 5,
-                "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+                "min_replicas": 1,
+                "max_replicas": 5,
+                'policy': 'default',
             },
         )
         assert web.get_autoscaling("stag")
@@ -147,7 +147,8 @@ class TestModuleProcessSpecViewSet:
                         "scaling_config": {
                             "min_replicas": 1,
                             "max_replicas": 5,
-                            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+                            # NOTE: The metrics field will be ignored by the backend
+                            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70"}],
                         },
                     },
                 },
@@ -175,13 +176,12 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["env_overlay"]["prod"]["scaling_config"] == {
             "min_replicas": 1,
             "max_replicas": 5,
-            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
             "policy": "default",
         }
         assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config("prod") == {
-            "minReplicas": 1,
-            "maxReplicas": 5,
-            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "70%"}],
+            "min_replicas": 1,
+            "max_replicas": 5,
             "policy": "default",
         }
 

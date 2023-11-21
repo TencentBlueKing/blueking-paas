@@ -22,18 +22,7 @@ from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paasng.platform.modules.constants import DeployHookType, ModuleName
 from paasng.platform.modules.models.module import Module
-
-DEFAULT_METRICS = [
-    {
-        "type": 'Resource',
-        "metric": 'cpuUtilization',
-        "value": '85%',
-    },
-]
-
-
-def default_scaling_config():
-    return {"minReplicas": 1, "maxReplicas": 1, "metrics": DEFAULT_METRICS, "policy": ScalingPolicy.DEFAULT}
+from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -45,8 +34,10 @@ class GetManifestInputSLZ(serializers.Serializer):
 class ScalingConfigSLZ(serializers.Serializer):
     """扩缩容配置"""
 
-    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数", source="minReplicas")
-    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数", source="maxReplicas")
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最小副本数")
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text="最大副本数")
+    # WARNING: The metrics field is only for output and should never be saved to the database
+    # TODO: Remove the metrics field when the UI does not reads it anymore.
     metrics = serializers.ListField(
         child=MetricSpecSLZ(), min_length=1, help_text="扩缩容指标", default=lambda: DEFAULT_METRICS
     )
@@ -114,7 +105,7 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        """ 校验应用和模块存在，否则抛出异常 """
+        """校验应用和模块存在，否则抛出异常"""
         # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
         # 判断应用或者模块是否存在
         if not Module.objects.filter(application__code=attrs['bkAppCode'], name=attrs['moduleName']).exists():

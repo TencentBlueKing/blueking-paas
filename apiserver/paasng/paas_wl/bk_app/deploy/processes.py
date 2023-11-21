@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 # TODO: Add Tests for both controller classes
 import logging
 from dataclasses import asdict
-from typing import Dict, Optional
+from typing import Optional
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
@@ -97,7 +97,7 @@ class AppProcessesController:
             if not autoscaling:
                 return self._scale(proc_type, target_replicas)
 
-            raise AutoscalingUnsupported("autoscaling can't be used because cluster unsupported.")
+            raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
         scaling = self._build_proc_autoscaling(cluster.name, proc_type, autoscaling, scaling_config)
         if autoscaling:
@@ -166,7 +166,8 @@ class AppProcessesController:
             name=get_proc_deployment_name(self.app, proc_type),
         )
 
-        return ProcAutoscaling(self.app, proc_type, scaling_config, target_ref)  # type: ignore
+        autoscaling_spec = scaling_config.to_autoscaling_spec() if scaling_config else None
+        return ProcAutoscaling(self.app, proc_type, autoscaling_spec, target_ref)  # type: ignore
 
 
 class CNativeProcController:
@@ -249,21 +250,18 @@ class CNativeProcController:
         if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_AUTOSCALING):
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
-        if scaling_config:
-            # TODO: Use a more robust way to transform the scaling_config to dict.
-            config_dict = {'max_replicas': scaling_config.max_replicas, 'min_replicas': scaling_config.min_replicas}
-        else:
-            # Use the old config value when the scaling config is not provided
-            config_dict = spec_updater.spec_object.scaling_config
-            assert config_dict, 'The config must not be None when turning on autoscaling.'
+        # Use the old config value when the scaling config is not provided.
+        if not scaling_config:
+            _config_dict = spec_updater.spec_object.scaling_config
+            assert _config_dict, 'The config must not be None when turning on autoscaling.'
+            scaling_config = AutoscalingConfig(**_config_dict)
 
-        spec_updater.set_autoscaling(True, config_dict)
-        ModuleProcessSpecManager(self.env.module).set_autoscaling(proc_type, self.env.environment, True, config_dict)
-        # Make sure to pass a non-empty config object by reading the database
+        spec_updater.set_autoscaling(True, scaling_config)
+        ModuleProcessSpecManager(self.env.module).set_autoscaling(
+            proc_type, self.env.environment, True, scaling_config
+        )
         try:
-            # NOTE: The "metrics" field was ignored ATM
-            _config_obj = AutoscalingConfig(metrics=[], **config_dict)
-            BkAppProcScaler(self.env).set_autoscaling(proc_type, True, _config_obj)
+            BkAppProcScaler(self.env).set_autoscaling(proc_type, True, scaling_config)
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
         return
@@ -304,12 +302,12 @@ class ProcSpecUpdater:
         )
         proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
 
-    def set_autoscaling(self, enabled: bool, config: Optional[Dict] = None):
+    def set_autoscaling(self, enabled: bool, config: Optional[AutoscalingConfig] = None):
         """Set the autoscaling for the given process and environment."""
         proc_spec = self.spec_object
         proc_spec.autoscaling = enabled
         if config is not None:
-            proc_spec.scaling_config = config
+            proc_spec.scaling_config = asdict(config)
         proc_spec.save(update_fields=['autoscaling', 'scaling_config', 'updated'])
 
     @property

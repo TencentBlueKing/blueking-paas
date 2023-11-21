@@ -53,7 +53,7 @@ class TestBkAppProcScaler:
     def test_set_autoscaling_not_deployed(self, bk_stag_env, bk_stag_wl_app):
         with pytest.raises(ProcNotDeployed):
             BkAppProcScaler(bk_stag_env).set_autoscaling(
-                'invalid-name', True, AutoscalingConfig(min_replicas=1, max_replicas=1, metrics=[])
+                'invalid-name', True, AutoscalingConfig(min_replicas=1, max_replicas=1, policy='default')
             )
 
     def test_set_autoscaling_integrated(self, bk_stag_env, bk_stag_wl_app, deploy_stag_env):
@@ -61,7 +61,7 @@ class TestBkAppProcScaler:
 
         # Enable the autoscaling
         BkAppProcScaler(bk_stag_env).set_autoscaling(
-            'web', True, AutoscalingConfig(min_replicas=1, max_replicas=1, metrics=[])
+            'web', True, AutoscalingConfig(min_replicas=1, max_replicas=1, policy='default')
         )
         assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') == {
             'min_replicas': 1,
@@ -71,7 +71,7 @@ class TestBkAppProcScaler:
 
         # Update the autoscaling config
         BkAppProcScaler(bk_stag_env).set_autoscaling(
-            'web', True, AutoscalingConfig(min_replicas=2, max_replicas=2, metrics=[])
+            'web', True, AutoscalingConfig(min_replicas=2, max_replicas=2, policy='default')
         )
         assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') == {
             'min_replicas': 2,

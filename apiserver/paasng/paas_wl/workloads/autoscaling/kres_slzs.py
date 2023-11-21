@@ -31,7 +31,7 @@ from paas_wl.workloads.autoscaling.constants import (
     ScalingMetricSourceType,
     ScalingMetricTargetType,
 )
-from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, MetricSpec, ScalingObjectRef
+from paas_wl.workloads.autoscaling.entities import MetricSpec, ProcAutoscalingSpec, ScalingObjectRef
 
 if TYPE_CHECKING:
     from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
@@ -61,7 +61,7 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         return self.entity_type(
             app=app,
             name=kube_data.metadata.name,
-            spec=AutoscalingConfig(
+            spec=ProcAutoscalingSpec(
                 min_replicas=kube_data.spec.minReplicas,
                 max_replicas=kube_data.spec.maxReplicas,
                 metrics=self._parse_metrics(kube_data),
@@ -166,23 +166,24 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         内存 绝对数值 -> {"name": "memory", "target": {"type": "AverageValue", "averageValue": "512Mi"}}
         CPU 使用率百分比 -> {"name": "cpu", "target": {"type": Utilization, "averageUtilization": 80}}
         """
+        value: Union[str, int]
         if spec.metric == ScalingMetric.CPU_UTILIZATION:
-            metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.UTILIZATION
+            metric_name, target_type = ScalingMetricName.CPU.value, ScalingMetricTargetType.UTILIZATION
             value_key, value = 'averageUtilization', int(spec.value)
 
         elif spec.metric == ScalingMetric.MEMORY_UTILIZATION:
-            metric_name, target_type = ScalingMetricName.MEMORY, ScalingMetricTargetType.UTILIZATION
+            metric_name, target_type = ScalingMetricName.MEMORY.value, ScalingMetricTargetType.UTILIZATION
             value_key, value = 'averageUtilization', int(spec.value)
 
         elif spec.metric == ScalingMetric.CPU_AVERAGE_VALUE:
-            metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.AVERAGE_VALUE
-            value_key, value = 'averageValue', spec.value  # type: ignore
+            metric_name, target_type = ScalingMetricName.CPU.value, ScalingMetricTargetType.AVERAGE_VALUE
+            value_key, value = 'averageValue', spec.value
 
         elif spec.metric == ScalingMetric.MEMORY_AVERAGE_VALUE:
-            metric_name, target_type = ScalingMetricName.MEMORY, ScalingMetricTargetType.AVERAGE_VALUE
-            value_key, value = 'averageValue', spec.value  # type: ignore
+            metric_name, target_type = ScalingMetricName.MEMORY.value, ScalingMetricTargetType.AVERAGE_VALUE
+            value_key, value = 'averageValue', spec.value
 
         else:
             raise ValueError('unsupported metric: {}'.format(spec.metric))
 
-        return {'name': metric_name, 'target': {'type': target_type, value_key: value}}
+        return {'name': metric_name, 'target': {'type': target_type.value, value_key: value}}

@@ -78,19 +78,23 @@ class TestProcSpecUpdater:
 
         # Enable autoscaling
         updater = ProcSpecUpdater(bk_stag_env, 'web')
-        updater.set_autoscaling(True, {'maxReplicas': 3})
+        updater.set_autoscaling(True, AutoscalingConfig(min_replicas=1, max_replicas=3, policy='default'))
         assert updater.spec_object.autoscaling is True
-        assert updater.spec_object.scaling_config == {'maxReplicas': 3}
+        assert updater.spec_object.scaling_config == {'min_replicas': 1, 'max_replicas': 3, 'policy': 'default'}
 
         # Update autoscaling
-        updater.set_autoscaling(True, {'maxReplicas': 4})
+        updater.set_autoscaling(True, AutoscalingConfig(min_replicas=1, max_replicas=4, policy='default'))
         assert updater.spec_object.autoscaling is True
-        assert updater.spec_object.scaling_config == {'maxReplicas': 4}
+        assert updater.spec_object.scaling_config == {'min_replicas': 1, 'max_replicas': 4, 'policy': 'default'}
 
         # Disable autoscaling
         updater.set_autoscaling(False)
         assert updater.spec_object.autoscaling is False
-        assert updater.spec_object.scaling_config == {'maxReplicas': 4}, 'The config should remain as it is.'
+        assert updater.spec_object.scaling_config == {
+            'min_replicas': 1,
+            'max_replicas': 4,
+            'policy': 'default',
+        }, 'The config should remain as it is.'
 
 
 # TODO: Remove duplicated fixture called the same name
@@ -130,7 +134,7 @@ class TestCNativeProcController:
 
         assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') is None
         CNativeProcController(bk_stag_env).scale(
-            'web', True, None, scaling_config=AutoscalingConfig(min_replicas=1, max_replicas=3, metrics=[])
+            'web', True, None, scaling_config=AutoscalingConfig(min_replicas=1, max_replicas=3, policy='default')
         )
         assert BkAppProcScaler(bk_stag_env).get_autoscaling('web') is not None
 

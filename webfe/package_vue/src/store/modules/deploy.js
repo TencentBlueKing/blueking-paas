@@ -158,7 +158,7 @@ const actions = {
   getModuleReleaseList({ }, { appCode, env, deployId = '' },  config = {}) {
     let url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list/`;
     if (deployId) {
-      url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list?deployment_id=${deployId}`;
+      url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list/?deployment_id=${deployId}`;
     }
     return http.get(url, config);
   },

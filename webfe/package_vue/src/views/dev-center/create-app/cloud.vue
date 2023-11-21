@@ -99,7 +99,7 @@
             v-model="formData.url"
             class="form-input-width"
             clearable
-            :placeholder="`${$t('示例镜像：')}${GLOBAL.CONFIG.MIRROR_EXAMPLE}`"
+            :placeholder="mirrorExamplePlaceholder"
           >
 
             <template slot="append">
@@ -513,7 +513,7 @@ import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
-import { TAG_MAP } from '@/common/constants.js';
+import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 export default {
   components: {
     gitExtend,
@@ -743,6 +743,9 @@ export default {
     },
     isAdvancedOptions() {
       return this.$store.state.createApp.isAdvancedOptions;
+    },
+    mirrorExamplePlaceholder() {
+      return `${this.$t('示例镜像：')}${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
     },
   },
   watch: {
@@ -1124,7 +1127,7 @@ export default {
 
     // 处理应用示例填充
     handleSetMirrorUrl() {
-      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
+      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
       this.$refs.formImageRef.clearError();
     },
 

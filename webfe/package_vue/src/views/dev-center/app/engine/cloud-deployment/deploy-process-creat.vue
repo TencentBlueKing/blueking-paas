@@ -834,7 +834,7 @@
 
 <script>import _ from 'lodash';
 import { bus } from '@/common/bus';
-import { RESQUOTADATA, ENV_ENUM } from '@/common/constants';
+import { RESQUOTADATA, ENV_ENUM, TE_MIRROR_EXAMPLE } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 import quotaPopver from './comps/quota-popver';
 
@@ -1124,7 +1124,15 @@ export default {
           this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
           if (this.isCreate) {
             // 根据版本，填充示例镜像，启动命令默认值
-            this.useExample();
+            if (this.buildData.image === TE_MIRROR_EXAMPLE) {
+              this.formData.command = ['bash', '/app/start_web.sh'];
+            } else if (this.buildData.image === 'nginx') {
+              this.formData.command = [];
+              this.formData.targetPort = 80;
+            } else {
+              this.formData.command = [];
+              this.formData.targetPort = '';
+            }
           }
         }
         this.panels = _.cloneDeep(this.processData);

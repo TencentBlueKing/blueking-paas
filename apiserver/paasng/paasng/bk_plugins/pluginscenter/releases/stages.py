@@ -151,6 +151,7 @@ class ItsmStage(BaseStageController):
         assert self.stage.itsm_detail
         ticket_info = get_ticket_status(self.stage.itsm_detail.sn)
         ticket_info['fields'] = self.stage.itsm_detail.fields
+        self.stage.refresh_from_db()
         return {
             **basic_info,
             "detail": ItsmTicketInfoSlz(ticket_info).data,

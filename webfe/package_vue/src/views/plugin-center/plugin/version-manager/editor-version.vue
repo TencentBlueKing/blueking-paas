@@ -67,11 +67,14 @@
                 ext-cls="select-custom"
                 searchable
               >
+                <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
                 <bk-option
                   v-for="option in sourceVersions"
                   :id="option.name"
                   :key="option.name"
                   :name="option.name"
+                  :disabled="!curVersionData.allow_duplicate_source_version &&
+                    releasedSourceVersions.includes(option.name)"
                 />
               </bk-select>
               <div class="ribbon">
@@ -317,6 +320,9 @@ export default {
     curPluginInfo() {
       return this.$store.state.plugin.curPluginInfo;
     },
+    releasedSourceVersions() {
+      return this.curVersionData.released_source_versions || [];
+    },
   },
   watch: {
     'curVersion.source_versions'() {
@@ -355,7 +361,11 @@ export default {
         // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
         this.curVersion.semver_choices = res.semver_choices;
         // source_versions 会存在 [] 情况
-        this.curVersion.source_versions = res.source_versions[0]?.name || '';
+        if (res.allow_duplicate_source_version) {
+          this.curVersion.source_versions = res.source_versions[0]?.name || '';
+        } else {
+          this.curVersion.source_versions = '';
+        }
         if (res.version_no === 'revision') {
         // 与代码版本一致(revision)
           this.curVersion.version = res.source_versions[0]?.name || '';

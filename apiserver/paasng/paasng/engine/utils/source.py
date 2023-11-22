@@ -136,7 +136,7 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
 
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
-        proc_data_from_source = {
+        proc_data_from_procfile = {
             name: {"command": command} for name, command in metadata_reader.get_procfile(version_info).items()
         }
     except GetProcfileError as e:
@@ -145,14 +145,16 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
     except NotImplementedError:
         """对于不支持从源码读取进程信息的应用, 忽略异常, 因为可能在其他分支已成功获取到 proc_data"""
     else:
-        if proc_data is not None:
-            # 当 proc_name 在 proc_data 中未定义或 proc_data 中的进程命令与 proc_data_from_source 的进程命令不一致时, 判定冲突
-            # 冲突时将强制使用 proc_data_from_source
+        if not proc_data:
+            proc_data = proc_data_from_procfile
+        else:
+            # 当 proc_name 在 proc_data 中未定义或 proc_data 中的进程命令与 proc_data_from_procfile 的进程命令不一致时, 判定冲突
+            # 冲突时将强制使用 proc_data_from_procfile
             def find_conflict_process(proc_name):
                 assert proc_data is not None
                 if proc_name not in proc_data:
                     return True
-                if proc_data[proc_name]["command"] != proc_data_from_source[proc_name]["command"]:
+                if proc_data[proc_name]["command"] != proc_data_from_procfile[proc_name]["command"]:
                     return True
                 return False
 
@@ -164,9 +166,7 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
                             _("Warning: Process definition conflict, will use the one defined in `Procfile`")
                         )
                     )
-                proc_data = proc_data_from_source
-        else:
-            proc_data = proc_data_from_source
+                proc_data = proc_data_from_procfile
 
     if proc_data is None:
         raise DeployShouldAbortError(_("Missing process definition"))

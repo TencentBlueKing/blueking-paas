@@ -156,7 +156,7 @@
           show-overflow-tooltip
         />
         <bk-table-column
-          :width="localLanguage === 'en' ? 200 : 150"
+          :width="localLanguage === 'en' ? 200 : 180"
           :label="$t('操作')"
         >
           <template slot-scope="{ row }">

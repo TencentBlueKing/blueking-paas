@@ -81,6 +81,7 @@ class InstanceForDisplaySLZ(serializers.Serializer):
     start_time = serializers.CharField(read_only=True)
     state = serializers.SerializerMethodField(read_only=True, help_text='实例状态')
     state_message = serializers.CharField(read_only=True)
+    rich_status = serializers.CharField(read_only=True)
     ready = serializers.BooleanField(read_only=True)
     restart_count = serializers.IntegerField()
     version = serializers.CharField(read_only=True)

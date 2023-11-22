@@ -80,9 +80,6 @@ class DeployDetailSerializer(serializers.ModelSerializer):
 class AppModelRevisionSerializer(serializers.ModelSerializer):
     """Serializer for representing detailed AppModelDeploy object"""
 
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), source='json_value')
-    deployed_manifest = serializers.JSONField(label=_('已部署的配置信息'), source='deployed_value')
-
     class Meta:
         model = AppModelRevision
         exclude = ('module_id', 'yaml_value')

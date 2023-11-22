@@ -75,7 +75,7 @@
               <span v-if="row.isStartUp && row.specifications && row.specifications.length">
                 <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
                   <span>
-                    {{ $t(item.display_name) }} {{getVersionValue(item.name, row.specificationsData)}}
+                    {{ $t(item.display_name) }} {{ getVersionValue(item.name, row?.specificationsData || []) }}
                   </span>
                 </bk-tag>
               </span>
@@ -378,7 +378,7 @@ export default {
     getVersionValue() {
       return function (name, data) {
         const versionData = data.find(e => e.name === name) || {};
-        return versionData.value;
+        return versionData?.value || '';
       };
     },
   },

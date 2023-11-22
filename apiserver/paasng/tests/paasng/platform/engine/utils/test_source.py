@@ -214,7 +214,7 @@ class TestGetProcesses:
         )
 
     def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
-        """s-mart case: 当未处理 app_desc 时, 从源码包读取进程仅包含进程启动命令信息"""
+        """lesscode case: 当未处理 app_desc 时, 从源码包读取进程仅包含进程启动命令信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 

@@ -39,23 +39,20 @@ class Command(BaseCommand):
         svc_objs = ServiceInstance.objects.all()
         for obj in svc_objs:
             credentials = obj.get_credentials()
+            updated_credentials = credentials.copy()
 
-            has_changed = False
             if host:
-                credentials["host"] = host
-                has_changed = True
+                updated_credentials["host"] = host
 
             if port:
-                credentials["port"] = port
-                has_changed = True
+                updated_credentials["port"] = port
 
             if password:
-                credentials["password"] = password
-                has_changed = True
+                updated_credentials["password"] = password
 
             if not dry_run:
-                obj.credentials = json.dumps(credentials)
-                if has_changed:
+                if updated_credentials != credentials:
+                    obj.credentials = json.dumps(updated_credentials)
                     obj.save(update_fields=["credentials"])
 
-            self.stdout.write(self.style.NOTICE(f'实例配置变化：\n before:{obj.get_credentials()} \n after:{credentials} \n'))
+            self.stdout.write(self.style.NOTICE(f'实例配置变化：\n before:{credentials} \n after:{updated_credentials} \n'))

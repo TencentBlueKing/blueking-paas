@@ -17,13 +17,14 @@
           <div class="base-info-name">
             <div class="flex-row align-items-center">
               {{ baseInfo.name || '--' }}
-              <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div>
+              <!-- 当前版本先去掉 -->
+              <!-- <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div> -->
               <!-- 云原生相邻tab可以修改基本信息 所以不需要跳转 -->
               <router-link :to="{ name: 'appBaseInfo' }" v-if="!isCloudNativeApp">
                 {{ $t('点击修改基本信息') }}
               </router-link>
             </div>
-            <div class="mt5"> {{ $t('创建时间：') }} {{ baseInfo.updated || '--' }}</div>
+            <div class="mt5"> {{ $t('创建时间') }}： {{ baseInfo.updated || '--' }}</div>
           </div>
         </div>
       </div>
@@ -580,7 +581,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -654,7 +655,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -812,7 +813,7 @@ export default {
         } catch (e) {
           this.$paasMessage({
             theme: 'error',
-            message: e.message,
+            message: e.detail || e.message || this.$t('接口异常'),
           });
         } finally {
           this.isInfoSaving = false;
@@ -835,7 +836,7 @@ export default {
         } catch (e) {
           this.$paasMessage({
             theme: 'error',
-            message: e.message,
+            message: e.detail || e.message || this.$t('接口异常'),
           });
         } finally {
           this.isInfoSaving = false;

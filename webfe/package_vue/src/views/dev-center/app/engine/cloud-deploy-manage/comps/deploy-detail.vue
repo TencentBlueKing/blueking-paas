@@ -672,10 +672,8 @@ export default {
   mounted() {
     moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
-    if (this.index === 0) {   // 只需要启动一次stream
-      if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
-        this.watchServerPush();
-      }
+    if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
+      this.watchServerPush();
     }
   },
 
@@ -981,7 +979,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
         this.clearChart();
       } finally {
@@ -1375,7 +1373,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.isLogsLoading = false;
@@ -1410,7 +1408,7 @@ export default {
         } else {
           this.$paasMessage({
             theme: 'error',
-            message: e.message,
+            message: e.detail || e.message || this.$t('接口异常'),
           });
         }
       }

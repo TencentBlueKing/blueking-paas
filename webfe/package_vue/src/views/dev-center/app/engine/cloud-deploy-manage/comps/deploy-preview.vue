@@ -3,21 +3,18 @@
     <div class="info-item">
       <p>
         <span class="count">{{ deploymentInfo.total_available_instance_count }}</span>
-        <span class="unit">{{$t('个')}}</span>
       </p>
       <p class="desc">{{$t('运行实例数')}}</p>
     </div>
     <div class="info-item">
       <p>
         <span class="count">{{ deploymentInfo.total_desired_replicas }}</span>
-        <span class="unit">个</span>
       </p>
       <p class="desc">{{$t('期望实例数')}}</p>
     </div>
     <div class="info-item">
       <p>
         <span class="count rejected">{{ deploymentInfo.total_failed }}</span>
-        <span class="unit">个</span>
       </p>
       <p class="desc">{{$t('异常实例数')}}</p>
     </div>

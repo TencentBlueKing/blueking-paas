@@ -581,8 +581,7 @@
   </div>
 </template>
 
-<script>
-import moment from 'moment';
+<script>import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import User from '@/components/user';
 // import BluekingUserSelector from '@blueking/user-selector';
@@ -1127,7 +1126,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },

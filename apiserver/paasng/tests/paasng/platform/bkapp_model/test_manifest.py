@@ -31,9 +31,12 @@ from paas_wl.bk_app.cnative.specs.constants import (
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppHooks, BkAppResource, BkAppSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay, HostAlias
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, VolumeSource
+from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS, VolumeSource
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import CNativeBkAppNameGenerator
@@ -43,15 +46,22 @@ from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
     BuiltinAnnotsManifestConstructor,
+    DomainResolutionManifestConstructor,
     EnvVarsManifestConstructor,
     HooksManifestConstructor,
     MountsManifestConstructor,
     ProcessesManifestConstructor,
+    SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
     apply_env_annots,
     get_manifest,
 )
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import (
+    DomainResolution,
+    ModuleProcessSpec,
+    ProcessSpecEnvOverlay,
+    SvcDiscConfig,
+)
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
@@ -96,8 +106,8 @@ def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
         plan_name='Starter',
         autoscaling=True,
         scaling_config={
-            "minReplicas": 1,
-            "maxReplicas": 5,
+            "min_replicas": 1,
+            "max_replicas": 5,
             "policy": 'default',
         },
     )
@@ -157,6 +167,14 @@ class TestBuiltinAnnotsManifestConstructor:
 
 
 class TestProcessesManifestConstructor:
+    @pytest.fixture
+    def process_web_autoscaling(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with autoscaling enabled"""
+        process_web.autoscaling = True
+        process_web.scaling_config = {'min_replicas': 1, 'max_replicas': 2, 'policy': 'default'}
+        process_web.save()
+        return process_web
+
     @pytest.mark.parametrize(
         "plan_name, expected",
         [
@@ -244,6 +262,16 @@ class TestProcessesManifestConstructor:
             },
         }
 
+    def test_integrated_autoscaling(self, bk_module, blank_resource, process_web_autoscaling):
+        initialize_default_proc_spec_plans()
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(include={"processes"})['processes'][0]
+        assert data['autoscaling'] == {
+            'minReplicas': 1,
+            'maxReplicas': 2,
+            'policy': 'default',
+        }
+
     @pytest.fixture
     def v1alpha1_process_web(self, bk_module, process_web) -> ModuleProcessSpec:
         process_web.image = "python:latest"
@@ -319,6 +347,59 @@ class TestHooksManifestConstructor:
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, args=["hook.py"])
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.hooks == BkAppHooks(preRelease={"args": ["hook.py"]})
+
+
+class TestSvcDiscoveryManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        create_svc_disc = functools.partial(SvcDiscConfig.objects.create, application=bk_module.application)
+        # Create svc_disc object
+        create_svc_disc(
+            bk_saas=[
+                {
+                    'bkAppCode': 'bk_app_code_test',
+                    'moduleName': 'module_name_test',
+                }
+            ]
+        )
+
+        SvcDiscoveryManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.svcDiscovery == SvcDiscConfigSpec(
+            bkSaaS=[SvcDiscEntryBkSaaS(bkAppCode='bk_app_code_test', moduleName='module_name_test')],
+        )
+
+
+class TestDomainResolutionManifestConstructor:
+    def test_normal(self, bk_module, blank_resource):
+        create_domain_resolution = functools.partial(
+            DomainResolution.objects.create, application=bk_module.application
+        )
+        # Create domain_resolution object
+        create_domain_resolution(
+            nameservers=['192.168.1.3', '192.168.1.4'],
+            host_aliases=[
+                {
+                    'ip': '1.1.1.1',
+                    'hostnames': [
+                        'bk_app_code_test',
+                        'bk_app_code_test_z',
+                    ],
+                }
+            ],
+        )
+
+        DomainResolutionManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.domainResolution == DomainResolutionSpec(
+            nameservers=['192.168.1.3', '192.168.1.4'],
+            hostAliases=[
+                HostAlias(
+                    ip='1.1.1.1',
+                    hostnames=[
+                        'bk_app_code_test',
+                        'bk_app_code_test_z',
+                    ],
+                )
+            ],
+        )
 
 
 def test_get_manifest(bk_module):

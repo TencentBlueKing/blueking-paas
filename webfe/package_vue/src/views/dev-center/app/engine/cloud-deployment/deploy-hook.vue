@@ -94,7 +94,7 @@
           v-if="preFormData.enabled"
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
-          style="width: 510px; position: relative;"
+          style="position: relative;"
         >
           <bk-tag-input
             v-model="preFormData.args"

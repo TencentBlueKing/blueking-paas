@@ -198,7 +198,7 @@
                         <i
                           v-if="!volumeFormData.source_config_data[item.value]"
                           class="icon paasng-icon paasng-paas-remind-fill tips-icon"
-                          v-bk-tooltips="$t('文件内容不可为空')"></i>
+                          v-bk-tooltips="$t('文件内容不能为空')"></i>
                       </div>
                       <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
                         <i class="paasng-icon paasng-edit2" @click="handleEditLabel(item)" />
@@ -231,8 +231,7 @@
   </div>
 </template>
 
-<script>
-import { cloneDeep } from 'lodash';
+<script>import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import ResourceEditor from './comps/deploy-resource-editor';
 // import i18n from '@/language/i18n.js';

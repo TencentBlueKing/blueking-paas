@@ -152,6 +152,7 @@ class DeploymentOperationSLZ(serializers.Serializer):
     version_info = VersionInfoSLZ(help_text="版本信息")
     err_detail = serializers.CharField(help_text="错误原因")
     has_requested_int = serializers.BooleanField(help_text="部署是否被中断")
+    advanced_options = serializers.DictField(help_text="部署选项")
 
 
 class OfflineOperationSLZ(serializers.Serializer):

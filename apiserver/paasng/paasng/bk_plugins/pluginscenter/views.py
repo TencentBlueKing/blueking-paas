@@ -449,6 +449,12 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
+        # 如果插件定义了不允许发布已经发布过的代码分支
+        release_revision = plugin.pd.release_revision
+        if not release_revision.allowDuplicateSourVersion:
+            if PluginRelease.objects.filter(plugin=plugin, source_version_name=data['source_version_name']).exists():
+                raise error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION
+
         release = PluginRelease.objects.create(
             plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
         )
@@ -565,6 +571,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 constants.SemverAutomaticType.PATCH: str(current_version_no.bump_patch()),
             }
 
+        # 插件可定义：新建版本时是否能选择已经发布过的分支
+        released_source_versions = set(
+            PluginRelease.objects.filter(plugin=plugin).values_list('source_version_name', flat=True)
+        )
+
         return Response(
             {
                 "docs": release_revision.docs,
@@ -573,6 +584,8 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 "version_type": release_revision.revisionType,
                 "extra_fields": cattr.unstructure(release_revision.extraFields),
                 "source_versions": cattr.unstructure(versions),
+                "allow_duplicate_source_version": release_revision.allowDuplicateSourVersion,
+                "released_source_versions": released_source_versions,
                 "semver_choices": semver_choices,
                 "current_release": serializers.PlainPluginReleaseVersionSLZ(current_release).data
                 if current_release

@@ -475,24 +475,34 @@ export default {
 
     // 保存
     handleSave() {
+      // 空值保存
+      if (!this[this.dataName].service.length) {
+        this.saveExecution();
+        return;
+      }
       // 表单校验
       this.$refs[this.dataName].validate().then(() => {
-        // 备份数据更新
-        this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
-        switch (this.dataName) {
-          case 'serviceFormData':
-            this.saveServiceDiscoveryData();
-            break;
-          case 'dnsRuleFormData':
-            this.$emit('save', { key: 'host_aliases', value: this.formatdnsRuleData() });
-            break;
-          default:
-            this.$emit('save', { key: 'nameservers', value: this.formatdnsServerData() });
-            break;
-        }
+        this.saveExecution();
       }, (validator) => {
         console.error(`${validator.field}：${validator.content}`);
       });
+    },
+
+    // 调用对用接口
+    saveExecution() {
+      // 备份数据更新
+      this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
+      switch (this.dataName) {
+        case 'serviceFormData':
+          this.saveServiceDiscoveryData();
+          break;
+        case 'dnsRuleFormData':
+          this.$emit('save', { key: 'host_aliases', value: this.formatdnsRuleData() });
+          break;
+        default:
+          this.$emit('save', { key: 'nameservers', value: this.formatdnsServerData() });
+          break;
+      }
     },
 
     // 服务发现数据格式化

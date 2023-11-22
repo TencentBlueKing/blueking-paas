@@ -152,7 +152,15 @@ class DeploymentOperationSLZ(serializers.Serializer):
     version_info = VersionInfoSLZ(help_text="版本信息")
     err_detail = serializers.CharField(help_text="错误原因")
     has_requested_int = serializers.BooleanField(help_text="部署是否被中断")
-    advanced_options = serializers.DictField(help_text="部署选项")
+
+    advanced_options = serializers.SerializerMethodField(allow_null=True)
+
+    def get_advanced_options(self, obj: Deployment) -> Dict:
+        if obj.advanced_options:
+            return {
+                "image_pull_policy": obj.advanced_options.image_pull_policy.value,
+            }
+        return {}
 
 
 class OfflineOperationSLZ(serializers.Serializer):

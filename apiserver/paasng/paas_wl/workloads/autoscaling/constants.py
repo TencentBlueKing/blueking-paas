@@ -61,3 +61,13 @@ class ScalingMetric(str, StructuredEnum):
     MEMORY_UTILIZATION = EnumField('memoryUtilization', label=_('内存使用率'))
     CPU_AVERAGE_VALUE = EnumField('cpuAverageValue', label=_('CPU 使用量'))
     MEMORY_AVERAGE_VALUE = EnumField('memoryAverageValue', label=_('内存使用量'))
+
+
+# The default metrics for autoscaling, do not support customize at this time
+DEFAULT_METRICS = [
+    {
+        "type": 'Resource',
+        "metric": 'cpuUtilization',
+        "value": '85',
+    },
+]

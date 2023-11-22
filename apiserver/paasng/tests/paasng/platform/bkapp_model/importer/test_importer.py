@@ -59,8 +59,8 @@ def test_import_with_enum_type(bk_module, base_manifest):
     proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
     assert proc_spec.plan_name == ResQuotaPlan.P_DEFAULT.value
     assert proc_spec.scaling_config == {
-        "minReplicas": 1,
-        "maxReplicas": 2,
+        "min_replicas": 1,
+        "max_replicas": 2,
         "policy": ScalingPolicy.DEFAULT.value,
     }
 
@@ -160,7 +160,7 @@ class TestAutoscaling:
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_autoscaling("stag")
-        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'maxReplicas': 1, 'minReplicas': 1}
+        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'max_replicas': 1, 'min_replicas': 1}
 
     def test_missing_policy(self, bk_module, base_manifest):
         base_manifest["spec"]["envOverlay"] = {
@@ -177,4 +177,4 @@ class TestAutoscaling:
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_autoscaling("stag")
-        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'maxReplicas': 1, 'minReplicas': 1}
+        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'max_replicas': 1, 'min_replicas': 1}

@@ -37,7 +37,7 @@ class Test__import_env_overlays:
             target_replicas=2,
             plan_name=ResQuotaPlan.P_DEFAULT,
             autoscaling=True,
-            scaling_config={"minReplicas": 1, "maxReplicas": 1, "policy": "default"},
+            scaling_config={"min_replicas": 1, "max_replicas": 1, "policy": "default"},
         )
         G(
             ProcessSpecEnvOverlay,
@@ -113,14 +113,14 @@ class Test__import_env_overlays:
 
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").autoscaling
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").scaling_config == {
-            "minReplicas": 1,
-            "maxReplicas": 2,
+            "min_replicas": 1,
+            "max_replicas": 2,
             "policy": "default",
         }
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").autoscaling
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").scaling_config == {
-            "minReplicas": 2,
-            "maxReplicas": 5,
+            "min_replicas": 2,
+            "max_replicas": 5,
             "policy": "default",
         }
 

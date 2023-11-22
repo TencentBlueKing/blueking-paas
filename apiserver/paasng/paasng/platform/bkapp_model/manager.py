@@ -16,10 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Callable, Dict, Iterable, List, Tuple, Union
+from dataclasses import asdict
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import ProcessTmpl
@@ -225,6 +227,13 @@ class ModuleProcessSpecManager:
         """
         proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
         for env_name, overlay in env_overlay.items():
+            scaling_config = overlay.get("scaling_config")
+            if scaling_config:
+                # Remove not allowed fields such as "metrics"
+                # TODO: Use `AutoscalingConfig` type
+                allowed_fields = ['min_replicas', 'max_replicas', 'policy']
+                scaling_config = {k: v for k, v in scaling_config.items() if k in allowed_fields}
+
             ProcessSpecEnvOverlay.objects.update_or_create(
                 proc_spec=proc_spec,
                 environment_name=env_name,
@@ -232,7 +241,7 @@ class ModuleProcessSpecManager:
                     "target_replicas": overlay.get("target_replicas"),
                     "plan_name": overlay.get("plan_name"),
                     "autoscaling": overlay.get("autoscaling", False),
-                    "scaling_config": overlay.get("scaling_config"),
+                    "scaling_config": scaling_config,
                 },
             )
 
@@ -243,6 +252,21 @@ class ModuleProcessSpecManager:
             proc_spec=proc_spec,
             environment_name=AppEnvName(env_name).value,
             defaults={"target_replicas": replicas},
+        )
+
+    def set_autoscaling(
+        self, proc_name: str, env_name: str, enabled: bool, config: Optional[AutoscalingConfig] = None
+    ):
+        """Set the autoscaling for the given process and environment."""
+        proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
+        defaults: Dict[str, Union[bool, Dict, None]] = {"autoscaling": enabled}
+        if config is not None:
+            defaults.update(scaling_config=asdict(config))
+
+        ProcessSpecEnvOverlay.objects.update_or_create(
+            proc_spec=proc_spec,
+            environment_name=AppEnvName(env_name).value,
+            defaults=defaults,
         )
 
 

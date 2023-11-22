@@ -756,7 +756,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -832,7 +832,7 @@ export default {
           if (!data) this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
           this.$paasMessage({
             theme: 'error',
-            message: e.message || e.detail || this.$t('接口异常'),
+            message: e.detail || e.message || this.$t('接口异常'),
           });
         },
       )
@@ -902,7 +902,7 @@ export default {
       }, (e) => {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       });
     },
@@ -918,7 +918,7 @@ export default {
       }, (e) => {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       });
     },
@@ -1137,7 +1137,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1153,7 +1153,7 @@ export default {
       }, (e) => {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       })
         .finally(() => {
@@ -1188,7 +1188,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1200,7 +1200,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },

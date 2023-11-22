@@ -12,90 +12,6 @@
       :offset-top="30"
       class="app-container middle overview"
     >
-      <!-- 去掉 -->
-      <!-- <section class="deploy-panel deploy-metadata flex mt20">
-                <div class="metadata-wrap">
-                    <div class="data-logo">
-                        <img src="/static/images/smart.png" v-if="isSmartApp" />
-                        <img src="/static/images/docker.png" v-else-if="isDockerApp" />
-                        <svg aria-hidden="true" v-else>
-                            <use xlink:href="#paasng-gitlab-2" v-if="overview.repo.source_type === 'bk_gitlab'"></use>
-                            <use xlink:href="#paasng-git-code" v-if="overview.repo.source_type === 'tc_git'"></use>
-                            <use xlink:href="#paasng-svn" v-if="overview.repo.source_type === 'bk_svn'"></use>
-                            <use xlink:href="#paasng-svn" v-if="overview.repo.source_type === 'bare_svn'"></use>
-                            <use xlink:href="#paasng-git" v-if="overview.repo.source_type === 'bare_git'"></use>
-                            <use xlink:href="#paasng-lesscode" v-if="isLesscodeApp"></use>
-                        </svg>
-                    </div>
-                    <div class="metadata">
-                        <template v-if="overview.repo.source_type === 'bk_svn'">
-                            <div class="data-item">
-                                <span class="data-title" v-bk-overflow-tips> {{ $t('仓库：') }} {{overview.repo.display_name}}</span>
-                            </div>
-                            <div class="data-item">
-                                <div class="data-value" v-bk-overflow-tips> {{ $t('地址：') }} {{overview.repo.repo_url}}</div>
-                            </div>
-                            <a class="mr10" target="_blank" :href="overview.repo.repo_url"> {{ $t('点击访问') }} </a>
-                        </template>
-                        <template v-else>
-                            <template v-if="isLesscodeApp">
-                                <div class="data-item">
-                                    <span class="data-title mr15"> {{ $t('仓库：蓝鲸可视化开发平台提供源码包') }} </span>
-                                </div>
-                                <router-link :to="{ name: 'appPackages' }" class="mr10"> {{ $t('查看包版本') }} </router-link>
-                                <a :href="GLOBAL.DOC.LESSCODE_START" target="_blank" class="mr10"> {{ $t('开发指引') }} </a>
-                                <a v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" :href="lessCodeData.address_in_lesscode || 'javascript:;'" @click="handleLessCode"> {{ $t('我要开发') }} </a>
-                            </template>
-                            <template v-else-if="isSmartApp">
-                                <div class="data-item">
-                                    <span class="data-title mr15"> {{ $t('仓库：蓝鲸 S-mart 源码包') }} </span>
-                                </div>
-                                <router-link :to="{ name: 'appPackages' }" class="mr10"> {{ $t('查看包版本') }} </router-link>
-                            </template>
-                            <template v-else>
-                                <div class="data-item">
-                                    <span class="data-title mr15"> {{ $t('仓库：') }} {{overview.repo.display_name}}</span>
-                                    <template v-if="overview.repo.authorized">
-                                        <label class="data-label success">
-                                            <span class="text"> {{ $t('已授权') }} </span>
-                                        </label>
-                                    </template>
-                                    <template v-else>
-                                        <label class="data-label">
-                                            <span class="text"> {{ $t('未授权') }} </span>
-                                        </label>
-                                    </template>
-                                </div>
-                                <div class="data-item">
-                                    <div class="data-value" v-bk-overflow-tips> {{ $t('地址：') }} {{overview.repo.repo_url}}</div>
-                                </div>
-                                <div class="data-item" v-if="overview.repo.source_dir">
-                                    <div class="data-value" v-bk-overflow-tips> {{ $t('部署目录：') }} {{overview.repo.source_dir}}</div>
-                                </div>
-                                <a class="mr10" target="_blank" v-if="!isDockerApp" :href="overview.repo.repo_url"> {{ $t('点击访问') }} </a>
-                                <router-link target="_blank" v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE && !overview.repo.authorized" :to="{ name: 'serviceCode' }"> {{ $t('前往授权') }} </router-link>
-                            </template>
-                        </template>
-                    </div>
-                </div>
-
-                <div class="metadata-wrap" v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE">
-                    <div class="data-logo">
-                        <svg aria-hidden="true">
-                            <use xlink:href="#paasng-python" v-if="overview.language === 'Python'"></use>
-                            <use xlink:href="#paasng-nodejs-2" v-if="overview.language === 'NodeJS'"></use>
-                            <use xlink:href="#paasng-golang" v-if="overview.language === 'Go'"></use>
-                        </svg>
-                    </div>
-                    <div class="metadata">
-                        <div class="data-item"> {{ $t('镜像：') }} {{overview.stack || '--'}}</div>
-                        <div class="data-item">
-                            <div class="data-value" v-bk-overflow-tips> {{ $t('构建工具：') }} {{buildpacks || '--'}}</div>
-                        </div>
-                        <router-link :to="{ name: 'appEnvVariables', params: { id: appCode, moduleId: curModuleId } }"> {{ $t('查看详情') }} </router-link>
-                    </div>
-                </div>
-            </section> -->
 
       <section class="deploy-panel deploy-main">
         <ul
@@ -196,11 +112,12 @@ export default {
     '$route'(newVal, oldVal) {
       if (newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId) {
         console.log('init-overview');
+        // eslint-disable-next-line no-plusplus
         this.renderIndex++;
         this.init();
       }
     },
-    curModuleId(val) {
+    curModuleId() {
       // this.getLessCode();
     },
   },

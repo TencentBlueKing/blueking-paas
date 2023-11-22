@@ -91,13 +91,13 @@
                 >
                   <div
                     class="dot"
-                    :class="instance.state"
+                    :class="instance.rich_status"
                   >
                   </div>
                   <span
-                    v-dashed="{disabled: instance.state === 'Running'}"
+                    v-dashed="{disabled: instance.rich_status === 'Running'}"
                     v-bk-tooltips="instance.state_message || ''">
-                    {{ instance.state || '--' }}
+                    {{ instance.rich_status || '--' }}
                   </span>
                 </div>
               </div>

@@ -434,7 +434,7 @@ export default {
     handleShowDialog(process, env = 'stag', moduleName) {
       this.environment = env;
       this.moduleName = moduleName;
-      // this.getAutoScalFlag();
+      this.getAutoScalFlag();
 
       // 最大副本数
       maxReplicasNum = process.maxReplicas;

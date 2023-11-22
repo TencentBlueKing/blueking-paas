@@ -168,22 +168,22 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         """
         value: Union[str, int]
         if spec.metric == ScalingMetric.CPU_UTILIZATION:
-            metric_name, target_type = ScalingMetricName.CPU.value, ScalingMetricTargetType.UTILIZATION
+            metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.UTILIZATION
             value_key, value = 'averageUtilization', int(spec.value)
 
         elif spec.metric == ScalingMetric.MEMORY_UTILIZATION:
-            metric_name, target_type = ScalingMetricName.MEMORY.value, ScalingMetricTargetType.UTILIZATION
+            metric_name, target_type = ScalingMetricName.MEMORY, ScalingMetricTargetType.UTILIZATION
             value_key, value = 'averageUtilization', int(spec.value)
 
         elif spec.metric == ScalingMetric.CPU_AVERAGE_VALUE:
-            metric_name, target_type = ScalingMetricName.CPU.value, ScalingMetricTargetType.AVERAGE_VALUE
+            metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.AVERAGE_VALUE
             value_key, value = 'averageValue', spec.value
 
         elif spec.metric == ScalingMetric.MEMORY_AVERAGE_VALUE:
-            metric_name, target_type = ScalingMetricName.MEMORY.value, ScalingMetricTargetType.AVERAGE_VALUE
+            metric_name, target_type = ScalingMetricName.MEMORY, ScalingMetricTargetType.AVERAGE_VALUE
             value_key, value = 'averageValue', spec.value
 
         else:
             raise ValueError('unsupported metric: {}'.format(spec.metric))
 
-        return {'name': metric_name, 'target': {'type': target_type.value, value_key: value}}
+        return {'name': metric_name.value, 'target': {'type': target_type.value, value_key: value}}

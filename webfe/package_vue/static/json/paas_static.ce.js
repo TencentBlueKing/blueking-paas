@@ -144,6 +144,9 @@ export const PLATFORM_CONFIG = {
 
     // 文档
     DOC: {
+        // 产品文档，导航右上角展示的文档总入口
+        PRODUCT_DOC: BK_DOCS_URL_PREFIX + '/markdown/PaaS/UserGuide/Overview/README.md',
+    
         // 配置蓝鲸应用访问入口
         APP_ENTRY_INTRO: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#section-3',
 

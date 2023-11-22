@@ -75,22 +75,27 @@
           </div>
         </bk-popover>
         <!-- 构建完成可以进入下一步 -->
-        <bk-button
-          v-if="!isFinalStage"
-          theme="primary"
-          class="ml5"
-          style="width: 120px"
-          :disabled="!isAllowNext"
-          @click="handlerNext()"
-        >
-          <!-- 是否可以进行下一步 -->
-          <template v-if="stageId !== 'market'">
-            {{ $t('下一步') }}
-          </template>
-          <template v-else>
-            {{ $t('保存') }}
-          </template>
-        </bk-button>
+        <bk-popover placement="top" :disabled="nextTips.disabled">
+          <bk-button
+            v-if="!isFinalStage"
+            theme="primary"
+            class="ml5"
+            style="width: 120px"
+            :disabled="!isAllowNext"
+            @click="handlerNext()"
+          >
+            <!-- 是否可以进行下一步 -->
+            <template v-if="stageId !== 'market'">
+              {{ $t('下一步') }}
+            </template>
+            <template v-else>
+              {{ $t('保存') }}
+            </template>
+          </bk-button>
+          <div slot="content" style="white-space: normal;">
+            {{ nextTips.content }}
+          </div>
+        </bk-popover>
       </div>
     </paas-content-loader>
   </div>
@@ -195,6 +200,18 @@ export default {
     // 是否为审批阶段
     isItsmStage() {
       return this.curStageComponmentType === 'itsm';
+    },
+    // 下一步 tips
+    nextTips() {
+      const config = {
+        content: '',
+        disabled: true,
+      };
+      if (this.stageData?.detail?.next_step_disabled_tips) {
+        config.content = this.stageData.detail?.next_step_disabled_tips || '';
+        config.disabled = false;
+      }
+      return config;
     },
   },
   watch: {

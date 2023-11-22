@@ -240,7 +240,7 @@
               <ul class="monitor-navigation-admin">
                 <li class="nav-item">
                   <a
-                    :href="GLOBAL.LINK.BK_APP_DOC"
+                    :href="GLOBAL.DOC.PRODUCT_DOC"
                     target="_blank"
                   > {{ $t('产品文档') }} </a>
                 </li>

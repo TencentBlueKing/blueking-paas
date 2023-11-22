@@ -11,7 +11,8 @@
       </div>
       <bk-form
         ref="pluginForm"
-        style="width: 730px;"
+        style="width: 730px"
+        :label-width="170"
         :model="form"
         :rules="rules"
       >
@@ -25,38 +26,36 @@
             <bk-select
               v-model="form.pd_id"
               class="w480"
-              ext-cls="slot-class"
+              ext-popover-cls="plugin-type-custom"
               searchable
               :clearable="false"
               :placeholder="$t('插件类型')"
               @change="changePluginType"
             >
               <bk-option
-                v-for="(option, index) in pluginTypeList"
+                v-for="option in pluginTypeList"
                 :id="option.plugin_type.id"
-                :key="index"
+                :key="option.plugin_type.id"
                 v-bind="option"
               >
                 <div
                   id="guide-wrap"
                   class="guide-container"
                 >
-                  <div class="guide-list">
-                    <div class="flex-row align-items-center guide-item">
-                      <img
-                        :src="option.plugin_type.logo"
-                        onerror="this.src='/static/images/plugin-default.svg'"
+                  <div class="flex-row align-items-center guide-item">
+                    <img
+                      :src="option.plugin_type.logo"
+                      onerror="this.src='/static/images/plugin-default.svg'"
+                    />
+                    <div class="guide-right pl10">
+                      <div class="guide-plugin-name">
+                        {{ option.plugin_type.name }}
+                      </div>
+                      <div
+                        v-bk-overflow-tips="option.plugin_type.description"
+                        class="guide-plugin-desc"
                       >
-                      <div class="guide-right pl10">
-                        <div class="guide-plugin-name">
-                          {{ option.plugin_type.name }}
-                        </div>
-                        <div
-                          v-bk-tooltips.right="option.plugin_type.description"
-                          class="guide-plugin-desc"
-                        >
-                          {{ option.plugin_type.description }}
-                        </div>
+                        {{ option.plugin_type.description }}
                       </div>
                     </div>
                   </div>
@@ -75,18 +74,24 @@
             </a>
           </div>
           <div
-            v-if="curPluginItem.plugin_type && curPluginItem.plugin_type.approval_config && curPluginItem.plugin_type.approval_config.enabled"
+            v-if="
+              curPluginItem.plugin_type &&
+                curPluginItem.plugin_type.approval_config &&
+                curPluginItem.plugin_type.approval_config.enabled
+            "
             class="plugin-info w480 mt15"
           >
             <i
-              style="color: #3A84FF;"
+              style="color: #3a84ff"
               class="paasng-icon paasng-info-circle"
             />
             {{ curPluginItem.plugin_type.approval_config.tips }}
             <a
               target="_blank"
               :href="curPluginItem.plugin_type.approval_config.docs"
-            >{{ $t('详见文档') }}</a>
+            >
+              {{ $t('详见文档') }}
+            </a>
           </div>
         </bk-form-item>
         <bk-form-item
@@ -134,9 +139,9 @@
             @change="changePluginLanguage"
           >
             <bk-option
-              v-for="(option, index) in pluginLanguage"
+              v-for="option in pluginLanguage"
               :id="option.id"
-              :key="index"
+              :key="option.id"
               :name="option.language"
             />
           </bk-select>
@@ -155,9 +160,9 @@
             :placeholder="$t('适用语言')"
           >
             <bk-option
-              v-for="(option, index) in applicableLanguageList"
+              v-for="option in applicableLanguageList"
               :id="option.id"
-              :key="index"
+              :key="option.id"
               :name="option.text"
             />
           </bk-select>
@@ -175,9 +180,9 @@
             :placeholder="$t('初始化模板')"
           >
             <bk-option
-              v-for="(option, index) in pluginTemplateList"
+              v-for="option in pluginTemplateList"
               :id="option.id"
-              :key="index"
+              :key="option.id"
               :name="option.name"
             />
           </bk-select>
@@ -213,8 +218,9 @@
             v-model="schemaFormData"
             ref="bkForm"
             :http-adapter="{ request }"
-            :schema="schema">
-          </BkSchemaForm>
+            :label-width="170"
+            :schema="schema"
+          ></BkSchemaForm>
         </bk-form>
       </template>
 
@@ -385,7 +391,6 @@ export default {
         // 参数指定插件类型，没有指定默认为第一项
         this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
 
-        console.log('res', res);
         const properties = res[0]?.schema.extra_fields;
         this.schema = { type: 'object', properties };
         this.addRules();
@@ -460,6 +465,7 @@ export default {
       this.languageData = this.pluginLanguage.find(e => e.id === value);
       // 初始化模板
       this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
+      this.form.templateName = '';
     },
     // 富文本编辑
     onEditorChange(e) {
@@ -519,7 +525,7 @@ export default {
         const data = await http.get(url);
         return data.map(e => ({ label: e.name, value: e.code_name }));
       } catch (error) {
-        console.log('error', error);
+        console.warn(error);
       }
     },
   },
@@ -527,81 +533,92 @@ export default {
 </script>
 <style lang="scss" scoped>
 .bk-create-plugin-warp {
-    padding: 28px 0 44px;
-    width: calc(100% - 120px);
-    margin: 0 auto;
-    min-height: calc(100vh - 120px);
-    .base-info-tit{
-        margin: 5px 0 20px;
-        font-weight: Bold;
-        color: #63656E;
-        padding: 5px 16px;
-        background: #F5F7FA;
-        border-radius: 2px;
+  padding: 28px 0 44px;
+  width: calc(100% - 120px);
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
+  .base-info-tit {
+    margin: 5px 0 20px;
+    font-weight: Bold;
+    color: #63656e;
+    padding: 5px 16px;
+    background: #f5f7fa;
+    border-radius: 2px;
+  }
+  .w480 {
+    width: 480px;
+  }
+  .tips {
+    color: #979ba5;
+    font-size: 12px;
+  }
+  .plugin-info {
+    background: #f0f8ff;
+    border: 1px solid #a3c5fd;
+    font-size: 12px;
+    color: #666666;
+    padding: 0 9px;
+  }
+  .edit-form-item {
+    height: 300px;
+    .editor {
+      width: 800px;
+      height: 200px;
     }
-    .w480{
-        width: 480px;
-    }
-    .tips{
-        color: #979ba5;
-        font-size: 12px;
-    }
-    .plugin-info{
-        background: #F0F8FF;
-        border: 1px solid #A3C5FD;
-        font-size: 12px;
-        color: #666666;
-        padding: 0 9px;
-    }
-    .edit-form-item{
-        height: 300px;
-        .editor{
-            width: 800px;
-            height: 200px;
-        }
-    }
+  }
 }
 .button-warp {
-    margin: 30px 0 0 150px;
+  margin: 30px 0 0 150px;
 }
-.guide-container{
-    background: #fff;
-    .guide-item{
-        cursor: pointer;
-        height: 64px;
-        img{
-            width: 48px;
-            height: 48px;
-        }
-        .guide-plugin-name{
-            font-size: 14px;
-            color: #313238;
-        }
-        .guide-plugin-desc{
-            line-height: 24px;
-            font-size: 12px;
-            color: #63656E;
-        }
+.guide-container {
+  background: #fff;
+  .guide-item {
+    cursor: pointer;
+    height: 64px;
+    img {
+      width: 48px;
+      height: 48px;
     }
-    .guide-item:hover {
-        background: #e7f1fe;
+    .guide-plugin-name {
+      font-size: 14px;
+      color: #313238;
     }
+    .guide-plugin-desc {
+      line-height: 24px;
+      font-size: 12px;
+      // 宽度
+      color: #63656e;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    .guide-right {
+      overflow: hidden;
+    }
+  }
+  .guide-item:hover {
+    background: #e7f1fe;
+  }
 }
 .plugin-guide {
-    font-size: 12px;
-    cursor: pointer;
-    margin-left: 10px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 10px;
 }
 .plugin-top-title {
-    margin: 12px 0 14px;
+  margin: 12px 0 14px;
 }
 </style>
-<style>
-  .bk-form-warp{
-    width: 630px !important;
-  }
-  .guide-input input {
-      border: none;
-      border-bottom: 1px solid #c4c6cc;
-  }
+<style lang="scss">
+.bk-form-warp {
+  width: 630px !important;
+}
+.guide-input input {
+  border: none;
+  border-bottom: 1px solid #c4c6cc;
+}
+
+.plugin-type-custom .is-selected .guide-container {
+  background-color: #f4f6fa !important;
+}
 </style>

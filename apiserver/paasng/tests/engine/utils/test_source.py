@@ -180,6 +180,7 @@ class TestGetProcesses:
         assert processes == expected
 
     def test_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
+        """s-mart case: 当处理 app_desc 后, 从源码包读取进程包含进程启动命令、方案、副本数等信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 
@@ -193,7 +194,11 @@ class TestGetProcesses:
                 'bk_app_code': bk_app_full.code,
                 'bk_app_name': bk_app_full.name,
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {"is_default": True, "processes": {'web': {'command': 'start web'}}, "language": "python"},
+                "module": {
+                    "is_default": True,
+                    "processes": {'web': {'command': 'start web', 'plan': 'default', 'replicas': 5}},
+                    "language": "python",
+                },
             },
         )
 
@@ -204,7 +209,9 @@ class TestGetProcesses:
         handler.handle_deployment(bk_deployment_full)
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
+        assert processes == cast_to_processes(
+            {'web': {'name': 'web', 'command': 'start web', 'plan': 'default', 'replicas': 5}}
+        )
 
     def test_get_from_deploy_config(self, bk_module_full, bk_deployment_full):
         deploy_config = bk_module_full.get_deploy_config()
@@ -215,6 +222,7 @@ class TestGetProcesses:
         assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
 
     def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
+        """lesscode case: 当未处理 app_desc 时, 从源码包读取进程仅包含进程启动命令信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 
@@ -228,7 +236,11 @@ class TestGetProcesses:
                 'bk_app_code': bk_app_full.code,
                 'bk_app_name': bk_app_full.name,
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {"is_default": True, "processes": {'web': {'command': 'start web'}}, "language": "python"},
+                "module": {
+                    "is_default": True,
+                    "processes": {'web': {'command': 'start web', 'plan': 'default'}},
+                    "language": "python",
+                },
             },
         )
 

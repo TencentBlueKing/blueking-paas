@@ -26,6 +26,7 @@ class ErrorCodes:
     THIRD_PARTY_API_ERROR = ErrorCode(_("插件后台系统异常, 请联系管理员"))
     DELETE_REPO_ERROR = ErrorCode(_("删除插件项目(源码)失败, 请联系管理员"))
 
+    CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION = ErrorCode(_("该代码分支/Tag 已经发布过，不能重复发布"))
     CANNOT_RELEASE_ONGOING_EXISTS = ErrorCode(_("已有发布任务进行中，请刷新查看"))
     CANNOT_RERUN_ONGOING_STEPS = ErrorCode(_("重试步骤失败, 当前步骤不支持重试。"))
     CANNOT_ROLLBACK_CURRENT_STEP = ErrorCode(_("无法退回至上一步"))

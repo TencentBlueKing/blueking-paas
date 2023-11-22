@@ -151,6 +151,7 @@ class ItsmStage(BaseStageController):
         assert self.stage.itsm_detail
         ticket_info = get_ticket_status(self.stage.itsm_detail.sn)
         ticket_info['fields'] = self.stage.itsm_detail.fields
+        self.stage.refresh_from_db()
         return {
             **basic_info,
             "detail": ItsmTicketInfoSlz(ticket_info).data,
@@ -268,9 +269,8 @@ class PipelineStage(BaseStageController):
         resp = utils.make_client(stage_definition.api.postCommand).call(
             data=data, path_params={"plugin_id": self.plugin.id}
         )
-        if result := resp.get("result"):
+        if not (result := resp.get("result")):
             logger.error(f"execute post command [plugin_id: {self.plugin.id}, data:{data}], error: {resp}")
-        logger.info(f"execute post command success,resp: {resp}")
         return result
 
 
@@ -287,9 +287,12 @@ class SubPageStage(BaseStageController):
         if not stage_def:
             raise error_codes.STAGE_DEF_NOT_FOUND
 
-        # 能否进入到下一步
         page_url = self.format_page_url(stage_def)
+
+        # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
         can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release)
+        if can_proceed:
+            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         return {
             **basic_info,
             "detail": {

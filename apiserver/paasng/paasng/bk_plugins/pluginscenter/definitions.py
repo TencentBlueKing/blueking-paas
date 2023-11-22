@@ -165,6 +165,7 @@ class ReleaseRevisionDefinition(BaseModel):
 
     revisionType: Literal["all", "master", "tag"] = Field(description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)")
     revisionPattern: Optional[str] = Field(description="代码版本正则表达式模板, 留空则不校验")
+    allowDuplicateSourVersion: bool = Field(default=True, description="是否允许选择已经发布过的代码分支, 不填则默认为 True")
     docs: Optional[str] = Field(description="代码版本校验失败的指引文档")
     versionNo: Literal["automatic", "revision", "commit-hash", "self-fill"] = Field(
         description="版本号生成规则, 自动生成(automatic)," "与代码版本一致(revision)," "与提交哈希一致(commit-hash)," "用户自助填写(self-fill)"

@@ -227,7 +227,6 @@ def get_cnative_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     result = get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
 
     # Part: Address for bk_docs_center saas
-    # method(get_preallocated_address) and module(ConfigVar) will be referenced circularly
     result.update({'BK_DOCS_URL_PREFIX': get_bk_doc_url_prefix()})
 
     # Part: env vars shared from other modules

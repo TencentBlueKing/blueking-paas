@@ -187,6 +187,11 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
         exclude = ("plugin", "stages_shortcut")
 
 
+class overviewPageSLZ(serializers.Serializer):
+    top_url = serializers.CharField(default=None, source="topUrl")
+    bottom_url = serializers.CharField(default=None, source="bottomUrl")
+
+
 class PluginInstanceSLZ(serializers.ModelSerializer):
     pd_id = serializers.CharField(source="pd.identifier", help_text="插件类型标识")
     pd_name = serializers.CharField(source="pd.name", help_text="插件类型名称")
@@ -200,6 +205,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     logo = serializers.CharField(source="get_logo_url", help_text="插件logo", allow_null=True)
     itsm_detail = ItsmDetailSLZ()
     role = PluginRoleSLZ(required=False)
+    overview_page = overviewPageSLZ(source="get_overview_page")
 
     def to_representation(self, instance):
         # 注入当前用户的角色信息

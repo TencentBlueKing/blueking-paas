@@ -89,6 +89,7 @@ class Command(BaseCommand):
                 "repository_group": pd_data.spec.basicInfo.repositoryGroup,
                 "api": pd_data.spec.basicInfo.api,
                 "extra_fields": pd_data.spec.basicInfo.extraFields,
+                "overview_page": pd_data.spec.basicInfo.overviewPage,
             },
         )
 

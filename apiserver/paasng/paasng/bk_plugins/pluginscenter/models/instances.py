@@ -31,7 +31,7 @@ from pilkit.processors import ResizeToFill
 from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
-from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
+from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -101,6 +101,16 @@ class PluginInstance(UuidAuditedModel):
                 logger.info("Unable to make logo url for plugin: %s/%s", self.pd.identifier, self.id)
                 return default_url
         return default_url
+
+    def get_overview_page(self) -> Optional[PluginoverviewPage]:
+        if not (overview_page := self.pd.basic_info_definition.overview_page):
+            return None
+
+        if overview_page.topUrl:
+            overview_page.topUrl = overview_page.topUrl.format(plugin_id=self.id)
+        if overview_page.bottomUrl:
+            overview_page.bottomUrl = overview_page.bottomUrl.format(plugin_id=self.id)
+        return overview_page
 
     class Meta:
         unique_together = ("pd", "id")

@@ -133,12 +133,16 @@ class SchemaViewSet(ViewSet):
     def get_config_schema(self, request, pd_id):
         """get config schema for given PluginType"""
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        # 部分插件未定义配置管理
+        if not hasattr(pd, 'config_definition'):
+            return Response(data={})
+
         config_definition = pd.config_definition
         return Response(data=serializers.PluginConfigSchemaSLZ(config_definition).data)
 
 
 class PluginInstanceMixin:
-    """PluginInstanceMixin provide a shortcut method to get a plugin instance
+    """PluginInstanceMixin provide a shortcut method to get a plugin instance`
 
     IF request.user DOES NOT have object permissions, will raise PermissionDeny exception
     """

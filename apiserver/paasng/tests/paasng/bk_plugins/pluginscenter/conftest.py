@@ -125,6 +125,10 @@ def pd():
             "update": make_api_resource("update-instance-{ plugin_id }"),
             "delete": make_api_resource("delete-instance-{ plugin_id }"),
         },
+        overview_page={
+            "bottomUrl": "http://example.com/bottom/{plugin_id}",
+            "topUrl": "http://example.com/top/{plugin_id}",
+        },
     )
 
     pd.config_definition = G(

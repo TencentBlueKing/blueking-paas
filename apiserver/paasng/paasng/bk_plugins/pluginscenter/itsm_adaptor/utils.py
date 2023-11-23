@@ -70,7 +70,7 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
 
     # 组装提单数据,包含插件的基本信息和版本信息
     basic_fields = _get_basic_fields(pd, plugin)
-    advanced_fields = _get_advanced_fields(version, market_info)
+    advanced_fields = _get_advanced_fields(pd, plugin, version, market_info)
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
     fields = basic_fields + advanced_fields + title_fields
 
@@ -169,7 +169,9 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
     return fields
 
 
-def _get_advanced_fields(version: PluginRelease, market_info: Optional[PluginMarketInfo]) -> List[dict]:
+def _get_advanced_fields(
+    pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, market_info: Optional[PluginMarketInfo]
+) -> List[dict]:
     """获取插件的版本、市场相关字段信息，可用于上线申请提单"""
     fields = [
         {
@@ -199,6 +201,10 @@ def _get_advanced_fields(version: PluginRelease, market_info: Optional[PluginMar
         {
             "key": "contact",
             "value": market_info.contact if market_info else "",
+        },
+        {
+            "key": "version_url",
+            "value": f"{settings.PLUGIN_CENTER_URL}/plugin/{pd.identifier}/{plugin.id}/version-release?release_id={version.id}",  # noqa
         },
     ]
     return fields

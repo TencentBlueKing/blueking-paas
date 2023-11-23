@@ -1196,6 +1196,9 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 # 插件开发中心在蓝盾的项目 ID
 PLUGIN_CENTER_PROJECT_ID = settings.get("PLUGIN_CENTER_PROJECT_ID", default="bkplugins")
 
+# 插件开发者中心访问地址
+PLUGIN_CENTER_URL = settings.get("PLUGIN_CENTER_URL", default=f'{BKPAAS_URL}/plugin-center')
+
 # -----------------
 # 蓝鲸监控配置项
 # -----------------

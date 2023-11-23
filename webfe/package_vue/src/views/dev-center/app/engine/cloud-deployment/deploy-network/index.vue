@@ -53,7 +53,7 @@ export default {
       },
       dnsServeData: {
         title: this.$t('DNS 服务器'),
-        tips: this.$t('应用可通过 hostAliases 字段来添加额外的域名解析规则（效果等同于向 /etc/hosts 文件中追加条目)'),
+        tips: this.$t('应用可通过 nameservers 字段来设置 DNS 服务器 (效果等同于配置 /etc/resolv.conf 文件)'),
         headerCol: ['nameserver'],
         list: [],
       },

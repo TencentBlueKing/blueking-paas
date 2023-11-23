@@ -2431,4 +2431,13 @@ export default {
   告警名称: 'Alarm name',
   批量编辑: 'Batch edit',
   导入: 'Import',
+  网络配置: 'Network Config',
+  域名解析规则: 'Domain resolution rules',
+  'DNS 服务器': 'DNS server',
+  '通过环境变量或配置文件 获取其他应用的访问地址。': 'Retrieve the access address of other applications through environment variables or configuration files.',
+  '应用可通过 hostAliases 字段来添加额外的域名解析规则（效果等同于向 /etc/hosts 文件中追加条目)': 'Applications can use the hostAliases field to add additional domain resolution rules (effectively equivalent to appending entries to the /etc/hosts file).',
+  '应用可通过 nameservers 字段来设置 DNS 服务器 (效果等同于配置 /etc/resolv.conf 文件)': 'Applications can use the nameservers field to set DNS servers (equivalent to configuring the /etc/resolv.conf file).',
+  应用ID: 'Application ID',
+  '请输入模块名称，不填则默认为主模块': 'Please enter the module name, leave it blank for the default main module.',
+  '请输入 IP': 'Please enter the IP',
 };

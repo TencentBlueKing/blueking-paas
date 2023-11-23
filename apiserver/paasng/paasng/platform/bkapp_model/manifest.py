@@ -71,7 +71,7 @@ from paasng.platform.bkapp_model.models import (
     SvcDiscConfig,
 )
 from paasng.platform.bkapp_model.utils import merge_env_vars
-from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
+from paasng.platform.engine.configurations.config_var import get_cnative_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
@@ -501,7 +501,7 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     :param env: The environment object.
     """
     env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
-    for name, value in get_builtin_env_variables(env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX).items():
+    for name, value in get_cnative_env_variables(env).items():
         env_vars.append(EnvVar(name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones

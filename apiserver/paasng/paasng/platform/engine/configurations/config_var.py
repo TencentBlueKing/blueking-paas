@@ -20,19 +20,19 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 from django.conf import settings
 
+from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.core.region.app import BuiltInEnvsRegionHelper
+from paasng.core.region.models import get_region
+from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
+from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.infras.oauth2.utils import get_oauth2_client_secret
-from paasng.core.region.app import BuiltInEnvsRegionHelper
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 from paasng.utils.blobstore import make_blob_store_env
 
 if TYPE_CHECKING:
@@ -214,3 +214,30 @@ def get_builtin_env_variables(engine_app: 'EngineApp', config_vars_prefix: str) 
     envs_by_region_and_env = generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
 
     return {**app_info_envs, **runtime_envs, **bk_address_envs, **envs_by_region_and_env}
+
+
+def get_cnative_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+    """Get env vars for current environment of cloud-native app, this will includes:
+    - built-in env vars
+    - env vars from services
+    """
+    engine_app = env.engine_app
+
+    # Part: system-wide env vars
+    result = get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+
+    # Part: Address for bk_docs_center saas
+    # method(get_preallocated_address) and module(ConfigVar) will be referenced circularly
+    result.update({'BK_DOCS_URL_PREFIX': get_bk_doc_url_prefix()})
+
+    # Part: env vars shared from other modules
+    result.update(ServiceSharingManager(env.module).get_env_variables(env))
+
+    # Part: env vars provided by services
+    result.update(mixed_service_mgr.get_env_vars(engine_app))
+
+    # Part: Application's default sub domains/paths
+    result.update(AppDefaultDomains(env).as_env_vars())
+    result.update(AppDefaultSubpaths(env).as_env_vars())
+
+    return result

@@ -235,8 +235,4 @@ def get_cnative_builtin_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     # Part: env vars provided by services
     result.update(mixed_service_mgr.get_env_vars(engine_app))
 
-    # Part: Application's default sub domains/paths
-    result.update(AppDefaultDomains(env).as_env_vars())
-    result.update(AppDefaultSubpaths(env).as_env_vars())
-
     return result

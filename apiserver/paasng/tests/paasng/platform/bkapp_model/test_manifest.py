@@ -417,13 +417,13 @@ def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
     assert 'bkapp.paas.bk.tencent.com/bkpaas-deploy-id' not in annots
 
 
-def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env, with_wl_apps):
+def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     apply_env_annots(blank_resource, bk_stag_env, deploy_id='foo-id')
     assert blank_resource.metadata.annotations['bkapp.paas.bk.tencent.com/bkpaas-deploy-id'] == 'foo-id'
 
 
-def test_apply_builtin_env_vars(blank_resource, bk_stag_env):
+def test_apply_builtin_env_vars(blank_resource, bk_stag_env, with_wl_apps):
     apply_builtin_env_vars(blank_resource, bk_stag_env)
     var_names = {item.name for item in blank_resource.spec.configuration.env}
-    for name in {"BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL"}:
+    for name in {"BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL", "BK_DOCS_URL_PREFIX"}:
         assert name in var_names

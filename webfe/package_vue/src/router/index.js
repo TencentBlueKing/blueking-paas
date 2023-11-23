@@ -225,6 +225,10 @@ const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/vie
   window.showDeployTip(error);
 });
 
+const networkConfig = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/deploy-network').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appBasicInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/info').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -681,6 +685,15 @@ const router = new Router({
               name: 'observabilityConfig',
               meta: {
                 module: 'observability',
+
+              },
+            },
+            {
+              path: 'network-config',
+              component: networkConfig,
+              name: 'networkConfig',
+              meta: {
+                module: 'network-config',
               },
             },
             {

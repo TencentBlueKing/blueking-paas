@@ -617,6 +617,42 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}`;
     return http.put(url, data, config);
   },
+
+  /**
+   * 获取网络配置-服务发现数据
+   * @param {Object} params 请求参数：appCode
+   */
+  getServiceDiscoveryData({}, { appCode }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/svc_disc/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 全量编辑网络配置-服务发现数据
+   * @param {Object} params 请求参数：appCode
+   */
+  saveServiceDiscoveryData({}, { appCode, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/svc_disc/`;
+    return http.post(url, data, config);
+  },
+
+  /**
+   * 获取网络配置-域名解析和DNS服务器数据
+   * @param {Object} params 请求参数：appCode
+   */
+  getDomainResolutionData({}, { appCode }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domain_resolution/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 保存网络配置-域名解析和DNS服务器数据
+   * @param {Object} params 请求参数：appCode
+   */
+  saveDomainResolutionData({}, { appCode, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domain_resolution/`;
+    return http.post(url, data, config);
+  },
 };
 
 export default {

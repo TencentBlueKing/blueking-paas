@@ -103,13 +103,13 @@
         <div class="replica-count-cls">
           <bk-form-item
             v-if="autoscaling"
-            property="maxReplicas"
-            :label="$t('最大副本数量')"
-            :rules="rules.maxReplicas"
+            property="minReplicas"
+            :label="$t('最小副本数量')"
+            :rules="rules.minReplicas"
             :error-display-type="'normal'"
           >
             <bk-input
-              v-model="scalingConfig.maxReplicas"
+              v-model="scalingConfig.minReplicas"
               type="number"
               :max="5"
               :min="0"
@@ -118,13 +118,13 @@
           </bk-form-item>
           <bk-form-item
             v-if="autoscaling"
-            property="minReplicas"
-            :label="$t('最小副本数量')"
-            :rules="rules.minReplicas"
+            property="maxReplicas"
+            :label="$t('最大副本数量')"
+            :rules="rules.maxReplicas"
             :error-display-type="'normal'"
           >
             <bk-input
-              v-model="scalingConfig.minReplicas"
+              v-model="scalingConfig.maxReplicas"
               type="number"
               :max="5"
               :min="0"

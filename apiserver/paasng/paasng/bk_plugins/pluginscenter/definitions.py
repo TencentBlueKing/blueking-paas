@@ -50,6 +50,7 @@ class FieldSchema(BaseModel):
     default: Optional[Any] = Field(description="默认值")
     maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
+    uiRules: Optional[List] = Field(alias="ui:rules")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
     uiReactions: Optional[List] = Field(alias="ui:reactions")

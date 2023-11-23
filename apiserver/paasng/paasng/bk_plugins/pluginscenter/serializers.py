@@ -251,15 +251,23 @@ class TemplateChoiceField(serializers.ChoiceField):
         return self.choices[super().to_internal_value(data)]
 
 
-def make_string_field(field_schema: FieldSchema) -> serializers.Field:
-    """Generate a Field for verifying a string according to the given field_schema"""
+def _get_init_kwargs(field_schema: FieldSchema) -> dict:
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
         "max_length": field_schema.maxlength,
     }
+    if (not field_schema.uiRules) or ('required' not in field_schema.uiRules):
+        init_kwargs['allow_null'] = True
+        init_kwargs['allow_blank'] = True
     if field_schema.default:
         init_kwargs["default"] = field_schema.default
+    return init_kwargs
+
+
+def make_string_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate a Field for verifying a string according to the given field_schema"""
+    init_kwargs = _get_init_kwargs(field_schema)
     if field_schema.pattern:
         return serializers.RegexField(regex=field_schema.pattern, **init_kwargs)
     return serializers.CharField(**init_kwargs)
@@ -267,17 +275,19 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
 
 def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a array according to the given field_schema"""
+    init_kwargs = _get_init_kwargs(field_schema)
     # 如果没有定义 items，则默认为：List[str]
     if not field_schema.items:
-        return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
+        return serializers.ListField(child=serializers.CharField(), **init_kwargs)
     child_field_schema = cattr.structure(field_schema.items, FieldSchema)
     child_field = make_json_schema_field(child_field_schema)
-    return serializers.ListField(child=child_field)
+    return serializers.ListField(child=child_field, **init_kwargs)
 
 
 def make_bool_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a bool according to the given field_schema"""
-    return serializers.BooleanField(default=field_schema.default)
+    init_kwargs = _get_init_kwargs(field_schema)
+    return serializers.BooleanField(**init_kwargs)
 
 
 def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:

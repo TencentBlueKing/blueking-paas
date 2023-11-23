@@ -779,6 +779,7 @@ export default {
           isExpand: true,
           autoscaling: processInfo.autoscaling,
           type,
+          scalingConfig: processInfo.scaling_config,
         };
         this.updateProcessStatus(process);
 

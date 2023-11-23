@@ -139,6 +139,7 @@
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
+import _ from 'lodash';
 let maxReplicasNum = 0;
 
 export default {
@@ -254,7 +255,8 @@ export default {
     },
 
     isScalingConfigChange() {
-      return JSON.stringify(this.scalingConfig) === JSON.stringify(this.initScalingConfig);
+      return this.autoscaling === this.autoscalingBackUp
+      && JSON.stringify(this.scalingConfig) === JSON.stringify(this.initScalingConfig);
     },
 
     // 进程实例设置
@@ -264,7 +266,7 @@ export default {
         return;
       }
 
-      // 如果没有改变也不允许操作
+      // 如果没有改变值也没有改变扩缩容方式不允许操作
       if (this.isScalingConfigChange()) {
         this.handleCancel();
         return;
@@ -449,6 +451,7 @@ export default {
 
       // 扩容方式
       this.autoscaling = process.autoscaling;
+      this.autoscalingBackUp = _.cloneDeep(this.autoscaling);
       this.curActiveType = process.autoscaling ? 'automatic' : 'manual';
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || maxReplicasNum;
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || minReplicasNum;

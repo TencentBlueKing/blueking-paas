@@ -15,48 +15,23 @@ repos:
         require_serial: true
         entry: bash -c "if [[ -d pre_commit_hooks ]]; then pre_commit_hooks/ip.sh $@; fi"
 
-      # See ./pyproject.toml for below tool's version and settings
-      - id: isort
-        name: isort
-        # Set language to disable pre-commit's virtual-env
+      # 总是使用 --force-exclude 来让 ruff 配置文件中的 exclude 生效
+      - id: ruff-check-fix
+        name: ruff-check-fix
         language: system
         types: [python]
-        exclude: >
-          (?x)^(
-              .*/node_modules/.*
-              | apiserver/paasng/assets/.*
-              | .*/migrations/.*
-              | .*/paasng/platform/mgrlegacy/data/.*
-              | .*/tests/platform/mgrlegacy/assets/.*
-          )$
-        entry: poetry run isort --settings-path=pyproject.toml
-      - id: black
-        name: black
-        # Set language to disable pre-commit's virtual-env
+        # 修复包导入顺序问题，类似 isort 工具
+        entry: poetry run ruff check --force-exclude --select I --fix  
+      - id: ruff-format
+        name: ruff-format
         language: system
         types: [python]
-        exclude: >
-          (?x)^(
-              .*/node_modules/.*
-              | apiserver/paasng/assets/.*
-              | .*/migrations/.*
-              | .*/paasng/platform/mgrlegacy/data/.*
-              | .*/tests/platform/mgrlegacy/assets/.*
-          )$
-        entry: poetry run black --config=pyproject.toml
-      - id: flake8
-        name: flak8
+        entry: poetry run ruff format --force-exclude 
+      - id: ruff-check
+        name: ruff-check
         language: system
         types: [python]
-        exclude: >
-          (?x)^(
-              .*/node_modules/.*
-              | apiserver/paasng/assets/.*
-              | .*/migrations/.*
-              | .*/paasng/platform/mgrlegacy/data/.*
-              | .*/tests/platform/mgrlegacy/assets/.*
-          )$
-        entry: poetry run flake8 
+        entry: poetry run ruff check --force-exclude 
 
       # mypy hooks for each Python project, the hooks must be separated because different
       # project might use their own configurations

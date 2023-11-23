@@ -47,9 +47,13 @@ def update_instance(pd: PluginDefinition, instance: PluginInstance, operator: st
 
 
 def archive_instance(pd: PluginDefinition, instance: PluginInstance, operator: str) -> bool:
-    utils.make_client(pd.basic_info_definition.api.delete).call(
+    resp = utils.make_client(pd.basic_info_definition.api.delete).call(
         path_params={"plugin_id": instance.id}, data={"operator": operator}
     )
+    if not resp.get("result"):
+        logger.error(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
+        return False
+
     instance.status = PluginStatus.ARCHIVED
     instance.save(update_fields=["status", "updated"])
     return True

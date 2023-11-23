@@ -254,8 +254,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         plugin.name = validated_data[to_translated_field("name")]
         plugin.extra_fields = validated_data["extra_fields"]
         plugin.save()
+
         if pd.basic_info_definition.api.update:
-            update_instance(pd, plugin, operator=request.user.pk)
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
 
         # 操作记录: 修改基本信息
         OperationRecord.objects.create(
@@ -281,8 +284,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         slz = serializers.PluginInstanceLogoSLZ(data=request.data, instance=plugin)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         if pd.basic_info_definition.api.update:
-            update_instance(pd, plugin, operator=request.user.pk)
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
 
         # 操作记录: 修改 logo
         OperationRecord.objects.create(
@@ -306,13 +312,17 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         logger.error(f"plugin(id: {plugin_id}) is deleted by {request.user.username}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @atomic
     @_permission_classes(
         [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
     )
     def archive(self, request, pd_id, plugin_id):
         """插件下架"""
         plugin = self.get_plugin_instance()
-        instance_api.archive_instance(plugin.pd, plugin, operator=request.user.username)
+        api_call_success = instance_api.archive_instance(plugin.pd, plugin, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
         # 操作记录: 插件下架
         OperationRecord.objects.create(
             plugin=plugin,

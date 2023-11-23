@@ -78,6 +78,8 @@ ignore = [
   "TRY200",
   # flake8-simplify: 忽略后，允许使用 exception: pass 语句，不要求必须用 contextlib.suppress 替换
   "SIM105",
+  # flake8-simplify: 忽略后，不强制要求用三元表达式替换普通的短 if-else 语句
+  "SIM108",
 
   # === 谨慎忽略 ===
   # pep8-naming: 忽略后，不强制 class 必须使用驼峰命名，部分单元测试代码中用下划线起名可能更方便

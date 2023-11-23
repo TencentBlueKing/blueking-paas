@@ -455,7 +455,7 @@ export default {
       this.curActiveType = process.autoscaling ? 'automatic' : 'manual';
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || maxReplicasNum;
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || minReplicasNum;
-      this.scalingConfig.targetReplicas = process.available_instance_count;
+      this.scalingConfig.targetReplicas = process.targetReplicas;
 
       this.initScalingConfig = { ...this.scalingConfig };
       this.curTargetReplicas = this.processPlan.targetReplicas;

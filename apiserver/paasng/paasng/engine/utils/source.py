@@ -158,7 +158,7 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
                     return True
                 return False
 
-            if next(filter(find_conflict_process, proc_data_from_source), None):
+            if next(filter(find_conflict_process, proc_data_from_procfile), None):
                 logger.warning("Process definition conflict, will use the one defined in `Procfile`")
                 if stream:
                     stream.write_message(

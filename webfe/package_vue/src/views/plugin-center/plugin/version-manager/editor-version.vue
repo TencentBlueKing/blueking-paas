@@ -65,6 +65,7 @@
                 :disabled="false"
                 ext-cls="select-custom"
                 searchable
+                :loading="isBranchLoading"
               >
                 <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
                 <bk-option
@@ -77,7 +78,10 @@
                   "
                 />
               </bk-select>
-              <div class="ribbon">
+              <div :class="['ribbon', { 'en-cls': localLanguage === 'en' }]">
+                <bk-button :text="true" title="primary" class="mr15" @click="getNewVersionFormat('refresh')">
+                  {{ $t('刷新') }}
+                </bk-button>
                 <div
                   v-if="curVersion.current_release"
                   class="mr10"
@@ -264,6 +268,7 @@ export default {
   data() {
     return {
       isLoading: false,
+      isBranchLoading: false,
       versionDetail: {
         isShow: false,
       },
@@ -330,6 +335,9 @@ export default {
     releasedSourceVersions() {
       return this.curVersionData.released_source_versions || [];
     },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
   },
   watch: {
     'curVersion.source_versions'() {
@@ -353,18 +361,22 @@ export default {
     },
 
     // 获取新建版本表单格式
-    async getNewVersionFormat() {
-      this.isLoading = true;
+    async getNewVersionFormat(type) {
+      type === 'refresh' ? this.isBranchLoading = true : this.isLoading = true;
       const data = {
         pdId: this.pdId,
         pluginId: this.pluginId,
       };
       try {
         const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
+        this.sourceVersions = res.source_versions;
+        // 刷新操作，只重新获取代码分支
+        if (type === 'refresh') {
+          return;
+        }
         this.curVersionData = res;
         this.curVersion.doc = res.doc;
         this.curVersion.current_release = res.current_release;
-        this.sourceVersions = res.source_versions;
         // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
         this.curVersion.semver_choices = res.semver_choices;
         // source_versions 会存在 [] 情况
@@ -393,9 +405,8 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 200);
+        this.isLoading = false;
+        this.isBranchLoading = false;
       }
     },
 
@@ -599,9 +610,17 @@ export default {
   .ribbon {
     display: flex;
     position: absolute;
-    right: -98px;
+    right: -138px;
     top: 0px;
     color: #3a84ff;
+
+    &.en-cls {
+      right: -158px;
+    }
+
+    &:hover {
+      color: #699df4;
+    }
 
     div {
       cursor: pointer;

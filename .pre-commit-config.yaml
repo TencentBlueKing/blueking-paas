@@ -16,17 +16,17 @@ repos:
         entry: bash -c "if [[ -d pre_commit_hooks ]]; then pre_commit_hooks/ip.sh $@; fi"
 
       # 总是使用 --force-exclude 来让 ruff 配置文件中的 exclude 生效
-      - id: ruff-format
-        name: ruff-format
-        language: system
-        types: [python]
-        entry: poetry run ruff format --force-exclude 
       - id: ruff-check-fix
         name: ruff-check-fix
         language: system
         types: [python]
         # 修复包导入顺序问题，类似 isort 工具
         entry: poetry run ruff check --force-exclude --select I --fix  
+      - id: ruff-format
+        name: ruff-format
+        language: system
+        types: [python]
+        entry: poetry run ruff format --force-exclude 
       - id: ruff-check
         name: ruff-check
         language: system

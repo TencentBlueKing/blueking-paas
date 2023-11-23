@@ -24,7 +24,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
+
+	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/metrics"
+	"github.com/spf13/pflag"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -33,7 +37,6 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,6 +65,9 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 	cfgFile  string
+
+	metricServerAddress string
+	metricPort          uint
 )
 
 func init() {
@@ -69,6 +75,9 @@ func init() {
 	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	pflag.StringVar(&metricServerAddress, "metric-server-address", "0.0.0.0", "http metric server address")
+	pflag.UintVar(&metricPort, "metric-port", 10251, "prometheus metrics port")
 }
 
 func main() {
@@ -161,6 +170,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	// start metric server
+	var metricsServer metrics.PrometheusMetricServer
+	addr := metricServerAddress + ":" + strconv.Itoa(int(metricPort))
+	go metricsServer.NewServer(addr, "/metrics")
+
 	//+kubebuilder:scaffold:builder
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
@@ -174,12 +189,6 @@ func main() {
 	setupLog.Info("starting manager")
 	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
-	}
-
-	// add metric server
-	if err = mgr.AddMetricsExtraHandler("/metrics", promhttp.Handler()); err != nil {
-		setupLog.Error(err, "unable to set up metrics server")
 		os.Exit(1)
 	}
 }

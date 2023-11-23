@@ -286,8 +286,7 @@ def make_array_field(field_schema: FieldSchema) -> serializers.Field:
 
 def make_bool_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a bool according to the given field_schema"""
-    init_kwargs = _get_init_kwargs(field_schema)
-    return serializers.BooleanField(**init_kwargs)
+    return serializers.BooleanField(default=field_schema.default)
 
 
 def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
@@ -626,12 +625,15 @@ def make_config_column_field(column_definition: PluginConfigColumnDefinition) ->
 def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
     """generate a SLZ for verifying the creation/update of "Plugin Config"
     according to the PluginConfigDefinition definition"""
-    config_definition = pd.config_definition
-    fields = {
-        column_definition.name: make_config_column_field(column_definition)
-        for column_definition in config_definition.columns
-    }
-    fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
+    fields = {}
+    # 部分插件未定义配置管理
+    if hasattr(pd, 'config_definition'):
+        config_definition = pd.config_definition
+        fields = {
+            column_definition.name: make_config_column_field(column_definition)
+            for column_definition in config_definition.columns
+        }
+        fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
     return type("DynamicPluginConfigSerializer", (serializers.Serializer,), fields)
 
 

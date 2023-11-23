@@ -147,7 +147,10 @@
                   ext-cls="dropdown-menu-cls"
                 >
                   <template slot="dropdown-trigger">
-                    <i class="paasng-icon paasng-icon-more" v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'), disabled: process.available_instance_count || process.desired_replicas }" />
+                    <i
+                      class="paasng-icon paasng-icon-more"
+                      v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'),
+                                       disabled: process.available_instance_count || process.desired_replicas }" />
                   </template>
                   <ul class="bk-dropdown-list" slot="dropdown-content">
                     <!-- <li>
@@ -201,7 +204,7 @@
                         <span
                           v-bk-tooltips="{content: getInstanceStateToolTips(instance)}"
                           v-dashed="9"
-                        >{{ instance.state }}</span>
+                        >{{ instance.rich_status }}</span>
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">
@@ -2154,7 +2157,7 @@ export default {
     // 获取进程状态 tooltips 展示内容
     getInstanceStateToolTips(instance) {
       if (!(instance.state_message && instance.state_message.length)) {
-        return instance.state;
+        return instance.rich_status;
       }
       return instance.state_message;
     },

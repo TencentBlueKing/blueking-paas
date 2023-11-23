@@ -227,6 +227,7 @@ export default {
 
   computed: {
     shrinkLimit() {
+      if (!this.curTargetReplicas) return '0%';
       return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * 85).toFixed(1)}%`;
     },
   },
@@ -458,6 +459,7 @@ export default {
       this.scalingConfig.targetReplicas = process.targetReplicas;
 
       this.initScalingConfig = { ...this.scalingConfig };
+      console.log('this.processPlan', this.processPlan);
       this.curTargetReplicas = this.processPlan.targetReplicas;
 
       this.scaleDialog.visible = true;

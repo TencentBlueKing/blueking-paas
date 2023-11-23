@@ -22,17 +22,14 @@ from typing import Dict, Optional
 import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
-from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.cnative.specs.models import to_error_string
-from paas_wl.core.resource import CNativeBkAppNameGenerator
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.images.serializers import ImageCredentialSLZ
+from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
+from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
@@ -271,29 +268,6 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         return tmpl_name
 
 
-class CreateModuleBuildConfigSLZ(serializers.Serializer):
-    """创建模块构建信息"""
-
-    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
-    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
-
-    # docker build 相关字段
-    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
-    docker_build_args = serializers.DictField(
-        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
-    )
-
-    def to_internal_value(self, data) -> entities.BuildConfig:
-        # TODO 增加一些可能的基础校验
-        data = super().to_internal_value(data)
-        return entities.BuildConfig(
-            build_method=data["build_method"],
-            tag_options=data.get("tag_options", ImageTagOptions()),
-            dockerfile_path=data.get('dockerfile_path'),
-            docker_build_args=data.get('docker_build_args'),
-        )
-
-
 class ModuleBuildConfigSLZ(serializers.Serializer):
     """模块镜像构建信息"""
 
@@ -333,41 +307,77 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
         return attrs
 
 
+class CreateModuleBuildConfigSLZ(serializers.Serializer):
+    """Serializer for create module build config"""
+
+    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
+    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
+
+    # docker build 相关字段
+    dockerfile_path = serializers.CharField(
+        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
+    )
+    docker_build_args = serializers.DictField(
+        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
+    )
+
+    image_repository = serializers.CharField(help_text="镜像仓库", required=False, allow_null=True)
+    image_credential = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
+
+    def to_internal_value(self, data) -> entities.BuildConfig:
+        data = super().to_internal_value(data)
+        return entities.BuildConfig(
+            build_method=data["build_method"],
+            tag_options=data.get("tag_options", ImageTagOptions()),
+            dockerfile_path=data.get('dockerfile_path'),
+            docker_build_args=data.get('docker_build_args'),
+            image_repository=data.get('image_repository'),
+            image_credential=data.get('image_credential'),
+        )
+
+    def validate(self, attrs):
+        if attrs.build_method == RuntimeType.CUSTOM_IMAGE and not attrs.image_repository:
+            raise ValidationError('image-based cloud-native application module requires a image_repository parameter')
+        return attrs
+
+
+class BkAppSpecSLZ(serializers.Serializer):
+    """Serializer for create bkapp spec of module"""
+
+    build_config = CreateModuleBuildConfigSLZ(required=True, help_text=_('构建配置'))
+    processes = serializers.ListField(child=ModuleProcessSpecSLZ(), required=False)
+    hook = CNativeModuleDeployHookSLZ(allow_null=True, default=None)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        build_config = attrs['build_config']
+        if build_config.build_method == RuntimeType.CUSTOM_IMAGE and not attrs.get('processes'):
+            raise ValidationError('image-based cloud-native application module requires a processes parameter')
+
+        return attrs
+
+
 class CreateCNativeModuleSLZ(serializers.Serializer):
     """Serializer for create cloud-native application's module"""
 
     name = ModuleNameField()
     source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码配置'))
-    image_credentials = ImageCredentialSLZ(required=False, help_text=_('镜像凭证信息'))
-    build_config = CreateModuleBuildConfigSLZ(required=True, help_text=_('构建配置'))
-    manifest = serializers.JSONField(required=False, help_text=_('云原生应用 manifest'))
+    bkapp_spec = BkAppSpecSLZ()
 
     def validate(self, attrs):
-        application = self.context["application"]
-        source_cfg = attrs["source_config"]
+        attrs = super().validate(attrs)
 
-        validate_build_method(attrs["build_config"].build_method, source_cfg['source_origin'])
+        source_config = attrs['source_config']
+        build_config = attrs['bkapp_spec']['build_config']
 
-        if manifest := attrs.get('manifest'):
-            # 检查 source_config 中 source_origin 类型必须为 CNATIVE_IMAGE
-            if source_cfg['source_origin'] != SourceOrigin.CNATIVE_IMAGE:
-                raise ValidationError(_('托管模式为仅镜像时，source_origin 必须为 CNATIVE_IMAGE'))
+        validate_build_method(build_config.build_method, source_config['source_origin'])
 
-            try:
-                bkapp_res = BkAppResource(**manifest)
-            except PDValidationError as e:
-                raise ValidationError(to_error_string(e))
-
-            if bkapp_res.apiVersion != ApiVersion.V1ALPHA2:
-                raise ValidationError(_('请使用 BkApp v1alpha2 以支持多模块'))
-
-            if bkapp_res.metadata.name != CNativeBkAppNameGenerator.make_name(
-                app_code=application.code, module_name=attrs["name"]
-            ):
-                raise ValidationError(_("Manifest 中定义的应用模型名称与模块信息不一致"))
-
-            if bkapp_res.spec.build is None or bkapp_res.spec.build.image != source_cfg['source_repo_url']:
-                raise ValidationError(_('Manifest 中定义的镜像信息与 source_repo_url 不一致'))
+        if (
+            build_config.build_method == RuntimeType.CUSTOM_IMAGE
+            and build_config.image_repository != source_config.get('source_repo_url')
+        ):
+            raise ValidationError('image_repository is not consistent with source_repo_url')
 
         return attrs
 

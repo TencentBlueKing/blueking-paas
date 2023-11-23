@@ -106,7 +106,6 @@ from paasng.platform.applications.utils import (
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.bkapp_model.services import initialize_simple
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
@@ -476,21 +475,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
     def create_cloud_native(self, request):
-        """[API] 创建云原生架构应用
-
-        `cloud_native_params` 为 object 类型，各字段说明：
-
-        - `image`: string | 必填 | 容器镜像地址，
-        - `command`：array[string] | 选填 | 启动命令列表，例如 ["/bin/bash"]
-        - `args`：array[string] | 选填 | 命令参数列表，例如 ["-name", "demo"]
-        - `target_port`：integer | 选填 | 容器端口
-        """
+        """[API] 创建云原生架构应用"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP):
             raise ValidationError(_('你无法创建云原生应用'))
 
         serializer = slzs.CreateCloudNativeAppSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        params = serializer.data
+        params = serializer.validated_data
 
         advanced_options = params.get('advanced_options', {})
         cluster_name = None
@@ -500,15 +491,15 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             cluster_name = advanced_options.get('cluster_name')
 
         module_src_cfg: Dict[str, Any] = {"source_origin": SourceOrigin.CNATIVE_IMAGE}
-        if source_config := params.get('source_config'):
-            source_origin = SourceOrigin(source_config['source_origin'])
-            self._ensure_source_origin_available(request.user, source_origin)
+        source_config = params["source_config"]
+        source_origin = SourceOrigin(source_config['source_origin'])
+        self._ensure_source_origin_available(request.user, source_origin)
 
-            module_src_cfg['source_origin'] = source_origin
-            # 如果指定模板信息，则需要提取并保存
-            if tmpl_name := source_config['source_init_template']:
-                tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
-                module_src_cfg.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+        module_src_cfg['source_origin'] = source_origin
+        # 如果指定模板信息，则需要提取并保存
+        if tmpl_name := source_config['source_init_template']:
+            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            module_src_cfg.update({'language': tmpl.language, 'source_init_template': tmpl_name})
 
         application = create_application(
             region=params["region"],
@@ -521,24 +512,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         module = create_default_module(application, **module_src_cfg)
 
         # 初始化应用镜像凭证信息
-        if image_credentials := params.get('image_credentials'):
-            self._init_image_credentials(application, image_credentials)
+        if image_credential := params['bkapp_spec']['build_config'].image_credential:
+            self._init_image_credential(application, image_credential)
 
-        source_init_result = None
-        if cloud_native_params := params.get('cloud_native_params'):
-            initialize_simple(module=module, cluster_name=cluster_name, **cloud_native_params)
-        else:
-            source_config = params["source_config"]
-            source_init_result = init_module_in_view(
-                module,
-                repo_type=source_config.get('source_control_type'),
-                repo_url=source_config.get('source_repo_url'),
-                repo_auth_info=source_config.get('source_repo_auth_info'),
-                source_dir=source_config.get('source_dir', ''),
-                cluster_name=cluster_name,
-                manifest=params.get('manifest'),
-                build_config=serializer.validated_data['build_config'],
-            ).source_init_result
+        source_init_result = init_module_in_view(
+            module,
+            repo_type=source_config.get('source_control_type'),
+            repo_url=source_config.get('source_repo_url'),
+            repo_auth_info=source_config.get('source_repo_auth_info'),
+            source_dir=source_config.get('source_dir', ''),
+            cluster_name=cluster_name,
+            bkapp_spec=params['bkapp_spec'],
+        ).source_init_result
 
         https_enabled = self._get_cluster_entrance_https_enabled(
             module.region, cluster_name, ExposedURLType(module.exposed_url_type)
@@ -703,9 +688,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
                 raise ValidationError(_('你无法使用非默认的源码来源'))
 
-    def _init_image_credentials(self, application: Application, image_credentials: Dict):
+    def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
-            AppUserCredential.objects.create(application_id=application.id, **image_credentials)
+            AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 

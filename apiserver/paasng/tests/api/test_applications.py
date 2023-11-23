@@ -30,8 +30,11 @@ from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
@@ -466,47 +469,37 @@ class TestCreateCloudNativeApp:
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
-    def test_legacy(self, api_client):
-        """现存的云原生应用创建（cloud_native_params）"""
-
+    def test_create_with_image(self, api_client):
+        """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            '/api/bkapps/cloud-native/',
-            data={
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': f'uta-{random_suffix}',
-                'name': f'uta-{random_suffix}',
-                'cloud_native_params': {
-                    'image': 'nginx:alpine',
-                },
-            },
-        )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        assert response.json()['application']['type'] == 'cloud_native'
-
-    def test_create_with_manifest(self, api_client):
-        """托管方式：仅镜像（提供 manifest）"""
-        random_suffix = generate_random_string(length=6)
+        image_credential_name = generate_random_string(length=6)
+        image_repository = "strm/helloworld-http"
         response = api_client.post(
             "/api/bkapps/cloud-native/",
             data={
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
+                "bkapp_spec": {
+                    "build_config": {
+                        "build_method": "custom_image",
+                        "image_repository": image_repository,
+                        "image_credential": {"name": image_credential_name, "password": "123456", "username": "test"},
+                    },
+                    'processes': [
+                        {
+                            "name": "web",
+                            "command": ["bash", "/app/start_web.sh"],
+                            "env_overlay": {
+                                'stag': {'environment_name': 'stag', 'target_replicas': 1, 'plan_name': '2C1G'},
+                                'prod': {'environment_name': 'prod', 'target_replicas': 2, 'plan_name': '2C1G'},
+                            },
+                        }
+                    ],
+                },
                 "source_config": {
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
-                    "source_repo_url": "strm/helloworld-http",
-                },
-                "build_config": {"build_method": "custom_image"},
-                "manifest": {
-                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
-                    "kind": "BkApp",
-                    "metadata": {"name": f"uta-{random_suffix}", "generation": 0, "annotations": {}},
-                    "spec": {
-                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
-                        "processes": [{"name": "web", "replicas": 1}],
-                        "configuration": {"env": []},
-                    },
+                    "source_repo_url": image_repository,
                 },
             },
         )
@@ -515,6 +508,16 @@ class TestCreateCloudNativeApp:
         assert app_data['type'] == 'cloud_native'
         assert app_data['modules'][0]['web_config']['build_method'] == 'custom_image'
         assert app_data['modules'][0]['web_config']['artifact_type'] == 'none'
+
+        module = Module.objects.get(id=app_data['modules'][0]['id'])
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        assert cfg.image_repository == image_repository
+        process_spec = ModuleProcessSpec.objects.get(module=module, name='web')
+        assert process_spec.image is None
+        assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.image_credential_name == image_credential_name
+        assert process_spec.get_target_replicas('stag') == 1
+        assert process_spec.get_target_replicas('prod') == 2
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
     @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')
@@ -534,7 +537,7 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
-                "build_config": {"build_method": "buildpack"},
+                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -558,7 +561,7 @@ class TestCreateCloudNativeApp:
                 "region": settings.DEFAULT_REGION_NAME,
                 "code": f'uta-{random_suffix}',
                 "name": f'uta-{random_suffix}',
-                "build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"},
+                "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
                 "source_config": {
                     "source_init_template": "docker",
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,

@@ -109,7 +109,7 @@
               <bk-form-item
                 style="width: 240px"
                 ext-cls="not-margin-top-cls"
-                :label="$t('模块名')"
+                :label="$t('模块名称')"
                 :icon-offset="5"
                 :rules="rules.module"
                 :property="'service.' + index + '.module'"
@@ -256,17 +256,6 @@
         </div>
       </div>
     </template>
-    <!-- 方案一 -->
-    <!-- <bk-button
-      v-if="!isEdit"
-      class="edit-btn"
-      theme="primary"
-      title="编辑"
-      :outline="true"
-      @click="handleEdit"
-    >
-      {{ $t('编辑') }}
-    </bk-button> -->
     <div
       class="footer-btn-wrapper"
       v-if="isEdit"
@@ -349,6 +338,10 @@ export default {
         module: [
           {
             validator(val) {
+              // 允许不填
+              if (val === '') {
+                return true;
+              }
               const reg = /^[a-z][a-z0-9-]{1,16}$/;
               return reg.test(val);
             },
@@ -359,42 +352,21 @@ export default {
         ip: [
           {
             required: true,
-            message: '必填项',
-            trigger: 'blur',
-          },
-          {
-            validator(val) {
-              return val.length > 3;
-            },
-            message: 'ip',
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         hostnames: [
           {
             required: true,
-            message: '必填项',
-            trigger: 'blur',
-          },
-          {
-            validator(val) {
-              return val.length > 3;
-            },
-            message: '域名',
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         name: [
           {
             required: true,
-            message: '必填项',
-            trigger: 'blur',
-          },
-          {
-            validator(val) {
-              return val.length > 3;
-            },
-            message: '服务名',
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],

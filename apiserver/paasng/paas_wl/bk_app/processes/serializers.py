@@ -343,6 +343,7 @@ class ScalingConfigSLZ(serializers.Serializer):
 
     min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
+    policy = serializers.CharField(required=False, default='default', help_text=_('扩缩容策略'))
     metrics = serializers.ListField(child=MetricSpecSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
 
 

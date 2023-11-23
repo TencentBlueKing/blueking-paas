@@ -50,7 +50,7 @@ def get_env_deployed_version_info(env: ModuleEnvironment) -> Tuple[RuntimeType, 
 
     if application.type == ApplicationType.CLOUD_NATIVE and build_config.build_method == RuntimeType.CUSTOM_IMAGE:
         bkapp_revision = AppModelRevision.objects.get(pk=deployment.bkapp_revision_id)
-        res = BkAppResource(**bkapp_revision.json_value)
+        res = BkAppResource(**bkapp_revision.deployed_value)
         version_info = VersionInfo(revision="", version_name=ImageParser(res).get_tag() or "--", version_type="tag")
     else:
         version_info = deployment.get_version_info()

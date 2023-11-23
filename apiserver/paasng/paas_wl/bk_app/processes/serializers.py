@@ -153,6 +153,15 @@ class DeploymentOperationSLZ(serializers.Serializer):
     err_detail = serializers.CharField(help_text="错误原因")
     has_requested_int = serializers.BooleanField(help_text="部署是否被中断")
 
+    advanced_options = serializers.SerializerMethodField(allow_null=True)
+
+    def get_advanced_options(self, obj: Deployment) -> Dict:
+        if obj.advanced_options:
+            return {
+                "image_pull_policy": obj.advanced_options.image_pull_policy.value,
+            }
+        return {}
+
 
 class OfflineOperationSLZ(serializers.Serializer):
     """下架操作对象"""
@@ -343,6 +352,7 @@ class ScalingConfigSLZ(serializers.Serializer):
 
     min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
+    policy = serializers.CharField(required=False, default='default', help_text=_('扩缩容策略'))
     metrics = serializers.ListField(child=MetricSpecSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
 
 

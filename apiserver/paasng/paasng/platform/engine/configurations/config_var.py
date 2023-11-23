@@ -216,7 +216,7 @@ def get_builtin_env_variables(engine_app: 'EngineApp', config_vars_prefix: str) 
     return {**app_info_envs, **runtime_envs, **bk_address_envs, **envs_by_region_and_env}
 
 
-def get_cnative_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+def get_cnative_builtin_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     """Get env vars for current environment of cloud-native app, this will includes:
     - built-in env vars
     - env vars from services

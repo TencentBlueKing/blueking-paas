@@ -90,6 +90,7 @@ class Command(BaseCommand):
                 "api": pd_data.spec.basicInfo.api,
                 "extra_fields": pd_data.spec.basicInfo.extraFields,
                 "overview_page": pd_data.spec.basicInfo.overviewPage,
+                "sync_members": pd_data.spec.basicInfo.syncMembers,
             },
         )
 

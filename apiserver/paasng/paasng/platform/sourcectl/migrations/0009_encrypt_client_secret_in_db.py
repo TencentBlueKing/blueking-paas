@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 def encrypt_client_secret_in_db(apps, schema_editor):
     """encrypt client secret in database before change
-    client_secret field to EncryptField to avoid decode error"""
+    client_secret field to EncryptField to avoid decode error
+    """
 
     SourceTypeSpecConfig = apps.get_model('sourcectl', 'SourceTypeSpecConfig')
     encrypt_handler = EncryptHandler(secret_key=get_default_secret_key())

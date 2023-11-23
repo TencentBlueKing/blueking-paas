@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -27,9 +27,13 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaa
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+from paasng.platform.engine.models.deployment import AutoscalingConfig
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
 from paasng.utils.models import make_json_field
+
+if TYPE_CHECKING:
+    from typing import Callable  # noqa: F401
 
 
 def env_overlay_getter_factory(field_name: str):
@@ -42,6 +46,9 @@ def env_overlay_getter_factory(field_name: str):
             return getattr(self, field_name)
 
     return func
+
+
+AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -77,7 +84,7 @@ class ModuleProcessSpec(TimestampedModel):
     target_replicas = models.IntegerField("期望副本数", default=1)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
-    scaling_config = models.JSONField("自动扩缩容配置", null=True)
+    scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
 
     class Meta:
         unique_together = ("module", "name")
@@ -88,10 +95,10 @@ class ModuleProcessSpec(TimestampedModel):
             return self.proc_command
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
 
-    get_target_replicas = env_overlay_getter_factory("target_replicas")
-    get_plan_name = env_overlay_getter_factory("plan_name")
-    get_autoscaling = env_overlay_getter_factory("autoscaling")
-    get_scaling_config = env_overlay_getter_factory("scaling_config")
+    get_target_replicas = env_overlay_getter_factory("target_replicas")  # type: Callable[[str], int]
+    get_plan_name = env_overlay_getter_factory("plan_name")  # type: Callable[[str], str]
+    get_autoscaling = env_overlay_getter_factory("autoscaling")  # type: Callable[[str], bool]
+    get_scaling_config = env_overlay_getter_factory("scaling_config")  # type: Callable[[str], Optional[AutoscalingConfig]]
 
 
 class ProcessSpecEnvOverlay(TimestampedModel):
@@ -107,7 +114,7 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
     autoscaling = models.BooleanField("是否启用自动扩缩容", null=True)
-    scaling_config = models.JSONField("自动扩缩容配置", null=True)
+    scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
@@ -121,7 +128,7 @@ class ModuleDeployHookManager(models.Manager):
             raise RuntimeError("Can only call method from RelatedManager.")
 
         if not isinstance(self.instance, Module):
-            raise RuntimeError("Can only call from module.deploy_hooks")
+            raise TypeError("Can only call from module.deploy_hooks")
         return self.instance
 
     def enable_hook(

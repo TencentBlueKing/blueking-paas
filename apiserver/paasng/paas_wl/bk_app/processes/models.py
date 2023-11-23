@@ -31,6 +31,7 @@ from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PL
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.platform.declarative.deployment.resources import ProbeHandler
 from paasng.utils.models import make_json_field
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 PROC_DEFAULT_REPLICAS = 1
+AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
 
 
 class ProcessSpecPlanManager(models.Manager):
@@ -106,7 +108,7 @@ class ProcessSpec(TimestampedModel):
     target_status = models.CharField("期望状态", max_length=32, default="start")
     plan = models.ForeignKey(ProcessSpecPlan, on_delete=models.CASCADE)
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
-    scaling_config = JSONField("自动扩缩容配置", default={})
+    scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
 
     def save(self, *args, **kwargs):
         if self.target_replicas > self.plan.max_replicas:
@@ -166,6 +168,8 @@ class ProcessSpecManager:
                 target_replicas=target_replicas,
                 plan=plan,
                 proc_command=process.command,
+                autoscaling=process.scaling_config is not None,
+                scaling_config=process.scaling_config,
             )
             spec_create_bulks.append(process_spec)
         if spec_create_bulks:
@@ -183,13 +187,25 @@ class ProcessSpecManager:
             if (plan_name := process.plan) and (plan := self.get_plan(plan_name, None)):
                 changed = True
                 process_spec.plan = plan
-            if (replicas := process.replicas) and replicas != process_spec.target_replicas:
+
+            # 如果同时提供 scaling_config 和 replicas, 优先使用 scaling_config
+            if process.scaling_config is not None:
+                changed = True
+                process_spec.scaling_config = process.scaling_config
+                process_spec.autoscaling = True
+            elif (replicas := process.replicas) is not None:
                 changed = True
                 process_spec.target_replicas = replicas
+                # 保持与禁用自动扩缩容一致的逻辑, 清空 scaling_config
+                process_spec.scaling_config = None
+                process_spec.autoscaling = False
             if changed:
                 spec_update_bulks.append(process_spec)
         if spec_update_bulks:
-            ProcessSpec.objects.bulk_update(spec_update_bulks, ["proc_command", "target_replicas", "plan", "updated"])
+            ProcessSpec.objects.bulk_update(
+                spec_update_bulks,
+                ["proc_command", "target_replicas", "plan", "scaling_config", "autoscaling", "updated"],
+            )
 
     @staticmethod
     def get_default_replicas(process_type: str, environment: str):
@@ -220,12 +236,14 @@ class ProcessTmpl:
     :param command: 启动指令
     :param replicas: 副本数
     :param plan: 资源方案名称
+    :param scaling_config: 自动扩缩容配置, 当同时提供 replicas 与 scaling_config 时, 优先使用 scaling_config
     """
 
     name: str
     command: str
     replicas: Optional[int] = None
     plan: Optional[str] = None
+    scaling_config: Optional[AutoscalingConfig] = None
 
     def __post_init__(self):
         self.name = self.name.lower()

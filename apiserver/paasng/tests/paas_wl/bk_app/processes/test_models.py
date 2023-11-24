@@ -81,6 +81,7 @@ class TestProcessSpecManager:
                         "command": "foo",
                         "replicas": 2,
                         "scaling_config": {"min_replicas": 1, "max_replicas": 3, "policy": "default"},
+                        "autoscaling": True,
                     },
                     {
                         "name": "celery",
@@ -103,6 +104,7 @@ class TestProcessSpecManager:
                         "name": "web",
                         "command": "foo",
                         "replicas": 2,
+                        "autoscaling": False,
                     },
                     {
                         "name": "celery",
@@ -115,4 +117,5 @@ class TestProcessSpecManager:
         web.refresh_from_db()
         assert web.target_replicas == 2
         assert not web.autoscaling
-        assert web.scaling_config is None
+        # sync 时未提供 scaling_config, 不会设置未 None
+        assert web.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=3, policy="default")

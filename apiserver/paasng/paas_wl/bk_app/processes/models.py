@@ -194,11 +194,11 @@ class ProcessSpecManager:
                 recorder.setattr("proc_command", command)
             if (plan_name := process.plan) and (plan := self.get_plan(plan_name, None)):
                 recorder.setattr("plan", plan)
-            elif process.autoscaling != process_spec.autoscaling:
+            if process.autoscaling != process_spec.autoscaling:
                 recorder.setattr("autoscaling", process.autoscaling)
-            elif (scaling_config := process.scaling_config) and scaling_config != process_spec.scaling_config:
-                recorder.setattr("autoscaling", scaling_config)
-            elif (replicas := process.replicas) and replicas != process_spec.target_replicas:
+            if (scaling_config := process.scaling_config) and scaling_config != process_spec.scaling_config:
+                recorder.setattr("scaling_config", scaling_config)
+            if (replicas := process.replicas) and replicas != process_spec.target_replicas:
                 recorder.setattr("target_replicas", replicas)
             return recorder.changed, process_spec
 
@@ -207,11 +207,10 @@ class ProcessSpecManager:
             updating_procs=updating_proc_specs,
             updated_fields=[
                 "proc_command",
-                "target_replicas",
-                "target_replicas",
                 "plan",
-                "scaling_config",
                 "autoscaling",
+                "scaling_config",
+                "target_replicas",
                 "updated",
             ],
         )

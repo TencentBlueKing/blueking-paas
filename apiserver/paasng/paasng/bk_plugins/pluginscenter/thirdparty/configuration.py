@@ -31,6 +31,6 @@ def sync_config(pd: PluginDefinition, instance: PluginInstance):
     data = [config.row for config in instance.configs.all()]
     resp = utils.make_client(pd.config_definition.sync_api).call(data=data, path_params={"plugin_id": instance.id})
 
-    if not (result := resp.get("result")):
+    if not (result := resp.get("result", True)):
         logger.error(f"sync config error [plugin_id: {instance.id}, data:{data}], error: {resp}")
     return result

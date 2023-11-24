@@ -30,7 +30,7 @@ def create_instance(pd: PluginDefinition, instance: PluginInstance, operator: st
     slz = PluginRequestSLZ(instance, context={"operator": operator})
     data = slz.data
     resp = utils.make_client(pd.basic_info_definition.api.create).call(data=data)
-    if not (result := resp.get("result")):
+    if not (result := resp.get("result", True)):
         logger.error(f"create instance error [operator: {operator}, data:{data}], error: {resp}")
     return result
 
@@ -41,7 +41,7 @@ def update_instance(pd: PluginDefinition, instance: PluginInstance, operator: st
     resp = utils.make_client(pd.basic_info_definition.api.update).call(
         data=data, path_params={"plugin_id": instance.id}
     )
-    if not (result := resp.get("result")):
+    if not (result := resp.get("result", True)):
         logger.error(f"upadte instance error [plugin_id: {instance.id}, data:{data}], error: {resp}")
     return result
 
@@ -50,7 +50,7 @@ def archive_instance(pd: PluginDefinition, instance: PluginInstance, operator: s
     resp = utils.make_client(pd.basic_info_definition.api.delete).call(
         path_params={"plugin_id": instance.id}, data={"operator": operator}
     )
-    if not resp.get("result"):
+    if not resp.get("result", True):
         logger.error(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
         return False
 
@@ -66,7 +66,7 @@ def reactivate_instance(pd: PluginDefinition, instance: PluginInstance, operator
     resp = utils.make_client(pd.basic_info_definition.api.reactivate).call(
         path_params={"plugin_id": instance.id}, data={"operator": operator}
     )
-    if not resp.get("result"):
+    if not resp.get("result", True):
         logger.error(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
         return False
 

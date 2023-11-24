@@ -34,6 +34,6 @@ def sync_members(pd: PluginDefinition, instance: PluginInstance):
         data=data, path_params={"plugin_id": instance.id}
     )
 
-    if not (result := resp.get("result")):
+    if not (result := resp.get("result", True)):
         logger.error(f"sync members error [plugin_id: {instance.id}, data:{data}], error: {resp}")
     return result

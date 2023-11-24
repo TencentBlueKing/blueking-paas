@@ -279,7 +279,7 @@ class PipelineStage(BaseStageController):
                 "build_id": self.build.buildId,
             },
         )
-        if not (result := resp.get("result")):
+        if not (result := resp.get("result", True)):
             logger.error(f"execute post command [plugin_id: {self.plugin.id}, data:{data}], error: {resp}")
         return result
 

@@ -45,7 +45,7 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     )
     data = slz.data
     resp = utils.make_client(pd.release_revision.api.create).call(data=data, path_params={"plugin_id": instance.id})
-    if not (result := resp.get("result")):
+    if not (result := resp.get("result", True)):
         logger.error(f"create release error: {resp}")
     return result
 
@@ -71,6 +71,6 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     resp = utils.make_client(pd.release_revision.api.update).call(
         data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
     )
-    if not (result := resp.get("result")):
+    if not (result := resp.get("result", True)):
         logger.error(f"create release error: {resp}")
     return result

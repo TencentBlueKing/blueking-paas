@@ -354,6 +354,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     def archive(self, request, pd_id, plugin_id):
         """插件下架"""
         plugin = self.get_plugin_instance()
+        if plugin.status == constants.PluginStatus.ARCHIVED:
+            raise error_codes.CANNOT_ARCHIVED.f(_("插件已下架，不能再执行下架操作"))
+
         api_call_success = instance_api.archive_instance(plugin.pd, plugin, operator=request.user.username)
         if not api_call_success:
             raise error_codes.THIRD_PARTY_API_ERROR
@@ -376,6 +379,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         plugin = self.get_plugin_instance()
         if not plugin.can_reactivate:
             raise error_codes.NOT_SUPPORT_REACTIVATE
+
+        if plugin.status != constants.PluginStatus.ARCHIVED:
+            raise error_codes.CANNOT_REACTIVATE.f(_("插件未下架，不能重新上架"))
 
         api_call_success = instance_api.reactivate_instance(plugin.pd, plugin, operator=request.user.username)
         if not api_call_success:

@@ -38,6 +38,8 @@ class ErrorCodes:
     CONFIGURATION_CONFLICT = ErrorCode(_("该插件 {conflict_fields} 的配置项已存在, 不能重复添加"))
     STAGE_RENDER_ERROR = ErrorCode(_("查询步骤详情失败"))
     NOT_SUPPORT_REACTIVATE = ErrorCode(_("插件不支持重新上架"))
+    CANNOT_ARCHIVED = ErrorCode(_("下架失败"))
+    CANNOT_REACTIVATE = ErrorCode(_("重新上架失败"))
 
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("插件应该至少拥有一个管理员"))

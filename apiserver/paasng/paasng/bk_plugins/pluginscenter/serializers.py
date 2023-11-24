@@ -87,7 +87,7 @@ class PluginUniqueValidator:
             if field_name in attrs:
                 value = attrs[field_name]
                 if queryset.filter(**{field_name: value}).exists():
-                    raise ValidationError(_('{} 为 {} 的插件已存在').format(field_label, value), code="unique")
+                    raise ValidationError(_("{} 为 {} 的插件已存在").format(field_label, value), code="unique")
                 checked = True
         if not checked:
             raise ValidationError(_("attrs `{}` is required").format([f["name"] for f in fields]), code="required")
@@ -177,9 +177,9 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data['creator']:
-            user = get_user_by_user_id(data['creator'])
-            data['creator'] = user.username
+        if data["creator"]:
+            user = get_user_by_user_id(data["creator"])
+            data["creator"] = user.username
         return data
 
     class Meta:
@@ -209,7 +209,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         # 注入当前用户的角色信息
-        if request := self.context.get("request"):
+        if request := self.context.get("request"):  # noqa: SIM102
             if request.user.is_authenticated:
                 setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
         return super().to_representation(instance)
@@ -257,9 +257,9 @@ def _get_init_kwargs(field_schema: FieldSchema) -> dict:
         "help_text": field_schema.description,
         "max_length": field_schema.maxlength,
     }
-    if (not field_schema.uiRules) or ('required' not in field_schema.uiRules):
-        init_kwargs['allow_null'] = True
-        init_kwargs['allow_blank'] = True
+    if (not field_schema.uiRules) or ("required" not in field_schema.uiRules):
+        init_kwargs["allow_null"] = True
+        init_kwargs["allow_blank"] = True
     if field_schema.default:
         init_kwargs["default"] = field_schema.default
     return init_kwargs
@@ -336,6 +336,13 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
     return i18n(type("DynamicPluginSerializer", (serializers.Serializer,), fields))
 
 
+def make_extra_fields_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
+    fields = {
+        "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
+    }
+    return i18n(type("DynamicPluginMarketInfoSerializer", (serializers.Serializer,), fields))
+
+
 class StubCreatePluginSLZ(serializers.Serializer):
     """A stub Serializer for create `Plugin`, just be used to generate docs
 
@@ -390,7 +397,7 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
         elif version_rule == PluginReleaseVersionRule.REVISION:
             if version != attrs["source_version_name"]:
                 raise ValidationError(_("版本号必须与代码分支一致"))
-        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:
+        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:  # noqa: SIM102
             if version != self.context["source_hash"]:
                 raise ValidationError(_("版本号必须与提交哈希一致"))
         return attrs
@@ -414,7 +421,9 @@ def make_create_release_version_slz_class(pd: PluginDefinition) -> Type[serializ
         "extra_fields": make_extra_fields_slz(pd.release_revision.extraFields)(default=dict),
     }
     if pd.release_revision.versionNo == PluginReleaseVersionRule.AUTOMATIC:
-        fields["semver_type"] = serializers.ChoiceField(choices=SemverAutomaticType.get_choices(), help_text="版本类型")
+        fields["semver_type"] = serializers.ChoiceField(
+            choices=SemverAutomaticType.get_choices(), help_text="版本类型"
+        )
 
     return type(
         "DynamicPluginReleaseSerializer",
@@ -560,7 +569,9 @@ class DateHistogramSLZ(serializers.Serializer):
     """插件日志基于时间分布的直方图"""
 
     series = serializers.ListField(child=serializers.IntegerField(), help_text="按时间排序的值(文档数)")
-    timestamps = serializers.ListField(child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳")
+    timestamps = serializers.ListField(
+        child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳"
+    )
     dsl = serializers.CharField(help_text="日志查询语句")
 
 
@@ -627,7 +638,7 @@ def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
     according to the PluginConfigDefinition definition"""
     fields = {}
     # 部分插件未定义配置管理
-    if hasattr(pd, 'config_definition'):
+    if hasattr(pd, "config_definition"):
         config_definition = pd.config_definition
         fields = {
             column_definition.name: make_config_column_field(column_definition)
@@ -647,11 +658,11 @@ class StubConfigSLZ(serializers.Serializer):
 
 
 class OperationRecordSLZ(serializers.ModelSerializer):
-    display_text = serializers.CharField(source='get_display_text', read_only=True)
+    display_text = serializers.CharField(source="get_display_text", read_only=True)
 
     class Meta:
         model = OperationRecord
-        fields = '__all__'
+        fields = "__all__"
 
 
 class CodeCommitSearchSLZ(serializers.Serializer):
@@ -664,8 +675,8 @@ class CodeCommitSearchSLZ(serializers.Serializer):
         data = super().to_internal_value(instance)
 
         # 将时间转换为代码仓库指定的格式  YYYY-MM-DDTHH:mm:ssZ
-        data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
-        data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        data["begin_time"] = arrow.get(data["begin_time"]).format("YYYY-MM-DDTHH:mm:ssZ")
+        data["end_time"] = arrow.get(data["end_time"]).format("YYYY-MM-DDTHH:mm:ssZ")
         return data
 
 

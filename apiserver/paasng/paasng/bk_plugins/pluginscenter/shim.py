@@ -46,7 +46,7 @@ def _atomic_create_plugin_repository(func):
     def wrapped_init_plugin_in_view(plugin: PluginInstance, operator: str):
         try:
             return func(plugin, operator)
-        except Exception as e:
+        except Exception:
             plugin.refresh_from_db()
             if plugin.repository:
                 # 如果插件仓库已创建, 则删除插件仓库
@@ -62,7 +62,7 @@ def _atomic_create_plugin_repository(func):
                 except SourceAPIError as e:
                     logger.exception("删除插件仓库<%s>失败!", plugin.repository)
                     raise error_codes.DELETE_REPO_ERROR from e
-            raise e
+            raise
 
     return wrapped_init_plugin_in_view
 

@@ -300,7 +300,7 @@ class SubPageStage(BaseStageController):
         page_url = self.format_page_url(stage_def)
 
         # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
-        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release)
+        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release, self.stage)
         if can_proceed:
             self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         return {

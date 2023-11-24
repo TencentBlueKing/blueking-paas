@@ -77,6 +77,15 @@
                     !curVersionData.allow_duplicate_source_version && releasedSourceVersions.includes(option.name)
                   "
                 />
+                <div
+                  v-if="curVersionData.version_type === 'tag'"
+                  slot="extension"
+                  style="cursor: pointer;text-align: center"
+                  @click="handleAddTag"
+                >
+                  <i class="bk-icon icon-plus-circle mr5" />
+                  {{ $t('新建 Tag') }}
+                </div>
               </bk-select>
               <div
                 class="ribbon"
@@ -235,27 +244,6 @@
         </bk-table>
       </div>
     </bk-sideslider>
-
-    <bk-dialog
-      v-model="newVersionConfig.visible"
-      theme="primary"
-      :mask-close="false"
-      :title="`${$t('确认新建版本')}：${curVersion.version}`"
-      @confirm="handlerConfirm"
-      @cancel="handlerCancel"
-    >
-      <template v-if="curVersionData.source_versions">
-        <div class="version-tips-item">
-          <span>{{ $t('代码分支：') }}{{ curVersionData.source_versions[0]?.name }}</span>
-        </div>
-        <div class="version-tips-item">
-          <span>{{ $t('代码更新时间：') }}{{ formatTime(curVersionData.source_versions[0]?.last_update) }}</span>
-        </div>
-        <div class="version-tips-item">
-          <span>Commit Message: {{ curVersionData.source_versions[0]?.message }}</span>
-        </div>
-      </template>
-    </bk-dialog>
   </div>
 </template>
 
@@ -296,9 +284,6 @@ export default {
       sourceVersions: [],
       isLogLoading: false,
       isSubmitLoading: false,
-      newVersionConfig: {
-        visible: false,
-      },
       curVersionData: {
         source_versions: [],
       },
@@ -420,10 +405,27 @@ export default {
 
     submitVersionForm() {
       this.$refs.versionForm.validate().then(() => {
-        this.newVersionConfig.visible = true;
+        // 新建版本info弹窗
+        this.$bkInfo({
+          title: `${this.$t('确认新建版本')}：${this.curVersion.version}`,
+          subHeader: this.bkInfoRander(),
+          confirmFn: this.handlerConfirm,
+          cancelFn: this.handlerCancel,
+        });
       }, (validator) => {
         console.error(validator.content);
       });
+    },
+
+    bkInfoRander() {
+      const h = this.$createElement;
+      return h('div', {
+        class: 'version-info-wrapper',
+      }, [
+        h('div', {}, `${this.$t('代码分支：')}${this.curVersionData.source_versions[0]?.name || '--'}`),
+        h('div', {}, `${this.$t('代码更新时间：')}${this.formatTime(this.curVersionData.source_versions[0]?.last_update) || '--'}`),
+        h('div', {}, `Commit Message: ${this.curVersionData.source_versions[0]?.message || '--'}`),
+      ]);
     },
 
     // 新建版本并发布
@@ -518,6 +520,12 @@ export default {
 
     changeVersionType() {
       this.$refs.versionForm.validate();
+    },
+
+    // 新建Tag
+    handleAddTag() {
+      const url = this.curVersion.repository.replace('.git', '/-/tags/new');
+      window.open(url, '_blank');
     },
   },
 };
@@ -748,11 +756,11 @@ export default {
   margin: 16px 0;
 }
 
-.version-tips-item {
+.version-info-wrapper div {
+  font-size: 14px;
   color: #63656e;
-  font-size: 12px;
-  line-height: 20px;
-  padding: 3px 0;
+  line-height: 32px;
+  word-break: break-all;
 }
 
 .code-branch-tip {

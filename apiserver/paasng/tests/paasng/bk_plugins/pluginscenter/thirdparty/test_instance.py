@@ -25,7 +25,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty import instance
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.parametrize("handler", (instance.create_instance, instance.update_instance))
+@pytest.mark.parametrize("handler", [instance.create_instance, instance.update_instance])
 def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
     """测试 instance create/update 接口的序列化"""
     handler(pd, plugin, operator="nobody")
@@ -50,7 +50,7 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
 def test_instance_delete_api(thirdparty_client_session, pd, plugin):
     response = requests.Response()
     response.status_code = 200
-    response._content = b"{}"
+    response._content = b'{"result": true}'
     thirdparty_client_session.return_value = response
     instance.archive_instance(pd, plugin, "")
     assert thirdparty_client_session.called

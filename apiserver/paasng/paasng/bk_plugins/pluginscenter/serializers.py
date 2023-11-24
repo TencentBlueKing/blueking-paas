@@ -278,10 +278,10 @@ def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     init_kwargs = _get_init_kwargs(field_schema)
     # 如果没有定义 items，则默认为：List[str]
     if not field_schema.items:
-        return serializers.ListField(child=serializers.CharField(), **init_kwargs)
+        return serializers.ListField(child=serializers.CharField(**init_kwargs))
     child_field_schema = cattr.structure(field_schema.items, FieldSchema)
     child_field = make_json_schema_field(child_field_schema)
-    return serializers.ListField(child=child_field, **init_kwargs)
+    return serializers.ListField(child=child_field)
 
 
 def make_bool_field(field_schema: FieldSchema) -> serializers.Field:

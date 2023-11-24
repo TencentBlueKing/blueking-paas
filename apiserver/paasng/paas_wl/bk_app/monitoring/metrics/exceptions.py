@@ -32,13 +32,13 @@ class RequestMetricBackendError(Exception):
         self.error_message = self.get_error_message()
 
     def get_error_code(self):
-        return self.json_response.get('code', 'UNKNOWN')
+        return self.json_response.get("code", "UNKNOWN")
 
     def get_error_message(self):
-        return self.json_response.get('detail', 'Response is not a valid JSON')
+        return self.json_response.get("detail", "Response is not a valid JSON")
 
     def __str__(self):
-        return 'status_code=%s error_code=%s %s' % (self.status_code, self.error_code, self.error_message)
+        return "status_code=%s error_code=%s %s" % (self.status_code, self.error_code, self.error_message)
 
 
 class AppMetricNotSupportedError(Exception):

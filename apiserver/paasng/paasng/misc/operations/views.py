@@ -25,20 +25,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.publish.entrance.exposer import get_module_exposed_links
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.operations import serializers
+from paasng.misc.operations.serializers import RecentOperationsByAppSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
-from paasng.misc.operations import serializers
-from paasng.misc.operations.serializers import RecentOperationsByAppSLZ
-from paasng.accessories.publish.entrance.exposer import get_module_exposed_links
 
 from .constant import OperationType as OT
 from .models import ApplicationLatestOp, Operation
 from .serializers import QueryRecentOperatedApplications
 
-EventRepresentProps = namedtuple('EventRepresentProps', 'display_module provide_links provide_actions')
+EventRepresentProps = namedtuple("EventRepresentProps", "display_module provide_links provide_actions")
 
 
 class OperationRepresentHelper:
@@ -82,7 +82,7 @@ class LatestApplicationsViewSet(APIView):
 
     serializer_class = serializers.OperationSLZ
     lookup_field = "id"
-    ordering_fields = ('-id',)
+    ordering_fields = ("-id",)
     pagination_class = None
 
     def get_queryset(self, limit: int):
@@ -98,7 +98,7 @@ class LatestApplicationsViewSet(APIView):
 
         latest_operated_objs = (
             ApplicationLatestOp.objects.filter(operation_type__in=op_types, application__id__in=application_ids)
-            .select_related('operation')
+            .select_related("operation")
             .order_by("-latest_operated_at")[:limit]
         )
 
@@ -127,12 +127,12 @@ class LatestApplicationsViewSet(APIView):
 
         module_name = obj.module_name or obj.application.get_default_module().name
         represent_info = {
-            'props': event_props._asdict(),
-            'module_name': module_name,
+            "props": event_props._asdict(),
+            "module_name": module_name,
         }
         if event_props.provide_links:
             module = obj.application.get_module(module_name)
-            represent_info['links'] = get_module_exposed_links(module)
+            represent_info["links"] = get_module_exposed_links(module)
 
         obj.represent_info = represent_info
 
@@ -140,7 +140,7 @@ class LatestApplicationsViewSet(APIView):
         serializer = QueryRecentOperatedApplications(data=request.GET)
         serializer.is_valid(raise_exception=True)
 
-        records_queryset = self.get_queryset(serializer.data['limit'])
+        records_queryset = self.get_queryset(serializer.data["limit"])
         data = {
             "results": records_queryset,
         }
@@ -161,15 +161,15 @@ class ApplicationOperationsViewSet(viewsets.ModelViewSet, ApplicationCodeInPathM
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
     queryset = Operation.objects.all()
     lookup_field = "id"
-    ordering_fields = ('-id',)
+    ordering_fields = ("-id",)
 
     def get_queryset(self):
-        return self.queryset.filter(application__code=self.kwargs['code'], is_hidden=False).order_by('-id')
+        return self.queryset.filter(application__code=self.kwargs["code"], is_hidden=False).order_by("-id")
 
     def list(self, request, *args, **kwargs):
         application = self.get_application()
         self.queryset = Operation.objects.filter(application=application)
         # 路径参数中指定了模块才查询模块的操作记录，否则查询应用所有的操作记录
-        if module_name := kwargs.get('module_name'):
+        if module_name := kwargs.get("module_name"):
             self.queryset = self.queryset.filter(module_name=module_name)
         return super().list(request, *args, **kwargs)

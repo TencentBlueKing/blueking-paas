@@ -50,11 +50,13 @@ class ModuleProcessSpec(TimestampedModel):
     部署应用时会同步到 paas_wl.ProcessSpec, 需保证字段与 ProcessSpec 一致"""
 
     module = models.ForeignKey(
-        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name="process_specs"
+        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="process_specs"
     )
-    name = models.CharField('进程名称', max_length=32)
+    name = models.CharField("进程名称", max_length=32)
 
-    proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
+    proc_command = models.TextField(
+        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True
+    )
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
@@ -67,17 +69,19 @@ class ModuleProcessSpec(TimestampedModel):
         default=ImagePullPolicy.IF_NOT_PRESENT,
         max_length=20,
     )
-    image_credential_name = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
+    image_credential_name = models.CharField(
+        help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True
+    )
 
     # Global settings
-    target_replicas = models.IntegerField('期望副本数', default=1)
+    target_replicas = models.IntegerField("期望副本数", default=1)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
-    autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
-    scaling_config = models.JSONField('自动扩缩容配置', null=True)
+    autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
+    scaling_config = models.JSONField("自动扩缩容配置", null=True)
 
     class Meta:
         unique_together = ("module", "name")
-        ordering = ['id']
+        ordering = ["id"]
 
     def get_proc_command(self) -> str:
         if self.proc_command:
@@ -97,13 +101,13 @@ class ProcessSpecEnvOverlay(TimestampedModel):
         ModuleProcessSpec, on_delete=models.CASCADE, db_constraint=False, related_name="env_overlays"
     )
     environment_name = models.CharField(
-        verbose_name=_('环境名称'), choices=AppEnvName.get_choices(), null=False, max_length=16
+        verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
 
-    target_replicas = models.IntegerField('期望副本数', null=True)
+    target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
-    autoscaling = models.BooleanField('是否启用自动扩缩容', null=True)
-    scaling_config = models.JSONField('自动扩缩容配置', null=True)
+    autoscaling = models.BooleanField("是否启用自动扩缩容", null=True)
+    scaling_config = models.JSONField("自动扩缩容配置", null=True)
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
@@ -126,7 +130,7 @@ class ModuleDeployHookManager(models.Manager):
         proc_command: Optional[str] = None,
         command: Optional[List[str]] = None,
         args: Optional[List[str]] = None,
-    ) -> 'ModuleDeployHook':
+    ) -> "ModuleDeployHook":
         """upsert a ModuleDeployHook with args, will auto enable it if it is disabled
 
         :param type_: 钩子类型
@@ -147,7 +151,7 @@ class ModuleDeployHookManager(models.Manager):
             raise ValueError("invalid value to upsert ModuleDeployHook")
         return hook
 
-    def disable_hook(self, type_: DeployHookType) -> 'ModuleDeployHook':
+    def disable_hook(self, type_: DeployHookType) -> "ModuleDeployHook":
         """disable a ModuleDeployHook by type
 
         :raise ObjectDoesNotExist: if hook not found
@@ -156,7 +160,7 @@ class ModuleDeployHookManager(models.Manager):
         hook, _ = self.update_or_create(module=module, type=type_, defaults={"enabled": False})
         return hook
 
-    def get_by_type(self, type_: DeployHookType) -> Optional['ModuleDeployHook']:
+    def get_by_type(self, type_: DeployHookType) -> Optional["ModuleDeployHook"]:
         """get hook by type, return None if not found"""
         module = self._get_caller()
         try:
@@ -169,11 +173,13 @@ class ModuleDeployHook(TimestampedModel):
     """钩子命令"""
 
     module = models.ForeignKey(
-        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name="deploy_hooks"
+        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="deploy_hooks"
     )
     type = models.CharField(help_text="钩子类型", max_length=20, choices=DeployHookType.get_choices())
 
-    proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
+    proc_command = models.TextField(
+        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True
+    )
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     enabled = models.BooleanField(help_text="是否已开启", default=False)
@@ -205,7 +211,7 @@ HostAliasesField = make_json_field("HostAliasesField", List[HostAlias])
 
 
 class SvcDiscConfig(AuditedModel):
-    """" 服务发现配置 """
+    """ " 服务发现配置"""
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
 
@@ -213,7 +219,7 @@ class SvcDiscConfig(AuditedModel):
 
 
 class DomainResolution(AuditedModel):
-    """ 域名解析配置 """
+    """域名解析配置"""
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
 

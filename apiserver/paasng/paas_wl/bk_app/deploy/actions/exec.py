@@ -40,8 +40,8 @@ _FOLLOWING_LOGS_TIMEOUT = 300
 
 @define
 class AppCommandExecutor:
-    command: 'Command'
-    stream: 'DeployStream'
+    command: "Command"
+    stream: "DeployStream"
     extra_envs: Dict = field(factory=dict)
 
     scheduler_client: K8sScheduler = field(init=False)

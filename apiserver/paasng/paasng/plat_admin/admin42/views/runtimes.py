@@ -59,7 +59,7 @@ class RuntimeAdminViewGenerator:
                 kwargs = super().get_context_data(**kwargs)
                 data = self.list(self.request, *self.args, **self.kwargs)
                 kwargs["data"] = data
-                kwargs['pagination'] = self.get_pagination_context(self.request)
+                kwargs["pagination"] = self.get_pagination_context(self.request)
                 return kwargs
 
         return TemplateView

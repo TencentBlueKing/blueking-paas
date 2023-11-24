@@ -93,7 +93,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         application = self.get_application()
-        enabled = serializer.data['enabled']
+        enabled = serializer.data["enabled"]
         # 内置密钥不能被禁用
         if not enabled and self._is_default_secret_in_engine_app(application, bk_app_secret_id):
             raise ValidationError(_("当前密钥为内置密钥，不允许被禁用"))
@@ -181,7 +181,7 @@ class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         serializer = AppSecretIdSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        bk_app_secret_id = serializer.data['id']
+        bk_app_secret_id = serializer.data["id"]
 
         # 检查密钥的状态，已启用的密钥才能设置为内置密钥
         secret = BkOauthClient().get_secret_by_id(application.code, bk_app_secret_id)

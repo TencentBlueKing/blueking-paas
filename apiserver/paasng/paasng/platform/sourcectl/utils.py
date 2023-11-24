@@ -150,15 +150,15 @@ def compress_directory(source_path, target_path):
     # Add "GZIP=-n" to disable gzip timestamp
     # see: https://serverfault.com/questions/110208/different-md5sums-for-same-tar-contents
     p = subprocess.Popen(
-        f'GZIP=-n tar --exclude=.svn -czf {target_path} -C {source_path} .',
+        f"GZIP=-n tar --exclude=.svn -czf {target_path} -C {source_path} .",
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        encoding='utf-8',
+        encoding="utf-8",
     )
     _, stderr = p.communicate()
     if p.returncode != 0:
-        raise RuntimeError('Unable to package source, error: %s' % stderr)
+        raise RuntimeError("Unable to package source, error: %s" % stderr)
 
 
 def uncompress_directory(source_path, target_path):
@@ -171,18 +171,18 @@ def uncompress_directory(source_path, target_path):
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        encoding='utf-8',
+        encoding="utf-8",
     )
     _, stderr = p.communicate()
     if p.returncode != 0:
-        raise RuntimeError('Unable to unpackage source, error: %s' % stderr)
+        raise RuntimeError("Unable to unpackage source, error: %s" % stderr)
 
 
 def __generate_temp_dir__(suffix=None) -> Iterator[Path]:
     path = None
     try:
         path = Path(tempfile.mkdtemp(suffix=suffix))
-        logger.debug('Generating temp path: %s', path)
+        logger.debug("Generating temp path: %s", path)
         yield path
     finally:
         if path and path.exists():
@@ -196,7 +196,7 @@ def __generate_temp_file__(suffix="") -> Iterator[Path]:
     path = None
     try:
         path = Path(tempfile.mktemp(suffix=suffix))
-        logger.debug('Generating temp path: %s', path)
+        logger.debug("Generating temp path: %s", path)
         yield path
     finally:
         if path and path.exists():

@@ -20,11 +20,16 @@ from typing import Optional
 
 from django.conf import settings
 
-from paas_wl.bk_app.monitoring.app_monitor import constants
-from paas_wl.bk_app.monitoring.app_monitor.entities import Endpoint, ServiceMonitor, ServiceSelector, service_monitor_kmodel
-from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.monitoring.app_monitor import constants
+from paas_wl.bk_app.monitoring.app_monitor.entities import (
+    Endpoint,
+    ServiceMonitor,
+    ServiceSelector,
+    service_monitor_kmodel,
+)
+from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
 
@@ -102,7 +107,7 @@ class AppMonitorController:
         if existed != svc_monitor:
             # DynamicClient 默认使用 strategic-merge-patch, CRD 不支持, 因此需要使用 merge-patch
             service_monitor_kmodel.update(
-                svc_monitor, update_method='patch', content_type="application/merge-patch+json"
+                svc_monitor, update_method="patch", content_type="application/merge-patch+json"
             )
 
     def remove(self):

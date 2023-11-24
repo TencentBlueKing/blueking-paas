@@ -26,11 +26,11 @@ from django_dynamic_fixture import G
 from dynaconf.utils.parse_conf import parse_conf_data
 from kubernetes.client.exceptions import ApiException
 
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.monitoring.app_monitor import constants
 from paas_wl.bk_app.monitoring.app_monitor.managers import build_service_monitor, service_monitor_kmodel
 from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
@@ -79,7 +79,7 @@ class TestBuilder:
 
         assert (
             svc_monitor.endpoint.metric_relabelings
-            == [{'action': 'replace', 'replacement': 'bkop.example.com', 'targetLabel': 'bk_domain'}]
+            == [{"action": "replace", "replacement": "bkop.example.com", "targetLabel": "bk_domain"}]
             + builtin_relabelings
         )
 

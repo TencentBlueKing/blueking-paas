@@ -30,7 +30,7 @@ from tests.utils.helpers import (
     override_region_configs,
 )
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def create_module(bk_app):
@@ -59,24 +59,24 @@ class TestAppEntranceViewSet:
                 "name": "default",
                 "is_default": True,
                 "envs": {
-                    'stag': [
+                    "stag": [
                         {
-                            'module': 'default',
-                            'env': 'stag',
-                            'address': {
-                                'id': None,
-                                'url': f'http://stag-dot-{bk_app.code}.example.com',
-                                'type': 'subdomain',
+                            "module": "default",
+                            "env": "stag",
+                            "address": {
+                                "id": None,
+                                "url": f"http://stag-dot-{bk_app.code}.example.com",
+                                "type": "subdomain",
                             },
-                            'is_running': False,
+                            "is_running": False,
                         }
                     ],
-                    'prod': [
+                    "prod": [
                         {
-                            'module': 'default',
-                            'env': 'prod',
-                            'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
-                            'is_running': False,
+                            "module": "default",
+                            "env": "prod",
+                            "address": {"id": None, "url": f"http://{bk_app.code}.example.com", "type": "subdomain"},
+                            "is_running": False,
                         }
                     ],
                 },
@@ -86,8 +86,8 @@ class TestAppEntranceViewSet:
         # 添加独立域名
         # source type: custom
         custom_domain = Domain.objects.create(
-            name='foo-custom.example.com',
-            path_prefix='/subpath/',
+            name="foo-custom.example.com",
+            path_prefix="/subpath/",
             module_id=bk_module.id,
             environment_id=bk_stag_env.id,
         )
@@ -98,34 +98,34 @@ class TestAppEntranceViewSet:
                 "name": "default",
                 "is_default": True,
                 "envs": {
-                    'stag': [
+                    "stag": [
                         {
-                            'module': 'default',
-                            'env': 'stag',
-                            'address': {
-                                'id': None,
-                                'url': f'http://stag-dot-{bk_app.code}.example.com',
-                                'type': 'subdomain',
+                            "module": "default",
+                            "env": "stag",
+                            "address": {
+                                "id": None,
+                                "url": f"http://stag-dot-{bk_app.code}.example.com",
+                                "type": "subdomain",
                             },
-                            'is_running': False,
+                            "is_running": False,
                         },
                         {
-                            'module': 'default',
-                            'env': 'stag',
-                            'address': {
-                                'id': custom_domain.id,
-                                'url': 'http://foo-custom.example.com/subpath/',
-                                'type': 'custom',
+                            "module": "default",
+                            "env": "stag",
+                            "address": {
+                                "id": custom_domain.id,
+                                "url": "http://foo-custom.example.com/subpath/",
+                                "type": "custom",
                             },
-                            'is_running': False,
+                            "is_running": False,
                         },
                     ],
-                    'prod': [
+                    "prod": [
                         {
-                            'module': 'default',
-                            'env': 'prod',
-                            'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
-                            'is_running': False,
+                            "module": "default",
+                            "env": "prod",
+                            "address": {"id": None, "url": f"http://{bk_app.code}.example.com", "type": "subdomain"},
+                            "is_running": False,
                         }
                     ],
                 },
@@ -141,34 +141,34 @@ class TestAppEntranceViewSet:
                 "name": "default",
                 "is_default": True,
                 "envs": {
-                    'stag': [
+                    "stag": [
                         {
-                            'module': 'default',
-                            'env': 'stag',
-                            'address': {
-                                'id': None,
-                                'url': f'http://stag-dot-{bk_app.code}.example.com/',
-                                'type': 'subdomain',
+                            "module": "default",
+                            "env": "stag",
+                            "address": {
+                                "id": None,
+                                "url": f"http://stag-dot-{bk_app.code}.example.com/",
+                                "type": "subdomain",
                             },
-                            'is_running': True,
+                            "is_running": True,
                         },
                         {
-                            'module': 'default',
-                            'env': 'stag',
-                            'address': {
-                                'id': custom_domain.id,
-                                'url': 'http://foo-custom.example.com/subpath/',
-                                'type': 'custom',
+                            "module": "default",
+                            "env": "stag",
+                            "address": {
+                                "id": custom_domain.id,
+                                "url": "http://foo-custom.example.com/subpath/",
+                                "type": "custom",
                             },
-                            'is_running': True,
+                            "is_running": True,
                         },
                     ],
-                    'prod': [
+                    "prod": [
                         {
-                            'module': 'default',
-                            'env': 'prod',
-                            'address': {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
-                            'is_running': False,
+                            "module": "default",
+                            "env": "prod",
+                            "address": {"id": None, "url": f"http://{bk_app.code}.example.com", "type": "subdomain"},
+                            "is_running": False,
                         }
                     ],
                 },
@@ -179,8 +179,8 @@ class TestAppEntranceViewSet:
         # setup data
         # source type: custom
         Domain.objects.create(
-            name='foo-custom.example.com',
-            path_prefix='/subpath/',
+            name="foo-custom.example.com",
+            path_prefix="/subpath/",
             module_id=bk_module.id,
             environment_id=bk_prod_env.id,
         )
@@ -189,11 +189,11 @@ class TestAppEntranceViewSet:
             url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/entrances/"
             resp = api_client.get(url)
             assert resp.json() == [
-                {'id': None, 'url': f'http://example.com/{bk_app.code}/', 'type': 'subpath'},
+                {"id": None, "url": f"http://example.com/{bk_app.code}/", "type": "subpath"},
                 {
-                    'id': Domain.objects.get(environment_id=bk_prod_env.id).id,
-                    'url': 'http://foo-custom.example.com/subpath/',
-                    'type': 'custom',
+                    "id": Domain.objects.get(environment_id=bk_prod_env.id).id,
+                    "url": "http://foo-custom.example.com/subpath/",
+                    "type": "custom",
                 },
             ]
 
@@ -201,11 +201,11 @@ class TestAppEntranceViewSet:
             url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/entrances/"
             resp = api_client.get(url)
             assert resp.json() == [
-                {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                {"id": None, "url": f"http://{bk_app.code}.example.com", "type": "subdomain"},
                 {
-                    'id': Domain.objects.get(environment_id=bk_prod_env.id).id,
-                    'url': 'http://foo-custom.example.com/subpath/',
-                    'type': 'custom',
+                    "id": Domain.objects.get(environment_id=bk_prod_env.id).id,
+                    "url": "http://foo-custom.example.com/subpath/",
+                    "type": "custom",
                 },
             ]
 
@@ -215,14 +215,14 @@ class TestAppEntranceViewSet:
             url = f"/api/bkapps/applications/{bk_app.code}/modules/{another_m.name}/entrances/"
             resp = api_client.get(url)
             assert resp.json() == [
-                {'id': None, 'url': f'http://{bk_app.code}.example.com', 'type': 'subdomain'},
+                {"id": None, "url": f"http://{bk_app.code}.example.com", "type": "subdomain"},
             ]
 
         another_prod_env = another_m.get_envs("prod")
         # source type: custom
         Domain.objects.create(
-            name='foo-another.example.com',
-            path_prefix='/subpath/',
+            name="foo-another.example.com",
+            path_prefix="/subpath/",
             module_id=another_m.id,
             environment_id=another_prod_env.id,
         )
@@ -230,10 +230,10 @@ class TestAppEntranceViewSet:
             url = f"/api/bkapps/applications/{bk_app.code}/modules/{another_m.name}/entrances/"
             resp = api_client.get(url)
             assert resp.json() == [
-                {'id': None, 'url': f'http://example.com/{bk_app.code}/', 'type': 'subpath'},
+                {"id": None, "url": f"http://example.com/{bk_app.code}/", "type": "subpath"},
                 {
-                    'id': Domain.objects.get(environment_id=another_prod_env.id).id,
-                    'url': 'http://foo-another.example.com/subpath/',
-                    'type': 'custom',
+                    "id": Domain.objects.get(environment_id=another_prod_env.id).id,
+                    "url": "http://foo-another.example.com/subpath/",
+                    "type": "custom",
                 },
             ]

@@ -21,7 +21,7 @@ from django.conf import settings
 
 
 class SchedulerConfig(AppConfig):
-    name = 'paasng.platform.scheduler'
+    name = "paasng.platform.scheduler"
 
     def ready(self):
         from . import jobs

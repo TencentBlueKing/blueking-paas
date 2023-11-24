@@ -42,7 +42,7 @@ class HealthStatus:
     message: str
     status: HealthStatusType
 
-    def with_message(self, message) -> 'HealthStatus':
+    def with_message(self, message) -> "HealthStatus":
         self.message = message
         return self
 

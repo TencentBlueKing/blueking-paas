@@ -50,10 +50,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class K8sScheduler:
-    client: 'EnhancedApiClient'
+    client: "EnhancedApiClient"
     default_connect_timeout: int
     default_read_timeout: int
-    mapper_version: Optional['MapperPack'] = None
+    mapper_version: Optional["MapperPack"] = None
 
     def __post_init__(self):
         # NOTE: dynamic client only support a single timeout parameter, use summed value as
@@ -63,7 +63,7 @@ class K8sScheduler:
 
         # 主要通过上层判断传入 version
         self.mapper_version = self.mapper_version or get_mapper_version(
-            target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={'client': self.client}
+            target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={"client": self.client}
         )
 
         handler_init_params = dict(
@@ -75,7 +75,7 @@ class K8sScheduler:
         self._initial_controllers(handler_init_params)
 
     @classmethod
-    def from_cluster_name(cls, cluster_name: str) -> 'K8sScheduler':
+    def from_cluster_name(cls, cluster_name: str) -> "K8sScheduler":
         """Create a scheduler client from context name"""
         default_connect_timeout = settings.K8S_DEFAULT_CONNECT_TIMEOUT
         default_read_timeout = settings.K8S_DEFAULT_READ_TIMEOUT
@@ -127,7 +127,7 @@ class K8sScheduler:
     # build API #
     #############
 
-    def build_slug(self, template: 'SlugBuilderTemplate') -> str:
+    def build_slug(self, template: "SlugBuilderTemplate") -> str:
         """Build a default slug in NeverRestart Pod, called by Builder
         used to build on Job, but job doesn't meet our needs
 
@@ -199,7 +199,7 @@ class K8sScheduler:
     def ensure_image_credentials_secret(self, app: WlApp):
         """确保应用镜像的访问凭证存在"""
         credentials = ImageCredentials.load_from_app(app)
-        self.credential_handler.upsert(credentials, update_method='patch')
+        self.credential_handler.upsert(credentials, update_method="patch")
 
     ###################
     # autoscaling API #

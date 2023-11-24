@@ -18,5 +18,5 @@ to the current version of the project delivered to anyone in the future.
 """
 import django
 
-post_change_app_router = django.dispatch.Signal(providing_args=['application', 'legacy_app', 'migration_process'])
-rollback_change_app_router = django.dispatch.Signal(providing_args=['application', 'legacy_app', 'migration_process'])
+post_change_app_router = django.dispatch.Signal(providing_args=["application", "legacy_app", "migration_process"])
+rollback_change_app_router = django.dispatch.Signal(providing_args=["application", "legacy_app", "migration_process"])

@@ -22,16 +22,16 @@ from . import views
 
 urlpatterns = [
     url(
-        r'^streams/(?P<channel_id>[0-9a-f-]{32,36})$',
+        r"^streams/(?P<channel_id>[0-9a-f-]{32,36})$",
         views.StreamViewSet.as_view(dict(get="streaming")),
-        name='streaming.stream',
+        name="streaming.stream",
     ),
     url(
-        r'^streams/(?P<channel_id>[0-9a-f-]{32,36})/history_events$',
+        r"^streams/(?P<channel_id>[0-9a-f-]{32,36})/history_events$",
         views.StreamViewSet.as_view(dict(get="history_events")),
-        name='streaming.stream.history_events',
+        name="streaming.stream.history_events",
     ),
-    url(r'^streams/__debugger__$', views.StreamDebuggerView.as_view(), name='streaming.debugger'),
-    url(r'^streams/__void__$', views.VoidViewset.as_view({'patch': 'patch_no_content'})),
-    url(r'^streams/__void_with_content__$', views.VoidViewset.as_view({'patch': 'patch_with_content'})),
+    url(r"^streams/__debugger__$", views.StreamDebuggerView.as_view(), name="streaming.debugger"),
+    url(r"^streams/__void__$", views.VoidViewset.as_view({"patch": "patch_no_content"})),
+    url(r"^streams/__void_with_content__$", views.VoidViewset.as_view({"patch": "patch_with_content"})),
 ]

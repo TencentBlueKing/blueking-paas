@@ -36,9 +36,9 @@ def can_enter_next_stage(pd: PluginDefinition, plugin: PluginInstance, version: 
     resp = utils.make_client(sub_stage_definition.api.result).call(
         path_params={"plugin_id": plugin.id, "version_id": version.version}
     )
-    if not resp.get('result'):
+    if not resp.get("result"):
         logger.error(f"get sub page status error: {resp.get('message')}")
         return False
 
-    is_success = resp.get('data').get('is_success')
+    is_success = resp.get("data").get("is_success")
     return is_success

@@ -22,10 +22,12 @@ import gitlab.exceptions
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.infras.iam.helpers import add_role_members, remove_user_all_roles
+from paasng.accessories.publish.market.models import Product
+from paasng.bk_plugins.bk_plugins.models import BkPluginTag
+from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
-from paasng.platform.sourcectl.models import GitProject
-from paasng.platform.sourcectl.source_types import get_sourcectl_names
+from paasng.infras.iam.helpers import add_role_members, remove_user_all_roles
+from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.engine.constants import DeployConditions
 from paasng.platform.engine.workflow.protections import (
     EnvProtectionCondition,
@@ -34,12 +36,10 @@ from paasng.platform.engine.workflow.protections import (
     ProductInfoCondition,
     RepoAccessCondition,
 )
-from paasng.bk_plugins.bk_plugins.models import BkPluginTag
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
-from paasng.accessories.publish.market.models import Product
+from paasng.platform.sourcectl.models import GitProject
+from paasng.platform.sourcectl.source_types import get_sourcectl_names
 
 pytestmark = pytest.mark.django_db
 
@@ -50,7 +50,7 @@ def git_client(bk_module):
     with mock.patch.object(bk_module, "get_source_obj"), mock.patch.object(
         GitProject, "parse_from_repo_url"
     ) as get_backends, mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient") as client:
-        get_backends.return_value = GitProject(name="baz", namespace="bar", type='dft_gitlab')
+        get_backends.return_value = GitProject(name="baz", namespace="bar", type="dft_gitlab")
         yield client()
 
 
@@ -78,13 +78,13 @@ class TestProductInfoCondition:
 class TestPluginTagCondition:
     @pytest.mark.parametrize(
         "env, create_tag, ok",
-        [("prod", False, False), ('prod', True, True), ("stag", False, True), ('stag', True, True)],
+        [("prod", False, False), ("prod", True, True), ("stag", False, True), ("stag", True, True)],
     )
     def test_validate(self, bk_user, bk_plugin_app, env, create_tag, ok):
         bk_plugin_profile = bk_plugin_app.bk_plugin_profile
 
         if create_tag:
-            tag_1 = G(BkPluginTag, code_name='sample-tag-code-1', name='sample-tag-1')
+            tag_1 = G(BkPluginTag, code_name="sample-tag-code-1", name="sample-tag-1")
             bk_plugin_profile.tag = tag_1
 
         env = bk_plugin_app.get_default_module().envs.get(environment=env)
@@ -138,10 +138,10 @@ class TestRepoAccessCondition:
     @pytest.mark.parametrize(
         "source_type, create_user_profile, create_token_holder, ok, action_name",
         [
-            ('dft_gitlab', False, False, False, DeployConditions.NEED_TO_BIND_OAUTH_INFO),
-            ('dft_gitlab', True, False, False, DeployConditions.NEED_TO_BIND_OAUTH_INFO),
-            ('dft_gitlab', True, True, False, DeployConditions.DONT_HAVE_ENOUGH_PERMISSIONS),
-            ('dft_gitlab', True, True, True, ...),
+            ("dft_gitlab", False, False, False, DeployConditions.NEED_TO_BIND_OAUTH_INFO),
+            ("dft_gitlab", True, False, False, DeployConditions.NEED_TO_BIND_OAUTH_INFO),
+            ("dft_gitlab", True, True, False, DeployConditions.DONT_HAVE_ENOUGH_PERMISSIONS),
+            ("dft_gitlab", True, True, True, ...),
         ],
     )
     def test_validate(

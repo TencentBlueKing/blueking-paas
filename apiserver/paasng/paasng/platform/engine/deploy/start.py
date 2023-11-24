@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 def initialize_deployment(
-    env: 'ModuleEnvironment',
+    env: "ModuleEnvironment",
     operator: str,
     version_info: VersionInfo,
     advanced_options: Optional[Dict] = None,
@@ -118,7 +118,7 @@ class DeployTaskRunner:
         pre_appenv_deploy.send(self.deployment.app_environment, deployment=self.deployment)
 
         deployment_id = self.deployment.id
-        logger.debug('Starting new deployment: %s for Module: %s...', deployment_id, self.module)
+        logger.debug("Starting new deployment: %s for Module: %s...", deployment_id, self.module)
         if self.require_build():
             start_build.apply_async(args=(deployment_id, self.runtime_type), link_error=start_build_error_callback.s())
         else:

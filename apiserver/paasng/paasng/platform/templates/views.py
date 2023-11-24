@@ -22,12 +22,12 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.response import Response
 
+from paasng.platform.engine.configurations.image import get_image_repository_template
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.templates.exceptions import TmplRegionNotSupported
 from paasng.platform.templates.manager import TemplateRuntimeManager, retrieve_template_build_config
 from paasng.platform.templates.models import Template
 from paasng.platform.templates.serializers import SearchTemplateSLZ, TemplateDetailSLZ, TemplateSLZ
-from paasng.platform.engine.configurations.image import get_image_repository_template
-from paasng.platform.engine.constants import RuntimeType
 from paasng.utils.error_codes import error_codes
 
 
@@ -38,7 +38,7 @@ class TemplateViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
 
         params = slz.validated_data
-        tmpls = Template.objects.filter_by_region(region=params['region'], type=tpl_type)
+        tmpls = Template.objects.filter_by_region(region=params["region"], type=tpl_type)
         return Response(TemplateSLZ(tmpls, many=True).data)
 
 

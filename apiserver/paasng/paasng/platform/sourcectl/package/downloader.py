@@ -33,7 +33,7 @@ def download_file_via_http(target_url: str, local_path: PathLike):
 
     resp = requests.get(target_url, stream=True)
     if not (resp.status_code >= 200 and resp.status_code < 300):
-        raise ValueError(f'The status code returned by the download link({target_url}) is {resp.status_code}')
+        raise ValueError(f"The status code returned by the download link({target_url}) is {resp.status_code}")
 
     with open(local_path, mode="wb") as fh:
         for chunk in resp.iter_content(chunk_size=512):

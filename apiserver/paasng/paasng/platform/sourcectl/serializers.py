@@ -34,22 +34,22 @@ class RepositorySLZ(serializers.Serializer):
 
     # 在现在的逻辑里，每一个 Repo 对象的 server_name 等于 Module 对象的 repo_type 字段
     # source_type 和 type 字段是一样的，为了保证 source_type 名称的统一意义保持冗余
-    source_type = serializers.CharField(help_text='源码类型名称', source='get_source_type')
-    type = serializers.CharField(help_text='同 source_type', source="get_source_type")
+    source_type = serializers.CharField(help_text="源码类型名称", source="get_source_type")
+    type = serializers.CharField(help_text="同 source_type", source="get_source_type")
     trunk_url = serializers.SerializerMethodField(
         method_name="get_repo_url",
         required=False,
         allow_null=True,
         help_text="[Deprecated] 仅限 SVN 源码系统使用",
     )
-    repo_url = serializers.SerializerMethodField(help_text='源码仓库地址', required=False, allow_null=True)
+    repo_url = serializers.SerializerMethodField(help_text="源码仓库地址", required=False, allow_null=True)
     source_dir = serializers.CharField(
         source="get_source_dir", help_text="源码目录", read_only=True, allow_blank=True, allow_null=True
     )
-    repo_fullname = serializers.CharField(source="get_repo_fullname", help_text='仓库名')
-    diff_feature = serializers.SerializerMethodField(help_text='与“查看源码差异”功能有关的配置字段')
-    linked_to_internal_svn = serializers.BooleanField(help_text='[Deprecated] 与 SVN 有关的保留字段', default=True)
-    display_name = serializers.CharField(help_text='源码系统用于展示的名称', source="get_display_name")
+    repo_fullname = serializers.CharField(source="get_repo_fullname", help_text="仓库名")
+    diff_feature = serializers.SerializerMethodField(help_text="与“查看源码差异”功能有关的配置字段")
+    linked_to_internal_svn = serializers.BooleanField(help_text="[Deprecated] 与 SVN 有关的保留字段", default=True)
+    display_name = serializers.CharField(help_text="源码系统用于展示的名称", source="get_display_name")
 
     def to_representation(self, instance: RepositoryInstance):
         try:
@@ -89,12 +89,12 @@ class SVNAccountResponseSLZ(serializers.Serializer):
 class SvnAccountSLZ(serializers.ModelSerializer):
     account = serializers.ReadOnlyField()
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    verification_code = VerificationCodeField(write_only=True, required=False, default='NEVER-MATCH')
+    verification_code = VerificationCodeField(write_only=True, required=False, default="NEVER-MATCH")
     synced_from_paas20 = serializers.ReadOnlyField(help_text="账户信息是否来自Paas2.0")
 
     class Meta:
         model = SvnAccount
-        fields = ('region', 'account', 'user', 'id', "verification_code", "synced_from_paas20")
+        fields = ("region", "account", "user", "id", "verification_code", "synced_from_paas20")
         lookup_field = "id"
 
 
@@ -104,13 +104,13 @@ class SvnAccountCreateSLZ(serializers.ModelSerializer):
 
     validators = [
         UniqueTogetherValidator(
-            queryset=SvnAccount.objects.all(), fields=('user', 'region'), message=u"用户在当前Region的SVN账号已经存在"
+            queryset=SvnAccount.objects.all(), fields=("user", "region"), message="用户在当前Region的SVN账号已经存在"
         )
     ]
 
     class Meta:
         model = SvnAccount
-        fields = ('region', 'account', 'user', 'id')
+        fields = ("region", "account", "user", "id")
         lookup_field = "id"
 
 
@@ -158,7 +158,9 @@ class RepoBackendModifySLZ(serializers.Serializer):
 
     source_repo_url = serializers.CharField()
     source_repo_auth_info = serializers.JSONField(required=False, default={})
-    source_dir = serializers.CharField(help_text="Procfile 所在目录, 如果是根目录可不填.", default="", allow_blank=True)
+    source_dir = serializers.CharField(
+        help_text="Procfile 所在目录, 如果是根目录可不填.", default="", allow_blank=True
+    )
 
 
 ##########################

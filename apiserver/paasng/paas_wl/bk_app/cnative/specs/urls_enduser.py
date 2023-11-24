@@ -22,28 +22,28 @@ from . import views_enduser
 
 urlpatterns = [
     re_path(
-        make_app_pattern_with_applications_prefix(r'/mres/$', include_envs=False),
-        views_enduser.MresViewSet.as_view({'get': 'retrieve', 'put': 'update'}),
-        name='api.mres',
+        make_app_pattern_with_applications_prefix(r"/mres/$", include_envs=False),
+        views_enduser.MresViewSet.as_view({"get": "retrieve", "put": "update"}),
+        name="api.mres",
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/mres/deployments/$', include_envs=True),
-        views_enduser.MresDeploymentsViewSet.as_view({'get': 'list', 'post': 'create'}),
-        name='api.mres.deployments',
+        make_app_pattern_with_applications_prefix(r"/mres/deployments/$", include_envs=True),
+        views_enduser.MresDeploymentsViewSet.as_view({"get": "list", "post": "create"}),
+        name="api.mres.deployments",
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/mres/deploy_preps/$', include_envs=True),
-        views_enduser.MresDeploymentsViewSet.as_view({'post': 'prepare'}),
-        name='api.mres.deploy_preps',
+        make_app_pattern_with_applications_prefix(r"/mres/deploy_preps/$", include_envs=True),
+        views_enduser.MresDeploymentsViewSet.as_view({"post": "prepare"}),
+        name="api.mres.deploy_preps",
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/mres/deployments/(?P<deploy_id>[\d]+)/$'),
-        views_enduser.MresDeploymentsViewSet.as_view({'get': 'retrieve'}),
-        name='api.mres.deployments.singular',
+        make_app_pattern_with_applications_prefix(r"/mres/deployments/(?P<deploy_id>[\d]+)/$"),
+        views_enduser.MresDeploymentsViewSet.as_view({"get": "retrieve"}),
+        name="api.mres.deployments.singular",
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/mres/status/$'),
-        views_enduser.MresStatusViewSet.as_view({'get': 'retrieve'}),
-        name='api.mres.status',
+        make_app_pattern_with_applications_prefix(r"/mres/status/$"),
+        views_enduser.MresStatusViewSet.as_view({"get": "retrieve"}),
+        name="api.mres.status",
     ),
 ]

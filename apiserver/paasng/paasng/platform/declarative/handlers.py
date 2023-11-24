@@ -25,7 +25,7 @@ from django.utils.translation import gettext as _
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.models import User
-from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
@@ -36,13 +36,13 @@ from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.deployment.validations import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import SMartV1DescriptionSLZ, UniConfigSLZ, validate_desc
-from paasng.platform.applications.models import Application
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 
 logger = logging.getLogger(__name__)
 
 
-def get_desc_handler(json_data: Dict) -> 'DescriptionHandler':
+def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
     spec_version = detect_spec_version(json_data)
     if spec_version == AppSpecVersion.VER_1:
         return SMartDescriptionHandler(json_data)
@@ -116,8 +116,8 @@ class AppDescriptionHandler:
                 logger.warning("Duplicate definition of module information !")
             module_desc = self.json_data["modules"][module_name]
         if not module_desc:
-            logger.info('Skip running deployment controller because not content was provided')
-            raise DescriptionValidationError({"module": _('内容不能为空')})
+            logger.info("Skip running deployment controller because not content was provided")
+            raise DescriptionValidationError({"module": _("内容不能为空")})
         desc = validate_desc(DeploymentDescSLZ, module_desc)
         return desc
 
@@ -128,9 +128,9 @@ class AppDescriptionHandler:
         """
         json_data = validate_desc(UniConfigSLZ, self.json_data)
         if not json_data["app"]:
-            raise DescriptionValidationError({"app": _('内容不能为空')})
+            raise DescriptionValidationError({"app": _("内容不能为空")})
         if "module" not in json_data and "modules" not in json_data:
-            raise DescriptionValidationError({"modules": _('内容不能为空')})
+            raise DescriptionValidationError({"modules": _("内容不能为空")})
 
         controller = AppDeclarativeController(user, source_origin)
         return controller.perform_action(self.app_desc)
@@ -162,13 +162,13 @@ class SMartDescriptionHandler:
 
         :raises: DescriptionValidationError when input is invalid
         """
-        instance = get_application(self.json_data, 'app_code')
+        instance = get_application(self.json_data, "app_code")
         # S-mart application always perform a full update by using partial=False
         app_desc, _ = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
         return app_desc
 
     def get_deploy_desc(self, module_name: Optional[str] = None) -> DeploymentDesc:
-        instance = get_application(self.json_data, 'app_code')
+        instance = get_application(self.json_data, "app_code")
         # S-mart application always perform a full update by using partial=False
         _, deploy_desc = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
         return deploy_desc

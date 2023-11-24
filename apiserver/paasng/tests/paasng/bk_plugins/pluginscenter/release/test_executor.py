@@ -91,7 +91,9 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.enter_next_stage("")
         assert exc.value.code == error_codes.EXECUTE_STAGE_ERROR.code
-        assert exc.value.message == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message
+        assert (
+            exc.value.message == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message
+        )
 
         # 测试成功进入下一步, 同时下一步执行失败
         stage_class_setter.return_value = build_stage_controller(PluginReleaseStatus.INTERRUPTED)
@@ -133,7 +135,10 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.execute_current_stage("")
         assert exc.value.code == error_codes.EXECUTE_STAGE_ERROR.code
-        assert exc.value.message == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段")).message
+        assert (
+            exc.value.message
+            == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段")).message
+        )
 
         # 测试设置 status 为成功
         release.current_stage.reset()
@@ -166,7 +171,10 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.back_to_previous_stage("")
         assert exc.value.code == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.code
-        assert exc.value.message == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回审批单据, 再返回上一步")).message
+        assert (
+            exc.value.message
+            == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回审批单据, 再返回上一步")).message
+        )
 
     def test_rollback_current_stage(self, release):
         executor = PluginReleaseExecutor(release)
@@ -192,7 +200,9 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.reset_release("")
         assert exc.value.code == error_codes.CANNOT_RESET_RELEASE.code
-        assert exc.value.message == error_codes.CANNOT_RESET_RELEASE.f(_("状态异常: {}").format(release.status)).message
+        assert (
+            exc.value.message == error_codes.CANNOT_RESET_RELEASE.f(_("状态异常: {}").format(release.status)).message
+        )
 
         release.all_stages.update(status=PluginReleaseStatus.SUCCESSFUL)
         release.current_stage = release.all_stages.get(stage_id="stage4")

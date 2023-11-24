@@ -42,15 +42,15 @@ from paas_wl.workloads.networking.ingress.kres_entities.utils import (
     NginxRegexRewrittenProvider,
 )
 
-ANNOT_SERVER_SNIPPET = 'nginx.ingress.kubernetes.io/server-snippet'
-ANNOT_CONFIGURATION_SNIPPET = 'nginx.ingress.kubernetes.io/configuration-snippet'
+ANNOT_SERVER_SNIPPET = "nginx.ingress.kubernetes.io/server-snippet"
+ANNOT_CONFIGURATION_SNIPPET = "nginx.ingress.kubernetes.io/configuration-snippet"
 ANNOT_REWRITE_TARGET = "nginx.ingress.kubernetes.io/rewrite-target"
-ANNOT_SSL_REDIRECT = 'nginx.ingress.kubernetes.io/ssl-redirect'
+ANNOT_SSL_REDIRECT = "nginx.ingress.kubernetes.io/ssl-redirect"
 # 由于 tke 集群默认会为没有绑定 CLB 的 Ingress 创建并绑定公网 CLB 的危险行为，
 # bcs-webhook 会对下发/更新配置时没有指定 clb 的 Ingress 进行拦截，在关闭 tke 集群的 l7-lb-controller 组件后
 # 可以在下发 Ingress 时候添加注解 bkbcs.tencent.com/skip-filter-clb: "true" 以跳过 bcs-webhook 的拦截
 # l7-lb-controller 状态查询：kubectl get deploy l7-lb-controller -n kube-system
-ANNOT_SKIP_FILTER_CLB = 'bkbcs.tencent.com/skip-filter-clb'
+ANNOT_SKIP_FILTER_CLB = "bkbcs.tencent.com/skip-filter-clb"
 
 # Annotations managed by system
 reserved_annotations = {
@@ -76,7 +76,7 @@ class IngressNginxAdaptor:
         self.cluster = cluster
         self.use_regex = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_REGEX)
 
-    def make_configuration_snippet(self, fallback_script_name: Optional[str] = '') -> str:
+    def make_configuration_snippet(self, fallback_script_name: Optional[str] = "") -> str:
         """Make configuration snippet which set X-Script-Name as the sub-path provided by platform or custom domain
 
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
@@ -148,7 +148,7 @@ class ConfigurationSnippetPatcher:
         return self.PatchResult(False, snippet)
 
 
-class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
+class IngressV1Beta1Serializer(AppEntitySerializer["ProcessIngress"]):
     """Serializer for ProcessIngress in ApiVersion networking.k8s.io/v1beta1 or extensions/v1beta1
 
     IMPORTANT: This class is not compatible with ingress-nginx >= 1.0
@@ -197,7 +197,7 @@ class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
 
         tls = []
         for secret_name, hosts in tls_group_by_secret_name.items():
-            tls.append({'hosts': hosts, 'secretName': secret_name})
+            tls.append({"hosts": hosts, "secretName": secret_name})
 
         rules = []
         for domain in obj.domains:
@@ -205,25 +205,25 @@ class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
             for path_str in domain.path_prefix_list:
                 paths.append(
                     {
-                        "path": nginx_adaptor.build_http_path(path_str or '/') if obj.rewrite_to_root else path_str,
+                        "path": nginx_adaptor.build_http_path(path_str or "/") if obj.rewrite_to_root else path_str,
                         "backend": {"serviceName": obj.service_name, "servicePort": obj.service_port_name},
                     }
                 )
-            rules.append({'host': domain.host, 'http': {'paths': paths}})
+            rules.append({"host": domain.host, "http": {"paths": paths}})
 
         body: Dict[str, Any] = {
-            'metadata': {
-                'name': obj.name,
-                'namespace': obj.app.namespace,
-                'annotations': annotations,
+            "metadata": {
+                "name": obj.name,
+                "namespace": obj.app.namespace,
+                "annotations": annotations,
             },
-            'spec': {'rules': rules, 'tls': tls},
-            'apiVersion': self.get_api_version_from_gvk(self.gvk_config),
-            'kind': 'Ingress',
+            "spec": {"rules": rules, "tls": tls},
+            "apiVersion": self.get_api_version_from_gvk(self.gvk_config),
+            "kind": "Ingress",
         }
 
         if original_obj:
-            body['metadata']['resourceVersion'] = original_obj.metadata.resourceVersion
+            body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
         return body
 
 
@@ -279,7 +279,7 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         host_secret_map = {}
         for ingress_tls in tls:
             for host in ingress_tls.hosts:
-                host_secret_map[host] = ingress_tls.get('secretName', '')
+                host_secret_map[host] = ingress_tls.get("secretName", "")
 
         for rule in rules:
             if not rule.get("http"):
@@ -288,7 +288,7 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
                 PIngressDomain(
                     host=rule.host,
                     tls_enabled=(rule.host in host_secret_map),
-                    tls_secret_name=host_secret_map.get(rule.host, ''),
+                    tls_secret_name=host_secret_map.get(rule.host, ""),
                     path_prefix_list=[
                         nginx_adaptor.parse_http_path(ingress_path.path) for ingress_path in rule.http.paths
                     ],
@@ -309,9 +309,9 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
                 svc_info_pairs.add((ingress_path.backend.serviceName, ingress_path.backend.servicePort))
 
         if not svc_info_pairs:
-            raise ValueError('No ingress backend can be found in ingress rules')
+            raise ValueError("No ingress backend can be found in ingress rules")
         elif len(svc_info_pairs) != 1:
-            raise ValueError(f'different backends found: {svc_info_pairs}')
+            raise ValueError(f"different backends found: {svc_info_pairs}")
         return svc_info_pairs.pop()
 
 
@@ -356,7 +356,7 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
 
         tls = []
         for secret_name, hosts in tls_group_by_secret_name.items():
-            tls.append({'hosts': hosts, 'secretName': secret_name})
+            tls.append({"hosts": hosts, "secretName": secret_name})
 
         rules = []
         for domain in obj.domains:
@@ -364,28 +364,28 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
             for path_str in domain.path_prefix_list:
                 paths.append(
                     {
-                        "path": nginx_adaptor.make_location_path(path_str or '/') if obj.rewrite_to_root else path_str,
+                        "path": nginx_adaptor.make_location_path(path_str or "/") if obj.rewrite_to_root else path_str,
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {"name": obj.service_name, "port": {"name": obj.service_port_name}},
                         },
                     }
                 )
-            rules.append({'host': domain.host, 'http': {'paths': paths}})
+            rules.append({"host": domain.host, "http": {"paths": paths}})
 
         body: Dict[str, Any] = {
-            'metadata': {
-                'name': obj.name,
-                'namespace': obj.app.namespace,
-                'annotations': annotations,
+            "metadata": {
+                "name": obj.name,
+                "namespace": obj.app.namespace,
+                "annotations": annotations,
             },
-            'spec': {'rules': rules, 'tls': tls},
-            'apiVersion': self.get_api_version_from_gvk(self.gvk_config),
-            'kind': 'Ingress',
+            "spec": {"rules": rules, "tls": tls},
+            "apiVersion": self.get_api_version_from_gvk(self.gvk_config),
+            "kind": "Ingress",
         }
 
         if original_obj:
-            body['metadata']['resourceVersion'] = original_obj.metadata.resourceVersion
+            body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
         return body
 
 
@@ -431,7 +431,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         host_secret_map = {}
         for ingress_tls in tls:
             for host in ingress_tls.hosts:
-                host_secret_map[host] = ingress_tls.get('secretName', '')
+                host_secret_map[host] = ingress_tls.get("secretName", "")
 
         for rule in rules:
             if not rule.get("http"):
@@ -440,7 +440,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
                 PIngressDomain(
                     host=rule.host,
                     tls_enabled=(rule.host in host_secret_map),
-                    tls_secret_name=host_secret_map.get(rule.host, ''),
+                    tls_secret_name=host_secret_map.get(rule.host, ""),
                     path_prefix_list=[
                         nginx_adaptor.parse_location_path(ingress_path.path) for ingress_path in rule.http.paths
                     ],
@@ -463,13 +463,13 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
                 service_name = ingress_path.backend.service.name
                 service_port_name = ingress_path.backend.service.port.name
                 if not service_port_name:
-                    raise ValueError(f'Only support ingress with port name, detail: {ingress_path.backend}')
+                    raise ValueError(f"Only support ingress with port name, detail: {ingress_path.backend}")
                 svc_info_pairs.add((service_name, service_port_name))
 
         if not svc_info_pairs:
-            raise ValueError('No ingress backend can be found in ingress rules')
+            raise ValueError("No ingress backend can be found in ingress rules")
         elif len(svc_info_pairs) != 1:
-            raise ValueError(f'different backends found: {svc_info_pairs}')
+            raise ValueError(f"different backends found: {svc_info_pairs}")
         return svc_info_pairs.pop()
 
 
@@ -483,8 +483,8 @@ class PIngressDomain:
     host: str
 
     tls_enabled: bool = False
-    tls_secret_name: str = ''
-    path_prefix_list: List[str] = field(default_factory=lambda: ['/'])
+    tls_secret_name: str = ""
+    path_prefix_list: List[str] = field(default_factory=lambda: ["/"])
 
     @property
     def primary_prefix_path(self) -> str:
@@ -520,8 +520,8 @@ class ProcessIngress(AppEntity):
     service_name: str
     service_port_name: str
 
-    server_snippet: str = ''
-    configuration_snippet: str = ''
+    server_snippet: str = ""
+    configuration_snippet: str = ""
 
     # Whether to rewrite path to "/" when request matches path pattern, for example:
     # when path pattern is "/foo/" and user is requesting "/foo/bar", the path will be rewritten

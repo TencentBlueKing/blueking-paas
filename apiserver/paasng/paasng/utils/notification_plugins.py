@@ -35,7 +35,7 @@ class BaseComponentAPIPlugin(UserNotificationPlugin):
     def __init__(self):
         self.client = requests.session()
         self.inner_code, self.inner_secret = self._get_inner_auth_pair()
-        self.url_prefix = '/api/c/compapi/v2/cmsi/'
+        self.url_prefix = "/api/c/compapi/v2/cmsi/"
 
     def get_common_params(self, bk_username: str):
         """
@@ -47,15 +47,15 @@ class BaseComponentAPIPlugin(UserNotificationPlugin):
         The default is the first receiver
         """
         return {
-            'bk_username': bk_username,
-            'app_code': self.inner_code,
-            'app_secret': self.inner_secret,
+            "bk_username": bk_username,
+            "app_code": self.inner_code,
+            "app_secret": self.inner_secret,
         }
 
     def _call_api(self, method: str, bk_username: str, params: Dict) -> bool:
         """Send notification via BK API GateWay"""
         common_params = self.get_common_params(bk_username)
-        url = f'{settings.COMPONENT_SYSTEM_HOST}{self.url_prefix}{method}/'
+        url = f"{settings.COMPONENT_SYSTEM_HOST}{self.url_prefix}{method}/"
         try:
             resp = self.client.get(url, params={**common_params, **params})
             result = resp.json()
@@ -63,15 +63,15 @@ class BaseComponentAPIPlugin(UserNotificationPlugin):
             logger.exception("request to tof failed.")
             return False
 
-        if result.get('result'):
+        if result.get("result"):
             return True
 
         logger.warning(
             "send {method} to {receiver} failed: {code}/{reason}".format(
                 method=method,
-                receiver=params.get('receiver__username', '[unknown]'),
-                code=result.get('code', 'no exact code'),
-                reason=result.get('message', 'no exact reason'),
+                receiver=params.get("receiver__username", "[unknown]"),
+                code=result.get("code", "no exact code"),
+                reason=result.get("message", "no exact reason"),
             )
         )
         return False
@@ -83,7 +83,7 @@ class BaseComponentAPIPlugin(UserNotificationPlugin):
     @staticmethod
     def cat_names(names: Sequence[str]) -> str:
         """Concatenate user names to call BK API GateWay API"""
-        return ','.join(names)
+        return ",".join(names)
 
 
 class MailNotificationPlugin(BaseComponentAPIPlugin):
@@ -91,16 +91,16 @@ class MailNotificationPlugin(BaseComponentAPIPlugin):
 
     def send(self, receivers: List[str], content: str, title: Optional[str] = None) -> bool:
         if not receivers:
-            logger.error('The receivers of sending mail is empty, skipped')
+            logger.error("The receivers of sending mail is empty, skipped")
             return False
 
         params = {
-            'content': content,
-            'title': title,
-            'receiver__username': self.cat_names(receivers),
+            "content": content,
+            "title": title,
+            "receiver__username": self.cat_names(receivers),
         }
         bk_username = receivers[0]
-        return self._call_api('send_mail', bk_username, params=params)
+        return self._call_api("send_mail", bk_username, params=params)
 
 
 class WeComNotificationPlugin(BaseComponentAPIPlugin):
@@ -108,16 +108,16 @@ class WeComNotificationPlugin(BaseComponentAPIPlugin):
 
     def send(self, receivers: List[str], content: str, title: Optional[str] = None) -> bool:
         if not receivers:
-            logger.error('The receivers of sending rtx is empty, skipped')
+            logger.error("The receivers of sending rtx is empty, skipped")
             return False
 
         params = {
-            'content': content,
-            'title': title,
-            'receiver__username': self.cat_names(receivers),
+            "content": content,
+            "title": title,
+            "receiver__username": self.cat_names(receivers),
         }
         bk_username = receivers[0]
-        return self._call_api('send_rtx', bk_username, params=params)
+        return self._call_api("send_rtx", bk_username, params=params)
 
 
 class WeChatNotificationPlugin(BaseComponentAPIPlugin):
@@ -125,15 +125,15 @@ class WeChatNotificationPlugin(BaseComponentAPIPlugin):
 
     def send(self, receivers: List[str], content: str, title: Optional[str] = None) -> bool:
         if not receivers:
-            logger.error('The receivers of sending weixin is empty, skipped')
+            logger.error("The receivers of sending weixin is empty, skipped")
             return False
 
         params = {
-            'data': content,
-            'receiver__username': self.cat_names(receivers),
+            "data": content,
+            "receiver__username": self.cat_names(receivers),
         }
         bk_username = receivers[0]
-        return self._call_api('send_weixin', bk_username, params=params)
+        return self._call_api("send_weixin", bk_username, params=params)
 
 
 class SMSNotificationPlugin(BaseComponentAPIPlugin):
@@ -142,16 +142,16 @@ class SMSNotificationPlugin(BaseComponentAPIPlugin):
     def send(self, receivers: List[str], content: str, title: Optional[str] = None) -> bool:
         """Send SMS notification to user"""
         if not receivers:
-            logger.error('The receivers of sending SMS is empty, skipped')
+            logger.error("The receivers of sending SMS is empty, skipped")
             return False
 
         content = force_text(content)
         params = {
-            'receiver__username': receivers,
-            'content': content,
+            "receiver__username": receivers,
+            "content": content,
         }
         bk_username = receivers[0]
-        return self._call_api('send_sms', bk_username, params=params)
+        return self._call_api("send_sms", bk_username, params=params)
 
 
 def register_plugins():

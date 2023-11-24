@@ -20,13 +20,13 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 # Default resource limitations for each process
-DEFAULT_PROC_CPU = '4000m'
-DEFAULT_PROC_MEM = '1024Mi'
+DEFAULT_PROC_CPU = "4000m"
+DEFAULT_PROC_MEM = "1024Mi"
 # Default resource request for each process
-DEFAULT_PROC_CPU_REQUEST = '200m'
-DEFAULT_PROC_MEM_REQUEST = '256Mi'
+DEFAULT_PROC_CPU_REQUEST = "200m"
+DEFAULT_PROC_MEM_REQUEST = "256Mi"
 
-DEFAULT_PROCESS_NAME = 'web'
+DEFAULT_PROCESS_NAME = "web"
 
 # 注解中存储当前应用是否启用白名单功能的键名
 ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
@@ -70,21 +70,21 @@ CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
 class ApiVersion(str, StructuredEnum):
     """Kubernetes CRD API versions"""
 
-    V1ALPHA1 = 'paas.bk.tencent.com/v1alpha1'
-    V1ALPHA2 = 'paas.bk.tencent.com/v1alpha2'
+    V1ALPHA1 = "paas.bk.tencent.com/v1alpha1"
+    V1ALPHA2 = "paas.bk.tencent.com/v1alpha2"
 
 
 class DeployStatus(str, StructuredEnum):
     """Cloud-native app's deployment statuses"""
 
-    PENDING = EnumField('pending', label=_('待实施'))
-    PROGRESSING = EnumField('progressing', label=_('进行中'))
-    READY = EnumField('ready', label=_('已就绪'))
-    ERROR = EnumField('error', label=_('错误'))
-    UNKNOWN = EnumField('unknown', label=_('未知'))
+    PENDING = EnumField("pending", label=_("待实施"))
+    PROGRESSING = EnumField("progressing", label=_("进行中"))
+    READY = EnumField("ready", label=_("已就绪"))
+    ERROR = EnumField("error", label=_("错误"))
+    UNKNOWN = EnumField("unknown", label=_("未知"))
 
     @classmethod
-    def is_stable(cls, val: 'DeployStatus') -> bool:
+    def is_stable(cls, val: "DeployStatus") -> bool:
         """Check if a status is stable, which means it will not transform into
         other statuses.
         """
@@ -94,9 +94,9 @@ class DeployStatus(str, StructuredEnum):
 class DomainGroupSource(str, StructuredEnum):
     """The source types for DomainGroup data"""
 
-    SUBDOMAIN = 'subdomain'
-    SUBPATH = 'subpath'
-    CUSTOM = 'custom'
+    SUBDOMAIN = "subdomain"
+    SUBPATH = "subpath"
+    CUSTOM = "custom"
 
 
 class MResConditionType(str, StructuredEnum):
@@ -153,10 +153,10 @@ class ResQuotaPlan(str, StructuredEnum):
 class MountEnvName(str, StructuredEnum):
     """Environment name for managing mount volume"""
 
-    STAG = EnumField('stag', label='仅测试环境')
-    PROD = EnumField('prod', label='仅生产环境')
-    GLOBAL = EnumField('_global_', label='所有环境')
+    STAG = EnumField("stag", label="仅测试环境")
+    PROD = EnumField("prod", label="仅生产环境")
+    GLOBAL = EnumField("_global_", label="所有环境")
 
 
 class VolumeSourceType(str, StructuredEnum):
-    ConfigMap = EnumField('ConfigMap')
+    ConfigMap = EnumField("ConfigMap")

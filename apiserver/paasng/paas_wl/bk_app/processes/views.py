@@ -108,7 +108,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             )
 
         bkapp_release_id = None
-        if deployment_id := request.query_params.get('deployment_id'):
+        if deployment_id := request.query_params.get("deployment_id"):
             deployment_obj = get_object_or_404(Deployment, id=deployment_id)
             bkapp_release_id = deployment_obj.bkapp_release_id
 
@@ -144,32 +144,32 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         def resp():
             logger.debug(
-                'Start watching process, app code=%s, environment=%s, params=%s',
+                "Start watching process, app code=%s, environment=%s, params=%s",
                 application.code,
                 environment,
                 dict(data),
             )
             # 发送初始 ping 事件
             # 避免 stream 无新事件时, 前端请求表现为服务端长时间挂起(无法查看响应头)
-            yield 'event: ping\n'
-            yield 'data: \n\n'
+            yield "event: ping\n"
+            yield "data: \n\n"
 
             stream = ProcInstByEnvListWatcher(application, environment).watch(
                 timeout_seconds=data["timeout_seconds"], rv_proc=data["rv_proc"], rv_inst=data["rv_inst"]
             )
             for event in stream:
                 e = self.process_event(event)
-                yield 'event: message\n'
-                yield 'data: {}\n\n'.format(json.dumps(e))
+                yield "event: message\n"
+                yield "data: {}\n\n".format(json.dumps(e))
 
-            yield 'id: -1\n'
-            yield 'event: EOF\n'
-            yield 'data: \n\n'
+            yield "id: -1\n"
+            yield "event: EOF\n"
+            yield "data: \n\n"
             logger.info(
-                'Watching finished, app code=%s, environment=%s, params=%s', application.code, environment, dict(data)
+                "Watching finished, app code=%s, environment=%s, params=%s", application.code, environment, dict(data)
             )
 
-        return StreamingHttpResponse(resp(), content_type='text/event-stream')
+        return StreamingHttpResponse(resp(), content_type="text/event-stream")
 
     @staticmethod
     def process_event(event: WatchEvent) -> Dict:

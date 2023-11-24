@@ -28,7 +28,8 @@ class RegistryConf(BaseModel):
 
     host: str = Field(default=settings.SMART_DOCKER_REGISTRY_HOST, description="Registry 的域名")
     namespace: str = Field(
-        default=settings.SMART_DOCKER_REGISTRY_NAMESPACE, description="S-Mart 镜像仓库的命名空间, 即在 Registry 中的项目名"
+        default=settings.SMART_DOCKER_REGISTRY_NAMESPACE,
+        description="S-Mart 镜像仓库的命名空间, 即在 Registry 中的项目名",
     )
     username: str = Field(default=settings.SMART_DOCKER_REGISTRY_USERNAME, description="用于访问 Registry 的账号")
     password: str = Field(default=settings.SMART_DOCKER_REGISTRY_PASSWORD, description="用于访问 Registry 的密码")

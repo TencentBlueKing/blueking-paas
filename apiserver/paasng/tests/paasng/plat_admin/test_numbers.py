@@ -38,7 +38,7 @@ from tests.utils.helpers import create_app as helper_create_app
 from tests.utils.helpers import create_legacy_application
 
 # Create application with source obj to make tests work
-create_app = functools.partial(helper_create_app, additional_modules=['sourcectl'])
+create_app = functools.partial(helper_create_app, additional_modules=["sourcectl"])
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
@@ -49,7 +49,7 @@ def setup(init_tmpls):
 
 class TestDefaultAppDataBuilder:
     def test_normal(self):
-        app = create_app(owner_username='user1')
+        app = create_app(owner_username="user1")
 
         builder = DefaultAppDataBuilder()
         results = list(builder.get_results())
@@ -58,14 +58,14 @@ class TestDefaultAppDataBuilder:
         assert app.name == results[0].name
 
     def test_with_filter_developers(self):
-        create_app(owner_username='user1')
-        create_app(owner_username='user2')
+        create_app(owner_username="user1")
+        create_app(owner_username="user2")
 
         builder = DefaultAppDataBuilder()
-        builder.set_filter_developers(filter_developers=['user2'])
+        builder.set_filter_developers(filter_developers=["user2"])
         results = list(builder.get_results())
         assert len(results) == 1
-        assert results[0].creator == 'user2'
+        assert results[0].creator == "user2"
 
 
 class TestLegacyAppDataBuilder:
@@ -83,8 +83,8 @@ class TestLegacyAppDataBuilder:
 @skip_if_legacy_not_configured()
 class TestCalculateUserContribution:
     def test_with_mock(self):
-        create_app(owner_username='user1', repo_type='bk_svn')
-        user, _, apps = list(group_apps_by_developers(filter_developers=['user1']))[0]
+        create_app(owner_username="user1", repo_type="bk_svn")
+        user, _, apps = list(group_apps_by_developers(filter_developers=["user1"]))[0]
         with mock.patch("paasng.platform.sourcectl.svn.client.RemoteClient") as RemoteClient:
             RemoteClient().calculate_user_contribution.return_value = dict(
                 project_total_lines=0, user_total_lines=0, project_commit_nums=0, user_commit_nums=0
@@ -100,15 +100,15 @@ class TestCalculateUserContribution:
 
 class TestTablesAppGroupedByDevelopers:
     def test_with_filter_developers(self):
-        create_app(owner_username='user1')
-        create_app(owner_username='user2')
+        create_app(owner_username="user1")
+        create_app(owner_username="user2")
 
-        table = make_table_apps_grouped_by_developer(filter_developers=['user1'])
+        table = make_table_apps_grouped_by_developer(filter_developers=["user1"])
         assert len(table.rows) == 1
 
     def test_without_filter_developers(self):
-        create_app(owner_username='user1')
-        create_app(owner_username='user1')
+        create_app(owner_username="user1")
+        create_app(owner_username="user1")
 
         table = make_table_apps_grouped_by_developer()
         assert len(table.rows) == 2
@@ -116,20 +116,20 @@ class TestTablesAppGroupedByDevelopers:
 
 class TestTablesAppGroupedByDevelopersSimple:
     def test_with_filter_developers(self):
-        create_app(owner_username='user1')
-        create_app(owner_username='user2')
+        create_app(owner_username="user1")
+        create_app(owner_username="user2")
 
-        table = make_table_apps_grouped_by_developer_simple(filter_developers=['user1'])
+        table = make_table_apps_grouped_by_developer_simple(filter_developers=["user1"])
         assert len(table.rows) == 1
         metadata = table.metadata
-        assert metadata['users_cnt_total'] == 1
-        assert metadata['users_cnt_created'] == 1
-        assert metadata['users_cnt_developed'] == 1
+        assert metadata["users_cnt_total"] == 1
+        assert metadata["users_cnt_created"] == 1
+        assert metadata["users_cnt_developed"] == 1
 
 
 class TestTablesAppBasicInfo:
     def test_with_matched(self):
-        app = create_app(owner_username='user1')
+        app = create_app(owner_username="user1")
         legacy_app = create_legacy_application()
         # Create another legacy app which should not be included in table
         create_legacy_application()
@@ -138,15 +138,15 @@ class TestTablesAppBasicInfo:
         assert len(table.rows) == 2
 
     def test_without_matched(self):
-        create_app(owner_username='user1')
-        table = make_table_apps_basic_info(filter_app_codes=['invalid-code'])
+        create_app(owner_username="user1")
+        table = make_table_apps_basic_info(filter_app_codes=["invalid-code"])
         assert len(table.rows) == 0
 
 
 def test_print_table():
-    create_app(owner_username='user1')
-    create_app(owner_username='user1')
+    create_app(owner_username="user1")
+    create_app(owner_username="user1")
 
     table = make_table_apps_grouped_by_developer()
-    with open('/dev/null', 'w') as fp:
+    with open("/dev/null", "w") as fp:
         print_table(table, stream=fp)

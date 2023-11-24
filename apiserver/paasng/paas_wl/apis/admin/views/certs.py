@@ -29,7 +29,7 @@ from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm
 class AppDomainSharedCertsViewSet(ModelViewSet):
     """A viewSet for managing app certificates"""
 
-    lookup_field = 'name'
+    lookup_field = "name"
     model = AppDomainSharedCert
     serializer_class = AppDomainSharedCertSLZ
     pagination_class = None

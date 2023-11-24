@@ -36,10 +36,10 @@ def setup_languages():
 @pytest.fixture
 def serializer_class():
     class DummySLZ(serializers.Serializer):
-        A = serializers.CharField(required=False, allow_blank=True, default='')
-        B = TranslatedCharField(required=False, allow_blank=True, default='')
+        A = serializers.CharField(required=False, allow_blank=True, default="")
+        B = TranslatedCharField(required=False, allow_blank=True, default="")
         # 由于这个类没有被 i18n 包裹, 所以最后生成的 slz 没有 C 这个字段
-        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default=''))
+        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default=""))
 
     return DummySLZ
 
@@ -79,8 +79,8 @@ class TestTranslatedCharField:
 def i18n_serializer_class():
     @i18n
     class DummySLZ(serializers.Serializer):
-        A = serializers.CharField(required=False, allow_blank=True, default='')
-        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default='', max_length=6))
+        A = serializers.CharField(required=False, allow_blank=True, default="")
+        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default="", max_length=6))
 
     return DummySLZ
 
@@ -89,10 +89,14 @@ class TestI18NExtend:
     @pytest.mark.parametrize(
         "init_kwargs, ctx, expected",
         [
-            ({}, nullcontext(), {"A": "", "c_en": '', "c_zh_cn": ""}),
-            ({"C": "delta"}, nullcontext(), {"A": "", "c_en": 'delta', "c_zh_cn": "delta"}),
-            ({"c_en": "delta", "c_zh_cn": "德尔塔"}, override("en"), {"A": "", "c_en": 'delta', "c_zh_cn": "德尔塔"}),
-            ({"c_en": "delta", "c_zh_cn": "德尔塔"}, override("zh-cn"), {"A": "", "c_en": 'delta', "c_zh_cn": "德尔塔"}),
+            ({}, nullcontext(), {"A": "", "c_en": "", "c_zh_cn": ""}),
+            ({"C": "delta"}, nullcontext(), {"A": "", "c_en": "delta", "c_zh_cn": "delta"}),
+            ({"c_en": "delta", "c_zh_cn": "德尔塔"}, override("en"), {"A": "", "c_en": "delta", "c_zh_cn": "德尔塔"}),
+            (
+                {"c_en": "delta", "c_zh_cn": "德尔塔"},
+                override("zh-cn"),
+                {"A": "", "c_en": "delta", "c_zh_cn": "德尔塔"},
+            ),
         ],
     )
     def test_valid(self, i18n_serializer_class, init_kwargs, ctx, expected):

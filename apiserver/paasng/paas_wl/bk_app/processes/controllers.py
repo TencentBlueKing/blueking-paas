@@ -160,7 +160,7 @@ class ProcControllerHub:
         app_type = env.application.type
         controller_cls = cls._map.get(app_type)
         if not controller_cls:
-            raise RuntimeError(f'The proc controller for {app_type} is not registered')
+            raise RuntimeError(f"The proc controller for {app_type} is not registered")
         return controller_cls(env)
 
 

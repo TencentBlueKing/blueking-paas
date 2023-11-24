@@ -21,15 +21,15 @@ from typing import TYPE_CHECKING
 
 from django.dispatch import receiver
 
-from paasng.infras.accounts.models import Oauth2TokenHolder
 from paasng.accessories.ci.base import BkUserOAuth
 from paasng.accessories.ci.constants import CIBackend
 from paasng.accessories.ci.exceptions import NotSupportedRepoType
 from paasng.accessories.ci.managers import get_ci_manager_cls_by_backend
 from paasng.accessories.ci.models import CIAtomJob
+from paasng.infras.accounts.models import Oauth2TokenHolder
+from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.signals import post_appenv_deploy
-from paasng.platform.applications.models import ApplicationEnvironment
 
 if TYPE_CHECKING:
     from paasng.platform.engine.models.deployment import Deployment
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_appenv_deploy)
-def start_ci_job(sender: 'ApplicationEnvironment', deployment: 'Deployment', **kwargs):
+def start_ci_job(sender: "ApplicationEnvironment", deployment: "Deployment", **kwargs):
     """开始 CI 任务"""
     if not deployment.status == JobStatus.SUCCESSFUL.value:
         logger.info("AppEnv<%s> deploy failed, skipping", sender)
@@ -68,7 +68,7 @@ def start_ci_job(sender: 'ApplicationEnvironment', deployment: 'Deployment', **k
         logger.info("source type<%s> is not support, ci skipping", e.source_type)
         return
     except Oauth2TokenHolder.DoesNotExist:
-        logger.info(f'AppEnv<{sender}> failed to execute ci job: Oauth2TokenHolder does not exist')
+        logger.info(f"AppEnv<{sender}> failed to execute ci job: Oauth2TokenHolder does not exist")
         return
     except Exception:
         logger.exception("failed to execute ci job")

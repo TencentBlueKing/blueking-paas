@@ -134,31 +134,31 @@ def test_get_module_clusters_engineless(bk_module):
 
 
 @pytest.mark.parametrize(
-    'exposed_url_type, ingress_config, include_reserved, expected_domains',
+    "exposed_url_type, ingress_config, include_reserved, expected_domains",
     [
         (
             ExposedURLType.SUBDOMAIN,
-            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com'}]},
+            {"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]},
             False,
-            [Domain('foo.com'), Domain('bar.com')],
+            [Domain("foo.com"), Domain("bar.com")],
         ),
         (
             ExposedURLType.SUBDOMAIN,
-            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com', 'reserved': True}]},
+            {"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com", "reserved": True}]},
             False,
-            [Domain('foo.com')],
+            [Domain("foo.com")],
         ),
         (
             ExposedURLType.SUBDOMAIN,
-            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com', 'reserved': True}]},
+            {"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com", "reserved": True}]},
             True,
-            [Domain('foo.com'), Domain('bar.com', reserved=True)],
+            [Domain("foo.com"), Domain("bar.com", reserved=True)],
         ),
         (
             ExposedURLType.SUBPATH,
-            {'sub_path_domains': [{'name': 'foo.com'}, {'name': 'bar.com'}]},
+            {"sub_path_domains": [{"name": "foo.com"}, {"name": "bar.com"}]},
             False,
-            [Domain('foo.com'), Domain('bar.com')],
+            [Domain("foo.com"), Domain("bar.com")],
         ),
     ],
 )

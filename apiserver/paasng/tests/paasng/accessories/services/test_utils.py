@@ -30,19 +30,19 @@ logger = logging.getLogger(__name__)
 
 
 def test_get_vendor_config(settings):
-    settings.SERVICES_VENDOR_CONFIGS = {'foo': {'timeout': 3}}
+    settings.SERVICES_VENDOR_CONFIGS = {"foo": {"timeout": 3}}
 
     @dataclass
     class ConfigCls:
         timeout: int
 
-    assert get_vendor_config('foo', result_cls=ConfigCls).timeout == 3
+    assert get_vendor_config("foo", result_cls=ConfigCls).timeout == 3
 
 
 def test_get_vendor_config_not_configured(settings):
     settings.SERVICES_VENDOR_CONFIGS = {}
     with pytest.raises(ImproperlyConfigured):
-        assert get_vendor_config('foo', result_cls=type)
+        assert get_vendor_config("foo", result_cls=type)
 
 
 class TestWRR(TestCase):
@@ -83,12 +83,12 @@ class TestWRR(TestCase):
 class TestGetUniqueID(TestCase):
     @classmethod
     def setUpTestData(cls):
-        with connections['default'].cursor() as cursor:
+        with connections["default"].cursor() as cursor:
             # make a big id
-            cursor.execute('ALTER table services_resourceid AUTO_INCREMENT=1000')
+            cursor.execute("ALTER table services_resourceid AUTO_INCREMENT=1000")
 
     def setUp(self) -> None:
-        with connections['default'].cursor() as cursor:
+        with connections["default"].cursor() as cursor:
             cursor.execute("INSERT INTO services_resourceid (namespace, uid) VALUES ('default', 'foo')")
             cursor.execute("SELECT LAST_INSERT_ID()")
             self.latest_id = cursor.fetchone()[0] + 1

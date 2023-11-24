@@ -22,7 +22,6 @@ from django.utils.translation import gettext as _
 
 from paasng.accessories.services.utils import gen_unique_id
 
-from ..base import BaseProvider, InstanceData
 from .client import SentryClient
 from .exceptions import (
     CreateSentryClientKeyFail,
@@ -31,6 +30,7 @@ from .exceptions import (
     CreateSentryUserFail,
     FetchSentryTeamMembersFail,
 )
+from ..base import BaseProvider, InstanceData
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +48,18 @@ class SentryProvider(BaseProvider):
         token: api token, for api
         domain: access domain, for user access from frontend
         """
-        self._organ = config['organization']
-        self._host = config['service_name']
-        self._port = config['service_port']
-        self._token = config['token']
-        self._domain = config['domain']
+        self._organ = config["organization"]
+        self._host = config["service_name"]
+        self._port = config["service_port"]
+        self._token = config["token"]
+        self._domain = config["domain"]
 
         self.client = SentryClient(host=self._host, port=self._port, token=self._token)
 
     def _gen_dsn(self, client_key_info):
         service = "{host}:{port}".format(host=self._host, port=self._port)
-        prefix = client_key_info['dsn_prefix']
-        projectId = client_key_info['projectId']
+        prefix = client_key_info["dsn_prefix"]
+        projectId = client_key_info["projectId"]
 
         return "http://{prefix}@{service}/{projectId}".format(prefix=prefix, service=service, projectId=projectId)
 
@@ -110,16 +110,16 @@ class SentryProvider(BaseProvider):
             try:
                 ok, member = self.client.create_member(username=username)
                 if ok:
-                    self.client.add_team_member(team=team_slug, member_id=member['id'])
+                    self.client.add_team_member(team=team_slug, member_id=member["id"])
             except Exception:
-                logger.exception(u"create member or add member to team fail")
+                logger.exception("create member or add member to team fail")
                 raise CreateSentryUserFail("Create Sentry user error")
 
         dsn = self._gen_dsn(client_key_info)
         url = self._gen_url(project_slug)
 
-        credentials = {'dsn': dsn}
-        config = {'admin_url': url}
+        credentials = {"dsn": dsn}
+        config = {"admin_url": url}
 
         return InstanceData(credentials=credentials, config=config)
 
@@ -145,9 +145,9 @@ class SentryProvider(BaseProvider):
                 if username not in sentry_users:
                     ok, member = self.client.create_member(username=username)
                     if ok:
-                        self.client.add_team_member(team=team_slug, member_id=member['id'])
+                        self.client.add_team_member(team=team_slug, member_id=member["id"])
             except Exception:
-                logger.exception(u"patch: create member or add member to team fail")
+                logger.exception("patch: create member or add member to team fail")
                 raise CreateSentryUserFail("Create Sentry user error")
 
         # 3. remove use from team
@@ -156,7 +156,7 @@ class SentryProvider(BaseProvider):
             try:
                 self.client.delete_team_member(team=team_slug, member_id=member_id)
             except Exception:
-                logger.exception(u"patch: remove user from team fail")
+                logger.exception("patch: remove user from team fail")
                 continue
 
         return True

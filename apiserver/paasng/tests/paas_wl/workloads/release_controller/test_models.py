@@ -21,7 +21,7 @@ import pytest
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.utils.constants import BuildStatus
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestInterruptionAllowed:
@@ -34,6 +34,6 @@ class TestInterruptionAllowed:
 
     def test_finished_status(self, build_proc: BuildProcess):
         build_proc.status = BuildStatus.SUCCESSFUL
-        build_proc.save(update_fields=['status'])
+        build_proc.save(update_fields=["status"])
         build_proc.set_logs_was_ready()
         assert build_proc.check_interruption_allowed() is False

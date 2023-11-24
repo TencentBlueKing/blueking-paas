@@ -11,11 +11,11 @@ class RoleField(serializers.Field):
     """Role field for present role object friendly"""
 
     def to_representation(self, value):
-        return {'id': value, 'name': ApplicationRole(value).name.lower()}
+        return {"id": value, "name": ApplicationRole(value).name.lower()}
 
     def to_internal_value(self, data):
         try:
-            role_id = data['id']
+            role_id = data["id"]
         except Exception:
             raise ValidationError('Incorrect role param. Expected like {role: {"id": 3}}.')
         try:
@@ -27,7 +27,7 @@ class RoleField(serializers.Field):
 
 class ApplicationMemberSLZ(serializers.Serializer):
     user = UserField()
-    roles = serializers.ListField(child=RoleField(), help_text='用户角色列表')
+    roles = serializers.ListField(child=RoleField(), help_text="用户角色列表")
 
 
 class ApplicationMemberRoleOnlySLZ(serializers.Serializer):

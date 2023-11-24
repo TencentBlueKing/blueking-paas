@@ -25,8 +25,20 @@ from django.dispatch import receiver
 from sqlalchemy.exc import IntegrityError as SqlIntegrityError
 from sqlalchemy.orm import Session
 
-from paasng.platform.engine.models import Deployment
-from paasng.platform.engine.signals import post_appenv_deploy
+from paasng.accessories.publish.market.constant import AppState
+from paasng.accessories.publish.market.models import MarketConfig, Product
+from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
+from paasng.accessories.publish.sync_market.engine import RemoteAppManager
+from paasng.accessories.publish.sync_market.managers import (
+    AppDeveloperManger,
+    AppManger,
+    AppOpsManger,
+    AppReleaseRecordManger,
+)
+from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.core.region.models import get_region
+from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.signals import (
@@ -38,15 +50,8 @@ from paasng.platform.applications.signals import (
     prepare_use_application_code,
     prepare_use_application_name,
 )
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.infras.oauth2.models import OAuth2Client
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.market.constant import AppState
-from paasng.accessories.publish.market.models import MarketConfig, Product
-from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
-from paasng.accessories.publish.sync_market.engine import RemoteAppManager
-from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger, AppOpsManger, AppReleaseRecordManger
-from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
+from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.signals import post_appenv_deploy
 
 try:
     from paasng.accessories.publish.sync_market.constant_ext import I18N_FIELDS_IN_CONSOLE
@@ -63,7 +68,7 @@ def deploy_handler(sender, instance, created, raw, using, update_fields, *args, 
     application = instance.app_environment.application
     is_default_module_prod_deploy_success = all(
         [
-            instance.app_environment.environment == 'prod',
+            instance.app_environment.environment == "prod",
             instance.app_environment.module == application.get_default_module(),
             instance.has_succeeded(),
         ]
@@ -79,7 +84,7 @@ def deploy_handler(sender, instance, created, raw, using, update_fields, *args, 
     try:
         market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
         market_config.on_release()
-        on_product_deploy_success(product, 'prod')
+        on_product_deploy_success(product, "prod")
     except Exception:
         logger.exception("打开桌面入口失败！")
 
@@ -94,9 +99,9 @@ def on_product_deploy_success(product, environment, auto_enable_market=False, **
     product_state = product.state
 
     if product_state != AppState.RELEASED.value:
-        logger.debug('product:%s state changed to %s' % (product.id, AppState.RELEASED.value))
+        logger.debug("product:%s state changed to %s" % (product.id, AppState.RELEASED.value))
         product.state = AppState.RELEASED.value
-        product.save(update_fields=['state'])
+        product.save(update_fields=["state"])
 
     # no sync with not finished migration app
     if application.migrationprocess_set.exists():
@@ -133,7 +138,6 @@ def on_product_deploy_success(product, environment, auto_enable_market=False, **
 @receiver(product_create_or_update_by_operator)
 @run_required_db_console_config
 def on_product_create_or_updated(product: Product, **kwargs):
-
     """
     app基本属性更新
     以后处于性能的考虑，可能只更新部分字段
@@ -161,7 +165,7 @@ def on_product_create_or_updated(product: Product, **kwargs):
             sync_fields.extend(I18N_FIELDS_IN_CONSOLE)
             manager.sync_data(sync_fields)
         except Exception:
-            logger.exception(u"同步修改Product属性到桌面失败！")
+            logger.exception("同步修改Product属性到桌面失败！")
 
         # 同步开发者和运维人员名单
         sync_console_app_developers(application, session)
@@ -185,7 +189,7 @@ def sync_console_app_developers(application: Application, session: Session):
         developers = application.get_developers()
         AppDeveloperManger(session).update_developers(application.code, developers)
     except Exception:
-        logger.exception(u"同步开发者信息到桌面失败！")
+        logger.exception("同步开发者信息到桌面失败！")
 
 
 def sync_console_app_devopses(application: Application, session: Session):
@@ -194,9 +198,9 @@ def sync_console_app_devopses(application: Application, session: Session):
         devopses = application.get_devopses()
         AppOpsManger(session).update_ops(application.code, devopses)
     except NotImplementedError:
-        logger.info('op role is not defined, skip synchronization')
+        logger.info("op role is not defined, skip synchronization")
     except Exception:
-        logger.exception(u"同步运营人员信息到桌面失败！")
+        logger.exception("同步运营人员信息到桌面失败！")
 
 
 @receiver(prepare_use_application_code)
@@ -206,13 +210,13 @@ def validate_app_code_uniquely(sender, value: str, **kwargs):
     with console_db.session_scope() as session:
         app = AppManger(session).get(code=value)
     if app:
-        raise AppFieldValidationError('duplicated', 'Application code=%s already exists' % value)
+        raise AppFieldValidationError("duplicated", "Application code=%s already exists" % value)
     return None
 
 
 @receiver(prepare_use_application_name)
 @run_required_db_console_config
-def validate_app_name_uniquely(sender, value: str, instance: Optional['Application'] = None, **kwargs):
+def validate_app_name_uniquely(sender, value: str, instance: Optional["Application"] = None, **kwargs):
     """Check if name already exists in legacy database, if exists, raise AppFieldValidationError
 
     :param instance: if given, will not raise error when the existed object belongs to given instance
@@ -222,7 +226,7 @@ def validate_app_name_uniquely(sender, value: str, instance: Optional['Applicati
     with console_db.session_scope() as session:
         is_unique = AppManger(session).verify_name_is_unique(value, code)
     if not is_unique:
-        raise AppFieldValidationError('duplicated', 'Application name=%s already exists' % value)
+        raise AppFieldValidationError("duplicated", "Application name=%s already exists" % value)
     return None
 
 
@@ -242,9 +246,9 @@ def register_app_core_data(sender, application: Application, **kwargs):
         if len(e.args) > 0:
             error_msg = e.args[0]
             if re.search("Duplicate entry '.*' for key '.*code'", error_msg):
-                raise IntegrityError(field='code')
+                raise IntegrityError(field="code")
             elif re.search("Duplicate entry '.*' for key '.*name'", error_msg):
-                raise IntegrityError(field='name')
+                raise IntegrityError(field="name")
             else:
                 raise e
         else:
@@ -258,7 +262,7 @@ def on_change_application_name(sender, code: str, name: Optional[str] = None, na
     with console_db.session_scope() as session:
         app = AppManger(session).get(code)
         if not app:
-            raise AppFieldValidationError('not_exist', 'Application code=%s does not exist' % code)
+            raise AppFieldValidationError("not_exist", "Application code=%s does not exist" % code)
 
         update_fields = {}
         if name:
@@ -269,7 +273,7 @@ def on_change_application_name(sender, code: str, name: Optional[str] = None, na
         try:
             AppManger(session).update(code, update_fields)
         except SqlIntegrityError:
-            raise IntegrityError(field='name')
+            raise IntegrityError(field="name")
 
     return None
 
@@ -319,12 +323,12 @@ def offline_handler(sender, offline_instance, environment, **kwargs):
     product = application.get_product()
     if product and product.state != AppState.OFFLINE.value:
         product.state = AppState.OFFLINE.value
-        product.save(update_fields=['state'])
+        product.save(update_fields=["state"])
 
         update_data = {
             # 0 表示已下架
-            'state': 0,
-            'is_already_online': 0,
+            "state": 0,
+            "is_already_online": 0,
         }
         with console_db.session_scope() as session:
             AppManger(session).update(application.code, update_data)
@@ -419,7 +423,7 @@ def sync_release_record(sender: ApplicationEnvironment, deployment: Deployment, 
 
     application = sender.application
     # Only sync prod deployment
-    if not (deployment.has_succeeded() and sender.environment == 'prod'):
+    if not (deployment.has_succeeded() and sender.environment == "prod"):
         return
 
     try:

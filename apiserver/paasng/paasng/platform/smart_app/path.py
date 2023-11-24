@@ -27,7 +27,7 @@ from typing_extensions import Protocol
 class PathProtocol(Protocol):
     """PathProtocol 是 pathlib.Path 的子集, 声明了 detector 和 patcher 在操作文件时依赖的协议"""
 
-    def __truediv__(self, other: str) -> 'PathProtocol':
+    def __truediv__(self, other: str) -> "PathProtocol":
         ...
 
     def write_text(self, text: str):
@@ -42,7 +42,7 @@ class PathProtocol(Protocol):
     def is_dir(self) -> bool:
         ...
 
-    def relative_to(self, other: 'PathProtocol') -> PurePath:
+    def relative_to(self, other: "PathProtocol") -> PurePath:
         ...
 
 

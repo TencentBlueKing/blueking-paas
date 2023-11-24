@@ -29,22 +29,21 @@ from .constants import SiteAction
 
 
 class GlobalSiteResource(ProtectedResource):
-
     permissions = [
-        (SiteAction.VISIT_SITE, 'can visit site'),
-        (SiteAction.VISIT_ADMIN42, 'can visit admin pages'),
+        (SiteAction.VISIT_SITE, "can visit site"),
+        (SiteAction.VISIT_ADMIN42, "can visit admin pages"),
         # System Api
-        (SiteAction.SYSAPI_READ_APPLICATIONS, 'can read application and modules infos'),
-        (SiteAction.SYSAPI_MANAGE_APPLICATIONS, 'can manage a application'),
-        (SiteAction.SYSAPI_READ_SERVICES, 'can read services infos'),
-        (SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS, 'can manage light application'),
-        (SiteAction.SYSAPI_MANAGE_ACCESS_CONTROL, 'can manage access_control strategies'),
-        (SiteAction.SYSAPI_READ_DB_CREDENTIAL, 'can read db-credential'),
-        (SiteAction.SYSAPI_BIND_DB_SERVICE, 'can bind db-service'),
+        (SiteAction.SYSAPI_READ_APPLICATIONS, "can read application and modules infos"),
+        (SiteAction.SYSAPI_MANAGE_APPLICATIONS, "can manage a application"),
+        (SiteAction.SYSAPI_READ_SERVICES, "can read services infos"),
+        (SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS, "can manage light application"),
+        (SiteAction.SYSAPI_MANAGE_ACCESS_CONTROL, "can manage access_control strategies"),
+        (SiteAction.SYSAPI_READ_DB_CREDENTIAL, "can read db-credential"),
+        (SiteAction.SYSAPI_BIND_DB_SERVICE, "can bind db-service"),
         # Admin42
-        (SiteAction.MANAGE_PLATFORM, 'can manage platform'),
-        (SiteAction.MANAGE_APP_TEMPLATES, 'can manage app templates'),
-        (SiteAction.OPERATE_PLATFORM, 'can operate platform'),
+        (SiteAction.MANAGE_PLATFORM, "can manage platform"),
+        (SiteAction.MANAGE_APP_TEMPLATES, "can manage app templates"),
+        (SiteAction.OPERATE_PLATFORM, "can operate platform"),
     ]
 
     def _get_role_of_user(self, user, obj) -> SiteRole:
@@ -125,7 +124,6 @@ def gen_site_role_perm_map(role: SiteRole) -> Dict[SiteAction, bool]:
 
 
 def _init_global_site_resource():
-
     resource = GlobalSiteResource()
     resource.add_nobody_role()
 
@@ -156,12 +154,12 @@ def site_perm_class(action: SiteAction):
     class Permission(BasePermission):
         def has_permission(self, request, *args, **kwargs):
             if not user_has_site_action_perm(request.user, action):
-                raise PermissionDenied('You are not allowed to do this operation.')
+                raise PermissionDenied("You are not allowed to do this operation.")
             return True
 
         def has_object_permission(self, request, view, obj):
             if not user_has_site_action_perm(request.user, action):
-                raise PermissionDenied('You are not allowed to do this operation.')
+                raise PermissionDenied("You are not allowed to do this operation.")
             return True
 
     return Permission
@@ -175,10 +173,9 @@ def site_perm_required(action: SiteAction):
 
     def decorated(func):
         def view_func(self, request, *args, **kwargs):
-
-            role = global_site_resource.get_role_of_user(request.user, 'site')
+            role = global_site_resource.get_role_of_user(request.user, "site")
             if not role.has_perm(action):
-                raise PermissionDenied('You are not allowed to do this operation.')
+                raise PermissionDenied("You are not allowed to do this operation.")
 
             return func(self, request, *args, **kwargs)
 

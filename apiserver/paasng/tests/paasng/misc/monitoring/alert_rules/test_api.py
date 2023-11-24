@@ -21,7 +21,7 @@ import pytest
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.manager import AlertRuleManager
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAlertRulesView:
@@ -32,22 +32,22 @@ class TestAlertRulesView:
 
     def test_list_rules(self, api_client, bk_app, bk_module):
         resp = api_client.get(
-            f'/api/monitor/applications/{bk_app.code}/modules/{bk_module.name}/alert_rules/?keyword=CPU'
+            f"/api/monitor/applications/{bk_app.code}/modules/{bk_module.name}/alert_rules/?keyword=CPU"
         )
         assert len(resp.data) == 2
 
         resp = api_client.get(
-            f'/api/monitor/applications/{bk_app.code}/modules/{bk_module.name}/alert_rules/?alert_code=ddd'
+            f"/api/monitor/applications/{bk_app.code}/modules/{bk_module.name}/alert_rules/?alert_code=ddd"
         )
         assert len(resp.data) == 0
 
     def test_list_supported_alert_rules(self, api_client):
-        resp = api_client.get('/api/monitor/supported_alert_rules/')
-        alert_info = {alert['alert_code']: alert['display_name'] for alert in resp.data}
-        assert alert_info['high_cpu_usage'] == DEFAULT_RULE_CONFIGS['high_cpu_usage']['display_name']
+        resp = api_client.get("/api/monitor/supported_alert_rules/")
+        alert_info = {alert["alert_code"]: alert["display_name"] for alert in resp.data}
+        assert alert_info["high_cpu_usage"] == DEFAULT_RULE_CONFIGS["high_cpu_usage"]["display_name"]
 
 
 class TestInitAlertRulesAPI:
     def test_init_alert_rules(self, api_client, bk_app, wl_namespaces):
-        resp = api_client.post(f'/api/monitor/applications/{bk_app.code}/alert_rules/init/')
+        resp = api_client.post(f"/api/monitor/applications/{bk_app.code}/alert_rules/init/")
         assert resp.status_code == 200

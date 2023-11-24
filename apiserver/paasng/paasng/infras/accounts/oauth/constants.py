@@ -20,12 +20,12 @@ from paasng.utils.basic import ChoicesEnum
 
 
 class ScopeType(ChoicesEnum):
-    USER = 'user'
-    GROUP = 'group'
-    PROJECT = 'project'
+    USER = "user"
+    GROUP = "group"
+    PROJECT = "project"
 
     _choices_labels = (
-        (USER, 'API'),
-        (GROUP, '项目组'),
-        (PROJECT, '项目'),
+        (USER, "API"),
+        (GROUP, "项目组"),
+        (PROJECT, "项目"),
     )

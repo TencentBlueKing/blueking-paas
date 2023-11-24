@@ -20,4 +20,4 @@ from paasng.utils.addons import PlugableAppConfig
 
 
 class ModulesConfig(PlugableAppConfig):
-    name = 'paasng.platform.modules'
+    name = "paasng.platform.modules"

@@ -21,11 +21,11 @@ from typing import List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
-DEFAULT_ENGINE_APP_PREFIX = 'bkapp'
+DEFAULT_ENGINE_APP_PREFIX = "bkapp"
 
 
 class ModuleName(str, Enum):
-    DEFAULT = 'default'
+    DEFAULT = "default"
 
 
 class ExposedURLType(IntEnum):
@@ -38,27 +38,27 @@ class ExposedURLType(IntEnum):
 class SourceOrigin(int, StructuredEnum):
     """Source origin defines the origin of module's source code"""
 
-    AUTHORIZED_VCS = EnumField(1, 'Authorized VCS')
-    BK_LESS_CODE = EnumField(2, 'BK-Lesscode')
-    S_MART = EnumField(3, 'S-Mart')
-    IMAGE_REGISTRY = EnumField(4, 'Image Registry')
+    AUTHORIZED_VCS = EnumField(1, "Authorized VCS")
+    BK_LESS_CODE = EnumField(2, "BK-Lesscode")
+    S_MART = EnumField(3, "S-Mart")
+    IMAGE_REGISTRY = EnumField(4, "Image Registry")
     # 场景模板
-    SCENE = EnumField(5, 'Scene')
+    SCENE = EnumField(5, "Scene")
     # 仅托管镜像的云原生应用
-    CNATIVE_IMAGE = EnumField(6, 'CNative Image')
+    CNATIVE_IMAGE = EnumField(6, "CNative Image")
 
     @classmethod
-    def get_default_origins(cls) -> List['SourceOrigin']:
+    def get_default_origins(cls) -> List["SourceOrigin"]:
         return [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.CNATIVE_IMAGE]
 
 
 class APP_CATEGORY(str, StructuredEnum):
     """Application category, used when setting label to images"""
 
-    NORMAL_APP = 'normal_app'
-    S_MART_APP = 'smart_app'
-    CNATIVE_APP = 'cnative_app'
-    LEGACY_APP = 'legacy_app'
+    NORMAL_APP = "normal_app"
+    S_MART_APP = "smart_app"
+    CNATIVE_APP = "cnative_app"
+    LEGACY_APP = "legacy_app"
 
 
 class DeployHookType(str, StructuredEnum):

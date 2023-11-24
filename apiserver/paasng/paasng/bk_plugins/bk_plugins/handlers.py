@@ -21,10 +21,10 @@ import logging
 
 from django.dispatch import receiver
 
-from paasng.platform.engine.models import Deployment
-from paasng.platform.engine.signals import pre_appenv_deploy
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
+from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.signals import pre_appenv_deploy
 
 from .apigw import safe_sync_apigw
 from .models import BkPluginProfile, is_bk_plugin
@@ -42,7 +42,7 @@ def on_plugin_app_created(sender, application: Application, **kwargs):
     profile, _ = BkPluginProfile.objects.get_or_create_by_application(application)  # Create profile object
 
     # 创建插件时，将预设插件使用方信息存储到 DB 中
-    if distributor_codes := kwargs.get("extra_fields", {}).get('distributor_codes'):
+    if distributor_codes := kwargs.get("extra_fields", {}).get("distributor_codes"):
         profile.pre_distributor_codes = distributor_codes
         profile.save()
 
@@ -56,5 +56,5 @@ def on_pre_deployment(sender, deployment: Deployment, **kwargs):
         return
 
     if not application.bk_plugin_profile.is_synced:
-        logger.info('Syncing api-gw resource for %s, triggered by deployment.', application)
+        logger.info("Syncing api-gw resource for %s, triggered by deployment.", application)
         safe_sync_apigw(application)

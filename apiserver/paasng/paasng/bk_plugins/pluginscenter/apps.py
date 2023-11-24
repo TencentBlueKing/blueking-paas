@@ -20,8 +20,8 @@ from django.apps import AppConfig
 
 
 class PluginsCenterConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'paasng.bk_plugins.pluginscenter'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "paasng.bk_plugins.pluginscenter"
 
     def ready(self):
         from . import handlers  # noqa

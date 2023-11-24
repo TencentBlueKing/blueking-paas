@@ -35,7 +35,7 @@ class RegionBaseViewSet(viewsets.ViewSet):
     def get_region_or_404(region_name):
         regions = get_all_regions()
         if region_name not in regions:
-            raise Http404('No %s matches the given query.' % region_name)
+            raise Http404("No %s matches the given query." % region_name)
         return regions[region_name]
 
 

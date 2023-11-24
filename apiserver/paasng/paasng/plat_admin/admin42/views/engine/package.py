@@ -23,14 +23,14 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.sourcectl.models import SourcePackage
-from paasng.platform.sourcectl.package.downloader import download_package
-from paasng.platform.sourcectl.utils import generate_temp_file
-from paasng.platform.engine.constants import AppEnvName
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.serializers.packages import SourcePackageSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.sourcectl.models import SourcePackage
+from paasng.platform.sourcectl.package.downloader import download_package
+from paasng.platform.sourcectl.utils import generate_temp_file
 
 
 class SourcePackageManageView(ApplicationDetailBaseView):
@@ -73,5 +73,5 @@ class SourcePackageManageViewSet(ListModelMixin, GenericViewSet, ApplicationCode
             download_package(package, dest_path=dest_path)
             content = dest_path.read_bytes()
         response = HttpResponse(content, content_type="application/octet-stream")
-        response['Content-Disposition'] = f'attachment; filename="bk_paas3_{package.package_name}"'
+        response["Content-Disposition"] = f'attachment; filename="bk_paas3_{package.package_name}"'
         return response

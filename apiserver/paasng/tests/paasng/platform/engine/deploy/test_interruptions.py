@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db
 
 class TestInterruptDeployment:
     @pytest.mark.parametrize(
-        'has_bp_id,engine_called',
+        "has_bp_id,engine_called",
         [
             (True, True),
             (False, False),
@@ -43,7 +43,7 @@ class TestInterruptDeployment:
             deployment.build_process_id = str(uuid.uuid4().hex)
             deployment.save()
 
-        with mock.patch('paasng.platform.engine.deploy.interruptions.interrupt_build_proc') as mocked_interrupt:
+        with mock.patch("paasng.platform.engine.deploy.interruptions.interrupt_build_proc") as mocked_interrupt:
             interrupt_deployment(deployment, bk_user)
             assert mocked_interrupt.called is engine_called
 

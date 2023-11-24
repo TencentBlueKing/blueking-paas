@@ -46,13 +46,13 @@ class SiteAccessControlMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         # TODO: Find a better way to determine which views are belongs to admin42
-        if request.path_info.startswith('/admin42/'):
+        if request.path_info.startswith("/admin42/"):
             if request.user.is_anonymous or not request.user.is_authenticated:
                 # 用户验证失败，重定向到登录页面
                 return HttpResponseRedirect(f"{settings.LOGIN_FULL}?c_url={request.build_absolute_uri()}")
 
             if not user_has_site_action_perm(request.user, SiteAction.VISIT_ADMIN42):
-                raise PermissionDenied('You are not allowed to visit this')
+                raise PermissionDenied("You are not allowed to visit this")
 
             return
 
@@ -62,13 +62,15 @@ class SiteAccessControlMiddleware(MiddlewareMixin):
 
         if not user_has_site_action_perm(request.user, SiteAction.VISIT_SITE):
             # Use a custom
-            return JsonResponse({"code": "PRODUCT_NOT_READY", "detail": _('产品灰度测试中，尚未开放，敬请期待')}, status=404)
+            return JsonResponse(
+                {"code": "PRODUCT_NOT_READY", "detail": _("产品灰度测试中，尚未开放，敬请期待")}, status=404
+            )
 
 
 class PrivateTokenAuthenticationMiddleware:
     """Authenticate user by private token"""
 
-    AUTH_HEADER_TYPE = 'Bearer'
+    AUTH_HEADER_TYPE = "Bearer"
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -77,7 +79,7 @@ class PrivateTokenAuthenticationMiddleware:
         user = self.get_user(request)
         if user:
             logger.info(
-                'Authenticated user by PrivateToken, username: %s, ip: %s, path: %s',
+                "Authenticated user by PrivateToken, username: %s, ip: %s, path: %s",
                 user.username,
                 get_client_ip(request),
                 request.path_info,
@@ -96,20 +98,20 @@ class PrivateTokenAuthenticationMiddleware:
         try:
             token_obj = UserPrivateToken.objects.get(token=token_string)
         except UserPrivateToken.DoesNotExist:
-            logger.warning(f'private token {token_string} does not exist in database')
+            logger.warning(f"private token {token_string} does not exist in database")
             return None
 
         if token_obj.has_expired():
-            logger.warning(f'private token {token_string} has expired')
+            logger.warning(f"private token {token_string} has expired")
             return None
 
-        logger.debug(f'private token {token_string} is valid, user is {token_obj.user.username}')
+        logger.debug(f"private token {token_string} is valid, user is {token_obj.user.username}")
         return token_obj.user
 
     def get_token_string(self, request) -> Optional[str]:
         """Get private token string from current request"""
         # Source: query string
-        token_from_qs = request.GET.get('private_token', None)
+        token_from_qs = request.GET.get("private_token", None)
         if token_from_qs:
             return token_from_qs
 
@@ -130,10 +132,10 @@ class PrivateTokenAuthenticationMiddleware:
             return None
 
         if len(auth) == 1:
-            logger.warning('Invalid token header. No private token provided.')
+            logger.warning("Invalid token header. No private token provided.")
             return None
         elif len(auth) > 2:
-            logger.warning('Invalid token header. Token string should not contain spaces.')
+            logger.warning("Invalid token header. Token string should not contain spaces.")
             return None
         return auth[1]
 
@@ -157,12 +159,12 @@ class AuthenticatedAppAsUserMiddleware:
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         # Ignore already authenticated requests
-        if getattr(request, 'user', None) and request.user.is_authenticated:
+        if getattr(request, "user", None) and request.user.is_authenticated:
             return None
 
         if user := self.get_user(request, view_func):
             logger.info(
-                'Authenticated user by AuthenticatedApp, username: %s, ip: %s, path: %s',
+                "Authenticated user by AuthenticatedApp, username: %s, ip: %s, path: %s",
                 user.username,
                 get_client_ip(request),
                 request.path_info,
@@ -179,7 +181,7 @@ class AuthenticatedAppAsUserMiddleware:
         :param view_func: Current view function.
         :return: An User object.
         """
-        if not getattr(request, 'app', None):
+        if not getattr(request, "app", None):
             return None
         if not request.app.verified:
             return None
@@ -188,7 +190,7 @@ class AuthenticatedAppAsUserMiddleware:
             obj = AuthenticatedAppAsUser.objects.get(bk_app_code=request.app.bk_app_code, is_active=True)
             return obj.user
         except AuthenticatedAppAsUser.DoesNotExist:
-            if hasattr(view_func, 'cls') and ForceAllowAuthedApp.check_marked(view_func.cls):
+            if hasattr(view_func, "cls") and ForceAllowAuthedApp.check_marked(view_func.cls):
                 # Automatically create a new user and relation
                 return self.create_user(request.app.bk_app_code)
             return None
@@ -197,13 +199,13 @@ class AuthenticatedAppAsUserMiddleware:
     def create_user(bk_app_code: str) -> DatabaseUser:
         """Create a user and relationship from an application code with default permissions."""
         # Create the user
-        user_db, _ = User.objects.get_or_create(username=f'authed-app-{bk_app_code}')
+        user_db, _ = User.objects.get_or_create(username=f"authed-app-{bk_app_code}")
         user = DatabaseUser.from_db_obj(user_db)
-        UserProfile.objects.update_or_create(user=user.pk, defaults={'role': SiteRole.SYSTEM_API_BASIC_READER.value})
+        UserProfile.objects.update_or_create(user=user.pk, defaults={"role": SiteRole.SYSTEM_API_BASIC_READER.value})
 
         # Create the relationship
         AuthenticatedAppAsUser.objects.update_or_create(
-            bk_app_code=bk_app_code, defaults={'user': user_db, 'is_active': True}
+            bk_app_code=bk_app_code, defaults={"user": user_db, "is_active": True}
         )
         return user_db
 
@@ -238,4 +240,4 @@ def set_database_user(request: HttpRequest, user: User, set_non_cookies: bool = 
         # Reference from bkpaas_auth
         # Set a special attribute on request to mark this user was not authenticated from
         # cookie, so we may apply other logics afterwards, such as skipping CSRF checks.
-        setattr(request, '_bkpaas_auth_authenticated_from_non_cookies', True)
+        setattr(request, "_bkpaas_auth_authenticated_from_non_cookies", True)

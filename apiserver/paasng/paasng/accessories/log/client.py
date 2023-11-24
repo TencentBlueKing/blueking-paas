@@ -105,7 +105,7 @@ class BKLogClient:
             time_zone=settings.TIME_ZONE,
             min_doc_count=1,
         )
-        search.search.aggs.bucket('histogram', agg)
+        search.search.aggs.bucket("histogram", agg)
         search.limit_offset(0, 0)
         data = {
             "indices": index,
@@ -186,7 +186,7 @@ class ESLogClient:
             total = response._shards.total
             raise ScanError(
                 scroll_id,
-                'Scroll request has failed on %d shards out of %d.' % (failed, total),
+                "Scroll request has failed on %d shards out of %d." % (failed, total),
             )
         return (response, self._get_response_count(index, search, timeout, response))
 

@@ -74,9 +74,9 @@ class MetaDataFileReader:
 
         :raises: exceptions.GetProcfileError
         """
-        possible_keys = ['Procfile']
+        possible_keys = ["Procfile"]
         if self.source_dir != Path("."):
-            possible_keys = [str(self.source_dir / 'Procfile'), 'Procfile']
+            possible_keys = [str(self.source_dir / "Procfile"), "Procfile"]
 
         content = None
         for possible_key in possible_keys:
@@ -86,9 +86,9 @@ class MetaDataFileReader:
             except Exception:
                 continue
         if content is None:
-            error_msg = 'Can not read Procfile file from repository'
+            error_msg = "Can not read Procfile file from repository"
             if self.error_tips:
-                error_msg += f', {self.error_tips}'
+                error_msg += f", {self.error_tips}"
             raise exceptions.GetProcfileError(error_msg)
 
         try:
@@ -127,9 +127,9 @@ class MetaDataFileReader:
             except exceptions.DoesNotExistsOnServer:
                 continue
         if content is None:
-            error_msg = 'Can not read app description file from repository'
+            error_msg = "Can not read app description file from repository"
             if self.error_tips:
-                error_msg += f', {self.error_tips}'
+                error_msg += f", {self.error_tips}"
             raise exceptions.GetAppYamlError(error_msg)
 
         try:
@@ -145,9 +145,9 @@ class MetaDataFileReader:
 
         :raises: exceptions.GetDockerIgnoreError
         """
-        possible_keys = ['.dockerignore']
+        possible_keys = [".dockerignore"]
         if self.source_dir != Path("."):
-            possible_keys = [str(self.source_dir / '.dockerignore'), '.dockerignore']
+            possible_keys = [str(self.source_dir / ".dockerignore"), ".dockerignore"]
 
         content = None
         for possible_key in possible_keys:
@@ -157,9 +157,9 @@ class MetaDataFileReader:
             except Exception:
                 continue
         if content is None:
-            error_msg = 'Can not read .dockerignore file from repository'
+            error_msg = "Can not read .dockerignore file from repository"
             if self.error_tips:
-                error_msg += f', {self.error_tips}'
+                error_msg += f", {self.error_tips}"
             raise exceptions.GetDockerIgnoreError(error_msg)
         return content.decode()
 
@@ -179,7 +179,7 @@ class VCSMetaDataReader(MetaDataFileReader):
 class PackageMetaDataReader(MetaDataFileReader):
     error_tips = "please ensure the file exists in the package"
 
-    def __init__(self, module: 'Module', source_dir: Path = _current_path):
+    def __init__(self, module: "Module", source_dir: Path = _current_path):
         self.module = module
         self._client: Optional[BasePackageClient] = None
         self.source_dir = source_dir
@@ -231,7 +231,7 @@ class PackageMetaDataReader(MetaDataFileReader):
 
 
 def get_metadata_reader(
-    module: 'Module', operator: Optional[str] = None, source_dir: Path = _current_path
+    module: "Module", operator: Optional[str] = None, source_dir: Path = _current_path
 ) -> MetaDataReader:
     """Get MetaData Reader for the given module
     :param module: 待操作的模块

@@ -41,9 +41,9 @@ class TestProcessService:
 
         service = ProcessService(
             app=bk_stag_wl_app,
-            name='foo-service',
-            process_type='web',
-            ports=[PServicePortPair(name='http', port=80, target_port=80)],
+            name="foo-service",
+            process_type="web",
+            ports=[PServicePortPair(name="http", port=80, target_port=80)],
         )
         service_kmodel.save(service)
 
@@ -58,38 +58,38 @@ class TestProcessService:
 
     def test_get_not_found(self, bk_stag_wl_app):
         with pytest.raises(AppEntityNotFound):
-            service_kmodel.get(bk_stag_wl_app, 'non-existed-service')
+            service_kmodel.get(bk_stag_wl_app, "non-existed-service")
 
     @pytest.mark.auto_create_ns
     def test_get_normal(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
-            name='foo-service',
-            process_type='web',
-            ports=[PServicePortPair(name='http', port=80, target_port=80)],
+            name="foo-service",
+            process_type="web",
+            ports=[PServicePortPair(name="http", port=80, target_port=80)],
         )
         service_kmodel.save(service)
 
-        obj = service_kmodel.get(bk_stag_wl_app, 'foo-service')
+        obj = service_kmodel.get(bk_stag_wl_app, "foo-service")
         assert obj is not None
 
     def test_update_not_found(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
-            name='non-existed-service',
-            process_type='web',
-            ports=[PServicePortPair(name='http', port=80, target_port=80)],
+            name="non-existed-service",
+            process_type="web",
+            ports=[PServicePortPair(name="http", port=80, target_port=80)],
         )
         with pytest.raises(AppEntityNotFound):
-            service_kmodel.update(service, update_method='patch')
+            service_kmodel.update(service, update_method="patch")
 
     @pytest.mark.auto_create_ns
     def test_update(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
-            name='foo-service',
-            process_type='web',
-            ports=[PServicePortPair(name='http', port=80, target_port=80)],
+            name="foo-service",
+            process_type="web",
+            ports=[PServicePortPair(name="http", port=80, target_port=80)],
         )
         service_kmodel.save(service)
         service.ports[0].target_port = 8080
@@ -102,11 +102,11 @@ class TestProcessService:
     def test_update_with_less_ports(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
-            name='foo-service',
-            process_type='web',
+            name="foo-service",
+            process_type="web",
             ports=[
-                PServicePortPair(name='http', port=80, target_port=80),
-                PServicePortPair(name='https', port=83, target_port=8080),
+                PServicePortPair(name="http", port=80, target_port=80),
+                PServicePortPair(name="https", port=83, target_port=8080),
             ],
         )
         service_kmodel.save(service)

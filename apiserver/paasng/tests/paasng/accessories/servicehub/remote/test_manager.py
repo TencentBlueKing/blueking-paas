@@ -45,10 +45,10 @@ pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-servic
 class TestRemotePlanObj:
     def test_from_data(self):
         raw = {
-            'description': '通用集群',
-            'name': 'default',
-            'properties': {'is_eager': True, 'region': 'test'},
-            'uuid': '123',
+            "description": "通用集群",
+            "name": "default",
+            "properties": {"is_eager": True, "region": "test"},
+            "uuid": "123",
             "specifications": {},
         }
 
@@ -106,7 +106,7 @@ class TestRemoteEngineAppInstanceRel:
         assert plan.properties == plan_data["properties"]
 
     @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
-    @mock.patch('paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance')
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
     @pytest.mark.parametrize(
         "plans",
         [
@@ -121,7 +121,7 @@ class TestRemoteEngineAppInstanceRel:
     )
     def test_provision(self, mocked_provision, get_cluster_egress_info, store, bk_module, bk_service_ver, plans):
         """Test service instance provision"""
-        get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
+        get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         mgr = RemoteServiceMgr(store=store)
         bk_service_ver.plans = plans
 
@@ -142,9 +142,9 @@ class TestRemoteEngineAppInstanceRel:
                     assert mocked_provision.called
                     assert len(mocked_provision.call_args[0]) == 3
                     assert bool(all(mocked_provision.call_args[0]))
-                    assert mocked_provision.call_args[1]['params']['username'] == rel.db_engine_app.name
+                    assert mocked_provision.call_args[1]["params"]["username"] == rel.db_engine_app.name
 
-    @mock.patch('paasng.accessories.servicehub.remote.manager.EnvClusterInfo.get_egress_info')
+    @mock.patch("paasng.accessories.servicehub.remote.manager.EnvClusterInfo.get_egress_info")
     def test_render_params(self, mock_get_egress_info, store, bk_app, bk_module, bk_service_ver):
         mock_get_egress_info.return_value = {}
         mgr = RemoteServiceMgr(store=store)
@@ -182,8 +182,8 @@ class TestRemoteMgrWithRealStore:
         bk_app.save()
         bk_module.save()
 
-        meta_info = {'version': None}
-        with mock.patch('requests.get') as mocked_get:
+        meta_info = {"version": None}
+        with mock.patch("requests.get") as mocked_get:
             # Mock requests response
             bk_service_ver.plans = [bk_plan_r1_v1, bk_plan_r1_v2, bk_plan_r2_v1]
             mocked_get.return_value = mock_json_response(
@@ -394,19 +394,19 @@ class TestRemoteMgrWithMockedStore:
                         assert plan.specifications["app_zone"] == expected_zone_name
 
 
-id_of_first_service: str = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]['uuid']
+id_of_first_service: str = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
 
 
 class TestRemoteMgr:
-    app_region = 'r1'
+    app_region = "r1"
 
     @pytest.fixture(autouse=True)
     def setup_data(self, faked_remote_services, bk_app, bk_module):
         # Update app and module fixture's region
         bk_app.region = self.app_region
-        bk_app.save(update_fields=['region'])
+        bk_app.save(update_fields=["region"])
         bk_module.region = self.app_region
-        bk_module.save(update_fields=['region'])
+        bk_module.save(update_fields=["region"])
 
     @pytest.fixture
     def store(self):
@@ -425,13 +425,13 @@ class TestRemoteMgr:
         for env in bk_app.envs.all():
             assert len(list(mgr.list_unprovisioned_rels(env.engine_app))) == 1
 
-    @mock.patch('paasng.accessories.servicehub.remote.manager.get_cluster_egress_info')
-    @mock.patch('paasng.accessories.servicehub.remote.client.RemoteServiceClient.retrieve_instance')
-    @mock.patch('paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance')
+    @mock.patch("paasng.accessories.servicehub.remote.manager.get_cluster_egress_info")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.retrieve_instance")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
     def test_get_instance_has_create_time_attr(
         self, mocked_provision, mocked_retrieve, get_cluster_egress_info, store, bk_app, bk_module
     ):
-        get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
+        get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         mgr = RemoteServiceMgr(store=store)
 
         svc = mgr.get(id_of_first_service, region=bk_module.region)
@@ -442,18 +442,18 @@ class TestRemoteMgr:
 
             # Mock retrieve response
             data = data_mocks.REMOTE_INSTANCE_JSON.copy()
-            data['uuid'] = rel.db_obj.service_instance_id
+            data["uuid"] = rel.db_obj.service_instance_id
             mocked_retrieve.return_value = data
 
             instance = rel.get_instance()
             assert isinstance(instance.create_time, datetime.datetime)
 
-    @mock.patch('paasng.accessories.servicehub.remote.manager.get_cluster_egress_info')
-    @mock.patch('paasng.accessories.servicehub.remote.client.RemoteServiceClient.retrieve_instance')
-    @mock.patch('paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance')
+    @mock.patch("paasng.accessories.servicehub.remote.manager.get_cluster_egress_info")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.retrieve_instance")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
     def test_get_instance(self, mocked_provision, mocked_retrieve, get_cluster_egress_info, store, bk_app, bk_module):
         """Test service instance provision"""
-        get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
+        get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         mgr = RemoteServiceMgr(store=store)
 
         svc = mgr.get(id_of_first_service, region=bk_module.region)
@@ -465,13 +465,13 @@ class TestRemoteMgr:
 
                 # Mock retrieve response
                 data = data_mocks.REMOTE_INSTANCE_JSON.copy()
-                data['uuid'] = rel.db_obj.service_instance_id
+                data["uuid"] = rel.db_obj.service_instance_id
                 mocked_retrieve.return_value = data
 
                 instance = rel.get_instance()
 
                 assert len(instance.credentials) == 5
-                assert instance.credentials['CEPH_BUCKET'] == 'pig-bucket-2'
+                assert instance.credentials["CEPH_BUCKET"] == "pig-bucket-2"
 
                 assert mixed_service_mgr.get_env_vars(env.engine_app) != {}
 
@@ -515,16 +515,16 @@ class TestRemoteMgr:
 
 
 class TestLegacyRemoteMgr:
-    app_region = 'rr1'
-    uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[2]['uuid']
+    app_region = "rr1"
+    uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[2]["uuid"]
 
     @pytest.fixture(autouse=True)
     def setup_data(self, faked_remote_services, bk_app, bk_module):
         # Update app and module fixture's region
         bk_app.region = self.app_region
-        bk_app.save(update_fields=['region'])
+        bk_app.save(update_fields=["region"])
         bk_module.region = self.app_region
-        bk_module.save(update_fields=['region'])
+        bk_module.save(update_fields=["region"])
 
     @pytest.fixture
     def store(self):
@@ -542,7 +542,7 @@ class TestLegacyRemoteMgr:
 
         # Re-query another module object to avoid conflict
         module = Module.objects.get(pk=bk_module.pk)
-        module.region = 'r-invalid'
+        module.region = "r-invalid"
         with pytest.raises(RuntimeError):
             mgr.bind_service(svc, module)
 
@@ -588,7 +588,7 @@ class TestLegacyRemoteMgr:
 
 class TestMetaInfo:
     def test_semantic_version_gte_none_version(self):
-        assert MetaInfo(version=None).semantic_version_gte('0.0.1') is False
+        assert MetaInfo(version=None).semantic_version_gte("0.0.1") is False
 
     @pytest.mark.parametrize(
         "one, other, expected",

@@ -57,15 +57,15 @@ class Mapper(Generic[MapperResource]):
 
     kres_class: Type[MapperResource]
 
-    def __init__(self, process: 'Union[Process, MapperProcConfig]', client: Optional['EnhancedApiClient'] = None):
+    def __init__(self, process: "Union[Process, MapperProcConfig]", client: Optional["EnhancedApiClient"] = None):
         if not isinstance(process, MapperProcConfig):
             _proc_config = get_mapper_proc_config(process)
             if not _proc_config:
-                raise TypeError('process argument is invalid')
+                raise TypeError("process argument is invalid")
         else:
             _proc_config = process
 
-        self.proc_config: 'MapperProcConfig' = _proc_config
+        self.proc_config: "MapperProcConfig" = _proc_config
         self.client = client
 
     ##############
@@ -161,12 +161,12 @@ class MapperField(Generic[MapperResource]):
         self.mapper_class = mapper_class
 
     def __call__(
-        self, instance: 'MapperPack', process: Process, client: Optional['EnhancedApiClient'] = None
+        self, instance: "MapperPack", process: Process, client: Optional["EnhancedApiClient"] = None
     ) -> CallThroughKresMapper[MapperResource]:
         return self.mapper_class(process=process, client=client or instance.client)
 
     def __get__(
-        self, instance: Optional['MapperPack'], owner: Type['MapperPack']
+        self, instance: Optional["MapperPack"], owner: Type["MapperPack"]
     ) -> Callable[..., CallThroughKresMapper[MapperResource]]:
         if instance is None:
             return self
@@ -180,7 +180,7 @@ class MapperPack:
     deployment: MapperField[KDeployment]
     replica_set: MapperField[KReplicaSet]
 
-    def __init__(self, client: Optional['EnhancedApiClient'] = None):
+    def __init__(self, client: Optional["EnhancedApiClient"] = None):
         # client can only be used at CallThroughKresMapper
         # never be used at Mapper
         self.client = client
@@ -217,5 +217,5 @@ def get_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
             command_name=get_command_name(proc.runtime.proc_command),
         )
     except Exception:
-        logger.warning('Error getting mapper_proc_config object, process: %s', proc)
+        logger.warning("Error getting mapper_proc_config object, process: %s", proc)
         return None

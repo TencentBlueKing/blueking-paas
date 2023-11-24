@@ -54,37 +54,37 @@ class TestLegacyStdoutLogAPIView:
         assert response.data["data"]["logs"] == []
         # 测试 dsl 的拼接 是否符合预期
         assert json.loads(response.data["data"]["dsl"]) == {
-            'query': {
-                'bool': {
-                    'filter': [
-                        {'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}},
+            "query": {
+                "bool": {
+                    "filter": [
+                        {"range": {"@timestamp": {"gte": "now-1h", "lte": "now"}}},
                         # mappings 返回类型是 text, 因此添加了 .keyword
-                        {'term': {'app_code.keyword': bk_app.code}},
-                        {'term': {'module_name': bk_module.name}},
-                        {'terms': {'stream': ['stderr', 'stdout']}},
+                        {"term": {"app_code.keyword": bk_app.code}},
+                        {"term": {"module_name": bk_module.name}},
+                        {"terms": {"stream": ["stderr", "stdout"]}},
                     ],
-                    'must': [
-                        {'query_string': {'query': 'query_string', 'analyze_wildcard': True}},
-                        {'terms': {'terms': ['foo', 'bar']}},
+                    "must": [
+                        {"query_string": {"query": "query_string", "analyze_wildcard": True}},
+                        {"terms": {"terms": ["foo", "bar"]}},
                     ],
-                    'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
+                    "must_not": [{"terms": {"exclude": ["foo", "bar"]}}],
                 }
             },
-            'sort': [{'@timestamp': {'order': 'desc'}, 'some-field': {'order': 'asc'}}],
-            'size': 100,
-            'from': 0,
-            'highlight': {
-                'fields': {'json.message': {'number_of_fragments': 0}},
-                'pre_tags': ['[bk-mark]'],
-                'post_tags': ['[/bk-mark]'],
-                'require_field_match': False,
-                'highlight_query': {
-                    'bool': {
-                        'must': [
-                            {'query_string': {'query': 'query_string', 'analyze_wildcard': True}},
-                            {'terms': {'terms': ['foo', 'bar']}},
+            "sort": [{"@timestamp": {"order": "desc"}, "some-field": {"order": "asc"}}],
+            "size": 100,
+            "from": 0,
+            "highlight": {
+                "fields": {"json.message": {"number_of_fragments": 0}},
+                "pre_tags": ["[bk-mark]"],
+                "post_tags": ["[/bk-mark]"],
+                "require_field_match": False,
+                "highlight_query": {
+                    "bool": {
+                        "must": [
+                            {"query_string": {"query": "query_string", "analyze_wildcard": True}},
+                            {"terms": {"terms": ["foo", "bar"]}},
                         ],
-                        'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
+                        "must_not": [{"terms": {"exclude": ["foo", "bar"]}}],
                     }
                 },
             },
@@ -140,13 +140,13 @@ class TestLegacyStdoutLogAPIView:
         assert response.data["data"]["scroll_id"] == "scroll_id"
         assert response.data["data"]["logs"] == [
             {
-                'timestamp': '1970-01-01 08:00:01',
+                "timestamp": "1970-01-01 08:00:01",
                 # 高亮
-                'message': '[bk-mark]???[/bk-mark]',
+                "message": "[bk-mark]???[/bk-mark]",
                 # 没有 module_name
-                'environment': 'stag',
-                'process_id': '1234567',
-                'pod_name': 'bar',
+                "environment": "stag",
+                "process_id": "1234567",
+                "pod_name": "bar",
             }
         ]
 
@@ -197,29 +197,29 @@ class TestLegacySysStructuredLogAPIView:
         # 测试日志的解析是否符合预期
         assert response.data["data"]["logs"] == [
             {
-                'ts': '1970-01-01 08:00:01',
+                "ts": "1970-01-01 08:00:01",
                 # 高亮
-                'message': '[bk-mark]???[/bk-mark]',
-                'detail': {
+                "message": "[bk-mark]???[/bk-mark]",
+                "detail": {
                     # 不在白名单内的字段, 不返回
                     # "@timestamp": 1,
                     # "one.two.three": "four",
                     # 扁平化
-                    'json.message': '[bk-mark]???[/bk-mark]',
-                    'region': 'default',
-                    'app_code': bk_app.code,
-                    'module_name': bk_module.name,
-                    'environment': 'stag',
-                    'process_id': '1234567',
-                    'stream': 'foo',
-                    'pod_name': 'bar',
+                    "json.message": "[bk-mark]???[/bk-mark]",
+                    "region": "default",
+                    "app_code": bk_app.code,
+                    "module_name": bk_module.name,
+                    "environment": "stag",
+                    "process_id": "1234567",
+                    "stream": "foo",
+                    "pod_name": "bar",
                 },
-                'region': bk_app.region,
-                'app_code': bk_app.code,
+                "region": bk_app.region,
+                "app_code": bk_app.code,
                 # 没有 module_name
-                'environment': 'stag',
-                'process_id': '1234567',
-                'stream': 'foo',
+                "environment": "stag",
+                "process_id": "1234567",
+                "stream": "foo",
             }
         ]
 
@@ -243,22 +243,22 @@ class TestSysBkPluginLogsViewset:
         assert response.data["logs"] == []
         # 测试 dsl 的拼接 是否符合预期
         assert json.loads(response.data["dsl"]) == {
-            'query': {
-                'bool': {
-                    'filter': [
-                        {'range': {'@timestamp': {'gte': 'now-14d', 'lte': 'now'}}},
+            "query": {
+                "bool": {
+                    "filter": [
+                        {"range": {"@timestamp": {"gte": "now-14d", "lte": "now"}}},
                         # mappings 返回类型是 text, 因此添加了 .keyword
-                        {'term': {'app_code.keyword': bk_plugin_app.code}},
+                        {"term": {"app_code.keyword": bk_plugin_app.code}},
                         # module_name 是硬编码的
-                        {'term': {'module_name': 'default'}},
-                        {'bool': {'must_not': [{'terms': {'stream': ['stderr', 'stdout']}}]}},
-                        {'term': {'json.trace_id': 'foo'}},
+                        {"term": {"module_name": "default"}},
+                        {"bool": {"must_not": [{"terms": {"stream": ["stderr", "stdout"]}}]}},
+                        {"term": {"json.trace_id": "foo"}},
                     ]
                 }
             },
-            'sort': [{'@timestamp': {'order': 'desc'}}],
-            'size': 200,
-            'from': 0,
+            "sort": [{"@timestamp": {"order": "desc"}}],
+            "size": 200,
+            "from": 0,
         }
 
     def test_list(self, sys_api_client, bk_plugin_app):
@@ -305,40 +305,40 @@ class TestSysBkPluginLogsViewset:
                 # message
                 # detail
                 # ts
-                'timestamp': 1,
-                'message': '[bk-mark]???[/bk-mark]',
-                'raw': {
+                "timestamp": 1,
+                "message": "[bk-mark]???[/bk-mark]",
+                "raw": {
                     # 不在白名单内的字段, 不返回
                     # "@timestamp": 1,
                     # "one.two.three": "four",
-                    'json.message': '[bk-mark]???[/bk-mark]',
-                    'region': bk_plugin_app.region,
-                    'app_code': bk_plugin_app.code,
-                    'environment': 'stag',
-                    'process_id': '1234567',
-                    'stream': 'foo',
-                    'pod_name': 'bar',
-                    'module_name': None,
-                    'ts': '1970-01-01 08:00:01',
+                    "json.message": "[bk-mark]???[/bk-mark]",
+                    "region": bk_plugin_app.region,
+                    "app_code": bk_plugin_app.code,
+                    "environment": "stag",
+                    "process_id": "1234567",
+                    "stream": "foo",
+                    "pod_name": "bar",
+                    "module_name": None,
+                    "ts": "1970-01-01 08:00:01",
                 },
-                'detail': {
+                "detail": {
                     # 不在白名单内的字段, 不返回
                     # "@timestamp": 1,
                     # "one.two.three": "four",
-                    'json.message': '[bk-mark]???[/bk-mark]',
-                    'region': bk_plugin_app.region,
-                    'app_code': bk_plugin_app.code,
-                    'environment': 'stag',
-                    'process_id': '1234567',
-                    'stream': 'foo',
-                    'pod_name': 'bar',
-                    'module_name': None,
-                    'ts': '1970-01-01 08:00:01',
+                    "json.message": "[bk-mark]???[/bk-mark]",
+                    "region": bk_plugin_app.region,
+                    "app_code": bk_plugin_app.code,
+                    "environment": "stag",
+                    "process_id": "1234567",
+                    "stream": "foo",
+                    "pod_name": "bar",
+                    "module_name": None,
+                    "ts": "1970-01-01 08:00:01",
                 },
-                'plugin_code': bk_plugin_app.code,
-                'environment': 'stag',
-                'process_id': '1234567',
-                'stream': 'foo',
-                'ts': '1970-01-01 08:00:01',
+                "plugin_code": bk_plugin_app.code,
+                "environment": "stag",
+                "process_id": "1234567",
+                "stream": "foo",
+                "ts": "1970-01-01 08:00:01",
             }
         ]

@@ -35,14 +35,14 @@ class TestEnvAddresses:
         wl_app = bk_stag_wl_app
         # Create all types of domains
         # source type: subdomain
-        AppDomain.objects.create(app=wl_app, host='foo.example.com', source=AppDomainSource.AUTO_GEN)
-        AppDomain.objects.create(app=wl_app, host='foo-more.example.org', source=AppDomainSource.AUTO_GEN)
-        AppDomain.objects.create(app=wl_app, host='foo.example.org', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=wl_app, host="foo.example.com", source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=wl_app, host="foo-more.example.org", source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=wl_app, host="foo.example.org", source=AppDomainSource.AUTO_GEN)
         # source type: subpath
-        AppSubpath.objects.create(app=wl_app, subpath='/foo/', source=AppSubpathSource.DEFAULT)
+        AppSubpath.objects.create(app=wl_app, subpath="/foo/", source=AppSubpathSource.DEFAULT)
         # source type: custom
         Domain.objects.create(
-            name='foo-custom.example.com', path_prefix='/', module_id=bk_module.id, environment_id=bk_stag_env.id
+            name="foo-custom.example.com", path_prefix="/", module_id=bk_module.id, environment_id=bk_stag_env.id
         )
 
     def test_not_deployed(self, bk_stag_env):
@@ -77,14 +77,14 @@ class TestEnvAddresses:
         create_release(bk_stag_env.wl_app, bk_user, failed=False)
         addrs = LiveEnvAddresses(bk_stag_env).list()
         assert addrs == [
-            Address(AddressType.SUBDOMAIN, 'http://foo.example.org:8080/', False),
-            Address(AddressType.SUBDOMAIN, 'http://foo-more.example.org:8080/', False),
-            Address(AddressType.SUBDOMAIN, 'http://foo.example.com:8080/', True),
-            Address(AddressType.SUBPATH, 'http://p2.example.com:8080/foo/', False),
-            Address(AddressType.SUBPATH, 'https://p1.example.com/foo/', True),
+            Address(AddressType.SUBDOMAIN, "http://foo.example.org:8080/", False),
+            Address(AddressType.SUBDOMAIN, "http://foo-more.example.org:8080/", False),
+            Address(AddressType.SUBDOMAIN, "http://foo.example.com:8080/", True),
+            Address(AddressType.SUBPATH, "http://p2.example.com:8080/foo/", False),
+            Address(AddressType.SUBPATH, "https://p1.example.com/foo/", True),
             Address(
                 AddressType.CUSTOM,
-                'http://foo-custom.example.com:8080/',
+                "http://foo-custom.example.com:8080/",
                 False,
                 id=Domain.objects.get(environment_id=bk_stag_env.id).id,
             ),

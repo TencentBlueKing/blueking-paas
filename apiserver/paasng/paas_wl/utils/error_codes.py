@@ -39,7 +39,7 @@ class ErrorCodes:
     # Custom Domain Start
     DELETE_CUSTOM_DOMAIN_FAILED = ErrorCode(_("删除独立域名失败"))
     CREATE_CUSTOM_DOMAIN_FAILED = ErrorCode(_("创建独立域名失败"))
-    UPDATE_CUSTOM_DOMAIN_FAILED = ErrorCode(_('修改独立域名失败'))
+    UPDATE_CUSTOM_DOMAIN_FAILED = ErrorCode(_("修改独立域名失败"))
 
     # Edition Start
     EDITION_NOT_SUPPORT = ErrorCode(_("该功能当前版本不支持"))

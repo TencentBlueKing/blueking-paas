@@ -23,7 +23,6 @@ def fetch_user_from_request():
     def decorator(func):
         @wraps(func)
         def wrapper(request, backend, *args, **kwargs):
-
             return func(request, backend, *args, **kwargs)
 
         return wrapper

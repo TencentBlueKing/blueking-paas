@@ -18,11 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import TYPE_CHECKING, Dict, List, Type
 
+from paasng.accessories.publish.entrance.preallocated import get_preallocated_url
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tags import DeployPhaseTag
 from paasng.platform.engine.models.phases import DeployPhaseTypes
-from paasng.accessories.publish.entrance.preallocated import get_preallocated_url
 
 if TYPE_CHECKING:
     from paasng.platform.engine.models import DeployPhase, EngineApp
@@ -36,11 +36,11 @@ class DisplayBlock:
     name: str = ""
 
     @staticmethod
-    def get_module_by_engine_app(engine_app: 'EngineApp') -> 'Module':
+    def get_module_by_engine_app(engine_app: "EngineApp") -> "Module":
         return engine_app.env.module
 
     @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
+    def get_detail(cls, engine_app: "EngineApp") -> dict:
         raise NotImplementedError
 
 
@@ -48,7 +48,7 @@ class SourceInfo(DisplayBlock):
     name = "source_info"
 
     @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
+    def get_detail(cls, engine_app: "EngineApp") -> dict:
         from paasng.platform.sourcectl.serializers import RepositorySLZ
 
         module = cls.get_module_by_engine_app(engine_app)
@@ -61,7 +61,7 @@ class ServicesInfo(DisplayBlock):
     name = "services_info"
 
     @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
+    def get_detail(cls, engine_app: "EngineApp") -> dict:
         from paasng.accessories.servicehub.manager import mixed_service_mgr
 
         detail = []
@@ -94,7 +94,7 @@ class HelpDocs(DisplayBlock):
         return DocumentaryLinkSLZ(docs, many=True).data
 
     @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
+    def get_detail(cls, engine_app: "EngineApp") -> dict:
         return {cls.name: cls.get_doc_links()}
 
 
@@ -125,13 +125,13 @@ class RuntimeInfo(DisplayBlock):
     name = "runtime_info"
 
     @classmethod
-    def get_module_runtime_manager(cls, engine_app: 'EngineApp') -> 'ModuleRuntimeManager':
+    def get_module_runtime_manager(cls, engine_app: "EngineApp") -> "ModuleRuntimeManager":
         from paasng.platform.modules.helpers import ModuleRuntimeManager
 
         return ModuleRuntimeManager(cls.get_module_by_engine_app(engine_app))
 
     @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
+    def get_detail(cls, engine_app: "EngineApp") -> dict:
         from paasng.platform.modules.serializers import ModuleRuntimeSLZ
 
         m = cls.get_module_runtime_manager(engine_app)
@@ -149,7 +149,7 @@ class AccessInfo(DisplayBlock):
     name = "access_info"
 
     @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
+    def get_detail(cls, engine_app: "EngineApp") -> dict:
         info = get_preallocated_url(engine_app.env)
         if info is None:
             return {}
@@ -176,7 +176,7 @@ def get_display_blocks_by_type(phase_type: DeployPhaseTypes) -> List[Type[Displa
 
 class DeployDisplayBlockRenderer:
     @staticmethod
-    def get_display_blocks_info(phase_obj: 'DeployPhase') -> dict:
+    def get_display_blocks_info(phase_obj: "DeployPhase") -> dict:
         """获取该阶段的静态展示信息"""
         # Q: 为什么这里不直接存渲染后的内容？
         # A: 因为很多信息是没有办法在应用创建拿到的，如果要存这些信息，那么需要引入信息及时同步的复杂度

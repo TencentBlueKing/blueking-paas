@@ -42,8 +42,8 @@ class ProtectedResource:
         """Add a new role"""
         if set(permissions_map.keys()) != set(self._permissions.keys()):
             raise ValueError(
-                'You must provide same permission names when add new role, '
-                'did you add a new permission in the Resource?'
+                "You must provide same permission names when add new role, "
+                "did you add a new permission in the Resource?"
             )
 
         self.roles[name] = ObjectRole(self, name, permissions_map)
@@ -67,7 +67,7 @@ class Permission:
         self.description = description
 
     def __str__(self):
-        return '<Permission %s>' % self.codename
+        return "<Permission %s>" % self.codename
 
 
 class ObjectRole:

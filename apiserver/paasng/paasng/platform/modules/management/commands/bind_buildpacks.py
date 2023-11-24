@@ -29,10 +29,10 @@ class Command(BaseCommand):
     help = "绑定 slugbuilder 和 buildpack"
 
     def add_arguments(self, parser):
-        parser.add_argument('--image', dest="image", help="slugbuilder name")
-        parser.add_argument('--buildpack', dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
-        parser.add_argument('--buildpack-name', dest="buildpack_names", help="buildpack name", nargs="*")
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
+        parser.add_argument("--image", dest="image", help="slugbuilder name")
+        parser.add_argument("--buildpack", dest="buildpack_ids", type=int, help="buildpack id", nargs="*")
+        parser.add_argument("--buildpack-name", dest="buildpack_names", help="buildpack name", nargs="*")
+        parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def get_slugbuilder(self, image: str) -> AppSlugBuilder:
         """根据条件获取一个 slugbuilder 对象"""

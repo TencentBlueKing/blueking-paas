@@ -108,7 +108,9 @@ class PluginReleaseExecutor:
             raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前发布流程已结束"))
 
         if not self.release.retryable:
-            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前插件类型不支持重置历史版本, 如需发布请创建新的版本"))
+            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(
+                _("当前插件类型不支持重置历史版本, 如需发布请创建新的版本")
+            )
 
         current_stage = self.release.current_stage
         if (

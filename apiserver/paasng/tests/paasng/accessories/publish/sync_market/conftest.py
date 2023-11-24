@@ -22,5 +22,5 @@ from tests.utils.helpers import configure_regions
 
 @pytest.fixture(autouse=True)
 def setup_ieod_region():
-    with configure_regions(['ieod']):
+    with configure_regions(["ieod"]):
         yield

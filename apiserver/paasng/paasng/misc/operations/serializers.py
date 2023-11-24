@@ -18,17 +18,17 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
+from paasng.misc.operations.models import Operation
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import ApplicationMinimalSLZ, ApplicationSLZ4Record
-from paasng.misc.operations.models import Operation
 
 
 class OperationSLZ(serializers.ModelSerializer):
     application = ApplicationSLZ4Record(read_only=True)
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
     operator = serializers.ReadOnlyField(source="get_operator", read_only=True)
-    operate = serializers.ReadOnlyField(source="get_operate_display", help_text=u"操作名称")
-    operate_type = serializers.ReadOnlyField(source="type", help_text=u"操作类型")
+    operate = serializers.ReadOnlyField(source="get_operate_display", help_text="操作名称")
+    operate_type = serializers.ReadOnlyField(source="type", help_text="操作类型")
 
     class Meta:
         model = Operation
@@ -39,13 +39,13 @@ class OperationSLZ(serializers.ModelSerializer):
 class OperationForRencentApp(OperationSLZ):
     application = ApplicationSLZ4Record(read_only=True)
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
-    operate = serializers.ReadOnlyField(source="get_operate_display", help_text=u"操作名称")
-    operate_type = serializers.ReadOnlyField(source="type", help_text=u"操作类型")
+    operate = serializers.ReadOnlyField(source="get_operate_display", help_text="操作名称")
+    operate_type = serializers.ReadOnlyField(source="type", help_text="操作类型")
     represent_info = serializers.DictField()
 
     class Meta:
         model = Operation
-        fields = ("application", "id", "at", "operate", "operate_type", 'represent_info')
+        fields = ("application", "id", "at", "operate", "operate_type", "represent_info")
         lookup_field = "id"
 
 
@@ -58,8 +58,8 @@ class ApplicationOperationSLZ(serializers.ModelSerializer):
     module_name = serializers.CharField(help_text="关联 Module")
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
     operator = serializers.ReadOnlyField(source="get_operator", read_only=True)
-    operate = serializers.ReadOnlyField(source="get_operate_display", help_text=u"操作名称")
-    operate_type = serializers.ReadOnlyField(source="type", help_text=u"操作类型")
+    operate = serializers.ReadOnlyField(source="get_operate_display", help_text="操作名称")
+    operate_type = serializers.ReadOnlyField(source="type", help_text="操作类型")
 
     class Meta:
         model = Operation
@@ -78,17 +78,17 @@ class ApplicationOperationSLZ(serializers.ModelSerializer):
 
 
 class QueryRecentOperatedApplications(serializers.Serializer):
-    limit = serializers.IntegerField(default=4, max_value=10, help_text='条目数')
+    limit = serializers.IntegerField(default=4, max_value=10, help_text="条目数")
 
 
 class SysOperationSLZ(serializers.Serializer):
     """Serializer for `Operation` model, on "system-api" level"""
 
     application = serializers.PrimaryKeyRelatedField(queryset=Application.objects.all())
-    operator = serializers.CharField(help_text='操作者ID', required=True)
+    operator = serializers.CharField(help_text="操作者ID", required=True)
     operate_type = serializers.IntegerField(help_text="操作类型", required=True)
 
     # Optional fields
-    module_name = serializers.CharField(help_text='模块名', required=False)
-    source_object_id = serializers.CharField(help_text='被操作对象ID', required=False)
-    extra_values = serializers.JSONField(help_text=u"附加数据", required=False)
+    module_name = serializers.CharField(help_text="模块名", required=False)
+    source_object_id = serializers.CharField(help_text="被操作对象ID", required=False)
+    extra_values = serializers.JSONField(help_text="附加数据", required=False)

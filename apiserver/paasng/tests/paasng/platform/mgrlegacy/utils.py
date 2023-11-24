@@ -23,14 +23,14 @@ from uuid import uuid4
 
 from django.conf import settings
 
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.accessories.publish.market.models import Tag
+from paasng.accessories.publish.sync_market.models import TagMap
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 from paasng.platform.mgrlegacy.models import MigrationContext, MigrationProcess
 from paasng.platform.modules.manager import EngineApp, ModuleInitializer
-from paasng.accessories.publish.market.models import Tag
-from paasng.accessories.publish.sync_market.models import TagMap
 from tests.utils import mock
 from tests.utils.auth import create_user
 
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def global_mock(context: MigrationContext):
-    with mock.patch('paasng.platform.modules.manager.ModuleInitializer.create_engine_apps') as create_engine_apps:
+    with mock.patch("paasng.platform.modules.manager.ModuleInitializer.create_engine_apps") as create_engine_apps:
         # for BaseObjectMigration
         def _create_engine_apps():
             app = context.app

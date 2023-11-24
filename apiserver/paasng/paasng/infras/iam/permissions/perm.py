@@ -50,7 +50,7 @@ class ResCreatorAction:
         self.system = settings.IAM_PAAS_V3_SYSTEM_ID
 
     def to_data(self) -> Dict:
-        return {'creator': self.creator, 'system': self.system, 'type': self.resource_type}
+        return {"creator": self.creator, "system": self.system, "type": self.resource_type}
 
 
 @define(kw_only=True)
@@ -67,18 +67,18 @@ class PermCtx:
     def validate_resource_id(self):
         """校验资源实例 ID. 如果校验不过，抛出 AttrValidationError 异常"""
         if not self.resource_id:
-            raise AttrValidationError('resource_id required!')
+            raise AttrValidationError("resource_id required!")
 
     @property
     def resource_id(self) -> str:
         """注册到权限中心的资源实例 ID. 空字符串表示实例无关"""
-        return ''
+        return ""
 
 
 class Permission(ABC, IAMClient):
     """对接 IAM 的权限基类"""
 
-    resource_type: str = ''
+    resource_type: str = ""
     resource_request_cls: Type[ResourceRequest] = ResourceRequest
 
     def can_action(self, perm_ctx: PermCtx, action_id: str, raise_exception: bool, use_cache: bool = False) -> bool:
@@ -175,7 +175,7 @@ class Permission(ABC, IAMClient):
             return False
 
         raise PermissionDeniedError(
-            message=';'.join(messages), username=perm_ctx.username, action_request_list=action_request_list
+            message=";".join(messages), username=perm_ctx.username, action_request_list=action_request_list
         )
 
     def _raise_permission_denied_error(self, perm_ctx: PermCtx, action_id: str):

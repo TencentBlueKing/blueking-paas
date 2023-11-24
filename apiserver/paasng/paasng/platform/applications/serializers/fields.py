@@ -34,13 +34,13 @@ class AppIDField(serializers.RegexField):
             max_length=16,
             min_length=3,
             required=True,
-            help_text='应用 ID',
+            help_text="应用 ID",
             validators=[
                 ReservedWordValidator(_("应用 ID")),
                 DnsSafeNameValidator(_("应用 ID")),
                 AppIDUniqueValidator(),
             ],
-            error_messages={'invalid': _('格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)')},
+            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)")},
         )
         preset_kwargs.update(kwargs)
         super().__init__(regex, *args, **preset_kwargs)
@@ -55,6 +55,6 @@ class AppNameField(NickNameField):
     """Field for validating application name"""
 
     def __init__(self, *args, **kwargs):
-        preset_kwargs = dict(max_length=20, help_text='应用名称', validators=[AppNameUniqueValidator()])
+        preset_kwargs = dict(max_length=20, help_text="应用名称", validators=[AppNameUniqueValidator()])
         preset_kwargs.update(kwargs)
         super().__init__(*args, **preset_kwargs)

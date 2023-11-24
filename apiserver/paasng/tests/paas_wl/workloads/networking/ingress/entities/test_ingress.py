@@ -57,9 +57,9 @@ class TestProcessIngress:
     def service(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
-            name='foo-service',
-            process_type='web',
-            ports=[PServicePortPair(name='http', port=80, target_port=80)],
+            name="foo-service",
+            process_type="web",
+            ports=[PServicePortPair(name="http", port=80, target_port=80)],
         )
 
         service_kmodel.save(service)
@@ -67,34 +67,34 @@ class TestProcessIngress:
 
     @pytest.mark.auto_create_ns
     def test_normal(self, bk_stag_wl_app, service):
-        domains = [PIngressDomain(host='foo.com')]
+        domains = [PIngressDomain(host="foo.com")]
         ingress = ProcessIngress(
             app=bk_stag_wl_app,
-            name='normal-service',
+            name="normal-service",
             domains=domains,
             service_name=service.name,
             service_port_name=service.ports[0].name,
             rewrite_to_root=True,
-            server_snippet='server',
-            annotations={'foo': 'bar'},
+            server_snippet="server",
+            annotations={"foo": "bar"},
         )
         ingress_kmodel.save(ingress)
 
-        item = ingress_kmodel.get(bk_stag_wl_app, 'normal-service')
+        item = ingress_kmodel.get(bk_stag_wl_app, "normal-service")
         assert item is not None
-        assert item.server_snippet == 'server'
-        assert item.annotations == {'foo': 'bar'}
+        assert item.server_snippet == "server"
+        assert item.annotations == {"foo": "bar"}
 
     @pytest.mark.auto_create_ns
     def test_paths(self, bk_stag_wl_app, service):
         """Multiple hosts with paths"""
         domains = [
-            PIngressDomain(host='foo.com'),
-            PIngressDomain(host='bar.com', path_prefix_list=['/foo/', '/extra_bar/']),
+            PIngressDomain(host="foo.com"),
+            PIngressDomain(host="bar.com", path_prefix_list=["/foo/", "/extra_bar/"]),
         ]
         ingress = ProcessIngress(
             app=bk_stag_wl_app,
-            name='primary-path-service',
+            name="primary-path-service",
             domains=domains,
             service_name=service.name,
             service_port_name=service.ports[0].name,
@@ -102,12 +102,12 @@ class TestProcessIngress:
         )
         ingress_kmodel.save(ingress)
 
-        item: ProcessIngress = ingress_kmodel.get(bk_stag_wl_app, 'primary-path-service')
+        item: ProcessIngress = ingress_kmodel.get(bk_stag_wl_app, "primary-path-service")
         assert len(item.domains) == 2
-        assert item.domains[0].primary_prefix_path == '/'
-        assert item.domains[0].path_prefix_list == ['/']
-        assert item.domains[1].primary_prefix_path == '/foo/'
-        assert item.domains[1].path_prefix_list == ['/foo/', '/extra_bar/']
+        assert item.domains[0].primary_prefix_path == "/"
+        assert item.domains[0].path_prefix_list == ["/"]
+        assert item.domains[1].primary_prefix_path == "/foo/"
+        assert item.domains[1].path_prefix_list == ["/foo/", "/extra_bar/"]
 
     def test_serializer_ordering(self, bk_stag_wl_app):
         serializer = ingress_kmodel._make_serializer(bk_stag_wl_app)
@@ -319,7 +319,7 @@ class TestIngressV1Beta1:
     def gvk_config(self, api_version):
         return GVKConfig(
             server_version="0.0.0",
-            kind='Ingress',
+            kind="Ingress",
             preferred_apiversion=api_version,
             available_apiversions=[api_version],
         )
@@ -428,7 +428,7 @@ class TestProcessIngressV1:
     def gvk_config(self):
         return GVKConfig(
             server_version="0.0.0",
-            kind='Ingress',
+            kind="Ingress",
             preferred_apiversion="networking.k8s.io/v1",
             available_apiversions=["networking.k8s.io/v1"],
         )
@@ -599,7 +599,7 @@ class TestPatternCompatible:
     def test_deserialize(self, request, bk_stag_wl_app, deserializer_cls, api_version, spec_fixture, subpath_ingress):
         gvk_config = GVKConfig(
             server_version="0.0.0",
-            kind='Ingress',
+            kind="Ingress",
             preferred_apiversion=api_version,
             available_apiversions=[api_version],
         )

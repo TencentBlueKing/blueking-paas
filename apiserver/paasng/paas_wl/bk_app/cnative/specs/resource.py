@@ -54,10 +54,10 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
                 generate_bkapp_name(env), namespace=wl_app.namespace
             )
         except ResourceNotFoundError:
-            logger.info('Resource BkApp not found in cluster')
+            logger.info("Resource BkApp not found in cluster")
             return None
         except ResourceMissing:
-            logger.info('BkApp not found in %s, app: %s', wl_app.namespace, env.application)
+            logger.info("BkApp not found in %s, app: %s", wl_app.namespace, env.application)
             return None
     return BkAppResource(**data)
 
@@ -74,14 +74,14 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
     with get_client_by_app(wl_app) as client:
         # 下发镜像访问凭证(secret)
         image_credentials = ImageCredentials.load_from_app(wl_app)
-        ImageCredentialsManager(client).upsert(image_credentials, update_method='patch')
+        ImageCredentialsManager(client).upsert(image_credentials, update_method="patch")
 
         # 创建或更新 BkApp
         bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
             generate_bkapp_name(env),
             namespace=wl_app.namespace,
             body=manifest,
-            update_method='replace',
+            update_method="replace",
             auto_add_version=True,
         )
 
@@ -100,8 +100,8 @@ def deploy_networking(env: ModuleEnvironment) -> None:
             mapping.metadata.name,
             namespace=wl_app.namespace,
             body=mapping.to_deployable(),
-            update_method='patch',
-            content_type='application/merge-patch+json',
+            update_method="patch",
+            content_type="application/merge-patch+json",
         )
 
 

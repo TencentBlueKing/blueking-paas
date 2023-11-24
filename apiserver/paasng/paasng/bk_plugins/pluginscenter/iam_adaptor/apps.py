@@ -20,5 +20,5 @@ from django.apps import AppConfig
 
 
 class PluginsCenterIAMConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'paasng.bk_plugins.pluginscenter.iam_adaptor'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "paasng.bk_plugins.pluginscenter.iam_adaptor"

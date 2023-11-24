@@ -52,7 +52,7 @@ class DeployCondition(BaseCondition):
     def validate(self):
         raise NotImplementedError
 
-    def __init__(self, user: 'User', env: 'ModuleEnvironment'):
+    def __init__(self, user: "User", env: "ModuleEnvironment"):
         self.user = user
         self.env = env
 
@@ -66,7 +66,7 @@ class ProductInfoCondition(DeployCondition):
         if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
             return
         if not Product.objects.filter(application=self.env.module.application).exists():
-            raise ConditionNotMatched(_('未完善应用基本信息'), self.action_name)
+            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 
 class RepoAccessCondition(DeployCondition):
@@ -125,7 +125,7 @@ class ProcfileCondition(DeployCondition):
             return
 
         if not ModuleProcessSpec.objects.filter(module=module).exists():
-            raise ConditionNotMatched(_('未完善进程启动命令'), self.action_name)
+            raise ConditionNotMatched(_("未完善进程启动命令"), self.action_name)
 
 
 class PluginTagValidationCondition(DeployCondition):
@@ -149,7 +149,7 @@ class PluginTagValidationCondition(DeployCondition):
             tag_info = bk_plugin_profile.get_tag_info()
 
         if not tag_info:
-            raise ConditionNotMatched(_('未设置插件分类'), self.action_name)
+            raise ConditionNotMatched(_("未设置插件分类"), self.action_name)
 
 
 class ModuleEnvDeployInspector(BaseConditionChecker):
@@ -163,7 +163,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         PluginTagValidationCondition,
     ]
 
-    def __init__(self, user: 'User', env: 'ModuleEnvironment'):
+    def __init__(self, user: "User", env: "ModuleEnvironment"):
         self.user = user
         self.env = env
         self.conditions = [cls(user, env) for cls in self.condition_classes]

@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class MemberConfig(AppConfig):
-    name = 'paasng.infras.iam.members'
+    name = "paasng.infras.iam.members"

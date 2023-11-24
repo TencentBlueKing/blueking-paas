@@ -52,7 +52,7 @@ def plugin_action_permission_class(actions: List[PluginPermissionActions], use_c
                 )
             # 无插件应用权限时，需要返回应用权限申请链接
             if not is_allowed:
-                raise PermissionDenied({'message': self.message, **user_group_apply_url(obj.id)})
+                raise PermissionDenied({"message": self.message, **user_group_apply_url(obj.id)})
 
             return True
 

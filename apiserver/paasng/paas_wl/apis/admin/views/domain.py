@@ -43,7 +43,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module_ids = list(application.modules.values_list("id", flat=True))
         return Domain.objects.filter(module_id__in=module_ids)
 
-    @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=['Domains'])
+    @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=["Domains"])
     def list(self, request, **kwargs):
         """查看应用的所有自定义域名信息
 
@@ -62,7 +62,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_id="create-app-domain",
         request_body=DomainSLZ,
         response_serializer=DomainSLZ,
-        tags=['Domains'],
+        tags=["Domains"],
     )
     def create(self, request, **kwargs):
         """创建一个独立域名
@@ -88,24 +88,24 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_id="update-app-domain",
         request_body=DomainForUpdateSLZ,
         response_serializer=DomainSLZ,
-        tags=['Domains'],
+        tags=["Domains"],
     )
     def update(self, request, **kwargs):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
 
         data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
         new_instance = get_custom_domain_mgr(application).update(
-            instance, host=data['name'], path_prefix=data['path_prefix'], https_enabled=data['https_enabled']
+            instance, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
         )
         return Response(DomainSLZ(new_instance).data)
 
-    @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=['Domains'])
+    @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=["Domains"])
     def destroy(self, request, *args, **kwargs):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
 
         get_custom_domain_mgr(application).delete(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)

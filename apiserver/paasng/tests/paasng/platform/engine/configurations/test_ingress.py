@@ -28,7 +28,7 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppDefaultSubpaths:
@@ -71,7 +71,7 @@ class TestAppDefaultSubpaths:
     @pytest.fixture
     def legacy_style_sub_path(self, bk_stag_env):
         engine_app = bk_stag_env.get_engine_app()
-        return f'/{engine_app.region}-{engine_app.name}/'
+        return f"/{engine_app.region}-{engine_app.name}/"
 
     @pytest.fixture
     def normal_style_sub_path(self, bk_app):
@@ -130,13 +130,13 @@ class TestAppDefaultSubpaths:
         assert envs[sub_path_key] == request.getfixturevalue(expected)
 
     def test_sync(self, bk_stag_env, with_wl_apps):
-        with mock.patch('paasng.platform.engine.configurations.ingress.sync_subpaths') as mocker:
+        with mock.patch("paasng.platform.engine.configurations.ingress.sync_subpaths") as mocker:
             AppDefaultSubpaths(bk_stag_env).sync()
             assert mocker.called
 
 
 class TestAppDefaultDomains:
     def test_sync(self, bk_stag_env, with_wl_apps):
-        with mock.patch('paasng.platform.engine.configurations.ingress.sync_subdomains') as mocker:
+        with mock.patch("paasng.platform.engine.configurations.ingress.sync_subdomains") as mocker:
             AppDefaultDomains(bk_stag_env).sync()
             assert mocker.called

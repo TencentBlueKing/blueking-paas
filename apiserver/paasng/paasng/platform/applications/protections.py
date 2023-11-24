@@ -24,9 +24,9 @@ from typing import Dict, List, Type
 from django.utils.translation import gettext as _
 from rest_framework import permissions
 
-from paasng.platform.applications.models import Application
 from paasng.core.core.protections.base import BaseCondition, ProtectionStatus
 from paasng.core.core.protections.exceptions import ConditionNotMatched
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 
@@ -41,9 +41,9 @@ class BaseAppResProtectCondition(BaseCondition):
 class ProtectedRes(Enum):
     """Protected application resources, it is usually a virtual "resource" and have no corresponding data"""
 
-    BASIC_INFO_MODIFICATIONS = 'BASIC_INFO_MODIFICATIONS'
-    SERVICES_MODIFICATIONS = 'SERVICES_MODIFICATIONS'
-    DISABLE_APP_DESC = 'DISABLE_APP_DESC'
+    BASIC_INFO_MODIFICATIONS = "BASIC_INFO_MODIFICATIONS"
+    SERVICES_MODIFICATIONS = "SERVICES_MODIFICATIONS"
+    DISABLE_APP_DESC = "DISABLE_APP_DESC"
 
 
 class AppDescDisableProtectCondition(BaseAppResProtectCondition):

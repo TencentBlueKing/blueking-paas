@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 def get_vhost(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
     if not module_name:
-        raise ValueError(f'get_vhost(app_code: {app_code}): module_name is required')
+        raise ValueError(f"get_vhost(app_code: {app_code}): module_name is required")
 
     app = Application.objects.get(code=app_code)
 
@@ -45,14 +45,14 @@ def get_vhost(app_code: str, run_env: str, module_name: Optional[str] = None) ->
         svc_obj = mixed_service_mgr.find_by_name(name=RABBITMQ_SERVICE_NAME, region=app.region)
     except ServiceObjNotFound as e:
         logger.info(e)
-        return ''
+        return ""
 
     app_module = app.get_module(module_name)
     if env_vars := mixed_service_mgr.get_env_vars(app_module.get_envs(run_env).engine_app, svc_obj):
-        return env_vars['RABBITMQ_VHOST']
+        return env_vars["RABBITMQ_VHOST"]
 
-    logger.info(f'RabbitMQ service not bounded with app: {app_code}, module: {module_name}')
-    return ''
+    logger.info(f"RabbitMQ service not bounded with app: {app_code}, module: {module_name}")
+    return ""
 
 
 def get_namespace(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
@@ -73,11 +73,11 @@ def get_cluster_id(app_code: str, run_env: str, module_name: Optional[str] = Non
     # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
     module_name = module_name or ModuleName.DEFAULT.value
     cluster_info = _get_cluster_info_cache(app_code, run_env, module_name)
-    version = cluster_info['version']
-    if (int(version.major), int(version.minor.rstrip('+'))) < (1, 12):
-        raise BKMonitorNotSupportedError(f'bkmonitor does not support k8s version {version} which below 1.12')
+    version = cluster_info["version"]
+    if (int(version.major), int(version.minor.rstrip("+"))) < (1, 12):
+        raise BKMonitorNotSupportedError(f"bkmonitor does not support k8s version {version} which below 1.12")
 
-    return cluster_info['bcs_cluster_id']
+    return cluster_info["bcs_cluster_id"]
 
 
 @functools.lru_cache(maxsize=32)
@@ -96,15 +96,15 @@ def _get_cluster_info_cache(app_code: str, run_env: str, module_name: str) -> di
     client = get_client_by_cluster_name(cluster.name)
     version = VersionApi(client).get_code()
     return {
-        'bcs_cluster_id': cluster.bcs_cluster_id,
-        'version': version,
+        "bcs_cluster_id": cluster.bcs_cluster_id,
+        "version": version,
     }
 
 
 LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
-    'namespace': get_namespace,
-    'vhost': get_vhost,
-    'bcs_cluster_id': get_cluster_id,
+    "namespace": get_namespace,
+    "vhost": get_vhost,
+    "bcs_cluster_id": get_cluster_id,
 }
 
 

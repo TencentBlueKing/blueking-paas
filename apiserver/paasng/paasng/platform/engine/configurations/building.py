@@ -36,9 +36,9 @@ if TYPE_CHECKING:
 class SlugbuilderInfo:
     """表示与模块相关的构建环境信息"""
 
-    module: 'Module'
-    slugbuilder: Optional['AppSlugBuilder']
-    buildpacks: List['AppBuildPack']
+    module: "Module"
+    slugbuilder: Optional["AppSlugBuilder"]
+    buildpacks: List["AppBuildPack"]
     # builder + buildpacks 的环境变量
     environments: Dict
     # cnb runtime will build application as Container Image
@@ -63,7 +63,7 @@ class SlugbuilderInfo:
         return buildpacks
 
     @classmethod
-    def from_module(cls, module: 'Module') -> 'SlugbuilderInfo':
+    def from_module(cls, module: "Module") -> "SlugbuilderInfo":
         """根据模块获取支持的构建环境"""
         manager = ModuleRuntimeManager(module)
         buildpacks = manager.list_buildpacks()  # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
@@ -88,7 +88,7 @@ class SlugbuilderInfo:
         )
 
     @classmethod
-    def from_engine_app(cls, app: 'EngineApp') -> 'SlugbuilderInfo':
+    def from_engine_app(cls, app: "EngineApp") -> "SlugbuilderInfo":
         """根据 engine app 获取支持的构建环境"""
         return cls.from_module(app.env.module)
 

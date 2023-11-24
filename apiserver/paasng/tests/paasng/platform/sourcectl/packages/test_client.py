@@ -62,13 +62,13 @@ class TestBinaryTarClient:
         tarball = tarball_maker(["a", "b", "c/d", "e/f", "g/h/i", "j/k/l"])
         with tarfile.open(tarball) as tar:
             assert (set(BinaryTarClient(tarball).list(tarfile_like=False)) - set(tar.getnames())) == {
-                './',
-                './c/',
-                './e/',
-                './g/',
-                './g/h/',
-                './j/',
-                './j/k/',
+                "./",
+                "./c/",
+                "./e/",
+                "./g/",
+                "./g/h/",
+                "./j/",
+                "./j/k/",
             }
 
 

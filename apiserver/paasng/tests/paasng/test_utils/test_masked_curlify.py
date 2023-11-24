@@ -9,16 +9,16 @@ from paasng.utils.masked_curlify import MASKED_CONTENT
 
 class TestToCurlMasked:
     def test_mask_query_params(self):
-        test_request = Request('GET', 'https://example.com/api?BK_PASSWORD=123456&api_key=abcdef')
+        test_request = Request("GET", "https://example.com/api?BK_PASSWORD=123456&api_key=abcdef")
         prepared_request = test_request.prepare()
 
         curlify.to_curl(prepared_request)
 
-        assert f'BK_PASSWORD={quote(MASKED_CONTENT)}' in str(prepared_request.url)
-        assert f'api_key={quote(MASKED_CONTENT)}' in str(prepared_request.url)
+        assert f"BK_PASSWORD={quote(MASKED_CONTENT)}" in str(prepared_request.url)
+        assert f"api_key={quote(MASKED_CONTENT)}" in str(prepared_request.url)
 
     def test_mask_json_data(self):
-        test_request = Request('POST', 'https://example.com/api', json={"BK_PASSWORD": "123456", "api_key": "abcdef"})
+        test_request = Request("POST", "https://example.com/api", json={"BK_PASSWORD": "123456", "api_key": "abcdef"})
         prepared_request = test_request.prepare()
 
         curlify.to_curl(prepared_request)
@@ -28,7 +28,7 @@ class TestToCurlMasked:
         assert json_data["api_key"] == MASKED_CONTENT
 
     def test_mask_form_data(self):
-        test_request = Request('POST', 'https://example.com/api', data={"BK_PASSWORD": "123456", "api_key": "abcdef"})
+        test_request = Request("POST", "https://example.com/api", data={"BK_PASSWORD": "123456", "api_key": "abcdef"})
         prepared_request = test_request.prepare()
 
         curlify.to_curl(prepared_request)
@@ -39,7 +39,7 @@ class TestToCurlMasked:
 
     def test_mask_header_data(self):
         test_request = Request(
-            'POST', 'https://example.com/api', headers={"BK_PASSWORD": "123456", "api_key": "abcdef"}
+            "POST", "https://example.com/api", headers={"BK_PASSWORD": "123456", "api_key": "abcdef"}
         )
         prepared_request = test_request.prepare()
 

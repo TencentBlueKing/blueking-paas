@@ -21,5 +21,5 @@ from django.conf.urls import url
 from .views import SvcWorkloadsEndUserView
 
 urlpatterns = [
-    url(r'^svc_workloads/(?P<path>.*)$', SvcWorkloadsEndUserView.as_view(), name="workloads.proxy"),
+    url(r"^svc_workloads/(?P<path>.*)$", SvcWorkloadsEndUserView.as_view(), name="workloads.proxy"),
 ]

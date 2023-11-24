@@ -21,10 +21,10 @@ import logging
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 from paasng.accessories.publish.market.models import DisplayOptions, Product, Tag
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 from paasng.accessories.publish.sync_market.models import TagMap
+from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class ProductMigration(BaseMigration):
         )
         product = Product.objects.create(**kwargs)
         product.created = self.legacy_app.created_date
-        product.save(update_fields=['created'])
+        product.save(update_fields=["created"])
 
         DisplayOptions.objects.create(
             product=product,
@@ -72,7 +72,7 @@ class ProductMigration(BaseMigration):
         # 迁移logo到rgw
         logo = self.context.legacy_app_proxy.get_logo_file()
         if logo is not None:
-            kwargs['logo'] = logo
+            kwargs["logo"] = logo
 
         filename = self.context.legacy_app_proxy.get_logo_filename()
         app.logo.save(filename, logo, save=False)

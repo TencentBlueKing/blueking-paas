@@ -88,11 +88,11 @@ class TestModuleBuildConfigViewSet:
         resp = api_client.get(url)
         assert resp.json() == {
             **_placeholder_response,
-            'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
-            'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
-            'bp_stack_name': None,
-            'buildpacks': [],
+            "image_repository": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            "build_method": "buildpack",
+            "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
+            "bp_stack_name": None,
+            "buildpacks": [],
         }
 
     def test_retrieve_bp(self, api_client, bk_app, bk_module, slugbuilder, slugrunner, buildpack_x):
@@ -104,17 +104,17 @@ class TestModuleBuildConfigViewSet:
         resp = api_client.get(url)
         assert resp.json() == {
             **_placeholder_response,
-            'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
-            'build_method': 'buildpack',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
-            'bp_stack_name': slugbuilder.name,
-            'buildpacks': [
+            "image_repository": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            "build_method": "buildpack",
+            "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
+            "bp_stack_name": slugbuilder.name,
+            "buildpacks": [
                 {
-                    'id': buildpack_x.id,
-                    'language': buildpack_x.language,
-                    'name': buildpack_x.name,
-                    'display_name': buildpack_x.display_name,
-                    'description': buildpack_x.description,
+                    "id": buildpack_x.id,
+                    "language": buildpack_x.language,
+                    "name": buildpack_x.name,
+                    "display_name": buildpack_x.display_name,
+                    "description": buildpack_x.description,
                 }
             ],
         }
@@ -129,11 +129,11 @@ class TestModuleBuildConfigViewSet:
         resp = api_client.get(url)
         assert resp.json() == {
             **_placeholder_response,  # type: ignore
-            'image_repository': f'example.com/bkapps/{bk_app.code}/{bk_module.name}',
-            'build_method': 'dockerfile',
-            'tag_options': {'prefix': None, 'with_version': True, 'with_build_time': True, 'with_commit_id': False},
-            'dockerfile_path': 'rootfs/Dockerfile',
-            'docker_build_args': {'CFLAGS': '-g -Wall', 'GOARCH': 'amd64', 'GO_VERSION': '1.19'},
+            "image_repository": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            "build_method": "dockerfile",
+            "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
+            "dockerfile_path": "rootfs/Dockerfile",
+            "docker_build_args": {"CFLAGS": "-g -Wall", "GOARCH": "amd64", "GO_VERSION": "1.19"},
         }
 
     def test_retrieve_custom_image(self, api_client, bk_app, bk_module):
@@ -147,9 +147,9 @@ class TestModuleBuildConfigViewSet:
 
         assert resp.json() == {
             **_placeholder_response,  # type: ignore
-            'image_repository': 'example.com/foo',
-            'image_credential_name': 'foo',
-            'build_method': 'custom_image',
+            "image_repository": "example.com/foo",
+            "image_credential_name": "foo",
+            "build_method": "custom_image",
         }
 
     def test_modify_bp(
@@ -165,10 +165,10 @@ class TestModuleBuildConfigViewSet:
         buildpack_z,
     ):
         data = {
-            'build_method': RuntimeType.BUILDPACK,
-            'tag_options': {'prefix': "foo", 'with_version': True, 'with_build_time': False, 'with_commit_id': True},
-            'bp_stack_name': bp_stack_name,
-            'buildpacks': [{"id": buildpack_z.id}, {"id": buildpack_x.id}, {"id": buildpack_y.id}],
+            "build_method": RuntimeType.BUILDPACK,
+            "tag_options": {"prefix": "foo", "with_version": True, "with_build_time": False, "with_commit_id": True},
+            "bp_stack_name": bp_stack_name,
+            "buildpacks": [{"id": buildpack_z.id}, {"id": buildpack_x.id}, {"id": buildpack_y.id}],
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
@@ -183,10 +183,10 @@ class TestModuleBuildConfigViewSet:
 
     def test_modify_dockerbuild(self, api_client, bk_app, bk_module):
         data = {
-            'build_method': RuntimeType.DOCKERFILE,
-            'tag_options': {'prefix': "foo", 'with_version': False, 'with_build_time': False, 'with_commit_id': True},
-            'dockerfile_path': "rootfs/Dockerfile",
-            'docker_build_args': {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
+            "build_method": RuntimeType.DOCKERFILE,
+            "tag_options": {"prefix": "foo", "with_version": False, "with_build_time": False, "with_commit_id": True},
+            "dockerfile_path": "rootfs/Dockerfile",
+            "docker_build_args": {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
@@ -198,10 +198,10 @@ class TestModuleBuildConfigViewSet:
 
     def test_modify_dockerbuild_with_emtpy_build_args(self, api_client, bk_app, bk_module):
         data = {
-            'build_method': RuntimeType.DOCKERFILE,
-            'tag_options': {'prefix': "foo", 'with_version': False, 'with_build_time': False, 'with_commit_id': True},
-            'dockerfile_path': "rootfs/Dockerfile",
-            'docker_build_args': {},
+            "build_method": RuntimeType.DOCKERFILE,
+            "tag_options": {"prefix": "foo", "with_version": False, "with_build_time": False, "with_commit_id": True},
+            "dockerfile_path": "rootfs/Dockerfile",
+            "docker_build_args": {},
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
@@ -213,9 +213,9 @@ class TestModuleBuildConfigViewSet:
 
     def test_modify_custom_image(self, api_client, bk_app, bk_module):
         data = {
-            'build_method': RuntimeType.CUSTOM_IMAGE,
-            'image_repository': 'example.com/bar',
-            'image_credential_name': 'bar',
+            "build_method": RuntimeType.CUSTOM_IMAGE,
+            "image_repository": "example.com/bar",
+            "image_credential_name": "bar",
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
@@ -230,38 +230,38 @@ class TestModuleBuildConfigViewSet:
         [
             {
                 # 传递了错误的构建方式
-                'build_method': RuntimeType.BUILDPACK,
-                'tag_options': {
-                    'prefix': "foo",
-                    'with_version': True,
-                    'with_build_time': False,
-                    'with_commit_id': True,
+                "build_method": RuntimeType.BUILDPACK,
+                "tag_options": {
+                    "prefix": "foo",
+                    "with_version": True,
+                    "with_build_time": False,
+                    "with_commit_id": True,
                 },
-                'dockerfile_path': "rootfs/Dockerfile",
-                'docker_build_args': {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
+                "dockerfile_path": "rootfs/Dockerfile",
+                "docker_build_args": {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
             },
             {
-                'build_method': RuntimeType.DOCKERFILE,
-                'tag_options': {
+                "build_method": RuntimeType.DOCKERFILE,
+                "tag_options": {
                     # 传递非法的 prefix
-                    'prefix': "-foo",
-                    'with_version': True,
-                    'with_build_time': False,
-                    'with_commit_id': True,
+                    "prefix": "-foo",
+                    "with_version": True,
+                    "with_build_time": False,
+                    "with_commit_id": True,
                 },
-                'dockerfile_path': "rootfs/Dockerfile",
-                'docker_build_args': {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
+                "dockerfile_path": "rootfs/Dockerfile",
+                "docker_build_args": {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"},
             },
             {
-                'build_method': RuntimeType.BUILDPACK,
-                'tag_options': {
-                    'prefix': "foo",
-                    'with_version': True,
-                    'with_build_time': False,
-                    'with_commit_id': True,
+                "build_method": RuntimeType.BUILDPACK,
+                "tag_options": {
+                    "prefix": "foo",
+                    "with_version": True,
+                    "with_build_time": False,
+                    "with_commit_id": True,
                 },
                 # 传递了不存在的 bp stack
-                'bp_stack_name': "unknown-bp",
+                "bp_stack_name": "unknown-bp",
             },
         ],
     )

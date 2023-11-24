@@ -75,7 +75,7 @@ class BkAppProcScaler:
         :raise: `ProcNotFoundInRes` when process can not be found
         """
         if count < 0:
-            raise ValueError('count must greater than or equal to 0')
+            raise ValueError("count must greater than or equal to 0")
 
         with get_client_by_app(self.wl_app) as client:
             bkapp_res = self._get_bkapp_res(client)
@@ -89,7 +89,7 @@ class BkAppProcScaler:
 
             self._set_process(replicas_overlay, self.env.environment, proc_type, count)
 
-            patch_body = {'spec': {'envOverlay': {'replicas': [r.dict() for r in replicas_overlay]}}}
+            patch_body = {"spec": {"envOverlay": {"replicas": [r.dict() for r in replicas_overlay]}}}
             # "strategic json merge" is not available for CRD resources, use
             # "json merge" to replace the entire array.
             crd.BkApp(client).patch(self.res_name, namespace=self.ns, body=patch_body, ptype=PatchType.MERGE)
@@ -134,7 +134,7 @@ class BkAppProcScaler:
                 autoscaling_overlay, self.env.environment, proc_type, enabled, config
             )
 
-            patch_body = {'spec': {'envOverlay': {'autoscaling': [r.dict() for r in items]}}}
+            patch_body = {"spec": {"envOverlay": {"autoscaling": [r.dict() for r in items]}}}
             crd.BkApp(client).patch(self.res_name, namespace=self.ns, body=patch_body, ptype=PatchType.MERGE)
 
     def _get_bkapp_res(self, client: EnhancedApiClient) -> BkAppResource:
@@ -142,7 +142,7 @@ class BkAppProcScaler:
         try:
             data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(self.res_name, namespace=self.ns)
         except ResourceMissing:
-            raise ProcNotDeployed(f'{self.env} not deployed')
+            raise ProcNotDeployed(f"{self.env} not deployed")
         return BkAppResource(**data)
 
     @staticmethod
@@ -179,7 +179,7 @@ class BkAppProcScaler:
             return [ao for ao in data if not (ao.envName == env_name and ao.process == proc_type)]
 
         # Handle enable
-        assert config is not None, 'Config can not be None when enabled is True'
+        assert config is not None, "Config can not be None when enabled is True"
         results: List[AutoscalingOverlay] = []
         found = False
         for item in data:
@@ -257,9 +257,9 @@ class AutoscalingReader:
         results = {
             p.name: (
                 {
-                    'min_replicas': c.minReplicas,
-                    'max_replicas': c.maxReplicas,
-                    'policy': c.policy,
+                    "min_replicas": c.minReplicas,
+                    "max_replicas": c.maxReplicas,
+                    "policy": c.policy,
                 }
                 if (c := p.autoscaling)
                 else None,
@@ -279,9 +279,9 @@ class AutoscalingReader:
             if r.envName == env_name.value and r.process in results:
                 results[r.process] = (
                     {
-                        'min_replicas': r.minReplicas,
-                        'max_replicas': r.maxReplicas,
-                        'policy': r.policy,
+                        "min_replicas": r.minReplicas,
+                        "max_replicas": r.maxReplicas,
+                        "policy": r.policy,
                     },
                     True,
                 )

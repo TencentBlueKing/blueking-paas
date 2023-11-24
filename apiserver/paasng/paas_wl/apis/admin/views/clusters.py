@@ -59,9 +59,9 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     pagination_class = None
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['region', 'name', 'is_default']
-    ordering = ('-region',)
-    ordering_fields = ('region', 'created', 'updated')
+    search_fields = ["region", "name", "is_default"]
+    ordering = ("-region",)
+    ordering_fields = ("region", "created", "updated")
 
     @swagger_auto_schema(request_body=ClusterRegisterRequestSLZ)
     def update_or_create(self, request, pk: Optional[str] = None):
@@ -91,18 +91,18 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         slz = GenRegionClusterStateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
-        region = data['region']
+        region = data["region"]
 
         if not Cluster.objects.filter(region=region, name=cluster_name).exists():
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        logger.info(f'will generate state for [{region}/{cluster_name}]...')
+        logger.info(f"will generate state for [{region}/{cluster_name}]...")
         client = get_client_by_cluster_name(cluster_name=cluster_name)
 
-        logger.info(f'generating state for [{region}/{cluster_name}]...')
-        state = generate_state(region, cluster_name, client, data['ignore_labels'])
+        logger.info(f"generating state for [{region}/{cluster_name}]...")
+        state = generate_state(region, cluster_name, client, data["ignore_labels"])
 
-        logger.info('syncing the state to nodes...')
+        logger.info("syncing the state to nodes...")
         sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -113,7 +113,7 @@ class ClusterComponentViewSet(ViewSet):
 
     def get_operator_info(self, requests, cluster_name, *args, **kwargs):
         """获取各集群 Operator 相关信息"""
-        resp_data = {'cluster_name': cluster_name}
+        resp_data = {"cluster_name": cluster_name}
         try:
             client = get_client_by_cluster_name(cluster_name)
         except ValueError:
@@ -123,11 +123,11 @@ class ClusterComponentViewSet(ViewSet):
         # Operator 部署状态
         resp_data.update(detect_operator_status(client))
         # PaaS 平台自定义资源信息
-        resp_data.update(fetch_paas_cobj_info(client, resp_data['crds']))
+        resp_data.update(fetch_paas_cobj_info(client, resp_data["crds"]))
         return Response(resp_data)
 
     def list_components(self, request, cluster_name, *args, **kwargs):
-        resp_data = {'cluster_name': cluster_name, 'components': defaultdict(list)}
+        resp_data = {"cluster_name": cluster_name, "components": defaultdict(list)}
         try:
             client = get_client_by_cluster_name(cluster_name)
         except ValueError:
@@ -142,7 +142,7 @@ class ClusterComponentViewSet(ViewSet):
             if chart_name not in settings.BKPAAS_K8S_CLUSTER_COMPONENTS:
                 continue
 
-            resp_data['components'][chart_name].append(asdict(rel))
+            resp_data["components"][chart_name].append(asdict(rel))
 
         return Response(resp_data)
 
@@ -159,10 +159,10 @@ class ClusterComponentViewSet(ViewSet):
             return Response()
 
         try:
-            secret = KSecret(client).get(namespace=params['namespace'], name=params['secret_name'])
+            secret = KSecret(client).get(namespace=params["namespace"], name=params["secret_name"])
         except ResourceMissing:
             raise error_codes.CLUSTER_COMPONENT_NOT_EXIST.f(
-                'chart {} not deployed in cluster {}'.format(cluster_name, component_name)
+                "chart {} not deployed in cluster {}".format(cluster_name, component_name)
             )
 
         release = HelmReleaseParser(secret, parse_manifest=True).parse()

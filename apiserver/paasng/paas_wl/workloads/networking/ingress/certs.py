@@ -45,7 +45,7 @@ class DomainWithCert:
         self.cert = cert
 
     @classmethod
-    def from_app_domain(cls, domain: AppDomain) -> 'DomainWithCert':
+    def from_app_domain(cls, domain: AppDomain) -> "DomainWithCert":
         """Get DomainWithCert from `AppDomain`, will set shared_cert if found some matched"""
         cert = domain.cert or domain.shared_cert
         if not cert:
@@ -56,7 +56,7 @@ class DomainWithCert:
         return cls(host=domain.host, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
     @classmethod
-    def from_custom_domain(cls, region: str, domain: Domain) -> 'DomainWithCert':
+    def from_custom_domain(cls, region: str, domain: Domain) -> "DomainWithCert":
         """get DomainWithCert from `Domain`, will pick shared cert by domain.name for backward compatibility"""
         cert = pick_shared_cert(region, domain.name)
         return cls(host=domain.name, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
@@ -73,18 +73,18 @@ def update_or_create_secret_by_cert(app: WlApp, cert: BasicCert) -> Tuple[str, b
     client = get_client_by_app(app)
     secret_name = cert.get_secret_name()
     body = {
-        'metadata': {
-            'name': secret_name,
-            'annotations': {"related_cert_type": cert.type, "related_cert_pk": str(cert.pk)},
+        "metadata": {
+            "name": secret_name,
+            "annotations": {"related_cert_type": cert.type, "related_cert_pk": str(cert.pk)},
         },
-        'type': "kubernetes.io/tls",
-        'data': {
+        "type": "kubernetes.io/tls",
+        "data": {
             "tls.crt": force_str(base64.b64encode(force_bytes(cert.cert_data))),
-            'tls.key': force_str(base64.b64encode(force_bytes(cert.key_data))),
+            "tls.key": force_str(base64.b64encode(force_bytes(cert.key_data))),
         },
     }
     _, created = kres.KSecret(client).create_or_update(
-        name=secret_name, namespace=app.namespace, body=body, update_method='patch'
+        name=secret_name, namespace=app.namespace, body=body, update_method="patch"
     )
     return secret_name, created
 

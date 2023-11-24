@@ -27,17 +27,17 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
 @pytest.fixture
 def example_cluster_config():
     return {
-        'ingress_config': {
+        "ingress_config": {
             "app_root_domains": [{"name": "example.com"}],
             "sub_path_domains": [{"name": "example.com"}],
             "default_ingress_domain_tmpl": "%s.apps.com",
             "frontend_ingress_ip": "0.0.0.0",
             "port_map": {"http": "80", "https": "443"},
         },
-        'ca_data': '',
-        'cert_data': '',
-        'key_data': '',
-        'feature_flags': ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
+        "ca_data": "",
+        "cert_data": "",
+        "key_data": "",
+        "feature_flags": ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
     }
 
 

@@ -43,14 +43,25 @@ def test_gen_iam_resource(plugin):
 def test_gen_iam_grade_manager(pd, plugin):
     grade_manager = gen_iam_grade_manager(plugin)
     assert grade_manager.name == f"{plugin.pd.name}:{plugin.id}"
-    assert grade_manager.description == f"{pd.name}（{gen_iam_resource_name(plugin)}）分级管理员，拥有审批用户加入管理者/开发者用户组权限。"
+    assert (
+        grade_manager.description
+        == f"{pd.name}（{gen_iam_resource_name(plugin)}）分级管理员，拥有审批用户加入管理者/开发者用户组权限。"
+    )
 
 
 @pytest.mark.parametrize(
     "role, name, description",
     [
-        (PluginRole.ADMINISTRATOR, "{pd_name}-{plugin_name}-管理者", "{pd_name}（{plugin_name}）管理者，拥有应用的全部权限。"),
-        (PluginRole.DEVELOPER, "{pd_name}-{plugin_name}-开发者", "{pd_name}（{plugin_name}）开发者，拥有应用的开发权限，如基础开发，版本发布等。"),
+        (
+            PluginRole.ADMINISTRATOR,
+            "{pd_name}-{plugin_name}-管理者",
+            "{pd_name}（{plugin_name}）管理者，拥有应用的全部权限。",
+        ),
+        (
+            PluginRole.DEVELOPER,
+            "{pd_name}-{plugin_name}-开发者",
+            "{pd_name}（{plugin_name}）开发者，拥有应用的开发权限，如基础开发，版本发布等。",
+        ),
     ],
 )
 def test_gen_plugin_user_group(pd, plugin, role, name, description):

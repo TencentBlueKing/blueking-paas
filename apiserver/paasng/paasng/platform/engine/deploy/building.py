@@ -133,7 +133,7 @@ class BaseBuilder(DeployStep):
                 raise NotADirectoryError(message)
 
             tag_module_from_source_files(module, source_dir)
-            with generate_temp_file(suffix='.tar.gz') as package_path:
+            with generate_temp_file(suffix=".tar.gz") as package_path:
                 compress_directory_ext(source_dir, package_path, should_ignore=should_ignore)
                 check_source_package(self.engine_app, package_path, self.stream)
                 logger.info(f"Uploading source files to {source_destination_path}")
@@ -209,7 +209,7 @@ class BaseBuilder(DeployStep):
 
         for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
             p.stream.write_message(
-                'Creating new service instance of %s, it will take several minutes...' % rel.get_service().display_name
+                "Creating new service instance of %s, it will take several minutes..." % rel.get_service().display_name
             )
             rel.provision()
 
@@ -266,10 +266,10 @@ class ApplicationBuilder(BaseBuilder):
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure_force_phase('解析应用描述文件', phase=preparation_phase):
+        with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
             self.handle_app_description(raise_exception=is_cnative_app)
 
-        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+        with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
             self.deployment.update_fields(processes=processes)
             # 保存应用描述文件记录的信息到 DB - Processes/Hooks
@@ -277,22 +277,22 @@ class ApplicationBuilder(BaseBuilder):
 
         bkapp_revision_id = None
         if is_cnative_app:
-            with self.procedure_force_phase('生成应用模型', phase=preparation_phase):
+            with self.procedure_force_phase("生成应用模型", phase=preparation_phase):
                 bkapp_revision_id = self.create_bkapp_revision()
                 self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
 
-        with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
+        with self.procedure_force_phase("上传仓库代码", phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
             self.compress_and_upload(relative_source_dir, source_destination_path)
 
-        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
+        with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
             self.provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
-        with self.procedure('启动应用构建任务'):
+        with self.procedure("启动应用构建任务"):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
                 procfile={p.name: p.command for p in processes.values()},
@@ -338,14 +338,14 @@ class ApplicationBuilder(BaseBuilder):
             build_process.uuid,
             stream_channel_id=str(self.deployment.id),
             metadata={
-                'procfile': procfile,
-                'extra_envs': extra_envs,
+                "procfile": procfile,
+                "extra_envs": extra_envs,
                 # TODO: 不传递 image_repository
-                'image_repository': app_image_repository,
-                'image': app_image,
-                'buildpacks': build_process.buildpacks_as_build_env(),
+                "image_repository": app_image_repository,
+                "image": app_image,
+                "buildpacks": build_process.buildpacks_as_build_env(),
                 "use_cnb": build_info.use_cnb,
-                'bkapp_revision_id': bkapp_revision_id,
+                "bkapp_revision_id": bkapp_revision_id,
             },
         )
         return str(build_process.uuid)
@@ -366,10 +366,10 @@ class DockerBuilder(BaseBuilder):
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure_force_phase('解析应用描述文件', phase=preparation_phase):
+        with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
             self.handle_app_description(raise_exception=is_cnative_app)
 
-        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
+        with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
             self.deployment.update_fields(processes=processes)
             # 保存应用描述文件记录的信息到 DB - Processes/Hooks
@@ -377,14 +377,14 @@ class DockerBuilder(BaseBuilder):
 
         bkapp_revision_id = None
         if is_cnative_app:
-            with self.procedure_force_phase('生成应用模型', phase=preparation_phase):
+            with self.procedure_force_phase("生成应用模型", phase=preparation_phase):
                 bkapp_revision_id = self.create_bkapp_revision()
                 self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
 
-        with self.procedure_force_phase('解析 .dockerignore', phase=preparation_phase):
+        with self.procedure_force_phase("解析 .dockerignore", phase=preparation_phase):
             dockerignore = get_dockerignore(deployment=self.deployment)
 
-        with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
+        with self.procedure_force_phase("上传仓库代码", phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
             self.compress_and_upload(
                 relative_source_dir,
@@ -392,14 +392,14 @@ class DockerBuilder(BaseBuilder):
                 should_ignore=dockerignore.should_ignore if dockerignore else None,
             )
 
-        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
+        with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
             self.provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
-        with self.procedure('启动应用构建任务'):
+        with self.procedure("启动应用构建任务"):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
                 procfile={p.name: p.command for p in processes.values()},
@@ -440,13 +440,13 @@ class DockerBuilder(BaseBuilder):
             build_process.uuid,
             stream_channel_id=str(self.deployment.id),
             metadata={
-                'procfile': procfile,
-                'extra_envs': extra_envs or {},
+                "procfile": procfile,
+                "extra_envs": extra_envs or {},
                 # TODO: 不传递 image_repository
-                'image_repository': app_image_repository,
-                'image': app_image,
+                "image_repository": app_image_repository,
+                "image": app_image,
                 "use_dockerfile": True,
-                'bkapp_revision_id': bkapp_revision_id,
+                "bkapp_revision_id": bkapp_revision_id,
             },
         )
         return str(build_process.uuid)
@@ -462,8 +462,8 @@ class BuildProcessPoller(DeployPoller):
     default_retry_delay_seconds = 2
 
     def query(self) -> PollingResult:
-        deployment = Deployment.objects.get(pk=self.params['deployment_id'])
-        build_proc = BuildProcess.objects.get(pk=self.params['build_process_id'])
+        deployment = Deployment.objects.get(pk=self.params["deployment_id"])
+        build_proc = BuildProcess.objects.get(pk=self.params["build_process_id"])
 
         self.update_steps(deployment, build_proc)
 
@@ -488,7 +488,7 @@ class BuildProcessPoller(DeployPoller):
                 coordinator.update_polling_time()
 
         result = {"build_id": build_id, "build_status": build_status}
-        logger.info("[%s] got build status [%s][%s]", self.params['deployment_id'], build_id, build_status)
+        logger.info("[%s] got build status [%s][%s]", self.params["deployment_id"], build_id, build_status)
         return PollingResult(status=status, data=result)
 
     def update_steps(self, deployment: Deployment, build_proc: BuildProcess):
@@ -499,11 +499,11 @@ class BuildProcessPoller(DeployPoller):
             JobStatus.PENDING: phase.get_started_pattern_map(),
             JobStatus.SUCCESSFUL: phase.get_finished_pattern_map(),
         }
-        logger.info("[%s] start updating steps by log lines", self.params['deployment_id'])
+        logger.info("[%s] start updating steps by log lines", self.params["deployment_id"])
 
         # TODO: Use a flag value to indicate the progress of the scanning of the log,
         # so that we won't need to scan the log from the beginning every time.
-        for line in build_proc.output_stream.lines.all().values_list('line', flat=True):
+        for line in build_proc.output_stream.lines.all().values_list("line", flat=True):
             update_step_by_line(line, pattern_maps, phase)
 
 
@@ -512,8 +512,8 @@ class BuildProcessResultHandler(CallbackHandler):
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
         """Callback for a finished build process"""
-        build_process_id = poller.params['build_process_id']
-        deployment_id = poller.params['deployment_id']
+        build_process_id = poller.params["build_process_id"]
+        deployment_id = poller.params["deployment_id"]
         state_mgr = DeploymentStateMgr.from_deployment_id(
             deployment_id=deployment_id, phase_type=DeployPhaseTypes.BUILD
         )
@@ -523,8 +523,8 @@ class BuildProcessResultHandler(CallbackHandler):
             return
 
         try:
-            build_id = result.data['build_id']
-            build_status = result.data['build_status']
+            build_id = result.data["build_id"]
+            build_status = result.data["build_status"]
         except KeyError:
             state_mgr.finish(JobStatus.FAILED, "An unexpected error occurred while building application")
             return

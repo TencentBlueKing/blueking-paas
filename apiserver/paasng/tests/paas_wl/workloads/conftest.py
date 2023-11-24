@@ -38,6 +38,6 @@ def create_release(env: ModuleEnvironment, user: User, failed: bool = False) -> 
         failed=failed,
         config=wl_app.latest_config,
         version=version,
-        summary='',
+        summary="",
         procfile={},
     )

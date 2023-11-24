@@ -45,7 +45,7 @@ class ImageCredentials(AppEntity):
         serializer = ImageCredentialsSerializer
 
     @classmethod
-    def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
+    def load_from_app(cls, app: WlApp) -> "ImageCredentials":
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)

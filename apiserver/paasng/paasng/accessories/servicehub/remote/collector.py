@@ -58,7 +58,7 @@ class RemoteSvcFetcher:
         try:
             json_data = self.client.list_services()
         except RemoteClientError as e:
-            raise FetchRemoteSvcError('error fetching services.') from e
+            raise FetchRemoteSvcError("error fetching services.") from e
 
         items = self.validate_data(json_data)
         return items
@@ -74,8 +74,8 @@ class RemoteSvcFetcher:
             try:
                 serializer.is_valid(raise_exception=True)
             except ValidationError as e:
-                logger.exception(f'service data from {self.config} validation failed')
-                raise FetchRemoteSvcError(f'svc json data from {self.config} is invalid: {e}') from e
+                logger.exception(f"service data from {self.config} validation failed")
+                raise FetchRemoteSvcError(f"svc json data from {self.config} is invalid: {e}") from e
             items.append(serializer.validated_data)
         return items
 
@@ -111,9 +111,9 @@ class RemoteServiceSLZ(serializers.Serializer):
     name = serializers.CharField()
     display_name = TranslatedCharField()
     logo = serializers.CharField(allow_blank=True)
-    description = TranslatedCharField(default='', allow_blank=True)
-    long_description = TranslatedCharField(default='', allow_blank=True)
-    instance_tutorial = TranslatedCharField(default='', allow_blank=True)
+    description = TranslatedCharField(default="", allow_blank=True)
+    long_description = TranslatedCharField(default="", allow_blank=True)
+    instance_tutorial = TranslatedCharField(default="", allow_blank=True)
     available_languages = serializers.CharField()
     config = serializers.DictField(required=False, default=dict)
     is_active = serializers.BooleanField(required=False, default=True)
@@ -132,7 +132,7 @@ class RemoteSpecDefinitionUpdateSLZ(RemoteSpecDefinitionSLZ):
 # Serializers end
 
 
-FetchResult = namedtuple('FetchResult', 'config data meta_info')
+FetchResult = namedtuple("FetchResult", "config data meta_info")
 
 
 def fetch_remote_service(config: RemoteSvcConfig) -> FetchResult:
@@ -153,9 +153,9 @@ def fetch_all_remote_services() -> Generator[FetchResult, None, None]:
     try:
         remote_svc_configs = settings.SERVICE_REMOTE_ENDPOINTS
     except AttributeError:
-        raise ImproperlyConfigured('Can\'t initialize remote services, ' 'SERVICE_REMOTE_ENDPOINTS is not configured')
+        raise ImproperlyConfigured("Can't initialize remote services, " "SERVICE_REMOTE_ENDPOINTS is not configured")
     if not isinstance(remote_svc_configs, list):
-        raise ImproperlyConfigured('SERVICE_REMOTE_ENDPOINTS must be list type')
+        raise ImproperlyConfigured("SERVICE_REMOTE_ENDPOINTS must be list type")
 
     for endpoint_conf in remote_svc_configs:
         config = RemoteSvcConfig.from_json(endpoint_conf)

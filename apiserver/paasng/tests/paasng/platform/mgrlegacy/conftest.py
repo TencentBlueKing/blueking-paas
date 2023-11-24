@@ -42,7 +42,7 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture(autouse=True)
 def configure_ieod_region():
-    region_list = ['ieod']
+    region_list = ["ieod"]
     with configure_regions(region_list):
         yield
 
@@ -61,10 +61,10 @@ def migration_instance_maker(bk_app, legacy_app_code):
 def svc_config():
     return RemoteSvcConfig.from_json(
         {
-            'name': 'obj_store_remote',
-            'endpoint_url': 'http://faked-host',
-            'provision_params_tmpl': {'username': '{engine_app.name}'},
-            'jwt_auth_conf': {'iss': 'foo', 'key': 's1'},
+            "name": "obj_store_remote",
+            "endpoint_url": "http://faked-host",
+            "provision_params_tmpl": {"username": "{engine_app.name}"},
+            "jwt_auth_conf": {"iss": "foo", "key": "s1"},
         }
     )
 

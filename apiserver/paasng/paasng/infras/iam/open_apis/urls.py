@@ -20,8 +20,8 @@ from django.conf.urls import url
 
 from . import views
 
-resource_types = 'applications'
+resource_types = "applications"
 
 urlpatterns = [
-    url(r'^api/iam-provider/(?P<resource_type>{})/'.format(resource_types), views.ResourceAPIView.as_view()),
+    url(r"^api/iam-provider/(?P<resource_type>{})/".format(resource_types), views.ResourceAPIView.as_view()),
 ]

@@ -23,17 +23,17 @@ from . import views
 # 统计相关
 urlpatterns = [
     url(
-        r'^api/bkapps/applications/statistics/pv/top5',
+        r"^api/bkapps/applications/statistics/pv/top5",
         views.StatisticsPVAPIView.as_view(),
-        name='api.global.statistics.pv.top5',
+        name="api.global.statistics.pv.top5",
     ),
 ]
 
 
 urlpatterns += [
     url(
-        r'^api/sync_market/test_on_product_deploy/(?P<code>[^/]+)/',
+        r"^api/sync_market/test_on_product_deploy/(?P<code>[^/]+)/",
         views.TestONProductDeployAPIView.as_view(),
-        name='api.sync_market.test_on_product_deploy',
+        name="api.sync_market.test_on_product_deploy",
     ),
 ]

@@ -25,15 +25,15 @@ from .misc import OneOffCommand, OutputStream, OutputStreamLine
 from .release import Release
 
 __all__ = [
-    'AuditedModel',
-    'UuidAuditedModel',
-    'WlApp',
-    'Config',
-    'Build',
-    'BuildProcess',
-    'DEFAULT_SLUG_RUNNER_ENTRYPOINT',
-    'Release',
-    'OutputStream',
-    'OutputStreamLine',
-    'OneOffCommand',
+    "AuditedModel",
+    "UuidAuditedModel",
+    "WlApp",
+    "Config",
+    "Build",
+    "BuildProcess",
+    "DEFAULT_SLUG_RUNNER_ENTRYPOINT",
+    "Release",
+    "OutputStream",
+    "OutputStreamLine",
+    "OneOffCommand",
 ]

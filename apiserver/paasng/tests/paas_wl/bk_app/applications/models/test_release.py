@@ -28,5 +28,5 @@ class TestReleaseManager:
         assert Release.objects.any_successful(wl_app) is False
 
     def test_any_successful_positive(self, wl_app, bk_user, wl_build):
-        wl_app.release_set.new(bk_user.username, build=wl_build, procfile={'web': 'true'})
+        wl_app.release_set.new(bk_user.username, build=wl_build, procfile={"web": "true"})
         assert Release.objects.any_successful(wl_app) is True

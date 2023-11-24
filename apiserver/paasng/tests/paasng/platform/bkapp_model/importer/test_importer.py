@@ -24,19 +24,19 @@ from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.models.config_var import ConfigVar
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
 def base_manifest(bk_app):
     """A very basic manifest that can pass the validation."""
     return {
-        'kind': 'BkApp',
-        'apiVersion': 'paas.bk.tencent.com/v1alpha2',
-        'metadata': {'name': bk_app.code},
-        'spec': {
-            'build': {'image': 'nginx:latest'},
-            'processes': [{'name': 'web', 'replicas': 1, 'resQuotaPlan': 'default'}],
+        "kind": "BkApp",
+        "apiVersion": "paas.bk.tencent.com/v1alpha2",
+        "metadata": {"name": bk_app.code},
+        "spec": {
+            "build": {"image": "nginx:latest"},
+            "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
         },
     }
 
@@ -68,15 +68,15 @@ def test_import_with_enum_type(bk_module, base_manifest):
 class TestEnvVars:
     def test_invalid_name_input(self, bk_module, base_manifest):
         # Names in lower case are forbidden.
-        base_manifest['spec']['configuration'] = {'env': [{'name': 'foo', 'value': 'foo'}]}
+        base_manifest["spec"]["configuration"] = {"env": [{"name": "foo", "value": "foo"}]}
         with pytest.raises(ManifestImportError) as e:
             import_manifest(bk_module, base_manifest)
 
-        assert 'configuration.env.0.name' in str(e)
+        assert "configuration.env.0.name" in str(e)
 
     def test_normal(self, bk_module, base_manifest):
-        base_manifest['spec']['configuration'] = {'env': [{'name': 'KEY1', 'value': 'foo'}]}
-        base_manifest['spec']['envOverlay'] = {'envVariables': [{'envName': 'stag', 'name': 'KEY2', 'value': 'foo'}]}
+        base_manifest["spec"]["configuration"] = {"env": [{"name": "KEY1", "value": "foo"}]}
+        base_manifest["spec"]["envOverlay"] = {"envVariables": [{"envName": "stag", "name": "KEY2", "value": "foo"}]}
 
         import_manifest(bk_module, base_manifest)
         assert ConfigVar.objects.count() == 2
@@ -84,26 +84,26 @@ class TestEnvVars:
 
 class TestMounts:
     def test_invalid_mount_path_input(self, bk_module, base_manifest):
-        base_manifest['spec']['mounts'] = [
+        base_manifest["spec"]["mounts"] = [
             # mountPath must starts with "/"
-            {'name': 'nginx-conf', 'mountPath': '___/etc/nginx', 'source': {'configMap': {'name': 'nginx-conf-cm'}}}
+            {"name": "nginx-conf", "mountPath": "___/etc/nginx", "source": {"configMap": {"name": "nginx-conf-cm"}}}
         ]
         with pytest.raises(ManifestImportError) as e:
             import_manifest(bk_module, base_manifest)
 
-        assert 'mounts.0.mountPath' in str(e)
+        assert "mounts.0.mountPath" in str(e)
 
     def test_normal(self, bk_module, base_manifest):
-        base_manifest['spec']['mounts'] = [
-            {'name': 'nginx-conf', 'mountPath': '/etc/nginx', 'source': {'configMap': {'name': 'nginx-conf-cm'}}}
+        base_manifest["spec"]["mounts"] = [
+            {"name": "nginx-conf", "mountPath": "/etc/nginx", "source": {"configMap": {"name": "nginx-conf-cm"}}}
         ]
-        base_manifest['spec']['envOverlay'] = {
-            'mounts': [
+        base_manifest["spec"]["envOverlay"] = {
+            "mounts": [
                 {
-                    'envName': 'stag',
-                    'name': 'nginx-conf-stag',
-                    'mountPath': '/etc/nginx_stag',
-                    'source': {'configMap': {'name': 'nginx-conf-cm'}},
+                    "envName": "stag",
+                    "name": "nginx-conf-stag",
+                    "mountPath": "/etc/nginx_stag",
+                    "source": {"configMap": {"name": "nginx-conf-cm"}},
                 }
             ]
         }
@@ -114,27 +114,27 @@ class TestMounts:
 
 class TestReplicasOverlay:
     def test_invalid_replicas_input(self, bk_module, base_manifest):
-        base_manifest['spec']['envOverlay'] = {
-            'replicas': [
+        base_manifest["spec"]["envOverlay"] = {
+            "replicas": [
                 {
-                    'envName': 'stag',
-                    'process': 'web',
-                    'count': 'not_a_number',
+                    "envName": "stag",
+                    "process": "web",
+                    "count": "not_a_number",
                 }
             ]
         }
         with pytest.raises(ManifestImportError) as e:
             import_manifest(bk_module, base_manifest)
 
-        assert 'envOverlay.replicas.0.count' in str(e)
+        assert "envOverlay.replicas.0.count" in str(e)
 
     def test_str(self, bk_module, base_manifest):
-        base_manifest['spec']['envOverlay'] = {
-            'replicas': [
+        base_manifest["spec"]["envOverlay"] = {
+            "replicas": [
                 {
-                    'envName': 'stag',
-                    'process': 'web',
-                    'count': '3',
+                    "envName": "stag",
+                    "process": "web",
+                    "count": "3",
                 }
             ]
         }
@@ -160,7 +160,7 @@ class TestAutoscaling:
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_autoscaling("stag")
-        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'max_replicas': 1, 'min_replicas': 1}
+        assert proc_spec.get_scaling_config("stag") == {"policy": "default", "max_replicas": 1, "min_replicas": 1}
 
     def test_missing_policy(self, bk_module, base_manifest):
         base_manifest["spec"]["envOverlay"] = {
@@ -177,4 +177,4 @@ class TestAutoscaling:
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_autoscaling("stag")
-        assert proc_spec.get_scaling_config("stag") == {'policy': 'default', 'max_replicas': 1, 'min_replicas': 1}
+        assert proc_spec.get_scaling_config("stag") == {"policy": "default", "max_replicas": 1, "min_replicas": 1}

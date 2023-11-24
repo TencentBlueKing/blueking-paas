@@ -39,37 +39,37 @@ class DeploymentFailureHint:
     def render_links(self, params: Dict[str, Any]):
         """Render helper's "link" field with given params"""
         for helper in self.helpers:
-            if 'link' in helper:
-                helper['link'] = helper['link'].format(**params)
+            if "link" in helper:
+                helper["link"] = helper["link"].format(**params)
 
 
 def get_default_failure_hint() -> DeploymentFailureHint:
     """Make a default failure hint object"""
     helpers = [
         {
-            'text': _('日志查询'),
-            'link': settings.BKPAAS_URL + '/developer-center/apps/{application_code}/{module_name}/log?tab=stream',
+            "text": _("日志查询"),
+            "link": settings.BKPAAS_URL + "/developer-center/apps/{application_code}/{module_name}/log?tab=stream",
         },
-        {'text': _('去 FAQ 查询试试'), 'link': settings.PLATFORM_FAQ_URL},
+        {"text": _("去 FAQ 查询试试"), "link": settings.PLATFORM_FAQ_URL},
     ]
     if settings.SUPPORT_LIVE_AGENT:
         helpers.append(settings.LIVE_AGENT_CONFIG)
 
     return DeploymentFailureHint(
         matched_solutions_found=False,
-        possible_reason=_('暂时无法找到解决方案，请前往“标准输出日志”检查是否有异常'),
+        possible_reason=_("暂时无法找到解决方案，请前往“标准输出日志”检查是否有异常"),
         helpers=helpers,
     )
 
 
-def get_failure_hint(deployment: Deployment) -> 'DeploymentFailureHint':
+def get_failure_hint(deployment: Deployment) -> "DeploymentFailureHint":
     """Get failure hint for deployment"""
     tags = get_deployment_tags(deployment)
     docs = DocumentaryLinkAdvisor().search_by_tags(tags)
 
     module = deployment.app_environment.module
 
-    link_params = {'application_code': module.application.code, 'module_name': module.name}
+    link_params = {"application_code": module.application.code, "module_name": module.name}
     if not docs:
         hint = get_default_failure_hint()
         hint.render_links(link_params)
@@ -78,4 +78,4 @@ def get_failure_hint(deployment: Deployment) -> 'DeploymentFailureHint':
     helpers = []
     for doc in docs:
         helpers.append(dict(DocumentaryLinkSLZ(doc).data))
-    return DeploymentFailureHint(matched_solutions_found=True, possible_reason=_('已找到解决方案'), helpers=helpers)
+    return DeploymentFailureHint(matched_solutions_found=True, possible_reason=_("已找到解决方案"), helpers=helpers)

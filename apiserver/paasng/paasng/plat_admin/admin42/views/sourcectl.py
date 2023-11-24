@@ -21,12 +21,12 @@ from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModel
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
+from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 
 
 class SourceTypeSpecManageView(GenericTemplateView):
@@ -40,28 +40,27 @@ class SourceTypeSpecManageView(GenericTemplateView):
         kwargs = super().get_context_data(**kwargs)
 
         available_spec_cls = [
-            'BkSvnSourceTypeSpec',
-            'GitHubSourceTypeSpec',
-            'GiteeSourceTypeSpec',
-            'BareGitSourceTypeSpec',
-            'BareSvnSourceTypeSpec',
-            'GitLabSourceTypeSpec',
+            "BkSvnSourceTypeSpec",
+            "GitHubSourceTypeSpec",
+            "GiteeSourceTypeSpec",
+            "BareGitSourceTypeSpec",
+            "BareSvnSourceTypeSpec",
+            "GitLabSourceTypeSpec",
         ]
         # 存在 TcGitSourceTypeSpec 才将其添加到可选项中
         try:
             from paasng.platform.sourcectl.type_specs import TcGitSourceTypeSpec  # noqa
 
-            available_spec_cls.append('TcGitSourceTypeSpec')
+            available_spec_cls.append("TcGitSourceTypeSpec")
         except ImportError:
             pass
 
         kwargs.update(
             {
-                'bk_docs_url_prefix': get_bk_doc_url_prefix(),
-                'bk_paas_url': settings.BKPAAS_URL,
-                'spec_cls_choices': {
-                    f'paasng.platform.sourcectl.type_specs.{spec_cls}': spec_cls
-                    for spec_cls in available_spec_cls
+                "bk_docs_url_prefix": get_bk_doc_url_prefix(),
+                "bk_paas_url": settings.BKPAAS_URL,
+                "spec_cls_choices": {
+                    f"paasng.platform.sourcectl.type_specs.{spec_cls}": spec_cls for spec_cls in available_spec_cls
                 },
             }
         )

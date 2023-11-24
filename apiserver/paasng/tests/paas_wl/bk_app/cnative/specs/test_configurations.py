@@ -46,8 +46,8 @@ class TestEnvVarsReader:
     @pytest.mark.parametrize(
         "overlays, expected_env",
         [
-            ([EnvVarOverlay(name="Foo", value="2", envName="prod")], 'prod'),
-            ([EnvVarOverlay(name="bar", value="2", envName="stag")], 'stag'),
+            ([EnvVarOverlay(name="Foo", value="2", envName="prod")], "prod"),
+            ([EnvVarOverlay(name="bar", value="2", envName="stag")], "stag"),
         ],
     )
     def test_overlay(self, bk_app, bk_module, overlays, expected_env):

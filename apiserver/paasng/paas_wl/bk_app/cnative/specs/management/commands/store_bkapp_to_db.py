@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 
 class Command(BaseAppModelResourceCommand):
-    help = 'Store BkApp Specs to databases'
+    help = "Store BkApp Specs to databases"
 
     def handle(self, app_code, module_name, region, cluster_name, all_clusters, verbosity, dry_run, **options):
         try:

@@ -59,15 +59,15 @@ def get_service_dns_name(app: WlApp, process_type: str) -> str:
     :param app: WlApp object
     :param process_type: Process Type, e.g. "web"
     """
-    return f'{make_service_name(app, process_type)}.{app.namespace}'
+    return f"{make_service_name(app, process_type)}.{app.namespace}"
 
 
 def guess_default_service_name(app: WlApp) -> str:
     """Guess the default service name should be used when a brand new ingress creation is required."""
     if not get_structure(app):
-        return make_service_name(app, 'web')
-    if 'web' in get_structure(app):
-        return make_service_name(app, 'web')
+        return make_service_name(app, "web")
+    if "web" in get_structure(app):
+        return make_service_name(app, "web")
     # Pick a random process type for generating service name
     return make_service_name(app, list(get_structure(app).keys())[0])
 

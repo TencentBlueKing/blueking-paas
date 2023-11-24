@@ -82,28 +82,28 @@ class TestGeneration:
             mapper.get()
 
         kp = Mock(return_value={"items": [1, 2, 3]})
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kp):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kp):
             assert mapper.get() == {"items": [1, 2, 3]}
 
     def test_v1_delete(self, wl_app, process, client, v1_mapper):
         kd = Mock(return_value=None)
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.delete', kd):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kd):
             mapper = v1_mapper.pod(process=process, client=client)
             assert mapper.delete() is None
             args, kwargs = kd.call_args_list[0]
             assert kd.called
-            assert kwargs['name'] == mapper.name
-            assert kwargs['namespace'] == mapper.namespace
+            assert kwargs["name"] == mapper.name
+            assert kwargs["namespace"] == mapper.namespace
 
     def test_v1_create(self, wl_app, process, client, v1_mapper):
         kd = Mock(return_value={"items": [1, 2, 3]})
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.create', kd):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create", kd):
             mapper = v1_mapper.pod(process=process, client=client)
             assert mapper.create(body={}) == {"items": [1, 2, 3]}
             args, kwargs = kd.call_args_list[0]
             assert kd.called
-            assert kwargs['name'] == mapper.name
-            assert kwargs['namespace'] == mapper.namespace
+            assert kwargs["name"] == mapper.name
+            assert kwargs["namespace"] == mapper.namespace
 
     def test_v2_name(self, process, v2_mapper):
         assert v2_mapper.pod(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"
@@ -111,4 +111,4 @@ class TestGeneration:
 
 
 def test_get_proc_deployment_name(wl_app):
-    assert get_proc_deployment_name(wl_app, 'web') != ''
+    assert get_proc_deployment_name(wl_app, "web") != ""

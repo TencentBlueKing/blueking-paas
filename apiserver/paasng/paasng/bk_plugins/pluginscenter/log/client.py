@@ -81,7 +81,7 @@ class BKLogClient:
             time_zone=settings.TIME_ZONE,
             min_doc_count=1,
         )
-        search.search.aggs.bucket('histogram', agg)
+        search.search.aggs.bucket("histogram", agg)
         search.limit_offset(0, 0)
         data = {
             "indices": index,
@@ -135,7 +135,7 @@ class ESLogClient:
             time_zone=settings.TIME_ZONE,
             min_doc_count=1,
         )
-        search.search.aggs.bucket('histogram', agg)
+        search.search.aggs.bucket("histogram", agg)
         search.limit_offset(0, 0)
         return AggResponse(
             search.search.aggs,

@@ -18,4 +18,4 @@ to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
 
-__all__ = ['mock']
+__all__ = ["mock"]

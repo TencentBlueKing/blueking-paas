@@ -30,41 +30,41 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.utils.models import TimestampedModel
 from paasng.utils.models import make_json_field
 
-SourceConfigField = make_json_field('SourceConfigField', VolumeSource)
+SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
 class ConfigMapSourceQuerySet(models.QuerySet):
-    def get_by_mount(self, m: 'Mount'):
+    def get_by_mount(self, m: "Mount"):
         if m.source_config.configMap:
             return self.get(
                 application_id=m.module.application_id,
                 environment_name=m.environment_name,
                 name=m.source_config.configMap.name,
             )
-        raise ValueError(f'Mount {m.name} is invalid: source_config.configMap is none')
+        raise ValueError(f"Mount {m.name} is invalid: source_config.configMap is none")
 
 
 class ConfigMapSource(TimestampedModel):
-    application_id = models.UUIDField(verbose_name=_('所属应用'), null=False)
-    module_id = models.UUIDField(verbose_name=_('所属模块'), null=False)
+    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()
 
     environment_name = models.CharField(
-        verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
+        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
     # TODO name 的生成规则在具体的创建接口中定义
-    name = models.CharField(max_length=63, help_text=_('ConfigMap 名'))
+    name = models.CharField(max_length=63, help_text=_("ConfigMap 名"))
     data = models.JSONField(default=dict)
 
     objects = ConfigMapSourceQuerySet.as_manager()
 
     class Meta:
-        unique_together = ('name', 'application_id', 'environment_name')
+        unique_together = ("name", "application_id", "environment_name")
 
 
 def generate_source_config_name(app_code: str) -> str:
     """Generate name of the Mount source_config"""
-    return f'{app_code}-{uuid.uuid4().hex}'
+    return f"{app_code}-{uuid.uuid4().hex}"
 
 
 class MountManager(models.Manager):
@@ -83,7 +83,7 @@ class MountManager(models.Manager):
             source_config_name = generate_source_config_name(app_code=app_code)
             source_config = VolumeSource(configMap=ConfigMapSourceSpec(name=source_config_name))
         else:
-            raise ValueError(f'unsupported source type {source_type}')
+            raise ValueError(f"unsupported source type {source_type}")
 
         return Mount.objects.create(
             module_id=module_id,
@@ -95,10 +95,10 @@ class MountManager(models.Manager):
             source_config=source_config,
         )
 
-    def upsert_source(self, m: 'Mount', data: dict) -> Union[ConfigMapSource]:
+    def upsert_source(self, m: "Mount", data: dict) -> Union[ConfigMapSource]:
         if m.source_type == VolumeSourceType.ConfigMap:
             if m.source_config.configMap is None:
-                raise ValueError(f'source_config {m.source_config} is null')
+                raise ValueError(f"source_config {m.source_config} is null")
             config_source, _ = ConfigMapSource.objects.update_or_create(
                 name=m.source_config.configMap.name,
                 module_id=m.module.id,
@@ -109,19 +109,19 @@ class MountManager(models.Manager):
                 },
             )
             return config_source
-        raise ValueError(f'unsupported source type {m.source_type}')
+        raise ValueError(f"unsupported source type {m.source_type}")
 
 
 class Mount(TimestampedModel):
     """挂载配置"""
 
-    module_id = models.UUIDField(verbose_name=_('所属模块'), null=False)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()
 
     environment_name = models.CharField(
-        verbose_name=_('环境名称'), choices=MountEnvName.get_choices(), null=False, max_length=16
+        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
-    name = models.CharField(max_length=63, help_text=_('挂载点的名称'))
+    name = models.CharField(max_length=63, help_text=_("挂载点的名称"))
     mount_path = models.CharField(max_length=128)
     source_type = models.CharField(choices=VolumeSourceType.get_choices(), max_length=32)
     source_config: VolumeSource = SourceConfigField()
@@ -129,10 +129,10 @@ class Mount(TimestampedModel):
     objects = MountManager()
 
     class Meta:
-        unique_together = ('module_id', 'mount_path', 'environment_name')
+        unique_together = ("module_id", "mount_path", "environment_name")
 
     @cached_property
     def source(self) -> ConfigMapSource:
         if self.source_type == VolumeSourceType.ConfigMap:
             return ConfigMapSource.objects.get_by_mount(self)
-        raise ValueError(f'unsupported source type {self.source_type}')
+        raise ValueError(f"unsupported source type {self.source_type}")

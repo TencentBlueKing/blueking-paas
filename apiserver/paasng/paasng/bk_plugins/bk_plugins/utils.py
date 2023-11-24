@@ -36,7 +36,7 @@ def ensure_builtin_user():
     role = SiteRole.SYSTEM_API_BASIC_READER.value
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
     profile, _ = UserProfile.objects.update_or_create(
-        user=user_id, defaults={'role': role, 'enable_regions': settings.DEFAULT_REGION_NAME}
+        user=user_id, defaults={"role": role, "enable_regions": settings.DEFAULT_REGION_NAME}
     )
     profile.refresh_from_db(fields=["role", "enable_regions"])
 

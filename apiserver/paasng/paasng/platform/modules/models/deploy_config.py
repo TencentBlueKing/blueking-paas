@@ -74,7 +74,7 @@ cattr.register_unstructure_hook(HookList, HookList.__cattrs_unstructure__)
 # TODO: Replace this models with ModuleProcessSpec && ModuleDeployHook
 class DeployConfig(UuidAuditedModel):
     module = models.OneToOneField(
-        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name="deploy_config"
+        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="deploy_config"
     )
     procfile = JSONField(default=dict, help_text="部署命令")
     hooks: HookList = HookListField(help_text="部署钩子", default=HookList)

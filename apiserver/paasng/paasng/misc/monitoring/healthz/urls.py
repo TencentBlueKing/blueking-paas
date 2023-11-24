@@ -21,6 +21,6 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'healthz/$', views.HealthViewSet.as_view({'get': 'healthz'}), name='api.healthz'),
-    url(r'readyz/$', views.HealthViewSet.as_view({'get': 'readyz'}), name='api.readyz'),
+    url(r"healthz/$", views.HealthViewSet.as_view({"get": "healthz"}), name="api.healthz"),
+    url(r"readyz/$", views.HealthViewSet.as_view({"get": "readyz"}), name="api.readyz"),
 ]

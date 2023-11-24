@@ -24,9 +24,9 @@ from celery import shared_task
 
 from paasng.accessories.servicehub.manager import LocalServiceObj, mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
+from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import ResQuotasAggregation
-from paasng.core.core.storages.redisdb import DefaultRediStore
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def sync_developers_to_sentry(application_id):
     for app_env in application.get_app_envs():
         engine_app = app_env.engine_app
         region = engine_app.region
-        service_obj = mixed_service_mgr.find_by_name(name='sentry', region=region)
+        service_obj = mixed_service_mgr.find_by_name(name="sentry", region=region)
         service_obj = cast(LocalServiceObj, service_obj)
 
         if list(mixed_service_mgr.list_provisioned_rels(engine_app, service_obj)):
@@ -50,10 +50,10 @@ def sync_developers_to_sentry(application_id):
             )
             plan = engine_attachment.plan
             params = {
-                'engine_app_name': engine_app.name,
-                'region': region,
-                'application_code': application.code,
-                'application_id': application.id,
+                "engine_app_name": engine_app.name,
+                "region": region,
+                "application_code": application.code,
+                "application_id": application.id,
             }
             service.patch_service_instance_by_plan(plan, params)
 
@@ -68,9 +68,9 @@ def cal_app_resource_quotas():
         quotas = ResQuotasAggregation(app).get_resource_quotas()
         app_resource_quotas[app.code] = quotas
     # Sort by memory usage size
-    sorted_app_quotas = OrderedDict(sorted(app_resource_quotas.items(), key=lambda x: x[1]['memory'], reverse=True))
+    sorted_app_quotas = OrderedDict(sorted(app_resource_quotas.items(), key=lambda x: x[1]["memory"], reverse=True))
 
     # Save to redis
-    store = DefaultRediStore(rkey='quotas::app')
+    store = DefaultRediStore(rkey="quotas::app")
     store.save(sorted_app_quotas)
     return

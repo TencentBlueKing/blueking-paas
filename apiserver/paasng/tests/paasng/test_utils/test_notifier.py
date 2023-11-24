@@ -23,7 +23,7 @@ class TestUserNotificationBackend:
     def test_normal(self):
         backend = UserNotificationBackend()
         _plugin = DummyUserNotificationPlugin()
-        backend.register('dummy1', _plugin)
+        backend.register("dummy1", _plugin)
         assert backend.dummy1 is _plugin
 
         # non-existed plugin name

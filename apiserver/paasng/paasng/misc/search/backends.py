@@ -62,13 +62,13 @@ def get_json_response(resp: requests.Response, only_allow_ok_status=True) -> Any
     """
     if not (200 <= resp.status_code <= 299):
         logger.warning("Got invalid status_code: %s from response", resp.status_code)
-        raise ValueError('status_code invalid')
+        raise ValueError("status_code invalid")
 
     try:
         return resp.json()
     except JSONDecodeError:
         logger.warning("Response is not valid JSON string, response: %s", repr(resp.text[:100]))
-        raise ValueError('content is not valid JSON')
+        raise ValueError("content is not valid JSON")
 
 
 class BaseSearcher:
@@ -77,7 +77,7 @@ class BaseSearcher:
 
 
 class BKDocumentSearcher(BaseSearcher):
-    BKDOC_SEARCH_BASE_URL = settings.BKDOC_URL + '/search/?keyword={}'
+    BKDOC_SEARCH_BASE_URL = settings.BKDOC_URL + "/search/?keyword={}"
 
     def search(self, keyword: str) -> SearchDocResults:
         """Call blueking document API to get matching documents"""
@@ -89,9 +89,9 @@ class BKDocumentSearcher(BaseSearcher):
 
         results = []
         for item in json_data:
-            url = settings.BKDOC_URL + item['url']
+            url = settings.BKDOC_URL + item["url"]
             results.append(
-                SearchDocumentary(source_type='bk_document', title=item['title'], url=url, digest=item["digest"])
+                SearchDocumentary(source_type="bk_document", title=item["title"], url=url, digest=item["digest"])
             )
         return SearchDocResults(docs=results, count=len(results))
 

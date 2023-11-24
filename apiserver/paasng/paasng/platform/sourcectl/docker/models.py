@@ -18,11 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict
 
-from paasng.platform.sourcectl.models import DockerRepository, RepoBasicAuthHolder
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.models import DockerRepository, RepoBasicAuthHolder
 
-REPO_TYPE = 'docker'
+REPO_TYPE = "docker"
 
 
 def get_or_create_repo_obj(
@@ -30,10 +30,10 @@ def get_or_create_repo_obj(
 ) -> DockerRepository:
     """Get or create a repository object by given url and source_dir."""
     repo_kwargs = {
-        'region': application.region,
-        'server_name': repo_type,
-        'repo_url': repo_url,
-        'source_dir': source_dir,
+        "region": application.region,
+        "server_name": repo_type,
+        "repo_url": repo_url,
+        "source_dir": source_dir,
     }
     # Not using `get_or_create` because it might return more than 1 results
     repo_objs = DockerRepository.objects.filter(**repo_kwargs)[:1]
@@ -53,7 +53,7 @@ def init_image_repo(module: Module, repo_url: str, source_dir: str, repo_auth_in
     repo_obj = get_or_create_repo_obj(module.application, REPO_TYPE, repo_url, source_dir)
     module.source_type = REPO_TYPE
     module.source_repo_id = repo_obj.id
-    module.save(update_fields=['source_type', 'source_repo_id'])
+    module.save(update_fields=["source_type", "source_repo_id"])
 
     # Create related basic auth credentials
     RepoBasicAuthHolder.objects.update_or_create(
@@ -61,7 +61,7 @@ def init_image_repo(module: Module, repo_url: str, source_dir: str, repo_auth_in
         repo_type=repo_obj.get_source_type(),
         module=module,
         defaults={
-            "username": repo_auth_info.get("username", ''),
-            "password": repo_auth_info.get("password", ''),
+            "username": repo_auth_info.get("username", ""),
+            "password": repo_auth_info.get("password", ""),
         },
     )

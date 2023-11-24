@@ -26,9 +26,9 @@ pytestmark = pytest.mark.django_db
 
 class Test__import_env_vars:
     def test_integrated(self, bk_module):
-        ConfigVar.objects.create(module=bk_module, key='KEY_EXISTING')
-        env_vars = [EnvVar(name='KEY1', value='foo'), EnvVar(name='KEY2', value='foo')]
-        overlay_env_vars = [EnvVarOverlay(envName='stag', name='KEY3', value='foo')]
+        ConfigVar.objects.create(module=bk_module, key="KEY_EXISTING")
+        env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
+        overlay_env_vars = [EnvVarOverlay(envName="stag", name="KEY3", value="foo")]
         ret = import_env_vars(bk_module, env_vars, overlay_env_vars)
 
         assert ConfigVar.objects.count() == 3

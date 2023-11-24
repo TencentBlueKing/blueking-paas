@@ -210,16 +210,16 @@ def test_rename_log_fields(log, expected):
         (
             SearchRequestSchema(query={"query_string": "foo"}),
             {},
-            {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+            {"query_string": {"query": "foo", "analyze_wildcard": True}},
         ),
         (
             SearchRequestSchema(query={"query_string": "foo", "terms": {"app_code": {"foo"}}}),
             {},
             {
-                'bool': {
-                    'must': [
-                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
-                        {'terms': {'app_code': ['foo']}},
+                "bool": {
+                    "must": [
+                        {"query_string": {"query": "foo", "analyze_wildcard": True}},
+                        {"terms": {"app_code": ["foo"]}},
                     ]
                 }
             },
@@ -228,10 +228,10 @@ def test_rename_log_fields(log, expected):
             SearchRequestSchema(query={"query_string": "foo", "terms": {"app_code": ["foo"]}}),
             {"app_code": {"type": "text"}},
             {
-                'bool': {
-                    'must': [
-                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
-                        {'terms': {'app_code.keyword': ['foo']}},
+                "bool": {
+                    "must": [
+                        {"query_string": {"query": "foo", "analyze_wildcard": True}},
+                        {"terms": {"app_code.keyword": ["foo"]}},
                     ]
                 }
             },
@@ -247,12 +247,12 @@ def test_rename_log_fields(log, expected):
             ),
             {"app_code": {"type": "text"}},
             {
-                'bool': {
-                    'must': [
-                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
-                        {'terms': {'app_code.keyword': ['foo']}},
+                "bool": {
+                    "must": [
+                        {"query_string": {"query": "foo", "analyze_wildcard": True}},
+                        {"terms": {"app_code.keyword": ["foo"]}},
                     ],
-                    'must_not': [{'terms': {'module_name': ['bar']}}],
+                    "must_not": [{"terms": {"module_name": ["bar"]}}],
                 }
             },
         ),

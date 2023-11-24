@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class SmartAdvisorConfig(AppConfig):
-    name = 'paasng.accessories.smart_advisor'
+    name = "paasng.accessories.smart_advisor"

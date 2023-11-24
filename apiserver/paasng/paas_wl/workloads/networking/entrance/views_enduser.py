@@ -26,8 +26,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.core.env import env_is_running
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance import serializers as slzs
 from paas_wl.workloads.networking.entrance.addrs import URL, Address
 from paas_wl.workloads.networking.entrance.allocator.domains import SubDomainAllocator
@@ -38,11 +38,11 @@ from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, get_bui
 from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.core.region.models import get_region
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.core.region.models import get_region
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 
@@ -62,7 +62,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module_ids = list(application.modules.values_list("id", flat=True))
         return Domain.objects.filter(module_id__in=module_ids)
 
-    @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=['Domains'])
+    @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=["Domains"])
     def list(self, request, **kwargs):
         """查看应用的所有自定义域名信息
 
@@ -79,7 +79,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_id="create-app-domain",
         request_body=DomainSLZ,
         response_serializer=DomainSLZ,
-        tags=['Domains'],
+        tags=["Domains"],
     )
     def create(self, request, **kwargs):
         """创建一个独立域名
@@ -91,7 +91,9 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """
         application = self.get_application()
         if not self.allow_modifications(application.region):
-            raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
+            raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.format(
+                "当前应用版本不允许手动管理独立域名，请联系平台管理员"
+            )
 
         data = validate_domain_payload(request.data, application, serializer_cls=DomainSLZ)
         env = application.get_module(data["module"]["name"]).get_envs(data["environment"]["environment"])
@@ -107,28 +109,32 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_id="update-app-domain",
         request_body=DomainForUpdateSLZ,
         response_serializer=DomainSLZ,
-        tags=['Domains'],
+        tags=["Domains"],
     )
     def update(self, request, **kwargs):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
+        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
         if not self.allow_modifications(application.region):
-            raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
+            raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.format(
+                "当前应用版本不允许手动管理独立域名，请联系平台管理员"
+            )
 
         data = validate_domain_payload(request.data, application, serializer_cls=DomainForUpdateSLZ, instance=instance)
         new_instance = get_custom_domain_mgr(application).update(
-            instance, host=data['name'], path_prefix=data['path_prefix'], https_enabled=data['https_enabled']
+            instance, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
         )
         return Response(DomainSLZ(new_instance).data)
 
-    @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=['Domains'])
+    @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=["Domains"])
     def destroy(self, request, *args, **kwargs):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
+        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
         if not self.allow_modifications(application.region):
-            raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
+            raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.format(
+                "当前应用版本不允许手动管理独立域名，请联系平台管理员"
+            )
 
         get_custom_domain_mgr(application).delete(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -142,12 +148,12 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             for env in module.envs.all():
                 cluster = EnvClusterService(env).get_cluster()
                 # `cluster` could be None when application's engine was disabled
-                frontend_ingress_ip = cluster.ingress_config.frontend_ingress_ip if cluster else ''
+                frontend_ingress_ip = cluster.ingress_config.frontend_ingress_ip if cluster else ""
                 results.append(
                     {
-                        'module': module.name,
-                        'environment': env.environment,
-                        'frontend_ingress_ip': frontend_ingress_ip,
+                        "module": module.name,
+                        "environment": env.environment,
+                        "frontend_ingress_ip": frontend_ingress_ip,
                     }
                 )
         return Response(slzs.CustomDomainsConfigSLZ(results, many=True).data)

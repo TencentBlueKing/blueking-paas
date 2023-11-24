@@ -40,25 +40,25 @@ class TestMresDeploymentsViewSet:
         dp = create_cnative_deploy(bk_stag_env, bk_user)
         response = api_client.get(url)
 
-        assert response.data['count'] == 1
-        assert response.data['previous'] is None
-        assert response.data['next'] is None
-        ret = response.data['results'][0]
+        assert response.data["count"] == 1
+        assert response.data["previous"] is None
+        assert response.data["next"] is None
+        ret = response.data["results"][0]
         # django serializer 提供时区转换，因此不进行比较
-        assert ret.pop('created') is not None
-        assert ret.pop('updated') is not None
+        assert ret.pop("created") is not None
+        assert ret.pop("updated") is not None
         assert ret == {
-            'id': dp.pk,
-            'application_id': str(bk_app.id),
-            'environment_name': bk_stag_env.environment,
-            'name': dp.name,
-            'region': dp.region,
-            'revision': dp.revision.pk,
-            'status': dp.status,
-            'reason': dp.reason,
-            'message': dp.message,
-            'last_transition_time': dp.last_transition_time,
-            'operator': bk_user.username,
+            "id": dp.pk,
+            "application_id": str(bk_app.id),
+            "environment_name": bk_stag_env.environment,
+            "name": dp.name,
+            "region": dp.region,
+            "revision": dp.revision.pk,
+            "status": dp.status,
+            "reason": dp.reason,
+            "message": dp.message,
+            "last_transition_time": dp.last_transition_time,
+            "operator": bk_user.username,
         }
 
     def test_create(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps, bk_user):
@@ -93,8 +93,10 @@ class TestMresDeploymentsViewSet:
             },
         }
         # Mock out the interactions with k8s cluster
-        with mock.patch("paasng.platform.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest), mock.patch(
-            'paasng.platform.engine.deploy.release.operator.WaitAppModelReady.start',
+        with mock.patch(
+            "paasng.platform.engine.deploy.release.operator.apply_bkapp_to_k8s", return_value=manifest
+        ), mock.patch(
+            "paasng.platform.engine.deploy.release.operator.WaitAppModelReady.start",
             return_value=None,
         ), mock.patch("paasng.platform.engine.deploy.release.operator.svc_disc"), mock.patch(
             "paasng.platform.engine.deploy.release.operator.ensure_namespace"
@@ -102,10 +104,10 @@ class TestMresDeploymentsViewSet:
             response = api_client.post(url, data={"manifest": manifest})
 
         assert response.status_code == 200
-        assert response.data['apiVersion'] == "paas.bk.tencent.com/v1alpha2"
-        assert response.data['kind'] == "BkApp"
-        assert response.data['metadata']['name'] == bk_app.code
-        assert response.data['spec'] is not None
+        assert response.data["apiVersion"] == "paas.bk.tencent.com/v1alpha2"
+        assert response.data["kind"] == "BkApp"
+        assert response.data["metadata"]["name"] == bk_app.code
+        assert response.data["spec"] is not None
 
 
 class TestMresStatusViewSet:
@@ -169,39 +171,42 @@ class TestMresStatusViewSet:
         ]
         with mock.patch(
             "paas_wl.bk_app.cnative.specs.views_enduser.get_mres_from_cluster", return_value=bkapp_res
-        ), mock.patch('paas_wl.bk_app.cnative.specs.views_enduser.list_events', return_value=events,), mock.patch(
-            'paas_wl.bk_app.cnative.specs.views_enduser.get_exposed_url',
+        ), mock.patch(
+            "paas_wl.bk_app.cnative.specs.views_enduser.list_events",
+            return_value=events,
+        ), mock.patch(
+            "paas_wl.bk_app.cnative.specs.views_enduser.get_exposed_url",
             return_value=Address(type=AddressType.SUBDOMAIN, url="http://example.com").to_exposed_url(),
         ):
             response = api_client.get(url)
             excepted = {
-                'deployment': {
-                    'deploy_id': dp.pk,
-                    'status': 'ready',
-                    'reason': None,
-                    'message': None,
-                    'last_transition_time': None,
-                    'operator': bk_user.username,
+                "deployment": {
+                    "deploy_id": dp.pk,
+                    "status": "ready",
+                    "reason": None,
+                    "message": None,
+                    "last_transition_time": None,
+                    "operator": bk_user.username,
                 },
-                'ingress': {'url': 'http://example.com'},
-                'conditions': [
-                    {'type': 'AppAvailable', 'status': 'True', 'reason': 'AppAvailable', 'message': ''},
-                    {'type': 'AppProgressing', 'status': 'True', 'reason': 'NewRevision', 'message': ''},
+                "ingress": {"url": "http://example.com"},
+                "conditions": [
+                    {"type": "AppAvailable", "status": "True", "reason": "AppAvailable", "message": ""},
+                    {"type": "AppProgressing", "status": "True", "reason": "NewRevision", "message": ""},
                 ],
-                'events': [
+                "events": [
                     {
-                        'name': 'pre-release-hook-14.1756b63cec29a836',
-                        'type': 'Normal',
-                        'reason': 'Started',
-                        'count': '1',
-                        'message': 'Started container hook',
-                        'source_component': 'kubelet',
-                        'first_seen': '2023-04-18 03:44:43',
-                        'last_seen': '2023-04-18 03:44:43',
+                        "name": "pre-release-hook-14.1756b63cec29a836",
+                        "type": "Normal",
+                        "reason": "Started",
+                        "count": "1",
+                        "message": "Started container hook",
+                        "source_component": "kubelet",
+                        "first_seen": "2023-04-18 03:44:43",
+                        "last_seen": "2023-04-18 03:44:43",
                     }
                 ],
             }
 
             # django serializer 提供时区转换，因此不进行比较
-            assert response.data['deployment'].pop('created') is not None
+            assert response.data["deployment"].pop("created") is not None
             assert response.data == excepted

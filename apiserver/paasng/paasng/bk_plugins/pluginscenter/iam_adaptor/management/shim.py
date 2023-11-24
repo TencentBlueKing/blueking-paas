@@ -248,7 +248,7 @@ def delete_builtin_user_groups(plugin: PluginInstance):
     :param plugin: 蓝鲸插件
     """
     user_groups = PluginUserGroup.objects.filter_by_plugin(plugin)
-    lazy_iam_client.delete_user_groups(user_groups.values_list('user_group_id', flat=True))
+    lazy_iam_client.delete_user_groups(user_groups.values_list("user_group_id", flat=True))
     user_groups.delete()
 
 

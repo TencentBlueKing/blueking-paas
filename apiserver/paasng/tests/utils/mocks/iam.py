@@ -77,7 +77,7 @@ class StubBKIAMClient:
         user_group_id_start_at = latest_user_group.id + 1 if latest_user_group else 1
 
         return [
-            {'id': user_group_id_start_at + idx, 'role': role, 'name': f'{role.name} user group', 'readonly': True}
+            {"id": user_group_id_start_at + idx, "role": role, "name": f"{role.name} user group", "readonly": True}
             for idx, role in enumerate(APP_DEFAULT_ROLES)
         ]
 

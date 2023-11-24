@@ -25,5 +25,5 @@ class OperationIndexView(GenericTemplateView):
 
 
 __all__ = [
-    'OperationIndexView',
+    "OperationIndexView",
 ]

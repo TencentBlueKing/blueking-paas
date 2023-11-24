@@ -32,13 +32,13 @@ def test_process_probe_mgr(wl_app, process_type, probe_handler_templates, port_e
             app=wl_app,
             process_type=process_type,
             probe_type=ProbeType.READINESS,
-            probe_handler=probe_handler_templates['readiness'],
+            probe_handler=probe_handler_templates["readiness"],
         )
         ProcessProbe.objects.create(
             app=wl_app,
             process_type=process_type,
             probe_type=ProbeType.LIVENESS,
-            probe_handler=probe_handler_templates['liveness'],
+            probe_handler=probe_handler_templates["liveness"],
         )
 
         app_probe_mgr = ProcessProbeManager(app=wl_app, process_type=process_type)

@@ -24,32 +24,32 @@ from revproxy.utils import cookie_from_string, is_hop_by_hop, should_stream
 from urllib3.response import HTTPResponse as U3HTTPResponse
 
 #: Default number of bytes that are going to be read in a file lecture
-DEFAULT_AMT = 2 ** 16
+DEFAULT_AMT = 2**16
 # The amount of chunk being used when no buffering is needed for reading response
 NO_BUFFER_AMT = 1
 
-logger = logging.getLogger('revproxy.response')
+logger = logging.getLogger("revproxy.response")
 
 
 def set_response_headers(response, response_headers):
     # check for Django 3.2 headers interface
     # https://code.djangoproject.com/ticket/31789
     # check and set pointer before loop to improve efficiency
-    if hasattr(response, 'headers'):
+    if hasattr(response, "headers"):
         headers = response.headers
     else:
         headers = response
 
     for header, value in response_headers.items():
-        if is_hop_by_hop(header) or header.lower() == 'set-cookie':
+        if is_hop_by_hop(header) or header.lower() == "set-cookie":
             continue
 
         headers[header] = value
 
-    if hasattr(response, 'headers'):
-        logger.debug('Response headers: %s', response.headers)
+    if hasattr(response, "headers"):
+        logger.debug("Response headers: %s", response.headers)
     else:
-        logger.debug('Response headers: %s', getattr(response, '_headers'))
+        logger.debug("Response headers: %s", getattr(response, "_headers"))
 
 
 def get_django_response(proxy_response, strict_cookies=False):
@@ -68,44 +68,44 @@ def get_django_response(proxy_response, strict_cookies=False):
     status = proxy_response.status
     headers = proxy_response.headers
 
-    logger.debug('Proxy response headers: %s', headers)
+    logger.debug("Proxy response headers: %s", headers)
 
-    content_type = headers.get('Content-Type')
+    content_type = headers.get("Content-Type")
 
-    logger.debug('Content-Type: %s', content_type)
+    logger.debug("Content-Type: %s", content_type)
 
     if should_stream(proxy_response):
-        logger.info('Content-Length is bigger than %s', DEFAULT_AMT)
+        logger.info("Content-Length is bigger than %s", DEFAULT_AMT)
         # PATCH: get amount of bytes of streaming
         _streaming_amt = detect_streaming_amt(proxy_response)
         response = StreamingHttpResponse(
             proxy_response.stream(_streaming_amt), status=status, content_type=content_type
         )
     else:
-        content = proxy_response.data or b''
+        content = proxy_response.data or b""
         response = HttpResponse(content, status=status, content_type=content_type)
 
-    logger.info('Normalizing response headers')
+    logger.info("Normalizing response headers")
     set_response_headers(response, headers)
 
-    cookies = proxy_response.headers.getlist('set-cookie')
-    logger.info('Checking for invalid cookies')
+    cookies = proxy_response.headers.getlist("set-cookie")
+    logger.info("Checking for invalid cookies")
     for cookie_string in cookies:
         cookie_dict = cookie_from_string(cookie_string, strict_cookies=strict_cookies)
         # if cookie is invalid cookie_dict will be None
         if cookie_dict:
             response.set_cookie(**cookie_dict)
 
-    logger.debug('Response cookies: %s', response.cookies)
+    logger.debug("Response cookies: %s", response.cookies)
 
     return response
 
 
 def detect_streaming_amt(proxy_response: U3HTTPResponse) -> int:
     """Detect the amount of bytes for streaming response"""
-    content_type = proxy_response.headers.get('Content-Type', '')
+    content_type = proxy_response.headers.get("Content-Type", "")
     # When response was event stream, disable response buffering by setting amount to 1,
     # without this, all events will wait for a long time because how `HTTPResponse.stream()` works
-    if content_type.lower() == 'text/event-stream':
+    if content_type.lower() == "text/event-stream":
         return NO_BUFFER_AMT
     return DEFAULT_AMT

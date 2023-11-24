@@ -53,7 +53,7 @@ class TestConfigVar:
             module=bk_module,
             environment_id=getattr(bk_env, "pk", -1),
             is_global=bk_env is None,
-            **data
+            **data,
         )
 
     @pytest.mark.parametrize(

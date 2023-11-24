@@ -20,9 +20,9 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.accessories.publish.market.serializers import AvailableAddressFullySLZ, AvailableAddressSLZ
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.serializers import MinimalModuleSLZ
-from paasng.accessories.publish.market.serializers import AvailableAddressFullySLZ, AvailableAddressSLZ
 
 
 class UpdateExposedURLTypeSLZ(serializers.Serializer):
@@ -30,7 +30,7 @@ class UpdateExposedURLTypeSLZ(serializers.Serializer):
 
     def validate_exposed_url_type(self, value):
         if value != ExposedURLType.SUBDOMAIN:
-            raise ValidationError(_('类型错误，只允许修改为子域名类型'))
+            raise ValidationError(_("类型错误，只允许修改为子域名类型"))
         return value
 
 
@@ -58,7 +58,9 @@ class ApplicationAvailableEntranceSLZ(serializers.Serializer):
 
 
 class RootDoaminSLZ(serializers.Serializer):
-    root_domains = serializers.ListField(help_text="查看模块所属集群的子域名根域", child=serializers.CharField(), default=[])
+    root_domains = serializers.ListField(
+        help_text="查看模块所属集群的子域名根域", child=serializers.CharField(), default=[]
+    )
     preferred_root_domain = serializers.CharField(help_text="偏好的根域名", default="")
 
 

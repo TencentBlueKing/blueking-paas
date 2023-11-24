@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.global_site import global_site_resource
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.service_proxy.plugins import (
     ApplicationInPathExtractor,
     ExtractedAppBasicInfo,
@@ -34,21 +34,21 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def patch_list_app_perms():
     with mock.patch(
-        'paasng.misc.service_proxy.plugins.list_application_permissions',
+        "paasng.misc.service_proxy.plugins.list_application_permissions",
         new=lambda *args, **kwargs: {action: True for action in AppAction},
     ):
         yield
 
 
 def test_get_current_instances(bk_user, bk_app):
-    insts = get_current_instances(bk_user, f'applications/{bk_app.code}/modules/default/envs/stag/')
-    assert insts[0]['type'] == 'application'
-    assert isinstance(insts[0]['value'], dict)
-    assert isinstance(insts[0]['perms_map'], dict)
+    insts = get_current_instances(bk_user, f"applications/{bk_app.code}/modules/default/envs/stag/")
+    assert insts[0]["type"] == "application"
+    assert isinstance(insts[0]["value"], dict)
+    assert isinstance(insts[0]["perms_map"], dict)
 
-    assert insts[1]['type'] == 'global_site'
-    assert isinstance(insts[1]['value'], str)
-    assert isinstance(insts[1]['perms_map'], dict)
+    assert insts[1]["type"] == "global_site"
+    assert isinstance(insts[1]["value"], str)
+    assert isinstance(insts[1]["perms_map"], dict)
 
 
 @pytest.fixture
@@ -61,30 +61,30 @@ def site_permissions(bk_user):
 
 
 def test_get_current_instances_none(bk_user, site_permissions):
-    insts = get_current_instances(bk_user, '/foo/bar')
-    assert insts == [{'type': 'global_site', 'value': 'user', 'perms_map': site_permissions}]
+    insts = get_current_instances(bk_user, "/foo/bar")
+    assert insts == [{"type": "global_site", "value": "user", "perms_map": site_permissions}]
 
 
 class TestApplicationInPathExtractor:
     @pytest.mark.parametrize(
-        'request_path,expected_result',
+        "request_path,expected_result",
         [
-            ('foo/bar', None),
+            ("foo/bar", None),
             (
-                'applications/foo/',
-                ExtractedAppBasicInfo(code='foo'),
+                "applications/foo/",
+                ExtractedAppBasicInfo(code="foo"),
             ),
             (
-                'applications/foo/modules/bar/',
-                ExtractedAppBasicInfo(code='foo', module_name='bar'),
+                "applications/foo/modules/bar/",
+                ExtractedAppBasicInfo(code="foo", module_name="bar"),
             ),
             (
-                'applications/foo/envs/stag/',
-                ExtractedAppBasicInfo(code='foo', module_name=None, environment='stag'),
+                "applications/foo/envs/stag/",
+                ExtractedAppBasicInfo(code="foo", module_name=None, environment="stag"),
             ),
             (
-                'applications/foo/modules/bar/envs/stag/',
-                ExtractedAppBasicInfo(code='foo', module_name='bar', environment='stag'),
+                "applications/foo/modules/bar/envs/stag/",
+                ExtractedAppBasicInfo(code="foo", module_name="bar", environment="stag"),
             ),
         ],
     )
@@ -93,12 +93,12 @@ class TestApplicationInPathExtractor:
         assert ret == expected_result
 
     def test_extract_objects(self, bk_app):
-        request_path = f'applications/{bk_app.code}/modules/default/envs/stag/'
+        request_path = f"applications/{bk_app.code}/modules/default/envs/stag/"
         ret = ApplicationInPathExtractor().extract_objects(request_path)
         assert ret is not None
         assert ret.application and ret.application.code == bk_app.code
-        assert ret.module and ret.module.name == 'default'
-        assert ret.module_env and ret.module_env.environment == 'stag'
+        assert ret.module and ret.module.name == "default"
+        assert ret.module_env and ret.module_env.environment == "stag"
         assert ret.engine_app and ret.engine_app.name is not None
 
 

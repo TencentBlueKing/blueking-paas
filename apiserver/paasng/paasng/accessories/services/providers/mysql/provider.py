@@ -25,9 +25,9 @@ import pymysql
 
 from paasng.accessories.services.utils import gen_unique_id, generate_password
 
-from ..base import BaseProvider, InstanceData
 from .constants import GRANT_SQL_FMT, REVOKE_SQL_FMT, MySQLAuthTypeEnum
 from .exceptions import CreateDatabaseFailed
+from ..base import BaseProvider, InstanceData
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +49,11 @@ class MySQLProvider(BaseProvider):
     """
 
     def __init__(self, config):
-        self.host = config['host']
-        self.port = config['port']
-        self.user = config['user']
-        self.password = config['password']
-        self.auth_ip_list = config['auth_ip_list']
+        self.host = config["host"]
+        self.port = config["port"]
+        self.user = config["user"]
+        self.password = config["password"]
+        self.auth_ip_list = config["auth_ip_list"]
 
     def _get_connection(self):
         connection = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
@@ -82,7 +82,7 @@ class MySQLProvider(BaseProvider):
                         logger.exception("Revoke privileges FAIL: %s" % sql)
                         continue
 
-            cursor.execute('flush privileges;')
+            cursor.execute("flush privileges;")
         connection.commit()
 
     def _grant_auth_ips(self, connection, auth_ip_list, database_name, database_user, database_password):
@@ -111,7 +111,7 @@ class MySQLProvider(BaseProvider):
         """
         申请时, 我们是知道需要授权的IP列表的
         """
-        preferred_name = params.get('engine_app_name')
+        preferred_name = params.get("engine_app_name")
 
         connection = None
 

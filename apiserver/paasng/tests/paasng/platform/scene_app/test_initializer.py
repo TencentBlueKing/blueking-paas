@@ -35,14 +35,14 @@ class TestSceneAPPInitializer:
 
         create_scene_tmpls()
         with mock.patch(
-            'paasng.platform.declarative.application.controller.initialize_smart_module',
+            "paasng.platform.declarative.application.controller.initialize_smart_module",
             new=lambda *args, **kwargs: {},
         ), mock.patch(
-            'paasng.platform.scene_app.initializer.create_oauth2_client',
-            new=lambda *args, **kwargs: 'test_app_secret',
+            "paasng.platform.scene_app.initializer.create_oauth2_client",
+            new=lambda *args, **kwargs: "test_app_secret",
         ), mock.patch(
-            'paasng.platform.scene_app.initializer.get_oauth2_client_secret',
-            new=lambda *args, **kwargs: 'test_app_secret',
+            "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
+            new=lambda *args, **kwargs: "test_app_secret",
         ):
             yield
 
@@ -51,14 +51,14 @@ class TestSceneAPPInitializer:
         app_code = generate_random_string(8, string.ascii_lowercase)
         app, sync_result = SceneAPPInitializer(
             bk_user,
-            'scene_tmpl1',
+            "scene_tmpl1",
             app_name,
             app_code,
             settings.DEFAULT_REGION_NAME,
             {
-                'source_control_type': 'github',
-                'source_repo_url': 'https://github.com/octocat/helloWorld.git',
-                'source_repo_auth_info': {},
+                "source_control_type": "github",
+                "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                "source_repo_auth_info": {},
             },
         ).execute()
         assert app is not None

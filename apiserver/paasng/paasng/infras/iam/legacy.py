@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 class LegacyAction(str, StructuredEnum):
-    DEVELOP_APP = EnumField('develop_app', label='开发 SaaS 应用及外链应用')
-    MANAGE_SMART = EnumField('manage_smart', label='管理 S-mart 应用')
+    DEVELOP_APP = EnumField("develop_app", label="开发 SaaS 应用及外链应用")
+    MANAGE_SMART = EnumField("manage_smart", label="管理 S-mart 应用")
 
 
 class Permission:
@@ -40,7 +40,7 @@ class Permission:
             settings.IAM_APP_CODE, settings.IAM_APP_SECRET, settings.BK_IAM_V3_INNER_URL, settings.BK_PAAS2_URL
         )
 
-    def _make_request_without_resources(self, username: str, action_id: str) -> 'Request':
+    def _make_request_without_resources(self, username: str, action_id: str) -> "Request":
         return Request(settings.IAM_SYSTEM_ID, Subject("user", username), Action(action_id), None, None)
 
     def allowed_manage_smart(self, username):

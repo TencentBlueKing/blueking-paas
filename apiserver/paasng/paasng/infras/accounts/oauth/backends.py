@@ -33,10 +33,10 @@ import paasng.utils.masked_curlify as curlify
 from paasng.infras.accounts.oauth.exceptions import BKAppOauthRequestError, BKAppOauthResponseError
 from paasng.utils.error_codes import error_codes
 
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 # ignore scope warning
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 
 logger = logging.getLogger(__name__)
@@ -85,8 +85,8 @@ class OAuth2Backend:
 
     def __str__(self):
         return (
-            f'OAuth2Backend: display_name: {self.display_info.display_name}, '
-            f'address: {self.display_info.address}, desc: {self.display_info.description}'
+            f"OAuth2Backend: display_name: {self.display_info.display_name}, "
+            f"address: {self.display_info.address}, desc: {self.display_info.description}"
         )
 
     def get_oauth_session(self) -> OAuth2Session:
@@ -223,7 +223,7 @@ class BlueKingApplicationOauthMixin:
             )
 
         data = response.json()
-        if not data['data']:
+        if not data["data"]:
             raise BKAppOauthResponseError(
                 error_message=f"Can't get access token from response, detail: {data}",
                 response_code=response.status_code,

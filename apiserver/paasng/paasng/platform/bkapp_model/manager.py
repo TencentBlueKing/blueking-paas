@@ -47,7 +47,7 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_from_bkapp(self, processes: List['BkAppProcess'], image_credential_names: Dict[str, str]):
+    def sync_from_bkapp(self, processes: List["BkAppProcess"], image_credential_names: Dict[str, str]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess
@@ -55,7 +55,7 @@ class ModuleProcessSpecManager:
                           where 'replicas' and 'plan' is optional
         :param image_credential_names: extra image credential name dict
         """
-        processes_map: Dict[str, 'BkAppProcess'] = {process.name: process for process in processes}
+        processes_map: Dict[str, "BkAppProcess"] = {process.name: process for process in processes}
 
         # delete outdated procs, which are removed from bkapp
         self.delete_outdated_procs(cur_procs_name=processes_map.keys())
@@ -125,7 +125,7 @@ class ModuleProcessSpecManager:
         )
         # update spec objects end
 
-    def sync_from_desc(self, processes: List['ProcessTmpl']):
+    def sync_from_desc(self, processes: List["ProcessTmpl"]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess ProcessTmpl
@@ -133,7 +133,7 @@ class ModuleProcessSpecManager:
                           where 'replicas' and 'plan' is optional
         """
 
-        processes_map: Dict[str, 'ProcessTmpl'] = {process.name: process for process in processes}
+        processes_map: Dict[str, "ProcessTmpl"] = {process.name: process for process in processes}
 
         # remove proc spec objects which is already deleted via procfile
         self.delete_outdated_procs(cur_procs_name=processes_map.keys())
@@ -180,7 +180,7 @@ class ModuleProcessSpecManager:
     def delete_outdated_procs(self, cur_procs_name: Iterable[str]):
         """Delete all ModuleProcessSpec not existed in cur_procs_name"""
         proc_specs = ModuleProcessSpec.objects.filter(module=self.module)
-        existed_procs_name = set(proc_specs.values_list('name', flat=True))
+        existed_procs_name = set(proc_specs.values_list("name", flat=True))
         # remove proc spec objects which is already deleted via procfile
         removing_procs_name = list(existed_procs_name - set(cur_procs_name))
         if removing_procs_name:
@@ -231,7 +231,7 @@ class ModuleProcessSpecManager:
             if scaling_config:
                 # Remove not allowed fields such as "metrics"
                 # TODO: Use `AutoscalingConfig` type
-                allowed_fields = ['min_replicas', 'max_replicas', 'policy']
+                allowed_fields = ["min_replicas", "max_replicas", "policy"]
                 scaling_config = {k: v for k, v in scaling_config.items() if k in allowed_fields}
 
             ProcessSpecEnvOverlay.objects.update_or_create(

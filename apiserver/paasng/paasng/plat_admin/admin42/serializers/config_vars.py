@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
+from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
@@ -30,5 +30,5 @@ class ConfigVarSLZ(BaseConfigVarSLZ):
         RE_CONFIG_VAR_KEY,
         max_length=1024,
         required=True,
-        error_messages={'invalid': _('格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。')},
+        error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
     )

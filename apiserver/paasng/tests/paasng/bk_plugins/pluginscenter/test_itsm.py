@@ -81,5 +81,5 @@ def test_itsm_render(mock_client_session, set_itsm_to_current_stage):
     ticket_info = get_ticket_status(sn)
     assert mock_client_session.called
 
-    assert ticket_info['current_status_display'] == '被挂起'
-    assert ticket_info['can_withdraw'] is True
+    assert ticket_info["current_status_display"] == "被挂起"
+    assert ticket_info["can_withdraw"] is True

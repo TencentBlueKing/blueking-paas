@@ -38,7 +38,7 @@ class GiteeRepoController(BaseGitRepoController):
     def __init__(self, api_url: str, repo_url: str, user_credentials: Optional[Dict] = None):
         super().__init__(api_url, repo_url, user_credentials)
         self.user_credentials = user_credentials or {}
-        self.repo_url = repo_url or ''
+        self.repo_url = repo_url or ""
         self.api_client = GiteeApiClient(api_url=api_url, **(self.user_credentials))
 
     def get_client(self):
@@ -57,16 +57,16 @@ class GiteeRepoController(BaseGitRepoController):
         api_client = GiteeApiClient(**kwargs)
         return [
             Repository(
-                namespace=repo['namespace']['path'],
-                project=repo['name'],
-                description=repo['description'],
+                namespace=repo["namespace"]["path"],
+                project=repo["name"],
+                description=repo["description"],
                 # Gitee 未支持项目图标链接
-                avatar_url='',
-                web_url=repo['html_url'],
-                http_url_to_repo=repo['html_url'],
-                ssh_url_to_repo=repo['ssh_url'],
-                created_at=arrow.get(repo['created_at']).datetime,
-                last_activity_at=arrow.get(repo['updated_at']).datetime,
+                avatar_url="",
+                web_url=repo["html_url"],
+                http_url_to_repo=repo["html_url"],
+                ssh_url_to_repo=repo["ssh_url"],
+                created_at=arrow.get(repo["created_at"]).datetime,
+                last_activity_at=arrow.get(repo["updated_at"]).datetime,
             )
             for repo in api_client.list_repo()
         ]
@@ -88,18 +88,18 @@ class GiteeRepoController(BaseGitRepoController):
         """列举仓库所有可用 branch 或 tag"""
         result = []
         for branch in self.api_client.repo_list_branches(self.project):
-            result.append(self._branch_data_to_version('branch', branch))
+            result.append(self._branch_data_to_version("branch", branch))
         for tag in self.api_client.repo_list_tags(self.project):
-            result.append(self._branch_data_to_version('tag', tag))
+            result.append(self._branch_data_to_version("tag", tag))
         return result
 
     def extract_smart_revision(self, smart_revision: str) -> str:
         """解析组合 revision 信息（如 branch:master, tag:v1.2），获取更加具体的 commit id（hash）"""
-        if ':' not in smart_revision:
+        if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(':')
+        version_type, version_name = smart_revision.split(":")
         commit = self.api_client.repo_last_commit(self.project, version_name)
-        return commit['sha']
+        return commit["sha"]
 
     def extract_version_info(self, version_info: VersionInfo) -> Tuple[str, str]:
         return version_info.version_name, version_info.revision
@@ -112,7 +112,7 @@ class GiteeRepoController(BaseGitRepoController):
         repo_url = self.repo_url
         from_revision = self.extract_smart_revision(from_revision)
         to_revision = self.extract_smart_revision(to_revision)
-        return repo_url.replace('.git', f'/compare/{from_revision}...{to_revision}')
+        return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
     def get_diff_commit_logs(self, from_revision, to_revision=None, rel_filepath=None) -> List[CommitLog]:
         """gitee 不支持该功能"""
@@ -129,22 +129,22 @@ class GiteeRepoController(BaseGitRepoController):
         :param data_source: tag / branch
         :param data: gitee api 请求结果
         """
-        if data_source not in ('tag', 'branch'):
-            raise ValueError('type must be tag or branch')
+        if data_source not in ("tag", "branch"):
+            raise ValueError("type must be tag or branch")
 
         # NOTE Gitee API 不提供最后更新信息
         return AlternativeVersion(
-            name=data['name'],
+            name=data["name"],
             type=data_source,
-            revision=data['commit']['sha'],
-            url=data['commit']['url'],
+            revision=data["commit"]["sha"],
+            url=data["commit"]["url"],
         )
 
     def _build_repo_url_with_auth(self) -> MutableURL:
         """构建包含 username:oauth_token 的 repo url"""
-        oauth_token = self.user_credentials.get('oauth_token')
+        oauth_token = self.user_credentials.get("oauth_token")
         if not oauth_token:
-            raise exceptions.AccessTokenMissingError('oauth_token required')
+            raise exceptions.AccessTokenMissingError("oauth_token required")
 
         try:
             username = self.api_client.get_current_user()["login"]

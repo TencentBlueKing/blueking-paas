@@ -57,9 +57,11 @@ class IngressConfigSLZ(serializers.Serializer):
 class ClusterFeatureFlagsSLZ(serializers.Serializer):
     """Serializer for Cluster feature flags"""
 
-    ENABLE_EGRESS_IP = serializers.BooleanField(help_text='支持提供出口 IP', required=False, default=False)
-    ENABLE_MOUNT_LOG_TO_HOST = serializers.BooleanField(help_text='允许挂载日志到主机', required=False, default=False)
-    INGRESS_USE_REGEX = serializers.BooleanField(help_text='Ingress路径是否使用正则表达式', required=False, default=False)
+    ENABLE_EGRESS_IP = serializers.BooleanField(help_text="支持提供出口 IP", required=False, default=False)
+    ENABLE_MOUNT_LOG_TO_HOST = serializers.BooleanField(help_text="允许挂载日志到主机", required=False, default=False)
+    INGRESS_USE_REGEX = serializers.BooleanField(
+        help_text="Ingress路径是否使用正则表达式", required=False, default=False
+    )
     ENABLE_BK_MONITOR = serializers.BooleanField(help_text="支持蓝鲸监控", default=False)
     ENABLE_BK_LOG_COLLECTOR = serializers.BooleanField(help_text="使用蓝鲸日志平台方案采集日志", default=False)
     ENABLE_AUTOSCALING = serializers.BooleanField(help_text="支持自动扩容", default=False)

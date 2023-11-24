@@ -34,13 +34,13 @@ class RegionAwareConfig:
 
     def __init__(self, user_settings: Any):
         try:
-            lookup_field = user_settings['_lookup_field']
+            lookup_field = user_settings["_lookup_field"]
         except (TypeError, KeyError):
             lookup_field = None
 
-        if lookup_field == 'region':
+        if lookup_field == "region":
             self.lookup_with_region = True
-            self.data = user_settings['data']
+            self.data = user_settings["data"]
         else:
             self.lookup_with_region = False
             self.data = user_settings
@@ -88,7 +88,7 @@ def get_settings(django_settings_name: str, field_name: str, raise_if_missing=Fa
     :param bool raise_if_missing: raise exception if settings was not set
     """
     if not hasattr(settings, django_settings_name):
-        raise ImproperlyConfigured(f'Missing `{django_settings_name}` in settings.')
+        raise ImproperlyConfigured(f"Missing `{django_settings_name}` in settings.")
 
     def factory():
         config = getattr(settings, django_settings_name)
@@ -101,7 +101,7 @@ def get_settings(django_settings_name: str, field_name: str, raise_if_missing=Fa
             env_key = f"{django_settings_name}.{field_name}".replace(".", "_")
             value = os.getenv(env_key, default)
             if value is None and raise_if_missing:
-                raise ImproperlyConfigured(f'Missing `{django_settings_name}.{field_name}` in settings.')
+                raise ImproperlyConfigured(f"Missing `{django_settings_name}.{field_name}` in settings.")
             return value
 
     return factory

@@ -22,11 +22,11 @@ from typing import TYPE_CHECKING, Type
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
 from django.utils.translation import gettext as _
 
+from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment, OfflineOperation
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
-from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import ModuleEnvironment
@@ -40,7 +40,7 @@ class BaseArchiveManager:
     :param env: the module environment to be archived.
     """
 
-    def __init__(self, env: 'ModuleEnvironment'):
+    def __init__(self, env: "ModuleEnvironment"):
         self.env = env
 
     def perform_env_offline(self, operator: str) -> OfflineOperation:
@@ -92,7 +92,7 @@ class ArchiveResultHandler(CallbackHandler):
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
         if result.is_exception:
-            error_detail = 'Unable to perform offline: processes were not stopped in given period'
+            error_detail = "Unable to perform offline: processes were not stopped in given period"
             status = ReleaseStatus.FAILED
         else:
             error_detail = ""

@@ -20,8 +20,8 @@ from blue_krill.data_types.enum import StructuredEnum
 
 
 class AlertCode(str, StructuredEnum):
-    HIGH_CPU_USAGE = 'high_cpu_usage'
-    HIGH_MEM_USAGE = 'high_mem_usage'
-    POD_RESTART = 'pod_restart'
-    OOM_KILLED = 'oom_killed'
-    HIGH_RABBITMQ_QUEUE_MESSAGES = 'high_rabbitmq_queue_messages'
+    HIGH_CPU_USAGE = "high_cpu_usage"
+    HIGH_MEM_USAGE = "high_mem_usage"
+    POD_RESTART = "pod_restart"
+    OOM_KILLED = "oom_killed"
+    HIGH_RABBITMQ_QUEUE_MESSAGES = "high_rabbitmq_queue_messages"

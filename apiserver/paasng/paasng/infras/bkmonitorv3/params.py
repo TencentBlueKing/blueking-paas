@@ -56,20 +56,20 @@ class QueryAlertsParams:
     def to_dict(self) -> Dict:
         """组装成 search_alerts 接口需要的参数"""
         d = {
-            'start_time': int(self.start_time.timestamp()),
-            'end_time': int(self.end_time.timestamp()),
-            'bk_biz_ids': [get_bk_biz_id(self.app_code)],
-            'page': 1,
-            'page_size': 500,
+            "start_time": int(self.start_time.timestamp()),
+            "end_time": int(self.end_time.timestamp()),
+            "bk_biz_ids": [get_bk_biz_id(self.app_code)],
+            "page": 1,
+            "page_size": 500,
             # 按照 ID 降序
-            'ordering': ['-id'],
+            "ordering": ["-id"],
         }
 
         if self.status:
-            d['status'] = [self.status]
+            d["status"] = [self.status]
 
         if query_string := self._build_query_string():
-            d['query_string'] = query_string
+            d["query_string"] = query_string
 
         return d
 
@@ -81,19 +81,19 @@ class QueryAlertsParams:
         query_string = None
         query_labels = self._build_valid_args(self.environment, self.alert_code)
         if query_labels:
-            query_string = f'labels:({query_labels})'
+            query_string = f"labels:({query_labels})"
 
         if self.keyword:
-            query_keyword = f'alert_name:({self.keyword} OR *{self.keyword}*)'
+            query_keyword = f"alert_name:({self.keyword} OR *{self.keyword}*)"
             query_string = self._build_valid_args(query_string, query_keyword)
         return query_string
 
     def _build_valid_args(self, *args) -> Optional[str]:
-        """ 将非空参数拼接为 "arg1 AND arg2 AND arg3" 的形式 """
+        """将非空参数拼接为 "arg1 AND arg2 AND arg3" 的形式"""
         valid_args: List[str] = list(filter(None, args))
         if not valid_args:
             return None
-        return ' AND '.join(valid_args)
+        return " AND ".join(valid_args)
 
 
 @define(kw_only=True)
@@ -117,10 +117,10 @@ class QueryAlarmStrategiesParams:
     def to_dict(self) -> Dict:
         """组装成 search_alarm_strategy_without_biz 接口需要的参数"""
         return {
-            'bk_biz_id': get_bk_biz_id(self.app_code),
-            'page': 1,
-            'page_size': 500,
-            'conditions': self._build_conditions(),
+            "bk_biz_id": get_bk_biz_id(self.app_code),
+            "page": 1,
+            "page_size": 500,
+            "conditions": self._build_conditions(),
         }
 
     def _build_conditions(self) -> List:

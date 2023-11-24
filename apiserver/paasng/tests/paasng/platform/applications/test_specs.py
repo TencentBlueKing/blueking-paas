@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.models import Template
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.specs import AppSpecs
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 class TestAppSpecs:
     @pytest.mark.parametrize(
-        'type,value',
+        "type,value",
         [
             (ApplicationType.DEFAULT, True),
             (ApplicationType.ENGINELESS_APP, False),
@@ -38,11 +38,11 @@ class TestAppSpecs:
     )
     def test_engine_enabled(self, type, value, bk_app):
         bk_app.type = type
-        bk_app.save(update_fields=['type'])
+        bk_app.save(update_fields=["type"])
         assert AppSpecs(bk_app).engine_enabled is value
 
     @pytest.mark.parametrize(
-        'region_creation_allowed,is_smart_app,type,value',
+        "region_creation_allowed,is_smart_app,type,value",
         [
             (True, False, ApplicationType.DEFAULT, True),
             (True, True, ApplicationType.DEFAULT, False),
@@ -54,29 +54,29 @@ class TestAppSpecs:
     def test_can_create_extra_modules(self, region_creation_allowed, is_smart_app, type, value, bk_app):
         bk_app.type = type
         bk_app.is_smart_app = is_smart_app
-        bk_app.save(update_fields=['type', 'is_smart_app'])
+        bk_app.save(update_fields=["type", "is_smart_app"])
 
         def update_region_hook(config):
-            config['mul_modules_config'] = {"creation_allowed": region_creation_allowed}
+            config["mul_modules_config"] = {"creation_allowed": region_creation_allowed}
 
         with override_region_configs(bk_app.region, update_region_hook):
             assert AppSpecs(bk_app).can_create_extra_modules is value
 
     def test_preset_services(self, settings, bk_app):
-        settings.PRESET_SERVICES_BY_APP_TYPE = {'bk_plugin': {'mysql': {}}}
+        settings.PRESET_SERVICES_BY_APP_TYPE = {"bk_plugin": {"mysql": {}}}
         assert AppSpecs(bk_app).preset_services == {}
 
         # Update application type to match settings
-        bk_app.type = 'bk_plugin'
+        bk_app.type = "bk_plugin"
         bk_app.save()
-        assert AppSpecs(bk_app).preset_services == {'mysql': {}}
+        assert AppSpecs(bk_app).preset_services == {"mysql": {}}
 
     def test_confirm_required_when_publish_with_no_template(self, bk_app):
         confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish
         assert confirm_required_when_publish is False
 
     @pytest.mark.parametrize(
-        'market_ready,expect',
+        "market_ready,expect",
         [
             (True, False),
             (False, True),

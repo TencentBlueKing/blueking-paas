@@ -24,7 +24,7 @@ from tests.utils.encrypt_cmd_base import BaseTestEnctrypMigrationCmd
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.parametrize('model_name', ['AppImageCredential', 'AppUserCredential', ''])
+@pytest.mark.parametrize("model_name", ["AppImageCredential", "AppUserCredential", ""])
 class TestCommand(BaseTestEnctrypMigrationCmd):
     @pytest.fixture(autouse=True)
     def command_name(self):

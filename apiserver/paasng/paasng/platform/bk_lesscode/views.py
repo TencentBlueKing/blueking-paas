@@ -21,10 +21,10 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.modules.constants import SourceOrigin
 
 
@@ -36,11 +36,11 @@ class LesscodeModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         module = application.get_module(module_name)
 
-        address_in_lesscode = ''
+        address_in_lesscode = ""
         if module.source_origin == SourceOrigin.BK_LESS_CODE:
             bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
             address_in_lesscode = make_bk_lesscode_client(login_cookie=bk_token).get_address(
                 application.code, module.name
             )
 
-        return Response(data={'address_in_lesscode': address_in_lesscode, 'tips': settings.BK_LESSCODE_TIPS})
+        return Response(data={"address_in_lesscode": address_in_lesscode, "tips": settings.BK_LESSCODE_TIPS})

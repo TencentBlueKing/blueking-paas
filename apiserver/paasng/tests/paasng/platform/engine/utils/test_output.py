@@ -22,7 +22,7 @@ import pytest
 
 from paasng.platform.engine.utils.output import ConsoleStream, ModelStream, RedisWithModelStream
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModelStream:

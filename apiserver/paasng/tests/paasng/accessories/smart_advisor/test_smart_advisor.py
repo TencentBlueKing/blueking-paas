@@ -61,25 +61,25 @@ class TestDocumentaryLinkAdvisor:
         )
 
     @pytest.mark.parametrize(
-        'tags,link_names',
+        "tags,link_names",
         [
             # Normal match
             ([PlatPanelTag("app_processes")], ["what_is_processes", "python_processes", "celery_processes"]),
             # All tags matches
-            ([AppPLTag('python'), PlatPanelTag("app_created")], ["py_new_app_tutorial", "common_new_app_tutorial"]),
+            ([AppPLTag("python"), PlatPanelTag("app_created")], ["py_new_app_tutorial", "common_new_app_tutorial"]),
             # Part of tags matches
-            ([AppPLTag('nodejs'), PlatPanelTag("app_processes")], ["what_is_processes"]),
+            ([AppPLTag("nodejs"), PlatPanelTag("app_processes")], ["what_is_processes"]),
             # Subject has more tags
             (
-                [AppPLTag('python'), PlatPanelTag("app_processes")],
+                [AppPLTag("python"), PlatPanelTag("app_processes")],
                 ["python_processes", "celery_processes", "what_is_processes"],
             ),
             (
-                [AppPLTag('python'), AppSDKTag('celery'), PlatPanelTag("app_processes")],
+                [AppPLTag("python"), AppSDKTag("celery"), PlatPanelTag("app_processes")],
                 ["celery_processes", "python_processes", "what_is_processes"],
             ),
             (
-                [AppPLTag('python'), AppSDKTag('gevent'), PlatPanelTag("app_processes")],
+                [AppPLTag("python"), AppSDKTag("gevent"), PlatPanelTag("app_processes")],
                 ["python_processes", "what_is_processes"],
             ),
         ],
@@ -96,27 +96,27 @@ class TestDeploymentFailureHint:
     def test_render_links(self):
         hint = DeploymentFailureHint(
             matched_solutions_found=False,
-            possible_reason='reason',
-            helpers=[{'text': 'foo', 'link': '/link/'}, {'text': 'bar', 'link': '/foo/{module_name}/bar'}],
+            possible_reason="reason",
+            helpers=[{"text": "foo", "link": "/link/"}, {"text": "bar", "link": "/foo/{module_name}/bar"}],
         )
-        hint.render_links({'module_name': 'default'})
-        assert hint.helpers[1]['link'] == '/foo/default/bar'
+        hint.render_links({"module_name": "default"})
+        assert hint.helpers[1]["link"] == "/foo/default/bar"
 
 
 class TestGetFailureHint:
     def test_not_found_docs(self, bk_module):
         deployment = create_fake_deployment(bk_module)
 
-        with mock.patch('paasng.accessories.smart_advisor.utils.DocumentaryLinkAdvisor') as mocked_advisor:
+        with mock.patch("paasng.accessories.smart_advisor.utils.DocumentaryLinkAdvisor") as mocked_advisor:
             mocked_advisor().search_by_tags.return_value = []
             hint = get_failure_hint(deployment)
             assert hint.matched_solutions_found is False
 
     def test_found_docs(self, bk_module):
         deployment = create_fake_deployment(bk_module)
-        docs = [G(DocumentaryLink, title_zh_cn='解决方案1'), G(DocumentaryLink, title_zh_cn='解决方案2')]
+        docs = [G(DocumentaryLink, title_zh_cn="解决方案1"), G(DocumentaryLink, title_zh_cn="解决方案2")]
 
-        with mock.patch('paasng.accessories.smart_advisor.utils.DocumentaryLinkAdvisor') as mocked_advisor:
+        with mock.patch("paasng.accessories.smart_advisor.utils.DocumentaryLinkAdvisor") as mocked_advisor:
             mocked_advisor().search_by_tags.return_value = docs
             hint = get_failure_hint(deployment)
             _ = asdict(hint)

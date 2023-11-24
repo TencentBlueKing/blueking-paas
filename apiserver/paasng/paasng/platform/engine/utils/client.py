@@ -37,7 +37,7 @@ class LogLine(TypedDict):
 
 def polish_line(line: str) -> str:
     """Return the line with special characters removed"""
-    return line.replace('\x1b[1G', '')
+    return line.replace("\x1b[1G", "")
 
 
 def get_all_logs(d: Deployment) -> str:
@@ -51,10 +51,10 @@ def get_all_logs(d: Deployment) -> str:
     client = EngineDeployClient(engine_app)
     # NOTE: 当前暂不包含“准备阶段”和“检测部署结果”这两个步骤的日志，将在未来版本添加
     if d.build_process_id:
-        logs.extend([polish_line(obj['line']) for obj in client.list_build_proc_logs(d.build_process_id)])
+        logs.extend([polish_line(obj["line"]) for obj in client.list_build_proc_logs(d.build_process_id)])
     if d.pre_release_id:
-        logs.extend([polish_line(obj['line']) for obj in client.list_command_logs(d.pre_release_id)])
-    return "".join(logs) + "\n" + (d.err_detail or '')
+        logs.extend([polish_line(obj["line"]) for obj in client.list_command_logs(d.pre_release_id)])
+    return "".join(logs) + "\n" + (d.err_detail or "")
 
 
 class EngineDeployClient:
@@ -90,15 +90,15 @@ class EngineDeployClient:
     def list_command_logs(self, command_id: str) -> List[LogLine]:
         """List all logs of command"""
         command = self.wl_app.command_set.get(pk=command_id)
-        return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
+        return [{"stream": line.stream, "line": line.line, "created": line.created} for line in command.lines]
 
     def list_build_proc_logs(self, build_process_id: str) -> List[LogLine]:
         """Get current status of build process"""
         build_proc = BuildProcess.objects.get(pk=build_process_id)
 
         lines: List[LogLine] = []
-        for line in build_proc.output_stream.lines.all().order_by('created'):
-            lines.append({'stream': line.stream, 'line': line.line, 'created': line.created})
+        for line in build_proc.output_stream.lines.all().order_by("created"):
+            lines.append({"stream": line.stream, "line": line.line, "created": line.created})
         return lines
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):

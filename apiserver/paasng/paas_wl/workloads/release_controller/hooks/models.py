@@ -35,11 +35,11 @@ if TYPE_CHECKING:
 class CommandManager(models.Manager):
     def new(
         self,
-        build: 'Build',
+        build: "Build",
         type_: CommandType,
         command: str,
         operator: str,
-        config: Optional['Config'] = None,
+        config: Optional["Config"] = None,
     ):
         """Create a new command for the build.
 
@@ -57,7 +57,7 @@ class CommandManager(models.Manager):
             raise RuntimeError("Only call from app.command_set.")
 
         app = self.instance
-        latest_obj = self.filter(type=type_.value).order_by('-version').first()
+        latest_obj = self.filter(type=type_.value).order_by("-version").first()
         if latest_obj:
             new_version = latest_obj.version + 1
             cfg = config or latest_obj.config
@@ -84,24 +84,24 @@ class Command(UuidAuditedModel):
 
     type = models.CharField(choices=CommandType.get_choices(), max_length=32)
 
-    app = models.ForeignKey('api.App', on_delete=models.CASCADE, db_constraint=False)
+    app = models.ForeignKey("api.App", on_delete=models.CASCADE, db_constraint=False)
     version = models.PositiveIntegerField()
     command = models.TextField()
     exit_code = models.SmallIntegerField(null=True, help_text="容器结束状态码, -1 表示未知")
     status = models.CharField(choices=CommandStatus.get_choices(), max_length=12, default=CommandStatus.PENDING.value)
-    logs_was_ready_at = models.DateTimeField(null=True, help_text='Pod 状态就绪允许读取日志的时间')
-    int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断的时间')
-    output_stream = models.OneToOneField('api.OutputStream', null=True, on_delete=models.CASCADE)
+    logs_was_ready_at = models.DateTimeField(null=True, help_text="Pod 状态就绪允许读取日志的时间")
+    int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断的时间")
+    output_stream = models.OneToOneField("api.OutputStream", null=True, on_delete=models.CASCADE)
 
-    build = models.ForeignKey('api.Build', on_delete=models.CASCADE, null=True, db_constraint=False)
-    config = models.ForeignKey('api.Config', on_delete=models.CASCADE, db_constraint=False)
+    build = models.ForeignKey("api.Build", on_delete=models.CASCADE, null=True, db_constraint=False)
+    config = models.ForeignKey("api.Config", on_delete=models.CASCADE, db_constraint=False)
     operator = models.CharField(max_length=64, help_text="操作者(被编码的 username), 目前该字段无意义")
 
     objects = CommandManager()
 
     class Meta:
-        get_latest_by = 'created'
-        ordering = ['-created']
+        get_latest_by = "created"
+        ordering = ["-created"]
 
     @property
     def region(self):
@@ -109,7 +109,7 @@ class Command(UuidAuditedModel):
 
     @property
     def lines(self):
-        return self.output_stream.lines.all().order_by('created')
+        return self.output_stream.lines.all().order_by("created")
 
     @property
     def split_command(self) -> List[str]:
@@ -133,12 +133,12 @@ class Command(UuidAuditedModel):
     def set_logs_was_ready(self):
         """Mark current build was ready for reading logs from"""
         self.logs_was_ready_at = timezone.now()
-        self.save(update_fields=['logs_was_ready_at', 'updated'])
+        self.save(update_fields=["logs_was_ready_at", "updated"])
 
     def set_int_requested_at(self):
         """Set `int_requested_at` field"""
         self.int_requested_at = timezone.now()
-        self.save(update_fields=['int_requested_at', 'updated'])
+        self.save(update_fields=["int_requested_at", "updated"])
 
     def check_interruption_allowed(self) -> bool:
         """Check if current command allows interruptions"""

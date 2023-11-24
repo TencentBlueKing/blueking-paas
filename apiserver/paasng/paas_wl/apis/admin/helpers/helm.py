@@ -86,27 +86,27 @@ class HelmReleaseParser:
         :return: HelmRelease 对象
         """
         release = json.loads(gzip.decompress(base64.b64decode(base64.b64decode(self.secret.data.release))))
-        release_info = release['info']
-        chart_metadata = release['chart']['metadata']
+        release_info = release["info"]
+        chart_metadata = release["chart"]["metadata"]
 
         resources: List[Dict] = []
         if self.parse_manifest:
-            resources = list(yaml.safe_load_all(release['manifest']))
+            resources = list(yaml.safe_load_all(release["manifest"]))
 
         return HelmRelease(
-            name=release['name'],
-            namespace=release['namespace'],
-            version=release['version'],
+            name=release["name"],
+            namespace=release["namespace"],
+            version=release["version"],
             chart=HelmChart(
-                name=chart_metadata['name'],
-                version=chart_metadata['version'],
-                app_version=chart_metadata.get('appVersion'),
-                description=chart_metadata.get('description'),
+                name=chart_metadata["name"],
+                version=chart_metadata["version"],
+                app_version=chart_metadata.get("appVersion"),
+                description=chart_metadata.get("description"),
             ),
             deploy_result=DeployResult(
-                status=release_info['status'],
-                description=release_info['description'],
-                created_at=arrow.get(release_info['last_deployed']).datetime.isoformat(' ', 'seconds'),
+                status=release_info["status"],
+                description=release_info["description"],
+                created_at=arrow.get(release_info["last_deployed"]).datetime.isoformat(" ", "seconds"),
             ),
             resources=resources,
             secret_name=self.secret.metadata.name,
@@ -140,9 +140,9 @@ class WorkloadsDetector:
             return []
 
         return [
-            self._get_status(res['kind'], self.release.namespace, res['metadata']['name'])
+            self._get_status(res["kind"], self.release.namespace, res["metadata"]["name"])
             for res in self.release.resources
-            if res['kind'] in [KDeployment.kind, KStatefulSet.kind, KDaemonSet.kind]
+            if res["kind"] in [KDeployment.kind, KStatefulSet.kind, KDaemonSet.kind]
         ]
 
     def _get_status(self, kind: str, namespace: str, name: str) -> Dict[str, Any]:
@@ -155,29 +155,29 @@ class WorkloadsDetector:
 
         res = kres_client(self.client).get(namespace=namespace, name=name)
         return {
-            'kind': kind,
-            'name': name,
-            'status': gen_status_func(res),
-            'conditions': res.status.get('conditions', []),
+            "kind": kind,
+            "name": name,
+            "status": gen_status_func(res),
+            "conditions": res.status.get("conditions", []),
         }
 
     def _gen_deploy_status(self, res: ResourceInstance):
-        ready = res.status.get('readyReplicas', 0)
-        replicas = res.spec.get('replicas', 0)
-        updated = res.status.get('updatedReplicas', 0)
-        available = res.status.get('availableReplicas', 0)
-        return f'Ready: {ready}/{replicas}, Up-to-date: {updated}, Available: {available}'
+        ready = res.status.get("readyReplicas", 0)
+        replicas = res.spec.get("replicas", 0)
+        updated = res.status.get("updatedReplicas", 0)
+        available = res.status.get("availableReplicas", 0)
+        return f"Ready: {ready}/{replicas}, Up-to-date: {updated}, Available: {available}"
 
     def _gen_sts_status(self, res: ResourceInstance):
-        ready = res.status.get('readyReplicas', 0)
-        replicas = res.spec.get('replicas', 0)
-        updated = res.status.get('updatedReplicas', 0)
-        return f'Ready: {ready}/{replicas}, Up-to-date: {updated}'
+        ready = res.status.get("readyReplicas", 0)
+        replicas = res.spec.get("replicas", 0)
+        updated = res.status.get("updatedReplicas", 0)
+        return f"Ready: {ready}/{replicas}, Up-to-date: {updated}"
 
     def _gen_ds_status(self, res: ResourceInstance):
-        desired = res.status.get('desiredNumberScheduled', 0)
-        current = res.status.get('currentNumberScheduled', 0)
-        ready = res.status.get('numberReady', 0)
-        updated = res.status.get('updatedNumberScheduled', 0)
-        available = res.status.get('numberAvailable', 0)
-        return f'Desired: {desired}, Current: {current}, Ready: {ready}, Up-to-date: {updated}, Available: {available}'
+        desired = res.status.get("desiredNumberScheduled", 0)
+        current = res.status.get("currentNumberScheduled", 0)
+        ready = res.status.get("numberReady", 0)
+        updated = res.status.get("updatedNumberScheduled", 0)
+        available = res.status.get("numberAvailable", 0)
+        return f"Desired: {desired}, Current: {current}, Ready: {ready}, Up-to-date: {updated}, Available: {available}"

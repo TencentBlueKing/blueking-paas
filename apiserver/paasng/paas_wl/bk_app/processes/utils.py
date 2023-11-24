@@ -37,7 +37,7 @@ def list_unavailable_deployment(client: CoreDynamicClient) -> List:
 
     for deployment in deployment_list.items:
         # 判断 Deployment 是否由蓝鲸应用的工作负载
-        if not deployment.metadata.namespace.startswith('bkapp'):
+        if not deployment.metadata.namespace.startswith("bkapp"):
             continue
 
         # 只有当前就绪的副本数等于需要的副本数时, Deployment 才完成滚动更新

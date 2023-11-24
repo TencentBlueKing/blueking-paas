@@ -55,7 +55,7 @@ class TestQueryDefaultApps:
         results = query_default_apps_by_ids(ids=[bk_app.code], include_inactive_apps=False)
         item = results[bk_app.code]
         assert item.name == bk_app.name
-        assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, 'should use default logo by default'
+        assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, "should use default logo by default"
 
     def test_include_inactive_apps(self, bk_app):
         bk_app.is_active = False
@@ -66,7 +66,7 @@ class TestQueryDefaultApps:
         item = all_apps[bk_app.code]
         assert not active_apps
         assert item.name == bk_app.name
-        assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, 'should use default logo by default'
+        assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, "should use default logo by default"
 
 
 class TestQueryLegacyApps:
@@ -129,12 +129,12 @@ class TestGetContactInfo:
         assert contact_info.recent_deployment_operators == []
 
     @pytest.mark.parametrize(
-        'deployment_infos,recent_deployment_operators',
+        "deployment_infos,recent_deployment_operators",
         [
             # username, created_days_delta
-            ([('user-a1', 1), ('user-b2', 10)], ['user-a1', 'user-b2']),
+            ([("user-a1", 1), ("user-b2", 10)], ["user-a1", "user-b2"]),
             # 'b2' should ignore because it was created too early
-            ([('user-a1', 1), ('user-b2', 40)], ['user-a1']),
+            ([("user-a1", 1), ("user-b2", 40)], ["user-a1"]),
         ],
     )
     def test_recent_deployment_operators(
@@ -169,7 +169,11 @@ class TestLessCodeSystemAPIViewSet:
     @pytest.mark.parametrize(
         "credentials, expected_code, expected_content",
         [
-            ({}, 400, {'code': 'CANNOT_READ_INSTANCE_INFO', 'detail': '读取增强服务实例信息失败: 无法获取到有效的配置信息.'}),
+            (
+                {},
+                400,
+                {"code": "CANNOT_READ_INSTANCE_INFO", "detail": "读取增强服务实例信息失败: 无法获取到有效的配置信息."},
+            ),
             ({"A": "B"}, 200, {"credentials": {"A": "B"}}),
         ],
     )
@@ -187,8 +191,8 @@ class TestLessCodeSystemAPIViewSet:
         mixed_service_mgr.get_env_vars.return_value = credentials
 
         url = (
-            f'/sys/api/bkapps/applications/{bk_app.code}'
-            f'/modules/{bk_module.name}/envs/stag/lesscode/query_db_credentials'
+            f"/sys/api/bkapps/applications/{bk_app.code}"
+            f"/modules/{bk_module.name}/envs/stag/lesscode/query_db_credentials"
         )
 
         response = sys_lesscode_api_client.get(url)
@@ -212,35 +216,35 @@ class TestSysAddonsAPIViewSet:
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
         svc = G(
             Service,
-            name='mysql',
+            name="mysql",
             category=category,
             region=bk_app.region,
             logo_b64="dummy",
             config={
-                'specifications': [
-                    {'name': 'instance_type', 'description': '', 'recommended_value': 'ha'},
-                    {'name': 'version', 'description': '', 'recommended_value': '5.0.0'},
+                "specifications": [
+                    {"name": "instance_type", "description": "", "recommended_value": "ha"},
+                    {"name": "version", "description": "", "recommended_value": "5.0.0"},
                 ]
             },
         )
         # Create default plans
         G(
             Plan,
-            name='no-ha',
+            name="no-ha",
             service=svc,
-            config=json.dumps({'specifications': {'instance_type': 'no-ha'}}),
+            config=json.dumps({"specifications": {"instance_type": "no-ha"}}),
         )
         G(
             Plan,
-            name='ha',
+            name="ha",
             service=svc,
-            config=json.dumps({'specifications': {'instance_type': 'ha'}}),
+            config=json.dumps({"specifications": {"instance_type": "ha"}}),
         )
         return svc
 
     @pytest.fixture
     def url(self, bk_app, bk_module, bk_stag_env, service_name):
-        url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service_name}/'
+        url = f"/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service_name}/"
         return url
 
     def test_query_credentials(self, mixed_service_mgr, url, sys_api_client):
@@ -260,18 +264,18 @@ class TestSysAddonsAPIViewSet:
         "specs, expected_code",
         [
             ({}, 200),
-            ({'instance_type': 'no-ha'}, 200),
-            ({'instance_type': 'test'}, 400),
-            ({'instance_type': 'no-ha', 'version': '3.5'}, 400),
-            ({'unknown_spec_name': ''}, 400),
+            ({"instance_type": "no-ha"}, 200),
+            ({"instance_type": "test"}, 400),
+            ({"instance_type": "no-ha", "version": "3.5"}, 400),
+            ({"unknown_spec_name": ""}, 400),
         ],
     )
-    @mock.patch('paasng.accessories.servicehub.local.manager.LocalEngineAppInstanceRel.provision', return_value=None)
+    @mock.patch("paasng.accessories.servicehub.local.manager.LocalEngineAppInstanceRel.provision", return_value=None)
     def test_validate_specs_for_provision_service(
         self, provision, bk_app, bk_module, bk_stag_env, sys_api_client, service, specs, expected_code
     ):
-        url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service.name}/'
-        response = sys_api_client.post(url, data={'specs': specs})
+        url = f"/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service.name}/"
+        response = sys_api_client.post(url, data={"specs": specs})
         assert response.status_code == expected_code
 
 
@@ -282,14 +286,14 @@ class TestClusterNamespaceInfoViewSet:
         for wl_app in wl_apps:
             Cluster.objects.get_or_create(
                 name=wl_app.latest_config.cluster,
-                defaults={'annotations': {'bcs_cluster_id': generate_random_string()}},
+                defaults={"annotations": {"bcs_cluster_id": generate_random_string()}},
             )
 
     def test_list_by_code(self, bk_app, with_wl_apps, sys_api_client):
-        url = f'/sys/api/bkapps/applications/{bk_app.code}/cluster_namespaces/'
+        url = f"/sys/api/bkapps/applications/{bk_app.code}/cluster_namespaces/"
         response = sys_api_client.get(url)
 
         assert response.status_code == 200
         assert len(response.data) == 2
-        assert response.data[0]['namespace']
-        assert response.data[0]['bcs_cluster_id'] is not None
+        assert response.data[0]["namespace"]
+        assert response.data[0]["bcs_cluster_id"] is not None

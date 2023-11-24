@@ -42,7 +42,7 @@ class TestCreateDefaultModule(TestCase):
     def setUp(self):
         self.user = create_user()
         self.application = G(
-            Application, owner=self.user.pk, code='awesome-app', language='Python', region=settings.DEFAULT_REGION_NAME
+            Application, owner=self.user.pk, code="awesome-app", language="Python", region=settings.DEFAULT_REGION_NAME
         )
 
     def test_create_default_module(self):
@@ -57,45 +57,45 @@ class BaseCaseWithApps:
     @pytest.fixture(autouse=True)
     def setup_data(self):
         self.user = create_user()
-        self.another_user = create_user(username='another_user')
+        self.another_user = create_user(username="another_user")
         self.app1 = G(
             Application,
             owner=self.user.pk,
-            code='awesome-app',
-            language='Python',
+            code="awesome-app",
+            language="Python",
             region=settings.DEFAULT_REGION_NAME,
             type=ApplicationType.DEFAULT,
         )
         register_iam_after_create_application(self.app1)
-        create_default_module(self.app1, source_origin=SourceOrigin.AUTHORIZED_VCS, language='Python')
+        create_default_module(self.app1, source_origin=SourceOrigin.AUTHORIZED_VCS, language="Python")
         self.app_another1 = G(
             Application,
             owner=self.another_user.pk,
-            code='awesome-bk',
-            language='PHP',
+            code="awesome-bk",
+            language="PHP",
             region=settings.DEFAULT_REGION_NAME,
             type=ApplicationType.BK_PLUGIN,
         )
         register_iam_after_create_application(self.app_another1)
-        create_default_module(self.app_another1, source_origin=SourceOrigin.AUTHORIZED_VCS, language='PHP')
+        create_default_module(self.app_another1, source_origin=SourceOrigin.AUTHORIZED_VCS, language="PHP")
         self.app_another2 = G(
             Application,
             owner=self.another_user.pk,
-            code='gcloud',
-            language='Python',
+            code="gcloud",
+            language="Python",
             region=settings.DEFAULT_REGION_NAME,
         )
         register_iam_after_create_application(self.app_another2)
-        create_default_module(self.app_another2, source_origin=SourceOrigin.BK_LESS_CODE, language='Python')
+        create_default_module(self.app_another2, source_origin=SourceOrigin.BK_LESS_CODE, language="Python")
         self.app_another3 = G(
             Application,
             owner=self.another_user.pk,
-            code='awesome-php',
-            language='PHP',
+            code="awesome-php",
+            language="PHP",
             region=settings.DEFAULT_REGION_NAME,
         )
         register_iam_after_create_application(self.app_another3)
-        create_default_module(self.app_another3, source_origin=SourceOrigin.BK_LESS_CODE, language='PHP')
+        create_default_module(self.app_another3, source_origin=SourceOrigin.BK_LESS_CODE, language="PHP")
 
         # Add self.user as developer
         username = get_username_by_bkpaas_user_id(self.user.pk)
@@ -110,34 +110,34 @@ class TestApplicationManager(BaseCaseWithApps):
         assert set(apps) == {self.app1, self.app_another1, self.app_another2}
 
     def test_filter_by_userremove(self):
-        usernames = [m['username'] for m in fetch_application_members(self.app_another2.code)]
+        usernames = [m["username"] for m in fetch_application_members(self.app_another2.code)]
         remove_user_all_roles(self.app_another2.code, usernames)
 
         apps = Application.objects.filter_by_user(self.user)
         assert set(apps) == {self.app1, self.app_another1}
 
     def test_filter_language(self):
-        apps = Application.objects.filter_by_user(self.user).filter_by_languages(['Python'])
+        apps = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"])
         assert set(apps) == {self.app1, self.app_another2}
 
         # 给 app_another1 添加 Python 语言的模块后能过滤出来
         Module.objects.create(
             region=self.app_another1.region, application=self.app_another1, name="python", language="Python"
         )
-        apps_new = Application.objects.filter_by_user(self.user).filter_by_languages(['Python'])
+        apps_new = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"])
         assert set(apps_new) == {self.app1, self.app_another2, self.app_another1}
 
     def test_active_only(self):
-        apps = Application.objects.filter_by_user(self.user).filter_by_languages(['Python']).only_active()
+        apps = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"]).only_active()
         assert set(apps) == {self.app1, self.app_another2}
 
         self.app1.is_active = False
         self.app1.save()
-        apps = Application.objects.filter_by_user(self.user).filter_by_languages(['Python']).only_active()
+        apps = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"]).only_active()
         assert set(apps) == {self.app_another2}
 
     def test_search_by_code_or_name(self):
-        apps = Application.objects.filter_by_user(self.user).search_by_code_or_name('awesome')
+        apps = Application.objects.filter_by_user(self.user).search_by_code_or_name("awesome")
         assert set(apps) == {self.app1, self.app_another1}
 
     def test_filter_by_user(self):
@@ -155,8 +155,8 @@ class TestApplicationManager(BaseCaseWithApps):
 class TestUserApplication(BaseCaseWithApps):
     def test_filter(self):
         apps_filter = UserApplicationFilter(self.user)
-        assert set(apps_filter.filter(languages=['Python'])) == {self.app1, self.app_another2}
-        assert set(apps_filter.filter(search_term='awesome')) == {self.app1, self.app_another1}
+        assert set(apps_filter.filter(languages=["Python"])) == {self.app1, self.app_another2}
+        assert set(apps_filter.filter(search_term="awesome")) == {self.app1, self.app_another1}
 
     def test_filter_by_type_(self):
         apps_filter = UserApplicationFilter(self.user)

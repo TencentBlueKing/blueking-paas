@@ -35,18 +35,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # 按照 version 添加的顺序
-AVAILABLE_GENERATIONS: Dict[str, Type['MapperPack']] = OrderedDict(v1=V1Mapper, v2=V2Mapper)
+AVAILABLE_GENERATIONS: Dict[str, Type["MapperPack"]] = OrderedDict(v1=V1Mapper, v2=V2Mapper)
 
 
 class AppResVerManager:
     """应用资源版本管理器"""
 
-    def __init__(self, app: 'WlApp'):
+    def __init__(self, app: "WlApp"):
         self.app = app
         self._mapper_version_term: str = "mapper_version"
 
     @property
-    def curr_version(self) -> 'MapperPack':
+    def curr_version(self) -> "MapperPack":
         """获取当前版本"""
         latest_config = self.app.latest_config
 
@@ -69,9 +69,9 @@ class AppResVerManager:
 
         metadata = latest_config.metadata or {}
         metadata.update({self._mapper_version_term: version})
-        setattr(latest_config, 'metadata', metadata)
+        setattr(latest_config, "metadata", metadata)
 
-        latest_config.save(update_fields=['metadata', 'updated'])
+        latest_config.save(update_fields=["metadata", "updated"])
 
 
 def get_mapper_version(target: str, init_kwargs: Optional[dict] = None):
@@ -87,7 +87,7 @@ def get_latest_mapper_version(init_kwargs: Optional[dict] = None):
     return AVAILABLE_GENERATIONS[target](**init_kwargs or {})
 
 
-def get_proc_deployment_name(app: 'WlApp', process_type: str) -> str:
+def get_proc_deployment_name(app: "WlApp", process_type: str) -> str:
     """A shortcut function which gets the name of deployment resource for the given
     app and process_type.
     """
@@ -103,9 +103,9 @@ def get_proc_deployment_name(app: 'WlApp', process_type: str) -> str:
         version = release.version
         command_name = get_command_name(release.get_procfile()[process_type])
     except (Release.DoesNotExist, KeyError):
-        logger.warning('Unable to get the deployment name of %s, app: %s', process_type, app)
+        logger.warning("Unable to get the deployment name of %s, app: %s", process_type, app)
         version = 1
-        command_name = ''
+        command_name = ""
 
     proc_config = MapperProcConfig(app=app, type=process_type, version=version, command_name=command_name)
     return mapper_version.deployment(process=proc_config).name

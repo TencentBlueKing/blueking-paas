@@ -21,8 +21,8 @@ from typing import Optional
 import pytest
 
 from paas_wl.bk_app.applications.models.config import Config
-from paas_wl.workloads.release_controller.hooks.models import Command
 from paas_wl.utils.constants import CommandType
+from paas_wl.workloads.release_controller.hooks.models import Command
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -48,12 +48,12 @@ class TestPreReleaseHook:
     @pytest.mark.parametrize(
         "command, expected",
         [
-            ('echo 1', ['echo', '1']),
-            ('echo 1;', ['echo', '1;']),
-            ('echo "1 2"', ['echo', '1 2']),
+            ("echo 1", ["echo", "1"]),
+            ("echo 1;", ["echo", "1;"]),
+            ('echo "1 2"', ["echo", "1 2"]),
             # Bad case, 应该在 serializer 被过滤掉.
-            ('echo 1; echo 2;', ['echo', '1;', 'echo', '2;']),
-            ('start web', ['start', 'web']),
+            ("echo 1; echo 2;", ["echo", "1;", "echo", "2;"]),
+            ("start web", ["start", "web"]),
         ],
     )
     def test_get_command(self, hook_maker, command, expected):

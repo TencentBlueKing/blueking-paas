@@ -23,19 +23,19 @@ from . import views
 urlpatterns = [
     # 获取指定 Region 可用场景 SaaS 模板列表
     url(
-        r'^api/bkapps/(?P<tpl_type>[^/]+)/tmpls/$',
-        views.TemplateViewSet.as_view({'get': 'list_tmpls'}),
-        name='api.templates.list_tmpls',
+        r"^api/bkapps/(?P<tpl_type>[^/]+)/tmpls/$",
+        views.TemplateViewSet.as_view({"get": "list_tmpls"}),
+        name="api.templates.list_tmpls",
     ),
     # 获取指定 Region 可用场景 SaaS 模板列表
     url(
-        r'^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/$',
-        views.RegionTemplateViewSet.as_view({'get': 'list'}),
-        name='api.templates.list',
+        r"^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/$",
+        views.RegionTemplateViewSet.as_view({"get": "list"}),
+        name="api.templates.list",
     ),
     url(
-        r'^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/template/(?P<tpl_name>[^/]+)$',
-        views.RegionTemplateViewSet.as_view({'get': 'retrieve'}),
-        name='api.templates.detail',
+        r"^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/template/(?P<tpl_name>[^/]+)$",
+        views.RegionTemplateViewSet.as_view({"get": "retrieve"}),
+        name="api.templates.detail",
     ),
 ]

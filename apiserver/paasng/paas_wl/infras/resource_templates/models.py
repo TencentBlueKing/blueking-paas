@@ -36,13 +36,13 @@ class AppAddOnTemplate(UuidAuditedModel):
     type = models.IntegerField("挂件类型", default=AppAddOnType.SIMPLE_SIDECAR.value)
 
     class Meta:
-        unique_together = ('region', 'name')
+        unique_together = ("region", "name")
 
     @property
     def digest(self) -> str:
         return hashlib.sha256(self.spec).hexdigest()
 
-    def link_to_app(self, app: WlApp) -> 'AppAddOn':
+    def link_to_app(self, app: WlApp) -> "AppAddOn":
         add_on, _ = AppAddOn.objects.get_or_create(app=app, template=self)
         add_on.sync_with_template()
         return add_on
@@ -71,7 +71,7 @@ class AppAddOn(UuidAuditedModel):
     def sync_with_template(self):
         """与模版内容同步"""
         self.spec = self.template.spec
-        self.save(update_fields=['spec', 'updated'])
+        self.save(update_fields=["spec", "updated"])
 
     @property
     def digest(self) -> str:

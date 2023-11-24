@@ -25,14 +25,14 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application
 from paasng.accessories.publish.market import serializers
 from paasng.accessories.publish.market.models import MarketConfig, Product, Tag, get_all_corp_products
 from paasng.accessories.publish.market.protections import AppPublishPreparer
 from paasng.accessories.publish.market.signals import offline_market, release_to_market
+from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 
@@ -91,8 +91,8 @@ class ProductCombinedViewSet(ProductBaseViewSet):
         return application
 
     def update(self, request, *args, **kwargs):
-        partial = request.GET.get('partial', True)
-        kwargs['partial'] = partial
+        partial = request.GET.get("partial", True)
+        kwargs["partial"] = partial
         # update() method will fire an "product_create_or_updated" event which triggers
         # market syncing tasks.
         response = super().update(request, *args, **kwargs)
@@ -111,7 +111,7 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.filter(enabled=True).exclude(parent__enabled=False)
     serializer_class = serializers.TagSLZ
     pagination_class = None
-    lookup_field = 'id'
+    lookup_field = "id"
 
 
 class ProductStateViewSet(ProductBaseViewSet):
@@ -169,7 +169,7 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         if not AppPublishPreparer(application).all_matched:
             raise error_codes.RELEASED_MARKET_CONDITION_NOT_MET
         # 更新该应用的市场配置的 `enabled` 状态
-        MarketConfig.objects.update_enabled(application, request.data['enabled'])
+        MarketConfig.objects.update_enabled(application, request.data["enabled"])
         # 触发最新动态的变更
         signal = release_to_market if request.data["enabled"] else offline_market
         signal.send(sender=application, application=application, operator=self.request.user.pk)
@@ -201,6 +201,6 @@ class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         status = AppPublishPreparer(application).perform()
         return Response(
             serializers.PublishProtectionSLZ(
-                {'all_conditions_matched': not status.activated, 'failed_conditions': status.failed_conditions}
+                {"all_conditions_matched": not status.activated, "failed_conditions": status.failed_conditions}
             ).data
         )

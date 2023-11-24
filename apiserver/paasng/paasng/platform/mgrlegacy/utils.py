@@ -22,12 +22,12 @@ import typing
 from django.utils.functional import cached_property
 from rest_framework.exceptions import PermissionDenied
 
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
+from paasng.core.region.models import get_region
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.constants import LegacyAppTag, MigrationStatus
 from paasng.platform.mgrlegacy.models import MigrationProcess
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
@@ -41,7 +41,7 @@ def check_operation_perms(username, legacy_app_id, session):
     legacy_apps = AppDeveloperManger(session).get_apps_by_developer(username)
     _ids = [legacy_app.id for legacy_app in legacy_apps]
     if legacy_app_id not in _ids:
-        raise PermissionDenied('You are not allowed to do this operation.')
+        raise PermissionDenied("You are not allowed to do this operation.")
 
 
 class LegacyAppManager:
@@ -106,9 +106,9 @@ class LegacyAppManager:
     @cached_property
     def category(self):
         category_map = {
-            'is_ready_for_migration': 'todoMigrate',
-            'is_done_migration': 'doneMigrate',
-            'is_not_supported_migration': 'cannotMigrate',
+            "is_ready_for_migration": "todoMigrate",
+            "is_done_migration": "doneMigrate",
+            "is_not_supported_migration": "cannotMigrate",
         }
         for method, value in category_map.items():
             if getattr(self, method)():
@@ -175,11 +175,11 @@ class LegacyAppManager:
     def get_language(self):
         """将桌面的开发语言转换成v3上的开发语言, 两者大小写有些出入"""
         language_lower = self.legacy_app.language.lower()
-        if language_lower in ['python']:
+        if language_lower in ["python"]:
             return AppLanguage.PYTHON.value
-        elif language_lower in ['php']:
+        elif language_lower in ["php"]:
             return AppLanguage.PHP.value
-        elif language_lower in ['java']:
+        elif language_lower in ["java"]:
             return AppLanguage.JAVA.value
         else:
             raise ValueError(language_lower)
@@ -201,7 +201,7 @@ class LegacyAppManager:
         tmpl = region.basic_info.link_engine_app
 
         # WARNING: not compatible with multiple modules
-        name = 'bkapp-%s-%s' % (self.legacy_app.code, 'stag')
+        name = "bkapp-%s-%s" % (self.legacy_app.code, "stag")
         context = dict(region=region_name, name=name)
         return tmpl.format(**context)
 
@@ -216,6 +216,6 @@ class LegacyAppManager:
         tmpl = region.basic_info.link_engine_app
 
         # WARNING: not compatible with multiple modules
-        name = 'bkapp-%s-%s' % (self.legacy_app.code, 'prod')
+        name = "bkapp-%s-%s" % (self.legacy_app.code, "prod")
         context = dict(region=region_name, name=name)
         return tmpl.format(**context)

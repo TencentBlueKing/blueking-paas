@@ -20,9 +20,9 @@ from django.apps import AppConfig
 
 
 class ApplicationsAppConfig(AppConfig):
-    name = 'paas_wl.bk_app.applications'
+    name = "paas_wl.bk_app.applications"
     # Change label for backward compatibility
-    label = 'api'
+    label = "api"
 
     def ready(self):
         from . import handlers  # noqa

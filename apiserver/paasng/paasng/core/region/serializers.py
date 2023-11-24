@@ -28,7 +28,7 @@ if typing.TYPE_CHECKING:
 class RegionSerializer:
     """Serializer for Region object"""
 
-    def __init__(self, region: 'Region'):
+    def __init__(self, region: "Region"):
         self.region = region
 
     def serialize(self):

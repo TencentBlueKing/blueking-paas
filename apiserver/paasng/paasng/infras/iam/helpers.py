@@ -98,7 +98,7 @@ def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
         return [ApplicationRole.ADMINISTRATOR]
 
     user_roles = []
-    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
+    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
         if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
             user_roles.append(group.role)
 
@@ -113,7 +113,7 @@ def fetch_user_main_role(app_code: str, username: str) -> ApplicationRole:
     if username == settings.ADMIN_USERNAME:
         return ApplicationRole.ADMINISTRATOR
 
-    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
+    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
         if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
             return group.role
 
@@ -152,16 +152,16 @@ def fetch_application_members(app_code: str) -> List[Dict]:
     顺序：管理员 - 开发者 - 运营者
     """
     member_map: Dict[str, Dict] = {}
-    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
+    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
         for username in IAM_CLI.fetch_user_group_members(group.user_group_id):
             if username not in member_map:
                 member_map[username] = {
-                    'roles': [group.role],
-                    'username': username,
-                    'user': user_id_encoder.encode(username=username, provider_type=settings.USER_TYPE),
+                    "roles": [group.role],
+                    "username": username,
+                    "user": user_id_encoder.encode(username=username, provider_type=settings.USER_TYPE),
                 }
             else:
-                member_map[username]['roles'].append(group.role)
+                member_map[username]["roles"].append(group.role)
 
     return list(member_map.values())
 
@@ -169,7 +169,7 @@ def fetch_application_members(app_code: str) -> List[Dict]:
 def delete_builtin_user_groups(app_code: str):
     """删除应用的内建用户组"""
     user_groups = ApplicationUserGroup.objects.filter(app_code=app_code)
-    IAM_CLI.delete_user_groups(user_groups.values_list('user_group_id', flat=True))
+    IAM_CLI.delete_user_groups(user_groups.values_list("user_group_id", flat=True))
     user_groups.delete()
 
 

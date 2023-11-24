@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class SentryClient:
     def __init__(self, host, port, token):
         # default, just one organization
-        self.organization = 'sentry'
+        self.organization = "sentry"
         self.base_url = "http://{host}:{port}".format(host=host, port=port)
         self.headers = {"Content-Type": "application/json", "Authorization": "Bearer {token}".format(token=token)}
 
@@ -76,7 +76,7 @@ class SentryClient:
 
     # ================= team =================
     def create_team(self, team):
-        method = 'POST'
+        method = "POST"
         path = "/api/0/organizations/{organization}/teams/".format(organization=self.organization)
         data = {"slug": team, "name": team}
         ok, result = self._request(method, path, data)
@@ -84,7 +84,7 @@ class SentryClient:
 
     # ================= project =================
     def create_project(self, team, project):
-        method = 'POST'
+        method = "POST"
         path = "/api/0/teams/{organization}/{team}/projects/".format(organization=self.organization, team=team)
         data = {"slug": project, "name": project}
         ok, result = self._request(method, path, data)
@@ -96,19 +96,19 @@ class SentryClient:
         if ok and len(result):
             key = result[0]
             client_key_info = {
-                'dsn_prefix': "{public}:{secret}".format(public=key['public'], secret=key['secret']),
-                'projectId': key['projectId'],
+                "dsn_prefix": "{public}:{secret}".format(public=key["public"], secret=key["secret"]),
+                "projectId": key["projectId"],
             }
             return True, client_key_info
         return False, None
 
     def if_client_key_exists(self, project):
-        method = 'GET'
+        method = "GET"
         path = "/api/0/projects/{organization}/{project}/keys/".format(organization=self.organization, project=project)
         return self._get_client_key(method, path, {})
 
     def create_project_client_key(self, project):
-        method = 'POST'
+        method = "POST"
         path = "/api/0/projects/{organization}/{project}/keys/".format(organization=self.organization, project=project)
         data = {"name": "default"}
 
@@ -121,7 +121,7 @@ class SentryClient:
 
     # ================= user =================
     def create_member(self, username):
-        method = 'POST'
+        method = "POST"
         path = "/api/0/organizations/{organization}/members/".format(organization=self.organization)
         data = {"username": username}
         ok, result = self._request(method, path, data)
@@ -136,19 +136,19 @@ class SentryClient:
         return ok
 
     def add_team_member(self, team, member_id):
-        method = 'POST'
+        method = "POST"
         return self._http_team_member(method, team, member_id)
 
     def delete_team_member(self, team, member_id):
-        method = 'DELETE'
+        method = "DELETE"
         return self._http_team_member(method, team, member_id)
 
     def get_team_members(self, team):
-        method = 'GET'
+        method = "GET"
         path = "/api/0/teams/{organization}/{team}/members/".format(organization=self.organization, team=team)
         ok, result = self._request(method, path, {})
 
         if ok:
-            members = [(i['id'], i['user']['name']) for i in result if i['role'] == 'member']
+            members = [(i["id"], i["user"]["name"]) for i in result if i["role"] == "member"]
             return True, members
         return False, None

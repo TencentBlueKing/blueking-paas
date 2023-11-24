@@ -130,7 +130,7 @@ class BinaryTarClient(BasePackageClient):
             )
             stdout, stderr = p.communicate()
             if p.returncode != 0:
-                raise RuntimeError(f'Failed to extractfile from the tarball, error: {stderr!r}')
+                raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
             return (temp_dir / filename).read_bytes()
 
     def export(self, local_path: str):
@@ -152,7 +152,7 @@ class BinaryTarClient(BasePackageClient):
         )
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            raise RuntimeError(f'Failed to read from the tarball, error: {stderr!r}')
+            raise RuntimeError(f"Failed to read from the tarball, error: {stderr!r}")
         items = stdout.strip().decode().split("\n")
         return items if not tarfile_like else [item.rstrip(os.path.sep) for item in items]
 
@@ -164,7 +164,7 @@ class ZipClient(BasePackageClient):
         self,
         file_path: Optional[str] = None,
         file_obj: Optional[IO[bytes]] = None,
-        mode: Literal['r', 'w', 'x', 'a'] = "r",
+        mode: Literal["r", "w", "x", "a"] = "r",
         relative_path: str = "./",
     ):
         """从本地文件或 IO Stream 对象创建操作该 Zip 包的客户端

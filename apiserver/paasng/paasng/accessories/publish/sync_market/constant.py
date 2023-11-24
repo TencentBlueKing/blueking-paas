@@ -53,15 +53,15 @@ class PVTimeType(ChoicesEnum):
     TYPE_CUSTOMIZED = "customized"
 
     _choices_labels = (
-        (TYPE_15m, u"15分钟"),
-        (TYPE_30m, u"30钟"),
-        (TYPE_1h, u"1小时"),
-        (TYPE_4h, u"4小时"),
-        (TYPE_12h, u"12小时"),
-        (TYPE_1d, u"1天"),
-        (TYPE_3d, u"3天"),
-        (TYPE_7d, u"7天"),
-        (TYPE_CUSTOMIZED, u"自定义"),
+        (TYPE_15m, "15分钟"),
+        (TYPE_30m, "30钟"),
+        (TYPE_1h, "1小时"),
+        (TYPE_4h, "4小时"),
+        (TYPE_12h, "12小时"),
+        (TYPE_1d, "1天"),
+        (TYPE_3d, "3天"),
+        (TYPE_7d, "7天"),
+        (TYPE_CUSTOMIZED, "自定义"),
     )
 
 

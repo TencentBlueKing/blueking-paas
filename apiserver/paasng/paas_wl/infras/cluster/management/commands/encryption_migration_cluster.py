@@ -22,4 +22,4 @@ from paasng.utils.encrypt_cmd import ReEncryptCommand
 class Command(ReEncryptCommand):
     help = "cluster 存量数据加密迁移"
 
-    app_label = 'cluster'
+    app_label = "cluster"

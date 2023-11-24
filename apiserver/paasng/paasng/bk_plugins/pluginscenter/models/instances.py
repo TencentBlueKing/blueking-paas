@@ -56,7 +56,7 @@ StagesShortcutField = make_json_field("StagesShortcutField", List[PlainStageInfo
 ItsmDetailField = make_json_field("ItsmDetailField", ItsmDetail)
 
 
-def generate_plugin_logo_filename(instance: 'PluginInstance', filename: str) -> str:
+def generate_plugin_logo_filename(instance: "PluginInstance", filename: str) -> str:
     """Generate uploaded logo filename"""
     suffix = PurePath(filename).suffix
     name = f"{instance.pd.identifier}/{instance.id}_{time.time_ns()}{suffix}"
@@ -73,10 +73,13 @@ class PluginInstance(UuidAuditedModel):
     extra_fields = models.JSONField(verbose_name="额外字段")
 
     language = models.CharField(verbose_name="开发语言", max_length=16, help_text="冗余字段, 用于减少查询次数")
-    repo_type = models.CharField(verbose_name='源码托管类型', max_length=16, null=True)
+    repo_type = models.CharField(verbose_name="源码托管类型", max_length=16, null=True)
     repository = models.CharField(max_length=255)
     status = models.CharField(
-        verbose_name="插件状态", max_length=16, choices=PluginStatus.get_choices(), default=PluginStatus.WAITING_APPROVAL
+        verbose_name="插件状态",
+        max_length=16,
+        choices=PluginStatus.get_choices(),
+        default=PluginStatus.WAITING_APPROVAL,
     )
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
@@ -86,8 +89,8 @@ class PluginInstance(UuidAuditedModel):
         storage=plugin_logo_storage,
         upload_to=generate_plugin_logo_filename,
         processors=[ResizeToFill(144, 144)],
-        format='PNG',
-        options={'quality': 95},
+        format="PNG",
+        options={"quality": 95},
         default=None,
     )
 
@@ -119,7 +122,7 @@ class PluginMarketInfo(AuditedModel):
 
 
 class PluginReleaseVersionManager(models.Manager):
-    def get_latest_succeeded(self, plugin: Optional['PluginInstance'] = None) -> Optional['PluginRelease']:
+    def get_latest_succeeded(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
         """获取最后一个成功发布的版本"""
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
@@ -129,11 +132,11 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(plugin=plugin, status=PluginReleaseStatus.SUCCESSFUL).latest('created')
+            return self.filter(plugin=plugin, status=PluginReleaseStatus.SUCCESSFUL).latest("created")
         except self.model.DoesNotExist:
             return None
 
-    def get_ongoing_release(self, plugin: Optional['PluginInstance'] = None) -> Optional['PluginRelease']:
+    def get_ongoing_release(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
         """获取正在发布的版本"""
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
@@ -143,11 +146,11 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_ongoing_release() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(plugin=plugin, status__in=PluginReleaseStatus.running_status()).latest('created')
+            return self.filter(plugin=plugin, status__in=PluginReleaseStatus.running_status()).latest("created")
         except self.model.DoesNotExist:
             return None
 
-    def get_latest_release(self, plugin: Optional['PluginInstance'] = None) -> Optional['PluginRelease']:
+    def get_latest_release(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
         """获取最新的版本"""
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
@@ -160,7 +163,7 @@ class PluginReleaseVersionManager(models.Manager):
             return ongoing_release
 
         try:
-            return self.filter(plugin=plugin).latest('created')
+            return self.filter(plugin=plugin).latest("created")
         except self.model.DoesNotExist:
             return None
 
@@ -172,10 +175,12 @@ class PluginRelease(AuditedModel):
         PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="all_versions"
     )
     type = models.CharField(verbose_name="版本类型(正式/测试)", max_length=16)
-    version = models.CharField(verbose_name='版本号', max_length=255)
+    version = models.CharField(verbose_name="版本号", max_length=255)
     comment = models.TextField(verbose_name="版本日志")
     extra_fields = models.JSONField(verbose_name="额外字段")
-    semver_type = models.CharField(verbose_name="语义化版本类型", max_length=16, null=True, help_text="该字段只用于自动生成版本号的插件")
+    semver_type = models.CharField(
+        verbose_name="语义化版本类型", max_length=16, null=True, help_text="该字段只用于自动生成版本号的插件"
+    )
 
     source_location = models.CharField(verbose_name="代码仓库地址", max_length=2048)
     source_version_type = models.CharField(verbose_name="代码版本类型(branch/tag)", max_length=128, null=True)
@@ -185,7 +190,9 @@ class PluginRelease(AuditedModel):
     current_stage = models.OneToOneField(
         "PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True
     )
-    stages_shortcut: List[PlainStageInfo] = StagesShortcutField(help_text="发布阶段简易索引(保证顺序可靠)", null=True, default=list)
+    stages_shortcut: List[PlainStageInfo] = StagesShortcutField(
+        help_text="发布阶段简易索引(保证顺序可靠)", null=True, default=list
+    )
     status = models.CharField(default=PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")

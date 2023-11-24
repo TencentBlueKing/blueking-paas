@@ -52,7 +52,9 @@ class ElasticSearchParams(BaseModel):
     builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
     builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
 
-    filedMatcher: Optional[str] = Field(default=None, description="字段设置的白名单正则匹配表达式, 设置该字段可将某些字段从「字段设置」列表中隐藏")
+    filedMatcher: Optional[str] = Field(
+        default=None, description="字段设置的白名单正则匹配表达式, 设置该字段可将某些字段从「字段设置」列表中隐藏"
+    )
 
 
 @register
@@ -160,7 +162,10 @@ class CustomCollectorConfig(UuidAuditedModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False, db_index=True)
 
     name_en = models.CharField(
-        _("自定义采集项名称"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, db_index=True
+        _("自定义采集项名称"),
+        help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*",
+        max_length=50,
+        db_index=True,
     )
     collector_config_id = models.BigIntegerField(_("采集配置ID"), help_text="采集配置ID", db_index=True)
     index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用", null=True)

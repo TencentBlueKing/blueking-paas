@@ -22,7 +22,7 @@ from paasng.utils.addons import AddonsUrlRegister, PlugableAppConfig
 
 
 class MgrlegacyConfig(PlugableAppConfig):
-    name = 'paasng.platform.mgrlegacy'
+    name = "paasng.platform.mgrlegacy"
 
 
 def contribute_to_app(app_name):

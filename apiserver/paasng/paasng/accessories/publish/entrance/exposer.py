@@ -83,7 +83,7 @@ def update_exposed_url_type_to_subdomain(module: Module):
         return
 
     module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
-    module.save(update_fields=['exposed_url_type'])
+    module.save(update_fields=["exposed_url_type"])
 
     refresh_module_domains(module)
 

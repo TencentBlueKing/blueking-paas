@@ -46,18 +46,18 @@ class ProcServiceSLZ(serializers.Serializer):
     process_type = serializers.CharField(read_only=True)
     ports = ProcServicePortSLZ(many=True)
 
-    def validate_ports(self, ports: List['PServicePortPair']):
+    def validate_ports(self, ports: List["PServicePortPair"]):
         if not ports:
-            raise ValidationError(_('内部服务端口列表 ports 不能为空'))
+            raise ValidationError(_("内部服务端口列表 ports 不能为空"))
 
         # Check if field values are duplicated
         seen_fields: Dict[str, set] = defaultdict(set)
-        should_unique_fields = {'name', 'port'}
+        should_unique_fields = {"name", "port"}
         for port_pair in ports:
             for field in should_unique_fields:
                 value = getattr(port_pair, field)
                 if value in seen_fields[field]:
-                    raise ValidationError(_('端口列表中发现重复值 {value}').format(value=value))
+                    raise ValidationError(_("端口列表中发现重复值 {value}").format(value=value))
 
                 seen_fields[field].add(value)
         return ports
@@ -68,26 +68,26 @@ class ProcIngressSLZ(serializers.Serializer):
     service_port_name = serializers.CharField(required=True)
 
     def _get_service(self, service_name):
-        app = self.context['app']
+        app = self.context["app"]
         try:
             return service_kmodel.get(app, service_name)
         except AppEntityNotFound:
-            raise ValidationError(f'内部服务 {service_name} 不存在')
+            raise ValidationError(f"内部服务 {service_name} 不存在")
 
     def validate(self, data):
-        port_name = data['service_port_name']
-        service = self._get_service(data['service_name'])
+        port_name = data["service_port_name"]
+        service = self._get_service(data["service_name"])
         if not any(port.name == port_name for port in service.ports):
-            raise ValidationError(f'内部服务端口 {port_name} 不存在')
+            raise ValidationError(f"内部服务端口 {port_name} 不存在")
         return data
 
 
 def validate_cert(d):
     """Validate certificate content"""
     try:
-        cryptography.x509.load_pem_x509_certificate(bytes(d, 'utf-8'))
+        cryptography.x509.load_pem_x509_certificate(bytes(d, "utf-8"))
     except ValueError:
-        raise ValidationError('certificate is invalid, please check.')
+        raise ValidationError("certificate is invalid, please check.")
 
 
 class AppDomainSharedCertSLZ(serializers.ModelSerializer):
@@ -105,4 +105,4 @@ class UpdateAppDomainSharedCertSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppDomainSharedCert
-        fields = ['cert_data', 'key_data', 'auto_match_cns']
+        fields = ["cert_data", "key_data", "auto_match_cns"]

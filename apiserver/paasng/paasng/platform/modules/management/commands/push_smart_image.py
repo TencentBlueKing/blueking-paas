@@ -36,8 +36,8 @@ class Command(BaseCommand):
     help = "管理 S-Mart 基础镜像"
 
     def add_arguments(self, parser):
-        parser.add_argument('--image', required=True, help="universal image")
-        parser.add_argument('--dry-run', dest="dry_run", type=str2bool, help="dry run", default=False)
+        parser.add_argument("--image", required=True, help="universal image")
+        parser.add_argument("--dry-run", dest="dry_run", type=str2bool, help="dry run", default=False)
 
     def handle(self, image: str, dry_run: bool, *args, **options):
         if dry_run:

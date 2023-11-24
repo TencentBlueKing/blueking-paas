@@ -57,14 +57,14 @@ class DeployProcedure:
     :param title: title of current step
     """
 
-    TITLE_PREFIX: str = '正在'
+    TITLE_PREFIX: str = "正在"
 
     def __init__(
         self,
         stream: DeployStream,
         deployment: Optional[Deployment],
         title: str,
-        phase: 'DeployPhase',
+        phase: "DeployPhase",
     ):
         self.stream = stream
         self.deployment = deployment
@@ -73,7 +73,7 @@ class DeployProcedure:
         self.title = _(title)
 
     def __enter__(self):
-        self.stream.write_title(f'{self.TITLE_PREFIX}{self.title}')
+        self.stream.write_title(f"{self.TITLE_PREFIX}{self.title}")
 
         if self.step_obj:
             self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
@@ -92,7 +92,7 @@ class DeployProcedure:
         # user experiences.
         is_known_exc = exc_type in [DeployShouldAbortError, ProvisionInstanceError, HandleAppDescriptionError]
         if is_known_exc:
-            msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
+            msg = _("步骤 [{title}] 出错了，原因：{reason}。").format(
                 title=Style.Title(self.title), reason=Style.Warning(exc_val)
             )
         else:
@@ -114,7 +114,7 @@ class DeployProcedure:
             self.phase.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
         return False
 
-    def _get_step_obj(self, title: str) -> Optional['DeployStepModel']:
+    def _get_step_obj(self, title: str) -> Optional["DeployStepModel"]:
         if not self.deployment:
             return None
 
@@ -129,13 +129,13 @@ class DeployProcedure:
 class DeploymentStateMgr:
     """Deployment state manager"""
 
-    def __init__(self, deployment: Deployment, phase_type: 'DeployPhaseTypes', stream: Optional[DeployStream] = None):
+    def __init__(self, deployment: Deployment, phase_type: "DeployPhaseTypes", stream: Optional[DeployStream] = None):
         self.deployment = deployment
         self.stream = stream or get_default_stream(deployment)
         self.phase_type = phase_type
 
     @classmethod
-    def from_deployment_id(cls, deployment_id: str, phase_type: 'DeployPhaseTypes'):
+    def from_deployment_id(cls, deployment_id: str, phase_type: "DeployPhaseTypes"):
         deployment = Deployment.objects.get(pk=deployment_id)
         return cls(deployment=deployment, phase_type=phase_type)
 
@@ -146,7 +146,7 @@ class DeploymentStateMgr:
     def update(self, **fields):
         return self.deployment.update_fields(**fields)
 
-    def finish(self, status: JobStatus, err_detail: str = '', write_to_stream: bool = True):
+    def finish(self, status: JobStatus, err_detail: str = "", write_to_stream: bool = True):
         """finish a deployment
 
         :param status: the final status of deployment
@@ -154,7 +154,7 @@ class DeploymentStateMgr:
         :param write_to_stream: write the raw error detail message to stream, default to True
         """
         if status not in JobStatus.get_finished_states():
-            raise ValueError(f'{status} is not a valid finished status')
+            raise ValueError(f"{status} is not a valid finished status")
         if write_to_stream and err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
@@ -168,7 +168,7 @@ class DeploymentStateMgr:
         if status == JobStatus.SUCCESSFUL and self.deployment.app_environment.is_offlined:
             # 任意部署任务成功，下架状态都需要被更新
             self.deployment.app_environment.is_offlined = False
-            self.deployment.app_environment.save(update_fields=['is_offlined'])
+            self.deployment.app_environment.save(update_fields=["is_offlined"])
 
         # Release deploy lock
         try:
@@ -201,23 +201,23 @@ class DeploymentCoordinator:
     # The lock will be released anyway after {DEFAULT_LOCK_TIMEOUT} seconds
     DEFAULT_LOCK_TIMEOUT = 15 * 60
     # A placeholder value for lock
-    DEFAULT_TOKEN = 'None'
+    DEFAULT_TOKEN = "None"
     # If not any poll in 90s, assume the poller is failed
     POLLING_TIMEOUT = 90
 
     def __init__(
         self,
         env: ModuleEnvironment,
-        type: str = 'deploy',
+        type: str = "deploy",
         timeout: Optional[float] = None,
         redis_db: Optional[redis.Redis] = None,
     ):
         self.env = env
         self.redis = redis_db or get_default_redis()
 
-        self.key_name_lock = f'env:{env.pk}:{type}:lock'
-        self.key_name_deployment = f'env:{env.pk}:{type}:deployment'
-        self.key_name_latest_polling_time = f'env:{env.pk}:{type}:latest_polling_time'
+        self.key_name_lock = f"env:{env.pk}:{type}:lock"
+        self.key_name_deployment = f"env:{env.pk}:{type}:deployment"
+        self.key_name_latest_polling_time = f"env:{env.pk}:{type}:latest_polling_time"
         # use milliseconds
         self.timeout_ms = int((timeout or self.DEFAULT_LOCK_TIMEOUT) * 1000)
 
@@ -240,7 +240,7 @@ class DeploymentCoordinator:
                 deployment_id = pipe.get(self.key_name_deployment)
                 if deployment_id and (force_text(deployment_id) != str(expected_deployment.pk)):
                     raise ValueError(
-                        f'deployment lock holder mismatch, found: {deployment_id}, expected: {expected_deployment.pk}'
+                        f"deployment lock holder mismatch, found: {deployment_id}, expected: {expected_deployment.pk}"
                     )
 
             pipe.delete(self.key_name_lock)

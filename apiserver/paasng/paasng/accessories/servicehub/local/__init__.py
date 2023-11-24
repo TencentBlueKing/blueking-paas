@@ -18,4 +18,4 @@ to the current version of the project delivered to anyone in the future.
 """
 from .manager import LocalServiceBinder, LocalServiceMgr, LocalServiceObj
 
-__all__ = ['LocalServiceMgr', 'LocalServiceBinder', 'LocalServiceObj']
+__all__ = ["LocalServiceMgr", "LocalServiceBinder", "LocalServiceObj"]

@@ -87,8 +87,8 @@ def make_subdict(d: Dict, allowed_keys: Collection):
 # Make a global session object to turn on connection pooling
 _requests_session = requests.Session()
 _adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
-_requests_session.mount('http://', _adapter)
-_requests_session.mount('https://', _adapter)
+_requests_session.mount("http://", _adapter)
+_requests_session.mount("https://", _adapter)
 
 
 def get_requests_session() -> requests.Session:

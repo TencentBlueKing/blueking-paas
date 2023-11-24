@@ -44,7 +44,7 @@ def get_scheduler_client(cluster_name: str):
     return K8sScheduler.from_cluster_name(cluster_name)
 
 
-def get_scheduler_client_by_app(app: 'WlApp') -> 'K8sScheduler':
+def get_scheduler_client_by_app(app: "WlApp") -> "K8sScheduler":
     """A wrapper function to make K8sSchedulerClient from a raw client object"""
     return K8sScheduler(
         get_client_by_app(app),
@@ -54,7 +54,7 @@ def get_scheduler_client_by_app(app: 'WlApp') -> 'K8sScheduler':
     )
 
 
-def get_schedule_config(app: 'WlApp') -> 'Schedule':
+def get_schedule_config(app: "WlApp") -> "Schedule":
     """Get the schedule config of an app."""
     return Schedule(
         cluster_name=get_cluster_by_app(app).name,

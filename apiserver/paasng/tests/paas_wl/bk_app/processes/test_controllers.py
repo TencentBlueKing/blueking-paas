@@ -84,9 +84,9 @@ def test_list_processes(bk_stag_env, wl_app, wl_release, mock_reader):
     )
 
     web_proc = make_process(wl_app, "web")
-    web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+    web_proc.instances = [Instance(process_type="web", app=wl_app, name="web")]
     worker_proc = make_process(wl_app, "worker")
-    worker_proc.instances = [Instance(process_type='worker', app=wl_app, name='worker')]
+    worker_proc.instances = [Instance(process_type="worker", app=wl_app, name="worker")]
     assert list_processes(bk_stag_env).processes == [web_proc, worker_proc]
 
 

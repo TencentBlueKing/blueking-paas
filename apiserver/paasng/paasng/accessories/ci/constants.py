@@ -20,4 +20,4 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
 class CIBackend(str, StructuredEnum):
-    CODECC = EnumField('codecc', label='CodeCC')
+    CODECC = EnumField("codecc", label="CodeCC")

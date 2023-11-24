@@ -37,10 +37,10 @@ if TYPE_CHECKING:
     from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 
 
-class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
+class ProcAutoscalingDeserializer(AppEntityDeserializer["ProcAutoscaling"]):
     """Deserializer for ProcAutoscaling"""
 
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ProcAutoscaling":
         """Get scaling config from gpa spec
 
         :param app: workloads app
@@ -52,11 +52,11 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         elif app.type == WlAppType.CLOUD_NATIVE:
             proc_autoscaling = self._deserialize_for_cnative_app(app, kube_data)
         else:
-            raise ValueError('unsupported app type: {}'.format(app.type))
+            raise ValueError("unsupported app type: {}".format(app.type))
 
         return proc_autoscaling
 
-    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
+    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> "ProcAutoscaling":
         """deserialize process auto scaling config for default type(Heroku) app"""
         return self.entity_type(
             app=app,
@@ -73,9 +73,9 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
             ),
         )
 
-    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
+    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> "ProcAutoscaling":
         """deserialize process auto scaling config for cloud native type app"""
-        raise NotImplementedError('work in progress')
+        raise NotImplementedError("work in progress")
 
     def _parse_metrics(self, gpa: ResourceInstance) -> List[MetricSpec]:
         """Parse metrics for general pod autoscaler resource"""
@@ -83,7 +83,7 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         for m in gpa.spec.metric.metrics:
             # TODO 目前 MetricSource 只支持 Resources，需要支持 Pods & Object
             if m.type != ScalingMetricSourceType.RESOURCE:
-                raise ValueError('unsupported metric source type: {}'.format(m.type))
+                raise ValueError("unsupported metric source type: {}".format(m.type))
 
             metrics.append(
                 MetricSpec(
@@ -105,51 +105,51 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         }
 
         if (target_type, res_name) not in type_name_metric_map:
-            raise ValueError(f'unsupported metric res_name {res_name} and target type: {target_type}')
+            raise ValueError(f"unsupported metric res_name {res_name} and target type: {target_type}")
 
         return type_name_metric_map[(target_type, res_name)]
 
     def _get_metric_value(self, metric_target: Dict[str, Union[str, int]]) -> str:
         """将 gpa 配置中的 averageValue/averageUtilization 转换为统一的数值"""
-        metric_type = metric_target['type']
+        metric_type = metric_target["type"]
         if metric_type == ScalingMetricTargetType.UTILIZATION:
-            return str(metric_target['averageUtilization'])
+            return str(metric_target["averageUtilization"])
 
         if metric_type == ScalingMetricTargetType.AVERAGE_VALUE:
-            return str(metric_target['averageValue'])
+            return str(metric_target["averageValue"])
 
-        raise ValueError('unsupported metric type: {}'.format(metric_type))
+        raise ValueError("unsupported metric type: {}".format(metric_type))
 
 
-class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
+class ProcAutoscalingSerializer(AppEntitySerializer["ProcAutoscaling"]):
     """Serializer for process auto scaling"""
 
-    api_version = 'autoscaling.tkex.tencent.com/v1alpha1'
+    api_version = "autoscaling.tkex.tencent.com/v1alpha1"
 
-    def serialize(self, obj: 'ProcAutoscaling', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: "ProcAutoscaling", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         manifest: Dict[str, Any] = {
-            'apiVersion': self.get_apiversion(),
-            'kind': obj.Meta.kres_class.kind,
-            'metadata': {
-                'namespace': obj.app.namespace,
-                'name': obj.name,
-                'annotations': {
+            "apiVersion": self.get_apiversion(),
+            "kind": obj.Meta.kres_class.kind,
+            "metadata": {
+                "namespace": obj.app.namespace,
+                "name": obj.name,
+                "annotations": {
                     PROCESS_NAME_KEY: obj.name,
                     GPA_COMPUTE_BY_LIMITS_ANNO_KEY: "true",
                 },
             },
-            'spec': {
-                'minReplicas': obj.spec.min_replicas,
-                'maxReplicas': obj.spec.max_replicas,
-                'scaleTargetRef': {
-                    'apiVersion': obj.target_ref.api_version,
-                    'kind': obj.target_ref.kind,
-                    'name': obj.target_ref.name,
+            "spec": {
+                "minReplicas": obj.spec.min_replicas,
+                "maxReplicas": obj.spec.max_replicas,
+                "scaleTargetRef": {
+                    "apiVersion": obj.target_ref.api_version,
+                    "kind": obj.target_ref.kind,
+                    "name": obj.target_ref.name,
                 },
-                'metric': {
-                    'metrics': [
+                "metric": {
+                    "metrics": [
                         # TODO 目前 MetricSource 只支持 Resources，需要支持 Pods & Object
-                        {'type': 'Resource', 'resource': self._gen_resource_metric_source(metric)}
+                        {"type": "Resource", "resource": self._gen_resource_metric_source(metric)}
                         for metric in obj.spec.metrics
                     ]
                 },
@@ -158,7 +158,7 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         return manifest
 
     @staticmethod
-    def _gen_resource_metric_source(spec: 'MetricSpec') -> Dict[str, Any]:
+    def _gen_resource_metric_source(spec: "MetricSpec") -> Dict[str, Any]:
         """
         根据指定的指标信息，生成对应的 k8s ResourceMetricSource
 
@@ -169,21 +169,21 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         value: Union[str, int]
         if spec.metric == ScalingMetric.CPU_UTILIZATION:
             metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.UTILIZATION
-            value_key, value = 'averageUtilization', int(spec.value)
+            value_key, value = "averageUtilization", int(spec.value)
 
         elif spec.metric == ScalingMetric.MEMORY_UTILIZATION:
             metric_name, target_type = ScalingMetricName.MEMORY, ScalingMetricTargetType.UTILIZATION
-            value_key, value = 'averageUtilization', int(spec.value)
+            value_key, value = "averageUtilization", int(spec.value)
 
         elif spec.metric == ScalingMetric.CPU_AVERAGE_VALUE:
             metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.AVERAGE_VALUE
-            value_key, value = 'averageValue', spec.value
+            value_key, value = "averageValue", spec.value
 
         elif spec.metric == ScalingMetric.MEMORY_AVERAGE_VALUE:
             metric_name, target_type = ScalingMetricName.MEMORY, ScalingMetricTargetType.AVERAGE_VALUE
-            value_key, value = 'averageValue', spec.value
+            value_key, value = "averageValue", spec.value
 
         else:
-            raise ValueError('unsupported metric: {}'.format(spec.metric))
+            raise ValueError("unsupported metric: {}".format(spec.metric))
 
-        return {'name': metric_name.value, 'target': {'type': target_type.value, value_key: value}}
+        return {"name": metric_name.value, "target": {"type": target_type.value, value_key: value}}

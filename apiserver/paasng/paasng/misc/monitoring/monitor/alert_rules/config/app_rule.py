@@ -68,7 +68,7 @@ _cnative_supported_alert_codes = SupportedAlertCodes(
 )
 
 # 普通应用支持的告警码
-if settings.RABBITMQ_MONITOR_CONF.get('enabled', False):
+if settings.RABBITMQ_MONITOR_CONF.get("enabled", False):
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
 
@@ -91,7 +91,7 @@ class RuleConfig(Protocol):
     alert_rule_display_name: Optional[str]
 
     @classmethod
-    def from_alert_rule_obj(cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> 'RuleConfig':
+    def from_alert_rule_obj(cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> "RuleConfig":
         ...
 
     def to_alert_rule_obj(self) -> AppAlertRule:
@@ -131,7 +131,7 @@ class AppScopedRuleConfig:
     metric_labels: Dict[str, str] = field(factory=dict)
 
     def __attrs_post_init__(self):
-        self.alert_rule_name = f'{self.app_code}-{self.run_env}-{self.alert_code}'
+        self.alert_rule_name = f"{self.app_code}-{self.run_env}-{self.alert_code}"
 
         r_configs = DEFAULT_RULE_CONFIGS[self.alert_code]
 
@@ -140,26 +140,26 @@ class AppScopedRuleConfig:
 
         if not self.metric_labels:
             try:
-                self.metric_labels = get_metric_labels(r_configs['metric_label_names'], self.app_code, self.run_env)
+                self.metric_labels = get_metric_labels(r_configs["metric_label_names"], self.app_code, self.run_env)
             except BKMonitorNotSupportedError as e:
-                logger.info(f'generate metric labels failed: {e}')
+                logger.info(f"generate metric labels failed: {e}")
                 self.metric_labels = {}
 
-        self.metric_labels.update({'app_code': self.app_code, 'run_env': self.run_env})
+        self.metric_labels.update({"app_code": self.app_code, "run_env": self.run_env})
 
     @classmethod
     def from_alert_rule_obj(
         cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None
-    ) -> 'AppScopedRuleConfig':
+    ) -> "AppScopedRuleConfig":
         override_fields = override_fields or {}
         return cls(
             alert_code=rule_obj.alert_code,
             app_code=rule_obj.application.code,
             run_env=rule_obj.environment,
             alert_rule_display_name=rule_obj.display_name,
-            enabled=override_fields.get('enabled') or rule_obj.enabled,
-            threshold_expr=override_fields.get('threshold_expr') or rule_obj.threshold_expr,
-            receivers=override_fields.get('receivers') or rule_obj.receivers,
+            enabled=override_fields.get("enabled") or rule_obj.enabled,
+            threshold_expr=override_fields.get("threshold_expr") or rule_obj.threshold_expr,
+            receivers=override_fields.get("receivers") or rule_obj.receivers,
         )
 
     def to_alert_rule_obj(self) -> AppAlertRule:
@@ -195,7 +195,7 @@ class ModuleScopedRuleConfig(AppScopedRuleConfig):
     module_name: str
 
     def __attrs_post_init__(self):
-        self.alert_rule_name = f'{self.app_code}-{self.module_name}-{self.run_env}-{self.alert_code}'
+        self.alert_rule_name = f"{self.app_code}-{self.module_name}-{self.run_env}-{self.alert_code}"
 
         r_configs = DEFAULT_RULE_CONFIGS[self.alert_code]
         if not self.alert_rule_display_name:
@@ -204,25 +204,25 @@ class ModuleScopedRuleConfig(AppScopedRuleConfig):
         if not self.metric_labels:
             try:
                 self.metric_labels = get_metric_labels(
-                    r_configs['metric_label_names'], self.app_code, self.run_env, self.module_name
+                    r_configs["metric_label_names"], self.app_code, self.run_env, self.module_name
                 )
             except BKMonitorNotSupportedError as e:
-                logger.info(f'generate metric labels failed: {e}')
+                logger.info(f"generate metric labels failed: {e}")
                 self.metric_labels = {}
 
     @classmethod
     def from_alert_rule_obj(
         cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None
-    ) -> 'ModuleScopedRuleConfig':
+    ) -> "ModuleScopedRuleConfig":
         override_fields = override_fields or {}
         return cls(
             alert_code=rule_obj.alert_code,
             app_code=rule_obj.application.code,
             run_env=rule_obj.environment,
             alert_rule_display_name=rule_obj.display_name,
-            enabled=override_fields.get('enabled') or rule_obj.enabled,
-            threshold_expr=override_fields.get('threshold_expr') or rule_obj.threshold_expr,
-            receivers=override_fields.get('receivers') or rule_obj.receivers,
+            enabled=override_fields.get("enabled") or rule_obj.enabled,
+            threshold_expr=override_fields.get("threshold_expr") or rule_obj.threshold_expr,
+            receivers=override_fields.get("receivers") or rule_obj.receivers,
             module_name=rule_obj.module.name,
         )
 

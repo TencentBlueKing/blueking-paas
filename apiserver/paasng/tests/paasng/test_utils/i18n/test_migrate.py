@@ -34,7 +34,7 @@ class TestCopyField:
         assert obj.display_name_zh_cn != "test"
 
         with connection.schema_editor() as schema_editor:
-            copy_field('engine', 'deploystep', from_field='name', to_field='display_name_zh_cn')(apps, schema_editor)
+            copy_field("engine", "deploystep", from_field="name", to_field="display_name_zh_cn")(apps, schema_editor)
 
         obj.refresh_from_db()
         assert obj.display_name_zh_cn == "test"
@@ -49,7 +49,7 @@ class TestCopyField:
         assert DeployStep.objects.count() == 99
 
         with connection.schema_editor() as schema_editor:
-            copy_field('engine', 'deploystep', from_field='name', to_field='display_name_zh_cn', batch_size=2)(
+            copy_field("engine", "deploystep", from_field="name", to_field="display_name_zh_cn", batch_size=2)(
                 apps, schema_editor
             )
 

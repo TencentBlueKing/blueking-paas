@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def get_default_subpath(app: 'WlApp') -> str:
+def get_default_subpath(app: "WlApp") -> str:
     """Get the default sub path for given application, this value will be used for:
 
     - sub path based ingress resource, used as request accessing location
@@ -46,7 +46,7 @@ class AppConfigVarManager:
     职责: 管理与 `应用`和 `应用进程` 相关的环境变量, 例如日志路径, 应用ID, 模块名称 等等, 不涉及与具体运行版本相关的配置
     """
 
-    app: 'WlApp'
+    app: "WlApp"
 
     def __post_init__(self):
         self.metadata = get_metadata(self.app)
@@ -59,7 +59,7 @@ class AppConfigVarManager:
         config_vars = self.get_envs()
         config_vars.update(
             {
-                self.add_prefix('LOG_NAME_PREFIX'): (
+                self.add_prefix("LOG_NAME_PREFIX"): (
                     f"{self.app.region}-bkapp-"
                     f"{self.metadata.get_paas_app_code()}-"
                     f"{self.metadata.environment}-{process_type}"
@@ -73,7 +73,7 @@ class AppConfigVarManager:
         config_vars = {
             self.add_prefix("APP_LOG_PATH"): settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
             # May be overwrite by paasng module
-            self.add_prefix('SUB_PATH'): get_default_subpath(self.app),
+            self.add_prefix("SUB_PATH"): get_default_subpath(self.app),
         }
         # TODO: 使用更好的方式把端口暴露给用户
         config_vars.update({"PORT": str(settings.CONTAINER_PORT)})

@@ -21,4 +21,4 @@ to the current version of the project delivered to anyone in the future.
 记录操作流水
 """
 
-default_app_config = 'paasng.misc.operations.apps.OperationsConfig'
+default_app_config = "paasng.misc.operations.apps.OperationsConfig"

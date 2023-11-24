@@ -28,20 +28,20 @@ from paasng.utils.basic import get_username_by_bkpaas_user_id
 @dataclass
 class BkUserOAuth:
     operator: str
-    oauth_token: str = ''
+    oauth_token: str = ""
 
     @classmethod
-    def from_request(cls, request) -> 'BkUserOAuth':
+    def from_request(cls, request) -> "BkUserOAuth":
         """通过 request 获取 BkUserOAuth 对象，包含 oauth_token"""
         return cls.from_simple_username(request.user.username)
 
     @classmethod
-    def from_user_profile(cls, user: str) -> 'BkUserOAuth':
+    def from_user_profile(cls, user: str) -> "BkUserOAuth":
         """传入 UserProfile.user 字段内容，转换成 username"""
         return cls.from_simple_username(get_username_by_bkpaas_user_id(user))
 
     @classmethod
-    def from_simple_username(cls, username) -> 'BkUserOAuth':
+    def from_simple_username(cls, username) -> "BkUserOAuth":
         """通过 username 获取 BkUserOAuth 对象，不包含 oauth_token"""
         return cls(operator=username)
 

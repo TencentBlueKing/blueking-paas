@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger()
 
 
-def get_sorted_steps(phase: 'DeployPhase') -> List['DeployStep']:
+def get_sorted_steps(phase: "DeployPhase") -> List["DeployStep"]:
     """获取有序的 Steps 列表"""
     names = list(
         DeployStepPicker.pick(engine_app=phase.engine_app).list_sorted_step_names(DeployPhaseTypes(phase.type))
@@ -141,7 +141,7 @@ class DeployStepPicker:
     """部署步骤选择器"""
 
     @classmethod
-    def pick(cls, engine_app: 'EngineApp') -> StepMetaSet:
+    def pick(cls, engine_app: "EngineApp") -> StepMetaSet:
         """通过 engine_app 选择部署阶段应该绑定的步骤"""
         m = ModuleRuntimeManager(engine_app.env.module)
         if m.build_config.build_method == RuntimeType.DOCKERFILE:
@@ -174,13 +174,13 @@ class DeployStepPicker:
         try:
             best_matched_set = StepMetaSet.objects.get(is_default=True)
         except StepMetaSet.DoesNotExist:
-            best_matched_set = StepMetaSet.objects.all().latest('-created')
+            best_matched_set = StepMetaSet.objects.all().latest("-created")
         except StepMetaSet.MultipleObjectsReturned:
             best_matched_set = StepMetaSet.objects.filter(is_default=True).order_by("-created")[0]
         return best_matched_set
 
 
-def update_step_by_line(line: str, pattern_maps: Dict, phase: 'DeployPhase'):
+def update_step_by_line(line: str, pattern_maps: Dict, phase: "DeployPhase"):
     """Try to find a match for the given log line in the given pattern maps. If a
     match is found, update the step status and write to stream.
 

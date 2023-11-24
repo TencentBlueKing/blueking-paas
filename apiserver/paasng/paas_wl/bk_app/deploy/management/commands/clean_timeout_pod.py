@@ -26,9 +26,9 @@ from paas_wl.infras.resources.base.kres import KPod
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
+        parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
         parser.add_argument(
-            '--timeout', help="slug pod timeout(default is 3600s), please use seconds", type=int, default=60 * 60
+            "--timeout", help="slug pod timeout(default is 3600s), please use seconds", type=int, default=60 * 60
         )
 
     def handle(self, dry_run, timeout, *args, **options):
@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
         for cluster_name in get_all_cluster_names():
             client = get_client_by_cluster_name(cluster_name)
-            pods = KPod(client).ops_label.list(labels={'category': 'slug-builder'})
+            pods = KPod(client).ops_label.list(labels={"category": "slug-builder"})
             timeout_count = 0
             # normally, there is only one slug instance
             for pod in pods.items:

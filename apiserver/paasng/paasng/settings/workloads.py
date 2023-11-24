@@ -45,8 +45,8 @@ from dynaconf import LazySettings
 
 BASE_DIR = Path(__file__).parents[2]
 
-SETTINGS_FILES_GLOB = str(BASE_DIR / 'settings_files/*.yaml')
-LOCAL_SETTINGS = str(BASE_DIR / 'settings_local.yaml')
+SETTINGS_FILES_GLOB = str(BASE_DIR / "settings_files/*.yaml")
+LOCAL_SETTINGS = str(BASE_DIR / "settings_local.yaml")
 
 settings = LazySettings(
     environments=False,
@@ -63,59 +63,59 @@ settings = LazySettings(
 # ---------------
 # 运行时默认配置
 # ---------------
-DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner:latest')
-DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder:latest')
+DEFAULT_SLUGRUNNER_IMAGE = settings.get("DEFAULT_SLUGRUNNER_IMAGE", "bkpaas/slugrunner:latest")
+DEFAULT_SLUGBUILDER_IMAGE = settings.get("DEFAULT_SLUGBUILDER_IMAGE", "bkpaas/slugbuilder:latest")
 KANIKO_IMAGE = settings.get("KANIKO_IMAGE", "bkpaas/kaniko-executor")
 
-BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
+BUILDER_USERNAME = settings.get("BUILDER_USERNAME", "blueking")
 
 # 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
-PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
+PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get("PYTHON_BUILDPACK_PIP_INDEX_URL")
 
 # 从源码构建应用时，注入额外环境变量
-BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
+BUILD_EXTRA_ENV_VARS = settings.get("BUILD_EXTRA_ENV_VARS", {})
 
 # ---------------
 # 服务导出配置
 # ---------------
 
 # 默认容器内监听地址
-CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
+CONTAINER_PORT = settings.get("CONTAINER_PORT", 5000)
 
 # 服务相关插件配置
-SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
+SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 
 # ---------------
 # 资源命名配置
 # ---------------
 
-STR_APP_NAME = r'^([a-z0-9_-]){1,64}$'
-PROC_TYPE_PATTERN = r'^[a-z0-9]([-a-z0-9])*$'
+STR_APP_NAME = r"^([a-z0-9_-]){1,64}$"
+PROC_TYPE_PATTERN = r"^[a-z0-9]([-a-z0-9])*$"
 
 # ---------------
 # 资源限制配置
 # ---------------
-DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 'prod': 2})
+DEFAULT_WEB_REPLICAS_MAP = settings.get("DEFAULT_WEB_REPLICAS_MAP", {"stag": 1, "prod": 2})
 
 # 构建 pod 资源规格，按 k8s 格式书写
-SLUGBUILDER_RESOURCES_SPEC = settings.get('SLUGBUILDER_RESOURCES_SPEC')
+SLUGBUILDER_RESOURCES_SPEC = settings.get("SLUGBUILDER_RESOURCES_SPEC")
 
 # ---------------
 # 部署环境相关
 # ---------------
 # 环境变量前缀
-SYSTEM_CONFIG_VARS_KEY_PREFIX = settings.get('SYSTEM_CONFIG_VARS_KEY_PREFIX', 'BKPAAS_')
+SYSTEM_CONFIG_VARS_KEY_PREFIX = settings.get("SYSTEM_CONFIG_VARS_KEY_PREFIX", "BKPAAS_")
 
 # 兼容内部旧的日志挂载配置
-VOLUME_NAME_APP_LOGGING = settings.get('VOLUME_NAME_APP_LOGGING', 'applogs')
-VOLUME_MOUNT_APP_LOGGING_DIR = settings.get('VOLUME_MOUNT_APP_LOGGING_DIR', '/app/logs')
-VOLUME_HOST_PATH_APP_LOGGING_DIR = settings.get('VOLUME_HOST_PATH_APP_LOGGING_DIR', '/tmp/logs')
+VOLUME_NAME_APP_LOGGING = settings.get("VOLUME_NAME_APP_LOGGING", "applogs")
+VOLUME_MOUNT_APP_LOGGING_DIR = settings.get("VOLUME_MOUNT_APP_LOGGING_DIR", "/app/logs")
+VOLUME_HOST_PATH_APP_LOGGING_DIR = settings.get("VOLUME_HOST_PATH_APP_LOGGING_DIR", "/tmp/logs")
 
 # 支持多模块的日志挂载配置
-MUL_MODULE_VOLUME_NAME_APP_LOGGING = settings.get('MUL_MODULE_VOLUME_NAME_APP_LOGGING', 'appv3logs')
-MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR = settings.get('MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR', '/app/v3logs')
+MUL_MODULE_VOLUME_NAME_APP_LOGGING = settings.get("MUL_MODULE_VOLUME_NAME_APP_LOGGING", "appv3logs")
+MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR = settings.get("MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR", "/app/v3logs")
 MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR = settings.get(
-    'MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR', '/tmp/v3logs'
+    "MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR", "/tmp/v3logs"
 )
 
 
@@ -127,7 +127,7 @@ K8S_DEFAULT_CONNECT_TIMEOUT = 5
 K8S_DEFAULT_READ_TIMEOUT = 60
 
 # 指定 kubectl 使用的 config.yaml 文件路径，容器化交付时由 secret 挂载而来
-KUBE_CONFIG_FILE = settings.get('KUBE_CONFIG_FILE', '/data/kubelet/conf/kubeconfig.yaml')
+KUBE_CONFIG_FILE = settings.get("KUBE_CONFIG_FILE", "/data/kubelet/conf/kubeconfig.yaml")
 
 # 和 Deployment 资源回滚相关，设置值宜小，减轻 controller-manager 压力
 MAX_RS_RETAIN = 3
@@ -148,12 +148,12 @@ DEFAULT_POD_LOGS_LINE = 512
 # ---------------
 
 # 不指定则使用默认，可以指定为 bk-ingress-nginx
-APP_INGRESS_CLASS = settings.get('APP_INGRESS_CLASS')
+APP_INGRESS_CLASS = settings.get("APP_INGRESS_CLASS")
 
 # 控制 ingress 资源路径是否严格匹配末尾斜杆, 如某个 ingress 路径设置成 "/foo/", 开启严格匹配将无法通过 "/foo" 访问应用
 # 如果希望通过 "/foo" 也能访问, 则需要设置 APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH、APP_INGRESS_V1_PATH_TRAILING_SLASH 为 False
 # ingress extensions/v1beta1 资源路径是否严格匹配末尾斜杆
-APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH = settings.get('APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH', True)
+APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH = settings.get("APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH", True)
 # ingress v1 资源路径是否严格匹配末尾斜杆
 APP_INGRESS_V1_PATH_TRAILING_SLASH = APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH
 
@@ -166,18 +166,18 @@ APP_INGRESS_V1_PATH_TRAILING_SLASH = APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH
 #  - 只能处理 extensions/v1beta1 和 networking.k8s.io/v1beta1 版本的 Ingress 资源, 如果未来的 Kubernetes 集群版本删除了对该
 #    apiVersion 的支持，服务会报错
 #  - 只能使用 <1.0 版本的 ingress-nginx
-ENABLE_MODERN_INGRESS_SUPPORT = settings.get('ENABLE_MODERN_INGRESS_SUPPORT', True)
+ENABLE_MODERN_INGRESS_SUPPORT = settings.get("ENABLE_MODERN_INGRESS_SUPPORT", True)
 
 # 是否开启终端色彩
 COLORFUL_TERMINAL_OUTPUT = True
 
 # 应用独立域名相关配置
 CUSTOM_DOMAIN_CONFIG = settings.get(
-    'CUSTOM_DOMAIN_CONFIG',
+    "CUSTOM_DOMAIN_CONFIG",
     {
         "enabled": True,
         # 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
-        "valid_domain_suffixes": settings.get('VALID_CUSTOM_DOMAIN_SUFFIXES', []),
+        "valid_domain_suffixes": settings.get("VALID_CUSTOM_DOMAIN_SUFFIXES", []),
         # 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
         "allow_user_modifications": True,
     },
@@ -187,18 +187,18 @@ CUSTOM_DOMAIN_CONFIG = settings.get(
 # egress 配置
 # ---------------
 # BCS Egress Gate 镜像地址
-BCS_EGRESS_GATE_IMAGE = settings.get('BCS_EGRESS_GATE_IMAGE', '')
+BCS_EGRESS_GATE_IMAGE = settings.get("BCS_EGRESS_GATE_IMAGE", "")
 # BCS Egress PodIP 镜像地址
-BCS_EGRESS_POD_IP_IMAGE = settings.get('BCS_EGRESS_POD_IP_IMAGE', '')
+BCS_EGRESS_POD_IP_IMAGE = settings.get("BCS_EGRESS_POD_IP_IMAGE", "")
 # 应用服务 Pod IP 可分配网段
-BCS_EGRESS_POD_CIDRS = settings.get('BCS_EGRESS_POD_CIDRS', [])
+BCS_EGRESS_POD_CIDRS = settings.get("BCS_EGRESS_POD_CIDRS", [])
 
 # -----------
 # 进程相关配置
 # -----------
 
 # 默认进程规格套餐名称
-DEFAULT_PROC_SPEC_PLAN = 'Starter'
+DEFAULT_PROC_SPEC_PLAN = "Starter"
 PREMIUM_PROC_SPEC_PLAN = "4C2G5R"
 ULTIMATE_PROC_SPEC_PLAN = "4C4G5R"
 
@@ -206,32 +206,32 @@ ULTIMATE_PROC_SPEC_PLAN = "4C4G5R"
 # 最大资源限制，格式与单位请参考：https://kubernetes.io/docs/concepts/policy/resource-quotas/
 DEFAULT_PROC_SPEC_PLANS = {
     "Starter": {
-        'max_replicas': 5,
-        'limits': {'cpu': '4096m', 'memory': '1024Mi'},
-        'requests': {'cpu': '100m', 'memory': '256Mi'},
+        "max_replicas": 5,
+        "limits": {"cpu": "4096m", "memory": "1024Mi"},
+        "requests": {"cpu": "100m", "memory": "256Mi"},
     },
     "4C1G5R": {
-        'max_replicas': 5,
-        'limits': {'cpu': '4096m', 'memory': '1024Mi'},
-        'requests': {'cpu': '100m', 'memory': '256Mi'},
+        "max_replicas": 5,
+        "limits": {"cpu": "4096m", "memory": "1024Mi"},
+        "requests": {"cpu": "100m", "memory": "256Mi"},
     },
     "4C2G5R": {
-        'max_replicas': 5,
-        'limits': {'cpu': '4096m', 'memory': '2048Mi'},
-        'requests': {'cpu': '100m', 'memory': '896Mi'},
+        "max_replicas": 5,
+        "limits": {"cpu": "4096m", "memory": "2048Mi"},
+        "requests": {"cpu": "100m", "memory": "896Mi"},
     },
     "4C4G5R": {
-        'max_replicas': 5,
-        'limits': {'cpu': '4096m', 'memory': '4096Mi'},
-        'requests': {'cpu': '100m', 'memory': '2048Mi'},
+        "max_replicas": 5,
+        "limits": {"cpu": "4096m", "memory": "4096Mi"},
+        "requests": {"cpu": "100m", "memory": "2048Mi"},
     },
 }
 
 # 按照进程名称与环境，配置默认副本数
 ENGINE_PROC_REPLICAS_BY_TYPE = {
     # （进程类型, 环境名称）： 副本数量
-    ('web', 'stag'): 1,
-    ('web', 'prod'): 2,
+    ("web", "stag"): 1,
+    ("web", "prod"): 2,
 }
 
 # ----------------------
@@ -239,18 +239,18 @@ ENGINE_PROC_REPLICAS_BY_TYPE = {
 # ----------------------
 
 # 插件监控图表相关配置（原生 Prometheus 使用，仅用于不支持蓝鲸监控的集群 k8s 1.12-）
-MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
+MONITOR_CONFIG = settings.get("MONITOR_CONFIG", {})
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
 
-FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localhost:28080')
-FOR_TESTS_CA_DATA = settings.get('FOR_TESTS_CA_DATA', '')
-FOR_TESTS_CERT_DATA = settings.get('FOR_TESTS_CERT_DATA', '')
-FOR_TESTS_KEY_DATA = settings.get('FOR_TESTS_KEY_DATA', '')
-FOR_TESTS_TOKEN_VALUE = settings.get('FOR_TESTS_TOKEN_VALUE', '')
-FOR_TESTS_FORCE_DOMAIN = settings.get('FOR_TESTS_FORCE_DOMAIN', '')
+FOR_TESTS_APISERVER_URL = settings.get("FOR_TESTS_APISERVER_URL", "http://localhost:28080")
+FOR_TESTS_CA_DATA = settings.get("FOR_TESTS_CA_DATA", "")
+FOR_TESTS_CERT_DATA = settings.get("FOR_TESTS_CERT_DATA", "")
+FOR_TESTS_KEY_DATA = settings.get("FOR_TESTS_KEY_DATA", "")
+FOR_TESTS_TOKEN_VALUE = settings.get("FOR_TESTS_TOKEN_VALUE", "")
+FOR_TESTS_FORCE_DOMAIN = settings.get("FOR_TESTS_FORCE_DOMAIN", "")
 
 FOR_TESTS_CLUSTER_CONFIG = {
     "url": FOR_TESTS_APISERVER_URL,

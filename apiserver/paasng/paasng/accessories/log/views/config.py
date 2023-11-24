@@ -64,9 +64,9 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
         return {
-            'request': self.request,
-            'format': self.format_kwarg,
-            'view': self,
+            "request": self.request,
+            "format": self.format_kwarg,
+            "view": self,
             "builtin_config_names": [
                 build_custom_collector_config_name(module, type="json"),
                 build_custom_collector_config_name(module, type="stdout"),
@@ -116,7 +116,9 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         return Response(data=ModuleCustomCollectorConfigSLZ(qs, many=True, context=self.get_serializer_context()).data)
 
     @swagger_auto_schema(
-        response_serializer=ModuleCustomCollectorConfigSLZ, request_body=ModuleCustomCollectorConfigSLZ, tags=["日志采集"]
+        response_serializer=ModuleCustomCollectorConfigSLZ,
+        request_body=ModuleCustomCollectorConfigSLZ,
+        tags=["日志采集"],
     )
     def upsert(self, request, code, module_name):
         """更新或创建模块日志采集配置"""

@@ -38,11 +38,11 @@ class ErrorCodes:
     CONFIGURATION_CONFLICT = ErrorCode(_("该插件 {conflict_fields} 的配置项已存在, 不能重复添加"))
     STAGE_RENDER_ERROR = ErrorCode(_("查询步骤详情失败"))
     # 人员管理
-    MEMBERSHIP_DELETE_FAILED = ErrorCode(_('插件应该至少拥有一个管理员'))
+    MEMBERSHIP_DELETE_FAILED = ErrorCode(_("插件应该至少拥有一个管理员"))
     MEMBERSHIP_ADD_FAILED = ErrorCode(_("添加插件成员失败"))
     MEMBERSHIP_UPDATE_FAILED = ErrorCode(_("修改插件成员角色失败"))
     # 下架或删除插件相关
-    CANNOT_BE_DELETED = ErrorCode(_('不允许删除'))
+    CANNOT_BE_DELETED = ErrorCode(_("不允许删除"))
     PLUGIN_ARCHIVED = ErrorCode(_("插件已下架, 无法进行该操作"))
     # 插件仓库成员管理异常
     MAINTAIN_REPO_MEMBERS_ERROR = ErrorCode(_("添加/删除仓库成员异常, 请稍后重试"))

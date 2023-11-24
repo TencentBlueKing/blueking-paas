@@ -38,7 +38,7 @@ def get_patch_create_connection_with_dns(dns_resolver) -> Callable:
     """simply get patched create_connection"""
 
     # 保留原方法
-    _orig_create_connection = getattr(importlib.import_module('urllib3.util.connection'), 'create_connection')
+    _orig_create_connection = getattr(importlib.import_module("urllib3.util.connection"), "create_connection")
 
     def patched_create_connection(address, *args, **kwargs):
         """在 urllib3's create_connection 流程前解析 address"""

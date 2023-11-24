@@ -31,15 +31,15 @@ from blue_krill.web.std_error import APIError
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.workflow import DeploymentCoordinator, ServerSendEvent
-from paasng.platform.applications.models import Application
-from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
 
 REVISION_HELP_TEXT = """\
@@ -79,7 +79,7 @@ def handle_error(func):
 def get_subscriber(channel_id):
     subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
     channel_state = subscriber.get_channel_state()
-    if channel_state == 'none':
+    if channel_state == "none":
         raise error_codes.CHANNEL_NOT_FOUND
     return subscriber
 
@@ -95,7 +95,9 @@ class Command(BaseCommand):
             "-u", "--operator", dest="operator", required=False, type=str, default="admin", help="当前操作人"
         )
         parser.add_argument("--revision", dest="smart_revision", required=True, type=str, help=REVISION_HELP_TEXT)
-        parser.add_argument("--force", dest="force", default=False, action="store_true", help="强制部署, 无论上次部署是否还在进行.")
+        parser.add_argument(
+            "--force", dest="force", default=False, action="store_true", help="强制部署, 无论上次部署是否还在进行."
+        )
 
     @handle_error
     def handle(self, operator, app_code, module_name, environment, smart_revision, force, *args, **options):

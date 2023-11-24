@@ -22,4 +22,4 @@ from paasng.utils.encrypt_cmd import ReEncryptCommand
 class Command(ReEncryptCommand):
     help = "images 存量数据加密迁移"
 
-    app_label = 'images'
+    app_label = "images"

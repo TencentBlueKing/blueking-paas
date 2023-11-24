@@ -20,9 +20,9 @@ from rest_framework.permissions import IsAuthenticated
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.engine.models.deployment import Deployment
 from paasng.plat_admin.admin42.serializers.engine import DeploymentForListSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.platform.engine.models.deployment import Deployment
 
 
 class DeploymentListView(GenericTemplateView):
@@ -34,7 +34,7 @@ class DeploymentListView(GenericTemplateView):
     template_name = "admin42/applications/list_deployments.html"
 
     def get_queryset(self):
-        queryset = Deployment.objects.all().order_by('-created').select_related('app_environment')
+        queryset = Deployment.objects.all().order_by("-created").select_related("app_environment")
         return queryset
 
     def list(self, request, *args, **kwargs):
@@ -53,12 +53,12 @@ class DeploymentListView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         self.paginator.default_limit = 10
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
         data = self.list(self.request, *self.args, **self.kwargs)
-        kwargs['deployment_list'] = data
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["deployment_list"] = data
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
     def get(self, request, *args, **kwargs):

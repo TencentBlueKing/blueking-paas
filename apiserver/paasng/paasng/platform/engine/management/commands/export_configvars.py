@@ -24,8 +24,8 @@ import sys
 
 from django.core.management.base import BaseCommand
 
-from paasng.platform.engine.models.managers import ExportedConfigVars
 from paasng.platform.applications.models import Application
+from paasng.platform.engine.models.managers import ExportedConfigVars
 
 
 class Command(BaseCommand):
@@ -47,7 +47,7 @@ class Command(BaseCommand):
         application = Application.objects.get(code=app_code)
         module = application.get_module(module_name=module_name)
 
-        qs = module.configvar_set.filter(is_builtin=False).select_related('environment')
+        qs = module.configvar_set.filter(is_builtin=False).select_related("environment")
         exported = ExportedConfigVars.from_list(list(qs))
 
         with file_ as fh:

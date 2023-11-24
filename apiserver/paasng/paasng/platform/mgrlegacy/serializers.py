@@ -25,58 +25,58 @@ from paasng.utils.i18n.serializers import DjangoTranslatedCharField
 class MigrationRunResult(serializers.Serializer):
     """migration 步骤执行结果"""
 
-    name = serializers.CharField(help_text='步骤名称')
-    description = DjangoTranslatedCharField(help_text='步骤描述')
-    failed_reason = DjangoTranslatedCharField(help_text='失败原因')
-    log = serializers.CharField(help_text='日志')
-    successful = serializers.BooleanField(help_text='是否成功')
-    apply_type = serializers.CharField(help_text='类型')
-    finished = serializers.BooleanField(help_text='是否完成')
-    msecs_cost = serializers.FloatField(help_text='执行时长')
+    name = serializers.CharField(help_text="步骤名称")
+    description = DjangoTranslatedCharField(help_text="步骤描述")
+    failed_reason = DjangoTranslatedCharField(help_text="失败原因")
+    log = serializers.CharField(help_text="日志")
+    successful = serializers.BooleanField(help_text="是否成功")
+    apply_type = serializers.CharField(help_text="类型")
+    finished = serializers.BooleanField(help_text="是否完成")
+    msecs_cost = serializers.FloatField(help_text="执行时长")
     created_ts = serializers.FloatField(default=0)
 
 
 class LegacyAppSLZ(serializers.Serializer):
-    category = serializers.CharField(help_text='迁移分类')
-    legacy_app_id = serializers.IntegerField(help_text='应用ID')
-    code = serializers.CharField(help_text='应用编码')
-    name = serializers.CharField(help_text='应用名称')
-    logo = serializers.CharField(help_text='LOGO地址')
+    category = serializers.CharField(help_text="迁移分类")
+    legacy_app_id = serializers.IntegerField(help_text="应用ID")
+    code = serializers.CharField(help_text="应用编码")
+    name = serializers.CharField(help_text="应用名称")
+    logo = serializers.CharField(help_text="LOGO地址")
     tag = serializers.CharField(help_text="标签")
     not_support_reasons = serializers.ListField(help_text="暂不支持迁移的原因")
-    language = serializers.CharField(help_text='开发语言')
-    created = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", help_text='创建时间')
-    latest_migration_id = serializers.IntegerField(help_text='绑定的迁移记录ID')
-    finished_migration = serializers.BooleanField(help_text='是否已经迁移完成')
+    language = serializers.CharField(help_text="开发语言")
+    created = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", help_text="创建时间")
+    latest_migration_id = serializers.IntegerField(help_text="绑定的迁移记录ID")
+    finished_migration = serializers.BooleanField(help_text="是否已经迁移完成")
     is_active = serializers.BooleanField(help_text="latest_migration_id是否是活动状态")
     is_prod_deployed = serializers.BooleanField(help_text="正式环境已上线，且没有下架")
     has_prod_deployed_before_migration = serializers.BooleanField(help_text="迁移前正式环境上线过")
-    stag_exposed_link = serializers.CharField(help_text='app测试环境地址')
-    prod_exposed_link = serializers.CharField(help_text='app正式环境地址')
-    region = serializers.CharField(help_text='版本')
-    migration_finished_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", help_text='迁移完成时间')
+    stag_exposed_link = serializers.CharField(help_text="app测试环境地址")
+    prod_exposed_link = serializers.CharField(help_text="app正式环境地址")
+    region = serializers.CharField(help_text="版本")
+    migration_finished_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", help_text="迁移完成时间")
     legacy_url = serializers.CharField(help_text="PaaS2.0上的访问地址")
 
     class Meta:
         fields = (
-            'legacy_app_id',
-            'code',
-            'name',
-            'logo',
-            'tag',
-            'language',
-            'is_prod_deployed',
-            'has_prod_deployed_before_migration',
-            'created',
-            'migration_finished_date',
+            "legacy_app_id",
+            "code",
+            "name",
+            "logo",
+            "tag",
+            "language",
+            "is_prod_deployed",
+            "has_prod_deployed_before_migration",
+            "created",
+            "migration_finished_date",
         )
 
 
 class LegacyAppStateSLZ(serializers.Serializer):
-    is_prod_deployed = serializers.BooleanField(help_text='PaaS2.0 上正式环境是否已下架')
-    is_stag_deployed = serializers.BooleanField(help_text='PaaS2.0 上测试环境是否已下架')
-    offline_url = serializers.CharField(help_text='PaaS2.0 上的下架链接')
-    is_third_app = serializers.BooleanField(help_text='是否为第三方应用')
+    is_prod_deployed = serializers.BooleanField(help_text="PaaS2.0 上正式环境是否已下架")
+    is_stag_deployed = serializers.BooleanField(help_text="PaaS2.0 上测试环境是否已下架")
+    offline_url = serializers.CharField(help_text="PaaS2.0 上的下架链接")
+    is_third_app = serializers.BooleanField(help_text="是否为第三方应用")
 
 
 class MigrationProcessCreateSLZ(serializers.ModelSerializer):
@@ -87,7 +87,7 @@ class MigrationProcessCreateSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = MigrationProcess
-        fields = ('legacy_app_id', 'owner')
+        fields = ("legacy_app_id", "owner")
 
 
 class MigrationProcessDetailSLZ(serializers.ModelSerializer):
@@ -101,7 +101,7 @@ class MigrationProcessDetailSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = MigrationProcess
-        fields = '__all__'
+        fields = "__all__"
 
 
 class MigrationProcessOperateSLZ(serializers.Serializer):
@@ -115,14 +115,14 @@ class MigrationProcessConfirmSLZ(serializers.Serializer):
 class QueryMigrationAppSLZ(serializers.Serializer):
     result_type = serializers.ChoiceField(
         choices=(
-            ('doneMigrate', 'doneMigrate'),
-            ('todoMigrate', 'todoMigrate'),
-            ('cannotMigrate', 'cannotMigrate'),
-            ('all', 'all'),
+            ("doneMigrate", "doneMigrate"),
+            ("todoMigrate", "todoMigrate"),
+            ("cannotMigrate", "cannotMigrate"),
+            ("all", "all"),
         ),
-        default='all',
+        default="all",
     )
 
 
 class ApplicationMigrationInfoSLZ(serializers.Serializer):
-    is_need_alert_migration_timeout = serializers.BooleanField(help_text='是否需要提醒迁移超时了')
+    is_need_alert_migration_timeout = serializers.BooleanField(help_text="是否需要提醒迁移超时了")

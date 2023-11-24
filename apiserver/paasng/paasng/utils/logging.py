@@ -29,7 +29,7 @@ logger = logging.getLogger("console")
 
 
 class LogstashRedisHandler(logging.Handler):
-    def __init__(self, redis_url, queue_name='', message_type='logstash', tags=None):
+    def __init__(self, redis_url, queue_name="", message_type="logstash", tags=None):
         """
         初始化，延迟时间默认1秒钟
         """
@@ -48,7 +48,7 @@ class LogstashRedisHandler(logging.Handler):
             assert self.formatter
             self.client.rpush(self.queue_name, self.formatter.format(record))
         except Exception:
-            logger.exception('LogstashRedisHandler push to redis error')
+            logger.exception("LogstashRedisHandler push to redis error")
 
 
 class RequestIDFilter(logging.Filter):

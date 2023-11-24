@@ -83,7 +83,7 @@ def init_s3_bucket(request):
         pass
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def crds_is_configured(django_db_setup, django_db_blocker):
     """Configure 'BkApp' and other CRDs when tests starts
 
@@ -104,10 +104,10 @@ def crds_is_configured(django_db_setup, django_db_blocker):
         crd_client = KCustomResourceDefinition(client)
 
         for name, path in crd_infos:
-            logger.info('Configure CRD %s...', name)
+            logger.info("Configure CRD %s...", name)
             body = yaml.safe_load((Path(__file__).parent / path).read_text())
             try:
-                name = body['metadata']['name']
+                name = body["metadata"]["name"]
                 crd_client.create_or_update(name=name, body=body)
             except ValueError as e:
                 logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
@@ -128,9 +128,9 @@ def _skip_when_no_crds(request, crds_is_configured):
     """Handle @pytest.mark.skip_when_no_crds, skip current test when mark is used
     and CRDs are not configured(from "crds_is_configured" fixture).
     """
-    if request.keywords.get('skip_when_no_crds'):
+    if request.keywords.get("skip_when_no_crds"):
         if not crds_is_configured:
-            pytest.skip('Skip test because CRDs is not configured')
+            pytest.skip("Skip test because CRDs is not configured")
 
 
 @pytest.fixture
@@ -186,7 +186,7 @@ def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
     bk_stag_wl_app / bk_prod_wl_app
     """
-    if not request.keywords.get('auto_create_ns'):
+    if not request.keywords.get("auto_create_ns"):
         yield
         return
 
@@ -240,13 +240,13 @@ def patch_ingress_config():
     def _patch_func(**kwargs):
         for k, v in kwargs.items():
             setattr(cluster.ingress_config, k, v)
-        cluster.save(update_fields=['ingress_config'])
+        cluster.save(update_fields=["ingress_config"])
 
     yield _patch_func
 
     # Restore to original
     cluster.ingress_config = orig_cfg
-    cluster.save(update_fields=['ingress_config'])
+    cluster.save(update_fields=["ingress_config"])
 
 
 def setup_default_client(cluster: Cluster):

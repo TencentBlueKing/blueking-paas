@@ -24,9 +24,9 @@ from . import views
 urlpatterns = [
     re_path(
         make_app_pattern(
-            r'/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/webconsole/$'
+            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/webconsole/$"
         ),
         views.ApplicationProcessWebConsoleViewSet.as_view({"get": "open"}),
-        name='api.applications.webconsole',
+        name="api.applications.webconsole",
     ),
 ]

@@ -22,14 +22,14 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.templates.models import Template
 from paasng.core.region.models import get_all_regions
+from paasng.platform.templates.models import Template
 
 
 class TemplateSLZ(serializers.ModelSerializer):
     class Meta:
         model = Template
-        fields = '__all__'
+        fields = "__all__"
 
     def validate_preset_services_config(self, conf: Dict) -> Dict:
         if not isinstance(conf, dict):
@@ -61,7 +61,7 @@ class TemplateSLZ(serializers.ModelSerializer):
         return tags
 
     def validate(self, attrs: Dict) -> Dict:
-        enabled_regions = attrs['enabled_regions']
+        enabled_regions = attrs["enabled_regions"]
         if not isinstance(enabled_regions, list):
             raise ValidationError(_("允许被使用的版本必须为 List 格式"))
 
@@ -69,7 +69,7 @@ class TemplateSLZ(serializers.ModelSerializer):
         if unsupported_regions := set(enabled_regions) - available_regions:
             raise ValidationError(_("Region {} 不受支持").format(unsupported_regions))
 
-        blob_url_conf = attrs['blob_url']
+        blob_url_conf = attrs["blob_url"]
         if not isinstance(blob_url_conf, dict):
             raise ValidationError(_("二进制包存储配置必须为 Dict 格式"))
 

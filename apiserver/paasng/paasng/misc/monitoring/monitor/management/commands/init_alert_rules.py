@@ -29,13 +29,13 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-    help = 'Initialize alert rules for applications'
+    help = "Initialize alert rules for applications"
 
     def add_arguments(self, parser):
-        parser.add_argument('--apps', nargs='*', help='specified app code list. optional, default: all')
+        parser.add_argument("--apps", nargs="*", help="specified app code list. optional, default: all")
 
     def handle(self, *args, **options):
-        app_codes = options.get('apps')
+        app_codes = options.get("apps")
 
         app_qs = Application.objects.filter(is_active=True, is_deleted=False)
         if app_codes:
@@ -46,19 +46,19 @@ class Command(BaseCommand):
 
         for app in app_qs:
             # sleep 1s, 减小对监控接口的压力
-            self.stdout.write('Waiting for one second before sending the request to initialize alert rules ...')
+            self.stdout.write("Waiting for one second before sending the request to initialize alert rules ...")
             time.sleep(1)
             self._init_rules(app)
 
     def _write_invalid_codes(self, app_codes: List[str], app_qs: QuerySet):
-        invalid_app_codes = set(app_codes) - set(app_qs.values_list('code', flat=True))
+        invalid_app_codes = set(app_codes) - set(app_qs.values_list("code", flat=True))
         for code in invalid_app_codes:
-            self.stdout.write(self.style.ERROR(f'Initialize alert rules for {code} failed: app is invalid or offline'))
+            self.stdout.write(self.style.ERROR(f"Initialize alert rules for {code} failed: app is invalid or offline"))
 
     def _init_rules(self, app: Application):
         try:
             AlertRuleManager(app).init_rules()
         except (exceptions.AsCodeAPIError, BKMonitorNotSupportedError) as e:
-            self.stdout.write(self.style.ERROR(f'Initialize alert rules for {app.code} failed: {e}'))
+            self.stdout.write(self.style.ERROR(f"Initialize alert rules for {app.code} failed: {e}"))
         else:
-            self.stdout.write(self.style.SUCCESS(f'Initialize alert rules for {app.code} success'))
+            self.stdout.write(self.style.SUCCESS(f"Initialize alert rules for {app.code} success"))

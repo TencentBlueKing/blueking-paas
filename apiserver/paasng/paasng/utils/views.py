@@ -40,12 +40,12 @@ def one_line_error(error: ValidationError):
     try:
         return stringify_validation_error(error)[0]
     except Exception:
-        logger.exception('Error getting one line error from %s', error)
-        return _('参数格式错误')
+        logger.exception("Error getting one line error from %s", error)
+        return _("参数格式错误")
 
 
-ERROR_CODE_HEADER = 'bkapi-error-code'
-ERROR_CODE_NUM_HEADER = 'bkapi-error-code-num'
+ERROR_CODE_HEADER = "bkapi-error-code"
+ERROR_CODE_NUM_HEADER = "bkapi-error-code-num"
 
 
 def make_unauthorized_json() -> Dict:
@@ -74,16 +74,16 @@ def custom_exception_handler(exc, context):
 
     elif isinstance(exc, ValidationError):
         data = {
-            'code': 'VALIDATION_ERROR',
-            'detail': one_line_error(exc),
-            'fields_detail': exc.detail,
+            "code": "VALIDATION_ERROR",
+            "detail": one_line_error(exc),
+            "fields_detail": exc.detail,
         }
         set_rollback()
         return Response(data, status=exc.status_code, headers={})
     elif isinstance(exc, APIError):
         data = {
-            'code': exc.code,
-            'detail': exc.message,
+            "code": exc.code,
+            "detail": exc.message,
         }
         if exc.data:
             data["data"] = exc.data
@@ -105,14 +105,14 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     # Use a default error code
     if response is not None:
-        response.data.update(code='ERROR')
+        response.data.update(code="ERROR")
     return response
 
 
 class HookChain:
     """为链式调用 hook 提供封装的工具类"""
 
-    def __init__(self, hook: Callable[..., Response], pre_hook: Optional['HookChain'] = None):
+    def __init__(self, hook: Callable[..., Response], pre_hook: Optional["HookChain"] = None):
         """
         :param hook: 当前的 hook 函数
         :param pre_hook: 上一步的 hook 函数
@@ -165,10 +165,10 @@ class IgnoreClientContentNegotiation(BaseContentNegotiation):
 
 
 class EventStreamRender(BaseRenderer):
-    media_type = 'text/event-stream'
-    format = 'text'
-    charset = 'utf-8'
-    render_style = 'text'
+    media_type = "text/event-stream"
+    format = "text"
+    charset = "utf-8"
+    render_style = "text"
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         return data
@@ -181,15 +181,15 @@ class BkStandardApiJSONRenderer(JSONRenderer):
     - Wrapped: `{"result": true, "code": 0, "data": {"foo": [1, 2]}, "message": ""}`
     """
 
-    format = 'bk_std_json'
+    format = "bk_std_json"
 
     _successful_code = 0
     _default_code = -1
-    _default_error_message = 'Unknown error, please try again later'
+    _default_error_message = "Unknown error, please try again later"
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         # Wrap response data on demand
-        resp = renderer_context['response']
+        resp = renderer_context["response"]
         if status.is_success(resp.status_code):
             data = self.wrap_successful(data, resp)
         elif status.is_client_error(resp.status_code) or status.is_server_error(resp.status_code):
@@ -199,7 +199,7 @@ class BkStandardApiJSONRenderer(JSONRenderer):
 
     def wrap_successful(self, data: Any, resp: Response) -> Any:
         """Wrap successful response data"""
-        return {'result': True, 'data': data, 'code': self._successful_code, 'message': ''}
+        return {"result": True, "data": data, "code": self._successful_code, "message": ""}
 
     def wrap_error(self, data: Any, resp: Response) -> Any:
         """Wrap error response data
@@ -207,17 +207,17 @@ class BkStandardApiJSONRenderer(JSONRenderer):
         TODO: Provide more specific code for special status codes, such as 404, 401 etc.
         """
         if not isinstance(data, dict):
-            return {'result': False, 'data': data, 'code': self._default_code, 'message': self._default_error_message}
+            return {"result": False, "data": data, "code": self._default_code, "message": self._default_error_message}
 
-        message = data.pop('detail', self._default_error_message)
+        message = data.pop("detail", self._default_error_message)
         # The numeric error code was stored in response headers
         error_code = int(resp.get(ERROR_CODE_NUM_HEADER, self._default_code))
         slug_error_code = data.pop("code", None)
 
-        result = {'result': False, 'data': data, 'code': error_code, 'message': message}
+        result = {"result": False, "data": data, "code": error_code, "message": message}
         # Put the original non-numeric "code" into data when found
         if slug_error_code:
-            result['code_slug'] = slug_error_code
+            result["code_slug"] = slug_error_code
         return result
 
 

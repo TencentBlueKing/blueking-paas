@@ -20,20 +20,20 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from paasng.infras.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import can_exempt_application_perm
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import global_site_resource
-from paasng.platform.engine.models import EngineApp
+from paasng.infras.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 from .serializers import AppInstanceInfoSLZ
 
-INST_TYPE_APPLICATION = 'application'
-INST_TYPE_SITE = 'global_site'
+INST_TYPE_APPLICATION = "application"
+INST_TYPE_SITE = "global_site"
 
 
 def get_current_instances(user: User, path: str, include_perms_map: bool = True) -> List[Dict]:
@@ -47,7 +47,7 @@ def get_current_instances(user: User, path: str, include_perms_map: bool = True)
     """
     obj_role = global_site_resource.get_role_of_user(user, None)
     site_role = obj_role.name
-    site_inst = {'type': INST_TYPE_SITE, 'value': site_role.name.lower()}
+    site_inst = {"type": INST_TYPE_SITE, "value": site_role.name.lower()}
     if include_perms_map:
         site_inst["perms_map"] = list_site_permissions(user)
 
@@ -56,9 +56,9 @@ def get_current_instances(user: User, path: str, include_perms_map: bool = True)
         return [site_inst]
 
     value = AppInstanceInfoSLZ(extracted_obj).data
-    application_inst = {'type': INST_TYPE_APPLICATION, 'value': value}
+    application_inst = {"type": INST_TYPE_APPLICATION, "value": value}
     if include_perms_map:
-        application_inst['perms_map'] = list_application_permissions(user, extracted_obj.application)
+        application_inst["perms_map"] = list_application_permissions(user, extracted_obj.application)
     return [application_inst, site_inst]
 
 
@@ -86,8 +86,8 @@ class ExtractedAppInfo:
 class ApplicationInPathExtractor:
     """Extract application info from requested path"""
 
-    _pattern_without_env = r'applications/(?P<code>[^/]+)(/modules/(?P<module_name>[^/]+))?/'
-    _pattern_with_env = _pattern_without_env + r'envs/(?P<environment>stag|prod)/'
+    _pattern_without_env = r"applications/(?P<code>[^/]+)(/modules/(?P<module_name>[^/]+))?/"
+    _pattern_with_env = _pattern_without_env + r"envs/(?P<environment>stag|prod)/"
 
     RE_WITHOUT_ENV = re.compile(_pattern_without_env)
     RE_WITH_ENV = re.compile(_pattern_with_env)

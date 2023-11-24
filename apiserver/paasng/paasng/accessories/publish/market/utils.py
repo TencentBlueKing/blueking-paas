@@ -22,11 +22,11 @@ from typing import List, Optional
 
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL, default_port_map
 from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, get_builtin_addrs
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.modules.models import Module
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import AvailableAddress, MarketConfig
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class AvailableAddressMixin:
             for addr in LiveEnvAddresses(self.env).list_custom()
         ]
 
-    def filter_domain_address(self, address: str) -> Optional['AvailableAddress']:
+    def filter_domain_address(self, address: str) -> Optional["AvailableAddress"]:
         """获取与 `address` 完全匹配的 `MarketAvailableAddress` 对象"""
         for available_address in self.domain_addresses:
             if available_address.address == address:
@@ -75,7 +75,7 @@ class ModuleEnvAvailableAddressHelper(AvailableAddressMixin):
         self.module = self.env.module
 
     @property
-    def addresses(self) -> List['AvailableAddress']:
+    def addresses(self) -> List["AvailableAddress"]:
         """模块环境中所有可选的访问入口"""
         return self.default_access_entrances + self.domain_addresses
 

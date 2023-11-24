@@ -24,4 +24,4 @@ logger = logging.getLogger(__name__)
 
 
 class AppMonitorConfig(AppConfig):
-    name = 'paas_wl.bk_app.monitoring.app_monitor'
+    name = "paas_wl.bk_app.monitoring.app_monitor"

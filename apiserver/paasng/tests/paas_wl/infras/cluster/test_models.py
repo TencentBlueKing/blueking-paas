@@ -23,7 +23,11 @@ from django.db.utils import IntegrityError
 from django.utils.crypto import get_random_string
 
 from paas_wl.infras.cluster.constants import ClusterTokenType
-from paas_wl.infras.cluster.exceptions import DuplicatedDefaultClusterError, NoDefaultClusterError, SwitchDefaultClusterError
+from paas_wl.infras.cluster.exceptions import (
+    DuplicatedDefaultClusterError,
+    NoDefaultClusterError,
+    SwitchDefaultClusterError,
+)
 from paas_wl.infras.cluster.models import Cluster, Domain, EnhancedConfiguration, IngressConfig, PortMap
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
@@ -97,11 +101,11 @@ class TestCluster:
 
     def test_token(self, region, example_cluster_config):
         Cluster.objects.register_cluster(
-            region=region, name='default-cluster', is_default=True, token_value='foo_token', **example_cluster_config
+            region=region, name="default-cluster", is_default=True, token_value="foo_token", **example_cluster_config
         )
-        cluster = Cluster.objects.get(name='default-cluster')
+        cluster = Cluster.objects.get(name="default-cluster")
         assert cluster.token_type == ClusterTokenType.SERVICE_ACCOUNT
-        assert cluster.token_value == 'foo_token'
+        assert cluster.token_value == "foo_token"
 
 
 class TestIngressConfigField:
@@ -109,12 +113,12 @@ class TestIngressConfigField:
         ingress_config = {
             "port_map": {"http": "81", "https": "8081"},
         }
-        c: Cluster = Cluster.objects.create(region=region, name='dft', is_default=True, ingress_config=ingress_config)
+        c: Cluster = Cluster.objects.create(region=region, name="dft", is_default=True, ingress_config=ingress_config)
         c.refresh_from_db()
         assert isinstance(c.ingress_config, IngressConfig)
         assert isinstance(c.ingress_config.port_map, PortMap)
         assert c.ingress_config.port_map.http == 81
-        assert c.ingress_config.port_map.get_port_num('https') == 8081
+        assert c.ingress_config.port_map.get_port_num("https") == 8081
 
         # Update `PortMap` to None value
         c.ingress_config = {}  # type: ignore
@@ -122,11 +126,11 @@ class TestIngressConfigField:
         c.refresh_from_db()
         assert isinstance(c.ingress_config.port_map, PortMap)
         assert c.ingress_config.port_map.http == 80
-        assert c.ingress_config.port_map.get_port_num('https') == 443
+        assert c.ingress_config.port_map.get_port_num("https") == 443
 
     def test_domains(self, region):
         ingress_config = {"app_root_domains": ["foo.com", {"name": "bar.com"}, {"name": "baz.com", "reserved": True}]}
-        c: Cluster = Cluster.objects.create(region=region, name='dft', is_default=True, ingress_config=ingress_config)
+        c: Cluster = Cluster.objects.create(region=region, name="dft", is_default=True, ingress_config=ingress_config)
         c.refresh_from_db()
         assert isinstance(c.ingress_config, IngressConfig)
         assert len(c.ingress_config.app_root_domains) == 3
@@ -147,37 +151,37 @@ class TestIngressConfigField:
             ]
         }
         config = cattr.structure(d, IngressConfig)
-        root_domain = config.find_app_root_domain('test.foo.example.com')
+        root_domain = config.find_app_root_domain("test.foo.example.com")
         assert root_domain is not None
-        assert root_domain.name == 'foo.example.com'
+        assert root_domain.name == "foo.example.com"
         assert root_domain.reserved is True
 
-        assert config.find_app_root_domain('test.foo.example.org') is None
+        assert config.find_app_root_domain("test.foo.example.org") is None
 
 
 class TestEnhancedConfiguration:
     def test_create_normal(self):
-        conf = EnhancedConfiguration.create('https://192.168.1.1:8443', '', '', '', '', '')
-        assert conf.host == 'https://192.168.1.1:8443'
+        conf = EnhancedConfiguration.create("https://192.168.1.1:8443", "", "", "", "", "")
+        assert conf.host == "https://192.168.1.1:8443"
         assert conf.resolver_records == {}
 
     def test_create_force_hostname(self):
-        conf = EnhancedConfiguration.create('https://192.168.1.1:8443', 'kubernetes', '', '', '', '')
-        assert conf.host == 'https://kubernetes:8443'
-        assert conf.resolver_records == {'kubernetes': '192.168.1.1'}
+        conf = EnhancedConfiguration.create("https://192.168.1.1:8443", "kubernetes", "", "", "", "")
+        assert conf.host == "https://kubernetes:8443"
+        assert conf.resolver_records == {"kubernetes": "192.168.1.1"}
 
     def test_create_invalid_values(self):
         with pytest.raises(ValueError):
-            EnhancedConfiguration.create('https://example.com', 'kubernetes', '', '', '', '')
+            EnhancedConfiguration.create("https://example.com", "kubernetes", "", "", "", "")
 
     @pytest.mark.parametrize(
-        'host,ip',
+        "host,ip",
         [
-            ('https://192.168.1.100/', '192.168.1.100'),
-            ('http://192.168.1.1:8080/', '192.168.1.1'),
-            ('http://[fdf8:f53b:82e4::53]:8443/', 'fdf8:f53b:82e4::53'),
-            ('http://[fdf8:f53b:82e4::53]/', 'fdf8:f53b:82e4::53'),
-            ('https://kubernetes:8443/', None),
+            ("https://192.168.1.100/", "192.168.1.100"),
+            ("http://192.168.1.1:8080/", "192.168.1.1"),
+            ("http://[fdf8:f53b:82e4::53]:8443/", "fdf8:f53b:82e4::53"),
+            ("http://[fdf8:f53b:82e4::53]/", "fdf8:f53b:82e4::53"),
+            ("https://kubernetes:8443/", None),
         ],
     )
     def test_extract_ip(self, host, ip):

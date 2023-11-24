@@ -28,7 +28,7 @@ def get_random_secret_key():
     """
     Return a 50 character random string usable as a SECRET_KEY setting value.
     """
-    chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return get_random_string(50, chars)
 
 
@@ -38,7 +38,7 @@ def create_oauth2_client(bk_app_code: str, region: str) -> bool:
         return BkOauthClient().create_client(bk_app_code)
 
     OAuth2Client.objects.get_or_create(
-        region=region, client_id=bk_app_code, defaults={'client_secret': get_random_secret_key()}
+        region=region, client_id=bk_app_code, defaults={"client_secret": get_random_secret_key()}
     )
     return True
 

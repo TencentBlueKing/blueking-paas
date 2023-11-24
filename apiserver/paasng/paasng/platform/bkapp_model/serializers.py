@@ -20,14 +20,14 @@ from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
+from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.modules.constants import DeployHookType, ModuleName
 from paasng.platform.modules.models.module import Module
-from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 
 
 class GetManifestInputSLZ(serializers.Serializer):
     output_format = serializers.ChoiceField(
-        help_text='The output format', choices=['json', 'yaml'], required=False, default='json'
+        help_text="The output format", choices=["json", "yaml"], required=False, default="json"
     )
 
 
@@ -73,8 +73,12 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     command = serializers.ListSerializer(
         child=serializers.CharField(), help_text="启动命令", default=list, allow_null=True
     )
-    args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list, allow_null=True)
-    port = serializers.IntegerField(help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False)
+    args = serializers.ListSerializer(
+        child=serializers.CharField(), help_text="命令参数", default=list, allow_null=True
+    )
+    port = serializers.IntegerField(
+        help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False
+    )
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
 
 
@@ -89,7 +93,9 @@ class ModuleDeployHookSLZ(serializers.Serializer):
     type = serializers.ChoiceField(help_text="钩子类型", choices=DeployHookType.get_choices())
 
     proc_command = serializers.CharField(
-        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", required=False, allow_null=True
+        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一",
+        required=False,
+        allow_null=True,
     )
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
@@ -99,37 +105,37 @@ class ModuleDeployHookSLZ(serializers.Serializer):
 class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     """A service discovery entry that represents an application and an optional module."""
 
-    bk_app_code = serializers.CharField(help_text='被服务发现的应用 code', max_length=20, source="bkAppCode")
+    bk_app_code = serializers.CharField(help_text="被服务发现的应用 code", max_length=20, source="bkAppCode")
     module_name = serializers.CharField(
-        help_text='被服务发现的应用模块', max_length=20, default=ModuleName.DEFAULT.value, source="moduleName"
+        help_text="被服务发现的应用模块", max_length=20, default=ModuleName.DEFAULT.value, source="moduleName"
     )
 
     def validate(self, attrs):
         """校验应用和模块存在，否则抛出异常"""
         # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
         # 判断应用或者模块是否存在
-        if not Module.objects.filter(application__code=attrs['bkAppCode'], name=attrs['moduleName']).exists():
+        if not Module.objects.filter(application__code=attrs["bkAppCode"], name=attrs["moduleName"]).exists():
             raise serializers.ValidationError(_(f'应用{attrs["bkAppCode"]}或模块{attrs["moduleName"]}不存在'))
 
         return attrs
 
 
 class SvcDiscConfigSLZ(serializers.Serializer):
-    bk_saas = serializers.ListField(help_text='服务发现列表', child=SvcDiscEntryBkSaaSSLZ())
+    bk_saas = serializers.ListField(help_text="服务发现列表", child=SvcDiscEntryBkSaaSSLZ())
 
 
 class HostAliasSLZ(serializers.Serializer):
-    ip = serializers.IPAddressField(help_text='ip')
-    hostnames = serializers.ListField(help_text='域名列表', child=serializers.CharField())
+    ip = serializers.IPAddressField(help_text="ip")
+    hostnames = serializers.ListField(help_text="域名列表", child=serializers.CharField())
 
 
 class DomainResolutionSLZ(serializers.Serializer):
-    nameservers = serializers.ListField(help_text='DNS 服务器', child=serializers.IPAddressField(), required=False)
-    host_aliases = serializers.ListField(help_text='域名解析列表', child=HostAliasSLZ(), required=False)
+    nameservers = serializers.ListField(help_text="DNS 服务器", child=serializers.IPAddressField(), required=False)
+    host_aliases = serializers.ListField(help_text="域名解析列表", child=HostAliasSLZ(), required=False)
 
     def validate(self, data):
-        nameservers = data.get('nameservers')
-        host_aliases = data.get('host_aliases')
+        nameservers = data.get("nameservers")
+        host_aliases = data.get("host_aliases")
 
         if (nameservers is None) and (host_aliases is None):
             raise serializers.ValidationError(_("至少需要提供一个有效值：nameservers 或 host_aliases"))

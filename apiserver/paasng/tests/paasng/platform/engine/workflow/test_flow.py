@@ -51,53 +51,53 @@ class TestDeployProcedure:
         stream = ConsoleStream()
         stream.write_title = mock.Mock()  # type: ignore
 
-        with DeployProcedure(stream, None, 'doing nothing', phases[0]):
+        with DeployProcedure(stream, None, "doing nothing", phases[0]):
             pass
 
         assert stream.write_title.call_count == 1
-        assert stream.write_title.call_args == ((DeployProcedure.TITLE_PREFIX + 'doing nothing',),)
+        assert stream.write_title.call_args == ((DeployProcedure.TITLE_PREFIX + "doing nothing",),)
 
     def test_with_expected_error(self, phases):
         stream = ConsoleStream()
         stream.write_message = mock.Mock()  # type: ignore
 
         try:
-            with DeployProcedure(stream, None, 'doing nothing', phases[0]):
-                raise DeployShouldAbortError('oops')
+            with DeployProcedure(stream, None, "doing nothing", phases[0]):
+                raise DeployShouldAbortError("oops")
         except DeployShouldAbortError:
             pass
 
         assert stream.write_message.call_count == 1
-        assert stream.write_message.call_args[0][0].endswith('oops。')
+        assert stream.write_message.call_args[0][0].endswith("oops。")
 
     def test_with_unexpected_error(self, phases):
         stream = ConsoleStream()
         stream.write_message = mock.Mock()  # type: ignore
 
         try:
-            with DeployProcedure(stream, None, 'doing nothing', phases[0]):
-                raise ValueError('oops')
+            with DeployProcedure(stream, None, "doing nothing", phases[0]):
+                raise ValueError("oops")
         except ValueError:
             pass
 
         assert stream.write_message.call_count == 1
         # The error message should not contains the original exception message
-        assert 'oops' not in stream.write_message.call_args[0][0]
+        assert "oops" not in stream.write_message.call_args[0][0]
 
     def test_with_deployment(self, bk_deployment, phases):
         stream = ConsoleStream()
         stream.write_message = mock.Mock()  # type: ignore
 
         # 手动标记该阶段的开启, 但 title 未知
-        with DeployProcedure(stream, bk_deployment, 'doing nothing', phases[0]) as d:
+        with DeployProcedure(stream, bk_deployment, "doing nothing", phases[0]) as d:
             assert not d.step_obj
 
         # title 已知，但是阶段不匹配
-        with DeployProcedure(stream, bk_deployment, '检测部署结果', phases[0]) as d:
+        with DeployProcedure(stream, bk_deployment, "检测部署结果", phases[0]) as d:
             assert not d.step_obj
 
         # 正常
-        with DeployProcedure(stream, bk_deployment, '配置资源实例', phases[0]) as d:
+        with DeployProcedure(stream, bk_deployment, "配置资源实例", phases[0]) as d:
             assert d.step_obj
 
 

@@ -24,8 +24,8 @@ from .base import GaugeMetric
 
 
 class MySQLAvailableMetric(GaugeMetric):
-    name = 'mysql_service'
-    description = 'mysql service available'
+    name = "mysql_service"
+    description = "mysql service available"
 
     @classmethod
     def calc_value(cls) -> bool:

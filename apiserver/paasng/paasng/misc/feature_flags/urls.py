@@ -20,4 +20,4 @@ from django.urls import path
 
 from paasng.misc.feature_flags.views import FeatureFlagViewSet
 
-urlpatterns = [path("api/platform/feature_flags/", FeatureFlagViewSet.as_view({'get': 'get_features'}))]
+urlpatterns = [path("api/platform/feature_flags/", FeatureFlagViewSet.as_view({"get": "get_features"}))]

@@ -24,6 +24,7 @@ from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.core.env import env_is_running
+from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.networking.entrance.addrs import URL
 from paas_wl.workloads.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.workloads.networking.ingress.domains.independent import (
@@ -35,10 +36,9 @@ from paas_wl.workloads.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.workloads.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.workloads.networking.ingress.models import Domain
 from paas_wl.workloads.networking.ingress.signals import cnative_custom_domain_updated
-from paas_wl.utils.error_codes import error_codes
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.accessories.publish.market.models import MarketConfig
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class DftCustomDomainManager:
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
         if not env_is_running(env):
-            raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
+            raise ValidationError("未部署的环境无法添加独立域名，请先部署对应环境")
 
         wl_app = env.wl_app
         service_name = get_service_name(wl_app)
@@ -105,7 +105,7 @@ class DftCustomDomainManager:
     def update(self, instance: Domain, *, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Update a custom domain object"""
         if check_domain_used_by_market(self.application, instance):
-            raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行更新操作')
+            raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f("该域名已被绑定为主访问入口, 请解绑后再进行更新操作")
 
         env = ModuleEnvironment.objects.get(pk=instance.environment_id)
         try:
@@ -119,7 +119,7 @@ class DftCustomDomainManager:
     def delete(self, instance: Domain) -> None:
         """Delete a custom domain"""
         if check_domain_used_by_market(self.application, instance):
-            raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行删除操作')
+            raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("该域名已被绑定为主访问入口, 请解绑后再进行删除操作")
 
         env = ModuleEnvironment.objects.get(pk=instance.environment_id)
         ret = DomainResourceDeleteService(env).do(host=instance.name, path_prefix=instance.path_prefix)
@@ -165,7 +165,7 @@ class CNativeCustomDomainManager:
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
         if not env_is_running(env):
-            raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
+            raise ValidationError("未部署的环境无法添加独立域名，请先部署对应环境")
 
         # Create the domain object first, so the later deploy process can read it
         domain, _ = Domain.objects.update_or_create(
@@ -186,7 +186,7 @@ class CNativeCustomDomainManager:
     def update(self, instance: Domain, *, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Update a custom domain"""
         if check_domain_used_by_market(self.application, instance.name):
-            raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行更新操作')
+            raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f("该域名已被绑定为主访问入口, 请解绑后再进行更新操作")
 
         # Update Domain instance
         instance.name = host
@@ -206,7 +206,7 @@ class CNativeCustomDomainManager:
     def delete(self, instance: Domain) -> None:
         """Delete a custom domain"""
         if check_domain_used_by_market(self.application, instance.name):
-            raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行删除操作')
+            raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("该域名已被绑定为主访问入口, 请解绑后再进行删除操作")
 
         # Delete the instance first so `deploy_networking` won't include it.
         instance.delete()

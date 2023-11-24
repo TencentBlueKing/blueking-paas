@@ -29,19 +29,6 @@ from django.db import IntegrityError as DjangoIntegrityError
 from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
-from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
-from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.exceptions import IntegrityError
-from paasng.platform.applications.handlers import application_logo_updated
-from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
-from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import before_finishing_application_creation
-from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.applications.utils import create_default_module
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.infras.oauth2.models import OAuth2Client
-from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.accessories.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
@@ -51,6 +38,19 @@ from paasng.accessories.publish.sync_market.handlers import (
     sync_external_url_to_market,
 )
 from paasng.accessories.publish.sync_market.managers import AppManger
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.utils import create_oauth2_client
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.exceptions import IntegrityError
+from paasng.platform.applications.handlers import application_logo_updated
+from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
+from paasng.platform.applications.models import Application
+from paasng.platform.applications.signals import before_finishing_application_creation
+from paasng.platform.applications.specs import AppSpecs
+from paasng.platform.applications.utils import create_default_module
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -72,14 +72,14 @@ class Simple3rdAppDesc:
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('--source', type=str, dest="source")
-        parser.add_argument('--app_codes', type=str, dest="third_app_init_codes")
-        parser.add_argument('--override', type=str2bool, dest="override", default=False)
-        parser.add_argument('--dry_run', dest="dry_run", action='store_true')
+        parser.add_argument("--source", type=str, dest="source")
+        parser.add_argument("--app_codes", type=str, dest="third_app_init_codes")
+        parser.add_argument("--override", type=str2bool, dest="override", default=False)
+        parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
     def handle(self, source, third_app_init_codes, override, dry_run, *args, **options):
         """批量创建第三方应用"""
-        with open(source, 'r') as f:
+        with open(source, "r") as f:
             apps = yaml.safe_load(f)
 
             for app in apps:
@@ -110,7 +110,7 @@ class Command(BaseCommand):
         legacy_app = AppManger(session).get(code)
         if legacy_app:
             return legacy_app.auth_token
-        return ''
+        return ""
 
     def create_oauth_client_by_code(self, code: str, region: str):
         secret_key = self.get_app_secret_key(code)
@@ -124,7 +124,7 @@ class Command(BaseCommand):
                     OAuth2Client.objects.get_or_create(
                         region=region,
                         client_id=code,
-                        defaults={'client_secret': secret_key},
+                        defaults={"client_secret": secret_key},
                     )
                 finally:
                     post_save.connect(receiver=application_oauth_handler, sender=OAuth2Client)
@@ -140,11 +140,11 @@ class Command(BaseCommand):
                 code=app_desc.code,
                 region=app_desc.region,
                 defaults={
-                    'name': app_desc.name,
-                    'name_en': app_desc.name_en,
-                    'type': ApplicationType.ENGINELESS_APP,
-                    'owner': app_desc.creator,
-                    'creator': app_desc.creator,
+                    "name": app_desc.name,
+                    "name_en": app_desc.name_en,
+                    "type": ApplicationType.ENGINELESS_APP,
+                    "owner": app_desc.creator,
+                    "creator": app_desc.creator,
                 },
             )
         except DjangoIntegrityError:
@@ -178,29 +178,29 @@ class Command(BaseCommand):
             region=application.region,
             application=application,
             defaults={
-                'enabled': True,
-                'auto_enable_when_deploy': not AppSpecs(application).confirm_required_when_publish,
-                'source_module': module,
-                'source_url_type': ProductSourceUrlType.THIRD_PARTY.value,
-                'source_tp_url': os.path.expandvars(app_desc.source_tp_url),
+                "enabled": True,
+                "auto_enable_when_deploy": not AppSpecs(application).confirm_required_when_publish,
+                "source_module": module,
+                "source_url_type": ProductSourceUrlType.THIRD_PARTY.value,
+                "source_tp_url": os.path.expandvars(app_desc.source_tp_url),
             },
         )
         product, p_created = Product.objects.update_or_create(
             application=application,
             code=app_desc.code,
             defaults={
-                'name_zh_cn': app_desc.name,
-                'name_en': app_desc.name_en,
-                'tag': Tag.objects.get(name=app_desc.tag),
-                'introduction_zh_cn': app_desc.introduction_zh_cn,
-                'introduction_en': app_desc.introduction_en,
-                'type': AppType.THIRD_PARTY.value,
-                'state': AppState.RELEASED.value,
+                "name_zh_cn": app_desc.name,
+                "name_en": app_desc.name_en,
+                "tag": Tag.objects.get(name=app_desc.tag),
+                "introduction_zh_cn": app_desc.introduction_zh_cn,
+                "introduction_en": app_desc.introduction_en,
+                "type": AppType.THIRD_PARTY.value,
+                "state": AppState.RELEASED.value,
             },
         )
-        img_format, img_str = app_desc.logo.split(';base64,')
-        ext = img_format.split('/')[-1]
-        img_name = 'templogo.' + ext
+        img_format, img_str = app_desc.logo.split(";base64,")
+        ext = img_format.split("/")[-1]
+        img_name = "templogo." + ext
         # # update product logo
         application.logo.save(name=img_name, content=ContentFile(base64.b64decode(img_str), name=img_name), save=False)
         application.save()

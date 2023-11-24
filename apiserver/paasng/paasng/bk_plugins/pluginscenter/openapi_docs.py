@@ -30,7 +30,9 @@ create_plugin_instance_schema = openapi.Schema(
             properties={
                 "id": openapi.Schema(title="id", description="插件类型标识", type=openapi.TYPE_STRING),
                 "name": openapi.Schema(title="name", description="插件类型名称", type=openapi.TYPE_STRING),
-                "description": openapi.Schema(title="description", description="插件类型描述", type=openapi.TYPE_STRING),
+                "description": openapi.Schema(
+                    title="description", description="插件类型描述", type=openapi.TYPE_STRING
+                ),
                 "docs": openapi.Schema(
                     title="docs", description="插件类型说明文档", type=openapi.TYPE_STRING, format=openapi.FORMAT_URI
                 ),
@@ -109,7 +111,10 @@ create_release_schema = openapi.Schema(
             description="校验代码版本(source_version_name)正则表达式模板, 留空则不校验", type=openapi.TYPE_STRING
         ),
         "version_no": openapi.Schema(
-            description="版本号生成规则, 自动生成(automatic)," "与代码版本一致(revision)," "与提交哈希一致(commit-hash)," "用户自助填写(self-fill)",
+            description="版本号生成规则, 自动生成(automatic),"
+            "与代码版本一致(revision),"
+            "与提交哈希一致(commit-hash),"
+            "用户自助填写(self-fill)",
             type=openapi.TYPE_STRING,
             enum=["automatic", "revision", "commit-hash", "self-fill"],
         ),
@@ -131,7 +136,9 @@ create_release_schema = openapi.Schema(
                         description="分支名/Tag名",
                         type=openapi.TYPE_STRING,
                     ),
-                    "type": openapi.Schema(description="源码版本类型", type=openapi.TYPE_STRING, enum=["branch", "tag"]),
+                    "type": openapi.Schema(
+                        description="源码版本类型", type=openapi.TYPE_STRING, enum=["branch", "tag"]
+                    ),
                 },
             ),
         ),

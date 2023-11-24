@@ -72,10 +72,10 @@ class TestProcInstManager:
         pod_name = v2_mapper.pod(process=process).name
         serializer = process_manager._make_serializer(wl_app)
         pod_body = {
-            'apiVersion': 'v1',
-            'kind': 'Pod',
-            'metadata': {'labels': v2_mapper.pod(process=process).labels, 'name': pod_name},
-            'spec': serializer._construct_pod_body_specs(process),  # type: ignore
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {"labels": v2_mapper.pod(process=process).labels, "name": pod_name},
+            "spec": serializer._construct_pod_body_specs(process),  # type: ignore
         }
         pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
         return pod
@@ -83,54 +83,54 @@ class TestProcInstManager:
     @pytest.fixture
     def terminated_pod(self, pod, client):
         new_status = {
-            'status': {
-                'phase': 'Running',
-                'containerStatuses': [make_container_status({"terminated": {"reason": "", "exitCode": 1}}, {})],
+            "status": {
+                "phase": "Running",
+                "containerStatuses": [make_container_status({"terminated": {"reason": "", "exitCode": 1}}, {})],
             }
         }
         KPod(client).patch(
-            name=pod.metadata.name, namespace=pod.metadata.namespace, body=new_status, subresource='status'
+            name=pod.metadata.name, namespace=pod.metadata.namespace, body=new_status, subresource="status"
         )
 
     def test_query_instances(self, wl_app, pod):
         # Query process instances
-        insts = instance_kmodel.list_by_process_type(wl_app, 'web')
+        insts = instance_kmodel.list_by_process_type(wl_app, "web")
         assert len(insts) == 1
-        assert insts[0].process_type == 'web'
-        assert insts[0].state == 'Pending'
-        assert insts[0].rich_status == 'Pending'
+        assert insts[0].process_type == "web"
+        assert insts[0].state == "Pending"
+        assert insts[0].rich_status == "Pending"
         assert insts[0].envs
 
     def test_query_instances_terminated(self, wl_app, terminated_pod):
-        inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
-        assert inst.state == 'Failed'
-        assert inst.rich_status == 'Terminated'
+        inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
+        assert inst.state == "Failed"
+        assert inst.rich_status == "Terminated"
 
     def test_query_instances_without_process_id_label(self, client, wl_app, pod):
         # Delete `process_id` label to simulate resources created by legacy engine versions
         labels = dict(pod.metadata.labels)
-        del labels['process_id']
+        del labels["process_id"]
         KPod(client).patch(
-            name=pod.metadata.name, body={'metadata': {'labels': labels}}, namespace=pod.metadata.namespace
+            name=pod.metadata.name, body={"metadata": {"labels": labels}}, namespace=pod.metadata.namespace
         )
 
         # Query process instances
-        insts = instance_kmodel.list_by_process_type(wl_app, 'web')
+        insts = instance_kmodel.list_by_process_type(wl_app, "web")
         assert len(insts) == 1
 
     def test_watch_from_rv0(self, client, wl_app, pod):
         labels = dict(pod.metadata.labels)
         # Update labels to produce events
-        labels['foo'] = 'bar'
+        labels["foo"] = "bar"
         KPod(client).patch(
-            name=pod.metadata.name, body={'metadata': {'labels': labels}}, namespace=pod.metadata.namespace
+            name=pod.metadata.name, body={"metadata": {"labels": labels}}, namespace=pod.metadata.namespace
         )
 
         events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0
 
     def test_watch_from_empty_rv(self, wl_app, pod):
-        inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
+        inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
         events = list(
             instance_kmodel.watch_by_app(wl_app, resource_version=inst.get_resource_version(), timeout_seconds=1)
         )
@@ -143,10 +143,10 @@ class TestProcInstManager:
         pod_name = v2_mapper.pod(process=process).name
         serializer = process_manager._make_serializer(wl_app)
         pod_body = {
-            'apiVersion': 'v1',
-            'kind': 'Pod',
-            'metadata': {'labels': {}, 'name': pod_name},
-            'spec': serializer._construct_pod_body_specs(process),  # type: ignore
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {"labels": {}, "name": pod_name},
+            "spec": serializer._construct_pod_body_specs(process),  # type: ignore
         }
         pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
         events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
@@ -160,8 +160,8 @@ class TestProcInstManager:
 
     def test_get_logs(self, wl_app, pod):
         # Query process instances
-        inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
-        with mock.patch('paas_wl.bk_app.processes.kres_entities.Instance.Meta.kres_class') as kp:
+        inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
+        with mock.patch("paas_wl.bk_app.processes.kres_entities.Instance.Meta.kres_class") as kp:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 
@@ -171,7 +171,7 @@ class TestProcInstManager:
         assert resources.metadata is not None
         rv = resources.get_resource_version()
         assert isinstance(rv, str)
-        assert rv != ''
+        assert rv != ""
 
 
 class TestProcSpecsManager:
@@ -186,10 +186,10 @@ class TestProcSpecsManager:
         # Query ProcSpecs objects
         objs = process_kmodel.list_by_app(process.app)
         assert len(objs) == 1
-        assert objs[0].type == 'web'
+        assert objs[0].type == "web"
         assert objs[0].replicas == 2
 
-        obj = process_kmodel.get_by_type(process.app, 'web')
+        obj = process_kmodel.get_by_type(process.app, "web")
         # 集成测试中的 k8s 集群会修改 metadata
         obj.metadata = {}
         objs[0].metadata = {}
@@ -206,19 +206,19 @@ class TestProcSpecsManager:
 
 class TestExtractTypeFromName:
     @pytest.mark.parametrize(
-        'name,namespace,proc_type',
+        "name,namespace,proc_type",
         [
             (
-                f'{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment',
-                'bkapp-foo-prod',
-                'web',
+                f"{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment",
+                "bkapp-foo-prod",
+                "web",
             ),
             (
-                f'{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment-858bf9c468-rms24',
-                'bkapp-foo-prod',
-                'web',
+                f"{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment-858bf9c468-rms24",
+                "bkapp-foo-prod",
+                "web",
             ),
-            ('invalid_name', 'xxx', None),
+            ("invalid_name", "xxx", None),
         ],
     )
     def test_main(self, name, namespace, proc_type):

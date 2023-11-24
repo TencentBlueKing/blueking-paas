@@ -28,7 +28,7 @@ from paasng.platform.modules.serializers import MinimalModuleSLZ
 class CategorySLZ(serializers.ModelSerializer):
     class Meta:
         model = ServiceCategory
-        fields = '__all__'
+        fields = "__all__"
 
 
 class SpecDefinitionSLZ(serializers.Serializer):
@@ -45,7 +45,7 @@ class ServiceMinimalSLZ(serializers.Serializer):
     display_name = serializers.CharField()
     description = serializers.CharField()
     category = CategorySLZ()
-    specifications = serializers.ListField(child=SpecDefinitionSLZ(), source='public_specifications')
+    specifications = serializers.ListField(child=SpecDefinitionSLZ(), source="public_specifications")
 
 
 class ServiceCategoryByRegionSLZ(serializers.Serializer):
@@ -63,7 +63,7 @@ class ServiceSLZ(serializers.Serializer):
     description = serializers.CharField()
     long_description = serializers.CharField()
     category = CategorySLZ()
-    specifications = serializers.ListField(child=SpecDefinitionSLZ(), source='public_specifications')
+    specifications = serializers.ListField(child=SpecDefinitionSLZ(), source="public_specifications")
     instance_tutorial = serializers.CharField()
 
 
@@ -98,7 +98,7 @@ class ApplicationWithLogoSLZ(serializers.Serializer):
     name = serializers.CharField()
     code = serializers.CharField()
     language = serializers.CharField()
-    logo_url = serializers.CharField(help_text='Logo 图片', read_only=True, source='get_logo_url')
+    logo_url = serializers.CharField(help_text="Logo 图片", read_only=True, source="get_logo_url")
 
 
 class EnvServiceAttachmentSLZ(serializers.Serializer):
@@ -140,16 +140,16 @@ class ServiceAttachmentDetailedSLZ(ServiceAttachmentSLZ):
 
 
 class ServiceAttachmentQuerySLZ(serializers.Serializer):
-    valid_order_by_fields = ('created',)
-    order_by = serializers.CharField(default='-created')
+    valid_order_by_fields = ("created",)
+    order_by = serializers.CharField(default="-created")
 
     def validate(self, data):
-        value = data['order_by']
-        if value.startswith('-'):
-            value = '-%s' % value.lstrip('-')
+        value = data["order_by"]
+        if value.startswith("-"):
+            value = "-%s" % value.lstrip("-")
 
-        if value.lstrip('-') not in self.valid_order_by_fields:
-            raise ValidationError(u'无效的排序选项：%s' % value)
+        if value.lstrip("-") not in self.valid_order_by_fields:
+            raise ValidationError("无效的排序选项：%s" % value)
 
         return data
 
@@ -165,16 +165,16 @@ class ServiceInstanceSLZ(serializers.Serializer):
     """增强服务实例-序列化器"""
 
     config = serializers.JSONField()
-    credentials = serializers.JSONField(source='credentials_insensitive')
+    credentials = serializers.JSONField(source="credentials_insensitive")
 
     def to_representation(self, instance):
         data = super(ServiceInstanceSLZ, self).to_representation(instance)
-        data['sensitive_fields'] = instance.should_remove_fields
-        data['hidden_fields'] = instance.get_hidden_credentials()
+        data["sensitive_fields"] = instance.should_remove_fields
+        data["hidden_fields"] = instance.get_hidden_credentials()
 
         # The client side needs string version instead of object type for credentials, which is
         # really confusing.
-        data['credentials'] = json.dumps(data['credentials'])
+        data["credentials"] = json.dumps(data["credentials"])
         return data
 
 
@@ -204,7 +204,7 @@ class ServiceSetGroupByNameSLZ(serializers.Serializer):
 class CreateSharedAttachmentsSLZ(serializers.Serializer):
     """Serializer for creating shared service attachment"""
 
-    ref_module_name = serializers.CharField(help_text='被共享的模块名称')
+    ref_module_name = serializers.CharField(help_text="被共享的模块名称")
 
 
 class ProvisionInfoSLZ(serializers.Serializer):
@@ -215,22 +215,22 @@ class ProvisionInfoSLZ(serializers.Serializer):
 class BoundServiceInfoSLZ(serializers.Serializer):
     """Serializer for representing bound service info"""
 
-    service = ServiceMinimalSLZ(help_text='增强服务信息')
-    provision_infos = ProvisionInfoSLZ(help_text='增强服务实例分配信息')
-    specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())
-    ref_modules = serializers.ListField(help_text='共享当前增强服务的模块', allow_null=True, child=MinimalModuleSLZ())
+    service = ServiceMinimalSLZ(help_text="增强服务信息")
+    provision_infos = ProvisionInfoSLZ(help_text="增强服务实例分配信息")
+    specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
+    ref_modules = serializers.ListField(help_text="共享当前增强服务的模块", allow_null=True, child=MinimalModuleSLZ())
 
 
 class SharedServiceInfoSLZ(serializers.Serializer):
     """Serializer for representing shared service info"""
 
-    module = MinimalModuleSLZ(help_text='发起共享的模块')
-    ref_module = MinimalModuleSLZ(help_text='被共享的模块')
-    service = ServiceMinimalSLZ(help_text='共享服务信息')
+    module = MinimalModuleSLZ(help_text="发起共享的模块")
+    ref_module = MinimalModuleSLZ(help_text="被共享的模块")
+    service = ServiceMinimalSLZ(help_text="共享服务信息")
 
 
 class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
     """携带分配 & 配置信息的共享服务信息"""
 
-    provision_infos = ProvisionInfoSLZ(help_text='共享服务实例分配信息')
-    specifications = serializers.ListField(help_text='配置信息', allow_null=True, child=ServicePlanSpecificationSLZ())
+    provision_infos = ProvisionInfoSLZ(help_text="共享服务实例分配信息")
+    specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())

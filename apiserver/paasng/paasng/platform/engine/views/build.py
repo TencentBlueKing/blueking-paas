@@ -27,12 +27,12 @@ from rest_framework.response import Response
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models import Build, BuildProcess
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine import serializers
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models import Deployment
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 class ImageArtifactViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['image']
-    ordering = ('-created',)
+    search_fields = ["image"]
+    ordering = ("-created",)
 
     @swagger_auto_schema(response_serializer=serializers.ImageArtifactMinimalSLZ(many=True))
     def list_image(self, request, code, module_name):
@@ -92,8 +92,8 @@ class ImageArtifactViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
 class BuildProcessViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['status']
-    ordering = ('-created',)
+    search_fields = ["status"]
+    ordering = ("-created",)
 
     @swagger_auto_schema(response_serializer=serializers.BuildProcessSLZ(many=True))
     def list(self, request, code, module_name):

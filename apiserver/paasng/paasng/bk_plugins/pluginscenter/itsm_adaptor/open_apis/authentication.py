@@ -30,11 +30,11 @@ class ItsmBasicAuthentication(BasicAuthentication):
         验证回调请求是否来自 ITSM
         https://github.com/TencentBlueKing/bk-itsm/blob/master/docs/wiki/access.md
         """
-        token = request.data.get('token', '')
+        token = request.data.get("token", "")
 
         client = ItsmClient()
         is_passed = client.verify_token(token)
         if not is_passed:
-            raise AuthenticationFailed('authentication failed: itsm callback token verification failed')
+            raise AuthenticationFailed("authentication failed: itsm callback token verification failed")
 
         return

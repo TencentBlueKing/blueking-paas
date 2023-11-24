@@ -18,4 +18,4 @@ to the current version of the project delivered to anyone in the future.
 """
 from .independent import get_service_name
 
-__all__ = ['get_service_name']
+__all__ = ["get_service_name"]

@@ -28,15 +28,15 @@ from django.conf import settings
 from django.utils.encoding import force_bytes, force_str
 
 from paas_wl.infras.cluster.models import Cluster
+from paasng.accessories.publish.entrance.preallocated import get_exposed_url_type, get_preallocated_address
+from paasng.platform.applications.models import Application
+from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import Deployment
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
-from paasng.platform.declarative.models import DeploymentDescription
-from paasng.platform.applications.models import Application
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
-from paasng.accessories.publish.entrance.preallocated import get_exposed_url_type, get_preallocated_address
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class BkSaaSAddrDiscoverer:
                 )._asdict()
             except ValueError:
                 value = None
-            data.append({'key': cattr.unstructure(saas_item), 'value': value})
+            data.append({"key": cattr.unstructure(saas_item), "value": value})
         return data
 
     @staticmethod
@@ -128,7 +128,7 @@ class BkSaaSAddrDiscoverer:
                 # Return the actual cluster object of current module
                 yield item, get_module_clusters(module)
             else:
-                logger.info('Module not found in system, no cluster for %s', item)
+                logger.info("Module not found in system, no cluster for %s", item)
                 yield item, None
 
 

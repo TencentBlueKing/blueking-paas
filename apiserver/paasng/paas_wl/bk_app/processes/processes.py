@@ -24,7 +24,7 @@ from paas_wl.bk_app.processes.entities import Status
 from paas_wl.bk_app.processes.kres_entities import Process
 
 
-def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':
+def condense_processes(processes: "List[Process]") -> "List[PlainProcess]":
     """Condense processes by removing unrelated fields to save space."""
     plain = []
     for p in processes:
@@ -69,7 +69,7 @@ class PlainInstance:
 
         'ieod-x-gunicorn-deployment-59b9789f76wk82' -> '59b9789f76wk82'
         """
-        return self.name.split('-')[-1]
+        return self.name.split("-")[-1]
 
     def is_ready_for(self, expected_version: int) -> bool:
         """detect if the instance if ready for the given version"""

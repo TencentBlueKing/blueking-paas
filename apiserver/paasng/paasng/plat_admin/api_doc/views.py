@@ -31,7 +31,7 @@ from paasng.infras.accounts.permissions.global_site import site_perm_class
 schema_view = get_schema_view(
     openapi.Info(
         title="PaaS V3 API",
-        default_version='vx',
+        default_version="vx",
         description="PaaS V3 API Document",
         terms_of_service=settings.BKPAAS_URL,
         contact=openapi.Contact(email="blueking@tencent.com"),
@@ -56,7 +56,7 @@ class FullSwaggerConfigurationView(schema_view):  # type: ignore
 
         return Response(default)
 
-    def _merge_paths(self, base: Dict, target: Dict, base_path: str = '', ignore_conflict: bool = True):
+    def _merge_paths(self, base: Dict, target: Dict, base_path: str = "", ignore_conflict: bool = True):
         """合并 swagger docs 中的 paths 字段"""
         to_merge = target.get("paths")
         if not isinstance(to_merge, dict):

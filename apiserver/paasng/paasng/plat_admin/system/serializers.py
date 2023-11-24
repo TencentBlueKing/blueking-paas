@@ -35,8 +35,8 @@ class QueryUniApplicationsByID(serializers.Serializer):
         child=serializers.CharField(allow_blank=False),
         help_text="应用 ID，最多不超过 20 个",
     )
-    include_deploy_info = serializers.BooleanField(help_text='是否在结果中返回部署相关信息', default=False)
-    include_inactive_apps = serializers.BooleanField(help_text='是否查询已下架的应用', default=False)
+    include_deploy_info = serializers.BooleanField(help_text="是否在结果中返回部署相关信息", default=False)
+    include_inactive_apps = serializers.BooleanField(help_text="是否查询已下架的应用", default=False)
 
 
 class QueryUniApplicationsByUserName(serializers.Serializer):
@@ -48,7 +48,7 @@ class QueryUniApplicationsByUserName(serializers.Serializer):
 class UniversalAppSLZ(serializers.Serializer):
     """Serializer for universal apps"""
 
-    source = serializers.IntegerField(source='get_source', help_text='应用来源平台。1 - 默认, 2 - 旧版本')
+    source = serializers.IntegerField(source="get_source", help_text="应用来源平台。1 - 默认, 2 - 旧版本")
     name = serializers.CharField(help_text="应用名称")
     name_en = serializers.CharField(help_text="应用英文名称")
     code = serializers.CharField(help_text="应用 ID（Code）")
@@ -96,20 +96,20 @@ class QueryApplicationsSLZ(serializers.Serializer):
     def validate(self, data):
         conds = [val for val in data.values() if val]
         if len(conds) != 1:
-            raise ValidationError('仅支持使用一种查询条件')
+            raise ValidationError("仅支持使用一种查询条件")
         return super().validate(data)
 
 
 class AppBasicSLZ(serializers.ModelSerializer):
     class Meta:
         model = Application
-        fields = ['id', 'type', 'region', 'code', 'name']
+        fields = ["id", "type", "region", "code", "name"]
 
 
 class ModuleBasicSLZ(serializers.ModelSerializer):
     class Meta:
         model = Module
-        fields = ['id', 'name']
+        fields = ["id", "name"]
 
 
 class ModuleEnvBasicSLZ(serializers.ModelSerializer):
@@ -117,7 +117,7 @@ class ModuleEnvBasicSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = ModuleEnvironment
-        fields = ['id', 'environment', 'module_id', 'engine_app_id', 'is_offlined']
+        fields = ["id", "environment", "module_id", "engine_app_id", "is_offlined"]
 
 
 class AddonCredentialsSLZ(serializers.Serializer):
@@ -141,17 +141,17 @@ class AddonSpecsSLZ(serializers.Serializer):
         if not specs:
             return specs
 
-        svc = self.context['svc']
+        svc = self.context["svc"]
         if not svc.public_specifications:
-            raise ValidationError(f'addon service {svc.name} does not support custom specs')
+            raise ValidationError(f"addon service {svc.name} does not support custom specs")
 
         # filter_plans 无法识别出 invalid spec name, 因此保留下面的逻辑
         public_spec_names = [spec.name for spec in svc.public_specifications]
         if invalid_spec_name := set(specs.keys()) - set(public_spec_names):
-            raise ValidationError(f'spec name {invalid_spec_name} is invalid for addon service {svc.name}')
+            raise ValidationError(f"spec name {invalid_spec_name} is invalid for addon service {svc.name}")
 
         if not ServiceSpecificationHelper.from_service_public_specifications(svc).filter_plans(specs):
-            raise ValidationError(f'{specs} is invalid for addon service {svc.name}')
+            raise ValidationError(f"{specs} is invalid for addon service {svc.name}")
 
         return specs
 

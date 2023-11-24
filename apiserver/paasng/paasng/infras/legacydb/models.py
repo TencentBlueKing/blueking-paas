@@ -23,21 +23,21 @@ from typing import List, Optional, no_type_check
 from sqlalchemy import or_
 from sqlalchemy.orm.session import Session
 
-from paasng.infras.iam.legacy import Permission
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.infras.iam.legacy import Permission
 
 logger = logging.getLogger(__name__)
-LApplication = legacy_db.get_model('paas_app')
+LApplication = legacy_db.get_model("paas_app")
 LEngineApp = legacy_db.get_model("engine_apps")
 
-LApplicationSecureInfo = legacy_db.get_model('paas_app_secureinfo')
+LApplicationSecureInfo = legacy_db.get_model("paas_app_secureinfo")
 LApplicationConfigVar = legacy_db.get_model("paas_app_envvars")
 LApplicationReleaseRecord = legacy_db.get_model("paas_release_record")
 LApplicationUseRecord = legacy_db.get_model("console_analysis_appuserecord")
-LApplicationTag = legacy_db.get_model('paas_apptags')
+LApplicationTag = legacy_db.get_model("paas_apptags")
 
-LAppDeveloper = legacy_db.get_model('paas_app_developer')
-LUser = legacy_db.get_model('account_bkuser')
+LAppDeveloper = legacy_db.get_model("paas_app_developer")
+LUser = legacy_db.get_model("account_bkuser")
 
 
 # 仅 EE 环境拥有的模型

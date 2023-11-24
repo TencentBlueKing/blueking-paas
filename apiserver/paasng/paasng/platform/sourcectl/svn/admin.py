@@ -55,7 +55,7 @@ class BaseSvnAuthClient:
     def mod_authz(self, repo_path, is_code_private, group_name=None):
         raise NotImplementedError
 
-    def mod_authz_common(self, repo_path, authz='r', group_or_user_name='svn_t', type_id='user'):
+    def mod_authz_common(self, repo_path, authz="r", group_or_user_name="svn_t", type_id="user"):
         raise NotImplementedError
 
     def del_authz(self, repo_path, user_or_group, type_id):
@@ -64,8 +64,8 @@ class BaseSvnAuthClient:
 
 class BaseRealSvnAuthClient(BaseSvnAuthClient):
     REGION: str
-    SVN_SECRET = '32fc6114554e3c53d5952594510021e2'
-    SVN_OPERATE_ERROR_NOTIFIER = 'admin'
+    SVN_SECRET = "32fc6114554e3c53d5952594510021e2"
+    SVN_OPERATE_ERROR_NOTIFIER = "admin"
     DUMMY = True
     TIMEOUT = 60
     SSL_VERIFY = False
@@ -81,8 +81,8 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         admin_url = self.get_admin_url(self.REGION)
         if not admin_url:
             return
-        if not admin_url.endswith('/'):
-            admin_url += '/'
+        if not admin_url.endswith("/"):
+            admin_url += "/"
 
         self.SVN_ADD_USER = self.BASE_SVN_ADD_USER.format(admin_url=admin_url)  # svn用户添加
         self.SVN_MOD_COMMON = self.BASE_SVN_MOD_COMMON.format(admin_url=admin_url)  # svn目录普通用户权限添加
@@ -96,12 +96,12 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         try:
             return get_bksvn_config(region).admin_url
         except RuntimeError:
-            logger.warning('No bk svn sourcectl was configured')
+            logger.warning("No bk svn sourcectl was configured")
             return None
 
     def request(self, url, params, **kwargs):
         # 带上权限信息
-        params.update({'dummy': self.DUMMY, 'secret': self.SVN_SECRET})
+        params.update({"dummy": self.DUMMY, "secret": self.SVN_SECRET})
 
         response = requests.get(url, params=params, timeout=self.TIMEOUT, verify=self.SSL_VERIFY, **kwargs)
 
@@ -128,13 +128,13 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         测试点：申请开发者、app注册
         """
         kwargs = {
-            'username': account,
-            'passwd': password,
+            "username": account,
+            "passwd": password,
         }
         result = self.request(url=self.SVN_ADD_USER, params=kwargs)
 
         # 解析返回内容
-        account, password = result.split('=')
+        account, password = result.split("=")
 
         return {"account": account.strip(), "password": password.strip()}
 
@@ -152,8 +152,8 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         测试点：app注册
         """
         kwargs = {
-            'app_code': app_code,
-            'is_create_trunk': is_create_trunk,
+            "app_code": app_code,
+            "is_create_trunk": is_create_trunk,
         }
 
         result = self.request(url=self.SVN_ADD_DIR, params=kwargs)
@@ -172,11 +172,11 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         developer_center.utils.mod_user_power_svn
         测试点：app注册，app开发者修改
         """
-        app_dev_list = developers.split(';')
-        group_users = ','.join(app_dev_list)
+        app_dev_list = developers.split(";")
+        group_users = ",".join(app_dev_list)
         kwargs = {
-            'group_name': code,
-            'group_users': group_users,
+            "group_name": code,
+            "group_users": group_users,
         }
         result = self.request(url=self.SVN_MOD_GROUP, params=kwargs)
         return result
@@ -196,14 +196,14 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         # 所有 module 共用同一个 group
         group_name = group_name or repo_path
         kwargs = {
-            'repos': repo_path,
-            'priv': int(is_code_private),
-            'group': group_name,
+            "repos": repo_path,
+            "priv": int(is_code_private),
+            "group": group_name,
         }
         result = self.request(self.SVN_MOD_AUTHZ, params=kwargs)
         return result
 
-    def mod_authz_common(self, repo_path, authz='r', group_or_user_name='svn_t', type_id='user'):
+    def mod_authz_common(self, repo_path, authz="r", group_or_user_name="svn_t", type_id="user"):
         """
         appsvn目录其他权限修改
         @param repo_path: repos 路径
@@ -217,10 +217,10 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         测试点：app注册，app开发者修改
         """
         kwargs = {
-            'repos': repo_path,
-            'type_id': type_id,
-            'user_or_group': group_or_user_name,
-            'authz': authz,
+            "repos": repo_path,
+            "type_id": type_id,
+            "user_or_group": group_or_user_name,
+            "authz": authz,
         }
 
         self.request(self.SVN_MOD_COMMON, params=kwargs)
@@ -237,9 +237,9 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         测试点：删除app
         """
         kwargs = {
-            'repos': repo_path,
-            'user_or_group': user_or_group,
-            'type_id': type_id,
+            "repos": repo_path,
+            "user_or_group": user_or_group,
+            "type_id": type_id,
         }
         self.request(self.SVN_DEL_AUTHZ, kwargs)
 
@@ -247,14 +247,14 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
 class IeodSvnAuthClient(BaseRealSvnAuthClient):
     """SVN用户账号注册及授权（互娱内部版）"""
 
-    REGION = 'ieod'
+    REGION = "ieod"
     BASE_SVN_ADD_DIR = "{admin_url}svn_add/app_dir_trunk/"
 
 
 class SvnApplicationAuthorization:
     svn_client_cls: Type[BaseSvnAuthClient]
 
-    def __init__(self, application: 'Application'):
+    def __init__(self, application: "Application"):
         self.application = application
         self.svn_client = self.svn_client_cls()
 
@@ -292,19 +292,19 @@ class SvnApplicationAuthorization:
         """针对根路径的平台账户权限设置
         :param path 不包含通用根目录的 应用path
         """
-        privilege = "%s%s" % ('r' if read else '', 'w' if write else '')
+        privilege = "%s%s" % ("r" if read else "", "w" if write else "")
         admin_credentials = get_bksvn_config(self.application.region).get_admin_credentials()
 
         # 修改目录权限
         # `v3apps/` + `somecode-123`
         repo_path = get_bksvn_config(self.application.region).get_base_path() + path
         self.svn_client.mod_authz_common(
-            repo_path=repo_path, group_or_user_name=admin_credentials['username'], authz=privilege
+            repo_path=repo_path, group_or_user_name=admin_credentials["username"], authz=privilege
         )
 
     def set_paas_user_privilege(self, read=True, write=False):
         """设置paas账户的权限"""
-        privilege = "%s%s" % ('r' if read else '', 'w' if write else '')
+        privilege = "%s%s" % ("r" if read else "", "w" if write else "")
         admin_credentials = get_bksvn_config(self.application.region).get_admin_credentials()
 
         # 需要保证 repo obj 已经生成
@@ -312,7 +312,7 @@ class SvnApplicationAuthorization:
         for module in self.application.modules.filter(source_type=get_sourcectl_names().bk_svn):
             self.svn_client.mod_authz_common(
                 repo_path=module.get_source_obj().get_repo_fullname(),
-                group_or_user_name=admin_credentials['username'],
+                group_or_user_name=admin_credentials["username"],
                 authz=privilege,
             )
 
@@ -364,7 +364,7 @@ class SvnAuthClient4Developer(BaseSvnAuthClient):
         return cls.mock(repo_path=repo_path, is_code_private=is_code_private, group_name=group_name)
 
     @classmethod
-    def mod_authz_common(cls, repo_path, authz='r', group_or_user_name='svn_t', type_id='user'):
+    def mod_authz_common(cls, repo_path, authz="r", group_or_user_name="svn_t", type_id="user"):
         return cls.mock(repo_path=repo_path, authz=authz, group_or_user_name=group_or_user_name, type_id=type_id)
 
     @classmethod

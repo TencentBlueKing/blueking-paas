@@ -30,9 +30,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
-from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP
+from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP, SiteRole
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
-from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.oauth.models import Project, Scope
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.utils.models import AuditedModel, BkUserField, RegionListField, TimestampedModel
@@ -50,37 +49,37 @@ class User(AbstractBaseUser):
     username_validator = UnicodeUsernameValidator()
 
     username = models.CharField(
-        'username',
+        "username",
         max_length=150,
         unique=True,
-        help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
+        help_text=_("Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."),
         validators=[username_validator],
-        error_messages={'unique': _("A user with that username already exists.")},
+        error_messages={"unique": _("A user with that username already exists.")},
     )
-    first_name = models.CharField(_('first name'), max_length=30, blank=True)
-    last_name = models.CharField(_('last name'), max_length=30, blank=True)
-    email = models.EmailField(_('email address'), blank=True)
+    first_name = models.CharField(_("first name"), max_length=30, blank=True)
+    last_name = models.CharField(_("last name"), max_length=30, blank=True)
+    email = models.EmailField(_("email address"), blank=True)
     is_staff = models.BooleanField(
-        _('staff status'), default=False, help_text=_('Designates whether the user can log into this admin site.')
+        _("staff status"), default=False, help_text=_("Designates whether the user can log into this admin site.")
     )
     is_active = models.BooleanField(
-        _('active'),
+        _("active"),
         default=True,
         help_text=_(
-            'Designates whether this user should be treated as active. ' 'Unselect this instead of deleting accounts.'
+            "Designates whether this user should be treated as active. " "Unselect this instead of deleting accounts."
         ),
     )
-    date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+    date_joined = models.DateTimeField(_("date joined"), default=timezone.now)
 
     objects = UserManager()
 
-    EMAIL_FIELD = 'email'
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['email']
+    EMAIL_FIELD = "email"
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["email"]
 
     class Meta:
-        verbose_name = _('user')
-        verbose_name_plural = _('users')
+        verbose_name = _("user")
+        verbose_name_plural = _("users")
 
     def clean(self):
         super().clean()
@@ -93,7 +92,7 @@ class User(AbstractBaseUser):
 class UserPrivateTokenManager(models.Manager):
     """Custom manager for UserPrivateToken"""
 
-    def create_token(self, user: User, expires_in: Optional[int]) -> 'UserPrivateToken':
+    def create_token(self, user: User, expires_in: Optional[int]) -> "UserPrivateToken":
         """Create a random private token for user
 
         :param expires_in: after how many seconds, this token will be marked expired, None means
@@ -144,7 +143,7 @@ class UserProfileManager(models.Manager):
 
     def get_profile(self, user):
         if user.pk is None or not user.pk:
-            raise ValueError('Must provide a real user, not an anonymous user!')
+            raise ValueError("Must provide a real user, not an anonymous user!")
 
         try:
             return self.model.objects.get(user=user.pk)
@@ -189,7 +188,7 @@ class SessionCodeVerifier:
 
     def __init__(self, session, storage_key=None):
         self.storage = session
-        self.storage_key = storage_key or 'verification_code'
+        self.storage_key = storage_key or "verification_code"
 
     def generate_code(self):
         return str(random.randint(10 ** (self.numbers - 1), 10**self.numbers - 1))
@@ -220,7 +219,7 @@ def make_verifier(session, func=None):
 
 
 class Oauth2TokenHolderQS(models.QuerySet):
-    def get_by_project(self, project: Project) -> 'Oauth2TokenHolder':
+    def get_by_project(self, project: Project) -> "Oauth2TokenHolder":
         """根据传入的 GitProject, 获取Scope能覆盖到该 GitProject 的 Oauth2TokenHolder
         如果不存在, 则抛异常
         """
@@ -230,7 +229,7 @@ class Oauth2TokenHolderQS(models.QuerySet):
                 return token_holder
         raise self.model.DoesNotExist
 
-    def filter_valid_tokens(self) -> List['Oauth2TokenHolder']:
+    def filter_valid_tokens(self) -> List["Oauth2TokenHolder"]:
         """获取所有未过期的 token"""
         return [token_holder for token_holder in self.all() if not token_holder.expired]
 
@@ -253,8 +252,8 @@ class Oauth2TokenHolder(TimestampedModel):
         backend = get_backend(self.provider)
         # 2. call backend.refresh_token()
         token_pair = backend.refresh_token(self.refresh_token)
-        self.access_token = token_pair.get('access_token')
-        self.refresh_token = token_pair.get('refresh_token')
+        self.access_token = token_pair.get("access_token")
+        self.refresh_token = token_pair.get("refresh_token")
         self.save()
 
     @property
@@ -325,8 +324,8 @@ class AccountFeatureFlag(TimestampedModel):
     """
 
     user = BkUserField()
-    effect = models.BooleanField(u"是否允许(value)", default=True)
-    name = models.CharField(u"特性名称(key)", max_length=64)
+    effect = models.BooleanField("是否允许(value)", default=True)
+    name = models.CharField("特性名称(key)", max_length=64)
     objects = AccountFeatureFlagManager()
 
 

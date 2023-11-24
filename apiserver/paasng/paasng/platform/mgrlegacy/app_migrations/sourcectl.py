@@ -18,12 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from paasng.accessories.publish.sync_market.managers import AppManger, AppSecureInfoManger
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.package.uploader import upload_package_via_url
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
-from paasng.accessories.publish.sync_market.managers import AppManger, AppSecureInfoManger
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class SourceControlMigration(BaseMigration):
             return
         # 获取仓库链接和认证信息
         repo_url = secure_info.vcs_url
-        repo_auth_info = {'username': secure_info.vcs_username, 'password': secure_info.vcs_password}
+        repo_auth_info = {"username": secure_info.vcs_username, "password": secure_info.vcs_password}
 
         # 绑定源码仓库信息到模块
         connector = get_repo_connector(repo_type, module)
@@ -91,4 +91,4 @@ class SourceControlMigration(BaseMigration):
         module = self.context.app.get_default_module()
         module.source_type = None
         module.source_repo_id = None
-        module.save(update_fields=['source_type', 'source_repo_id'])
+        module.save(update_fields=["source_type", "source_repo_id"])

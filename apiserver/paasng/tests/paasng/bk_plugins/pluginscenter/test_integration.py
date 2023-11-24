@@ -87,8 +87,8 @@ class TestReleaseStages:
         resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
         assert resp.status_code == 400
         assert resp.json() == {
-            'code': error_codes.EXECUTE_STAGE_ERROR.code,
-            'detail': error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message,
+            "code": error_codes.EXECUTE_STAGE_ERROR.code,
+            "detail": error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message,
         }
 
         # 测试保存市场信息(完成当前阶段的操作)
@@ -161,14 +161,14 @@ class TestReleaseStages:
             f"/stages/{release.current_stage.stage_id}/"
         )
         assert resp.json() == {
-            'stage_id': 'deploy',
-            'stage_name': '部署',
-            'status': 'pending',
-            'fail_message': '',
-            'detail': {
-                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'successful'}],
-                'finished': True,
-                'logs': ['1', '2', '3'],
+            "stage_id": "deploy",
+            "stage_name": "部署",
+            "status": "pending",
+            "fail_message": "",
+            "detail": {
+                "steps": [{"id": "step-1", "name": "步骤1", "status": "successful"}],
+                "finished": True,
+                "logs": ["1", "2", "3"],
             },
         }
 

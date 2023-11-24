@@ -21,8 +21,8 @@ from typing import List
 
 from rest_framework import serializers
 
-from paasng.platform.templates.models import Template
 from paasng.core.region.models import Region
+from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import UserField, VerificationCodeField
 
@@ -30,12 +30,12 @@ from .constants import AccountFeatureFlag
 
 
 class UserSLZ(serializers.Serializer):
-    email = serializers.EmailField(help_text=u"邮箱地址")
-    chinese_name = serializers.CharField(help_text=u"中文名称")
-    avatar_url = serializers.CharField(help_text=u"头像地址")
-    bkpaas_user_id = serializers.CharField(help_text=u"蓝鲸用户ID")
-    phone = serializers.CharField(help_text=u"手机号码")
-    username = serializers.CharField(help_text=u"用户名，内部版是rtx")
+    email = serializers.EmailField(help_text="邮箱地址")
+    chinese_name = serializers.CharField(help_text="中文名称")
+    avatar_url = serializers.CharField(help_text="头像地址")
+    bkpaas_user_id = serializers.CharField(help_text="蓝鲸用户ID")
+    phone = serializers.CharField(help_text="手机号码")
+    username = serializers.CharField(help_text="用户名，内部版是rtx")
 
 
 class VerificationCodeSLZ(serializers.Serializer):

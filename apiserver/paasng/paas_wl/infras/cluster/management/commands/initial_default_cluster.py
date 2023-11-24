@@ -62,8 +62,8 @@ class Command(BaseCommand):
     help = "Initialize the application cluster, which can overwrite the existing data in the database"
 
     def add_arguments(self, parser):
-        parser.add_argument('--override', dest="override", action='store_true')
-        parser.add_argument('--dry_run', dest="dry_run", action='store_true')
+        parser.add_argument("--override", dest="override", action="store_true")
+        parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
     def render_data(self) -> InitialClusterData:
         try:
@@ -112,7 +112,7 @@ class Command(BaseCommand):
         cluster_id = "332d740b-03ed-40f2-aa6b-c90cc5f1e89c"
         cluster_data = ClusterData(**data)
 
-        api_server_urls = os.environ.get('PAAS_WL_CLUSTER_API_SERVER_URLS')
+        api_server_urls = os.environ.get("PAAS_WL_CLUSTER_API_SERVER_URLS")
         api_server_list = api_server_urls.split(";") if api_server_urls else []
 
         return InitialClusterData(cluster_id=cluster_id, cluster_data=cluster_data, api_server_urls=api_server_list)

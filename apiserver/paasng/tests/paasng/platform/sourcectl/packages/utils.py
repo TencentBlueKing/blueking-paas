@@ -88,11 +88,11 @@ def gen_zip(target_path, contents: Dict[str, Union[str, bytes]]):
 
 
 EXAMPLE_APP_YAML: dict = {
-    'app_name': 'foo',
-    'app_code': 'foo',
-    'author': 'blueking',
-    'introduction': 'blueking app',
-    'is_use_celery': False,
-    'version': '0.0.1',
-    'env': [],
+    "app_name": "foo",
+    "app_code": "foo",
+    "author": "blueking",
+    "introduction": "blueking app",
+    "is_use_celery": False,
+    "version": "0.0.1",
+    "env": [],
 }

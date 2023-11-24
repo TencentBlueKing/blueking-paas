@@ -28,22 +28,22 @@ from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin
 class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     """创建云原生架构应用的表单"""
 
-    source_config = ModuleSourceConfigSLZ(required=True, help_text=_('源码/镜像配置'))
+    source_config = ModuleSourceConfigSLZ(required=True, help_text=_("源码/镜像配置"))
     bkapp_spec = BkAppSpecSLZ()
     advanced_options = AdvancedCreationParamsMixin(required=False)
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
 
-        source_config = attrs['source_config']
-        build_config = attrs['bkapp_spec']['build_config']
+        source_config = attrs["source_config"]
+        build_config = attrs["bkapp_spec"]["build_config"]
 
-        validate_build_method(build_config.build_method, source_config['source_origin'])
+        validate_build_method(build_config.build_method, source_config["source_origin"])
 
         if (
             build_config.build_method == RuntimeType.CUSTOM_IMAGE
-            and build_config.image_repository != source_config.get('source_repo_url')
+            and build_config.image_repository != source_config.get("source_repo_url")
         ):
-            raise ValidationError('image_repository is not consistent with source_repo_url')
+            raise ValidationError("image_repository is not consistent with source_repo_url")
 
         return attrs

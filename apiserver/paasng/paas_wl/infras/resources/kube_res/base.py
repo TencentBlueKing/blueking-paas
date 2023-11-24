@@ -73,23 +73,23 @@ class AppEntity:
 
         # Kubernetes resource type bound with current entity
         kres_class: Type[kres.BaseKresource] = kres.BaseKresource
-        deserializer: Optional[Type['AppEntityDeserializer']] = None
-        deserializers: List[Type['AppEntityDeserializer']] = []
+        deserializer: Optional[Type["AppEntityDeserializer"]] = None
+        deserializers: List[Type["AppEntityDeserializer"]] = []
 
         # Optional:
         # When "serializer" was defined, current AppEntity type becomes applicable, which means it's
         # instances can be written back to kubernetes cluster.
-        serializer: Optional[Type['AppEntitySerializer']] = None
-        serializers: List[Type['AppEntitySerializer']] = []
+        serializer: Optional[Type["AppEntitySerializer"]] = None
+        serializers: List[Type["AppEntitySerializer"]] = []
 
     def __init_subclass__(cls) -> None:
         """Check if subclasses have defined required attributes"""
-        if not hasattr(cls, 'Meta'):
+        if not hasattr(cls, "Meta"):
             raise TypeError(f'{cls.__name__} must define "Meta" field')
 
         # Merge user defined Meta with default values
         for attr, value in AppEntity.Meta.__dict__.items():
-            if attr.startswith('_') or hasattr(cls.Meta, attr):
+            if attr.startswith("_") or hasattr(cls.Meta, attr):
                 continue
             setattr(cls.Meta, attr, value)
 
@@ -135,20 +135,20 @@ class BaseTransformer(Generic[AET]):
     """
 
     # Specify an 'api_version', this property will be read by get_apiversion() method
-    api_version = ''
+    api_version = ""
 
     @staticmethod
     def get_api_version_from_gvk(gvk_config: GVKConfig) -> str:
         """dynamic api_version detected from gvk_config"""
-        return ''
+        return ""
 
     def __init__(self, entity_type: Type[AET], gvk_config: GVKConfig):
         self.entity_type = entity_type
         self.gvk_config = gvk_config
         if self.api_version and self.api_version not in self.gvk_config.available_apiversions:
             raise APIServerVersionIncompatible(
-                'APIServer does not support requested api_version, kind: {}, api_version: {}, '
-                'gvk_config: {}'.format(self.entity_type.Meta.kres_class.kind, self.api_version, self.gvk_config)
+                "APIServer does not support requested api_version, kind: {}, api_version: {}, "
+                "gvk_config: {}".format(self.entity_type.Meta.kres_class.kind, self.api_version, self.gvk_config)
             )
 
     def get_apiversion(self) -> str:
@@ -175,7 +175,7 @@ class AppEntitySerializer(BaseTransformer, Generic[AET], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-T = TypeVar('T', bound=BaseTransformer)
+T = TypeVar("T", bound=BaseTransformer)
 
 
 class EntityTransformerPicker(Generic[T]):
@@ -194,13 +194,13 @@ class EntityTransformerPicker(Generic[T]):
     def __init__(self, children_types: List[Type[T]]):
         self.children_types = children_types
 
-    def get_transformer(self, entity_type: Type['AppEntity'], gvk_config: GVKConfig) -> T:
+    def get_transformer(self, entity_type: Type["AppEntity"], gvk_config: GVKConfig) -> T:
         """Try finding the proper transformer"""
         for child_type in self._iter_transformer_type(gvk_config):
             try:
                 return child_type(entity_type, gvk_config)
             except APIServerVersionIncompatible as e:
-                logger.warning(f'{child_type} does not match current gvk_config, skip. error: {e}')
+                logger.warning(f"{child_type} does not match current gvk_config, skip. error: {e}")
                 continue
 
         raise APIServerVersionIncompatible(
@@ -339,10 +339,10 @@ class NamespaceScopedReader(Generic[AET]):
                     namespace=namespace, labels=labels, **kwargs
                 ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event
-                    if raw_event["type"] == 'ERROR':
+                    if raw_event["type"] == "ERROR":
                         raw_object = raw_event["raw_object"]
                         msg = raw_object.get("message", "Unknown")
-                        yield WatchEvent(type='ERROR', error_message=msg)
+                        yield WatchEvent(type="ERROR", error_message=msg)
                         return
 
                     kube_data = raw_event["object"]
@@ -358,13 +358,13 @@ class NamespaceScopedReader(Generic[AET]):
                         if ignore_unknown_objs:
                             logger.warning("failed to deserialize k8s resource %s, skip.", e.res)
                             continue
-                        yield WatchEvent(type='ERROR', error_message=e.msg)
+                        yield WatchEvent(type="ERROR", error_message=e.msg)
                         return
                     event.res_object._kube_data = raw_event["object"]
                     yield event
             except ApiException as exc:
                 if self._exc_is_expired_rv(exc):
-                    yield WatchEvent(type='ERROR', error_message=exc.reason)
+                    yield WatchEvent(type="ERROR", error_message=exc.reason)
                     return
                 else:
                     raise
@@ -386,27 +386,27 @@ class NamespaceScopedReader(Generic[AET]):
 
         picker = EntityDeserializerPicker(self.entity_type.Meta.deserializers)
         ret = picker.get_transformer(self.entity_type, gvk_config)
-        logger.debug('Picked deserializer:%s from multi choices, gvk_config: %s', ret.__class__.__name__, gvk_config)
+        logger.debug("Picked deserializer:%s from multi choices, gvk_config: %s", ret.__class__.__name__, gvk_config)
         return ret
 
     def _load_gvk_config(self, cluster_name: str) -> GVKConfig:
         """Load GVK config of current Kind"""
         with self.kres(cluster_name) as kres_client:
             return GVKConfig(
-                server_version=kres_client.version['kubernetes']['gitVersion'],
+                server_version=kres_client.version["kubernetes"]["gitVersion"],
                 kind=kres_client.kind,
                 preferred_apiversion=kres_client.get_preferred_version(),
                 available_apiversions=kres_client.get_available_versions(),
             )
 
-    def _kres(self, cluster_name: str, api_version: str = '') -> Iterator[kres.BaseKresource]:
+    def _kres(self, cluster_name: str, api_version: str = "") -> Iterator[kres.BaseKresource]:
         """Return kres object as a context manager which was initialized with kubernetes client, will close all
         connection automatically when exit to avoid connections leaking.
         """
         with get_client_by_cluster_name(cluster_name) as client:
             yield self.entity_type.Meta.kres_class(client, api_version=api_version)
 
-    kres: Callable[..., ContextManager['kres.BaseKresource']] = contextmanager(_kres)
+    kres: Callable[..., ContextManager["kres.BaseKresource"]] = contextmanager(_kres)
 
 
 class AppEntityReader(Generic[AET]):
@@ -428,7 +428,7 @@ class AppEntityReader(Generic[AET]):
             try:
                 kube_data = kres_client.get(name, namespace=self._get_namespace(app))
             except ResourceMissing as e:
-                raise AppEntityNotFound(f'{name} not found') from e
+                raise AppEntityNotFound(f"{name} not found") from e
 
         res = deserializer.deserialize(app, kube_data)
         # Set _kube_data
@@ -467,8 +467,8 @@ class AppEntityReader(Generic[AET]):
         """
         labels = labels or {}
         # Remove "resource_version" param when it's value is None because None value will trigger apiserver error
-        if 'resource_version' in kwargs and kwargs['resource_version'] is None:
-            kwargs.pop('resource_version')
+        if "resource_version" in kwargs and kwargs["resource_version"] is None:
+            kwargs.pop("resource_version")
         # watch_by_app must use namespace of app
         if kwargs.get("namespace"):
             # Setting "namespace" is not allowed, this function use the namespace of "app"
@@ -481,10 +481,10 @@ class AppEntityReader(Generic[AET]):
                     namespace=self._get_namespace(app), labels=labels, **kwargs
                 ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event
-                    if raw_event["type"] == 'ERROR':
+                    if raw_event["type"] == "ERROR":
                         raw_object = raw_event["raw_object"]
                         msg = raw_object.get("message", "Unknown")
-                        yield WatchEvent(type='ERROR', error_message=msg)
+                        yield WatchEvent(type="ERROR", error_message=msg)
                         return
 
                     event = WatchEvent[AET](type=raw_event["type"])
@@ -494,13 +494,13 @@ class AppEntityReader(Generic[AET]):
                         if ignore_unknown_objs:
                             logger.warning("failed to deserialize k8s resource %s, skip.", e.res)
                             continue
-                        yield WatchEvent(type='ERROR', error_message=e.msg)
+                        yield WatchEvent(type="ERROR", error_message=e.msg)
                         return
                     event.res_object._kube_data = raw_event["object"]
                     yield event
             except ApiException as exc:
                 if self._exc_is_expired_rv(exc):
-                    yield WatchEvent(type='ERROR', error_message=exc.reason)
+                    yield WatchEvent(type="ERROR", error_message=exc.reason)
                     return
                 else:
                     raise
@@ -522,7 +522,7 @@ class AppEntityReader(Generic[AET]):
 
         picker = EntityDeserializerPicker(self.entity_type.Meta.deserializers)
         ret = picker.get_transformer(self.entity_type, gvk_config)
-        logger.debug('Picked deserializer:%s from multi choices, gvk_config: %s', ret.__class__.__name__, gvk_config)
+        logger.debug("Picked deserializer:%s from multi choices, gvk_config: %s", ret.__class__.__name__, gvk_config)
         return ret
 
     def _load_gvk_config(self, app: WlApp) -> GVKConfig:
@@ -530,20 +530,20 @@ class AppEntityReader(Generic[AET]):
         with self.kres(app) as kres_client:
             # TODO: Add cache to avoid too many api calls
             return GVKConfig(
-                server_version=kres_client.version['kubernetes']['gitVersion'],
+                server_version=kres_client.version["kubernetes"]["gitVersion"],
                 kind=kres_client.kind,
                 preferred_apiversion=kres_client.get_preferred_version(),
                 available_apiversions=kres_client.get_available_versions(),
             )
 
-    def _kres(self, app: WlApp, api_version: str = '') -> Iterator[kres.BaseKresource]:
+    def _kres(self, app: WlApp, api_version: str = "") -> Iterator[kres.BaseKresource]:
         """Return kres object as a context manager which was initialized with kubernetes client, will close all
         connection automatically when exit to avoid connections leaking.
         """
         with get_client_by_app(app) as client:
             yield self.entity_type.Meta.kres_class(client, api_version=api_version)
 
-    kres: Callable[..., ContextManager['kres.BaseKresource']] = contextmanager(_kres)
+    kres: Callable[..., ContextManager["kres.BaseKresource"]] = contextmanager(_kres)
 
     def _get_namespace(self, app: WlApp) -> str:
         """Return the namespace the kres object will create/query in"""
@@ -556,7 +556,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
     def __init__(self, entity_type: Type[AET]):
         super().__init__(entity_type)
         if not self.entity_type.is_applicable():
-            raise TypeError(f'{self.entity_type} is not applicable, use AppEntityReader instead.')
+            raise TypeError(f"{self.entity_type} is not applicable, use AppEntityReader instead.")
 
     def save(self, res: AET):
         """Save a app related kube resource to kubernetes"""
@@ -577,14 +577,14 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
         res._kube_data = kube_data
         return res
 
-    def delete_by_name(self, app: WlApp, name: str, non_grace_period: bool = False) -> 'WaitDelete[AET]':
+    def delete_by_name(self, app: WlApp, name: str, non_grace_period: bool = False) -> "WaitDelete[AET]":
         """Delete a resource by its name"""
         serializer = self._make_serializer(app)
         with self.kres(app, serializer.get_apiversion()) as kres_client:
             kres_client.delete(name, namespace=self._get_namespace(app), non_grace_period=non_grace_period)
             return WaitDelete(self, app=app, name=name, namespace=self._get_namespace(app))
 
-    def upsert(self, res: AET, update_method='replace') -> AET:
+    def upsert(self, res: AET, update_method="replace") -> AET:
         """Create or Update a new app related kube resource"""
         namespace = self._get_namespace(res.app)
         try:
@@ -600,7 +600,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
 
     # Concrete methods start
 
-    def update(self, res: AET, update_method='replace', mapper_version: Optional['MapperPack'] = None, **kwargs):
+    def update(self, res: AET, update_method="replace", mapper_version: Optional["MapperPack"] = None, **kwargs):
         """Update a resource, if resource does not exists, raise an exception instead.
 
         :param res: res can be concrete or non-concreate object, if it's a non-concrete resource,
@@ -608,8 +608,8 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
         :raises: AppEntityNotFound if not found, ValueError if update_method is invalid
         """
         self.guide_res_argument(res)
-        if not kwargs.get("allow_not_concrete", res.is_concrete()) and update_method != 'patch':
-            raise ValueError('Only patch method is allowed for non-concrete resource')
+        if not kwargs.get("allow_not_concrete", res.is_concrete()) and update_method != "patch":
+            raise ValueError("Only patch method is allowed for non-concrete resource")
 
         serializer = self._make_serializer(res.app)
         body = serializer.serialize(res, original_obj=res._kube_data, mapper_version=mapper_version)
@@ -623,9 +623,9 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
                     **kwargs,
                 )
             except ResourceMissing as e:
-                raise AppEntityNotFound(f'{res.name} not found') from e
+                raise AppEntityNotFound(f"{res.name} not found") from e
 
-    def delete(self, res: AET, non_grace_period: bool = False) -> 'WaitDelete[AET]':
+    def delete(self, res: AET, non_grace_period: bool = False) -> "WaitDelete[AET]":
         """Delete a resource, it does not check if this resource exists in kubernetes apiserver or not."""
         self.guide_res_argument(res, allow_concrete_only=True)
         serializer = self._make_serializer(res.app)
@@ -643,15 +643,15 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
 
         picker = EntitySerializerPicker(self.entity_type.Meta.serializers)
         ret = picker.get_transformer(self.entity_type, gvk_config)
-        logger.debug('Picked serializer:%s from multi choices, gvk_config: %s', ret.__class__.__name__, gvk_config)
+        logger.debug("Picked serializer:%s from multi choices, gvk_config: %s", ret.__class__.__name__, gvk_config)
         return ret
 
     def guide_res_argument(self, res: AET, allow_concrete_only=False):
         """Raise exception when resource is invalid"""
         if not isinstance(res, self.entity_type):
-            raise TypeError(f'Only {self.entity_type.__name__} is supported')
+            raise TypeError(f"Only {self.entity_type.__name__} is supported")
         if allow_concrete_only and not res.is_concrete():
-            raise TypeError(f'resource {res.name} is not concrete')
+            raise TypeError(f"resource {res.name} is not concrete")
 
 
 class WaitDelete(Generic[AET]):

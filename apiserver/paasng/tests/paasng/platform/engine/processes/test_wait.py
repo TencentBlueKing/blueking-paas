@@ -52,7 +52,7 @@ def metadata():
 @pytest.fixture
 def poller_mocker():
     @contextmanager
-    def core(poller, processes: 'List[Process]', last_processes: 'Optional[List[Process]]' = None):
+    def core(poller, processes: "List[Process]", last_processes: "Optional[List[Process]]" = None):
         with mock.patch.object(poller, "_get_last_processes") as last, mock.patch.object(
             poller, "_get_current_processes"
         ) as current:
@@ -65,7 +65,7 @@ def poller_mocker():
 
 class TestDynamicReadyTimeoutPolicy:
     @pytest.mark.parametrize(
-        'desired_replicas,already_waited,desired_result',
+        "desired_replicas,already_waited,desired_result",
         [
             # small replicas
             (1, 60 * 3 - 1, False),
@@ -85,7 +85,7 @@ class TestDynamicReadyTimeoutPolicy:
 
 class TestWaitForAllStopped:
     def test_still_running(self, bk_stag_env, process, metadata, poller_mocker):
-        poller = WaitForAllStopped(params={'env_id': bk_stag_env.id}, metadata=metadata)
+        poller = WaitForAllStopped(params={"env_id": bk_stag_env.id}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
 
@@ -94,13 +94,13 @@ class TestWaitForAllStopped:
     def test_all_stopped(self, bk_stag_env, process, metadata, poller_mocker):
         # Stop all processes
         process.instances = []
-        poller = WaitForAllStopped(params={'env_id': bk_stag_env.id}, metadata=metadata)
+        poller = WaitForAllStopped(params={"env_id": bk_stag_env.id}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
         assert status.status == PollingStatus.DONE
 
     @pytest.mark.parametrize(
-        'enabled, events_is_empty',
+        "enabled, events_is_empty",
         [
             (True, False),
             (False, True),
@@ -118,7 +118,7 @@ class TestWaitForAllStopped:
 
         # Mark current query as the second try
         metadata.queried_count = 1
-        poller = WaitForAllStopped(params={'env_id': bk_stag_env.id, 'broadcast_enabled': enabled}, metadata=metadata)
+        poller = WaitForAllStopped(params={"env_id": bk_stag_env.id, "broadcast_enabled": enabled}, metadata=metadata)
         with poller_mocker(poller, [process], [last_process]):
             _ = poller.query()
 
@@ -131,7 +131,7 @@ class TestWaitForAllStopped:
 class TestWaitForReleaseAllReady:
     def test_not_ready(self, bk_stag_env, metadata, process, poller_mocker):
         processes = [process]
-        poller = WaitForReleaseAllReady(params={'env_id': bk_stag_env.id, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={"env_id": bk_stag_env.id, "release_version": "10"}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DOING
@@ -141,7 +141,7 @@ class TestWaitForReleaseAllReady:
         process.version = 10
         instance.version = 10
         instance.ready = True
-        poller = WaitForReleaseAllReady(params={'env_id': bk_stag_env.id, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={"env_id": bk_stag_env.id, "release_version": "10"}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -149,17 +149,17 @@ class TestWaitForReleaseAllReady:
     def test_aborted_by_dynamic_timeout(self, bk_stag_env, process, poller_mocker):
         processes = [process]
         metadata = PollingMetadata(retries=0, query_started_at=0, queried_count=0)
-        poller = WaitForReleaseAllReady(params={'env_id': bk_stag_env.id, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={"env_id": bk_stag_env.id, "release_version": "10"}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
         assert status.data is not None
-        assert status.data['aborted'] is True
+        assert status.data["aborted"] is True
 
 
 class TestTooManyRestartsPolicy:
     @pytest.mark.parametrize(
-        'restart_count, instance_has_different_version, desired_result',
+        "restart_count, instance_has_different_version, desired_result",
         [
             (0, False, False),
             (3, False, False),
@@ -179,28 +179,28 @@ class TestUserInterruptedPolicy:
         assert ret is False
 
     def test_wrong_deployment_id(self):
-        ret = UserInterruptedPolicy().evaluate([], 0, extra_params={'deployment_id': uuid.uuid4().hex})
+        ret = UserInterruptedPolicy().evaluate([], 0, extra_params={"deployment_id": uuid.uuid4().hex})
         assert ret is False
 
     def test_int_requested(self, bk_deployment):
         bk_deployment.release_int_requested_at = datetime.datetime.now()
         bk_deployment.save()
-        ret = UserInterruptedPolicy().evaluate([], 0, extra_params={'deployment_id': bk_deployment.pk})
+        ret = UserInterruptedPolicy().evaluate([], 0, extra_params={"deployment_id": bk_deployment.pk})
         assert ret is True
 
 
 class TestAbortedDetails:
     def test_truth_value(self):
-        v = AbortedDetails(aborted=True, policy=AbortedDetailsPolicy(reason='foo', name='bar'))
+        v = AbortedDetails(aborted=True, policy=AbortedDetailsPolicy(reason="foo", name="bar"))
         assert v.dict() == {
-            'aborted': True,
-            'policy': {'reason': 'foo', 'name': 'bar', 'is_interrupted': False},
-            'extra_data': None,
+            "aborted": True,
+            "policy": {"reason": "foo", "name": "bar", "is_interrupted": False},
+            "extra_data": None,
         }
 
     def test_falsehood_value(self):
-        v = AbortedDetails(aborted=False, extra_data='foo')
-        assert v.dict() == {'aborted': False, 'policy': None, 'extra_data': 'foo'}
+        v = AbortedDetails(aborted=False, extra_data="foo")
+        assert v.dict() == {"aborted": False, "policy": None, "extra_data": "foo"}
 
     def test_invalid_value(self):
         with pytest.raises(ValueError):

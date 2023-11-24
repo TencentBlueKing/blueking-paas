@@ -54,14 +54,14 @@ class BkAppReleaseMgr(DeployStep):
 
     def start(self):
         build = Build.objects.get(pk=self.deployment.build_id)
-        with self.procedure('更新进程配置'):
+        with self.procedure("更新进程配置"):
             # Turn the processes into the corresponding type in paas_wl module
             procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
             ProcessManager(self.engine_app.env).sync_processes_specs(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
-        with self.procedure('部署应用'):
+        with self.procedure("部署应用"):
             bkapp_release_id = release_by_k8s_operator(
                 self.module_environment,
                 revision,
@@ -105,7 +105,7 @@ def release_by_k8s_operator(
 
     # TODO: read name from request data or generate by model resource payload
     # Add current timestamp in name to avoid conflicts
-    default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
+    default_name = f"{application.code}-{revision.pk}-{int(time.time())}"
 
     # The resource payload of the revision object won't be send to the operator directly,
     # the platform will construct a bk-app model for deploying instead. So the model
@@ -164,7 +164,7 @@ def release_by_k8s_operator(
     # TODO: 统计成功 metrics
     # Poll status in background
     WaitAppModelReady.start(
-        {'env_id': env.id, 'deploy_id': app_model_deploy.id, 'deployment_id': deployment.id if deployment else None},
+        {"env_id": env.id, "deploy_id": app_model_deploy.id, "deployment_id": deployment.id if deployment else None},
         DeployStatusHandler,
     )
     return str(app_model_deploy.id)

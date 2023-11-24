@@ -26,10 +26,10 @@ from paasng.infras.accounts.models import UserPrivateToken
 from paasng.utils.serializers import UserField as BaseUserField
 
 PROVIDER_TYPE_CHCOISE = (
-    (ProviderType.UIN.value, 'UIN'),
-    (ProviderType.RTX.value, 'RTX'),
-    (ProviderType.BK.value, 'BK'),
-    (ProviderType.DATABASE.value, 'DATABASE'),
+    (ProviderType.UIN.value, "UIN"),
+    (ProviderType.RTX.value, "RTX"),
+    (ProviderType.BK.value, "BK"),
+    (ProviderType.DATABASE.value, "DATABASE"),
 )
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class UserField(BaseUserField):
             return representation
         except ValueError as e:
             logger.warning("except a dirty userprofile", e)
-            return {'id': obj, 'username': obj, 'provider_type': None}
+            return {"id": obj, "username": obj, "provider_type": None}
 
 
 class UserProfileBulkCreateFormSLZ(serializers.Serializer):

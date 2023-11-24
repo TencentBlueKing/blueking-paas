@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import TYPE_CHECKING, List, Optional
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.models import Cluster
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.configs import get_region_aware
 
@@ -43,7 +43,7 @@ class RegionClusterService:
         qs = Cluster.objects.filter(region=self.region, is_default=True)
         if qs.exists():
             return qs[0]
-        raise Cluster.DoesNotExist(f'Default cluster not found for {self.region}')
+        raise Cluster.DoesNotExist(f"Default cluster not found for {self.region}")
 
     def get_cluster_by_name(self, cluster_name: str) -> Cluster:
         return Cluster.objects.get(region=self.region, name=cluster_name)
@@ -109,8 +109,8 @@ def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):
     latest_config.save()
 
 
-def get_application_cluster(application: 'Application') -> Cluster:
+def get_application_cluster(application: "Application") -> Cluster:
     """Return the cluster name of app's default module"""
     default_module = application.get_default_module()
-    env = default_module.envs.get(environment='prod')
+    env = default_module.envs.get(environment="prod")
     return EnvClusterService(env).get_cluster()

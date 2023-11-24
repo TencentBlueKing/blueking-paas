@@ -110,7 +110,7 @@ class TemplateRuntimeManager:
         }
 
         if missing_bps := available_bps.keys() - set(bp_names):
-            raise RuntimeError('No buildpacks can be found for name: {}'.format(missing_bps))
+            raise RuntimeError("No buildpacks can be found for name: {}".format(missing_bps))
 
         return [available_bps[bp_name] for bp_name in bp_names]
 

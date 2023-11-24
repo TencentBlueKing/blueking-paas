@@ -87,7 +87,7 @@ class PluginUniqueValidator:
             if field_name in attrs:
                 value = attrs[field_name]
                 if queryset.filter(**{field_name: value}).exists():
-                    raise ValidationError(_('{} 为 {} 的插件已存在').format(field_label, value), code="unique")
+                    raise ValidationError(_("{} 为 {} 的插件已存在").format(field_label, value), code="unique")
                 checked = True
         if not checked:
             raise ValidationError(_("attrs `{}` is required").format([f["name"] for f in fields]), code="required")
@@ -177,9 +177,9 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data['creator']:
-            user = get_user_by_user_id(data['creator'])
-            data['creator'] = user.username
+        if data["creator"]:
+            user = get_user_by_user_id(data["creator"])
+            data["creator"] = user.username
         return data
 
     class Meta:
@@ -399,7 +399,9 @@ def make_create_release_version_slz_class(pd: PluginDefinition) -> Type[serializ
         "extra_fields": make_extra_fields_slz(pd.release_revision.extraFields)(default=dict),
     }
     if pd.release_revision.versionNo == PluginReleaseVersionRule.AUTOMATIC:
-        fields["semver_type"] = serializers.ChoiceField(choices=SemverAutomaticType.get_choices(), help_text="版本类型")
+        fields["semver_type"] = serializers.ChoiceField(
+            choices=SemverAutomaticType.get_choices(), help_text="版本类型"
+        )
 
     return type(
         "DynamicPluginReleaseSerializer",
@@ -545,7 +547,9 @@ class DateHistogramSLZ(serializers.Serializer):
     """插件日志基于时间分布的直方图"""
 
     series = serializers.ListField(child=serializers.IntegerField(), help_text="按时间排序的值(文档数)")
-    timestamps = serializers.ListField(child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳")
+    timestamps = serializers.ListField(
+        child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳"
+    )
     dsl = serializers.CharField(help_text="日志查询语句")
 
 
@@ -629,11 +633,11 @@ class StubConfigSLZ(serializers.Serializer):
 
 
 class OperationRecordSLZ(serializers.ModelSerializer):
-    display_text = serializers.CharField(source='get_display_text', read_only=True)
+    display_text = serializers.CharField(source="get_display_text", read_only=True)
 
     class Meta:
         model = OperationRecord
-        fields = '__all__'
+        fields = "__all__"
 
 
 class CodeCommitSearchSLZ(serializers.Serializer):
@@ -646,8 +650,8 @@ class CodeCommitSearchSLZ(serializers.Serializer):
         data = super().to_internal_value(instance)
 
         # 将时间转换为代码仓库指定的格式  YYYY-MM-DDTHH:mm:ssZ
-        data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
-        data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        data["begin_time"] = arrow.get(data["begin_time"]).format("YYYY-MM-DDTHH:mm:ssZ")
+        data["end_time"] = arrow.get(data["end_time"]).format("YYYY-MM-DDTHH:mm:ssZ")
         return data
 
 

@@ -21,7 +21,7 @@ from paas_wl.workloads.release_controller.hooks.kres_entities import Command as 
 from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
 
-def interrupt_command(command: 'CommandModel') -> bool:
+def interrupt_command(command: "CommandModel") -> bool:
     """Interrupt a command.
 
     :param command: Command object

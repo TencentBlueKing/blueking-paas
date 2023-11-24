@@ -57,4 +57,4 @@ class TestServerSendEvent:
     @pytest.mark.parametrize("eid, event, data_dict", [("1", "internal", {"aaa": "bbb"})])
     def test_to_yield_str_list(self, eid, event, data_dict):
         e = ServerSendEvent.from_raw(dict(id=eid, event=event, data=data_dict))
-        assert e.to_yield_str_list() == ['id: %s\n' % e.id, 'event: %s\n' % e.event, 'data: %s\n\n' % e.data]
+        assert e.to_yield_str_list() == ["id: %s\n" % e.id, "event: %s\n" % e.event, "data: %s\n\n" % e.data]

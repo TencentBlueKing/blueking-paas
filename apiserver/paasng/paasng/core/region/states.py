@@ -48,22 +48,22 @@ def load_regions_from_settings():
         cfg = copy.deepcopy(_orig_cfg)
 
         # Register to global region manager
-        name = cfg.pop('name')
-        display_name = cfg.pop('display_name')
-        basic_info = RegionBasicInfo(**cfg.pop('basic_info'))
+        name = cfg.pop("name")
+        display_name = cfg.pop("display_name")
+        basic_info = RegionBasicInfo(**cfg.pop("basic_info"))
         # 可选配置
-        module_mobile_config = RegionMobileConfig(**cfg.pop('module_mobile_config', {}))
+        module_mobile_config = RegionMobileConfig(**cfg.pop("module_mobile_config", {}))
 
         region = Region(
             name=name,
             display_name=display_name,
             basic_info=basic_info,
             module_mobile_config=module_mobile_config,
-            entrance_config=RegionEntranceConfig(**cfg.pop('entrance_config')),
-            mul_modules_config=RegionMulModulesConfig(**cfg.pop('mul_modules_config')),
-            enabled_feature_flags=set(cfg.pop('enabled_feature_flags', [])),
-            provide_env_vars_platform=cfg.pop('provide_env_vars_platform', None),
-            allow_deploy_app_by_lesscode=cfg.pop('allow_deploy_app_by_lesscode', None),
+            entrance_config=RegionEntranceConfig(**cfg.pop("entrance_config")),
+            mul_modules_config=RegionMulModulesConfig(**cfg.pop("mul_modules_config")),
+            enabled_feature_flags=set(cfg.pop("enabled_feature_flags", [])),
+            provide_env_vars_platform=cfg.pop("provide_env_vars_platform", None),
+            allow_deploy_app_by_lesscode=cfg.pop("allow_deploy_app_by_lesscode", None),
         )
         register_region(region)
 

@@ -24,8 +24,8 @@ from .base import GaugeMetric
 
 
 class BlobStoreAvailableMetric(GaugeMetric):
-    name = 'blob_store_service'
-    description = 'blob_store service available'
+    name = "blob_store_service"
+    description = "blob_store service available"
 
     @classmethod
     def calc_value(cls) -> bool:

@@ -33,6 +33,6 @@ class DeployPoller(TaskPoller):
 
     @classmethod
     def start(cls, params: Dict, callback_handler_cls: Optional[Type] = None):
-        deployment = Deployment.objects.get(pk=params['deployment_id'])
+        deployment = Deployment.objects.get(pk=params["deployment_id"])
         DeploymentCoordinator(deployment.app_environment).update_polling_time()
         super().start(params, callback_handler_cls)

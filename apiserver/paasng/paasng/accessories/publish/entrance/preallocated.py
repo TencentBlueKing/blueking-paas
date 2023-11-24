@@ -8,13 +8,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from paas_wl.infras.cluster.shim import Cluster, RegionClusterService
 from paas_wl.workloads.networking.entrance.addrs import URL, EnvExposedURL
 from paas_wl.workloads.networking.entrance.utils import get_legacy_url
-from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.modules.helpers import get_module_clusters
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
+from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.configurations.provider import env_vars_providers
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.modules.constants import ExposedURLType
+from paasng.platform.modules.helpers import get_module_clusters
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +55,13 @@ def get_preallocated_urls(module_env: ModuleEnvironment) -> List[EnvExposedURL]:
     module = module_env.module
     if module.exposed_url_type == ExposedURLType.SUBPATH:
         subpaths = get_preallocated_paths_by_env(module_env)
-        return [EnvExposedURL(url=p.as_url(), provider_type='subpath') for p in subpaths]
+        return [EnvExposedURL(url=p.as_url(), provider_type="subpath") for p in subpaths]
     elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
         domains = get_preallocated_domains_by_env(module_env)
-        return [EnvExposedURL(url=d.as_url(), provider_type='subdomain') for d in domains]
+        return [EnvExposedURL(url=d.as_url(), provider_type="subdomain") for d in domains]
     elif module.exposed_url_type is None:
         if url := get_legacy_url(module_env):
-            return [EnvExposedURL(url=URL.from_address(url), provider_type='legacy')]
+            return [EnvExposedURL(url=URL.from_address(url), provider_type="legacy")]
     return []
 
 
@@ -72,7 +72,7 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
     """
     application = env.module.application
     clusters = get_module_clusters(env.module)
-    addrs_value = ''
+    addrs_value = ""
     # Try to retrieve the exposed URL type in order to get a more accurate result.
     preferred_url_type = get_exposed_url_type(application.code, env.module.name)
     try:
@@ -85,8 +85,8 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
         )
         addrs_value = json.dumps(addrs._asdict())
     except ValueError:
-        logger.warning('Fail to get preallocated address for application: %s, module: %s', application, env.module)
-    return {settings.CONFIGVAR_SYSTEM_PREFIX + 'DEFAULT_PREALLOCATED_URLS': addrs_value}
+        logger.warning("Fail to get preallocated address for application: %s, module: %s", application, env.module)
+    return {settings.CONFIGVAR_SYSTEM_PREFIX + "DEFAULT_PREALLOCATED_URLS": addrs_value}
 
 
 class PreAddresses(NamedTuple):
@@ -133,14 +133,14 @@ def get_preallocated_address(
         for addr in addrs:
             if addr:
                 return getattr(addr, addr_key).as_url().as_address()
-        return ''
+        return ""
 
     # 生产环境
     prod_cluster = clusters.get(AppEnvName.PROD) or helper.get_default_cluster()
-    prod_address = _get_cluster_addr(prod_cluster, 'prod')
+    prod_address = _get_cluster_addr(prod_cluster, "prod")
     # 测试环境
     stag_cluster = clusters.get(AppEnvName.STAG) or helper.get_default_cluster()
-    stag_address = _get_cluster_addr(stag_cluster, 'stag')
+    stag_address = _get_cluster_addr(stag_cluster, "stag")
 
     if not (stag_address and prod_address):
         raise ValueError(

@@ -66,14 +66,14 @@ class LocalPlanObj(PlanObj):
     db_object: Plan = field(init=False)
 
     @classmethod
-    def from_db(cls, plan: Plan) -> 'LocalPlanObj':
+    def from_db(cls, plan: Plan) -> "LocalPlanObj":
         # 向前兼容 no-ha: ["stag"], ha: ["prod"] 的逻辑
         properties = {
             "restricted_envs": {"no-ha": [AppEnvName.STAG.value], "ha": [AppEnvName.PROD.value]}.get(
                 plan.name, [AppEnvName.STAG.value, AppEnvName.PROD.value]
             )
         }
-        config = json.loads(plan.config or '{}')
+        config = json.loads(plan.config or "{}")
         specifications = config.get("specifications") or {}
         instance = cls(
             uuid=str(plan.uuid),
@@ -92,27 +92,27 @@ class LocalPlanObj(PlanObj):
 
 @dataclass()
 class LocalServiceObj(ServiceObj):
-    provider_name: str = ''
+    provider_name: str = ""
     db_object: Service = field(init=False)
     category_id = None
     category = None
 
     @classmethod
-    def from_db_object(cls, service: Service) -> 'LocalServiceObj':
+    def from_db_object(cls, service: Service) -> "LocalServiceObj":
         field_names = list(cls.__dataclass_fields__.keys())  # type: ignore
         fields = {k: getattr(service, k) for k in field_names if hasattr(service, k)}
 
         if service.logo_b64:
-            fields['logo'] = service.logo_b64
+            fields["logo"] = service.logo_b64
         else:
             # Use the string url instead of the file-like object
-            fields['logo'] = service.logo.url
+            fields["logo"] = service.logo.url
 
         # format uuid instance to str
-        if isinstance(fields['uuid'], UUID):
-            fields['uuid'] = str(fields['uuid'])
-        fields['specifications'] = [
-            ServiceSpecificationDefinition(**i) for i in service.config.get('specifications') or ()
+        if isinstance(fields["uuid"], UUID):
+            fields["uuid"] = str(fields["uuid"])
+        fields["specifications"] = [
+            ServiceSpecificationDefinition(**i) for i in service.config.get("specifications") or ()
         ]
         fields["provider_name"] = service.config.get("provider_name", None)
 
@@ -147,14 +147,14 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         :raises: ProvisionInstanceError
         """
         if self.is_provisioned():
-            logger.warning(f'local instance {self.db_obj.pk} already provisioned, skip')
+            logger.warning(f"local instance {self.db_obj.pk} already provisioned, skip")
             return
 
         try:
             self.db_obj.create_service_instance()
         except Exception as e:
             raise ProvisionInstanceError(
-                _('配置资源实例异常: unable to provision instance for services<{service_name}>').format(
+                _("配置资源实例异常: unable to provision instance for services<{service_name}>").format(
                     service_name=self.get_service().name
                 )
             ) from e
@@ -170,7 +170,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
         if not self.is_provisioned():
-            raise ValueError('relationship is not provisioned yet')
+            raise ValueError("relationship is not provisioned yet")
 
         # All local service instance's credentials was prefixed with service name
         service_name = self.db_obj.service.name
@@ -203,7 +203,7 @@ class LocalServiceMgr(BaseServiceMgr):
         try:
             obj = Service.objects.get(uuid=uuid, region=region)
         except (Service.DoesNotExist, ValidationError) as e:
-            raise ServiceObjNotFound(f'Service with id={uuid} not found in database') from e
+            raise ServiceObjNotFound(f"Service with id={uuid} not found in database") from e
         return LocalServiceObj.from_db_object(obj)
 
     def find_by_name(self, name: str, region: str) -> LocalServiceObj:
@@ -214,7 +214,7 @@ class LocalServiceMgr(BaseServiceMgr):
         try:
             obj = Service.objects.get(name=name, region=region)
         except Service.DoesNotExist as e:
-            raise ServiceObjNotFound(f'Service with name={name} not found in database') from e
+            raise ServiceObjNotFound(f"Service with name={name} not found in database") from e
         return LocalServiceObj.from_db_object(obj)
 
     def list_by_category(
@@ -278,7 +278,7 @@ class LocalServiceMgr(BaseServiceMgr):
         db_obj = Service.objects.get(pk=service.uuid)
         db_obj.delete()
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: Optional['Dict[str, str]'] = None) -> str:
+    def bind_service(self, service: ServiceObj, module: Module, specs: Optional["Dict[str, str]"] = None) -> str:
         """Bind a service to module"""
         db_service = Service.objects.get(pk=service.uuid)
         return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind(module).pk
@@ -291,7 +291,7 @@ class LocalServiceMgr(BaseServiceMgr):
     def list_binded(self, module: Module, category_id: Optional[int] = None) -> Iterator[ServiceObj]:
         """List module's bound services"""
         service_ids = map(
-            str, ServiceModuleAttachment.objects.filter(module=module).values_list('service_id', flat=True)
+            str, ServiceModuleAttachment.objects.filter(module=module).values_list("service_id", flat=True)
         )
         for svc in Service.objects.filter(uuid__in=service_ids):
             obj = LocalServiceObj.from_db_object(svc)
@@ -504,10 +504,10 @@ class LocalServiceBinder:
     @staticmethod
     def _get_plan_by_env(env: ModuleEnvironment, plans: List[PlanObj]) -> PlanObj:
         """Return the first plan which matching the given env."""
-        plans = sorted(plans, key=lambda i: ('restricted_envs' in i.properties), reverse=True)
+        plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
 
         for plan in plans:
-            if 'restricted_envs' not in plan.properties or env.environment in plan.properties['restricted_envs']:
+            if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
                 return plan
         else:
             raise RuntimeError("can not bind a plan")

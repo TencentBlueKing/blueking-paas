@@ -165,11 +165,11 @@ class EnvOverlay(BaseModel):
     def append_item(self, field_name: str, item: Any):
         """A shortcut method that append an item to the given field."""
         assert field_name in {
-            'replicas',
-            'resQuotas',
-            'envVariables',
-            'autoscaling',
-            'mounts',
+            "replicas",
+            "resQuotas",
+            "envVariables",
+            "autoscaling",
+            "mounts",
         }, f"{field_name} invalid"
 
         if getattr(self, field_name) is None:
@@ -260,18 +260,18 @@ class BkAppResource(BaseModel):
     """Blueking Application resource"""
 
     apiVersion: str = ApiVersion.V1ALPHA2.value
-    kind: Literal['BkApp'] = 'BkApp'
+    kind: Literal["BkApp"] = "BkApp"
     metadata: ObjectMetadata
     spec: BkAppSpec
     status: BkAppStatus = Field(default_factory=BkAppStatus)
 
-    @validator('apiVersion')
+    @validator("apiVersion")
     def validate_api_version(cls, v) -> str:
         """ApiVersion can not be used for "Literal" validation directly, so we define a
         custom validator instead.
         """
         if v not in [ApiVersion.V1ALPHA2, ApiVersion.V1ALPHA1]:
-            raise ValueError(f'{v} is not valid, use {ApiVersion.V1ALPHA2} or {ApiVersion.V1ALPHA1}')
+            raise ValueError(f"{v} is not valid, use {ApiVersion.V1ALPHA2} or {ApiVersion.V1ALPHA1}")
         return v
 
     def to_deployable(self) -> Dict:
@@ -279,5 +279,5 @@ class BkAppResource(BaseModel):
         # Set `exclude_none` to remove all fields whose value is `None` because
         # entries such as `"hooks": null` is not processable in Kubernetes 1.18.
         result = self.dict(exclude_none=True, exclude={"status"})
-        result['metadata'].pop('generation', None)
+        result["metadata"].pop("generation", None)
         return result

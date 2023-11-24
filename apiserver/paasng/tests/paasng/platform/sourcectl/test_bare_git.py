@@ -35,7 +35,7 @@ class TestGeneralGitController:
         r = GitRepository.objects.create(server_name=get_sourcectl_names().bare_git, repo_url=repo_url)
         bk_module.source_type = get_sourcectl_names().bare_git
         bk_module.source_repo_id = r.pk
-        bk_module.save(update_fields=['source_type', 'source_repo_id'])
+        bk_module.save(update_fields=["source_type", "source_repo_id"])
         return r
 
     @staticmethod

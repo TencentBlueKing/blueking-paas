@@ -25,8 +25,8 @@ from django.db import models
 from jsonfield import JSONField
 
 from paas_wl.bk_app.applications.models import UuidAuditedModel
-from paas_wl.workloads.release_controller.constants import ImagePullPolicy, RuntimeType
 from paas_wl.utils.models import make_json_field
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy, RuntimeType
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class Config(UuidAuditedModel):
     """App configs, includes env variables and resource limits"""
 
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', on_delete=models.CASCADE)
+    app = models.ForeignKey("App", on_delete=models.CASCADE)
     values = JSONField(default={}, blank=True)
     resource_requirements = JSONField(default={}, blank=True)
     node_selector = JSONField(default={}, blank=True)
@@ -71,9 +71,9 @@ class Config(UuidAuditedModel):
     mount_log_to_host = models.BooleanField(default=True, help_text="Whether mount app logs to host")
 
     class Meta:
-        get_latest_by = 'created'
-        ordering = ['-created']
-        unique_together = (('app', 'uuid'),)
+        get_latest_by = "created"
+        ordering = ["-created"]
+        unique_together = (("app", "uuid"),)
 
     def get_image(self) -> str:
         """Return settings.DEFAULT_SLUGRUNNER_IMAGE when self.image is not set

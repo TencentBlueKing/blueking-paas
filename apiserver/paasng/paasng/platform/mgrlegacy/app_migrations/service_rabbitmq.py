@@ -69,7 +69,11 @@ class RabbitMQServiceMigration(BaseRemoteServiceMigration):
 
             # 绑定环境变量
             ConfigVar.objects.create(
-                module=module, environment=env, key="BK_BROKER_URL", value=BK_BROKER_URL, description="RabbitMQ 服务迁移变量"
+                module=module,
+                environment=env,
+                key="BK_BROKER_URL",
+                value=BK_BROKER_URL,
+                description="RabbitMQ 服务迁移变量",
             )
             ConfigVar.objects.create(
                 module=module, environment=env, key="IS_USE_CELERY", value="true", description="RabbitMQ 服务迁移变量"

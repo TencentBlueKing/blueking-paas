@@ -30,7 +30,7 @@ pytestmark = pytest.mark.django_db
 
 
 class TestIntegratedSvnAppRepoConnector:
-    @mock.patch('paasng.platform.sourcectl.connector.SvnRepositoryClient')
+    @mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient")
     def test_normal(self, mocked_client, bk_app, bk_module, init_tmpls):
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 

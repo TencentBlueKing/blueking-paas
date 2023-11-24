@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict
 
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.models import Deployment
-from paasng.platform.declarative.models import DeploymentDescription
 
 
 @env_vars_providers.register_deploy
@@ -41,5 +41,5 @@ class EnvVariablesReader:
 
     def read_as_dict(self) -> Dict[str, str]:
         """Read current env variables as dict"""
-        result = {obj['key']: obj['value'] for obj in self.desc_obj.env_variables}
+        result = {obj["key"]: obj["value"] for obj in self.desc_obj.env_variables}
         return result

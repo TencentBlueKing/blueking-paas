@@ -25,14 +25,14 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.fields import SkipField
 
-from paasng.platform.engine.models.mobile_config import MobileConfig
-from paasng.core.region.models import get_region
 from paasng.accessories.publish.market.constant import AppState
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import AppPublishPreparer
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.accessories.publish.sync_market.constant import RegionConverter
 from paasng.accessories.publish.sync_market.managers import AppManger, AppTagManger
+from paasng.core.region.models import get_region
+from paasng.platform.engine.models.mobile_config import MobileConfig
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 from .exceptions import FieldNotFound, UndefinedMethod
@@ -76,7 +76,7 @@ class RemoteAppManager:
     def sync_data(self, field_names):
         data = self.fields_hybrate(field_names)
         count = AppManger(self.session).update(self.product.code, data)
-        logger.info(u"成功更新应用%s的数据, 影响记录%s条，更新数据:%s" % (self.product.code, count, data))
+        logger.info("成功更新应用%s的数据, 影响记录%s条，更新数据:%s" % (self.product.code, count, data))
 
     def hybrate_app_cate(self):
         """
@@ -338,7 +338,7 @@ class RemoteAppManager:
         app是否在移动端(正式)使用
         选项: 1(是)，0(否)
         """
-        mobile_config = self.get_mobile_config('prod')
+        mobile_config = self.get_mobile_config("prod")
         return mobile_config.is_enabled if mobile_config else 0
 
     def hybrate_use_mobile_test(self):
@@ -346,18 +346,18 @@ class RemoteAppManager:
         app是否在移动端(测试)使用
         选项: 1(是)，0(否)
         """
-        mobile_config = self.get_mobile_config('stag')
+        mobile_config = self.get_mobile_config("stag")
         return mobile_config.is_enabled if mobile_config else 0
 
     def hybrate_mobile_url_test(self):
         """APP 移动端预发布环境地址"""
-        mobile_config = self.get_mobile_config('stag')
-        return mobile_config.access_url if mobile_config else ''
+        mobile_config = self.get_mobile_config("stag")
+        return mobile_config.access_url if mobile_config else ""
 
     def hybrate_mobile_url_prod(self):
         """APP 移动端生产环境地址"""
-        mobile_config = self.get_mobile_config('prod')
-        return mobile_config.access_url if mobile_config else ''
+        mobile_config = self.get_mobile_config("prod")
+        return mobile_config.access_url if mobile_config else ""
 
     def hybrate_usecount(self):
         """

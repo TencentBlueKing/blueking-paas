@@ -22,19 +22,19 @@ from . import views_enduser
 
 urlpatterns = [
     re_path(
-        make_app_pattern_with_applications_prefix(r'/process_services/$'),
-        views_enduser.ProcessServicesViewSet.as_view({'get': 'list'}),
-        name='api.process_services',
+        make_app_pattern_with_applications_prefix(r"/process_services/$"),
+        views_enduser.ProcessServicesViewSet.as_view({"get": "list"}),
+        name="api.process_services",
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r'/process_services/(?P<service_name>[a-z0-9-]+)$'),
-        views_enduser.ProcessServicesViewSet.as_view({'post': 'update'}),
-        name='api.process_services.single',
+        make_app_pattern_with_applications_prefix(r"/process_services/(?P<service_name>[a-z0-9-]+)$"),
+        views_enduser.ProcessServicesViewSet.as_view({"post": "update"}),
+        name="api.process_services.single",
     ),
     # Manage the default ingress rule
     re_path(
-        make_app_pattern_with_applications_prefix(r'/process_ingresses/default$'),
-        views_enduser.ProcessIngressesViewSet.as_view({'post': 'update'}),
-        name='api.process_ingresses.default',
+        make_app_pattern_with_applications_prefix(r"/process_ingresses/default$"),
+        views_enduser.ProcessIngressesViewSet.as_view({"post": "update"}),
+        name="api.process_ingresses.default",
     ),
 ]

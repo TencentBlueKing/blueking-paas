@@ -55,24 +55,24 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
     class Meta:
         model = Cluster
         fields = [
-            'uuid',
-            'region',
-            'name',
-            'type',
-            'is_default',
-            'description',
-            'ingress_config',
-            'annotations',
+            "uuid",
+            "region",
+            "name",
+            "type",
+            "is_default",
+            "description",
+            "ingress_config",
+            "annotations",
             "api_servers",
             # 相关证书
             "ca_data",
             "cert_data",
             "key_data",
             "token_value",
-            'default_node_selector',
-            'default_tolerations',
-            'feature_flags',
-            'nodes',
+            "default_node_selector",
+            "default_tolerations",
+            "feature_flags",
+            "nodes",
         ]
 
     def get_nodes(self, obj: Cluster) -> List[str]:
@@ -91,7 +91,7 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
     type = serializers.CharField(required=True)
     is_default = serializers.BooleanField(required=False, default=False)
     # optional field
-    description = serializers.CharField(required=False, default='')
+    description = serializers.CharField(required=False, default="")
     ingress_config = IngressConfigSLZ(required=False, default=None)
     annotations = serializers.JSONField(required=False, default=None)
     ca_data = serializers.CharField(
@@ -126,25 +126,25 @@ class GenRegionClusterStateSLZ(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        cluster_regions = set(Cluster.objects.values_list('region', flat=True))
+        cluster_regions = set(Cluster.objects.values_list("region", flat=True))
 
         # 若指定 region，则必须有对应 region 的集群
-        if attrs['region'] not in cluster_regions:
+        if attrs["region"] not in cluster_regions:
             raise ValidationError(f"region: [{attrs['region']}] is not a valid region name")
 
-        ignore_labels = [value.split('=') for value in attrs['ignore_labels']]
+        ignore_labels = [value.split("=") for value in attrs["ignore_labels"]]
         if any(len(label) != 2 for label in ignore_labels):
-            raise ValidationError('invalid label given!')
+            raise ValidationError("invalid label given!")
 
-        if not attrs['include_masters']:
-            ignore_labels.append(('node-role.kubernetes.io/master', 'true'))
+        if not attrs["include_masters"]:
+            ignore_labels.append(("node-role.kubernetes.io/master", "true"))
 
-        attrs['ignore_labels'] = ignore_labels
+        attrs["ignore_labels"] = ignore_labels
         return attrs
 
 
 class GetClusterComponentStatusSLZ(serializers.Serializer):
     """获取集群组件状态用序列化器"""
 
-    namespace = serializers.CharField(help_text='Chart 部署的命名空间', max_length=64)
-    secret_name = serializers.CharField(help_text='存储 Release 信息的 Secret 名称', max_length=64)
+    namespace = serializers.CharField(help_text="Chart 部署的命名空间", max_length=64)
+    secret_name = serializers.CharField(help_text="存储 Release 信息的 Secret 名称", max_length=64)

@@ -39,7 +39,7 @@ DEFAULT_PER_PAGE = 100
 # 请求超时时间，单位秒
 DEFAULT_TIMEOUT = 90
 # 默认 Ref 值（branch），一般为 master 或者 main
-DEFAULT_REPO_REF = 'master'
+DEFAULT_REPO_REF = "master"
 # 重试次数
 RETRY_TIME = 3
 
@@ -47,9 +47,9 @@ RETRY_TIME = 3
 class GitRepoProvider(str, StructuredEnum):
     """Git 仓库服务提供方"""
 
-    GitHub = EnumField('github', label='GitHub')
-    Gitee = EnumField('gitee', label='Gitee')
-    GitLab = EnumField('gitlab', label='GitLab')
+    GitHub = EnumField("github", label="GitHub")
+    Gitee = EnumField("gitee", label="Gitee")
+    GitLab = EnumField("gitlab", label="GitLab")
 
 
 class BaseGitApiClient(abc.ABC):
@@ -62,13 +62,13 @@ class BaseGitApiClient(abc.ABC):
         self.session = requests.session()
 
         headers = {}
-        if 'oauth_token' in kwargs:
-            self.access_token = kwargs['oauth_token']
+        if "oauth_token" in kwargs:
+            self.access_token = kwargs["oauth_token"]
             # GitHub token use Authorization
             if self.repo_provider == GitRepoProvider.GitHub:
-                headers['Authorization'] = f"token {self.access_token}"
+                headers["Authorization"] = f"token {self.access_token}"
         else:
-            raise exceptions.AccessTokenMissingError('oauth_token required')
+            raise exceptions.AccessTokenMissingError("oauth_token required")
         self.session.headers.update(headers)
 
         self.__token_holder: Oauth2TokenHolder = kwargs.get("__token_holder", None)
@@ -132,8 +132,8 @@ class BaseGitApiClient(abc.ABC):
         self, target_url: str, cur_page: int, per_page: int = DEFAULT_PER_PAGE, params: Optional[Dict] = None
     ) -> List[Dict]:
         params = params or {}
-        params['page'] = cur_page
-        params['per_page'] = per_page
+        params["page"] = cur_page
+        params["per_page"] = per_page
         return self._request_with_retry(target_url, params=params)
 
     def _request_with_retry(self, target_url, **kwargs) -> Any:
@@ -145,11 +145,11 @@ class BaseGitApiClient(abc.ABC):
         """
         # Gitee token use query_params
         if self.repo_provider == GitRepoProvider.Gitee:
-            params = kwargs.get('params') or {}
-            params['access_token'] = self.access_token
-            kwargs['params'] = params
+            params = kwargs.get("params") or {}
+            params["access_token"] = self.access_token
+            kwargs["params"] = params
 
-        kwargs.setdefault('timeout', DEFAULT_TIMEOUT)
+        kwargs.setdefault("timeout", DEFAULT_TIMEOUT)
         for __ in range(RETRY_TIME):
             raw_resp = self.session.get(target_url, **kwargs)
             try:
@@ -175,7 +175,7 @@ class BaseGitApiClient(abc.ABC):
             raise exceptions.AccessTokenError("the access_token can not fetch resource")
         elif raw_resp.status_code == 403:
             logging.warning(f"get url `{raw_resp.url}` but 403")
-            raise exceptions.AccessTokenForbidden('access token forbidden')
+            raise exceptions.AccessTokenForbidden("access token forbidden")
         elif raw_resp.status_code == 504:
             logging.warning(f"get url `{raw_resp.url}` but 504")
             raise exceptions.RequestTimeOutError(_("接口请求超时"))
@@ -191,7 +191,7 @@ class BaseGitApiClient(abc.ABC):
     def _refresh_token(self):
         """尝试 refresh token，失败时抛出异常（异常信息应该直接反馈到前端）"""
         # 没有 access_token 就不能 refresh，直接报错
-        if 'Authorization' not in self.session.headers:
+        if "Authorization" not in self.session.headers:
             raise exceptions.AccessTokenMissingError("access_token not found")
         # 没有 token holder 也不能 refresh，直接报错
         if not self.__token_holder:
@@ -205,4 +205,4 @@ class BaseGitApiClient(abc.ABC):
             logger.error(f"fail to refresh token for {holder.user.username}")
             raise exceptions.AccessTokenRefreshError("fail to refresh token")
         # 更新 token 后更新请求头
-        self.session.headers['Authorization'] = f"token {holder.access_token}"
+        self.session.headers["Authorization"] = f"token {holder.access_token}"

@@ -33,7 +33,7 @@ def gen_grade_manager_name(app_code: str) -> str:
     中：开发者中心-{app_code}
     英：PaaS-{app_code}
     """
-    return _('开发者中心-{}').format(app_code)
+    return _("开发者中心-{}").format(app_code)
 
 
 def gen_grade_manager_desc(app_code: str) -> str:
@@ -43,7 +43,7 @@ def gen_grade_manager_desc(app_code: str) -> str:
     英：Developer center application ({app_code}) grade administrator,
         with permission to approve users to join the administrator/developer/operator user group.
     """
-    return _('开发者中心应用（{}）分级管理员，拥有审批用户加入管理者/开发者/运营者用户组权限。').format(app_code)
+    return _("开发者中心应用（{}）分级管理员，拥有审批用户加入管理者/开发者/运营者用户组权限。").format(app_code)
 
 
 def gen_user_group_name(app_code: str, role: ApplicationRole) -> str:
@@ -53,12 +53,12 @@ def gen_user_group_name(app_code: str, role: ApplicationRole) -> str:
     英：PaaS-{app_code}-admin | PaaS-{app_code}-dev | PaaS-{app_code}-ops
     """
     if role == ApplicationRole.ADMINISTRATOR:
-        return _('开发者中心-{}-管理员').format(app_code)
+        return _("开发者中心-{}-管理员").format(app_code)
     elif role == ApplicationRole.DEVELOPER:
-        return _('开发者中心-{}-开发者').format(app_code)
+        return _("开发者中心-{}-开发者").format(app_code)
     elif role == ApplicationRole.OPERATOR:
-        return _('开发者中心-{}-运营者').format(app_code)
-    return ''
+        return _("开发者中心-{}-运营者").format(app_code)
+    return ""
 
 
 def gen_user_group_desc(app_code: str, role: ApplicationRole) -> str:
@@ -74,12 +74,14 @@ def gen_user_group_desc(app_code: str, role: ApplicationRole) -> str:
             such as basic information editing, access control management, application market management, etc.
     """
     if role == ApplicationRole.ADMINISTRATOR:
-        return _('开发者中心应用（{}）管理员，拥有应用的全部权限。').format(app_code)
+        return _("开发者中心应用（{}）管理员，拥有应用的全部权限。").format(app_code)
     elif role == ApplicationRole.DEVELOPER:
-        return _('开发者中心应用（{}）开发者，拥有应用的开发权限，如基础开发，云 API 管理等。').format(app_code)
+        return _("开发者中心应用（{}）开发者，拥有应用的开发权限，如基础开发，云 API 管理等。").format(app_code)
     elif role == ApplicationRole.OPERATOR:
-        return _('开发者中心应用（{}）运营者，拥有应用的运营权限，如基础信息编辑，访问控制管理，应用市场管理等。').format(app_code)
-    return ''
+        return _(
+            "开发者中心应用（{}）运营者，拥有应用的运营权限，如基础信息编辑，访问控制管理，应用市场管理等。"
+        ).format(app_code)
+    return ""
 
 
 def calc_expired_at(expire_after_days: int) -> int:
@@ -131,19 +133,19 @@ def get_paas_authorization_scopes(
                            给用户组授权时系统信息在路径参数中，授权范围中不需要包含系统信息
     """
     scopes = {
-        'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-        'actions': [{'id': action} for action in get_app_actions_by_role(ApplicationRole.ADMINISTRATOR)],
-        'resources': [
+        "system": settings.IAM_PAAS_V3_SYSTEM_ID,
+        "actions": [{"id": action} for action in get_app_actions_by_role(ApplicationRole.ADMINISTRATOR)],
+        "resources": [
             {
-                'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-                'type': constants.ResourceType.Application,
-                'paths': [
+                "system": settings.IAM_PAAS_V3_SYSTEM_ID,
+                "type": constants.ResourceType.Application,
+                "paths": [
                     [
                         {
-                            'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-                            'type': constants.ResourceType.Application,
-                            'id': app_code,
-                            'name': app_name,
+                            "system": settings.IAM_PAAS_V3_SYSTEM_ID,
+                            "type": constants.ResourceType.Application,
+                            "id": app_code,
+                            "name": app_name,
                         }
                     ]
                 ],
@@ -151,7 +153,7 @@ def get_paas_authorization_scopes(
         ],
     }
     if include_system:
-        scopes['system'] = settings.IAM_PAAS_V3_SYSTEM_ID
+        scopes["system"] = settings.IAM_PAAS_V3_SYSTEM_ID
     return scopes
 
 
@@ -167,18 +169,18 @@ def get_bk_monitor_authorization_scope_list(bk_space_id: str, app_name: str, inc
     scope_list = []
     for resource_type, actions in constants.APP_MINI_ACTIONS_IN_BK_MONITOR.items():
         scopes = {
-            'actions': [{'id': action} for action in actions],
-            'resources': [
+            "actions": [{"id": action} for action in actions],
+            "resources": [
                 {
-                    'system': constants.BK_MONITOR_SYSTEM_ID,
-                    'type': resource_type,
-                    'paths': [
+                    "system": constants.BK_MONITOR_SYSTEM_ID,
+                    "type": resource_type,
+                    "paths": [
                         [
                             {
-                                'system': constants.BK_MONITOR_SYSTEM_ID,
-                                'type': constants.ResourceType.BkMonitorSpace,
-                                'id': bk_space_id,
-                                'name': app_name,
+                                "system": constants.BK_MONITOR_SYSTEM_ID,
+                                "type": constants.ResourceType.BkMonitorSpace,
+                                "id": bk_space_id,
+                                "name": app_name,
                             }
                         ]
                     ],
@@ -203,19 +205,19 @@ def get_bk_log_authorization_scope_list(bk_space_id: str, app_name: str, include
     scope_list = []
     for resource_type, resource_data in constants.APP_MINI_ACTIONS_IN_BK_LOG.items():
         scopes = {
-            'actions': [{'id': action} for action in resource_data['actions']],
+            "actions": [{"id": action} for action in resource_data["actions"]],
             # 日志平台的 resources 是直接使用监控的资源
-            'resources': [
+            "resources": [
                 {
-                    'system': resource_data['resource_system'],
-                    'type': resource_type,
-                    'paths': [
+                    "system": resource_data["resource_system"],
+                    "type": resource_type,
+                    "paths": [
                         [
                             {
-                                'system': constants.BK_MONITOR_SYSTEM_ID,
-                                'type': constants.ResourceType.BkMonitorSpace,
-                                'id': bk_space_id,
-                                'name': app_name,
+                                "system": constants.BK_MONITOR_SYSTEM_ID,
+                                "type": constants.ResourceType.BkMonitorSpace,
+                                "id": bk_space_id,
+                                "name": app_name,
                             }
                         ]
                     ],

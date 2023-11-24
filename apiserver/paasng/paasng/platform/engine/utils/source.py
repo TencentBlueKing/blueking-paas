@@ -60,16 +60,16 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
 
     if len(processes) > settings.MAX_PROCESSES_PER_MODULE:
         raise ValidationError(
-            f'The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, '
-            f'but got {len(processes)}'
+            f"The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, "
+            f"but got {len(processes)}"
         )
 
     for proc_type in processes.keys():
         if not PROC_TYPE_PATTERN.match(proc_type):
-            raise ValidationError(f'Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}')
+            raise ValidationError(f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}")
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f'Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters'
+                f"Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters"
             )
 
     # Formalize processes data and return
@@ -78,7 +78,7 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
             {name.lower(): {"name": name.lower(), **v} for name, v in processes.items()}, TypeProcesses
         )
     except KeyError as e:
-        raise ValidationError(f'Invalid process data, missing: {e}')
+        raise ValidationError(f"Invalid process data, missing: {e}")
     except ValueError as e:
         raise ValidationError(f"Invalid process data, {e}")
 
@@ -139,7 +139,7 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
         }
     except GetProcfileError as e:
         if not proc_data:
-            raise DeployShouldAbortError(reason=f'Procfile error: {e.message}') from e
+            raise DeployShouldAbortError(reason=f"Procfile error: {e.message}") from e
     except NotImplementedError:
         """对于不支持从源码读取进程信息的应用, 忽略异常, 因为可能在其他分支已成功获取到 proc_data"""
     else:
@@ -174,11 +174,11 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
     # Note: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
     handler = get_app_description_handler(module, operator, version_info)
     if handler is None:
-        return ''
+        return ""
     return handler.get_deploy_desc(module.name).source_dir
 
 
-_current_path = Path('.')
+_current_path = Path(".")
 
 
 def get_app_description_handler(
@@ -203,8 +203,8 @@ def get_source_package_path(deployment: Deployment) -> str:
     branch = deployment.source_version_name
     revision = deployment.source_revision
 
-    slug_name = f'{engine_app.name}:{branch}:{revision}'
-    return f'{engine_app.region}/home/{slug_name}/tar'
+    slug_name = f"{engine_app.name}:{branch}:{revision}"
+    return f"{engine_app.region}/home/{slug_name}/tar"
 
 
 def download_source_to_dir(module: Module, operator: str, deployment: Deployment, working_path: Path):
@@ -235,9 +235,9 @@ def check_source_package(engine_app: EngineApp, package_path: Path, stream: Depl
     if size > warning_threshold * 1024 * 1024:
         stream.write_message(
             Style.Warning(
-                _("WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请尝试清理不必要的文件来减小体积。").format(
-                    warning_threshold=warning_threshold
-                )
+                _(
+                    "WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请尝试清理不必要的文件来减小体积。"
+                ).format(warning_threshold=warning_threshold)
             )
         )
         logger.error(f"Engine app {engine_app.name}'s source is too big, size={size}")

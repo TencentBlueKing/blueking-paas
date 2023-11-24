@@ -47,7 +47,7 @@ class Command(BaseCommand):
             action="store_true",
             help=(
                 "Before refreshing, scan all domains in the cert's region completely first, update the "
-                "\"shared_cert\" field of the domain object if a match is found, helpful when the cert is newly added."
+                '"shared_cert" field of the domain object if a match is found, helpful when the cert is newly added.'
             ),
         )
         parser.add_argument("--dry-run", action="store_true", help="Enable dry run mode")
@@ -57,39 +57,39 @@ class Command(BaseCommand):
 
     def handle_refresh(self, options):
         """Handle refresh action"""
-        name = options['name']
+        name = options["name"]
         try:
             cert = AppDomainSharedCert.objects.get(name=name)
         except AppDomainSharedCert.DoesNotExist:
             self.exit_with_error(f'Cert "{name}" does not exist')
 
         # If full scan is enabled, scan all domains and update the cert field if needed
-        if options['full_scan']:
-            self.scan_and_update(cert, options['dry_run'])
+        if options["full_scan"]:
+            self.scan_and_update(cert, options["dry_run"])
 
         # Find out all affected WlApps
         d_apps = self.find_subdomain_apps(cert)
         p_apps = self.find_subpath_apps(cert)
         # Sort the app list to get a deterministic result
         apps = sorted(set(d_apps) | set(p_apps), key=lambda app: app.name)
-        self.print(f'Found affected apps(sub-domain/sub-path): {len(d_apps)}/{len(p_apps)}')
-        self.print(f'Deduplicated overall count: {len(apps)}')
+        self.print(f"Found affected apps(sub-domain/sub-path): {len(d_apps)}/{len(p_apps)}")
+        self.print(f"Deduplicated overall count: {len(apps)}")
 
         # Ask user to double-check the certificate content
         self.display_cert(cert)
-        if input("Do you want to proceed?(yes/no) ").lower() not in {'y', 'yes'}:
+        if input("Do you want to proceed?(yes/no) ").lower() not in {"y", "yes"}:
             self.exit_with_error("quit")
 
         # The update will walk through all affected applications. Each cert only
         # have a single copy of Secret in one namespace, although it may be shared
         # by multiple Ingresses, so this approach will do fine.
-        self.update_secrets(apps, cert, options['dry_run'])
+        self.update_secrets(apps, cert, options["dry_run"])
         return
 
     def scan_and_update(self, cert: AppDomainSharedCert, dry_run: bool):
         """Scan all domains in the cert's region, update the cert related fields if needed."""
         # Make a print function which print message with current context
-        _print = partial(self.print, title='update_cert_fields')
+        _print = partial(self.print, title="update_cert_fields")
 
         _print("Scanning all domains to find those whose host matches the given cert...")
         matches: List[AppDomain] = list(find_uninitialized_domains(cert))
@@ -97,8 +97,8 @@ class Command(BaseCommand):
             _print(self.style.SUCCESS("No domains found."))
             return
 
-        _print(f'Found {len(matches)} domains.')
-        if input("Do you want to update the cert fields of these domains?(yes/no) ").lower() not in {'y', 'yes'}:
+        _print(f"Found {len(matches)} domains.")
+        if input("Do you want to update the cert fields of these domains?(yes/no) ").lower() not in {"y", "yes"}:
             _print("Update canceled.")
             return
 
@@ -107,14 +107,14 @@ class Command(BaseCommand):
             for domain in matches:
                 domain.shared_cert = cert
                 domain.save(update_fields=["shared_cert", "updated"])
-            _print(self.style.SUCCESS(f'{len(matches)} domain objects updated.'))
+            _print(self.style.SUCCESS(f"{len(matches)} domain objects updated."))
         else:
-            _print('(dry-run mode) Update skipped.')
+            _print("(dry-run mode) Update skipped.")
 
     def find_subdomain_apps(self, cert: AppDomainSharedCert) -> Sequence[WlApp]:
         """Find all affected WlApps for subdomain addresses"""
         self.print("Refreshing Secret resources for sub-domains...")
-        app_ids = AppDomain.objects.filter(shared_cert=cert).values_list('app_id').distinct()
+        app_ids = AppDomain.objects.filter(shared_cert=cert).values_list("app_id").distinct()
         return list(WlApp.objects.filter(pk__in=app_ids))
 
     def find_subpath_apps(self, cert: AppDomainSharedCert):
@@ -132,14 +132,14 @@ class Command(BaseCommand):
         if not cluster_names:
             return []
 
-        app_ids = AppSubpath.objects.filter(region=cert.region).values_list('app_id').distinct()
+        app_ids = AppSubpath.objects.filter(region=cert.region).values_list("app_id").distinct()
         apps = []
         # Although AppSubpath has "cluster_name" field, it's value is not set at
         # this moment. So it's impossible to filter affected applications by simply
         # querying "cluster_name" field.
         #
         # TODO: Improve below logic when AppSubpath model was improved
-        for app in WlApp.objects.filter(pk__in=app_ids).order_by('name'):
+        for app in WlApp.objects.filter(pk__in=app_ids).order_by("name"):
             if get_cluster_by_app(app).name in cluster_names:
                 apps.append(app)
         return apps
@@ -152,20 +152,20 @@ class Command(BaseCommand):
         for i, app in enumerate(apps, start=1):
             self.print(f"({i}/{cnt}) Processing {app}..")
             if dry_run:
-                self.print('(dry-run mode) Update skipped.')
+                self.print("(dry-run mode) Update skipped.")
                 continue
 
             try:
                 update_or_create_secret_by_cert(app, cert)
             except Exception as e:
-                self.print(f'Unable to update Secret for {app}: {str(e).splitlines()[0]}')
+                self.print(f"Unable to update Secret for {app}: {str(e).splitlines()[0]}")
                 error_cnt += 1
-        self.print(self.style.SUCCESS(f'Update Secrets finished, error count: {error_cnt}'))
+        self.print(self.style.SUCCESS(f"Update Secrets finished, error count: {error_cnt}"))
 
     def display_cert(self, cert: AppDomainSharedCert):
         """Display the information of given cert object"""
         try:
-            cert_obj = cryptography.x509.load_pem_x509_certificate(bytes(cert.cert_data, 'utf-8'))
+            cert_obj = cryptography.x509.load_pem_x509_certificate(bytes(cert.cert_data, "utf-8"))
         except ValueError as e:
             self.exit_with_error(f"{cert.name}'s certification file is not valid: {e}")
             return
@@ -176,7 +176,7 @@ class Command(BaseCommand):
 
     def exit_with_error(self, message: str, code: int = 2):
         """Exit execution and print error message"""
-        self.print(self.style.NOTICE(f'Error: {message}'))
+        self.print(self.style.NOTICE(f"Error: {message}"))
         sys.exit(2)
 
     def print(self, message: str, title: str = "refresh") -> None:
@@ -186,7 +186,7 @@ class Command(BaseCommand):
         :param title: Use this title to distinguish different print messages
         """
         if title:
-            print(self.style.SUCCESS(f'[{title.upper()}] ') + message)
+            print(self.style.SUCCESS(f"[{title.upper()}] ") + message)
         else:
             print(message)
 

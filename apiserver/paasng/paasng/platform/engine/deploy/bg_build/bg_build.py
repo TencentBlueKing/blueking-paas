@@ -24,13 +24,14 @@ from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 from django.utils.encoding import force_text
 
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.bk_app.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
 from paas_wl.bk_app.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
+from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.kubestatus import check_pod_health_status
+from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.utils import (
     SlugBuilderTemplate,
@@ -45,7 +46,6 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream, Style
 from paasng.platform.engine.workflow import DeployStep
-from paasng.core.core.storages.redisdb import get_default_redis
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
@@ -106,7 +106,7 @@ class BuildProcessExecutor(DeployStep):
         super().__init__(deployment, stream)
 
         self.bp = bp
-        self.wl_app: 'WlApp' = bp.app
+        self.wl_app: "WlApp" = bp.app
         self._builder_name = generate_builder_name(self.wl_app)
 
     def execute(self, metadata: Dict):
@@ -136,7 +136,7 @@ class BuildProcessExecutor(DeployStep):
 
             # 绑定Build对象
             build_instance = self.create_and_bind_build_instance(metadata=metadata)
-            self.stream.write_message('Generated build id: %s' % build_instance.uuid)
+            self.stream.write_message("Generated build id: %s" % build_instance.uuid)
         except ReadTargetStatusTimeout as e:
             logger.exception(
                 f"builder pod did not reach the target status within the timeout period during deploy[{self.bp}]"
@@ -216,7 +216,7 @@ class BuildProcessExecutor(DeployStep):
             self.stream.write_message(Style.Error(f"上一次构建未正常退出, 请在{e.extra_value}重试."))
             raise
 
-        logger.debug('SlugBuilder created: %s', slug_builder_name)
+        logger.debug("SlugBuilder created: %s", slug_builder_name)
         return slug_builder_name
 
     def create_and_bind_build_instance(self, metadata: Dict) -> Build:
@@ -225,11 +225,11 @@ class BuildProcessExecutor(DeployStep):
         :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
         """
         procfile = {}
-        if 'procfile' in metadata:
-            procfile = metadata['procfile']
-        if 'image' not in metadata:
+        if "procfile" in metadata:
+            procfile = metadata["procfile"]
+        if "image" not in metadata:
             raise KeyError("'image' is required")
-        image = metadata['image']
+        image = metadata["image"]
         artifact_type = ArtifactType.SLUG
         artifact_metadata = {}
         if metadata.get("use_dockerfile") or metadata.get("use_cnb"):

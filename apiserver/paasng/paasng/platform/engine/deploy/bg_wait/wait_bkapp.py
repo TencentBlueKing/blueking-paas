@@ -76,22 +76,22 @@ class UserInterruptedPolicy(AbortPolicy):
     """Abort procedure when user requested an interruption"""
 
     def get_reason(self) -> str:
-        return 'User interrupted release'
+        return "User interrupted release"
 
     @property
     def is_interrupted(self) -> bool:
         return True
 
     def evaluate(self, already_waited: float, params: Dict) -> bool:
-        deployment_id = params.get('deployment_id')
+        deployment_id = params.get("deployment_id")
         if not deployment_id:
-            logger.warning('Deployment was not provided for UserInterruptedPolicy, will not proceed.')
+            logger.warning("Deployment was not provided for UserInterruptedPolicy, will not proceed.")
             return False
 
         try:
             deployment = Deployment.objects.get(pk=deployment_id)
         except Deployment.DoesNotExist:
-            logger.warning('Deployment not exists for UserInterruptedPolicy, will not proceed.')
+            logger.warning("Deployment not exists for UserInterruptedPolicy, will not proceed.")
             return False
         return bool(deployment.release_int_requested_at)
 
@@ -110,16 +110,16 @@ class WaitProcedurePoller(TaskPoller):
 
     def __init__(self, params: Dict, metadata: PollingMetadata):
         super().__init__(params, metadata)
-        self.env = ModuleEnvironment.objects.get(pk=self.params['env_id'])
+        self.env = ModuleEnvironment.objects.get(pk=self.params["env_id"])
 
     def query(self) -> PollingResult:
         already_waited = time.time() - self.metadata.query_started_at
-        logger.info(f'wait procedure started {already_waited} seconds, env: {self.env}')
+        logger.info(f"wait procedure started {already_waited} seconds, env: {self.env}")
         # Check all abort policies
         for policy in self.abort_policies:
             if policy.evaluate(already_waited, self.params):
                 policy_name = policy.__class__.__name__
-                logger.info(f'AbortPolicy: {policy_name} evaluated, got positive result, abort current procedure')
+                logger.info(f"AbortPolicy: {policy_name} evaluated, got positive result, abort current procedure")
                 return PollingResult(
                     PollingStatus.DONE,
                     data=AbortedDetails(
@@ -159,7 +159,7 @@ class WaitAppModelReady(WaitProcedurePoller):
     abort_policies: List[AbortPolicy] = [UserInterruptedPolicy()]
 
     def get_status(self) -> PollingResult:
-        dp = AppModelDeploy.objects.get(id=self.params['deploy_id'])
+        dp = AppModelDeploy.objects.get(id=self.params["deploy_id"])
         mres = get_mres_from_cluster(
             ModuleEnvironment.objects.get(
                 application_id=dp.application_id, module_id=dp.module_id, environment=dp.environment_name
@@ -171,12 +171,12 @@ class WaitAppModelReady(WaitProcedurePoller):
 
         state = MresConditionParser(mres).detect_state()
         if state.status == DeployStatus.READY:
-            return PollingResult.done(data={'state': state, 'last_update': mres.status.lastUpdate})
+            return PollingResult.done(data={"state": state, "last_update": mres.status.lastUpdate})
 
         elif state.status == DeployStatus.ERROR:
             polling_failure_count = 1
-            if self.metadata.last_polling_data and 'polling_failure_count' in self.metadata.last_polling_data:
-                polling_failure_count = self.metadata.last_polling_data['polling_failure_count'] + 1
+            if self.metadata.last_polling_data and "polling_failure_count" in self.metadata.last_polling_data:
+                polling_failure_count = self.metadata.last_polling_data["polling_failure_count"] + 1
 
             # When deploying bkapp, temporary failures may occur but will quickly resume
             # e.g. Deployment does not have minimum availability
@@ -184,9 +184,9 @@ class WaitAppModelReady(WaitProcedurePoller):
             # Only when the consecutive polling failures count exceeds the limit,
             # then current deployment should be considered as failed.
             if polling_failure_count > CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS:
-                return PollingResult.done(data={'state': state, 'last_update': mres.status.lastUpdate})
+                return PollingResult.done(data={"state": state, "last_update": mres.status.lastUpdate})
 
-            return PollingResult.doing(data={'polling_failure_count': polling_failure_count})
+            return PollingResult.doing(data={"polling_failure_count": polling_failure_count})
 
         elif state.status == DeployStatus.PROGRESSING:
             # Also update status when it's progressing
@@ -200,24 +200,24 @@ class DeployStatusHandler(CallbackHandler):
     """Result handler for AppModelDeployStatusPoller"""
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
-        dp = AppModelDeploy.objects.get(id=poller.params['deploy_id'])
+        dp = AppModelDeploy.objects.get(id=poller.params["deploy_id"])
 
         is_interrupted, err_message, extra_data = self.parse_result(result)
         if result.is_exception or (not is_interrupted and err_message):
-            logger.warning('Error polling AppModelDeploy status, result: %s', result)
-            state = ModelResState(DeployStatus.ERROR, 'internal', err_message)
+            logger.warning("Error polling AppModelDeploy status, result: %s", result)
+            state = ModelResState(DeployStatus.ERROR, "internal", err_message)
             update_status(dp, state)
         elif is_interrupted:
-            logger.warning('polling AppModelDeploy is interrupted')
-            state = ModelResState(DeployStatus.UNKNOWN, 'interrupted', err_message)
+            logger.warning("polling AppModelDeploy is interrupted")
+            state = ModelResState(DeployStatus.UNKNOWN, "interrupted", err_message)
             update_status(dp, state)
         else:
-            logger.info('Update AppModelDeploy status with data: %s', result.data)
-            update_status(dp, extra_data['state'], last_transition_time=extra_data['last_update'])
+            logger.info("Update AppModelDeploy status with data: %s", result.data)
+            update_status(dp, extra_data["state"], last_transition_time=extra_data["last_update"])
 
         dp.refresh_from_db()
         # 需要更新 deploy step 的状态
-        deployment_id = poller.params.get('deployment_id')
+        deployment_id = poller.params.get("deployment_id")
         if deployment_id is not None:
             state_mgr = DeploymentStateMgr.from_deployment_id(
                 deployment_id=deployment_id, phase_type=DeployPhaseTypes.RELEASE
@@ -229,7 +229,7 @@ class DeployStatusHandler(CallbackHandler):
             except StepNotInPresetListError:
                 logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
             state_mgr.update(release_status=job_status)
-            state_mgr.finish(job_status, err_detail=dp.message or '', write_to_stream=True)
+            state_mgr.finish(job_status, err_detail=dp.message or "", write_to_stream=True)
 
         # 在部署流程结束后，发送信号触发操作审计等后续步骤。告警规则的创建统一在 post_appenv_deploy 信号中触发
         post_cnative_env_deploy.send(dp.environment, deploy=dp)
@@ -247,7 +247,7 @@ class DeployStatusHandler(CallbackHandler):
             return False, "invalid polling result", result.data
 
         if aborted_details.aborted:
-            assert aborted_details.policy is not None, 'policy must not be None'  # Make type checker happy
+            assert aborted_details.policy is not None, "policy must not be None"  # Make type checker happy
             return (
                 aborted_details.policy.is_interrupted,
                 aborted_details.policy.reason,

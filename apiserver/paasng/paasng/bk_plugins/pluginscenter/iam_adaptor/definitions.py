@@ -70,7 +70,7 @@ def gen_iam_grade_manager(plugin: PluginInstance) -> GradeManager:
     return GradeManager(
         # 分级管理员名称（最大字符数限制 32）"
         name=f"{plugin.pd.name}:{plugin.id}",
-        description=_('{pd_name}（{resource_name}）分级管理员，拥有审批用户加入管理者/开发者用户组权限。').format(
+        description=_("{pd_name}（{resource_name}）分级管理员，拥有审批用户加入管理者/开发者用户组权限。").format(
             pd_name=plugin.pd.name, resource_name=gen_iam_resource_name(plugin)
         ),
     )
@@ -106,18 +106,20 @@ def gen_user_group_name(plugin: PluginInstance, role: PluginRole) -> str:
     """根据指定的用户角色，生成对应的用户组名称（最大字符数限制 32）"""
     # warning: IAM 未支持分组名称国际化, 这里使用 gettext 只在创建用户组时生效
     if role == PluginRole.ADMINISTRATOR:
-        return _('{pd_name}-{plugin_name}-管理者').format(pd_name=plugin.pd.name, plugin_name=plugin.name)
+        return _("{pd_name}-{plugin_name}-管理者").format(pd_name=plugin.pd.name, plugin_name=plugin.name)
     elif role == PluginRole.DEVELOPER:
-        return _('{pd_name}-{plugin_name}-开发者').format(pd_name=plugin.pd.name, plugin_name=plugin.name)
+        return _("{pd_name}-{plugin_name}-开发者").format(pd_name=plugin.pd.name, plugin_name=plugin.name)
     raise NotImplementedError
 
 
 def gen_user_group_description(plugin: PluginInstance, role: PluginRole) -> str:
     """根据指定的用户角色，生成对应的用户组名称"""
     if role == PluginRole.ADMINISTRATOR:
-        return _('{pd_name}（{plugin_name}）管理者，拥有应用的全部权限。').format(pd_name=plugin.pd.name, plugin_name=plugin.name)
+        return _("{pd_name}（{plugin_name}）管理者，拥有应用的全部权限。").format(
+            pd_name=plugin.pd.name, plugin_name=plugin.name
+        )
     elif role == PluginRole.DEVELOPER:
-        return _('{pd_name}（{plugin_name}）开发者，拥有应用的开发权限，如基础开发，版本发布等。').format(
+        return _("{pd_name}（{plugin_name}）开发者，拥有应用的开发权限，如基础开发，版本发布等。").format(
             pd_name=plugin.pd.name, plugin_name=plugin.name
         )
     raise NotImplementedError

@@ -54,37 +54,37 @@ class TestModuleStructuredLogAPIView:
         assert response.data["logs"] == []
         # 测试 dsl 的拼接 是否符合预期
         assert json.loads(response.data["dsl"]) == {
-            'query': {
-                'bool': {
-                    'filter': [
-                        {'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}},
+            "query": {
+                "bool": {
+                    "filter": [
+                        {"range": {"@timestamp": {"gte": "now-1h", "lte": "now"}}},
                         # mappings 返回类型是 text, 因此添加了 .keyword
-                        {'term': {'app_code.keyword': bk_app.code}},
-                        {'term': {'module_name': bk_module.name}},
-                        {'bool': {'must_not': [{'terms': {'stream': ['stderr', 'stdout']}}]}},
+                        {"term": {"app_code.keyword": bk_app.code}},
+                        {"term": {"module_name": bk_module.name}},
+                        {"bool": {"must_not": [{"terms": {"stream": ["stderr", "stdout"]}}]}},
                     ],
-                    'must': [
-                        {'query_string': {'query': 'query_string', 'analyze_wildcard': True}},
-                        {'terms': {'terms': ['foo', 'bar']}},
+                    "must": [
+                        {"query_string": {"query": "query_string", "analyze_wildcard": True}},
+                        {"terms": {"terms": ["foo", "bar"]}},
                     ],
-                    'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
+                    "must_not": [{"terms": {"exclude": ["foo", "bar"]}}],
                 }
             },
-            'sort': [{'@timestamp': {'order': 'desc'}, 'some-field': {'order': 'asc'}}],
-            'size': 100,
-            'from': 0,
-            'highlight': {
-                'fields': {'*': {'number_of_fragments': 0}, '*.*': {'number_of_fragments': 0}},
-                'pre_tags': ['[bk-mark]'],
-                'post_tags': ['[/bk-mark]'],
-                'require_field_match': False,
-                'highlight_query': {
-                    'bool': {
-                        'must': [
-                            {'query_string': {'query': 'query_string', 'analyze_wildcard': True}},
-                            {'terms': {'terms': ['foo', 'bar']}},
+            "sort": [{"@timestamp": {"order": "desc"}, "some-field": {"order": "asc"}}],
+            "size": 100,
+            "from": 0,
+            "highlight": {
+                "fields": {"*": {"number_of_fragments": 0}, "*.*": {"number_of_fragments": 0}},
+                "pre_tags": ["[bk-mark]"],
+                "post_tags": ["[/bk-mark]"],
+                "require_field_match": False,
+                "highlight_query": {
+                    "bool": {
+                        "must": [
+                            {"query_string": {"query": "query_string", "analyze_wildcard": True}},
+                            {"terms": {"terms": ["foo", "bar"]}},
                         ],
-                        'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
+                        "must_not": [{"terms": {"exclude": ["foo", "bar"]}}],
                     }
                 },
             },

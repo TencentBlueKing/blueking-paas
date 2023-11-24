@@ -41,11 +41,14 @@ def dp(bk_stag_env, bk_stag_wl_app, bk_user):
 def poller(bk_stag_env, dp):
     """A poller fixture for testing"""
     metadata = PollingMetadata(retries=0, query_started_at=time.time(), queried_count=1)
-    return WaitAppModelReady(params={'env_id': bk_stag_env.id, 'deploy_id': dp.id}, metadata=metadata)
+    return WaitAppModelReady(params={"env_id": bk_stag_env.id, "deploy_id": dp.id}, metadata=metadata)
 
 
 class TestWaitAppModelReady:
-    @patch('paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster', return_value=create_res_with_conds([]))
+    @patch(
+        "paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster",
+        return_value=create_res_with_conds([]),
+    )
     def test_pending(self, mocker, dp, poller):
         ret = poller.query()
         assert ret.status == PollingStatus.DOING
@@ -53,7 +56,7 @@ class TestWaitAppModelReady:
         assert dp.status == DeployStatus.PENDING
 
     @patch(
-        'paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster',
+        "paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster",
         return_value=create_res_with_conds([create_condition(MResConditionType.APP_AVAILABLE)]),
     )
     def test_progressing(self, mocker, dp, poller):
@@ -63,7 +66,7 @@ class TestWaitAppModelReady:
         assert dp.status == DeployStatus.PROGRESSING
 
     @patch(
-        'paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster',
+        "paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster",
         return_value=create_res_with_conds(
             [create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning
         ),
@@ -73,8 +76,8 @@ class TestWaitAppModelReady:
         assert ret.status == PollingStatus.DONE
 
         extra_data = ret.data["extra_data"]
-        assert 'state' in extra_data
-        assert 'last_update' in extra_data
+        assert "state" in extra_data
+        assert "last_update" in extra_data
 
 
 class TestDeployStatusHandler:
@@ -82,7 +85,7 @@ class TestDeployStatusHandler:
         DeployStatusHandler().handle(result=CallbackResult(status=CallbackStatus.EXCEPTION), poller=poller)
         dp.refresh_from_db()
         assert dp.status == DeployStatus.ERROR
-        assert dp.reason == 'internal'
+        assert dp.reason == "internal"
 
     def test_handle_ready(self, dp, poller):
         DeployStatusHandler().handle(
@@ -91,8 +94,8 @@ class TestDeployStatusHandler:
                 data=AbortedDetails(
                     aborted=False,
                     extra_data={
-                        'state': ModelResState(DeployStatus.READY, 'ready', 'foo ready'),
-                        'last_update': arrow.get('2020-10-10').datetime,
+                        "state": ModelResState(DeployStatus.READY, "ready", "foo ready"),
+                        "last_update": arrow.get("2020-10-10").datetime,
                     },
                 ).dict(),
             ),
@@ -102,8 +105,8 @@ class TestDeployStatusHandler:
         dp.refresh_from_db()
         # Assert deploy has been updated
         assert dp.status == DeployStatus.READY
-        assert dp.reason == 'ready'
-        assert dp.message == 'foo ready'
+        assert dp.reason == "ready"
+        assert dp.message == "foo ready"
         assert dp.last_transition_time.date() == datetime.date(2020, 10, 10)
 
     def test_is_interrupted(self, dp, poller):
@@ -122,5 +125,5 @@ class TestDeployStatusHandler:
         dp.refresh_from_db()
         # Assert deploy has been updated
         assert dp.status == DeployStatus.UNKNOWN
-        assert dp.reason == 'interrupted'
-        assert dp.message == 'User interrupted release'
+        assert dp.reason == "interrupted"
+        assert dp.message == "User interrupted release"

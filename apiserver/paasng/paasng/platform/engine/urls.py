@@ -21,132 +21,132 @@ from paasng.utils.basic import make_app_pattern, make_app_pattern_with_global_en
 
 from . import views
 
-PVAR_UUID = '(?P<uuid>[0-9a-f-]{32,36})'
+PVAR_UUID = "(?P<uuid>[0-9a-f-]{32,36})"
 
 # Deployment
 urlpatterns = [
     re_path(
-        make_app_pattern(r'/released_info/$'),
-        views.ReleasedInfoViewSet.as_view({'get': 'get_current_info'}),
-        name='api.released_info.get_current_info',
+        make_app_pattern(r"/released_info/$"),
+        views.ReleasedInfoViewSet.as_view({"get": "get_current_info"}),
+        name="api.released_info.get_current_info",
     ),
     re_path(
-        make_app_pattern(r'/released_state/$'),
-        views.ReleasedInfoViewSet.as_view({'get': 'get_current_state'}),
-        name='api.released_info.get_current_state',
+        make_app_pattern(r"/released_state/$"),
+        views.ReleasedInfoViewSet.as_view({"get": "get_current_state"}),
+        name="api.released_info.get_current_state",
     ),
     re_path(
-        make_app_pattern_with_global_envs(r'/releases/$'),
-        views.ReleasesViewset.as_view({'post': 'release'}),
-        name='api.releases.release',
+        make_app_pattern_with_global_envs(r"/releases/$"),
+        views.ReleasesViewset.as_view({"post": "release"}),
+        name="api.releases.release",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/$', include_envs=False),
+        make_app_pattern(r"/config_vars/$", include_envs=False),
         views.ConfigVarViewSet.as_view(
             {
-                'get': 'list',
-                'post': 'create',
+                "get": "list",
+                "post": "create",
             }
         ),
-        name='api.config_vars',
+        name="api.config_vars",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/(?P<id>\d+)/$', include_envs=False),
+        make_app_pattern(r"/config_vars/(?P<id>\d+)/$", include_envs=False),
         views.ConfigVarViewSet.as_view(
             {
-                'put': 'update',
-                'delete': 'destroy',
+                "put": "update",
+                "delete": "destroy",
             }
         ),
-        name='api.config_vars.single',
+        name="api.config_vars.single",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/clone_from/(?P<source_module_name>[^/]+)$', include_envs=False),
-        views.ConfigVarViewSet.as_view({'post': 'clone'}),
-        name='api.config_vars.clone',
+        make_app_pattern(r"/config_vars/clone_from/(?P<source_module_name>[^/]+)$", include_envs=False),
+        views.ConfigVarViewSet.as_view({"post": "clone"}),
+        name="api.config_vars.clone",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/batch/$', include_envs=False),
-        views.ConfigVarViewSet.as_view({'post': 'batch'}),
-        name='api.config_vars.batch',
+        make_app_pattern(r"/config_vars/batch/$", include_envs=False),
+        views.ConfigVarViewSet.as_view({"post": "batch"}),
+        name="api.config_vars.batch",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/import/$', include_envs=False),
+        make_app_pattern(r"/config_vars/import/$", include_envs=False),
         views.ConfigVarImportExportViewSet.as_view(
             {
-                'post': 'import_by_file',
+                "post": "import_by_file",
             }
         ),
-        name='api.config_vars.import_by_file',
+        name="api.config_vars.import_by_file",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/export/$', include_envs=False),
+        make_app_pattern(r"/config_vars/export/$", include_envs=False),
         views.ConfigVarImportExportViewSet.as_view(
             {
-                'get': 'export_to_file',
+                "get": "export_to_file",
             }
         ),
-        name='api.config_vars.export_to_file',
+        name="api.config_vars.export_to_file",
     ),
     re_path(
-        make_app_pattern(r'/config_vars/template/$', include_envs=False),
+        make_app_pattern(r"/config_vars/template/$", include_envs=False),
         views.ConfigVarImportExportViewSet.as_view(
             {
-                'get': 'template',
+                "get": "template",
             }
         ),
-        name='api.config_vars.template',
+        name="api.config_vars.template",
     ),
     # deploy
     re_path(
-        make_app_pattern(r'/deployments/%s/result/$' % PVAR_UUID, include_envs=False),
-        views.DeploymentViewSet.as_view({'get': 'get_deployment_result'}),
-        name='api.deploy.result',
+        make_app_pattern(r"/deployments/%s/result/$" % PVAR_UUID, include_envs=False),
+        views.DeploymentViewSet.as_view({"get": "get_deployment_result"}),
+        name="api.deploy.result",
     ),
     re_path(
         make_app_pattern(r"/deployments/{}/interruptions/$".format(PVAR_UUID), include_envs=False),
-        views.DeploymentViewSet.as_view({'post': 'user_interrupt'}),
+        views.DeploymentViewSet.as_view({"post": "user_interrupt"}),
         name="api.deploy.release_interruptions",
     ),
     re_path(
-        make_app_pattern(r'/deployments/lists/$', include_envs=False),
-        views.DeploymentViewSet.as_view({'get': 'list'}),
-        name='api.deploy.lists',
+        make_app_pattern(r"/deployments/lists/$", include_envs=False),
+        views.DeploymentViewSet.as_view({"get": "list"}),
+        name="api.deploy.lists",
     ),
     re_path(
-        make_app_pattern(r'/deployments/$'), views.DeploymentViewSet.as_view({'post': 'deploy'}), name='api.deploy'
+        make_app_pattern(r"/deployments/$"), views.DeploymentViewSet.as_view({"post": "deploy"}), name="api.deploy"
     ),
     re_path(
-        make_app_pattern(r'/deployments/resumable/$'),
-        views.DeploymentViewSet.as_view({'get': 'get_resumable_deployment'}),
-        name='api.deploy.resumable',
+        make_app_pattern(r"/deployments/resumable/$"),
+        views.DeploymentViewSet.as_view({"get": "get_resumable_deployment"}),
+        name="api.deploy.resumable",
     ),
     re_path(
         make_app_pattern(r"/deploy/preparations$"),
-        views.DeploymentViewSet.as_view({'get': 'check_preparations'}),
+        views.DeploymentViewSet.as_view({"get": "check_preparations"}),
         name="api.deploy.check_preparations",
     ),
-    re_path(make_app_pattern(r'/offlines/$'), views.OfflineViewset.as_view({'post': 'offline'}), name='api.offline'),
+    re_path(make_app_pattern(r"/offlines/$"), views.OfflineViewset.as_view({"post": "offline"}), name="api.offline"),
     re_path(
-        make_app_pattern(r'/offlines/resumable/$'),
-        views.OfflineViewset.as_view({'get': 'get_resumable_offline_operations'}),
-        name='api.offline.resumable',
+        make_app_pattern(r"/offlines/resumable/$"),
+        views.OfflineViewset.as_view({"get": "get_resumable_offline_operations"}),
+        name="api.offline.resumable",
     ),
     re_path(
-        make_app_pattern(r'/offlines/%s/result/$' % PVAR_UUID, include_envs=False),
-        views.OfflineViewset.as_view({'get': 'get_offline_result'}),
-        name='api.deploy.result',
+        make_app_pattern(r"/offlines/%s/result/$" % PVAR_UUID, include_envs=False),
+        views.OfflineViewset.as_view({"get": "get_offline_result"}),
+        name="api.deploy.result",
     ),
     re_path(
-        make_app_pattern(r'/deploy_operations/lists/$', include_envs=False),
-        views.OperationsViewset.as_view({'get': 'list'}),
-        name='api.deploy_operation.lists',
+        make_app_pattern(r"/deploy_operations/lists/$", include_envs=False),
+        views.OperationsViewset.as_view({"get": "list"}),
+        name="api.deploy_operation.lists",
     ),
     # Deprecated: use `api.app_domains.configs` instead
     re_path(
-        '^api/bkapps/applications/(?P<code>[^/]+)/custom_domains/config/$',
-        AppDomainsViewSet.as_view({'get': 'list_configs'}),
-        name='api.custom_domains_config',
+        "^api/bkapps/applications/(?P<code>[^/]+)/custom_domains/config/$",
+        AppDomainsViewSet.as_view({"get": "list_configs"}),
+        name="api.custom_domains_config",
     ),
     # build artifact
     re_path(
@@ -170,31 +170,31 @@ urlpatterns = [
 # Built-in envs
 urlpatterns += [
     re_path(
-        '^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/app/$',
+        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/app/$",
         views.ConfigVarBuiltinViewSet.as_view(
             {
-                'get': 'get_builtin_envs_for_app',
+                "get": "get_builtin_envs_for_app",
             }
         ),
-        name='api.config_vars.builtin.app',
+        name="api.config_vars.builtin.app",
     ),
     re_path(
-        '^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/bk_platform/$',
+        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/bk_platform/$",
         views.ConfigVarBuiltinViewSet.as_view(
             {
-                'get': 'get_builtin_envs_bk_platform',
+                "get": "get_builtin_envs_bk_platform",
             }
         ),
-        name='api.config_vars.builtin.bk_platform',
+        name="api.config_vars.builtin.bk_platform",
     ),
     re_path(
-        '^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/runtime/$',
+        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/runtime/$",
         views.ConfigVarBuiltinViewSet.as_view(
             {
-                'get': 'get_runtime_envs',
+                "get": "get_runtime_envs",
             }
         ),
-        name='api.config_vars.builtin.runtime',
+        name="api.config_vars.builtin.runtime",
     ),
 ]
 
@@ -202,9 +202,9 @@ urlpatterns += [
 
 urlpatterns += [
     re_path(
-        make_app_pattern(r'/metrics/$'),
-        views.ProcessResourceMetricsViewset.as_view({'get': 'list'}),
-        name='api.process.metrics.get',
+        make_app_pattern(r"/metrics/$"),
+        views.ProcessResourceMetricsViewset.as_view({"get": "list"}),
+        name="api.process.metrics.get",
     ),
 ]
 
@@ -214,14 +214,14 @@ urlpatterns += [
 
 urlpatterns += [
     re_path(
-        make_app_pattern(r'/deploy_phases/$'),
-        views.DeployPhaseViewSet.as_view({'get': 'get_frame'}),
-        name='api.deploy.phase',
+        make_app_pattern(r"/deploy_phases/$"),
+        views.DeployPhaseViewSet.as_view({"get": "get_frame"}),
+        name="api.deploy.phase",
     ),
     re_path(
-        make_app_pattern(r'/deploy_phases/%s/$' % PVAR_UUID),
-        views.DeployPhaseViewSet.as_view({'get': 'get_result'}),
-        name='api.deploy.phase.result',
+        make_app_pattern(r"/deploy_phases/%s/$" % PVAR_UUID),
+        views.DeployPhaseViewSet.as_view({"get": "get_result"}),
+        name="api.deploy.phase.result",
     ),
 ]
 

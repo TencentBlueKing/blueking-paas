@@ -58,7 +58,7 @@ def test_get(
         data = resp.json()
 
         assert data["http"]["originalUrl"] == original_path
-        assert data["request"]["params"]['0'] == original_path
+        assert data["request"]["params"]["0"] == original_path
         assert data["request"]["headers"]["host"] == echo_hostname
         assert data["request"]["headers"]["x-original-uri"] == request_path
         assert data["request"]["headers"]["x-script-name"] == x_script_name
@@ -99,7 +99,7 @@ def test_post(
         data = resp.json()
 
         assert data["http"]["originalUrl"] == original_path
-        assert data["request"]["params"]['0'] == original_path
+        assert data["request"]["params"]["0"] == original_path
         assert data["request"]["body"] == {"foo": "bar"}
         assert data["request"]["headers"]["host"] == echo_hostname
         assert data["request"]["headers"]["x-original-uri"] == request_path

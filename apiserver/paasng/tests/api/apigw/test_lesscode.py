@@ -33,7 +33,7 @@ from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 from tests.utils.helpers import generate_random_string
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
@@ -77,19 +77,19 @@ class TestApiInAPIGW:
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
         lesscode_public_params.update(
             {
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': bk_app_code,
-                'name': bk_app_name,
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": bk_app_code,
+                "name": bk_app_name,
             }
         )
         with override_settings(IS_LESSCODE_APP_CLOUD_NATIVE=is_lesscode_app_cloud_native):
             response = api_client.post(
-                '/apigw/api/bkapps/applications/',
+                "/apigw/api/bkapps/applications/",
                 data=lesscode_public_params,
             )
         assert response.status_code == 201
-        assert response.json()['application']['modules'][0]['source_origin'] == SourceOrigin.BK_LESS_CODE
-        assert response.json()['application']['type'] == app_type
+        assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.BK_LESS_CODE
+        assert response.json()["application"]["type"] == app_type
 
 
 class TestModuleSourcePackageViewSet:
@@ -99,7 +99,7 @@ class TestModuleSourcePackageViewSet:
     def contents(self):
         """The default contents for making tar file."""
         app_desc = {
-            'spec_version': 2,
+            "spec_version": 2,
             "module": {"is_default": True, "processes": {"web": {"command": "npm run online"}}, "language": "NodeJS"},
         }
         return {"app.yaml": yaml.safe_dump(app_desc)}

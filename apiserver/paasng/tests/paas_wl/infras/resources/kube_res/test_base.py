@@ -50,7 +50,7 @@ def test_initialize_non_applicable_type():
 
 class DummySerializer(AppEntitySerializer):
     def serialize(self, obj, original_obj=None):
-        return {'metadata': {'name': f'new-{obj.name}'}, 'apiversion': self.gvk_config.preferred_apiversion}
+        return {"metadata": {"name": f"new-{obj.name}"}, "apiversion": self.gvk_config.preferred_apiversion}
 
 
 class DummyDeserializer(AppEntityDeserializer):
@@ -73,25 +73,25 @@ dummy_reader = AppEntityReader(DummyObj)
 
 class TestDummyReader:
     def test_watch_with_error_event(self, wl_app):
-        with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
+        with mock.patch.object(dummy_reader, "kres") as mocked_kres:
             mocked_kres().__enter__().ops_label.create_watch_stream.return_value = [
-                {'type': 'ERROR', 'raw_object': {}}
+                {"type": "ERROR", "raw_object": {}}
             ]
             event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
-            assert event.type == 'ERROR'
-            assert event.error_message == 'Unknown'
+            assert event.type == "ERROR"
+            assert event.error_message == "Unknown"
 
-        with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
+        with mock.patch.object(dummy_reader, "kres") as mocked_kres:
             mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(
                 410, 'Expired: too old resource version: 1 (1)"'
             )
             event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
-            assert event.type == 'ERROR'
+            assert event.type == "ERROR"
             assert event.error_message == 'Expired: too old resource version: 1 (1)"'
 
     def test_watch_with_expired_exception(self, wl_app):
-        with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(500, 'Internal error')
+        with mock.patch.object(dummy_reader, "kres") as mocked_kres:
+            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(500, "Internal error")
             with pytest.raises(ApiException):
                 next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 
@@ -109,7 +109,7 @@ class TestDummyManager:
 def test_version_incompatible(wl_app):
     class WrongVersionDeserializer(AppEntityDeserializer):
         # Namespace does not has below api_version
-        api_version = 'extensions/v1beta1'
+        api_version = "extensions/v1beta1"
 
         def deserialize(self, wl_app, kube_data):
             return DummyObj(app=wl_app, name=kube_data.metadata.name)
@@ -131,16 +131,16 @@ class TestEntitySerializerPicker:
         pass
 
     class v1beta1SLZ(DummySerializer):
-        api_version = 'extensions/v1beta1'
+        api_version = "extensions/v1beta1"
 
     class v1beta2SLZ(DummySerializer):
-        api_version = 'apps/v1beta2'
+        api_version = "apps/v1beta2"
 
     class v1SLZ(DummySerializer):
-        api_version = 'apps/v1'
+        api_version = "apps/v1"
 
     class WrongSLZ(DummySerializer):
-        api_version = 'apps/v3000'
+        api_version = "apps/v3000"
 
     class BoomSLZ(DummySerializer):
         def __init__(self, *args, **kwargs):
@@ -153,10 +153,10 @@ class TestEntitySerializerPicker:
     @pytest.fixture(autouse=True)
     def setup_gvk_config(self):
         self.gvk_config = GVKConfig(
-            server_version='v1.8.15',
-            kind='Deployment',
-            preferred_apiversion='extensions/v1beta1',
-            available_apiversions=['extensions/v1beta1', 'apps/v1beta2', 'apps/v1'],
+            server_version="v1.8.15",
+            kind="Deployment",
+            preferred_apiversion="extensions/v1beta1",
+            available_apiversions=["extensions/v1beta1", "apps/v1beta2", "apps/v1"],
         )
 
     @pytest.mark.parametrize(

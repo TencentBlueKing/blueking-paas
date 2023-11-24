@@ -68,8 +68,8 @@ class ProcEventsProducer:
     """Produces events according to processes states"""
 
     TYPE_EVENT_MAP: Dict[str, Tuple[ProcessEventType, ProcInstEventType, str]] = {
-        'created': (ProcessEventType.CREATED, ProcInstEventType.CREATED, '{type} found'),
-        'removed': (ProcessEventType.REMOVED, ProcInstEventType.REMOVED, '{type} removed'),
+        "created": (ProcessEventType.CREATED, ProcInstEventType.CREATED, "{type} found"),
+        "removed": (ProcessEventType.REMOVED, ProcInstEventType.REMOVED, "{type} removed"),
     }
 
     def __init__(self, procs_old: List[PlainProcess], procs_new: List[PlainProcess]):
@@ -85,12 +85,12 @@ class ProcEventsProducer:
         # Process added processes
         for proc_name in procs_added:
             process = self._get_proc_by_name(self.procs_new, proc_name)
-            yield from self.proc_process_pure(process, 'created')
+            yield from self.proc_process_pure(process, "created")
 
         # Process removed processes
         for proc_name in procs_removed:
             process = self._get_proc_by_name(self.procs_old, proc_name)
-            yield from self.proc_process_pure(process, 'removed')
+            yield from self.proc_process_pure(process, "removed")
 
         # Process both exists processes
         for proc_name in procs_both:
@@ -101,25 +101,25 @@ class ProcEventsProducer:
     def proc_process_pure(self, process: PlainProcess, type: str) -> Iterator[ProcessBaseEvent]:
         """Generates events by added/removed process"""
         if type not in self.TYPE_EVENT_MAP:
-            raise ValueError('Invalid type')
+            raise ValueError("Invalid type")
 
         proc_event_type, inst_event_type, msg_tmpl = self.TYPE_EVENT_MAP[type]
-        yield ProcessEvent(type=proc_event_type, invoker=process, message=msg_tmpl.format(type='process'))
+        yield ProcessEvent(type=proc_event_type, invoker=process, message=msg_tmpl.format(type="process"))
         for instance in process.instances:
             yield ProcInstEvent(
-                type=inst_event_type, invoker=instance, process=process, message=msg_tmpl.format(type='instance')
+                type=inst_event_type, invoker=instance, process=process, message=msg_tmpl.format(type="instance")
             )
 
     def proc_process_updated(self, proc_old: PlainProcess, proc_new: PlainProcess) -> Iterator[ProcessBaseEvent]:
         """Generates events by both exists process"""
         if proc_new.command != proc_old.command:
             yield ProcessEvent(
-                type=ProcessEventType.UPDATED_COMMAND, invoker=proc_new, message='process command changed'
+                type=ProcessEventType.UPDATED_COMMAND, invoker=proc_new, message="process command changed"
             )
 
         if proc_new.replicas != proc_old.replicas:
             yield ProcessEvent(
-                type=ProcessEventType.UPDATED_REPLICAS, invoker=proc_new, message='process desired replicas changed'
+                type=ProcessEventType.UPDATED_REPLICAS, invoker=proc_new, message="process desired replicas changed"
             )
 
         # Detect instances changes
@@ -150,14 +150,14 @@ class ProcInstanceEventsProducer:
         for name in insts_added:
             instance = self._get_inst_by_name(self.insts_new, name)
             yield ProcInstEvent(
-                type=ProcInstEventType.CREATED, invoker=instance, process=self.process, message='instance created'
+                type=ProcInstEventType.CREATED, invoker=instance, process=self.process, message="instance created"
             )
 
         # Process removed instances
         for name in insts_removed:
             instance = self._get_inst_by_name(self.insts_old, name)
             yield ProcInstEvent(
-                type=ProcInstEventType.REMOVED, invoker=instance, process=self.process, message='instance removed'
+                type=ProcInstEventType.REMOVED, invoker=instance, process=self.process, message="instance removed"
             )
 
         # Process updated instances
@@ -173,7 +173,7 @@ class ProcInstanceEventsProducer:
                 type=ProcInstEventType.UPDATED_RESTARTED,
                 invoker=inst_new,
                 process=self.process,
-                message='instance restarted',
+                message="instance restarted",
             )
 
         if inst_new.ready and not inst_old.ready:
@@ -181,7 +181,7 @@ class ProcInstanceEventsProducer:
                 type=ProcInstEventType.UPDATED_BECOME_READY,
                 invoker=inst_new,
                 process=self.process,
-                message='instance became ready',
+                message="instance became ready",
             )
 
         if inst_old.ready and not inst_new.ready:
@@ -189,7 +189,7 @@ class ProcInstanceEventsProducer:
                 type=ProcInstEventType.UPDATED_BECOME_NOT_READY,
                 invoker=inst_new,
                 process=self.process,
-                message='instance became not ready',
+                message="instance became not ready",
             )
 
     def _get_inst_by_name(self, insts: List[PlainInstance], name: str) -> PlainInstance:

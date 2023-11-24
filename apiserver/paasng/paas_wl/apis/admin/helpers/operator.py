@@ -31,16 +31,16 @@ from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KDeplo
 def detect_operator_status(client: EnhancedApiClient) -> Dict:
     """获取指定集群中 Operator 的部署情况"""
     result = {
-        'namespace': False,
-        'crds': {BkApp.kind: False, DomainGroupMapping.kind: False},
-        'controller': {},
+        "namespace": False,
+        "crds": {BkApp.kind: False, DomainGroupMapping.kind: False},
+        "controller": {},
     }
 
     # 检查集群中是否存在 Operator 需要的 CRD 定义
     for crd in KCustomResourceDefinition(client).ops_label.list(labels={}).items:
-        crd_kind = crd['spec']['names']['kind']
+        crd_kind = crd["spec"]["names"]["kind"]
         if crd_kind in [BkApp.kind, DomainGroupMapping.kind]:
-            result['crds'][crd_kind] = True  # type: ignore
+            result["crds"][crd_kind] = True  # type: ignore
 
     # 检查 controller 部署的命名空间是否存在
     try:
@@ -48,12 +48,12 @@ def detect_operator_status(client: EnhancedApiClient) -> Dict:
     except (ResourceMissing, ApiException):
         return result
     else:
-        result['namespace'] = True
+        result["namespace"] = True
 
     deployments = (
         KDeployment(client)
         .ops_label.list(
-            labels={'control-plane': 'controller-manager'},
+            labels={"control-plane": "controller-manager"},
             namespace=BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE,
         )
         .items
@@ -62,9 +62,9 @@ def detect_operator_status(client: EnhancedApiClient) -> Dict:
         return result
 
     # 获取 controller 副本状态
-    result['controller'] = {
-        'replicas': deployments[0]['spec']['replicas'],
-        'readyReplicas': deployments[0].get('status', {}).get('readyReplicas', 0),
+    result["controller"] = {
+        "replicas": deployments[0]["spec"]["replicas"],
+        "readyReplicas": deployments[0].get("status", {}).get("readyReplicas", 0),
     }
     return result
 
@@ -80,26 +80,26 @@ def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool])
         for bkapp in bkapps:
             bkapp_name = f"{bkapp['metadata']['namespace']}/{bkapp['metadata']['name']}"
 
-            if hookStatuses := bkapp.get('status', {}).get('hookStatuses', []):
+            if hookStatuses := bkapp.get("status", {}).get("hookStatuses", []):
                 # 任何 Hook 状态不健康，该 bkapp 都被认为非 ready
-                if any(hs.get('phase') != 'Healthy' for hs in hookStatuses):
+                if any(hs.get("phase") != "Healthy" for hs in hookStatuses):
                     not_ready_bkapps.append(bkapp_name)
                     continue
 
             # bkapp 总状态需要是 Running 才能算是 ready 的
-            if bkapp.get('status', {}).get('phase') != 'Running':
+            if bkapp.get("status", {}).get("phase") != "Running":
                 not_ready_bkapps.append(bkapp_name)
                 continue
 
             ready_cnt += 1
 
-        result[BkApp.kind] = {'total_cnt': len(bkapps), 'ready_cnt': ready_cnt, 'not_ready_bkapps': not_ready_bkapps}
+        result[BkApp.kind] = {"total_cnt": len(bkapps), "ready_cnt": ready_cnt, "not_ready_bkapps": not_ready_bkapps}
 
     # 统计 DomainGroupMapping 数量
     if crd_exists[DomainGroupMapping.kind]:
         domain_group_mappings = (
             DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).ops_label.list(labels={}).items
         )
-        result[DomainGroupMapping.kind]['total_cnt'] = len(domain_group_mappings)
+        result[DomainGroupMapping.kind]["total_cnt"] = len(domain_group_mappings)
 
     return result

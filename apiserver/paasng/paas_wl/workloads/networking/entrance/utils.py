@@ -18,13 +18,13 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Optional
 
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.core.region.models import get_region
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 def to_dns_safe(s: str) -> str:
     """Transform some string to dns safe"""
-    return s.replace('_', '--').lower()
+    return s.replace("_", "--").lower()
 
 
 def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:

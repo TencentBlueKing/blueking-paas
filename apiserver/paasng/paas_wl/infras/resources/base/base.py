@@ -69,7 +69,7 @@ class EnhancedApiClient(BaseApiClient):
         self.configuration: EnhancedConfiguration = self.ep_pool.get()
         try:
             with self.configuration.activate_resolver():
-                logger.debug('Send request to Kubernetes API %s...', self.configuration.host)
+                logger.debug("Send request to Kubernetes API %s...", self.configuration.host)
                 ret = super().call_api(*args, **kwargs)
         except HTTPError:
             self.ep_pool.fail()
@@ -109,7 +109,7 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
 
     if cluster_name not in get_all_cluster_names():
         # if the context which user want to use do not exist, raise a ValueError
-        raise ValueError(f'context "{cluster_name}" not found in settings, ' f'all context: {get_all_cluster_names()}')
+        raise ValueError(f'context "{cluster_name}" not found in settings, ' f"all context: {get_all_cluster_names()}")
 
     ep_pool = get_global_configuration_pool()[cluster_name]
     return EnhancedApiClient(ep_pool=ep_pool)

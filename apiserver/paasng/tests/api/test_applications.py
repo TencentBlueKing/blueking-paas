@@ -42,7 +42,7 @@ from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, generate_random_string
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class TestMembershipViewset:
     def test_list_succeed(self, api_client, bk_app):
         url = reverse("api.applications.members", kwargs=dict(code=bk_app.code))
         response = api_client.get(url)
-        assert len(response.data['results']) == 1
+        assert len(response.data["results"]) == 1
 
     @pytest.mark.parametrize(
         "role, status, ok",
@@ -81,9 +81,9 @@ class TestMembershipViewset:
         response = api_client.get(url)
         assert response.status_code == status
         if ok:
-            assert len(response.data['results']) == 2
+            assert len(response.data["results"]) == 2
             test = {
-                m['user']["username"]: dict(code=bk_app.code, role=m["roles"][0]["id"])
+                m["user"]["username"]: dict(code=bk_app.code, role=m["roles"][0]["id"])
                 for m in response.data["results"]
             }
             assert test[another_user.username]["code"] == bk_app.code
@@ -111,8 +111,8 @@ class TestMembershipViewset:
         new_user = user_choices[to_create_user_idx]
 
         url = reverse("api.applications.members", kwargs=dict(code=bk_app.code))
-        role_value = role.value if isinstance(role, ApplicationRole) else 'invalid_role'
-        data = [{'user': {'username': new_user.username, 'id': new_user.pk}, 'roles': [{'id': role_value}]}]
+        role_value = role.value if isinstance(role, ApplicationRole) else "invalid_role"
+        data = [{"user": {"username": new_user.username, "id": new_user.pk}, "roles": [{"id": role_value}]}]
 
         api_client.force_authenticate(cur_user)
         response = api_client.post(url, data=data)
@@ -200,11 +200,11 @@ class TestApplicationCreateWithEngine:
     """Test application creation APIs with engine enabled"""
 
     @pytest.mark.parametrize(
-        'type, desired_type, creation_succeeded',
+        "type, desired_type, creation_succeeded",
         [
-            ('default', 'default', True),
-            ('bk_plugin', 'bk_plugin', True),
-            ('engineless_app', 'engineless_app', False),
+            ("default", "default", True),
+            ("bk_plugin", "bk_plugin", True),
+            ("engineless_app", "engineless_app", False),
         ],
     )
     def test_create_different_types(
@@ -219,35 +219,35 @@ class TestApplicationCreateWithEngine:
         init_tmpls,
     ):
         # Turn on "allow_creation" in bk_plugin configs
-        settings.BK_PLUGIN_CONFIG = {'allow_creation': True}
-        with mock.patch.object(IntegratedSvnAppRepoConnector, 'sync_templated_sources') as mocked_sync:
+        settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
+        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
             # Mock return value of syncing template
-            mocked_sync.return_value = SourceSyncResult(dest_type='mock')
+            mocked_sync.return_value = SourceSyncResult(dest_type="mock")
 
             random_suffix = generate_random_string(length=6)
             response = api_client.post(
-                '/api/bkapps/applications/v2/',
+                "/api/bkapps/applications/v2/",
                 data={
-                    'region': settings.DEFAULT_REGION_NAME,
-                    'type': type,
-                    'code': f'uta-{random_suffix}',
-                    'name': f'uta-{random_suffix}',
-                    'engine_params': {
-                        'source_origin': SourceOrigin.AUTHORIZED_VCS.value,
-                        'source_control_type': 'dft_bk_svn',
-                        'source_init_template': settings.DUMMY_TEMPLATE_NAME,
+                    "region": settings.DEFAULT_REGION_NAME,
+                    "type": type,
+                    "code": f"uta-{random_suffix}",
+                    "name": f"uta-{random_suffix}",
+                    "engine_params": {
+                        "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                        "source_control_type": "dft_bk_svn",
+                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     },
                 },
             )
             if creation_succeeded:
                 assert response.status_code == 201
-                assert response.json()['application']['type'] == desired_type
+                assert response.json()["application"]["type"] == desired_type
             else:
                 assert response.status_code == 400
                 assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
 
     @pytest.mark.parametrize(
-        'source_origin, source_repo_url, source_control_type, with_feature_flag, is_success',
+        "source_origin, source_repo_url, source_control_type, with_feature_flag, is_success",
         [
             (
                 SourceOrigin.BK_LESS_CODE,
@@ -284,16 +284,16 @@ class TestApplicationCreateWithEngine:
 
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
-            '/api/bkapps/applications/v2/',
+            "/api/bkapps/applications/v2/",
             data={
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': f'uta-{random_suffix}',
-                'name': f'uta-{random_suffix}',
-                'engine_params': {
-                    'source_origin': source_origin,
-                    'source_repo_url': source_repo_url,
-                    'source_init_template': settings.DUMMY_TEMPLATE_NAME,
-                    'source_control_type': source_control_type,
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "engine_params": {
+                    "source_origin": source_origin,
+                    "source_repo_url": source_repo_url,
+                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                    "source_control_type": source_control_type,
                 },
             },
         )
@@ -304,47 +304,47 @@ class TestApplicationCreateWithEngine:
 class TestApplicationCreateWithoutEngine:
     """Test application creation APIs with engine disabled"""
 
-    @pytest.mark.parametrize("url", ['/api/bkapps/applications/v2/', '/api/bkapps/third-party/'])
+    @pytest.mark.parametrize("url", ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/"])
     def test_create_non_engine(self, api_client, url):
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
             url,
             data={
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': f'uta-{random_suffix}',
-                'name': f'uta-{random_suffix}',
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
                 "engine_enabled": False,
-                'market_params': {},
+                "market_params": {},
             },
         )
         assert response.status_code == 201
-        assert response.json()['application']['type'] == 'engineless_app'
+        assert response.json()["application"]["type"] == "engineless_app"
 
-    @pytest.mark.parametrize("url", ['/api/bkapps/applications/v2/', '/api/bkapps/third-party/'])
+    @pytest.mark.parametrize("url", ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/"])
     @pytest.mark.parametrize(
-        'profile_regions,region,creation_success',
+        "profile_regions,region,creation_success",
         [
-            (['r1'], 'r1', True),
-            (['r1', 'r2'], 'r1', True),
-            (['r1'], 'r2', False),
+            (["r1"], "r1", True),
+            (["r1", "r2"], "r1", True),
+            (["r1"], "r2", False),
         ],
     )
     def test_region_permission_control(self, bk_user, api_client, url, profile_regions, region, creation_success):
         """When user has or doesn't have permission, test application creation."""
-        with configure_regions(['r1', 'r2']):
+        with configure_regions(["r1", "r2"]):
             user_profile = UserProfile.objects.get_profile(bk_user)
-            user_profile.enable_regions = ';'.join(profile_regions)
+            user_profile.enable_regions = ";".join(profile_regions)
             user_profile.save()
 
             random_suffix = generate_random_string(length=6)
             response = api_client.post(
                 url,
                 data={
-                    'region': region,
-                    'code': f'uta-{random_suffix}',
-                    'name': f'uta-{random_suffix}',
+                    "region": region,
+                    "code": f"uta-{random_suffix}",
+                    "name": f"uta-{random_suffix}",
                     "engine_enabled": False,
-                    'market_params': {},
+                    "market_params": {},
                 },
             )
             desired_status_code = 201 if creation_success else 403
@@ -356,8 +356,8 @@ class TestApplicationUpdate:
 
     def test_normal(self, api_client, bk_app_full, bk_user, random_name):
         response = api_client.put(
-            '/api/bkapps/applications/{}/'.format(bk_app_full.code),
-            data={'name': random_name},
+            "/api/bkapps/applications/{}/".format(bk_app_full.code),
+            data={"name": random_name},
         )
         assert response.status_code == 200
         assert Application.objects.get(pk=bk_app_full.pk).name == random_name
@@ -365,8 +365,8 @@ class TestApplicationUpdate:
     def test_duplicated(self, api_client, bk_app, bk_user, random_name):
         G(Application, name=random_name)
         response = api_client.put(
-            '/api/bkapps/applications/{}/'.format(bk_app.code),
-            data={'name': random_name},
+            "/api/bkapps/applications/{}/".format(bk_app.code),
+            data={"name": random_name},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
@@ -376,17 +376,17 @@ class TestApplicationUpdate:
         get_desc_handler(
             dict(
                 spec_version=2,
-                app={'bk_app_code': random_name, 'bk_app_name': random_name},
+                app={"bk_app_code": random_name, "bk_app_name": random_name},
                 modules={random_name: {"is_default": True, "language": "python"}},
             )
         ).handle_app(bk_user)
         app = Application.objects.get(code=random_name)
         response = api_client.put(
-            '/api/bkapps/applications/{}/'.format(app.code),
-            data={'name': random_name},
+            "/api/bkapps/applications/{}/".format(app.code),
+            data={"name": random_name},
         )
         assert response.status_code == 400
-        assert response.json()['code'] == 'APP_RES_PROTECTED'
+        assert response.json()["code"] == "APP_RES_PROTECTED"
 
 
 class TestApplicationDeletion:
@@ -402,7 +402,7 @@ class TestApplicationDeletion:
     ):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
-            response = api_client.delete('/api/bkapps/applications/{}/'.format(bk_app.code))
+            response = api_client.delete("/api/bkapps/applications/{}/".format(bk_app.code))
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
 
@@ -419,7 +419,7 @@ class TestApplicationDeletion:
             "paasng.platform.applications.views.ApplicationViewSet._delete_all_module",
             side_effect=error_codes.CANNOT_DELETE_APP,
         ):
-            response = api_client.delete('/api/bkapps/applications/{}/'.format(bk_app.code))
+            response = api_client.delete("/api/bkapps/applications/{}/".format(bk_app.code))
         assert response.status_code == 400
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
 
@@ -428,34 +428,34 @@ class TestCreateBkPlugin:
     """Test 'bk_plugin' type application's creation"""
 
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, init_tmpls):
-        settings.BK_PLUGIN_CONFIG = {'allow_creation': True}
+        settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
         response = self._send_creation_request(api_client)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        assert response.json()['application']['type'] == 'bk_plugin'
+        assert response.json()["application"]["type"] == "bk_plugin"
         # TODO: Update tests when bk_plugin supports multiple languages
-        assert response.json()['application']['language'] == 'Python'
-        assert response.json()['application']['modules'][0]['repo'] is not None
+        assert response.json()["application"]["language"] == "Python"
+        assert response.json()["application"]["modules"][0]["repo"] is not None
 
     def test_forbidden_via_config(self, api_client, settings):
-        settings.BK_PLUGIN_CONFIG = {'allow_creation': False}
+        settings.BK_PLUGIN_CONFIG = {"allow_creation": False}
         response = self._send_creation_request(api_client)
 
-        assert response.status_code == 400, 'the creation of bk_plugin must fail'
+        assert response.status_code == 400, "the creation of bk_plugin must fail"
 
     def _send_creation_request(self, api_client):
         random_suffix = generate_random_string(length=6)
         return api_client.post(
-            '/api/bkapps/applications/v2/',
+            "/api/bkapps/applications/v2/",
             data={
-                'region': settings.DEFAULT_REGION_NAME,
-                'type': 'bk_plugin',
-                'code': f'uta-{random_suffix}',
-                'name': f'uta-{random_suffix}',
-                'engine_params': {
-                    'source_origin': SourceOrigin.AUTHORIZED_VCS.value,
-                    'source_control_type': 'dft_gitlab',
-                    'source_repo_url': 'http://example.com/default/git.git',
+                "region": settings.DEFAULT_REGION_NAME,
+                "type": "bk_plugin",
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "engine_params": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                    "source_control_type": "dft_gitlab",
+                    "source_repo_url": "http://example.com/default/git.git",
                 },
             },
         )
@@ -478,21 +478,21 @@ class TestCreateCloudNativeApp:
             "/api/bkapps/cloud-native/",
             data={
                 "region": settings.DEFAULT_REGION_NAME,
-                "code": f'uta-{random_suffix}',
-                "name": f'uta-{random_suffix}',
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
                 "bkapp_spec": {
                     "build_config": {
                         "build_method": "custom_image",
                         "image_repository": image_repository,
                         "image_credential": {"name": image_credential_name, "password": "123456", "username": "test"},
                     },
-                    'processes': [
+                    "processes": [
                         {
                             "name": "web",
                             "command": ["bash", "/app/start_web.sh"],
                             "env_overlay": {
-                                'stag': {'environment_name': 'stag', 'target_replicas': 1, 'plan_name': '2C1G'},
-                                'prod': {'environment_name': 'prod', 'target_replicas': 2, 'plan_name': '2C1G'},
+                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
+                                "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "2C1G"},
                             },
                         }
                     ],
@@ -504,23 +504,23 @@ class TestCreateCloudNativeApp:
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        app_data = response.json()['application']
-        assert app_data['type'] == 'cloud_native'
-        assert app_data['modules'][0]['web_config']['build_method'] == 'custom_image'
-        assert app_data['modules'][0]['web_config']['artifact_type'] == 'none'
+        app_data = response.json()["application"]
+        assert app_data["type"] == "cloud_native"
+        assert app_data["modules"][0]["web_config"]["build_method"] == "custom_image"
+        assert app_data["modules"][0]["web_config"]["artifact_type"] == "none"
 
-        module = Module.objects.get(id=app_data['modules'][0]['id'])
+        module = Module.objects.get(id=app_data["modules"][0]["id"])
         cfg = BuildConfig.objects.get_or_create_by_module(module)
         assert cfg.image_repository == image_repository
-        process_spec = ModuleProcessSpec.objects.get(module=module, name='web')
+        process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
         assert process_spec.image is None
         assert process_spec.command == ["bash", "/app/start_web.sh"]
         assert process_spec.image_credential_name == image_credential_name
-        assert process_spec.get_target_replicas('stag') == 1
-        assert process_spec.get_target_replicas('prod') == 2
+        assert process_spec.get_target_replicas("stag") == 1
+        assert process_spec.get_target_replicas("prod") == 2
 
-    @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
-    @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')
+    @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
+    @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
     def test_create_with_buildpack(
         self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, init_tmpls
     ):
@@ -535,8 +535,8 @@ class TestCreateCloudNativeApp:
             "/api/bkapps/cloud-native/",
             data={
                 "region": settings.DEFAULT_REGION_NAME,
-                "code": f'uta-{random_suffix}',
-                "name": f'uta-{random_suffix}',
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
                 "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
@@ -547,10 +547,10 @@ class TestCreateCloudNativeApp:
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        app_data = response.json()['application']
-        assert app_data['type'] == 'cloud_native'
-        assert app_data['modules'][0]['web_config']['build_method'] == 'buildpack'
-        assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'
+        app_data = response.json()["application"]
+        assert app_data["type"] == "cloud_native"
+        assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
+        assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
 
     def test_create_with_dockerfile(self, api_client, init_tmpls):
         """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
@@ -559,8 +559,8 @@ class TestCreateCloudNativeApp:
             "/api/bkapps/cloud-native/",
             data={
                 "region": settings.DEFAULT_REGION_NAME,
-                "code": f'uta-{random_suffix}',
-                "name": f'uta-{random_suffix}',
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
                 "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
                 "source_config": {
                     "source_init_template": "docker",
@@ -571,7 +571,7 @@ class TestCreateCloudNativeApp:
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        app_data = response.json()['application']
-        assert app_data['type'] == 'cloud_native'
-        assert app_data['modules'][0]['web_config']['build_method'] == 'dockerfile'
-        assert app_data['modules'][0]['web_config']['artifact_type'] == 'image'
+        app_data = response.json()["application"]
+        assert app_data["type"] == "cloud_native"
+        assert app_data["modules"][0]["web_config"]["build_method"] == "dockerfile"
+        assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"

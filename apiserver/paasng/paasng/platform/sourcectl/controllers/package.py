@@ -22,9 +22,9 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client
-from paasng.platform.modules.models.module import Module
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +32,12 @@ logger = logging.getLogger(__name__)
 class PackageController:
     """This class provides the basic method for reading source packages"""
 
-    def __init__(self, module: 'Module'):
+    def __init__(self, module: "Module"):
         self.module = module
         self._client: Optional[BasePackageClient] = None
 
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None):
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         return cls(module)
 
     def get_client(self, **kwargs) -> BasePackageClient:
@@ -52,7 +52,7 @@ class PackageController:
         """Package 总是能访问远程仓库"""
         return True
 
-    def export(self, local_path: 'PathLike', version_info: VersionInfo):
+    def export(self, local_path: "PathLike", version_info: VersionInfo):
         """解压缩指定版本(version_info)的源码包的内容的指定的位置(local_path)"""
         logger.debug("[sourcectl] export files to %s, version<%s>", local_path, version_info)
         _, version = self.extract_version_info(version_info)

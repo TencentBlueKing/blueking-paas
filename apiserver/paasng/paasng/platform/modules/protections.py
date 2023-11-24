@@ -20,10 +20,10 @@ to the current version of the project delivered to anyone in the future.
 from django.utils.translation import gettext as _
 
 from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses
-from paasng.platform.engine.models.managers import DeployOperationManager
-from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
+from paasng.platform.engine.models.managers import DeployOperationManager
+from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.modules.models import Module
 
 
@@ -40,12 +40,14 @@ class ModuleDeleteCondition(BaseCondition):
 class NoPendingOperationsCondition(ModuleDeleteCondition):
     """检查模块是否存在未完成的操作(部署或下架)"""
 
-    action_name = 'wait_operation_finish'
+    action_name = "wait_operation_finish"
 
     def validate(self):
         if DeployOperationManager(self.module).has_pending():
             raise ConditionNotMatched(
-                _("{module_name} 模块正在进行部署或下架操作，请操作结束后再尝试删除").format(module_name=self.module.name),
+                _("{module_name} 模块正在进行部署或下架操作，请操作结束后再尝试删除").format(
+                    module_name=self.module.name
+                ),
                 action_name=self.action_name,
             )
 

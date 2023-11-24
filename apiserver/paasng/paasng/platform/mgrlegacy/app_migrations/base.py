@@ -38,10 +38,10 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
         self.context = context
         self.legacy_app = self.context.legacy_app
 
-        self.apply_type = 'migrate'
+        self.apply_type = "migrate"
         self.finished = False
         self.successful = False
-        self.failed_reason = ''
+        self.failed_reason = ""
         self.msecs_cost = 0
         self.log = None
         self.created_ts = time.time()
@@ -76,15 +76,15 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
     def apply_migration(self):
         """Apply this migration"""
         st = time.time()
-        self.apply_type = 'migrate'
+        self.apply_type = "migrate"
         try:
             self.migrate()
             self.successful = True
         except Exception as e:
             self.failed_reason = str(e)
             self.successful = False
-            logger.exception('Apply %s failed: %s' % (self.get_name(), e))
-            raise MigrationFailed('Apply %s failed: %s' % (self.get_name(), e))
+            logger.exception("Apply %s failed: %s" % (self.get_name(), e))
+            raise MigrationFailed("Apply %s failed: %s" % (self.get_name(), e))
         finally:
             self.finished = True
             self.msecs_cost = int((time.time() - st) * 1000)
@@ -93,19 +93,19 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
         """Apply rollback"""
         if self.context.app is None:
             logger.critical(
-                'rollback app for LApplication[%s] is None \n %s'
+                "rollback app for LApplication[%s] is None \n %s"
                 % (self.context.legacy_app.id, "\n".join(traceback.format_stack()))
             )
 
         st = time.time()
-        self.apply_type = 'rollback'
+        self.apply_type = "rollback"
         try:
             self.rollback()
             self.successful = True
         except Exception as e:
             self.failed_reason = str(e)
             self.successful = False
-            logger.exception('Apply %s %s failed: %s' % (self.get_name(), self.apply_type, e))
+            logger.exception("Apply %s %s failed: %s" % (self.get_name(), self.apply_type, e))
         finally:
             self.finished = True
             self.msecs_cost = int((time.time() - st) * 1000)
@@ -113,15 +113,15 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
     def get_info(self):
         """Get current info of this migration instance"""
         return {
-            'apply_type': self.apply_type,
-            'name': self.get_name(),
-            'description': self.get_description(),
-            'finished': self.finished,
-            'successful': self.successful,
-            'failed_reason': self.failed_reason,
-            'msecs_cost': self.msecs_cost,
-            'log': self.log,
-            'created_ts': self.created_ts,
+            "apply_type": self.apply_type,
+            "name": self.get_name(),
+            "description": self.get_description(),
+            "finished": self.finished,
+            "successful": self.successful,
+            "failed_reason": self.failed_reason,
+            "msecs_cost": self.msecs_cost,
+            "log": self.log,
+            "created_ts": self.created_ts,
         }
 
     def migrate(self):

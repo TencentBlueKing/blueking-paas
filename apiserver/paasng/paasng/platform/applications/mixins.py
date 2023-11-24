@@ -38,7 +38,7 @@ class ApplicationCodeInPathMixin:
     check_object_permissions: Callable
 
     def get_application_without_perm(self):
-        code = self._get_param_from_kwargs(['code', 'app_code'])
+        code = self._get_param_from_kwargs(["code", "app_code"])
         application = get_object_or_404(Application, code=code)
         return application
 
@@ -48,7 +48,7 @@ class ApplicationCodeInPathMixin:
         - required path vars: code or app_code
         """
         application = self.get_application_without_perm()
-        if not hasattr(self, 'check_object_permissions'):
+        if not hasattr(self, "check_object_permissions"):
             raise NotImplementedError("Only support the class which inherited from rest_framework.viewset")
         self.check_object_permissions(self.request, application)
         return application
@@ -59,7 +59,7 @@ class ApplicationCodeInPathMixin:
         - required path vars: module_name
         """
         application = self.get_application()
-        module_name = self._get_param_from_kwargs(['module_name'])
+        module_name = self._get_param_from_kwargs(["module_name"])
         return application.get_module(module_name)
 
     def get_env_via_path(self) -> ModuleEnvironment:
@@ -68,8 +68,8 @@ class ApplicationCodeInPathMixin:
         - required path vars: module_name, environment
         """
         application = self.get_application()
-        module_name = self._get_param_from_kwargs(['module_name'])
-        environment = self._get_param_from_kwargs(['environment'])
+        module_name = self._get_param_from_kwargs(["module_name"])
+        environment = self._get_param_from_kwargs(["environment"])
 
         module = application.get_module(module_name)
         try:
@@ -101,4 +101,4 @@ class ApplicationCodeInPathMixin:
                 return self.kwargs[param_name]
             except KeyError:
                 continue
-        raise ValueError(f'{param_names} not found in self.kwargs(path variables)')
+        raise ValueError(f"{param_names} not found in self.kwargs(path variables)")

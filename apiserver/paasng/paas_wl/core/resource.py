@@ -59,11 +59,11 @@ class CNativeBkAppNameGenerator:
         if module_name == ModuleName.DEFAULT.value:
             name = app_code
         else:
-            name = f'{app_code}-m-{module_name}'
+            name = f"{app_code}-m-{module_name}"
         return name.replace("_", "0us0")
 
 
-def get_process_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
+def get_process_selector(app: "WlApp", process_type: str) -> Dict[str, str]:
     """Return labels selector dict by process type, useful for construct Deployment body
     and related Service. To get a result, the app must has been released successfully and
     the process_type must exists.

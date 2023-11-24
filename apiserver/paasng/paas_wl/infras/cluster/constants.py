@@ -30,19 +30,19 @@ class ClusterTokenType(int, StructuredEnum):
 class ClusterType(str, StructuredEnum):
     """集群类别"""
 
-    NORMAL = EnumField('normal', label=_('普通集群'))
-    VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
+    NORMAL = EnumField("normal", label=_("普通集群"))
+    VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
 
 
-LOG_COLLECTOR_TYPE_BK_LOG = 'BK_LOG'
+LOG_COLLECTOR_TYPE_BK_LOG = "BK_LOG"
 BK_LOG_DEFAULT_ENABLED = settings.LOG_COLLECTOR_TYPE == LOG_COLLECTOR_TYPE_BK_LOG
 
 
 class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     """集群特性标志"""
 
-    ENABLE_EGRESS_IP = FeatureFlagField(label=_('支持提供出口 IP'), default=False)
-    ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField(label=_('允许挂载日志到主机'), default=True)
+    ENABLE_EGRESS_IP = FeatureFlagField(label=_("支持提供出口 IP"), default=False)
+    ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField(label=_("允许挂载日志到主机"), default=True)
     # Indicates if the paths defined on an Ingress use regular expressions
     # if not use regex, the cluster can only deploy ingress-nginx-controller <= 0.21.0
     # Because in ingress-nginx-controller >= 0.22.0, any substrings within the request URI that

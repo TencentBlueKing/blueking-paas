@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class BareSvnRepoController(SvnRepoController):
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None):
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         repo_obj = module.get_source_obj()
         repo_url = repo_obj.get_repo_url()
 

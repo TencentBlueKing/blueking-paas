@@ -28,17 +28,17 @@ pytestmark = pytest.mark.django_db
 class TestDeployOperationManager:
     def test_normal_pending_exist(self, bk_module):
         manager = DeployOperationManager(bk_module)
-        d = Deployment.objects.create(app_environment=bk_module.get_envs('stag'))
+        d = Deployment.objects.create(app_environment=bk_module.get_envs("stag"))
         assert manager.has_pending()
 
         d.delete()
-        OfflineOperation.objects.create(app_environment=bk_module.get_envs('stag'))
+        OfflineOperation.objects.create(app_environment=bk_module.get_envs("stag"))
         assert manager.has_pending()
 
     def test_both_pending_exist(self, bk_module):
         manager = DeployOperationManager(bk_module)
-        Deployment.objects.create(app_environment=bk_module.get_envs('stag'))
-        OfflineOperation.objects.create(app_environment=bk_module.get_envs('stag'))
+        Deployment.objects.create(app_environment=bk_module.get_envs("stag"))
+        OfflineOperation.objects.create(app_environment=bk_module.get_envs("stag"))
 
         assert manager.has_pending()
 

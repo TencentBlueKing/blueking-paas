@@ -23,35 +23,35 @@ from . import views
 
 urlpatterns = [
     url(
-        r'api/monitor/applications/(?P<code>[^/]+)/record/query/$',
-        views.EventRecordView.as_view({'post': 'query'}),
+        r"api/monitor/applications/(?P<code>[^/]+)/record/query/$",
+        views.EventRecordView.as_view({"post": "query"}),
     ),
     url(
-        r'api/monitor/applications/(?P<code>[^/]+)/record/(?P<record>[^/]+)/$',
-        views.EventRecordDetailsView.as_view({'get': 'get'}),
+        r"api/monitor/applications/(?P<code>[^/]+)/record/(?P<record>[^/]+)/$",
+        views.EventRecordDetailsView.as_view({"get": "get"}),
     ),
     url(
-        r'api/monitor/applications/(?P<code>[^/]+)/record_metrics/(?P<record>[^/]+)/$',
-        views.EventRecordMetricsView.as_view({'get': 'get'}),
+        r"api/monitor/applications/(?P<code>[^/]+)/record_metrics/(?P<record>[^/]+)/$",
+        views.EventRecordMetricsView.as_view({"get": "get"}),
     ),
-    url(r'api/monitor/applications/(?P<code>[^/]+)/genre/$', views.EventGenreView.as_view({'get': 'list'})),
+    url(r"api/monitor/applications/(?P<code>[^/]+)/genre/$", views.EventGenreView.as_view({"get": "list"})),
     url(
-        r'api/monitor/record/applications/summary/$',
-        views.EventRecordView.as_view({'get': 'app_summary'}),
+        r"api/monitor/record/applications/summary/$",
+        views.EventRecordView.as_view({"get": "app_summary"}),
     ),
     path(
-        'api/monitor/applications/<slug:code>/modules/<slug:module_name>/alert_rules/',
-        views.AlertRulesView.as_view({'get': 'list'}),
+        "api/monitor/applications/<slug:code>/modules/<slug:module_name>/alert_rules/",
+        views.AlertRulesView.as_view({"get": "list"}),
     ),
     # TODO init_alert_rules will be deprecated
     path(
-        'api/monitor/applications/<slug:code>/alert_rules/init/',
-        views.AlertRulesView.as_view({'post': 'init_alert_rules'}),
+        "api/monitor/applications/<slug:code>/alert_rules/init/",
+        views.AlertRulesView.as_view({"post": "init_alert_rules"}),
     ),
-    path('api/monitor/supported_alert_rules/', views.AlertRulesView.as_view({'get': 'list_supported_alert_rules'})),
-    path('api/monitor/applications/<slug:code>/alerts/', views.ListAlertsView.as_view({'post': 'list'})),
+    path("api/monitor/supported_alert_rules/", views.AlertRulesView.as_view({"get": "list_supported_alert_rules"})),
+    path("api/monitor/applications/<slug:code>/alerts/", views.ListAlertsView.as_view({"post": "list"})),
     path(
-        'api/monitor/applications/<slug:code>/alarm_strategies/',
-        views.ListAlarmStrategiesView.as_view({'post': 'list'}),
+        "api/monitor/applications/<slug:code>/alarm_strategies/",
+        views.ListAlarmStrategiesView.as_view({"post": "list"}),
     ),
 ]

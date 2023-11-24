@@ -20,4 +20,4 @@ from .base import MetricClient, MetricQuery, MetricSeriesResult
 from .bkmonitor import BkMonitorMetricClient
 from .prometheus import PrometheusMetricClient
 
-__all__ = ['BkMonitorMetricClient', 'PrometheusMetricClient', 'MetricClient', 'MetricQuery', 'MetricSeriesResult']
+__all__ = ["BkMonitorMetricClient", "PrometheusMetricClient", "MetricClient", "MetricQuery", "MetricSeriesResult"]

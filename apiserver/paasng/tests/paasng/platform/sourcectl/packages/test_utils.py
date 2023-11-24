@@ -20,8 +20,8 @@ import pytest
 from django.utils.translation import override
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.smart_app.utils import get_app_description
+from paasng.platform.sourcectl.models import SPStat
 from paasng.utils.i18n import gettext_lazy
 
 pytestmark = pytest.mark.django_db
@@ -31,20 +31,20 @@ pytestmark = pytest.mark.django_db
     "meta_info,is_valid, name_in_desc",
     [
         ({}, False, None),
-        ({'app_name': '阿尔法'}, False, None),
+        ({"app_name": "阿尔法"}, False, None),
         (
             {
-                'app_name': '阿尔法',
-                'app_name_en': 'alpha',
-                'app_code': 'foo',
-                'author': 'blueking',
-                'introduction': 'blueking app',
-                'is_use_celery': False,
-                'version': '0.0.1',
-                'env': [],
+                "app_name": "阿尔法",
+                "app_name_en": "alpha",
+                "app_code": "foo",
+                "author": "blueking",
+                "introduction": "blueking app",
+                "is_use_celery": False,
+                "version": "0.0.1",
+                "env": [],
             },
             True,
-            gettext_lazy({'zh-cn': '阿尔法', 'en': 'alpha'}),
+            gettext_lazy({"zh-cn": "阿尔法", "en": "alpha"}),
         ),
     ],
 )

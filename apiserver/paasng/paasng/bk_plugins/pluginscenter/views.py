@@ -33,9 +33,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paasng.bk_plugins.pluginscenter import constants
+from paasng.bk_plugins.pluginscenter import constants, openapi_docs, serializers, shim
 from paasng.bk_plugins.pluginscenter import log as log_api
-from paasng.bk_plugins.pluginscenter import openapi_docs, serializers, shim
 from paasng.bk_plugins.pluginscenter.bk_devops.client import BkDevopsClient
 from paasng.bk_plugins.pluginscenter.bk_devops.exceptions import BkDevopsApiError, BkDevopsGatewayServiceError
 from paasng.bk_plugins.pluginscenter.bk_devops.utils import get_devops_project_id
@@ -173,13 +172,13 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        if status_list := query_params.get('status', []):
+        if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
 
-        if language_list := query_params.get('language', []):
+        if language_list := query_params.get("language", []):
             queryset = queryset.filter(language__in=language_list)
 
-        if pd__identifier_list := query_params.get('pd__identifier', []):
+        if pd__identifier_list := query_params.get("pd__identifier", []):
             queryset = queryset.filter(pd__identifier__in=pd__identifier_list)
         return queryset
 
@@ -337,7 +336,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         plugin = self.get_plugin_instance()
         repo_accessor = get_plugin_repo_accessor(plugin)
-        return Response(data=repo_accessor.get_submit_info(_data['begin_time'], _data['end_time']))
+        return Response(data=repo_accessor.get_submit_info(_data["begin_time"], _data["end_time"]))
 
     def get_feature_flags(self, request, pd_id, plugin_id):
         """获取插件支持的功能特性"""
@@ -366,7 +365,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
-    queryset = OperationRecord.objects.all().order_by('-created')
+    queryset = OperationRecord.objects.all().order_by("-created")
     serializer_class = serializers.OperationRecordSLZ
     pagination_class = LimitOffsetPagination
     permission_classes = [
@@ -396,7 +395,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
     ]
     search_fields = ["version", "source_version_name"]
-    ordering = ('-created',)
+    ordering = ("-created",)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -404,7 +403,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        if status_list := query_params.get('status', []):
+        if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
         return queryset
 
@@ -452,7 +451,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         # 如果插件定义了不允许发布已经发布过的代码分支
         release_revision = plugin.pd.release_revision
         if not release_revision.allowDuplicateSourVersion:
-            if PluginRelease.objects.filter(plugin=plugin, source_version_name=data['source_version_name']).exists():
+            if PluginRelease.objects.filter(plugin=plugin, source_version_name=data["source_version_name"]).exists():
                 raise error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION
 
         release = PluginRelease.objects.create(
@@ -573,7 +572,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         # 插件可定义：新建版本时是否能选择已经发布过的分支
         released_source_versions = set(
-            PluginRelease.objects.filter(plugin=plugin).values_list('source_version_name', flat=True)
+            PluginRelease.objects.filter(plugin=plugin).values_list("source_version_name", flat=True)
         )
 
         return Response(
@@ -967,7 +966,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         plugin = self.get_plugin_instance(allow_archive=True)
         data = [{"__id__": config.unique_key, **config.row} for config in plugin.configs.all()]
         # 根据 key 按字母序排序
-        data = sorted(data, key=lambda item: item['key'])
+        data = sorted(data, key=lambda item: item["key"])
         return Response(data=serializers.make_config_slz_class(pd)(data, many=True).data)
 
     @swagger_auto_schema(request_body=serializers.StubConfigSLZ)

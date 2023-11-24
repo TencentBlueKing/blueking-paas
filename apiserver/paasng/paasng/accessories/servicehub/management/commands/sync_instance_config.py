@@ -30,11 +30,11 @@ from paasng.accessories.servicehub.remote.manager import RemoteEngineAppInstance
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.core.region.models import get_all_regions
 
-logger = logging.getLogger('commands')
+logger = logging.getLogger("commands")
 
 
 class Command(BaseCommand):
-    help = 'Sync instance configs with remote services'
+    help = "Sync instance configs with remote services"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -57,7 +57,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         store = get_remote_store()
         mgr = RemoteServiceMgr(store)
-        service_name = options['name']
+        service_name = options["name"]
 
         svc = self._get_service(mgr, service_name)
         if not svc:
@@ -65,15 +65,15 @@ class Command(BaseCommand):
             return
 
         if not svc.supports_inst_config():
-            logger.error(f'Service {svc.name} does not supports feature: instance config, abort.')
+            logger.error(f"Service {svc.name} does not supports feature: instance config, abort.")
             return
 
         attachments = RemoteServiceEngineAppAttachment.objects.filter(service_id=svc.uuid)
         for rel_obj in attachments:
             if not rel_obj.service_instance_id:
-                logger.debug('Ignore not provisioned instances')
+                logger.debug("Ignore not provisioned instances")
                 continue
 
             rel = RemoteEngineAppInstanceRel(rel_obj, mgr, store)
             rel.sync_instance_config()
-            logger.info(f'Synced instance {rel_obj.service_instance_id}')
+            logger.info(f"Synced instance {rel_obj.service_instance_id}")

@@ -50,14 +50,14 @@ class AsCodeClient:
     def apply_notice_group(self, receivers: List[str]):
         """下发通知组"""
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / 'notice_tpl'])
+        loader = jinja2.FileSystemLoader([tpl_dir / "notice_tpl"])
         j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
         configs = {
-            'notice/default_notice.yaml': j2_env.get_template('notice.yaml.j2').render(
+            "notice/default_notice.yaml": j2_env.get_template("notice.yaml.j2").render(
                 notice_group_name=self.default_notice_group_name, receivers=receivers
             )
         }
-        self._apply_rule_configs(configs, f'{self.app_code}_notice_group', incremental=False)
+        self._apply_rule_configs(configs, f"{self.app_code}_notice_group", incremental=False)
 
     def apply_rule_configs(self, rule_configs: List[RuleConfig]):
         """下发告警规则"""
@@ -69,8 +69,8 @@ class AsCodeClient:
         for config in rule_configs:
             if config.app_code != self.app_code:
                 raise ValueError(
-                    f'apply rules error: app_code({config.app_code}) from rule_configs not match '
-                    f'app_code({self.app_code})'
+                    f"apply rules error: app_code({config.app_code}) from rule_configs not match "
+                    f"app_code({self.app_code})"
                 )
 
     def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
@@ -81,18 +81,18 @@ class AsCodeClient:
           └── high_mem_usage.yaml
         """
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / 'rules_tpl', tpl_dir / 'notice_tpl'])
+        loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
         j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
         configs = {}
         for conf in rule_configs:
             ctx = conf.to_dict()
-            ctx['notice_group_name'] = self.default_notice_group_name
+            ctx["notice_group_name"] = self.default_notice_group_name
             # 涉及到 rabbitmq 的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
-            if 'rabbitmq' in conf.alert_code:
-                ctx['rabbitmq_metric_name_prefix'] = settings.RABBITMQ_MONITOR_CONF.get('metric_name_prefix', '')
+            if "rabbitmq" in conf.alert_code:
+                ctx["rabbitmq_metric_name_prefix"] = settings.RABBITMQ_MONITOR_CONF.get("metric_name_prefix", "")
 
-            configs[f'rule/{conf.alert_rule_name}.yaml'] = j2_env.get_template(f'{conf.alert_code}.yaml.j2').render(
+            configs[f"rule/{conf.alert_rule_name}.yaml"] = j2_env.get_template(f"{conf.alert_code}.yaml.j2").render(
                 **ctx
             )
 
@@ -115,5 +115,5 @@ class AsCodeClient:
                 incremental=incremental,
             )
         except Exception as e:
-            logger.error(f'ascode import alert rule configs of app_code({self.app_code}) error: {e}')
+            logger.error(f"ascode import alert rule configs of app_code({self.app_code}) error: {e}")
             raise AsCodeAPIError(e)

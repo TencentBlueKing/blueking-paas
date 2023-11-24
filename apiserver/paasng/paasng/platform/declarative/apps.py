@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class DeclarativeConfig(AppConfig):
-    name = 'paasng.platform.declarative'
+    name = "paasng.platform.declarative"
 
     def ready(self):
         # Register protection hooks

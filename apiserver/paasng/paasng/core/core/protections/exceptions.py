@@ -29,4 +29,4 @@ class ConditionNotMatched(Exception):
 
     def as_dict(self) -> Dict[str, str]:
         """Return the dict type of current error"""
-        return {'message': self.message, 'action_name': self.action_name}
+        return {"message": self.message, "action_name": self.action_name}

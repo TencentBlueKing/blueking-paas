@@ -51,10 +51,10 @@ def wrap_request_exc():
         yield
     except requests.RequestException as e:
         logger.exception(f"unable to fetch response from {e.request.url}, curl: {curlify.to_curl(e.request)}")
-        raise BkOauthApiException(f'something wrong happened when fetching {e.request.url}') from e
+        raise BkOauthApiException(f"something wrong happened when fetching {e.request.url}") from e
     except json.decoder.JSONDecodeError as e:
-        logger.exception(f'invalid json response: {e.doc}')
-        raise BkOauthApiException(f'invalid json response: {e.doc}') from e
+        logger.exception(f"invalid json response: {e.doc}")
+        raise BkOauthApiException(f"invalid json response: {e.doc}") from e
     except BkOauthApiResponseError as e:
         logger.exception(
             "invalid response(%s) from %s ,request_id: %s ,Detail: %s"
@@ -73,13 +73,13 @@ class BkOauthClient:
         """Validate response status code"""
         if not (resp.status_code >= 200 and resp.status_code < 300):
             logger.error("request bkAuth api: %s", curlify.to_curl(resp.request))
-            request_url = resp.request.url or ''
+            request_url = resp.request.url or ""
             raise BkOauthApiResponseError(
-                f'stauts code is invalid: {resp.status_code}',
+                f"stauts code is invalid: {resp.status_code}",
                 status_code=resp.status_code,
                 request_url=request_url,
                 response_text=resp.text,
-                request_id=resp.headers.get('x-request-id') or '',
+                request_id=resp.headers.get("x-request-id") or "",
             )
 
     def create_client(self, bk_app_code: str):
@@ -136,10 +136,10 @@ class BkOauthClient:
                 raise BkOauthClientDoesNotExist(f"The bk_app_secret for the {bk_app_code} does not exist.")
 
             self._validate_resp(resp)
-            resp_data = resp.json()['data']
+            resp_data = resp.json()["data"]
             # 由于支持同一个app存在 2 个 secret, 所以返回的 secret 是一个列表
             return [
-                BkAppSecret(d['id'], d['bk_app_code'], d['bk_app_secret'], d['enabled'], d['created_at'])
+                BkAppSecret(d["id"], d["bk_app_code"], d["bk_app_secret"], d["enabled"], d["created_at"])
                 for d in resp_data
             ]
 

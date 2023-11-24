@@ -272,7 +272,12 @@ class PipelineStage(BaseStageController):
         )
         data = slz.data
         resp = utils.make_client(stage_definition.api.postCommand).call(
-            data=data, path_params={"plugin_id": self.plugin.id}
+            data=data,
+            path_params={
+                "plugin_id": self.plugin.id,
+                "pipeline_id": self.build.pipelineId,
+                "build_id": self.build.buildId,
+            },
         )
         if not (result := resp.get("result")):
             logger.error(f"execute post command [plugin_id: {self.plugin.id}, data:{data}], error: {resp}")

@@ -56,7 +56,7 @@
               </div>
             </bk-form-item>
             <bk-form-item
-              :label="$t('代码分支')"
+              :label="curVersionData.version_type === 'tag' ? $t('代码 Tag') : $t('代码分支')"
               :required="true"
               :property="'source_versions'"
             >
@@ -78,7 +78,10 @@
                   "
                 />
               </bk-select>
-              <div :class="['ribbon', { 'en-cls': localLanguage === 'en' }]">
+              <div
+                class="ribbon"
+                :style="{ 'right': -offset + 'px' }"
+              >
                 <bk-button :text="true" title="primary" class="mr15" @click="getNewVersionFormat('refresh')">
                   {{ $t('刷新') }}
                 </bk-button>
@@ -300,6 +303,7 @@ export default {
         source_versions: [],
       },
       formatTime,
+      offset: 138,
       rules: {
         source_versions: [
           {
@@ -407,6 +411,10 @@ export default {
       } finally {
         this.isLoading = false;
         this.isBranchLoading = false;
+
+        this.$nextTick(() => {
+          this.offset = document.querySelector('.ribbon')?.offsetWidth + 10 || 138;
+        });
       }
     },
 

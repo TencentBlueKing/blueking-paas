@@ -32,9 +32,9 @@
               >
                 <!-- 只有一个阶段的发布, 不展示发布步骤 -->
                 <bk-steps
-                  ext-cls="custom-icon"
+                  ext-cls="custom-step-cls"
                   :status="stepsStatus"
-                  :steps="curAllStages"
+                  :steps="stepAllStages"
                   :cur-step.sync="curStep"
                 />
               </div>
@@ -58,7 +58,7 @@
         />
       </template>
 
-      <div class="footer-btn-warp">
+      <div class="footer-btn-warp" v-if="isShowButtonGroup">
         <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
           <bk-button
             v-if="!isFirstStage"
@@ -139,6 +139,12 @@ export default {
       // 停止轮询状态
       stopPollingStatus: ['successful', 'failed', 'interrupted'],
       isPrevious: false,
+      timeId: null,
+      clickStageId: null,
+      isShowButtonGroup: true,
+      curStepIndex: null,
+      // 点击，切换后的步骤状态
+      stepAllStages: [],
     };
   },
   computed: {
@@ -234,12 +240,17 @@ export default {
   },
   async created() {
     await this.getReleaseDetail();
+    this.stepAllStages = this.curAllStages;
     this.getReleaseStageDetail();
   },
   methods: {
     async pollingReleaseStageDetail() {
+      if (this.clickStageId) {
+        clearTimeout(this.timeId);
+        return;
+      }
       await new Promise((resolve) => {
-        setTimeout(resolve, 2000);
+        this.timeId = setTimeout(resolve, 2000);
       });
 
       // 对应状态，停止轮询 / 上一步停止轮询
@@ -256,15 +267,15 @@ export default {
           pdId: this.pdId,
           pluginId: this.pluginId,
           releaseId: this.releaseId,
-          stageId: this.stageId,
+          stageId: this.clickStageId || this.stageId,
         };
         if (Object.values(params).some(value => value === undefined)) {
           return;
         }
         const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
         this.stageData = stageData;
-        // 所有阶段都需要进行轮询
-        if (this.stageData.status === 'pending') {
+        // 所有阶段都需要进行轮询 && 手动切换不用轮询
+        if (this.stageData.status === 'pending' && !this.clickStageId) {
           this.pollingReleaseStageDetail();
         }
         switch (this.stageData.stage_id) {
@@ -280,16 +291,78 @@ export default {
             }
             break;
         }
+        if (this.clickStageId) {
+          this.clickStageId = null;
+          this.isLoading = false;
+        }
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+        if (this.clickStageId) {
+          this.clickStageId = null;
+          this.isLoading = false;
+        }
       } finally {
         setTimeout(() => {
-          this.isLoading = false;
+          if (!this.clickStageId) this.isLoading = false;
+          this.stepsBindingClick();
         }, 500);
       }
+    },
+
+    // 给step绑定点击事件
+    stepsBindingClick() {
+      // 获取对应节点
+      const stepsEl = document.querySelector('.custom-step-cls');
+      const stepList = Array.from(stepsEl?.childNodes || []);
+      let bingElementList = [];
+      for (let i = 0; i < stepList.length; i++) {
+        const curStepEl = stepList[i];
+        if (curStepEl?.className.includes('current')) {
+          // 当前步骤index
+          if (this.curStepIndex === null) {
+            this.curStepIndex = i + 1;
+          }
+          bingElementList = stepList.slice(0, i + 1);
+        }
+      }
+      // 已成功步骤绑定点击事件
+      bingElementList.forEach((el, index) => {
+        const childList = Array.from(el.childNodes);
+        childList.forEach((child) => {
+          child.onclick = () => {
+            // 如果点击当前显示的当前步骤，不做操作
+            if (clickStageId !== this.stageId && this.curStep === (index + 1)) {
+              return;
+            }
+            // 给已发布完成的步骤添加状态
+            this.stepAllStages = this.curAllStages.map((v, index) => ({
+              ...v,
+              status: index < this.curStepIndex ? 'done' : '',
+            }));
+
+            // 点击更新步骤
+            this.curStep = index + 1;
+            // 当前点击的stage_id
+            const clickStageId = this.curAllStages[index].stage_id;
+            this.isLoading = true;
+            // 手动点击切换步骤不显示底部操作
+            this.isShowButtonGroup = false;
+            this.clickStageId = clickStageId;
+            // 获取当前步骤信息
+            this.getReleaseStageDetail();
+
+            // 点击返回了这在执行的发布步骤
+            if (this.curStepIndex === this.curStep) {
+              this.isShowButtonGroup = true;
+              // 重置点击的 stageId, 重新轮询接口
+              this.clickStageId = null;
+            }
+          };
+        });
+      });
     },
 
     // 获取版本详情（获取当前步骤详情数据）
@@ -673,6 +746,30 @@ export default {
 }
 .release-warp .info-mt {
     margin-top: 72px;
+}
+
+.custom-step-cls {
+  .bk-step {
+    &.done,
+    &.current {
+      .bk-step-number,
+      .bk-step-content {
+        cursor: pointer;
+      }
+    }
+    &.done .bk-step-number:hover+.bk-step-content .bk-step-title {
+      color: #3A84FF !important;
+    }
+    &.done .bk-step-content:hover .bk-step-title {
+      color: #3A84FF !important;
+    }
+    &.current .bk-step-number:hover+.bk-step-content .bk-step-title {
+      color: #3A84FF !important;
+    }
+    &.current:hover .bk-step-content:hover .bk-step-title {
+      color: #3A84FF !important;
+    }
+  }
 }
 </style>
 <style>

@@ -424,23 +424,23 @@ export default {
       rulesPluginId.push({
         regex: new RegExp(this.curPluginInfo.schema.id.pattern),
         message: this.$t(this.curPluginInfo.schema.id.description),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       rulesPluginId.push({
         max: this.curPluginInfo.schema.id.maxlength || 16,
         message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       // 插件名称
       rulesName.push({
         regex: new RegExp(this.curPluginInfo.schema.name.pattern),
         message: this.$t(this.curPluginInfo.schema.name.description),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       rulesName.push({
         max: this.curPluginInfo.schema.name.maxlength || 20,
         message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       this.rules.plugin_id = rulesPluginId;
       this.rules.name = rulesName;
@@ -498,8 +498,9 @@ export default {
           theme: 'success',
           message: this.$t('插件创建成功！'),
         });
+        // 版本管理
         this.$router.push({
-          name: 'pluginSummary',
+          name: 'pluginVersionManager',
           params: { pluginTypeId: res.pd_id, id: res.id },
         });
       } catch (e) {
@@ -568,7 +569,7 @@ export default {
   }
 }
 .button-warp {
-  margin: 30px 0 0 150px;
+  margin: 30px 0 0 170px;
 }
 .guide-container {
   background: #fff;

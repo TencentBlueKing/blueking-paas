@@ -93,6 +93,7 @@ class ProcessTmpl:
     command: str
     replicas: Optional[int] = None
     plan: Optional[str] = None
+    autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
 
     def __post_init__(self):

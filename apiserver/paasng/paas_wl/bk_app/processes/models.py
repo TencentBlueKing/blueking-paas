@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
 from cattr import unstructure
 from django.conf import settings
@@ -125,6 +125,16 @@ class ProcessSpec(TimestampedModel):
         return self.target_replicas
 
 
+class AttrSetter:
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+        self.changed = False
+
+    def setattr(self, name, value):
+        setattr(self.wrapped, name, value)
+        self.changed = True
+
+
 class ProcessSpecManager:
     def __init__(self, wl_app: "WlApp"):
         self.wl_app = wl_app
@@ -149,18 +159,17 @@ class ProcessSpecManager:
         if removing_procs_name:
             proc_specs.filter(name__in=removing_procs_name).delete()
 
+        # add spec objects start
         default_process_spec_plan = ProcessSpecPlan.objects.get_by_name(name=settings.DEFAULT_PROC_SPEC_PLAN)
+        adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
-        # add spec objects which is added via procfile
-        adding_proc_specs = [process for name, process in processes_map.items() if name not in existed_procs_name]
-        spec_create_bulks = []
-        for process in adding_proc_specs:
+        def process_spec_builder(process: "ProcessTmpl") -> ProcessSpec:
             target_replicas = process.replicas or self.get_default_replicas(process.name, environment)
             plan = default_process_spec_plan
             if plan_name := process.plan:
                 plan = self.get_plan(plan_name, default_process_spec_plan)
 
-            process_spec = ProcessSpec(
+            return ProcessSpec(
                 type=proc_type,
                 region=self.wl_app.region,
                 name=process.name,
@@ -168,44 +177,80 @@ class ProcessSpecManager:
                 target_replicas=target_replicas,
                 plan=plan,
                 proc_command=process.command,
-                autoscaling=process.scaling_config is not None,
+                autoscaling=process.autoscaling,
                 scaling_config=process.scaling_config,
             )
-            spec_create_bulks.append(process_spec)
-        if spec_create_bulks:
-            ProcessSpec.objects.bulk_create(spec_create_bulks)
+
+        self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
+        # add spec objects end
 
         # update spec objects
         updating_proc_specs = [process for name, process in processes_map.items() if name in existed_procs_name]
-        spec_update_bulks = []
-        for process in updating_proc_specs:
-            process_spec = proc_specs.get(name=process.name)
-            changed = False
-            if (command := process.command) and command != process_spec.proc_command:
-                changed = True
-                process_spec.proc_command = command
-            if (plan_name := process.plan) and (plan := self.get_plan(plan_name, None)):
-                changed = True
-                process_spec.plan = plan
 
-            # 如果同时提供 scaling_config 和 replicas, 优先使用 scaling_config
-            if process.scaling_config is not None:
-                changed = True
-                process_spec.scaling_config = process.scaling_config
-                process_spec.autoscaling = True
-            elif (replicas := process.replicas) is not None:
-                changed = True
-                process_spec.target_replicas = replicas
-                # 保持与禁用自动扩缩容一致的逻辑, 清空 scaling_config
-                process_spec.scaling_config = None
-                process_spec.autoscaling = False
+        def process_spec_updator(process: "ProcessTmpl") -> Tuple[bool, ProcessSpec]:
+            process_spec = proc_specs.get(name=process.name)
+            recorder = AttrSetter(process_spec)
+            if (command := process.command) and command != process_spec.proc_command:
+                recorder.setattr("proc_command", command)
+            if (plan_name := process.plan) and (plan := self.get_plan(plan_name, None)):
+                recorder.setattr("plan", plan)
+            elif process.autoscaling != process_spec.autoscaling:
+                recorder.setattr("autoscaling", process.autoscaling)
+            elif (scaling_config := process.scaling_config) and scaling_config != process_spec.scaling_config:
+                recorder.setattr("autoscaling", scaling_config)
+            elif (replicas := process.replicas) and replicas != process_spec.target_replicas:
+                recorder.setattr("target_replicas", replicas)
+            return recorder.changed, process_spec
+
+        self.bulk_update_procs(
+            proc_updator=process_spec_updator,
+            updating_procs=updating_proc_specs,
+            updated_fields=[
+                "proc_command",
+                "target_replicas",
+                "target_replicas",
+                "plan",
+                "scaling_config",
+                "autoscaling",
+                "updated",
+            ],
+        )
+
+    def bulk_create_procs(
+        self,
+        proc_creator: Callable[["ProcessTmpl"], ProcessSpec],
+        adding_procs: List["ProcessTmpl"],
+    ):
+        """bulk create ProcessSpec
+
+        :param proc_creator: ProcessSpec factory, accept `process` and return ProcessSpec
+        :param adding_procs: `process` waiting to transform to ProcessSpec
+        """
+        spec_create_bulks: List[ProcessSpec] = []
+        for process in adding_procs:
+            spec_create_bulks.append(proc_creator(process))
+        if spec_create_bulks:
+            ProcessSpec.objects.bulk_create(spec_create_bulks)
+
+    def bulk_update_procs(
+        self,
+        proc_updator: Callable[["ProcessTmpl"], Tuple[bool, ProcessSpec]],
+        updating_procs: List["ProcessTmpl"],
+        updated_fields: List[str],
+    ):
+        """bulk update ProcessSpec
+
+        :param proc_updator: handler to update ProcessSpec,
+                            accept `process` and return Tuple[whether spec need updated, updatedProcessSpec]
+        :param updating_procs: `process` waiting to update
+        """
+        spec_update_bulks: List[ProcessSpec] = []
+        for process in updating_procs:
+            changed, updated = proc_updator(process)
             if changed:
-                spec_update_bulks.append(process_spec)
+                spec_update_bulks.append(updated)
         if spec_update_bulks:
-            ProcessSpec.objects.bulk_update(
-                spec_update_bulks,
-                ["proc_command", "target_replicas", "plan", "scaling_config", "autoscaling", "updated"],
-            )
+            ProcessSpec.objects.bulk_update(spec_update_bulks, updated_fields)
 
     @staticmethod
     def get_default_replicas(process_type: str, environment: str):
@@ -236,13 +281,15 @@ class ProcessTmpl:
     :param command: 启动指令
     :param replicas: 副本数
     :param plan: 资源方案名称
-    :param scaling_config: 自动扩缩容配置, 当同时提供 replicas 与 scaling_config 时, 优先使用 scaling_config
+    :param autoscaling: 是否开启自动扩缩容
+    :param scaling_config: 自动扩缩容配置
     """
 
     name: str
     command: str
     replicas: Optional[int] = None
     plan: Optional[str] = None
+    autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
 
     def __post_init__(self):

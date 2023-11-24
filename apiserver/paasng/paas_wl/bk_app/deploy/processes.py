@@ -143,8 +143,7 @@ class AppProcessesController:
         proc_spec = self._get_spec(scaling.name)
 
         proc_spec.autoscaling = False
-        proc_spec.scaling_config = None
-        proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
+        proc_spec.save(update_fields=["autoscaling", "updated"])
 
         self.client.disable_autoscaling(scaling)
 
@@ -252,8 +251,9 @@ class CNativeProcController:
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
         # Use the old config value when the scaling config is not provided.
+        scaling_config = scaling_config or spec_updater.spec_object.scaling_config
         if not scaling_config:
-            scaling_config = spec_updater.spec_object.scaling_config
+            raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
 
         spec_updater.set_autoscaling(True, scaling_config)
         ModuleProcessSpecManager(self.env.module).set_autoscaling(

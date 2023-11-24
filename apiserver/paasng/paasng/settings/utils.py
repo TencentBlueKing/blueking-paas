@@ -26,7 +26,7 @@ from dynaconf.utils import object_merge
 
 
 def get_database_conf(
-    settings: LazySettings, encrypted_url_var: str = 'DATABASE_URL', env_var_prefix: str = '', for_tests: bool = False
+    settings: LazySettings, encrypted_url_var: str = "DATABASE_URL", env_var_prefix: str = "", for_tests: bool = False
 ) -> Optional[Dict]:
     """Get a database config dict, will try to read encrypted database url first
 
@@ -48,7 +48,7 @@ def get_database_conf(
         DATABASE_OPTIONS = settings.get(env_var_prefix + "DATABASE_OPTIONS", {})
 
         result = {
-            "ENGINE": 'django.db.backends.mysql',
+            "ENGINE": "django.db.backends.mysql",
             "NAME": DATABASE_NAME,
             "USER": DATABASE_USER,
             "PASSWORD": DATABASE_PASSWORD,
@@ -58,20 +58,20 @@ def get_database_conf(
         }
         # Use a test database name when running tests to avoid unexpected changes
         if for_tests:
-            result['NAME'] = f"test_{result['NAME']}"
+            result["NAME"] = f"test_{result['NAME']}"
         return result
     return None
 
 
-NAME_FOR_SIMPLE_JWT = 'ONE_SIMPLE_JWT_AUTH_KEY'
+NAME_FOR_SIMPLE_JWT = "ONE_SIMPLE_JWT_AUTH_KEY"
 
 
 def get_paas_service_jwt_clients(settings: LazySettings) -> List:
     """Get PAAS_SERVICE_JWT_CLIENTS from LazySettings object"""
-    jwt_clients = settings.get('PAAS_SERVICE_JWT_CLIENTS') or []
+    jwt_clients = settings.get("PAAS_SERVICE_JWT_CLIENTS") or []
     key = settings.get(NAME_FOR_SIMPLE_JWT)
     if key:
-        jwt_clients.append({'iss': 'paas-v3', 'key': key})
+        jwt_clients.append({"iss": "paas-v3", "key": key})
     return jwt_clients
 
 
@@ -99,7 +99,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
     - RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL RabbitMQ 增强服务地址
     - RSVC_BUNDLE_OTEL_ENDPOINT_URL OTEL-APM 增强服务地址
     """
-    endpoints = settings.get('SERVICE_REMOTE_ENDPOINTS', [])
+    endpoints = settings.get("SERVICE_REMOTE_ENDPOINTS", [])
     if endpoints:
         return endpoints
 
@@ -108,70 +108,70 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
         return []
 
     template = {
-        'provision_params_tmpl': {
-            'engine_app_name': '{engine_app.name}',
-            'operator': '{engine_app.owner}',
+        "provision_params_tmpl": {
+            "engine_app_name": "{engine_app.name}",
+            "operator": "{engine_app.owner}",
         },
-        'jwt_auth_conf': {
-            'iss': 'paas-v3',
-            'key': jwt_key,
+        "jwt_auth_conf": {
+            "iss": "paas-v3",
+            "key": jwt_key,
         },
-        'prefer_async_delete': True,
+        "prefer_async_delete": True,
     }
 
-    mysql_ep_url = settings.get('RSVC_BUNDLE_MYSQL_ENDPOINT_URL')
+    mysql_ep_url = settings.get("RSVC_BUNDLE_MYSQL_ENDPOINT_URL")
     if mysql_ep_url:
         endpoints.append(
             object_merge(
                 template,
                 {
-                    'name': 'mysql_remote',
-                    'endpoint_url': mysql_ep_url,
-                    'provision_params_tmpl': {'egress_info': '{cluster_info.egress_info_json}'},
+                    "name": "mysql_remote",
+                    "endpoint_url": mysql_ep_url,
+                    "provision_params_tmpl": {"egress_info": "{cluster_info.egress_info_json}"},
                 },
             )
         )
 
-    bkrepo_ep_url = settings.get('RSVC_BUNDLE_BKREPO_ENDPOINT_URL')
+    bkrepo_ep_url = settings.get("RSVC_BUNDLE_BKREPO_ENDPOINT_URL")
     if bkrepo_ep_url:
         endpoints.append(
             object_merge(
                 template,
                 {
-                    'name': 'svc_bk_repo',
-                    'endpoint_url': bkrepo_ep_url,
-                    'provision_params_tmpl': {
-                        'app_developers': '{app_developers}',
+                    "name": "svc_bk_repo",
+                    "endpoint_url": bkrepo_ep_url,
+                    "provision_params_tmpl": {
+                        "app_developers": "{app_developers}",
                     },
                 },
             )
         )
 
-    rabbitmq_ep_url = settings.get('RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL')
+    rabbitmq_ep_url = settings.get("RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL")
     if rabbitmq_ep_url:
         endpoints.append(
             object_merge(
                 template,
                 {
-                    'name': 'svc_rabbitmq',
-                    'endpoint_url': rabbitmq_ep_url,
+                    "name": "svc_rabbitmq",
+                    "endpoint_url": rabbitmq_ep_url,
                 },
             )
         )
-    otel_ep_url = settings.get('RSVC_BUNDLE_OTEL_ENDPOINT_URL')
+    otel_ep_url = settings.get("RSVC_BUNDLE_OTEL_ENDPOINT_URL")
     if otel_ep_url:
         endpoints.append(
             object_merge(
                 template,
                 {
-                    'name': 'svc_otel',
-                    'endpoint_url': otel_ep_url,
-                    'provision_params_tmpl': {
-                        'app_code': '{application.code}',
-                        'bk_monitor_space_id': '{bk_monitor_space_id}',
-                        'env': '{env.environment}',
+                    "name": "svc_otel",
+                    "endpoint_url": otel_ep_url,
+                    "provision_params_tmpl": {
+                        "app_code": "{application.code}",
+                        "bk_monitor_space_id": "{bk_monitor_space_id}",
+                        "env": "{env.environment}",
                     },
-                    'is_ready': settings.get('RSVC_BUNDLE_OTEL_ENABLED', False),
+                    "is_ready": settings.get("RSVC_BUNDLE_OTEL_ENABLED", False),
                 },
             )
         )
@@ -184,7 +184,7 @@ def is_redis_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:
         return False
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
-    return value.startswith('redis://') or value.startswith('sentinel://')
+    return value.startswith("redis://") or value.startswith("sentinel://")
 
 
 def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:
@@ -193,4 +193,4 @@ def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> boo
         return False
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
-    return value.startswith('sentinel://')
+    return value.startswith("sentinel://")

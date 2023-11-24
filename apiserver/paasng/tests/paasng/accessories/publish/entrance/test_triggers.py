@@ -25,9 +25,9 @@ from paas_wl.workloads.networking.entrance.handlers import sync_default_entrance
 pytestmark = pytest.mark.django_db
 
 
-@mock.patch('paas_wl.workloads.networking.entrance.handlers.refresh_module_subpaths')
-@mock.patch('paas_wl.workloads.networking.entrance.handlers.refresh_module_domains')
+@mock.patch("paas_wl.workloads.networking.entrance.handlers.refresh_module_subpaths")
+@mock.patch("paas_wl.workloads.networking.entrance.handlers.refresh_module_domains")
 def test_sync_default_entrances_for_module_switching(mocker_subpath, mocker_domain, bk_app, bk_module):
     sync_default_entrances_for_module_switching(None, bk_app, bk_module, bk_module)
-    assert mocker_domain.called, 'should refresh domains'
-    assert mocker_subpath.called, 'should refresh subpaths'
+    assert mocker_domain.called, "should refresh domains"
+    assert mocker_subpath.called, "should refresh subpaths"

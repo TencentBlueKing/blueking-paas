@@ -31,9 +31,6 @@ from requests import models
 from requests.auth import AuthBase
 from requests.models import Response
 
-from paasng.platform.sourcectl.git.client import GitClient, MutableURL
-from paasng.platform.sourcectl.models import GitProject
-from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
@@ -44,6 +41,9 @@ from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import (
     PluginRepoNameConflict,
 )
 from paasng.bk_plugins.pluginscenter.sourcectl.git import GitTemplateDownloader
+from paasng.platform.sourcectl.git.client import GitClient, MutableURL
+from paasng.platform.sourcectl.models import GitProject
+from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.utils.text import remove_prefix, remove_suffix
 
 logger = logging.getLogger(__name__)
@@ -55,9 +55,9 @@ class TencentGitAuth(AuthBase):
     def __init__(self, oauth_token: Optional[str] = None, private_token: Optional[str] = None):
         auth_headers = {}
         if oauth_token:
-            auth_headers['OAUTH-TOKEN'] = oauth_token
+            auth_headers["OAUTH-TOKEN"] = oauth_token
         if private_token:
-            auth_headers['PRIVATE-TOKEN'] = private_token
+            auth_headers["PRIVATE-TOKEN"] = private_token
         if not auth_headers:
             raise AuthTokenMissingError("invalid user credentials")
         self._auth_headers = auth_headers
@@ -76,7 +76,7 @@ def validate_response(resp: Response) -> Response:
         raise APIError("the access_token can not fetch resource")
     elif resp.status_code == 403:
         logging.warning(f"get url `{resp.url}` but 403")
-        raise APIError('access token forbidden')
+        raise APIError("access token forbidden")
     elif resp.status_code == 504:
         logging.warning(f"get url `{resp.url}` but 504")
         raise APIError(_("工蜂接口请求超时"))
@@ -108,7 +108,7 @@ class PluginRepoAccessor:
 
         :param smart_revision: 有名字的版本号，比如 master
         """
-        if ':' not in smart_revision:
+        if ":" not in smart_revision:
             return smart_revision
         version_type, version_name = smart_revision.split(":")
         commit = self.get_last_commit(self.project, version_name)
@@ -204,8 +204,8 @@ class PluginRepoAccessor:
         :param data_source: tag or branch
         :param data: JSON data returned from gitlab api
         """
-        if data_source not in ('tag', 'branch'):
-            raise ValueError('type must be tag or branch')
+        if data_source not in ("tag", "branch"):
+            raise ValueError("type must be tag or branch")
         try:
             message = data["message"]
         except KeyError:
@@ -213,7 +213,7 @@ class PluginRepoAccessor:
 
         date_str = data["commit"]["committed_date"]
         # Convert local time to utc datetime
-        commit_date = arrow.get(date_str).to('utc').datetime
+        commit_date = arrow.get(date_str).to("utc").datetime
         return AlternativeVersion(
             name=data["name"],
             type=data_source,
@@ -325,8 +325,8 @@ class PluginRepoInitializer:
         if not self._user_credentials:
             raise AuthTokenMissingError("private_token or oauth_token required")
 
-        private_token = self._user_credentials.get('private_token')
-        oauth_token = self._user_credentials.get('oauth_token')
+        private_token = self._user_credentials.get("private_token")
+        oauth_token = self._user_credentials.get("oauth_token")
         if not private_token and not oauth_token:
             raise AuthTokenMissingError("private_token or oauth_token required")
 

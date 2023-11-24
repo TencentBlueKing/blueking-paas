@@ -84,7 +84,7 @@ RESERVED_FIELDS = {
 }
 
 
-def parse_request_to_es_dsl(dsl: 'SearchRequestSchema', mappings: dict) -> Query:
+def parse_request_to_es_dsl(dsl: "SearchRequestSchema", mappings: dict) -> Query:
     # use `MatchAll` as fallback
     query_string = (
         Q("query_string", query=dsl.query.query_string, analyze_wildcard=True) if dsl.query.query_string else Q()

@@ -36,7 +36,7 @@ class AddressType(str, StructuredEnum):
     means the address was provided by a custom domain created by user.
     """
 
-    SUBDOMAIN = 'subdomain'
-    SUBPATH = 'subpath'
-    CUSTOM = 'custom'
-    LEGACY = 'legacy'
+    SUBDOMAIN = "subdomain"
+    SUBPATH = "subpath"
+    CUSTOM = "custom"
+    LEGACY = "legacy"

@@ -36,7 +36,7 @@ class BlobObject:
 def parse_url(url: str) -> BlobObject:
     """解析 s3/bkrpeo 协议的 url"""
     o = urlparse(url)
-    if o.scheme == '':
+    if o.scheme == "":
         # 向前兼容, 如果 url 不带上协议， 则使用默认的类型.
         return BlobObject(
             store_type=detect_default_blob_store(),

@@ -26,7 +26,7 @@ from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 pytestmark = pytest.mark.django_db
 
 
-@patch('paasng.bk_plugins.bk_plugins.handlers.safe_sync_apigw')
+@patch("paasng.bk_plugins.bk_plugins.handlers.safe_sync_apigw")
 def test_on_pre_deployment(safe_sync_apigw, bk_plugin_app):
     deployment = create_fake_deployment(bk_plugin_app.default_module)
     on_pre_deployment(None, deployment=deployment)

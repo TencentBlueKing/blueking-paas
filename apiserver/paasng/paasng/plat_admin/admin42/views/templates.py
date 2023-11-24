@@ -22,11 +22,11 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.models import Template
 from paasng.plat_admin.admin42.serializers.templates import TemplateSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 
 
 class TemplateManageView(GenericTemplateView):
@@ -39,7 +39,7 @@ class TemplateManageView(GenericTemplateView):
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
         kwargs.update(
-            {'type_choices': dict(TemplateType.get_choices()), 'language_choices': dict(AppLanguage.get_choices())}
+            {"type_choices": dict(TemplateType.get_choices()), "language_choices": dict(AppLanguage.get_choices())}
         )
         return kwargs
 

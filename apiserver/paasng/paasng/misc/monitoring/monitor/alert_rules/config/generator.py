@@ -46,7 +46,7 @@ class AppRuleConfigGenerator:
                     alert_code=alert_code,
                     app_code=self.app_code,
                     run_env=env,
-                    threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]['threshold_expr'],
+                    threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]["threshold_expr"],
                     receivers=self.default_receivers,
                 )
                 for env in run_envs
@@ -69,7 +69,7 @@ class AppRuleConfigGenerator:
                     app_code=self.app_code,
                     run_env=env,
                     module_name=module_name,
-                    threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]['threshold_expr'],
+                    threshold_expr=DEFAULT_RULE_CONFIGS[alert_code]["threshold_expr"],
                     receivers=self.default_receivers,
                 )
                 for env in run_envs

@@ -25,11 +25,11 @@ from paas_wl.bk_app.processes.kres_entities import Instance
 
 # proc type name is alphanumeric
 # https://docs-v2.readthedocs.io/en/latest/using-workflow/process-types-and-the-procfile/#declaring-process-types
-PROCTYPE_MATCH = re.compile(r'^(?P<type>[a-zA-Z0-9]+(\-[a-zA-Z0-9]+)*)$')
-MEMLIMIT_MATCH = re.compile(r'^(?P<mem>(([0-9]+(MB|KB|GB|[BKMG])|0)(/([0-9]+(MB|KB|GB|[BKMG])))?))$', re.IGNORECASE)
-CPUSHARE_MATCH = re.compile(r'^(?P<cpu>(([-+]?[0-9]*\.?[0-9]+[m]?)(/([-+]?[0-9]*\.?[0-9]+[m]?))?))$')
-TAGVAL_MATCH = re.compile(r'^(?:[a-zA-Z\d][-\.\w]{0,61})?[a-zA-Z\d]$')
-CONFIGKEY_MATCH = re.compile(r'^[a-z_]+[a-z0-9_]*$', re.IGNORECASE)
+PROCTYPE_MATCH = re.compile(r"^(?P<type>[a-zA-Z0-9]+(\-[a-zA-Z0-9]+)*)$")
+MEMLIMIT_MATCH = re.compile(r"^(?P<mem>(([0-9]+(MB|KB|GB|[BKMG])|0)(/([0-9]+(MB|KB|GB|[BKMG])))?))$", re.IGNORECASE)
+CPUSHARE_MATCH = re.compile(r"^(?P<cpu>(([-+]?[0-9]*\.?[0-9]+[m]?)(/([-+]?[0-9]*\.?[0-9]+[m]?))?))$")
+TAGVAL_MATCH = re.compile(r"^(?:[a-zA-Z\d][-\.\w]{0,61})?[a-zA-Z\d]$")
+CONFIGKEY_MATCH = re.compile(r"^[a-z_]+[a-z0-9_]*$", re.IGNORECASE)
 
 
 ####################
@@ -43,7 +43,7 @@ class SeriesMetricsResultSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         result = super().to_representation(instance)
-        result['display_name'] = MetricsSeriesType.get_choice_label(instance.type_name)
+        result["display_name"] = MetricsSeriesType.get_choice_label(instance.type_name)
         return result
 
 
@@ -59,5 +59,5 @@ class InstanceMetricsResultSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         result = super().to_representation(instance)
-        result['display_name'] = Instance.get_shorter_instance_name(instance.instance_name)
+        result["display_name"] = Instance.get_shorter_instance_name(instance.instance_name)
         return result

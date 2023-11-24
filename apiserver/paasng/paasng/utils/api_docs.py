@@ -26,7 +26,7 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 
 openapi_empty_schema = openapi.Schema(type=openapi.TYPE_OBJECT)
-openapi_empty_response = openapi.Response(_('操作成功后的空响应'), schema=openapi_empty_schema)
+openapi_empty_response = openapi.Response(_("操作成功后的空响应"), schema=openapi_empty_schema)
 
 
 def is_rendering_openapi(request: Request) -> bool:
@@ -34,5 +34,5 @@ def is_rendering_openapi(request: Request) -> bool:
     return (
         len(request.data) == 0
         and site_perm_class(SiteAction.VISIT_ADMIN42)().has_permission(request)
-        and request.accepted_media_type == 'application/openapi+json'
+        and request.accepted_media_type == "application/openapi+json"
     )

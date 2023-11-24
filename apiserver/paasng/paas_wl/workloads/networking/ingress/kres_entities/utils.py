@@ -27,7 +27,7 @@ class LegacyNginxRewrittenProvider:
     """Maintains compatibility for ingress-nginx <= 0.21.0"""
 
     @staticmethod
-    def make_configuration_snippet(fallback_script_name: Optional[str] = '') -> str:
+    def make_configuration_snippet(fallback_script_name: Optional[str] = "") -> str:
         """Make configuration snippet which set X-Script-Name as the sub-path provided by platform or custom domain
 
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"

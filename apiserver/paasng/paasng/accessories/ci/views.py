@@ -25,8 +25,6 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.accessories.ci import serializers
 from paasng.accessories.ci.base import BkUserOAuth
 from paasng.accessories.ci.clients.bk_ci import BkCIClient
@@ -34,6 +32,8 @@ from paasng.accessories.ci.constants import CIBackend
 from paasng.accessories.ci.exceptions import NotSupportedRepoType
 from paasng.accessories.ci.managers import get_ci_manager_cls_by_backend
 from paasng.accessories.ci.models import CIAtomJob, CIResourceAtom
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class CIJobViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @property
     def paginator(self):
-        if not hasattr(self, '_paginator'):
+        if not hasattr(self, "_paginator"):
             self._paginator = LimitOffsetPagination()
             self._paginator.default_limit = 10
         return self._paginator
@@ -67,7 +67,7 @@ class CIJobViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 filter_params[_filter_key] = _filter_value
 
         page = self.paginator.paginate_queryset(
-            CIAtomJob.objects.filter(env__module=module, **filter_params).order_by('-created'), self.request, view=self
+            CIAtomJob.objects.filter(env__module=module, **filter_params).order_by("-created"), self.request, view=self
         )
         return self.paginator.get_paginated_response(data=serializers.CIAtomJobSerializer(page, many=True).data)
 
@@ -98,7 +98,7 @@ class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
 
         # 查询模块下最近一次代码检查记录
-        last_ci_atom = CIResourceAtom.objects.filter(env__module=module).order_by('-created').first()
+        last_ci_atom = CIResourceAtom.objects.filter(env__module=module).order_by("-created").first()
         if not last_ci_atom:
             # 未执行过代码检查，去部署
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -113,7 +113,7 @@ class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         user_oauth = BkUserOAuth.from_request(request)
         client = BkCIClient(user_oauth)
         data = client.get_codecc_defect_tool_counts(task_id)
-        data['detailUrl'] = detail_url
+        data["detailUrl"] = detail_url
 
         serializer = serializers.CodeCCDetailSerializer(data=data)
         serializer.is_valid(raise_exception=True)

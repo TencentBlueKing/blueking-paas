@@ -87,7 +87,7 @@ class PluginBasicInfoDefinition(AuditedModel):
         """get languages declared in all plugin templates"""
         language_list = []
 
-        plugin_templates = cls.objects.values_list('init_templates', flat=True)
+        plugin_templates = cls.objects.values_list("init_templates", flat=True)
         for templates in plugin_templates:
             languages = [t.language for t in templates]
             language_list.extend(languages)

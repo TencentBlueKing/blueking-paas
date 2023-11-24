@@ -68,7 +68,7 @@ def test_render_base_info(release):
         assert base_info["stage_id"] == stage.stage_id
         assert base_info["stage_name"] == stage.stage_name
         assert base_info["status"] == PluginReleaseStatus.INITIAL
-        assert base_info["fail_message"] == ''
+        assert base_info["fail_message"] == ""
 
 
 class TestDeployAPIStage:

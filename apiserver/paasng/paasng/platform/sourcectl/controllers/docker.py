@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class DockerRegistryController:
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None):
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         source_obj = module.get_source_obj()
         repo_full_url = source_obj.get_repo_url()
         repo_fullname = source_obj.get_repo_fullname()
@@ -119,7 +119,7 @@ class DockerRegistryController:
         )
 
     def extract_smart_revision(self, smart_revision: str) -> str:
-        if ':' not in smart_revision:
+        if ":" not in smart_revision:
             return smart_revision
         version_type, version_name = smart_revision.split(":")
         return version_name

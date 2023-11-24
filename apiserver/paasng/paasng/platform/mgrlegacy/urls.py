@@ -24,52 +24,52 @@ from . import views
 
 urlpatterns = [
     url(
-        r'^api/mgrlegacy/applications/$',
-        views.LegacyAppViewset.as_view({'get': 'list'}),
-        name='api.mgrlegacy.applications.list',
+        r"^api/mgrlegacy/applications/$",
+        views.LegacyAppViewset.as_view({"get": "list"}),
+        name="api.mgrlegacy.applications.list",
     ),
     re_path(
-        make_app_pattern(r'/exposed_url_info', include_envs=False, prefix='api/mgrlegacy/applications/'),
-        views.LegacyAppViewset.as_view({'get': 'exposed_url_info'}),
-        name='api.mgrlegacy.applications.exposed_url_info',
+        make_app_pattern(r"/exposed_url_info", include_envs=False, prefix="api/mgrlegacy/applications/"),
+        views.LegacyAppViewset.as_view({"get": "exposed_url_info"}),
+        name="api.mgrlegacy.applications.exposed_url_info",
     ),
     # post - create migration process
     # delete - rollback - do rollback then change the entrance back
     url(
-        r'^api/mgrlegacy/migrations/progress/$',
-        views.MigrationCreateViewset.as_view({'post': 'create'}),
-        name='api.mgrlegacy.migrations.progress.create',
+        r"^api/mgrlegacy/migrations/progress/$",
+        views.MigrationCreateViewset.as_view({"post": "create"}),
+        name="api.mgrlegacy.migrations.progress.create",
     ),
     url(
-        r'^api/mgrlegacy/migrations/progress/(?P<id>\d+)/state',
-        views.MigrationDetailViewset.as_view({'get': 'state'}),
-        name='api.mgrlegacy.migrations.progress.state',
+        r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/state",
+        views.MigrationDetailViewset.as_view({"get": "state"}),
+        name="api.mgrlegacy.migrations.progress.state",
     ),
     url(
-        r'^api/mgrlegacy/migrations/progress/(?P<id>\d+)/old_state',
-        views.MigrationDetailViewset.as_view({'get': 'old_state'}),
-        name='api.mgrlegacy.migrations.progress.old_state',
+        r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/old_state",
+        views.MigrationDetailViewset.as_view({"get": "old_state"}),
+        name="api.mgrlegacy.migrations.progress.old_state",
     ),
     # confirmed - change the entrance
     url(
-        r'^api/mgrlegacy/migrations/progress/(?P<id>\d+)/confirm',
-        views.MigrationConfirmViewset.as_view({'post': 'confirm'}),
-        name='api.mgrlegacy.migrations.progress.confirm',
+        r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/confirm",
+        views.MigrationConfirmViewset.as_view({"post": "confirm"}),
+        name="api.mgrlegacy.migrations.progress.confirm",
     ),
     # just for local debug
     url(
-        r'^api/mgrlegacy/migrations/progress/records/',
-        views.MigrationDetailViewset.as_view({'get': 'list'}),
-        name='api.mgrlegacy.migrations.progress.records',
+        r"^api/mgrlegacy/migrations/progress/records/",
+        views.MigrationDetailViewset.as_view({"get": "list"}),
+        name="api.mgrlegacy.migrations.progress.records",
     ),
     url(
-        r'^api/mgrlegacy/migrations/progress/(?P<id>\d+)/rollback',
-        views.MigrationDetailViewset.as_view({'post': 'rollback'}),
-        name='api.mgrlegacy.migrations.progress.rollback',
+        r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/rollback",
+        views.MigrationDetailViewset.as_view({"post": "rollback"}),
+        name="api.mgrlegacy.migrations.progress.rollback",
     ),
     url(
-        r'^api/bkapps/applications/(?P<code>[^/]+)/migration/info$',
-        views.ApplicationMigrationInfoAPIView.as_view({'get': 'retrieve'}),
-        name='api.applications.migration.info',
+        r"^api/bkapps/applications/(?P<code>[^/]+)/migration/info$",
+        views.ApplicationMigrationInfoAPIView.as_view({"get": "retrieve"}),
+        name="api.applications.migration.info",
     ),
 ]

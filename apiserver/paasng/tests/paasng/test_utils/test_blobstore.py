@@ -125,10 +125,10 @@ def test_make_blob_store_env(settings, expected):
                 BLOBSTORE_BKREPO_CONFIG=BKREPO_CONFIG,
             ),
             [
-                'BKREPO_CONF',
-                r'{\"endpoint\": \"dummy://dummy\.dummy/generic/\", \"project\": \"dummy-project\", '
-                r'\"bucket\": \"dummy-bucket\", '
-                r'\"user\": \"dummy-username\", \"password\": \"gAAAAAB.+\"}',
+                "BKREPO_CONF",
+                r"{\"endpoint\": \"dummy://dummy\.dummy/generic/\", \"project\": \"dummy-project\", "
+                r"\"bucket\": \"dummy-bucket\", "
+                r"\"user\": \"dummy-username\", \"password\": \"gAAAAAB.+\"}",
             ],
         ),
         (

@@ -74,7 +74,7 @@ class UniSimpleApp:
 def get_simple_app_by_default_app(app: Application) -> UniSimpleApp:
     simple_app = UniSimpleApp(
         _source=SimpleAppSource.DEFAULT,
-        region=app.region or 'unknown',
+        region=app.region or "unknown",
         name=app.name,
         name_en=app.name_en,
         code=app.code,
@@ -95,7 +95,7 @@ def get_simple_app_by_legacy_app(app: LApplication) -> Optional[UniSimpleApp]:
         return None
 
     # Compatible with some versions of APP in PaaS2.0 without name_en field
-    name_en = getattr(app, 'name_en', app.name)
+    name_en = getattr(app, "name_en", app.name)
 
     simple_app = UniSimpleApp(
         _source=SimpleAppSource.LEGACY,
@@ -127,7 +127,7 @@ def query_uni_apps_by_ids(ids: List[str], include_inactive_apps) -> Dict[str, Un
 
 def query_default_apps_by_ids(ids: Collection[str], include_inactive_apps) -> Dict[str, UniSimpleApp]:
     """Query applications by application ids, returns universal model"""
-    apps = Application.objects.filter(code__in=ids).select_related('product')
+    apps = Application.objects.filter(code__in=ids).select_related("product")
     if not include_inactive_apps:
         apps = apps.filter(is_active=True)
 
@@ -200,17 +200,17 @@ def query_uni_apps_by_keyword(
     """
     # 应用名称的字段需要根据请求语言来确定
     language = get_language()
-    name_field = 'name_en' if language == "en" else 'name'
+    name_field = "name_en" if language == "en" else "name"
 
     # 蓝鲸统一的规范，默认排序为字母顺序，而不是按最近创建时间排序
-    default_apps = Application.objects.all().order_by('code')
+    default_apps = Application.objects.all().order_by("code")
     if not include_inactive_apps:
         default_apps = default_apps.filter(is_active=True)
     if keyword:
         default_apps = default_apps.filter(Q(code__icontains=keyword) | Q(name__icontains=keyword))
 
     apps_list = [
-        UniMinimalApp(code=app['code'], name=app[name_field]) for app in default_apps.values('code', name_field)
+        UniMinimalApp(code=app["code"], name=app[name_field]) for app in default_apps.values("code", name_field)
     ]
     # 如果应用数量大于请求数，则直接返回，不再查询 legacy app
     if default_apps.count() > (offset + limit):
@@ -220,6 +220,6 @@ def query_uni_apps_by_keyword(
         legacy_apps = AppAdaptor(session=session).get_by_keyword(
             keyword=keyword, include_inactive_apps=include_inactive_apps
         )
-    apps_list.extend([UniMinimalApp(code=app['code'], name=app[name_field]) for app in legacy_apps])
+    apps_list.extend([UniMinimalApp(code=app["code"], name=app[name_field]) for app in legacy_apps])
 
     return apps_list

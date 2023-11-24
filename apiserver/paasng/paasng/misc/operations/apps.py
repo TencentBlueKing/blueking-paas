@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class OperationsConfig(AppConfig):
-    name = 'paasng.misc.operations'
+    name = "paasng.misc.operations"
     verbose_name = "Operations"
 
     def ready(self):

@@ -45,7 +45,7 @@ def sidecar_template():
 
 @pytest.fixture
 def sidecar_addon_template(sidecar_template):
-    return AppAddOnTemplate.objects.create(name='sidecar', spec=sidecar_template, type=AppAddOnType.SIMPLE_SIDECAR)
+    return AppAddOnTemplate.objects.create(name="sidecar", spec=sidecar_template, type=AppAddOnType.SIMPLE_SIDECAR)
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def secret_volume_template():
 
 @pytest.fixture
 def process_type():
-    return 'web'
+    return "web"
 
 
 @pytest.fixture

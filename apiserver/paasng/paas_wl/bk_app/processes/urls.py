@@ -22,18 +22,18 @@ from . import views, views_enduser
 
 urlpatterns = [
     re_path(
-        make_app_pattern(r'/processes/$'),
-        views_enduser.ProcessesViewSet.as_view({'post': 'update'}),
-        name='api.processes.update',
+        make_app_pattern(r"/processes/$"),
+        views_enduser.ProcessesViewSet.as_view({"post": "update"}),
+        name="api.processes.update",
     ),
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/list/$',
-        views.ListAndWatchProcsViewSet.as_view({'get': 'list'}),
-        name='api.list_processes.namespace_scoped',
+        r"api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/list/$",
+        views.ListAndWatchProcsViewSet.as_view({"get": "list"}),
+        name="api.list_processes.namespace_scoped",
     ),
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/watch/$',
-        views.ListAndWatchProcsViewSet.as_view({'get': 'watch'}),
-        name='api.watch_processes.namespace_scoped',
+        r"api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/watch/$",
+        views.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
+        name="api.watch_processes.namespace_scoped",
     ),
 ]

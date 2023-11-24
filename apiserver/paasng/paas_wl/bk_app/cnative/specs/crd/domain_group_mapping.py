@@ -54,7 +54,7 @@ class MappingRef(BaseModel):
     """
 
     name: str
-    kind: Literal['BkApp'] = 'BkApp'
+    kind: Literal["BkApp"] = "BkApp"
     apiVersion: str = ApiVersion.V1ALPHA1.value
 
 
@@ -71,15 +71,15 @@ class DomainGroupMapping(BaseModel):
     metadata: ObjectMetadata
     spec: DomainGroupMappingSpec
     apiVersion: str = ApiVersion.V1ALPHA1.value
-    kind: Literal['DomainGroupMapping'] = 'DomainGroupMapping'
+    kind: Literal["DomainGroupMapping"] = "DomainGroupMapping"
 
-    @validator('apiVersion')
+    @validator("apiVersion")
     def validate_api_version(cls, v) -> str:
         """ApiVersion can not be used for "Literal" validation directly, so we define a
         custom validator instead.
         """
         if v != ApiVersion.V1ALPHA1:
-            raise ValueError(f'{v} is not valid, use {ApiVersion.V1ALPHA1}')
+            raise ValueError(f"{v} is not valid, use {ApiVersion.V1ALPHA1}")
         return v
 
     def to_deployable(self) -> Dict:

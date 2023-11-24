@@ -24,10 +24,10 @@ from django.conf import settings
 
 from .exceptions import RegionDoesNotExists, RegionDuplicated
 
-__all_regions: 'OrderedDict[str, Region]' = OrderedDict()
+__all_regions: "OrderedDict[str, Region]" = OrderedDict()
 
 
-def get_all_regions() -> Dict[str, 'Region']:
+def get_all_regions() -> Dict[str, "Region"]:
     return __all_regions
 
 
@@ -38,7 +38,7 @@ def filter_region_by_name(name_list):
     return region_list
 
 
-def register_region(region: 'Region'):
+def register_region(region: "Region"):
     """Registry a new region"""
     __all_regions[region.name] = region
 
@@ -52,7 +52,7 @@ def get_region(name: str):
 
 class RegionList(list):
     def __str__(self):
-        return str(';'.join([x.name for x in self]))
+        return str(";".join([x.name for x in self]))
 
     def has_region_by_name(self, region_name):
         try:
@@ -100,7 +100,7 @@ class RegionBasicInfo:
         self.built_in_config_var = built_in_config_var
 
     def get_extra_logo_bucket_name(self):
-        return self.extra_logo_bucket_info['name'] if self.extra_logo_bucket_info else None
+        return self.extra_logo_bucket_info["name"] if self.extra_logo_bucket_info else None
 
     @staticmethod
     def get_logo_bucket_name():
@@ -112,8 +112,8 @@ class RegionMobileConfig:
         self.enabled = enabled
         self.etcd_servers = etcd_servers
         for k, v in list(kwargs.items()):
-            if not k.endswith('_prefix'):
-                raise Exception('__init__ takes exactly 1 argument {}'.format(k))
+            if not k.endswith("_prefix"):
+                raise Exception("__init__ takes exactly 1 argument {}".format(k))
             setattr(self, k, v)
 
 
@@ -178,7 +178,7 @@ class Region:
 
     def load_dynamic_infos(self):
         if not _service_categories_loader:
-            raise RuntimeError('the svc categories loader is not found')
+            raise RuntimeError("the svc categories loader is not found")
 
         self._service_categories = _service_categories_loader(self.name)
 

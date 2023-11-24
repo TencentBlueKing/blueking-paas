@@ -24,10 +24,10 @@ from paasng.platform.engine.constants import JobStatus
 
 
 class BuildStatus(str, StructuredEnum):
-    SUCCESSFUL = EnumField('successful', '成功')
-    FAILED = EnumField('failed', '失败')
-    PENDING = EnumField('pending', '等待')
-    INTERRUPTED = EnumField('interrupted', '已中断')
+    SUCCESSFUL = EnumField("successful", "成功")
+    FAILED = EnumField("failed", "失败")
+    PENDING = EnumField("pending", "等待")
+    INTERRUPTED = EnumField("interrupted", "已中断")
 
     @classmethod
     def get_finished_states(cls) -> List[str]:
@@ -36,11 +36,11 @@ class BuildStatus(str, StructuredEnum):
 
 
 class CommandStatus(str, StructuredEnum):
-    SCHEDULED = EnumField('scheduled', label="已调度")
-    SUCCESSFUL = EnumField('successful', '成功')
-    FAILED = EnumField('failed', '失败')
-    PENDING = EnumField('pending', '等待')
-    INTERRUPTED = EnumField('interrupted', '已中断')
+    SCHEDULED = EnumField("scheduled", label="已调度")
+    SUCCESSFUL = EnumField("successful", "成功")
+    FAILED = EnumField("failed", "失败")
+    PENDING = EnumField("pending", "等待")
+    INTERRUPTED = EnumField("interrupted", "已中断")
 
     @classmethod
     def get_finished_states(cls) -> List[str]:

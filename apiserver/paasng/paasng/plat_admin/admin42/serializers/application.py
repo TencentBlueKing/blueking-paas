@@ -21,11 +21,11 @@ import logging
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.accessories.publish.market.models import MarketConfig
-from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationSLZ(serializers.ModelSerializer):
-    region_name = serializers.CharField(read_only=True, source='get_region_display', help_text=u"region对应的中文名称")
-    logo_url = serializers.CharField(read_only=True, source='get_logo_url', help_text=u"应用的Logo地址")
-    config_info = serializers.DictField(read_only=True, help_text='应用额外状态信息')
+    region_name = serializers.CharField(read_only=True, source="get_region_display", help_text="region对应的中文名称")
+    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的Logo地址")
+    config_info = serializers.DictField(read_only=True, help_text="应用额外状态信息")
     owner = UserNameField()
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
@@ -48,14 +48,14 @@ class ApplicationSLZ(serializers.ModelSerializer):
         return ApplicationType.get_choice_label(instance.type)
 
     def get_resource_quotas(self, instance: Application) -> dict:
-        default_quotas = {'memory': '--', 'cpu': '--'}
-        if app_resource_quotas := self.context.get('app_resource_quotas'):
+        default_quotas = {"memory": "--", "cpu": "--"}
+        if app_resource_quotas := self.context.get("app_resource_quotas"):
             return app_resource_quotas.get(instance.code, default_quotas)
         return default_quotas
 
     class Meta:
         model = Application
-        fields = '__all__'
+        fields = "__all__"
 
 
 class ApplicationDetailSLZ(ApplicationSLZ):
@@ -64,7 +64,7 @@ class ApplicationDetailSLZ(ApplicationSLZ):
 
     def get_modules(self, obj):
         # 将 default_module 排在第一位
-        modules = obj.modules.all().order_by('-is_default', '-created')
+        modules = obj.modules.all().order_by("-is_default", "-created")
         return ModuleSLZ(modules, many=True).data
 
     def get_market_availabled_address(self, obj):
@@ -85,21 +85,21 @@ class BindEnvClusterSLZ(serializers.Serializer):
 class ApplicationFilterSLZ(serializers.Serializer):
     """Serializer for application query filter"""
 
-    valid_order_by_fields = ('code', 'created', 'latest_operated_at')
+    valid_order_by_fields = ("code", "created", "latest_operated_at")
 
     include_inactive = serializers.BooleanField(default=False, help_text="是否包括已下架应用")
-    regions = serializers.ListField(required=False, help_text='应用 region')
-    languages = serializers.ListField(required=False, help_text='应用开发语言')
-    search_term = serializers.CharField(required=False, help_text='搜索关键字')
+    regions = serializers.ListField(required=False, help_text="应用 region")
+    languages = serializers.ListField(required=False, help_text="应用开发语言")
+    search_term = serializers.CharField(required=False, help_text="搜索关键字")
     source_origin = serializers.IntegerField(required=False, help_text="源码来源")
     market_enabled = serializers.NullBooleanField(required=False, default=None, help_text="是否已开启市场")
-    order_by = serializers.ListField(default=['-created'], help_text='排序关键字')
+    order_by = serializers.ListField(default=["-created"], help_text="排序关键字")
 
     def validate_order_by(self, fields):
         for field in fields:
             f = OrderByField.from_string(field)
             if f.name not in self.valid_order_by_fields:
-                raise ValidationError(u'无效的排序选项：%s' % f)
+                raise ValidationError("无效的排序选项：%s" % f)
         return fields
 
 
@@ -108,4 +108,4 @@ class LegacyApplicationFilterSLZ(serializers.Serializer):
     only_include_not_migrated_app = serializers.BooleanField(default=False, help_text="仅包括未迁移应用")
     include_downed_app = serializers.BooleanField(default=False, help_text="包括已下架应用")
 
-    search_term = serializers.CharField(required=False, help_text='搜索关键字, 只搜索应用id')
+    search_term = serializers.CharField(required=False, help_text="搜索关键字, 只搜索应用id")

@@ -68,75 +68,75 @@ def bk_monitor_space():
         application=app,
         id=40000,
         space_type_id=SpaceType.SAAS,
-        space_id='100',
-        space_name='蓝鲸应用-test',
-        extra_info={'test': 'test'},
+        space_id="100",
+        space_name="蓝鲸应用-test",
+        extra_info={"test": "test"},
     )
 
 
 class TestQueryAlertsParams:
     @pytest.mark.parametrize(
-        'query_params, expected_query_string',
+        "query_params, expected_query_string",
         [
             (
                 AppQueryAlertsParams(),
                 None,
             ),
             (
-                AppQueryAlertsParams(environment='stag'),
-                'labels:(stag)',
+                AppQueryAlertsParams(environment="stag"),
+                "labels:(stag)",
             ),
             (
-                AppQueryAlertsParams(environment='stag', alert_code='high_cpu_usage'),
-                'labels:(stag AND high_cpu_usage)',
+                AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
+                "labels:(stag AND high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(alert_code='high_cpu_usage'),
-                'labels:(high_cpu_usage)',
+                AppQueryAlertsParams(alert_code="high_cpu_usage"),
+                "labels:(high_cpu_usage)",
             ),
             (
                 AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
-                f'alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)',
+                f"alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)",
             ),
         ],
     )
     def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
         result = query_params.to_dict()
-        assert result['bk_biz_ids'] == [bk_monitor_space.iam_resource_id]
-        if query_string := result.get('query_string'):
+        assert result["bk_biz_ids"] == [bk_monitor_space.iam_resource_id]
+        if query_string := result.get("query_string"):
             assert query_string == expected_query_string
 
 
 class TestQueryAlarmStrategiesParams:
     @pytest.mark.parametrize(
-        'query_params, expected_query_string',
+        "query_params, expected_query_string",
         [
             (
                 AppQueryAlarmStrategiesParams(),
-                [{'key': 'label_name', 'value': []}],
+                [{"key": "label_name", "value": []}],
             ),
             (
-                AppQueryAlarmStrategiesParams(environment='stag'),
-                [{'key': 'label_name', 'value': ['stag']}],
+                AppQueryAlarmStrategiesParams(environment="stag"),
+                [{"key": "label_name", "value": ["stag"]}],
             ),
             (
-                AppQueryAlarmStrategiesParams(environment='stag', alert_code='high_cpu_usage'),
-                [{'key': 'label_name', 'value': ['stag', 'high_cpu_usage']}],
+                AppQueryAlarmStrategiesParams(environment="stag", alert_code="high_cpu_usage"),
+                [{"key": "label_name", "value": ["stag", "high_cpu_usage"]}],
             ),
             (
-                AppQueryAlarmStrategiesParams(alert_code='high_cpu_usage'),
-                [{'key': 'label_name', 'value': ['high_cpu_usage']}],
+                AppQueryAlarmStrategiesParams(alert_code="high_cpu_usage"),
+                [{"key": "label_name", "value": ["high_cpu_usage"]}],
             ),
             (
                 AppQueryAlarmStrategiesParams(keyword=SEARCH_KEYWORD),
                 [
-                    {'key': 'strategy_name', 'value': SEARCH_KEYWORD},
-                    {'key': 'label_name', 'value': []},
+                    {"key": "strategy_name", "value": SEARCH_KEYWORD},
+                    {"key": "label_name", "value": []},
                 ],
             ),
         ],
     )
     def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
         result = query_params.to_dict()
-        assert result['bk_biz_id'] == bk_monitor_space.iam_resource_id
-        assert result['conditions'] == expected_query_string
+        assert result["bk_biz_id"] == bk_monitor_space.iam_resource_id
+        assert result["conditions"] == expected_query_string

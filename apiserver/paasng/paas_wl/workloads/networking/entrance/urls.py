@@ -22,32 +22,32 @@ from . import views_enduser
 
 urlpatterns = [
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/domains/$',
-        views_enduser.AppDomainsViewSet.as_view({'get': 'list', 'post': 'create'}),
-        name='api.app_domains',
+        r"api/bkapps/applications/(?P<code>[^/]+)/domains/$",
+        views_enduser.AppDomainsViewSet.as_view({"get": "list", "post": "create"}),
+        name="api.app_domains",
     ),
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/domains/(?P<id>\d+)/$',
-        views_enduser.AppDomainsViewSet.as_view({'put': 'update', 'delete': 'destroy'}),
-        name='api.app_domains.singular',
+        r"api/bkapps/applications/(?P<code>[^/]+)/domains/(?P<id>\d+)/$",
+        views_enduser.AppDomainsViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="api.app_domains.singular",
     ),
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/domains/configs/$',
-        views_enduser.AppDomainsViewSet.as_view({'get': 'list_configs'}),
-        name='api.app_domains.configs',
+        r"api/bkapps/applications/(?P<code>[^/]+)/domains/configs/$",
+        views_enduser.AppDomainsViewSet.as_view({"get": "list_configs"}),
+        name="api.app_domains.configs",
     ),
 ]
 
 
 urlpatterns += [
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/entrances/$',
-        views_enduser.AppEntranceViewSet.as_view({'get': 'list_all_entrances'}),
-        name='api.applications.entrances.all_entrances',
+        r"api/bkapps/applications/(?P<code>[^/]+)/entrances/$",
+        views_enduser.AppEntranceViewSet.as_view({"get": "list_all_entrances"}),
+        name="api.applications.entrances.all_entrances",
     ),
     re_path(
-        r'api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/entrances/$',
-        views_enduser.AppEntranceViewSet.as_view({'get': 'list_module_available_entrances'}),
-        name='api.applications.entrances.all_module_entrances',
+        r"api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/entrances/$",
+        views_enduser.AppEntranceViewSet.as_view({"get": "list_module_available_entrances"}),
+        name="api.applications.entrances.all_module_entrances",
     ),
 ]

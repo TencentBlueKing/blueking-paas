@@ -27,6 +27,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, User, UserPrivateToken, UserProfile
@@ -36,14 +37,13 @@ from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
 from paasng.plat_admin.admin42.serializers import accountmgr
 from paasng.plat_admin.admin42.utils.filters import UserProfileFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.core.region.models import get_all_regions
 
 logger = logging.getLogger(__name__)
 
 
 class UserProfilesManageView(GenericTemplateView):
     name = "用户列表"
-    queryset = UserProfile.objects.exclude(role=SiteRole.USER.value).order_by('role', '-created')
+    queryset = UserProfile.objects.exclude(role=SiteRole.USER.value).order_by("role", "-created")
     serializer_class = accountmgr.UserProfileSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/accountmgr/user_profile_list.html"
@@ -52,7 +52,7 @@ class UserProfilesManageView(GenericTemplateView):
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
         kwargs["user_profile_list"] = self.list(self.request, *self.args, **self.kwargs)
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         kwargs["SITE_ROLE"] = dict(SiteRole.get_choices())
         kwargs["PROVIDER_TYPE"] = dict(accountmgr.PROVIDER_TYPE_CHCOISE)
         kwargs["ALL_REGIONS"] = list(get_all_regions())
@@ -78,7 +78,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             raise NotImplementedError(f"不支持创建ProviderType类型为 {provider_type} 的用户")
 
         results = []
-        for username in serializer.data['username_list']:
+        for username in serializer.data["username_list"]:
             if provider_type is ProviderType.DATABASE:
                 # 创建平台系统用户
                 user, created = User.objects.get_or_create(username=username)
@@ -87,14 +87,14 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
             user_id = user_id_encoder.encode(provider_type, username)
             obj, _ = UserProfile.objects.update_or_create(
-                user=user_id, defaults={'role': role, 'enable_regions': enable_regions}
+                user=user_id, defaults={"role": role, "enable_regions": enable_regions}
             )
             obj.refresh_from_db(fields=["role", "enable_regions"])
             results.append(obj)
         return Response(self.get_serializer(results, many=True).data)
 
     def list(self, request):
-        queryset = UserProfile.objects.order_by('role', '-created')
+        queryset = UserProfile.objects.order_by("role", "-created")
         queryset = UserProfileFilterBackend().filter_queryset(request, queryset, self)
         return Response(self.get_serializer(self.paginate_queryset(queryset), many=True).data)
 
@@ -110,7 +110,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
         user_id = data["user"]
         profile = UserProfile.objects.get(user=user_id)
-        profile.role = data['role']
+        profile.role = data["role"]
         profile.enable_regions = ";".join(data["enable_regions"])
         profile.save()
         return Response(status=status.HTTP_204_NO_CONTENT)

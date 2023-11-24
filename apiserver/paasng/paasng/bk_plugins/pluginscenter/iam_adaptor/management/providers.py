@@ -41,7 +41,7 @@ class PluginProvider(ResourceProvider):
         qs = PluginInstance.objects.all().order_by("created")
         paginated_qs = qs[page.slice_from : page.slice_to]
         results = [
-            {'id': gen_iam_resource_id(plugin), 'display_name': gen_iam_resource_name(plugin)}
+            {"id": gen_iam_resource_id(plugin), "display_name": gen_iam_resource_name(plugin)}
             for plugin in paginated_qs
         ]
         return ListResult(results=results, count=qs.count())
@@ -54,9 +54,9 @@ class PluginProvider(ResourceProvider):
             plugin = PluginInstance.objects.get(pd__identifier=pd_id, id=plugin_id)
             results.append(
                 {
-                    'id': gen_iam_resource_id(plugin),
-                    'display_name': gen_iam_resource_name(plugin),
-                    '_bk_iam_approver_': fetch_grade_manager_members(plugin),
+                    "id": gen_iam_resource_id(plugin),
+                    "display_name": gen_iam_resource_name(plugin),
+                    "_bk_iam_approver_": fetch_grade_manager_members(plugin),
                 }
             )
         return ListResult(results=results, count=len(results))
@@ -66,14 +66,14 @@ class PluginProvider(ResourceProvider):
 
     def search_instance(self, filter: FancyDict, page: Page, **options):
         """支持模糊搜索插件"""
-        keyword = filter.keyword or ''
+        keyword = filter.keyword or ""
         search_fields = ["name_zh_cn", "name_en", "id"]
         orm_lookups = [self.construct_search(str(search_field)) for search_field in search_fields]
         queries = [Q(**{orm_lookup: keyword}) for orm_lookup in orm_lookups]
         qs = PluginInstance.objects.filter(reduce(or_, queries)).all()
         paginated_qs = qs[page.slice_from : page.slice_to]
         results = [
-            {'id': gen_iam_resource_id(plugin), 'display_name': gen_iam_resource_name(plugin)}
+            {"id": gen_iam_resource_id(plugin), "display_name": gen_iam_resource_name(plugin)}
             for plugin in paginated_qs
         ]
         return ListResult(results=results, count=qs.count())

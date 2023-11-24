@@ -17,9 +17,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.bk_app.applications.models import Build, Release, WlApp
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.workloads.networking.ingress.models import Domain
-from paas_wl.bk_app.applications.models import Build, Release, WlApp
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -27,9 +27,9 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestDeleteModuleRelatedRes:
     def test_normal(self, bk_user, bk_module, bk_stag_env, bk_stag_wl_app):
         # Setup data
-        Domain.objects.create(name='example.com', module_id=bk_module.id, environment_id=bk_stag_env.id)
+        Domain.objects.create(name="example.com", module_id=bk_module.id, environment_id=bk_stag_env.id)
         build = Build.objects.create(owner=bk_user.username, app=bk_stag_wl_app)
-        bk_stag_wl_app.release_set.new(bk_user.username, build=build, procfile={'web': 'true'})
+        bk_stag_wl_app.release_set.new(bk_user.username, build=build, procfile={"web": "true"})
 
         assert Domain.objects.filter(module_id=bk_module.id).exists()
         assert WlApp.objects.filter(uuid=bk_stag_env.engine_app_id).exists()

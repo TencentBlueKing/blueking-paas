@@ -26,13 +26,13 @@ from django.core.files.storage import Storage
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
-from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.models import Deployment
-from paasng.misc.metrics import NEW_APP_COUNTER
-from paasng.platform.applications.models import Application
 from paasng.core.region.app import S3BucketRegionHelper
 from paasng.core.region.models import get_region
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
+from paasng.misc.metrics import NEW_APP_COUNTER
+from paasng.platform.applications.models import Application
+from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.models import Deployment
 from paasng.utils.blobstore import get_storage_by_bucket
 from paasng.utils.error_codes import error_codes
 
@@ -57,7 +57,7 @@ def initialize_application_members(sender, application: Application, **kwargs):
     默认为每个新建的蓝鲸应用创建三个用户组（管理者，开发者，运营者），以及该应用对应的分级管理员
     将 创建者 添加到 管理者用户组 以获取应用的管理权限，并添加为 分级管理员成员 以获取审批其他用户加入各个用户组的权限
     """
-    logger.debug('initialize members after create app: creator=%s app_code=%s', application.creator, application.code)
+    logger.debug("initialize members after create app: creator=%s app_code=%s", application.creator, application.code)
     try:
         register_builtin_user_groups_and_grade_manager(application)
     except BKIAMGatewayServiceError as e:
@@ -74,7 +74,7 @@ def extra_setup_tasks(sender, application: Application, **kwargs):
 @receiver(post_create_application)
 def update_app_counter(sender, application: Application, **kwargs):
     """Update new application counter"""
-    logger.debug('Increasing new application counter: application=%s', application.code)
+    logger.debug("Increasing new application counter: application=%s", application.code)
     module = application.get_default_module()
     NEW_APP_COUNTER.labels(
         region=module.region,
@@ -96,7 +96,7 @@ def on_environment_offlined(sender, offline_instance, environment, **kwargs):
     if not any_env_active:
         logger.info("application[%s] active state is setting to inactive" % application.id.hex)
         application.is_active = False
-        application.save(update_fields=['is_active'])
+        application.save(update_fields=["is_active"])
 
 
 @receiver(post_save, sender=Deployment)
@@ -110,7 +110,7 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
         if not application.is_active:
             logger.info("application[%s] active state is setting to active" % application.id.hex)
             application.is_active = True
-            application.save(update_fields=['is_active'])
+            application.save(update_fields=["is_active"])
 
 
 @receiver(application_logo_updated)
@@ -121,7 +121,7 @@ def extra_setup_logo(sender, application: Application, **kwargs):
 
     # Initialize logo's metadata
     bucket_name = S3BucketRegionHelper(application).get_logo_bucket()
-    initialize_app_logo_metadata(Application._meta.get_field('logo').storage, bucket_name, application.logo.name)
+    initialize_app_logo_metadata(Application._meta.get_field("logo").storage, bucket_name, application.logo.name)
 
 
 @receiver(application_logo_updated)
@@ -136,7 +136,7 @@ def duplicate_logo_to_extra_bucket(sender, application: Application, **kwargs):
 
     to_storage = get_storage_by_bucket(extra_bucket_name)
     with application.logo.storage.open(application.logo.name) as f:
-        logger.info('Duplicating logo: %s to bucket: %s...', application.logo.name, extra_bucket_name)
+        logger.info("Duplicating logo: %s to bucket: %s...", application.logo.name, extra_bucket_name)
         to_storage.save(application.logo.name, f)
         # update extra bucket logo cache
         initialize_app_logo_metadata(to_storage, extra_bucket_name, application.logo.name)
@@ -155,7 +155,7 @@ def initialize_app_logo_metadata(storage: Storage, bucket_name: str, key: str):
         return
 
     s3 = boto3.resource(
-        's3',
+        "s3",
         aws_access_key_id=storage.access_key,
         aws_secret_access_key=storage.secret_key,
         endpoint_url=storage.endpoint_url,
@@ -169,7 +169,7 @@ def initialize_app_logo_metadata(storage: Storage, bucket_name: str, key: str):
         return
 
     # If already set, skip proceeding
-    if 'CacheControl' in metadata:
+    if "CacheControl" in metadata:
         logger.debug("CacheControl was already set on %s", key)
         return
 

@@ -23,13 +23,13 @@ import logging
 
 from django.db import IntegrityError, transaction
 
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.workloads.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.workloads.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.workloads.networking.ingress.models import Domain
 from paas_wl.workloads.networking.ingress.utils import get_main_process_service_name, guess_default_service_name
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def restore_ingress_on_error(domain: Domain, service_name: str):
     try:
         yield
     except Exception:
-        logger.warning('Exception happened in `restore_ingress_on_error` block, will sync ingress resource.')
+        logger.warning("Exception happened in `restore_ingress_on_error` block, will sync ingress resource.")
         CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
         raise
 
@@ -146,7 +146,7 @@ class DomainResourceDeleteService:
         try:
             domain = Domain.objects.get(**fields)
         except Domain.DoesNotExist:
-            logger.warning('AppDomain record: %s-%s no longer exists in database, skip deletion', host, path_prefix)
+            logger.warning("AppDomain record: %s-%s no longer exists in database, skip deletion", host, path_prefix)
             domain = Domain(**fields)
         return domain
 

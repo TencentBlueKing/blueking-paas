@@ -55,14 +55,14 @@ class TestBaseEnvironmentVariableMigration(BaseTestCaseForMigration):
         self.migration.get_prod_envs = lambda: env_list[2]  # type: ignore
         # 自定义环境变量，有很多方法需要 implement，所以没有把自定义环境变量放到单独的单元测试中
         custom_env_list = [
-            EnvItem(key='STAG_ENV', value='stag', description='', is_builtin=False, environment_name='stag'),
-            EnvItem(key='PROD_ENV', value='prod', description='', is_builtin=False, environment_name='prod'),
+            EnvItem(key="STAG_ENV", value="stag", description="", is_builtin=False, environment_name="stag"),
+            EnvItem(key="PROD_ENV", value="prod", description="", is_builtin=False, environment_name="prod"),
             EnvItem(
-                key='GLOBAL_ENV',
-                value='_global_',
-                description='这是一个的描述',
+                key="GLOBAL_ENV",
+                value="_global_",
+                description="这是一个的描述",
                 is_builtin=False,
-                environment_name='_global_',
+                environment_name="_global_",
             ),
         ]
         self.migration.get_custom_envs = lambda: custom_env_list  # type: ignore

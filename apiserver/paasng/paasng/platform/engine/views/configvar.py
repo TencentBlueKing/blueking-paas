@@ -28,8 +28,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
@@ -45,15 +47,13 @@ from paasng.platform.engine.serializers import (
     ConfigVarSLZ,
     ListConfigVarsSLZ,
 )
-from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
 
-@method_decorator(name="update", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=['环境配置']))
-@method_decorator(name="create", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=['环境配置']))
-@method_decorator(name="list", decorator=swagger_auto_schema(query_serializer=ListConfigVarsSLZ, tags=['环境配置']))
-@method_decorator(name="destroy", decorator=swagger_auto_schema(tags=['环境配置']))
+@method_decorator(name="update", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"]))
+@method_decorator(name="create", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"]))
+@method_decorator(name="list", decorator=swagger_auto_schema(query_serializer=ListConfigVarsSLZ, tags=["环境配置"]))
+@method_decorator(name="destroy", decorator=swagger_auto_schema(tags=["环境配置"]))
 class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """ViewSet for config vars"""
 
@@ -63,7 +63,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
     def get_object(self):
         """Get current ConfigVar object by path var"""
-        return get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
 
     def get_queryset(self):
         return ConfigVar.objects.filter(module=self.get_module_via_path(), is_builtin=False)
@@ -74,13 +74,13 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         return context
 
     @swagger_auto_schema(
-        tags=['环境配置'],
+        tags=["环境配置"],
         responses={201: ConfigVarApplyResultSLZ()},
     )
     def clone(self, request, **kwargs):
         """从某一模块克隆环境变量至当前模块"""
         application = self.get_application()
-        source = application.get_module(module_name=self.kwargs['source_module_name'])
+        source = application.get_module(module_name=self.kwargs["source_module_name"])
         dest = self.get_module_via_path()
 
         res_nums = ConfigVarManager().clone_vars(source, dest)
@@ -90,7 +90,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         request_body=ConfigVarFormatWithIdSLZ(many=True),
-        tags=['环境配置'],
+        tags=["环境配置"],
         responses={201: ConfigVarApplyResultSLZ()},
     )
     def batch(self, request, **kwargs):
@@ -104,21 +104,23 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         res = ConfigVarApplyResultSLZ(apply_result)
         return Response(res.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(query_serializer=ListConfigVarsSLZ, tags=['环境配置'], responses={200: ConfigVarSLZ(many=True)})
+    @swagger_auto_schema(
+        query_serializer=ListConfigVarsSLZ, tags=["环境配置"], responses={200: ConfigVarSLZ(many=True)}
+    )
     def list(self, request, **kwargs):
         """查看应用的所有环境变量"""
         input_slz = ListConfigVarsSLZ(data=request.query_params)
         input_slz.is_valid(raise_exception=True)
 
-        config_vars = self.get_queryset().select_related('environment')
+        config_vars = self.get_queryset().select_related("environment")
 
         # Filter by environment name
-        environment_name = input_slz.data.get('environment_name')
+        environment_name = input_slz.data.get("environment_name")
         if environment_name:
             config_vars = config_vars.filter_by_environment_name(environment_name)
 
         # Change result ordering
-        config_vars = config_vars.order_by(input_slz.data['order_by'], 'is_global')
+        config_vars = config_vars.order_by(input_slz.data["order_by"], "is_global")
 
         serializer = self.serializer_class(config_vars, many=True)
         return Response(serializer.data)
@@ -166,7 +168,7 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         :param file_name: attachment filename
         """
         response = HttpResponse(data.to_file_content(), content_type="application/octet-stream")
-        response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+        response["Content-Disposition"] = f'attachment; filename="{file_name}"'
         return response
 
     def get_queryset(self):
@@ -174,7 +176,7 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
 
     @swagger_auto_schema(
         request_body=ConfigVarImportSLZ,
-        tags=['环境配置'],
+        tags=["环境配置"],
         responses={201: ConfigVarApplyResultSLZ()},
     )
     def import_by_file(self, request, **kwargs):
@@ -194,21 +196,21 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         res = ConfigVarApplyResultSLZ(apply_result)
         return Response(res.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(tags=['环境配置'])
+    @swagger_auto_schema(tags=["环境配置"])
     def export_to_file(self, request, code, module_name):
         """导出环境变量到文件"""
         list_vars_slz = ListConfigVarsSLZ(data=request.query_params)
         list_vars_slz.is_valid(raise_exception=True)
-        order_by = list_vars_slz.data['order_by']
+        order_by = list_vars_slz.data["order_by"]
 
         queryset = (
-            self.get_queryset().filter(is_builtin=False).select_related('environment').order_by(order_by, 'is_global')
+            self.get_queryset().filter(is_builtin=False).select_related("environment").order_by(order_by, "is_global")
         )
 
         result = ExportedConfigVars.from_list(list(queryset))
         return self.make_exported_vars_response(result, f"bk_paas3_{code}_{module_name}_config_vars.yaml")
 
-    @swagger_auto_schema(tags=['环境配置'])
+    @swagger_auto_schema(tags=["环境配置"])
     def template(self, request, **kwargs):
         """返回yaml模板"""
         config_vars = ExportedConfigVars(
@@ -218,4 +220,4 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 PlainConfigVar(key="GLOBAL", value="example", environment_name="_global_", description="example"),
             ]
         )
-        return self.make_exported_vars_response(config_vars, 'bk_paas3_config_vars_template.yaml')
+        return self.make_exported_vars_response(config_vars, "bk_paas3_config_vars_template.yaml")

@@ -59,7 +59,7 @@ class Changelog:
             try:
                 detail = self._parse_log(file)
             except InvalidChangelogError as e:
-                logger.error(f'invalid changelog file {file.name}: {e}')
+                logger.error(f"invalid changelog file {file.name}: {e}")
             else:
                 logs.append(detail)
 
@@ -73,22 +73,22 @@ class Changelog:
         :raises 解析到的日志文件无效时, 抛出 InvalidChangelogError 异常. 有效的文件名格式如 V1.1.1_2022-11-17.md
         """
         if not file.is_file():
-            raise InvalidChangelogError('not a file')
+            raise InvalidChangelogError("not a file")
 
-        if file.suffix != '.md':
-            raise InvalidChangelogError('file name does not ends with .md')
+        if file.suffix != ".md":
+            raise InvalidChangelogError("file name does not ends with .md")
 
-        if not file.name.startswith('V'):
-            raise InvalidChangelogError('file name must starts with letter V')
+        if not file.name.startswith("V"):
+            raise InvalidChangelogError("file name must starts with letter V")
 
-        version, _, date = file.stem.partition('_')
+        version, _, date = file.stem.partition("_")
 
         try:
             # 去除版本号中的前缀 V 后校验语义版本
             VersionInfo.parse(version[1:])
-            time.strptime(date, '%Y-%m-%d')
+            time.strptime(date, "%Y-%m-%d")
         except (TypeError, ValueError):
-            raise InvalidChangelogError('file name contains invalid version or date time')
+            raise InvalidChangelogError("file name contains invalid version or date time")
 
         return LogDetail(version=version, date=date, content=file.read_text())
 

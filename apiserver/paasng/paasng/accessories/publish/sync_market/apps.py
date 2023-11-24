@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class SyncMarketConfig(AppConfig):
-    name = 'paasng.accessories.publish.sync_market'
+    name = "paasng.accessories.publish.sync_market"
     verbose_name = "Sync Market DB"
 
     def ready(self):

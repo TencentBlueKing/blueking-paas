@@ -22,8 +22,8 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 from .serializers import DocumentaryLinkSLZ, ListAdvisedDocLinksSLZ
@@ -58,4 +58,4 @@ class AdvisedDocumentaryLinksViewSet(viewsets.ViewSet, ApplicationCodeInPathMixi
 
         advisor = DocumentaryLinkAdvisor()
         links = advisor.search_by_tags(tags, limit=slz.data["limit"])
-        return Response({'links': DocumentaryLinkSLZ(links, many=True).data})
+        return Response({"links": DocumentaryLinkSLZ(links, many=True).data})

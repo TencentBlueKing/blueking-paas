@@ -66,8 +66,8 @@ class TestCommandGenState:
         # Always create a new node before starting any tests
         node_maker(
             body={
-                'metadata': {'name': default_node_name, 'labels': {'should_be_ignored': '1'}},
-                'status': {"addresses": [{"address": "x.x.x.x", "type": "InternalIP"}]},
+                "metadata": {"name": default_node_name, "labels": {"should_be_ignored": "1"}},
+                "status": {"addresses": [{"address": "x.x.x.x", "type": "InternalIP"}]},
             }
         )
         yield
@@ -126,7 +126,7 @@ class TestCommandGenState:
 
     def test_ignore_multi_labels(self, existing_node_names, node_maker):
         node_name = "node-{}".format(random_resource_name())
-        node_maker(body={'metadata': {'name': node_name, 'labels': {'should_be_ignored_2': '1'}}})
+        node_maker(body={"metadata": {"name": node_name, "labels": {"should_be_ignored_2": "1"}}})
         call_command(
             "region_gen_state",
             region=REGION_NAME,
@@ -141,10 +141,10 @@ class TestCommandGenState:
         node_name = "node-{}".format(random_resource_name())
         node_maker(
             body={
-                'metadata': {
-                    'name': node_name,
+                "metadata": {
+                    "name": node_name,
                     # Mark this node as a "master"
-                    'labels': {'node-role.kubernetes.io/master': 'true'},
+                    "labels": {"node-role.kubernetes.io/master": "true"},
                 },
             }
         )

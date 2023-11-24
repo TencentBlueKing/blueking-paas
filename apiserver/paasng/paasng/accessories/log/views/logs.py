@@ -34,12 +34,6 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import ViewSet
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log import serializers
 from paasng.accessories.log.client import instantiate_log_client
 from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
@@ -50,6 +44,12 @@ from paasng.accessories.log.models import ElasticSearchParams, ProcessLogQueryCo
 from paasng.accessories.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.log.utils import clean_logs, parse_request_to_es_dsl
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_required
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
 from paasng.utils.es_log.misc import clean_histogram_buckets
 from paasng.utils.es_log.models import DateHistogram, Logs
@@ -205,7 +205,7 @@ class LogAPIView(LogBaseAPIView):
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
+            raise error_codes.QUERY_LOG_FAILED.f(_("日志查询失败，请稍后再试。"))
 
         logs = cattr.structure(
             {
@@ -245,12 +245,12 @@ class LogAPIView(LogBaseAPIView):
         except ScanError:
             # scan 失败大概率是 scroll_id 失效
             logger.exception("scroll_id 失效, 日志查询失败")
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询快照失效, 请刷新后重试。'))
+            raise error_codes.QUERY_LOG_FAILED.f(_("日志查询快照失效, 请刷新后重试。"))
         except RequestError:
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
+            raise error_codes.QUERY_LOG_FAILED.f(_("日志查询失败，请稍后再试。"))
 
         logs = cattr.structure(
             {

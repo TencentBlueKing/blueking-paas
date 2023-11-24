@@ -32,15 +32,12 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.platform.sourcectl.models import SourcePackage
-from paasng.platform.sourcectl.package.downloader import download_package
-from paasng.platform.sourcectl.serializers import SourcePackageSLZ
-from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.declarative.application.resources import ApplicationDesc, ApplicationDescDiffDog
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -55,7 +52,10 @@ from paasng.platform.smart_app.serializers import (
     PackageStashResponseWithDiffSLZ,
 )
 from paasng.platform.smart_app.utils import dispatch_package_to_modules, get_app_description
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.sourcectl.models import SourcePackage
+from paasng.platform.sourcectl.package.downloader import download_package
+from paasng.platform.sourcectl.serializers import SourcePackageSLZ
+from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import get_filepath
 
@@ -81,7 +81,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
     def upload(self, request):
         """上传一个 S-Mart 源码包，并将其暂存起来"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
-            raise ValidationError(_('你无法创建 SMart 应用'))
+            raise ValidationError(_("你无法创建 SMart 应用"))
 
         def get_region(app_desc):
             user_profile = UserProfile.objects.get_profile(self.request.user)
@@ -92,7 +92,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
         slz = PackageStashRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        package_fp = slz.validated_data['package']
+        package_fp = slz.validated_data["package"]
 
         with generate_temp_dir() as download_dir:
             filepath = get_filepath(package_fp, str(download_dir))
@@ -120,8 +120,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         return Response(
             data=PackageStashResponseSLZ(
                 {
-                    'app_description': app_desc,
-                    'signature': stat.sha256_signature,
+                    "app_description": app_desc,
+                    "signature": stat.sha256_signature,
                     "supported_services": [service.name for service in supported_services],
                 }
             ).data
@@ -131,7 +131,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
     def create_prepared(self, request):
         """根据已暂存的 S-Mart 源码包创建应用"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
-            raise ValidationError(_('你无法创建 S-Mart 应用'))
+            raise ValidationError(_("你无法创建 S-Mart 应用"))
 
         with generate_temp_dir() as download_dir:
             # Step 1. retrieve package(tarball)
@@ -190,9 +190,9 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
     serializer_class = SourcePackageSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-    search_fields = ['version', 'package_name', 'package_size']
-    ordering = ('-created',)
-    ordering_fields = ('version', 'package_name', 'package_size', 'updated')
+    search_fields = ["version", "package_name", "package_size"]
+    ordering = ("-created",)
+    ordering_fields = ("version", "package_name", "package_size", "updated")
     parser_classes = [MultiPartParser, JSONParser]
 
     def get_queryset(self):
@@ -241,7 +241,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
         slz = PackageStashRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        package_fp = slz.validated_data['package']
+        package_fp = slz.validated_data["package"]
 
         with generate_temp_dir() as download_dir:
             filepath = get_filepath(package_fp, download_dir)
@@ -260,10 +260,10 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         return Response(
             data=PackageStashResponseWithDiffSLZ(
                 {
-                    'app_description': app_desc,
-                    'signature': stat.sha256_signature,
-                    'diffs': ApplicationDescDiffDog(application=application, desc=app_desc).diff(),
-                    'supported_services': [service.name for service in supported_services],
+                    "app_description": app_desc,
+                    "signature": stat.sha256_signature,
+                    "diffs": ApplicationDescDiffDog(application=application, desc=app_desc).diff(),
+                    "supported_services": [service.name for service in supported_services],
                 }
             ).data
         )

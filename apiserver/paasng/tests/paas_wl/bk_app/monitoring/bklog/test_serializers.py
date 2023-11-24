@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.fixture
 def gvk_config():
     return GVKConfig(
-        server_version='1.20',
+        server_version="1.20",
         kind=crd.BKLogConfig.kind,
         preferred_apiversion=BKLogConfigSerializer.api_version,
         available_apiversions=[BKLogConfigSerializer.api_version],

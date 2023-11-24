@@ -23,20 +23,20 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
-from paasng.platform.engine.models import EngineApp
+from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_default_module
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.mgrlegacy.constants import AppMember
 from paasng.platform.mgrlegacy.models import MigrationProcess
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
-from paasng.infras.oauth2.models import OAuth2Client
-from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.utils.error_codes import error_codes
 
 from .base import BaseMigration
@@ -62,21 +62,21 @@ class BaseObjectMigration(BaseMigration):
         app, _ = Application.objects.update_or_create(
             code=self.legacy_app.code,
             defaults={
-                'owner': creator,
-                'creator': creator,
-                'region': region,
-                'name': self.legacy_app.name,
-                'name_en': self.legacy_app.name,
-                'language': self.context.legacy_app_proxy.get_language(),
-                'type': type_.value,
-                'is_deleted': False,
-                'is_smart_app': is_smart_app,
+                "owner": creator,
+                "creator": creator,
+                "region": region,
+                "name": self.legacy_app.name,
+                "name_en": self.legacy_app.name,
+                "language": self.context.legacy_app_proxy.get_language(),
+                "type": type_.value,
+                "is_deleted": False,
+                "is_smart_app": is_smart_app,
             },
         )
         app.created = self.legacy_app.created_date
         # 为什么不在这里绑定 migration_process 和 Application ?
         # app.migrationprocess_set.add(self.context.migration_process)
-        app.save(update_fields=['created'])
+        app.save(update_fields=["created"])
 
         self.context.app = app
 
@@ -168,7 +168,7 @@ class MainInfoMigration(BaseMigration):
             OAuth2Client.objects.get_or_create(
                 region=self.context.app.region,
                 client_id=self.context.app.code,
-                defaults={'client_secret': self.context.legacy_app_proxy.get_secret_key()},
+                defaults={"client_secret": self.context.legacy_app_proxy.get_secret_key()},
             )
             post_save.connect(receiver=application_oauth_handler, sender=OAuth2Client)
 
@@ -183,7 +183,7 @@ class MainInfoMigration(BaseMigration):
         # rollback application service attachment
         for env in self.context.app.envs.all():
             env.engine_app.service_attachment.all().delete()
-        engine_app_ids = list(self.context.app.envs.values_list('engine_app__id', flat=True))
+        engine_app_ids = list(self.context.app.envs.values_list("engine_app__id", flat=True))
         engine_app_ids = [item.hex for item in engine_app_ids]
         self.context.app.envs.all().delete()
         self.context.app.modules.all().delete()
@@ -191,5 +191,5 @@ class MainInfoMigration(BaseMigration):
             EngineApp.objects.filter(id__in=engine_app_ids).delete()
 
         # rollback developers and administrators
-        usernames = [m['username'] for m in fetch_application_members(self.context.app.code)]
+        usernames = [m["username"] for m in fetch_application_members(self.context.app.code)]
         remove_user_all_roles(self.context.app.code, usernames)

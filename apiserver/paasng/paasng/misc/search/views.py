@@ -22,8 +22,8 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from paasng.platform.applications.models import UserApplicationFilter
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
+from paasng.platform.applications.models import UserApplicationFilter
 
 from .backends import BKDocumentSearcher, MixSearcher
 from .serializers import AppSearchResultSLZ, DocSearchResultSLZ, DocumentSearchWordSLZ, DocumentSLZ, UniversalSearchSLZ
@@ -61,7 +61,7 @@ class ApplicationsSearchViewset(ViewSet):
         # Use serializer with only "keyword" field to avoid conflict
         operation_id="api-application-search",
         query_serializer=DocumentSearchWordSLZ,
-        tags=['搜索'],
+        tags=["搜索"],
         responses={200: AppSearchResultSLZ(many=True)},
     )
     def search(self, request):
@@ -71,20 +71,20 @@ class ApplicationsSearchViewset(ViewSet):
         slz.is_valid(raise_exception=True)
 
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=True, order_by=['name'], search_term=slz.data['keyword']
+            include_inactive=True, order_by=["name"], search_term=slz.data["keyword"]
         )
         paged_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
         # Set exposed links property, to be used by the serializer later
         for app in paged_applications:
             app._deploy_info = get_exposed_links(app)
-        return Response(AppSearchResultSLZ({'results': paged_applications, 'count': applications.count()}).data)
+        return Response(AppSearchResultSLZ({"results": paged_applications, "count": applications.count()}).data)
 
 
 class BkDocsSearchViewset(ViewSet):
     @swagger_auto_schema(
         operation_id="api-bkdoc-search",
         query_serializer=UniversalSearchSLZ,
-        tags=['搜索'],
+        tags=["搜索"],
         responses={200: DocSearchResultSLZ(many=True)},
     )
     def search(self, request):
@@ -94,10 +94,10 @@ class BkDocsSearchViewset(ViewSet):
         """
         slz = UniversalSearchSLZ(data=request.GET)
         slz.is_valid(raise_exception=True)
-        results = BKDocumentSearcher().search(keyword=slz.data['keyword'])
+        results = BKDocumentSearcher().search(keyword=slz.data["keyword"])
 
         # Slice search results
-        start = slz.data['offset']
-        stop = slz.data['offset'] + slz.data['limit']
+        start = slz.data["offset"]
+        stop = slz.data["offset"] + slz.data["limit"]
         docs = results.docs[start:stop]
-        return Response(DocSearchResultSLZ({'results': docs, 'count': results.count}).data)
+        return Response(DocSearchResultSLZ({"results": docs, "count": results.count}).data)

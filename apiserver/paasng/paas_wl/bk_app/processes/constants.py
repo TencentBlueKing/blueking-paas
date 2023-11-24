@@ -30,22 +30,22 @@ DEFAULT_CNATIVE_MAX_REPLICAS = 10
 class ProcessUpdateType(str, StructuredEnum):
     """Type of updating processes"""
 
-    START = EnumField('start')
-    STOP = EnumField('stop')
+    START = EnumField("start")
+    STOP = EnumField("stop")
     # scale 提供调整副本数量 & 自动扩缩容能力
-    SCALE = EnumField('scale')
+    SCALE = EnumField("scale")
 
 
 class ProcessTargetStatus(str, StructuredEnum):
     """Choices of process status"""
 
-    START = EnumField('start')
-    STOP = EnumField('stop')
+    START = EnumField("start")
+    STOP = EnumField("stop")
 
 
 class ProbeType(str, StructuredEnum):
     """Choices of probe type"""
 
-    READINESS = EnumField('readiness', label='readinessProbe')
-    LIVENESS = EnumField('liveness', label='livenessProbe')
-    STARTUP = EnumField('startup', label='startupProbe')
+    READINESS = EnumField("readiness", label="readinessProbe")
+    LIVENESS = EnumField("liveness", label="livenessProbe")
+    STARTUP = EnumField("startup", label="startupProbe")

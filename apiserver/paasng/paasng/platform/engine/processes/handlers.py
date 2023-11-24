@@ -22,6 +22,7 @@ from typing import Dict, Iterable
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.dispatch.dispatcher import receiver
 
+from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.processes.events import (
     ProcessBaseEvent,
     ProcessEvent,
@@ -31,7 +32,6 @@ from paasng.platform.engine.processes.events import (
 )
 from paasng.platform.engine.signals import processes_updated
 from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisChannelStream
-from paasng.core.core.storages.redisdb import get_default_redis
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 @receiver(processes_updated)
 def _on_processes_updated(sender, events: Iterable[ProcessBaseEvent], extra_params: Dict, **kwargs):
     """Update stream when processes was updated"""
-    deployment_id = extra_params.get('deployment_id')
+    deployment_id = extra_params.get("deployment_id")
     stream: DeployStream
 
     if deployment_id:
@@ -49,13 +49,13 @@ def _on_processes_updated(sender, events: Iterable[ProcessBaseEvent], extra_para
         stream = ConsoleStream()
 
     for event in events:
-        logger.debug('Render message for process update event: %s', event)
+        logger.debug("Render message for process update event: %s", event)
         try:
             msg = render_event_message(event)
         except Exception:
-            logger.exception(f'unable to render process event: {event}')
+            logger.exception(f"unable to render process event: {event}")
             return
-        stream.write_message(f'> {msg}')
+        stream.write_message(f"> {msg}")
 
 
 def render_event_message(event: ProcessBaseEvent) -> str:
@@ -64,7 +64,7 @@ def render_event_message(event: ProcessBaseEvent) -> str:
         return render_process_event_message(event)
     elif isinstance(event, ProcInstEvent):
         return render_instance_event_message(event)
-    raise TypeError('invalid event type')
+    raise TypeError("invalid event type")
 
 
 def render_process_event_message(event: ProcessEvent) -> str:

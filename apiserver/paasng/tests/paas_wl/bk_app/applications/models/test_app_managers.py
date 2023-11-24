@@ -30,8 +30,8 @@ class TestAppConfigVarManager:
     def test_app_configvar_generate(self):
         wl_app = create_wl_app(
             force_app_info={"name": "bkapp-test_me-stag", "region": settings.DEFAULT_REGION_NAME},
-            paas_app_code='test_me',
-            environment='stag',
+            paas_app_code="test_me",
+            environment="stag",
         )
 
         action = AppConfigVarManager(app=wl_app)
@@ -39,8 +39,8 @@ class TestAppConfigVarManager:
         assert result["BKPAAS_SUB_PATH"] == "/default-bkapp-test_me-stag/"
 
         result_with_process = action.get_process_envs(process_type="fake")
-        assert result_with_process['BKPAAS_LOG_NAME_PREFIX'] == "default-bkapp-test_me-stag-fake"
-        assert result_with_process['PORT'] == str(settings.CONTAINER_PORT)
+        assert result_with_process["BKPAAS_LOG_NAME_PREFIX"] == "default-bkapp-test_me-stag-fake"
+        assert result_with_process["PORT"] == str(settings.CONTAINER_PORT)
 
 
 class TestWlAppMetadata:
@@ -50,5 +50,5 @@ class TestWlAppMetadata:
             _ = obj.get_paas_app_code()
 
     def test_valid_data(self):
-        obj = WlAppMetadata(paas_app_code='foo')
-        assert obj.get_paas_app_code() == 'foo'
+        obj = WlAppMetadata(paas_app_code="foo")
+        assert obj.get_paas_app_code() == "foo"

@@ -85,17 +85,17 @@ def test_count_filters_options_from_agg(all_filters, aggregations, expected):
         (
             [{"foo": "1", "bar": "1", "b": {"a": {"z": "1"}}}],
             {
-                'foo': FieldFilter(name='foo', key='foo.keyword', options=[('1', '100.00%')], total=1),
-                'bar': FieldFilter(name='bar', key='bar', options=[('1', '100.00%')], total=1),
-                'b.a.z': FieldFilter(name='b.a.z', key='b.a.z', options=[('1', '100.00%')], total=1),
+                "foo": FieldFilter(name="foo", key="foo.keyword", options=[("1", "100.00%")], total=1),
+                "bar": FieldFilter(name="bar", key="bar", options=[("1", "100.00%")], total=1),
+                "b.a.z": FieldFilter(name="b.a.z", key="b.a.z", options=[("1", "100.00%")], total=1),
             },
         ),
         (
             [{"foo": "1", "bar": "1", "b": {"a": {"z": "1"}}}, {"foo": "1", "bar": "2"}],
             {
-                'foo': FieldFilter(name='foo', key='foo.keyword', options=[('1', '100.00%')], total=2),
-                'bar': FieldFilter(name='bar', key='bar', options=[('1', '50.00%'), ('2', '50.00%')], total=2),
-                'b.a.z': FieldFilter(name='b.a.z', key='b.a.z', options=[('1', '100.00%')], total=1),
+                "foo": FieldFilter(name="foo", key="foo.keyword", options=[("1", "100.00%")], total=2),
+                "bar": FieldFilter(name="bar", key="bar", options=[("1", "50.00%"), ("2", "50.00%")], total=2),
+                "b.a.z": FieldFilter(name="b.a.z", key="b.a.z", options=[("1", "100.00%")], total=1),
             },
         ),
     ],
@@ -149,11 +149,11 @@ class TestESFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": "b"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'a': 'a'}},
-                                {'term': {'b': 'b'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"a": "a"}},
+                                {"term": {"b": "b"}},
                             ]
                         }
                     }
@@ -162,11 +162,11 @@ class TestESFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": ["b", "B"]}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'a': 'a'}},
-                                {'terms': {'b': ["b", "B"]}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"a": "a"}},
+                                {"terms": {"b": ["b", "B"]}},
                             ]
                         }
                     }
@@ -183,20 +183,20 @@ class TestESFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": "b"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
+                    "query": {
+                        "bool": {
+                            "filter": [
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'a': 'a'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"a": "a"}},
                                         ]
                                     }
                                 },
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'b': 'b'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"b": "b"}},
                                         ]
                                     }
                                 },
@@ -208,20 +208,20 @@ class TestESFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": ["b", "B"]}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
+                    "query": {
+                        "bool": {
+                            "filter": [
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'a': 'a'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"a": "a"}},
                                         ]
                                     }
                                 },
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'terms': {'b': ['b', 'B']}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"terms": {"b": ["b", "B"]}},
                                         ]
                                     }
                                 },
@@ -251,10 +251,10 @@ class TestEnvFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"app_code": "{{ app_code }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'app_code': 'foo-app'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"app_code": "foo-app"}},
                             ]
                         }
                     }
@@ -263,10 +263,10 @@ class TestEnvFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"module_name": "{{ module_name }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'module_name': 'foo-module'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"module_name": "foo-module"}},
                             ]
                         }
                     }
@@ -275,10 +275,10 @@ class TestEnvFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_name }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'engine_app_name': 'bkapp-foo0us0bar-stag'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"engine_app_name": "bkapp-foo0us0bar-stag"}},
                             ]
                         }
                     }
@@ -289,10 +289,10 @@ class TestEnvFilter:
                     indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"}
                 ),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'terms': {'engine_app_name': ['bkapp-foo0us0bar-stag']}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"terms": {"engine_app_name": ["bkapp-foo0us0bar-stag"]}},
                             ]
                         }
                     }
@@ -327,10 +327,10 @@ class TestModuleFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"app_code": "{{ app_code }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'app_code': 'foo-app'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"app_code": "foo-app"}},
                             ]
                         }
                     }
@@ -339,10 +339,10 @@ class TestModuleFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"module_name": "{{ module_name }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'module_name': 'foo-module'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"module_name": "foo-module"}},
                             ]
                         }
                     }
@@ -353,10 +353,10 @@ class TestModuleFilter:
                     indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"}
                 ),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'terms': {'engine_app_name': ['bkapp-foo0us0bar-prod', 'bkapp-foo0us0bar-stag']}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"terms": {"engine_app_name": ["bkapp-foo0us0bar-prod", "bkapp-foo0us0bar-stag"]}},
                             ]
                         }
                     }

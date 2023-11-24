@@ -37,7 +37,7 @@ def sync_default_entrances_for_module_switching(sender, application, new_module,
             refresh_module_domains(module)
             refresh_module_subpaths(module)
         except Exception:
-            logger.exception(f'Error syncing domains and subpaths for {application.code}/{module.name}')
+            logger.exception(f"Error syncing domains and subpaths for {application.code}/{module.name}")
 
 
 def refresh_module_domains(module: Module):

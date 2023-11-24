@@ -38,8 +38,8 @@ class OAuth2Client(TimestampedModel):
     settings.ENABLE_BK_OAUTH 为 True 时，则不再使用该表，Auth 相关的数据直接调用 BKAuth 服务提供的 API。
     """
 
-    client_id = models.CharField(verbose_name=u'应用编码', max_length=20, unique=True)
-    client_secret = EncryptField(verbose_name=u"安全密钥")
+    client_id = models.CharField(verbose_name="应用编码", max_length=20, unique=True)
+    client_secret = EncryptField(verbose_name="安全密钥")
 
 
 class BkAppSecretInEnvVar(TimestampedModel):
@@ -48,7 +48,7 @@ class BkAppSecretInEnvVar(TimestampedModel):
     """
 
     bk_app_code = models.CharField(max_length=20, unique=True)
-    bk_app_secret_id = models.IntegerField(verbose_name=u"应用密钥的 ID", help_text="不存储密钥的信息，仅存储密钥 ID")
+    bk_app_secret_id = models.IntegerField(verbose_name="应用密钥的 ID", help_text="不存储密钥的信息，仅存储密钥 ID")
 
     def __str__(self) -> str:
         return f"[{self.bk_app_code}]{self.bk_app_secret_id}"

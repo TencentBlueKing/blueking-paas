@@ -36,7 +36,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.fixture
 def gpa_gvk_config():
     return GVKConfig(
-        server_version='1.20',
+        server_version="1.20",
         kind=crd.GPA.kind,
         preferred_apiversion=ProcAutoscalingSerializer.api_version,
         available_apiversions=[ProcAutoscalingSerializer.api_version],
@@ -46,41 +46,41 @@ def gpa_gvk_config():
 @pytest.fixture
 def gpa_manifest() -> Dict[str, Any]:
     return {
-        'apiVersion': 'autoscaling.tkex.tencent.com/v1alpha1',
-        'kind': 'GeneralPodAutoscaler',
-        'metadata': {
-            'name': 'web',
-            'annotations': {
-                'bkapp.paas.bk.tencent.com/process-name': 'web',
-                'compute-by-limits': 'true',
+        "apiVersion": "autoscaling.tkex.tencent.com/v1alpha1",
+        "kind": "GeneralPodAutoscaler",
+        "metadata": {
+            "name": "web",
+            "annotations": {
+                "bkapp.paas.bk.tencent.com/process-name": "web",
+                "compute-by-limits": "true",
             },
         },
-        'spec': {
-            'minReplicas': 2,
-            'maxReplicas': 5,
-            'scaleTargetRef': {
-                'apiVersion': 'apps/v1',
-                'kind': 'Deployment',
-                'name': 'bkapp-xx123-stag--web',
+        "spec": {
+            "minReplicas": 2,
+            "maxReplicas": 5,
+            "scaleTargetRef": {
+                "apiVersion": "apps/v1",
+                "kind": "Deployment",
+                "name": "bkapp-xx123-stag--web",
             },
-            'metric': {
-                'metrics': [
+            "metric": {
+                "metrics": [
                     {
-                        'type': 'Resource',
-                        'resource': {'name': 'cpu', 'target': {'type': 'AverageValue', 'averageValue': '1000m'}},
+                        "type": "Resource",
+                        "resource": {"name": "cpu", "target": {"type": "AverageValue", "averageValue": "1000m"}},
                     },
                     {
-                        'type': 'Resource',
-                        'resource': {
-                            'name': 'memory',
-                            'target': {'type': 'Utilization', 'averageUtilization': 80},
+                        "type": "Resource",
+                        "resource": {
+                            "name": "memory",
+                            "target": {"type": "Utilization", "averageUtilization": 80},
                         },
                     },
                     {
-                        'type': 'Resource',
-                        'resource': {
-                            'name': 'memory',
-                            'target': {'type': 'AverageValue', 'averageValue': '256Mi'},
+                        "type": "Resource",
+                        "resource": {
+                            "name": "memory",
+                            "target": {"type": "AverageValue", "averageValue": "256Mi"},
                         },
                     },
                 ]
@@ -93,7 +93,7 @@ def gpa_manifest() -> Dict[str, Any]:
 def scaling(wl_app) -> ProcAutoscaling:
     return ProcAutoscaling(
         app=wl_app,
-        name='web',
+        name="web",
         spec=ProcAutoscalingSpec(
             min_replicas=2,
             max_replicas=5,
@@ -116,8 +116,8 @@ def scaling(wl_app) -> ProcAutoscaling:
             ],
         ),
         target_ref=ScalingObjectRef(
-            kind='Deployment',
-            api_version='apps/v1',
+            kind="Deployment",
+            api_version="apps/v1",
             name="bkapp-xx123-stag--web",
         ),
     )
@@ -130,8 +130,8 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
     assert scaling.name == process.type
 
     excepted = gpa_manifest
-    excepted['metadata']['name'] = process.type
-    excepted['metadata']['namespace'] = wl_app.namespace
+    excepted["metadata"]["name"] = process.type
+    excepted["metadata"]["namespace"] = wl_app.namespace
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 
 

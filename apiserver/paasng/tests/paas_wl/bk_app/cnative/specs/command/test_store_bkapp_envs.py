@@ -26,7 +26,7 @@ from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_res
 from paasng.platform.engine.models import ConfigVar
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ def init_model_resource(bk_app, bk_module, resource_name):
     resource = create_app_resource(
         # Use Application code as default resource name
         name=resource_name,
-        image='nginx:latest',
+        image="nginx:latest",
         command=None,
         args=None,
         target_port=None,

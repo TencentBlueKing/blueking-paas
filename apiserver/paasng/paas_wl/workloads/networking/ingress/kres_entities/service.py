@@ -35,13 +35,13 @@ from paas_wl.infras.resources.kube_res.base import (
 )
 
 
-class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
+class ProcessServiceSerializer(AppEntitySerializer["ProcessService"]):
     """Serializer for ProcessService"""
 
-    def get_kube_annotations(self, service: 'ProcessService') -> Dict:
-        return {'process_type': service.process_type}
+    def get_kube_annotations(self, service: "ProcessService") -> Dict:
+        return {"process_type": service.process_type}
 
-    def get_kube_labels(self, service: 'ProcessService') -> Dict:
+    def get_kube_labels(self, service: "ProcessService") -> Dict:
         metadata = get_metadata(service.app)
         return {
             "name": service.name,
@@ -52,7 +52,7 @@ class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
             PROCESS_NAME_KEY: service.process_type,
         }
 
-    def serialize(self, obj: 'ProcessService', original_obj=None, **kwargs) -> Dict:
+    def serialize(self, obj: "ProcessService", original_obj=None, **kwargs) -> Dict:
         """Generate a kubernetes resource dict from ProcessService
 
         :param original_obj: if given, will update resource_version and other necessary fields
@@ -61,43 +61,43 @@ class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
         service = obj
         kube_selector = get_process_selector(service.app, service.process_type)
         body: Dict[str, Any] = {
-            'metadata': {
-                'name': service.name,
-                'annotations': self.get_kube_annotations(service),
-                'namespace': service.app.namespace,
-                'labels': self.get_kube_labels(service),
+            "metadata": {
+                "name": service.name,
+                "annotations": self.get_kube_annotations(service),
+                "namespace": service.app.namespace,
+                "labels": self.get_kube_labels(service),
             },
-            'spec': {
-                'ports': [
+            "spec": {
+                "ports": [
                     {"name": p.name, "port": p.port, "targetPort": p.target_port, "protocol": p.protocol}
                     for p in service.ports
                 ],
-                'selector': kube_selector,
+                "selector": kube_selector,
             },
-            'api_version': "v1",
-            'kind': "Service",
+            "api_version": "v1",
+            "kind": "Service",
         }
 
         if original_obj:
-            body['metadata']['resourceVersion'] = original_obj.metadata.resourceVersion
+            body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
             # Must provide same ClusterIP property or apiserver will complain
-            body['spec']['clusterIP'] = original_obj.spec.clusterIP
+            body["spec"]["clusterIP"] = original_obj.spec.clusterIP
         return body
 
 
-class ProcessServiceDeserializer(AppEntityDeserializer['ProcessService']):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcessService':
+class ProcessServiceDeserializer(AppEntityDeserializer["ProcessService"]):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ProcessService":
         """Generate a ProcessService object from kubernetes resource"""
         res_name = kube_data.metadata.name
 
         # 优先处理云原生应用, 如 labels: {'bkapp.paas.bk.tencent.com/process-name': 'web'}
-        labels = kube_data.metadata.get('labels', {})
+        labels = kube_data.metadata.get("labels", {})
         process_type = labels.get(PROCESS_NAME_KEY)
 
         if not process_type:
-            annotations = kube_data.metadata.get('annotations', {})
+            annotations = kube_data.metadata.get("annotations", {})
             try:
-                process_type = annotations['process_type']
+                process_type = annotations["process_type"]
             except KeyError:
                 # Backward-compatibility
                 process_type = self.extract_process_type_from_name(app, res_name)
@@ -113,7 +113,7 @@ class ProcessServiceDeserializer(AppEntityDeserializer['ProcessService']):
         """Try to extract the process_type from service name"""
         default_prefix = f"{app.region}-{app.scheduler_safe_name}"
         if not name.startswith(default_prefix):
-            raise ValueError('Unable to extract process_type')
+            raise ValueError("Unable to extract process_type")
         return name[len(default_prefix) + 1 :]
 
 
@@ -124,7 +124,7 @@ class PServicePortPair:
     name: str
     port: int
     target_port: int
-    protocol: str = 'TCP'
+    protocol: str = "TCP"
 
 
 @dataclass

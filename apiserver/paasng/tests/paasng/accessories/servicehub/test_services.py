@@ -132,22 +132,22 @@ class TestServiceSpecificationHelper:
     @pytest.mark.parametrize(
         "service_ssd_list, extra_plans, expected",
         [
-            ([generate_ssd("app_zone")], [gen_plan("r1", specifications={})], {'1': None, '2': None, None: None}),
-            ([generate_ssd("version")], [gen_plan("r1", specifications={})], {'1': None, '2': None, None: None}),
+            ([generate_ssd("app_zone")], [gen_plan("r1", specifications={})], {"1": None, "2": None, None: None}),
+            ([generate_ssd("version")], [gen_plan("r1", specifications={})], {"1": None, "2": None, None: None}),
             (
                 [generate_ssd("version"), generate_ssd("app_zone")],
                 [gen_plan("r1", specifications={})],
-                {'1': {'1': None, '2': None}, '2': {'1': None}, None: {None: None}},
+                {"1": {"1": None, "2": None}, "2": {"1": None}, None: {None: None}},
             ),
             (
                 [generate_ssd("version"), generate_ssd("sth_unexpected")],
                 [gen_plan("r1", specifications={})],
-                {'1': {None: None}, '2': {None: None}, None: {None: None}},
+                {"1": {None: None}, "2": {None: None}, None: {None: None}},
             ),
             (
                 [generate_ssd("version"), generate_ssd("app_zone"), generate_ssd("sth_unexpected")],
                 [gen_plan("r1", specifications={})],
-                {'1': {'1': {None: None}, '2': {None: None}}, '2': {'1': {None: None}}, None: {None: {None: None}}},
+                {"1": {"1": {None: None}, "2": {None: None}}, "2": {"1": {None: None}}, None: {None: {None: None}}},
             ),
         ],
     )
@@ -219,7 +219,7 @@ class TestServiceSpecificationHelper:
             (
                 [generate_ssd("foo"), generate_ssd("bar"), generate_ssd("baz")],
                 [gen_plan("", {"foo": "1", "bar": "2", "baz": "3"})],
-                [['1', '2', '3']],
+                [["1", "2", "3"]],
             ),
             (
                 [generate_ssd("foo"), generate_ssd("bar"), generate_ssd("baz")],
@@ -291,12 +291,12 @@ class TestServiceSpecificationHelper:
     @pytest.mark.parametrize(
         "data, expected",
         [
-            ([["a", "b", "c", "e"]], {'a': {'b': {'c': {'e': None}}}}),
-            ([["a", "b"], ["a", "c"]], {'a': {'b': None, 'c': None}}),
-            ([["a", "b"], ["a", "c"], ["d", "c"]], {'a': {'b': None, 'c': None}, 'd': {'c': None}}),
+            ([["a", "b", "c", "e"]], {"a": {"b": {"c": {"e": None}}}}),
+            ([["a", "b"], ["a", "c"]], {"a": {"b": None, "c": None}}),
+            ([["a", "b"], ["a", "c"], ["d", "c"]], {"a": {"b": None, "c": None}, "d": {"c": None}}),
             # TODO: 确认以下测试用例是否符合预期?
-            ([["a", "b", "c", "e"], ["d"]], {'a': {'b': {'c': {'e': None}}}, "d": None}),
-            ([["a", "b"], ["a", None]], {'a': {'b': None, None: None}}),
+            ([["a", "b", "c", "e"], ["d"]], {"a": {"b": {"c": {"e": None}}}, "d": None}),
+            ([["a", "b"], ["a", None]], {"a": {"b": None, None: None}}),
         ],
     )
     def test_parse_spec_values_tree(self, data, expected):

@@ -22,18 +22,23 @@ from typing import Dict, List, Optional
 
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.bk_app.monitoring.app_monitor import constants
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.monitoring.app_monitor import constants
 from paas_wl.infras.resources.base.crd import KServiceMonitor
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
+from paas_wl.infras.resources.kube_res.base import (
+    AppEntity,
+    AppEntityDeserializer,
+    AppEntityManager,
+    AppEntitySerializer,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class ServiceMonitorDeserializer(AppEntityDeserializer['ServiceMonitor']):
+class ServiceMonitorDeserializer(AppEntityDeserializer["ServiceMonitor"]):
     api_version = "monitoring.coreos.com/v1"
 
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ServiceMonitor':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ServiceMonitor":
         spec = kube_data.to_dict()["spec"]
         endpoint = spec["endpoints"][0]
         return ServiceMonitor(
@@ -50,10 +55,10 @@ class ServiceMonitorDeserializer(AppEntityDeserializer['ServiceMonitor']):
         )
 
 
-class ServiceMonitorSerializer(AppEntitySerializer['ServiceMonitor']):
+class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
     api_version = "monitoring.coreos.com/v1"
 
-    def serialize(self, obj: 'ServiceMonitor', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: "ServiceMonitor", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         endpoint = obj.endpoint
         return {
             "apiVersion": self.get_apiversion(),

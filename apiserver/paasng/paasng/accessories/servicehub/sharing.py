@@ -60,7 +60,7 @@ class ServiceSharingManager:
             when shared attachment already exists
         """
         if ref_module == self.module:
-            raise RuntimeError('module can not share from itself')
+            raise RuntimeError("module can not share from itself")
 
         DuplicatedBindingValidator(self.module, ServiceBindingType.SHARING).validate(service)
 
@@ -68,7 +68,7 @@ class ServiceSharingManager:
         try:
             rel = qs.get(module=ref_module)
         except ObjectDoesNotExist:
-            raise ReferencedAttachmentNotFound(f'Referenced attachment not found, module: {ref_module.name}')
+            raise ReferencedAttachmentNotFound(f"Referenced attachment not found, module: {ref_module.name}")
 
         db_properties = get_db_properties(service)
         # Check duplicated creation
@@ -77,7 +77,7 @@ class ServiceSharingManager:
             service_type=db_properties.col_service_type,
             service_id=service.uuid,
         ).exists():
-            raise SharedAttachmentAlreadyExists(f'already created shared attachment, ref_module: {ref_module.name}')
+            raise SharedAttachmentAlreadyExists(f"already created shared attachment, ref_module: {ref_module.name}")
 
         return SharedServiceAttachment.objects.create(
             region=self.application.region,
@@ -93,7 +93,7 @@ class ServiceSharingManager:
             referenced_info = extract_shared_info(obj)
             if not referenced_info:
                 logger.error(
-                    'Can not find referenced information from shared attachment: %s, data might be broken',
+                    "Can not find referenced information from shared attachment: %s, data might be broken",
                     obj.pk,
                 )
                 continue
@@ -128,7 +128,7 @@ class ServiceSharingManager:
         :param env: ModuleEnvironment object, must belongs to self.module
         """
         if env.module != self.module:
-            raise RuntimeError('Invalid env object, must belongs to self.module')
+            raise RuntimeError("Invalid env object, must belongs to self.module")
 
         ret = {}
         for referenced_info in self.list_all_shared_info():

@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class StreamingConfig(AppConfig):
-    name = 'paasng.platform.engine.streaming'
+    name = "paasng.platform.engine.streaming"

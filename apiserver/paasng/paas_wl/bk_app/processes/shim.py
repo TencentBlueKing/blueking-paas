@@ -68,7 +68,7 @@ class ProcessManager:
         results = []
         for item in specs:
             # Filter by given conditions
-            if target_status and item['target_status'] != target_status:
+            if target_status and item["target_status"] != target_status:
                 continue
             results.append(item)
         return results
@@ -107,15 +107,15 @@ class ProcessManager:
         cluster = get_cluster_by_app(self.wl_app)
         return BCSClient().api.create_web_console_sessions(
             json={
-                'namespace': self.wl_app.namespace,
-                'pod_name': process_instance_name,
-                'container_name': container_name,
-                'command': command,
-                'operator': operator,
+                "namespace": self.wl_app.namespace,
+                "pod_name": process_instance_name,
+                "container_name": container_name,
+                "command": command,
+                "operator": operator,
             },
             path_params={
-                'cluster_id': cluster.bcs_cluster_id,
-                'project_id_or_code': cluster.bcs_project_id,
-                'version': 'v4',
+                "cluster_id": cluster.bcs_cluster_id,
+                "project_id_or_code": cluster.bcs_project_id,
+                "version": "v4",
             },
         )

@@ -23,12 +23,12 @@ from typing import TYPE_CHECKING
 from blue_krill.storages.blobstore.exceptions import ObjectAlreadyExists
 from django.conf import settings
 
+from paasng.platform.smart_app.detector import SourcePackageStatReader
+from paasng.platform.smart_app.patcher import SourceCodePatcher
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.downloader import download_file_via_url
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.patcher import SourceCodePatcher
 from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
@@ -59,22 +59,22 @@ def upload_to_blob_store(package: PathLike, key: str, allow_overwrite: bool = Fa
     return f"{store.STORE_TYPE}://{store.bucket}/{key}"
 
 
-def generate_storage_path(module: 'Module', stat: SPStat) -> str:
+def generate_storage_path(module: "Module", stat: SPStat) -> str:
     """生成源码包存储在 S3 中的路径"""
     app_info_prefix = f"{module.application.name}/{module.name}"
     package_name = f"{stat.version}:{stat.sha256_signature}:{stat.name}"
-    return f'{module.region}/{app_info_prefix}/{package_name}'
+    return f"{module.region}/{app_info_prefix}/{package_name}"
 
 
 def upload_package_via_url(
-    module: 'Module',
+    module: "Module",
     package_url: str,
     version: str,
     filename: str,
-    operator: 'User',
+    operator: "User",
     allow_overwrite: bool = True,
     need_patch: bool = False,
-) -> 'SourcePackage':
+) -> "SourcePackage":
     """Upload package to object storage via url path"""
     with generate_temp_file(".tar.gz") as path, generate_temp_dir() as patching_dir:
         download_file_via_url(url=package_url, local_path=path)

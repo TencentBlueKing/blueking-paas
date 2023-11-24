@@ -59,15 +59,15 @@ class ApplicationReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
-        with self.procedure('更新进程配置'):
+        with self.procedure("更新进程配置"):
             # Turn the processes into the corresponding type in paas_wl module
             procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
             ProcessManager(self.engine_app.env).sync_processes_specs(procs)
 
-        with self.procedure('更新应用配置'):
+        with self.procedure("更新应用配置"):
             update_image_runtime_config(deployment=self.deployment)
 
-        with self.procedure('部署应用'):
+        with self.procedure("部署应用"):
             release_id = release_by_engine(
                 self.module_environment, str(self.deployment.build_id), deployment=self.deployment
             )
@@ -116,7 +116,7 @@ class ReleaseResultHandler(CallbackHandler):
         else:
             status = ReleaseStatus.SUCCESSFUL
 
-        deployment_id = poller.params['extra_params']['deployment_id']
+        deployment_id = poller.params["extra_params"]["deployment_id"]
         self.finish_release(str(deployment_id), status, error_detail)
 
     def finish_release(self, deployment_id: str, status: ReleaseStatus, error_detail: str):
@@ -135,13 +135,13 @@ class ReleaseResultHandler(CallbackHandler):
         if result.status == CallbackStatus.NORMAL:
             aborted_details = self.get_aborted_details(result)
             if not (aborted_details and aborted_details.aborted):
-                return False, ''
+                return False, ""
 
-            assert aborted_details.policy is not None, 'policy must not be None'  # Make type checker happy
+            assert aborted_details.policy is not None, "policy must not be None"  # Make type checker happy
             reason = aborted_details.policy.reason
-            return aborted_details.policy.is_interrupted, f'Release aborted, reason: {reason}'
+            return aborted_details.policy.is_interrupted, f"Release aborted, reason: {reason}"
 
-        return False, 'Release failed, internal error'
+        return False, "Release failed, internal error"
 
     def get_aborted_details(self, result: CallbackResult) -> Optional[AbortedDetails]:
         """If current release was aborted, return detailed info"""

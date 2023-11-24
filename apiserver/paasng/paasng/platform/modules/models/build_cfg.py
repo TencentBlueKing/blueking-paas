@@ -52,22 +52,24 @@ class BuildConfigManager(models.Manager):
 
 class BuildConfig(UuidAuditedModel):
     module = models.OneToOneField(
-        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name="build_config"
+        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="build_config"
     )
     build_method = models.CharField(verbose_name=_("构建方式"), max_length=32, default=RuntimeType.BUILDPACK)
 
     # buildpacks 相关配置
-    buildpacks = models.ManyToManyField('modules.AppBuildPack', related_name="related_build_configs", null=True)
+    buildpacks = models.ManyToManyField("modules.AppBuildPack", related_name="related_build_configs", null=True)
     buildpack_builder = models.ForeignKey(
-        'modules.AppSlugBuilder', on_delete=models.SET_NULL, db_constraint=False, null=True
+        "modules.AppSlugBuilder", on_delete=models.SET_NULL, db_constraint=False, null=True
     )
     buildpack_runner = models.ForeignKey(
-        'modules.AppSlugRunner', on_delete=models.SET_NULL, db_constraint=False, null=True
+        "modules.AppSlugRunner", on_delete=models.SET_NULL, db_constraint=False, null=True
     )
 
     # docker build 相关配置
     dockerfile_path = models.CharField(
-        max_length=512, null=True, help_text=_("Dockerfile文件路径, 必须保证 Dockerfile 在构建目录下, 填写时无需包含构建目录")
+        max_length=512,
+        null=True,
+        help_text=_("Dockerfile文件路径, 必须保证 Dockerfile 在构建目录下, 填写时无需包含构建目录"),
     )
     docker_build_args = DockerBuildArgsField(default=dict)
 

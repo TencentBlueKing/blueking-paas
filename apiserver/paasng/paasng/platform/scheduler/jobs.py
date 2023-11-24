@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 scheduler = Scheduler()
 
 
-@scheduler.scheduled_job('interval', minutes=settings.REMOTE_SERVICES_UPDATE_INTERVAL_MINUTES)
+@scheduler.scheduled_job("interval", minutes=settings.REMOTE_SERVICES_UPDATE_INTERVAL_MINUTES)
 def update_remote_services():
     """Update remote services periodically"""
     remote_store = get_remote_store()
-    logger.debug('Start updating remote services...')
+    logger.debug("Start updating remote services...")
     for ret in fetch_all_remote_services():
         remote_store.bulk_upsert(ret.data, meta_info=ret.meta_info, source_config=ret.config)

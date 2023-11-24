@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_NAME_FIELD
 from paasng.platform.declarative.application.validations import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,12 @@ class AppField:
 class AppNameField(AppField):
     def handle_desc(self, desc: ApplicationDesc):
         if self.application.name != desc.name_zh_cn:
-            raise DescriptionValidationError({APP_NAME_FIELD: '该字段不允许被修改'})
+            raise DescriptionValidationError({APP_NAME_FIELD: "该字段不允许被修改"})
         if self.application.name_en != desc.name_en:
             # 允许修改英文名
-            logger.warning("应用<%s> 的英文名将从 '%s' 修改成 '%s'", desc.name_zh_cn, self.application.name_en, desc.name_en)
+            logger.warning(
+                "应用<%s> 的英文名将从 '%s' 修改成 '%s'", desc.name_zh_cn, self.application.name_en, desc.name_en
+            )
             self.application.name_en = desc.name_en
             self.application.save(update_fields=["name_en", "updated"])
 
@@ -50,4 +52,4 @@ class AppNameField(AppField):
 class AppRegionField(AppField):
     def handle_desc(self, desc: ApplicationDesc):
         if desc.region and self.application.region != desc.region:
-            raise DescriptionValidationError({'region': '该字段不允许被修改'})
+            raise DescriptionValidationError({"region": "该字段不允许被修改"})

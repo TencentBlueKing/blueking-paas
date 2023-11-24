@@ -20,10 +20,10 @@ import logging
 
 from django.utils.translation import ugettext_lazy as _
 
+from paasng.accessories.publish.sync_market.managers import AppSecureInfoManger
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration
-from paasng.accessories.publish.sync_market.managers import AppSecureInfoManger
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class MysqlServiceMigration(BaseRemoteServiceMigration):
             kwargs = {
                 "key": key_maps.get(key, key),
                 "value": db_credentials[key],
-                "description": 'Generated when migrating from PaaS2.0',
+                "description": "Generated when migrating from PaaS2.0",
                 "is_builtin": True,
                 "module": module,
                 "environment": environment,
@@ -75,11 +75,11 @@ class MysqlServiceMigration(BaseRemoteServiceMigration):
 
         # NOTE: PaaS2.0 应用的测试库是特殊的, 其db_name并没有被存下来, 拼接规则为： {db_name}_bkt
         credentials = {
-            'host': obj.db_host,
-            'port': obj.db_port,
-            'name': f'{obj.db_name}_bkt',
-            'user': obj.db_username,
-            'password': db_pwd,
+            "host": obj.db_host,
+            "port": obj.db_port,
+            "name": f"{obj.db_name}_bkt",
+            "user": obj.db_username,
+            "password": db_pwd,
         }
 
         if not self.context.legacy_app_proxy.has_stag_deployed():
@@ -96,11 +96,11 @@ class MysqlServiceMigration(BaseRemoteServiceMigration):
         db_pwd = self.context.legacy_app_proxy.get_unified_password()
 
         credentials = {
-            'host': obj.db_host,
-            'port': obj.db_port,
-            'name': obj.db_name,
-            'user': obj.db_username,
-            'password': db_pwd,
+            "host": obj.db_host,
+            "port": obj.db_port,
+            "name": obj.db_name,
+            "user": obj.db_username,
+            "password": db_pwd,
         }
 
         if not self.context.legacy_app_proxy.has_prod_deployed():

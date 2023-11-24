@@ -36,14 +36,14 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestGuessDefaultServiceName:
     def test_structure_with_web(self, bk_stag_wl_app, set_structure):
         set_structure(bk_stag_wl_app, {"web": 1})
-        assert guess_default_service_name(bk_stag_wl_app) == f'{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-web'
+        assert guess_default_service_name(bk_stag_wl_app) == f"{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-web"
 
     def test_structure_without_web(self, bk_stag_wl_app, set_structure):
         set_structure(bk_stag_wl_app, {"worker": 1})
-        assert guess_default_service_name(bk_stag_wl_app) == f'{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-worker'
+        assert guess_default_service_name(bk_stag_wl_app) == f"{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-worker"
 
     def test_empty_structure(self, bk_stag_wl_app):
-        assert guess_default_service_name(bk_stag_wl_app) == f'{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-web'
+        assert guess_default_service_name(bk_stag_wl_app) == f"{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-web"
 
 
 class TestGetMainProcessServiceName:
@@ -60,7 +60,7 @@ class TestGetMainProcessServiceName:
             ]
         )
         with patch(
-            'paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app', patch_mgr
+            "paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app", patch_mgr
         ):
             assert get_main_process_service_name(bk_stag_wl_app) == bk_stag_wl_app.name
             assert patch_mgr.called
@@ -68,7 +68,7 @@ class TestGetMainProcessServiceName:
     def test_none(self, bk_stag_wl_app):
         patch_mgr = Mock(return_value=[])
         with patch(
-            'paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app', patch_mgr
+            "paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app", patch_mgr
         ):
             with pytest.raises(AppEntityNotFound):
                 assert not get_main_process_service_name(bk_stag_wl_app)
@@ -76,11 +76,11 @@ class TestGetMainProcessServiceName:
 
 
 def test_get_service_dns_name(bk_stag_wl_app):
-    name = get_service_dns_name(bk_stag_wl_app, 'web')
-    _, ns = name.split('.')
+    name = get_service_dns_name(bk_stag_wl_app, "web")
+    _, ns = name.split(".")
     assert ns == bk_stag_wl_app.namespace
 
 
 def test_parse_process_type(bk_stag_wl_app):
-    svc_name = make_service_name(bk_stag_wl_app, 'web')
-    assert parse_process_type(bk_stag_wl_app, svc_name) == 'web'
+    svc_name = make_service_name(bk_stag_wl_app, "web")
+    assert parse_process_type(bk_stag_wl_app, svc_name) == "web"

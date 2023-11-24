@@ -47,7 +47,7 @@ class AppBucket:
 
 
 class Command(BaseCommand):
-    help = 'A batch to delete expired S3 slug/tar package'
+    help = "A batch to delete expired S3 slug/tar package"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -98,7 +98,7 @@ class Command(BaseCommand):
                 deleted_size += result[1]
 
         self.stdout.write(
-            self.style.SUCCESS(f'\nSuccessfully to delete {deleted_count} slug package, total {deleted_size} bytes')
+            self.style.SUCCESS(f"\nSuccessfully to delete {deleted_count} slug package, total {deleted_size} bytes")
         )
 
 

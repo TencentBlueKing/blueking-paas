@@ -71,7 +71,7 @@ class StubApplicationPermission:
         from paasng.platform.applications.models import ApplicationMembership
 
         app_ids = ApplicationMembership.objects.filter(user=create_user(username)).values_list(
-            'application_id', flat=True
+            "application_id", flat=True
         )
         return Q(id__in=app_ids)
 
@@ -82,5 +82,5 @@ class StubApplicationPermission:
 
         app_ids = ApplicationMembership.objects.filter(
             user=create_user(username), role__in=[ApplicationRole.ADMINISTRATOR, ApplicationRole.DEVELOPER]
-        ).values_list('application_id', flat=True)
+        ).values_list("application_id", flat=True)
         return Q(id__in=app_ids)

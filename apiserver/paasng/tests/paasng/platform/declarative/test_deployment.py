@@ -40,19 +40,19 @@ pytestmark = pytest.mark.django_db
 
 class TestEnvVariablesField:
     def test_invalid_input(self, bk_deployment):
-        json_data = {'env_variables': 'not_a_valid_value'}
+        json_data = {"env_variables": "not_a_valid_value"}
         controller = DeploymentDeclarativeController(bk_deployment)
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-        assert 'env_variables' in str(exc_info.value)
+        assert "env_variables" in str(exc_info.value)
 
     def test_normal(self, bk_deployment):
         json_data = {
-            'env_variables': [
-                {'key': 'FOO', 'value': '1'},
-                {'key': 'BAR', 'value': '2'},
+            "env_variables": [
+                {"key": "FOO", "value": "1"},
+                {"key": "BAR", "value": "2"},
             ],
-            'language': 'python',
+            "language": "python",
         }
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
@@ -65,33 +65,33 @@ class TestEnvVariablesReader:
     @pytest.fixture(autouse=True)
     def setup_tasks(self, bk_user, bk_deployment):
         json_data = {
-            'env_variables': [
-                {'key': 'FOO', 'value': '1'},
-                {'key': 'BAR', 'value': '2'},
-                {'key': 'STAG', 'value': '3', 'environment_name': 'stag'},
-                {'key': 'PROD', 'value': '4', 'environment_name': 'prod'},
+            "env_variables": [
+                {"key": "FOO", "value": "1"},
+                {"key": "BAR", "value": "2"},
+                {"key": "STAG", "value": "3", "environment_name": "stag"},
+                {"key": "PROD", "value": "4", "environment_name": "prod"},
             ],
-            'language': 'python',
+            "language": "python",
         }
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
     def test_read_as_dict(self, bk_deployment):
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert EnvVariablesReader(desc_obj).read_as_dict() == {'FOO': '1', 'BAR': '2', 'PROD': '4'}
+        assert EnvVariablesReader(desc_obj).read_as_dict() == {"FOO": "1", "BAR": "2", "PROD": "4"}
 
 
 class TestSvcDiscoveryField:
     @staticmethod
     def apply_config(bk_deployment):
         json_data = {
-            'svc_discovery': {
-                'bk_saas': [
-                    {'bk_app_code': 'foo-app'},
-                    {'bk_app_code': 'bar-app', 'module_name': 'api'},
+            "svc_discovery": {
+                "bk_saas": [
+                    {"bk_app_code": "foo-app"},
+                    {"bk_app_code": "bar-app", "module_name": "api"},
                 ]
             },
-            'language': 'python',
+            "language": "python",
         }
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
@@ -99,53 +99,53 @@ class TestSvcDiscoveryField:
     def test_store(self, bk_deployment):
         self.apply_config(bk_deployment)
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert desc_obj.runtime['svc_discovery'] == {
-            'bk_saas': [
-                {'bk_app_code': 'foo-app', 'module_name': None},
-                {'bk_app_code': 'bar-app', 'module_name': 'api'},
+        assert desc_obj.runtime["svc_discovery"] == {
+            "bk_saas": [
+                {"bk_app_code": "foo-app", "module_name": None},
+                {"bk_app_code": "bar-app", "module_name": "api"},
             ]
         }
 
     def test_as_env_vars_domain(self, bk_deployment):
         with mock_cluster_service(
-            replaced_ingress_config={'app_root_domains': [{"name": 'foo.com'}, {"name": 'bar.com'}]}
+            replaced_ingress_config={"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}
         ):
             self.apply_config(bk_deployment)
             env_vars = get_services_as_env_variables(bk_deployment)
-            value = env_vars['BKPAAS_SERVICE_ADDRESSES_BKSAAS']
+            value = env_vars["BKPAAS_SERVICE_ADDRESSES_BKSAAS"]
             addresses = BkSaaSEnvVariableFactory.decode_data(value)
             assert len(addresses) == 2
-            assert addresses[0]['key'] == {'bk_app_code': 'foo-app', 'module_name': None}
-            assert addresses[0]['value'] == {
-                'stag': 'http://stag-dot-foo-app.foo.com',
-                'prod': 'http://foo-app.foo.com',
+            assert addresses[0]["key"] == {"bk_app_code": "foo-app", "module_name": None}
+            assert addresses[0]["value"] == {
+                "stag": "http://stag-dot-foo-app.foo.com",
+                "prod": "http://foo-app.foo.com",
             }
 
-            assert addresses[1]['key'] == {'bk_app_code': 'bar-app', 'module_name': 'api'}
-            assert addresses[1]['value'] == {
-                'stag': 'http://stag-dot-api-dot-bar-app.foo.com',
-                'prod': 'http://prod-dot-api-dot-bar-app.foo.com',
+            assert addresses[1]["key"] == {"bk_app_code": "bar-app", "module_name": "api"}
+            assert addresses[1]["value"] == {
+                "stag": "http://stag-dot-api-dot-bar-app.foo.com",
+                "prod": "http://prod-dot-api-dot-bar-app.foo.com",
             }
 
     def test_as_env_vars_subpath(self, bk_deployment):
         with mock_cluster_service(
-            replaced_ingress_config={'sub_path_domains': [{"name": 'foo.com'}, {"name": 'bar.com'}]}
+            replaced_ingress_config={"sub_path_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}
         ):
             self.apply_config(bk_deployment)
             env_vars = get_services_as_env_variables(bk_deployment)
-            value = env_vars['BKPAAS_SERVICE_ADDRESSES_BKSAAS']
+            value = env_vars["BKPAAS_SERVICE_ADDRESSES_BKSAAS"]
             addresses = BkSaaSEnvVariableFactory.decode_data(value)
             assert len(addresses) == 2
-            assert addresses[0]['key'] == {'bk_app_code': 'foo-app', 'module_name': None}
-            assert addresses[0]['value'] == {
-                'stag': 'http://foo.com/stag--foo-app/',
-                'prod': 'http://foo.com/foo-app/',
+            assert addresses[0]["key"] == {"bk_app_code": "foo-app", "module_name": None}
+            assert addresses[0]["value"] == {
+                "stag": "http://foo.com/stag--foo-app/",
+                "prod": "http://foo.com/foo-app/",
             }
 
-            assert addresses[1]['key'] == {'bk_app_code': 'bar-app', 'module_name': 'api'}
-            assert addresses[1]['value'] == {
-                'stag': 'http://foo.com/stag--api--bar-app/',
-                'prod': 'http://foo.com/prod--api--bar-app/',
+            assert addresses[1]["key"] == {"bk_app_code": "bar-app", "module_name": "api"}
+            assert addresses[1]["value"] == {
+                "stag": "http://foo.com/stag--api--bar-app/",
+                "prod": "http://foo.com/prod--api--bar-app/",
             }
 
 
@@ -153,9 +153,9 @@ class TestHookField:
     @pytest.mark.parametrize(
         "json_data, expected",
         [
-            ({'language': 'python'}, HookList()),
+            ({"language": "python"}, HookList()),
             (
-                {'language': 'python', 'scripts': {'pre_release_hook': 'echo 1;'}},
+                {"language": "python", "scripts": {"pre_release_hook": "echo 1;"}},
                 HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 1;"}, Hook)]),
             ),
         ],
@@ -171,9 +171,9 @@ class TestHookField:
     @pytest.mark.parametrize(
         "json_data, expected",
         [
-            ({'language': 'python'}, HookList()),
+            ({"language": "python"}, HookList()),
             (
-                {'language': 'python', 'scripts': {'pre_release_hook': 'echo 2;'}},
+                {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
                 HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 2;"}, Hook)]),
             ),
         ],
@@ -191,8 +191,8 @@ class TestHookField:
 class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:
     def test_missing_app(self):
         items = [
-            BkSaaSItem(bk_app_code='foo-app'),
-            BkSaaSItem(bk_app_code='foo-app', module_name='bar-module'),
+            BkSaaSItem(bk_app_code="foo-app"),
+            BkSaaSItem(bk_app_code="foo-app", module_name="bar-module"),
         ]
         # clusters 类型为 Dict，这里直接判断是否为空
         cluster_states = [bool(clusters) for _, clusters in BkSaaSAddrDiscoverer.extend_with_clusters(items)]
@@ -204,7 +204,7 @@ class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:
         items = [
             BkSaaSItem(bk_app_code=bk_app.code),
             BkSaaSItem(bk_app_code=bk_app.code, module_name=bk_module.name),
-            BkSaaSItem(bk_app_code=bk_app.code, module_name='wrong-name'),
+            BkSaaSItem(bk_app_code=bk_app.code, module_name="wrong-name"),
         ]
         cluster_states = [bool(clusters) for _, clusters in BkSaaSAddrDiscoverer.extend_with_clusters(items)]
         # Item which did not specify module_name and specified a right module name

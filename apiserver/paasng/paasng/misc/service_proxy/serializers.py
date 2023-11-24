@@ -18,21 +18,21 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paasng.platform.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
 
 class AppInstSLZ(serializers.ModelSerializer):
     class Meta:
         model = Application
-        fields = ['id', 'type', 'region', 'code', 'name']
+        fields = ["id", "type", "region", "code", "name"]
 
 
 class ModuleInstSLZ(serializers.ModelSerializer):
     class Meta:
         model = Module
-        fields = ['id', 'name']
+        fields = ["id", "name"]
 
 
 class ModuleEnvInstSLZ(serializers.ModelSerializer):
@@ -40,13 +40,13 @@ class ModuleEnvInstSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = ModuleEnvironment
-        fields = ['id', 'environment', 'engine_app_id', 'is_offlined']
+        fields = ["id", "environment", "engine_app_id", "is_offlined"]
 
 
 class EngineAppInstSLZ(serializers.ModelSerializer):
     class Meta:
         model = EngineApp
-        fields = ['id', 'name']
+        fields = ["id", "name"]
 
 
 class AppInstanceInfoSLZ(serializers.Serializer):

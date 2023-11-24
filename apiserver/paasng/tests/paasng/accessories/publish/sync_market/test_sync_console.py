@@ -21,13 +21,6 @@ import logging
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.infras.iam.helpers import add_role_members, delete_role_members
-from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.models.deployment import Deployment
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.sync_market.handlers import (
     on_change_application_name,
@@ -40,7 +33,19 @@ from paasng.accessories.publish.sync_market.handlers import (
     validate_app_code_uniquely,
     validate_app_name_uniquely,
 )
-from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger, AppOpsManger, AppReleaseRecordManger
+from paasng.accessories.publish.sync_market.managers import (
+    AppDeveloperManger,
+    AppManger,
+    AppOpsManger,
+    AppReleaseRecordManger,
+)
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.iam.helpers import add_role_members, delete_role_members
+from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
+from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.mgrlegacy.constants import LegacyAppState
 from tests.conftest import mark_skip_if_console_not_configured
 from tests.utils.helpers import create_app, generate_random_string
 
@@ -53,7 +58,7 @@ logger = logging.getLogger(__name__)
 class TestAppMembers:
     @pytest.fixture(autouse=True)
     def init_data(self, bk_user, create_custom_app):
-        init_users = [bk_user.username, 'user1', 'user2', 'user3']
+        init_users = [bk_user.username, "user1", "user2", "user3"]
         app = create_custom_app(bk_user, developers=init_users, ops=init_users)
         # 创建应用后，将应用注册到 console
         register_application_with_default(app.region, app.code, app.name)
@@ -68,12 +73,12 @@ class TestAppMembers:
         try:
             assert set(AppOpsManger(session).get_ops_names(app.code)) == set(init_users)
         except NotImplementedError:
-            logger.warning('AppOpsManger get_ops_names not implemented , skip')
+            logger.warning("AppOpsManger get_ops_names not implemented , skip")
 
     def test_delete_members(self, init_data):
         app, init_users = init_data
         # 删除成员
-        delete_user = 'user1'
+        delete_user = "user1"
         sync_users = set(init_users)
         sync_users.remove(delete_user)
 
@@ -89,12 +94,12 @@ class TestAppMembers:
             try:
                 assert set(AppOpsManger(session).get_ops_names(app.code)) == sync_users
             except NotImplementedError:
-                logger.warning('AppOpsManger get_ops_names not implemented , skip')
+                logger.warning("AppOpsManger get_ops_names not implemented , skip")
 
     def test_add_members(self, init_data):
         app, init_users = init_data
         # 添加成员
-        add_user = 'user4'
+        add_user = "user4"
         sync_users = set(init_users)
         sync_users.add(add_user)
         # 将用户添加为开发者，运营者
@@ -109,7 +114,7 @@ class TestAppMembers:
             try:
                 assert set(AppOpsManger(session).get_ops_names(app.code)) == sync_users
             except NotImplementedError:
-                logger.warning('AppOpsManger get_ops_names not implemented , skip')
+                logger.warning("AppOpsManger get_ops_names not implemented , skip")
 
 
 class TestApp:
@@ -137,7 +142,7 @@ class TestApp:
             on_change_application_name(self, new_app.code, bk_app_full.name)
         # 修改一个不存在应用的名称
         with pytest.raises(AppFieldValidationError):
-            on_change_application_name(self, new_app.code + '2', bk_app_full.name)
+            on_change_application_name(self, new_app.code + "2", bk_app_full.name)
         # 修改名称成功
         new_name = generate_random_string(10)
         on_change_application_name(self, new_app.code, new_name)
@@ -161,7 +166,7 @@ class TestApp:
 
 def test_create_release_record(bk_app):
     with console_db.session_scope() as session:
-        AppReleaseRecordManger(session).create(bk_app.code, 'userfoo', 'prod')
+        AppReleaseRecordManger(session).create(bk_app.code, "userfoo", "prod")
 
 
 class TestHandlers:
@@ -177,7 +182,7 @@ class TestProduct:
         assert product.tag is not None
 
         # 将应用部署到生产环境
-        on_product_deploy_success(product, 'prod')
+        on_product_deploy_success(product, "prod")
         # 验证应用上线信息是否已经同步到桌面
         with console_db.session_scope() as session:
             console_app = AppManger(session).get(bk_app_full.code)

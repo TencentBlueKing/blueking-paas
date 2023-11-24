@@ -135,7 +135,9 @@ class PluginReleaseLogsResponseSLZ(serializers.Serializer):
     """插件发布日志的返回体格式"""
 
     finished = serializers.BooleanField(help_text="日志是否结束", default=False)
-    logs = serializers.ListSerializer(child=serializers.CharField(help_text="日志内容", allow_null=True, allow_blank=True))
+    logs = serializers.ListSerializer(
+        child=serializers.CharField(help_text="日志内容", allow_null=True, allow_blank=True)
+    )
 
 
 class PluginRoleSLZ(serializers.Serializer):

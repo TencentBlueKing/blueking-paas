@@ -35,23 +35,23 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
+class ImageCredentialsSerializer(AppEntitySerializer["ImageCredentials"]):
     api_version = "v1"
 
-    def serialize(self, obj: 'ImageCredentials', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: "ImageCredentials", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         return {
-            'apiVersion': self.api_version,
-            'kind': 'Secret',
-            'type': constants.KUBE_SECRET_TYPE,
-            'metadata': {
-                'name': obj.name,
-                'namespace': obj.app.namespace,
+            "apiVersion": self.api_version,
+            "kind": "Secret",
+            "type": constants.KUBE_SECRET_TYPE,
+            "metadata": {
+                "name": obj.name,
+                "namespace": obj.app.namespace,
             },
-            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(obj.build_dockerconfig()))},
+            "data": {constants.KUBE_DATA_KEY: b64encode(json.dumps(obj.build_dockerconfig()))},
         }
 
 
-class ImageCredentialsDeserializer(AppEntityDeserializer['ImageCredentials']):
+class ImageCredentialsDeserializer(AppEntityDeserializer["ImageCredentials"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance):
         if kube_data.type != constants.KUBE_SECRET_TYPE:
             raise ValueError(f"Invalid kube resource: {kube_data.type}")

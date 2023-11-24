@@ -21,4 +21,4 @@ to the current version of the project delivered to anyone in the future.
 - ProcessService: for internal communications (Kubernetes Service)
 - ProcessIngress: for external communications (Kubernetes Ingress)
 """
-default_app_config = 'paas_wl.workloads.networking.ingress.apps.IngressConfig'
+default_app_config = "paas_wl.workloads.networking.ingress.apps.IngressConfig"

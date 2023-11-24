@@ -31,9 +31,9 @@ class BaseComponent:
         http_ok, resp_data = http_func(url, **kwargs)
 
         if not (http_ok and resp_data):
-            raise error_codes.REMOTE_REQUEST_ERROR.format(f'request {self.system_name} api error')
+            raise error_codes.REMOTE_REQUEST_ERROR.format(f"request {self.system_name} api error")
 
-        if resp_data['code'] != 0:
+        if resp_data["code"] != 0:
             raise error_codes.REMOTE_REQUEST_ERROR.format(resp_data["message"], replace=True)
 
         return resp_data

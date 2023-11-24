@@ -56,34 +56,36 @@ class ProcessSpecPlanManager(models.Manager):
 
 
 class ProcessSpecPlan(models.Model):
-    name = models.CharField('进程规格方案名称', max_length=32, db_index=True)
-    max_replicas = models.IntegerField('最大副本数')
+    name = models.CharField("进程规格方案名称", max_length=32, db_index=True)
+    max_replicas = models.IntegerField("最大副本数")
     limits = JSONField(default={})
     requests = JSONField(default={})
-    is_active = models.BooleanField(verbose_name='是否可用', default=True)
+    is_active = models.BooleanField(verbose_name="是否可用", default=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
     objects = ProcessSpecPlanManager()
 
     class Meta:
-        get_latest_by = 'created'
+        get_latest_by = "created"
 
     def get_resource_summary(self):
-        return {'limits': self.limits, 'requests': self.requests}
+        return {"limits": self.limits, "requests": self.requests}
 
     def __str__(self):
         return self.name
 
 
 class ProcessSpec(TimestampedModel):
-    name = models.CharField('进程名称', max_length=32)
-    type = models.CharField('计算单元组类型（deprecated）', max_length=32)
+    name = models.CharField("进程名称", max_length=32)
+    type = models.CharField("计算单元组类型（deprecated）", max_length=32)
     engine_app = models.ForeignKey(
-        'api.App', on_delete=models.DO_NOTHING, db_constraint=False, related_name='process_specs'
+        "api.App", on_delete=models.DO_NOTHING, db_constraint=False, related_name="process_specs"
     )
 
-    proc_command = models.TextField(help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True)
+    proc_command = models.TextField(
+        help_text="进程启动命令(包含完整命令和参数的字符串), 只能与 command/args 二选一", null=True
+    )
     command: List[str] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: List[str] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
@@ -96,13 +98,15 @@ class ProcessSpec(TimestampedModel):
         default=ImagePullPolicy.IF_NOT_PRESENT,
         max_length=20,
     )
-    image_credential_name = models.CharField(help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True)
+    image_credential_name = models.CharField(
+        help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True
+    )
 
-    target_replicas = models.IntegerField('期望副本数', default=1)
-    target_status = models.CharField('期望状态', max_length=32, default="start")
+    target_replicas = models.IntegerField("期望副本数", default=1)
+    target_status = models.CharField("期望状态", max_length=32, default="start")
     plan = models.ForeignKey(ProcessSpecPlan, on_delete=models.CASCADE)
-    autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
-    scaling_config = JSONField('自动扩缩容配置', default={})
+    autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
+    scaling_config = JSONField("自动扩缩容配置", default={})
 
     def save(self, *args, **kwargs):
         if self.target_replicas > self.plan.max_replicas:
@@ -120,23 +124,23 @@ class ProcessSpec(TimestampedModel):
 
 
 class ProcessSpecManager:
-    def __init__(self, wl_app: 'WlApp'):
+    def __init__(self, wl_app: "WlApp"):
         self.wl_app = wl_app
 
-    def sync(self, processes: List['ProcessTmpl']):
+    def sync(self, processes: List["ProcessTmpl"]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: plain process spec structure,
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
         """
-        processes_map: Dict[str, 'ProcessTmpl'] = {process.name: process for process in processes}
+        processes_map: Dict[str, "ProcessTmpl"] = {process.name: process for process in processes}
         environment = get_metadata(self.wl_app).environment
 
         # Hardcode proc_type to "process" because no other values is supported at this moment.
-        proc_type = 'process'
+        proc_type = "process"
         proc_specs = ProcessSpec.objects.filter(engine_app=self.wl_app, type=proc_type)
-        existed_procs_name = set(proc_specs.values_list('name', flat=True))
+        existed_procs_name = set(proc_specs.values_list("name", flat=True))
 
         # remove proc spec objects which is already deleted via procfile
         removing_procs_name = list(existed_procs_name - processes_map.keys())
@@ -201,7 +205,7 @@ class ProcessSpecManager:
             return default
 
 
-def _get_structure(app: 'WlApp') -> Dict:
+def _get_structure(app: "WlApp") -> Dict:
     return {item.name: item.computed_replicas for item in ProcessSpec.objects.filter(engine_app_id=app.uuid)}
 
 
@@ -231,7 +235,7 @@ ProbeHandlerField = make_json_field("ProbeHandlerField", ProbeHandler)
 
 
 class ProcessProbe(models.Model):
-    app = models.ForeignKey('api.App', related_name='process_probe', on_delete=models.CASCADE, db_constraint=False)
+    app = models.ForeignKey("api.App", related_name="process_probe", on_delete=models.CASCADE, db_constraint=False)
     # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
     process_type = models.CharField(max_length=255)
     probe_type = models.CharField(max_length=255, choices=ProbeType.get_django_choices())
@@ -244,7 +248,7 @@ class ProcessProbe(models.Model):
     failure_threshold = models.PositiveIntegerField(default=3)
 
     class Meta:
-        unique_together = ('app', 'process_type', 'probe_type')
+        unique_together = ("app", "process_type", "probe_type")
 
 
 def initialize_default_proc_spec_plans():
@@ -254,17 +258,17 @@ def initialize_default_proc_spec_plans():
     for name, config in plans.items():
         try:
             ProcessSpecPlan.objects.get_by_name(name=name)
-            logger.debug(f'Plan: {name} already exists, skip initialization.')
+            logger.debug(f"Plan: {name} already exists, skip initialization.")
         except ProcessSpecPlan.DoesNotExist:
-            logger.info(f'Creating default plan: {name}...')
+            logger.info(f"Creating default plan: {name}...")
             ProcessSpecPlan.objects.create(name=name, **config)
 
     for cnative_plan in ResQuotaPlan.get_values():
         try:
             ProcessSpecPlan.objects.get_by_name(name=cnative_plan)
-            logger.debug(f'Plan: {cnative_plan} already exists, skip initialization.')
+            logger.debug(f"Plan: {cnative_plan} already exists, skip initialization.")
         except ProcessSpecPlan.DoesNotExist:
-            logger.info(f'Creating default plan: {cnative_plan}...')
+            logger.info(f"Creating default plan: {cnative_plan}...")
             ProcessSpecPlan.objects.create(
                 name=cnative_plan,
                 max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS,

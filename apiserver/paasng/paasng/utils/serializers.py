@@ -43,7 +43,7 @@ from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 class VerificationCodeField(serializers.RegexField):
     def __init__(self, **kwargs):
-        kwargs.setdefault("help_text", u"操作验证码")
+        kwargs.setdefault("help_text", "操作验证码")
         super(VerificationCodeField, self).__init__(regex=re.compile(r"\d{6}"), **kwargs)
 
 
@@ -51,30 +51,30 @@ class UserField(serializers.Field):
     """User field for present user friendly user object"""
 
     def to_representation(self, obj):
-        assert isinstance(obj, basestring), 'Only accept user_id'
+        assert isinstance(obj, basestring), "Only accept user_id"
         user = get_user_by_user_id(obj)
         avatar = get_user_avatar(user.username)
-        return {'id': user.pk, 'username': user.username, 'provider_type': user.provider_type, 'avatar': avatar}
+        return {"id": user.pk, "username": user.username, "provider_type": user.provider_type, "avatar": avatar}
 
     def to_internal_value(self, data):
-        if 'username' in data:
-            provider_type = ProviderType(data.get('provider_type', settings.USER_TYPE))
-            return user_id_encoder.encode(provider_type, data['username'])
-        return data['id']
+        if "username" in data:
+            provider_type = ProviderType(data.get("provider_type", settings.USER_TYPE))
+            return user_id_encoder.encode(provider_type, data["username"])
+        return data["id"]
 
 
 class UserNameField(serializers.Field):
     """UserName field for present username friendly user object"""
 
     def to_representation(self, obj):
-        assert isinstance(obj, basestring), 'Only accept user_id'
+        assert isinstance(obj, basestring), "Only accept user_id"
         user = get_user_by_user_id(obj)
         return user.username
 
     def to_internal_value(self, data):
-        if 'username' in data:
-            return user_id_encoder.encode(settings.USER_TYPE, data['username'])
-        return data['id']
+        if "username" in data:
+            return user_id_encoder.encode(settings.USER_TYPE, data["username"])
+        return data["id"]
 
 
 class MaskField(serializers.CharField):
@@ -94,7 +94,7 @@ class NickNameField(MaskField):
     'a中文字母-'
     """
 
-    REGEX = re.compile(u"[\u4e00-\u9fa5\\w\\-_]")
+    REGEX = re.compile("[\u4e00-\u9fa5\\w\\-_]")
 
 
 class ChineseField(MaskField):
@@ -102,7 +102,7 @@ class ChineseField(MaskField):
     中文字段
     """
 
-    REGEX = re.compile(u"[\u4e00-\u9fa5" + force_text(r"\w\-\_\；\？\。\—\…\《\》\“\”\.\,\s\?\'\"\;\‘\’\r\n]"))
+    REGEX = re.compile("[\u4e00-\u9fa5" + force_text(r"\w\-\_\；\？\。\—\…\《\》\“\”\.\,\s\?\'\"\;\‘\’\r\n]"))
 
 
 class RichTextField(serializers.CharField):
@@ -119,7 +119,7 @@ class MultiUserField(serializers.CharField):
     """用于表示多个user"""
 
     regex = re.compile(r"(\w+[\,\;])*\w+")
-    validator = RegexValidator(regex, message=u"用户名必须是英文,或;分隔的")
+    validator = RegexValidator(regex, message="用户名必须是英文,或;分隔的")
     split_regex = re.compile(r"[\,\;]")
 
     def to_internal_value(self, users):
@@ -171,9 +171,9 @@ class Base64FileField(serializers.Field):
     _prefix = "base64,"
 
     default_error_messages = {
-        'invalid': _('"{input}" is not a valid bytes.'),
-        'invalid_str': _('"{input}" is not a valid format, please startswith "base64,"'),
-        'invalid_base64': _('"{input}" is not a valid base64, please check it.'),
+        "invalid": _('"{input}" is not a valid bytes.'),
+        "invalid_str": _('"{input}" is not a valid format, please startswith "base64,"'),
+        "invalid_base64": _('"{input}" is not a valid base64, please check it.'),
     }
 
     def to_internal_value(self, data: Union[bytes, str]):
@@ -228,15 +228,15 @@ class SourceControlField(serializers.ChoiceField):
         """ignore setter"""
 
     def to_internal_value(self, data):
-        if data == '' and self.allow_blank:
-            return ''
+        if data == "" and self.allow_blank:
+            return ""
 
         try:
             return self.choice_strings_to_values[str(data)]
         except KeyError:
             if self.allow_blank:
-                return ''
-            self.fail('invalid_choice', input=data)
+                return ""
+            self.fail("invalid_choice", input=data)
 
     choices = property(_get_choices, _set_choices)
 
@@ -262,7 +262,7 @@ def field_env_var_key():
         RE_CONFIG_VAR_KEY,
         max_length=1024,
         required=True,
-        error_messages={'invalid': _('格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。')},
+        error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
         validators=[
             ConfigVarReservedKeyValidator(
                 protected_key_list=getattr(settings, "CONFIGVAR_PROTECTED_NAMES", []),

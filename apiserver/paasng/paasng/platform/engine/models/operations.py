@@ -38,17 +38,19 @@ class OperationQuerySet(models.QuerySet):
 
 
 class ModuleEnvironmentOperations(TimestampedModel):
-    id = models.UUIDField('UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     application = models.ForeignKey(
-        'applications.Application', on_delete=models.CASCADE, related_name='module_operations'
+        "applications.Application", on_delete=models.CASCADE, related_name="module_operations"
     )
     app_environment = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, related_name='module_operations', null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, related_name="module_operations", null=True
     )
     operator = BkUserField()
     operation_type = models.CharField(max_length=32, choices=OperationTypes.get_choices())
-    object_uid = models.UUIDField(u'详情记录的UUID', default=uuid.uuid4, editable=False)
-    status = models.CharField(u"操作状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
+    object_uid = models.UUIDField("详情记录的UUID", default=uuid.uuid4, editable=False)
+    status = models.CharField(
+        "操作状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
+    )
 
     objects = OperationQuerySet().as_manager()
 

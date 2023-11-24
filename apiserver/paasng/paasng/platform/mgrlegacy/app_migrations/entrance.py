@@ -50,7 +50,7 @@ class EntranceMigration(BaseMigration):
     def rollback(self):
         # 修改入口, to old entrance
         set_migrated_state(self.context.legacy_app.code, False)
-        self.add_log(_('应用接入层已经回滚到 PaaS2.0'))
+        self.add_log(_("应用接入层已经回滚到 PaaS2.0"))
 
         # 回滚差异数据（logo & 访问地址）
         rollback_change_app_router.send(

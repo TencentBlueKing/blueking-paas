@@ -25,15 +25,15 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
+from paasng.platform.applications.models import Application
+from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.handlers import AppDescriptionHandler
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.connector import BlobStoreSyncProcedure, SourceSyncResult, get_repo_connector
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.templater import Templater
-from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.blobstore import make_blob_store
 
@@ -69,13 +69,13 @@ class SceneAPPInitializer:
 
             # Step 2. 根据应用描述文件（app_desc.yaml）创建应用 & 模块
             # 根据场景模板规范，代码包名称与模板名称一致，app_desc.yaml 文件在包根目录下
-            desc_filepath = source_dir / self.tmpl_name / 'app_desc.yaml'
+            desc_filepath = source_dir / self.tmpl_name / "app_desc.yaml"
             try:
-                with open(desc_filepath, 'r') as fr:
+                with open(desc_filepath, "r") as fr:
                     meta_info = yaml.load(fr.read())
             except (IOError, yaml.YAMLError) as e:
-                logger.exception(_('加载应用描述文件失败: {}').format(str(e)))
-                raise DescriptionValidationError(_('应用描述文件不存在或内容不是有效 YAML 格式'))
+                logger.exception(_("加载应用描述文件失败: {}").format(str(e)))
+                raise DescriptionValidationError(_("应用描述文件不存在或内容不是有效 YAML 格式"))
 
             desc_handler = AppDescriptionHandler(meta_info)
             with atomic():
@@ -84,9 +84,9 @@ class SceneAPPInitializer:
                 application = desc_handler.handle_app(self.user, SourceOrigin.SCENE)
 
                 # Step 4. 为每个模块单独绑定代码仓库信息，source_dir
-                repo_type = self.engine_params.get('source_control_type', '')
-                repo_url = self.engine_params.get('source_repo_url', '')
-                repo_auth_info = self.engine_params.get('source_repo_auth_info')
+                repo_type = self.engine_params.get("source_control_type", "")
+                repo_url = self.engine_params.get("source_repo_url", "")
+                repo_auth_info = self.engine_params.get("source_repo_auth_info")
                 for module_name, module_desc in desc_handler.app_desc.modules.items():
                     connector = get_repo_connector(repo_type, application.get_module(module_name))
                     connector.bind(repo_url, source_dir=module_desc.source_dir, repo_auth_info=repo_auth_info)
@@ -97,7 +97,7 @@ class SceneAPPInitializer:
             return application, source_init_result
 
     def _gen_downloadable_app_template(self, application: Application, source_dir: Path) -> SourceSyncResult:
-        key = f'app-template-instances/{application.region}/{application.code}.tar.gz'
+        key = f"app-template-instances/{application.region}/{application.code}.tar.gz"
         sync_procedure = BlobStoreSyncProcedure(
             blob_store=make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE), key=key
         )

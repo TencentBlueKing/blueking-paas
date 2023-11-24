@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class SceneAppConfig(AppConfig):
-    name = 'paasng.platform.scene_app'
+    name = "paasng.platform.scene_app"

@@ -22,8 +22,8 @@ from typing import List, NamedTuple, Optional
 from paas_wl.infras.cluster.models import IngressConfig
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance.allocator.subpaths import Subpath, SubPathAllocator
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 
 class PreSubpaths(NamedTuple):
@@ -50,7 +50,7 @@ def get_preallocated_paths_by_env(env: ModuleEnvironment) -> List[Subpath]:
             results.append(allocator.for_universal(domain_cfg, module.name, env.environment))
         else:
             if env.environment == AppEnvName.STAG.value:
-                results.append(allocator.for_default_module(domain_cfg, 'stag'))
+                results.append(allocator.for_default_module(domain_cfg, "stag"))
             else:
                 results.append(allocator.for_default_module_prod_env(domain_cfg))
     return results
@@ -76,14 +76,14 @@ def get_preallocated_path(
         # No module name was given, return shorten address which pointed to application's "default" module
         # automatically.
         return PreSubpaths(
-            stag=allocator.for_default_module(domain_cfg, 'stag'),
+            stag=allocator.for_default_module(domain_cfg, "stag"),
             prod=allocator.for_default_module_prod_env(domain_cfg),
         )
     else:
         # Generate address which always include module name
         return PreSubpaths(
-            stag=allocator.for_universal(domain_cfg, module_name, 'stag'),
-            prod=allocator.for_universal(domain_cfg, module_name, 'prod'),
+            stag=allocator.for_universal(domain_cfg, module_name, "stag"),
+            prod=allocator.for_universal(domain_cfg, module_name, "prod"),
         )
 
 
@@ -93,4 +93,4 @@ def get_legacy_compatible_path(env: ModuleEnvironment) -> str:
     See LegacyAppIngressMgr in Workload service for more details.
     """
     name = env.engine_app.name
-    return f'/{env.module.region}-{name}/'
+    return f"/{env.module.region}-{name}/"

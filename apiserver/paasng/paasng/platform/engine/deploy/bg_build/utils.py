@@ -44,31 +44,31 @@ logger = logging.getLogger(__name__)
 # TODO: Refactor this module to engine.configurations
 
 
-def generate_builder_name(app: 'WlApp') -> str:
+def generate_builder_name(app: "WlApp") -> str:
     """Get the builder name"""
     return f"slug-builder--{app.module_name}"
 
 
 def generate_slug_path(bp: BuildProcess) -> str:
     """Get the slug path for storing slug"""
-    app: 'WlApp' = bp.app
-    slug_name = f'{app.name}:{bp.branch}:{bp.revision}'
-    return f'{app.region}/home/{slug_name}/push'
+    app: "WlApp" = bp.app
+    slug_name = f"{app.name}:{bp.branch}:{bp.revision}"
+    return f"{app.region}/home/{slug_name}/push"
 
 
 def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
     """Generate all env vars required for building."""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
-    app: 'WlApp' = bp.app
+    app: "WlApp" = bp.app
     env_vars: Dict[str, str] = {}
 
     # TODO: 支持构建镜像到私有仓库
     # Note: 从 ImageCredentials 加载凭证理论上会读取到用户配置的用户/密码, 只需要让 output_image 可以自定义即可支持构建镜像到私有仓库
     if metadata.get("use_dockerfile"):
         # build application form Dockerfile
-        image_repository = metadata['image_repository']
-        output_image = metadata['image']
+        image_repository = metadata["image_repository"]
+        output_image = metadata["image"]
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
@@ -79,8 +79,8 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
         )
     elif metadata.get("use_cnb"):
         # build application as image
-        image_repository = metadata['image_repository']
-        output_image = metadata['image']
+        image_repository = metadata["image_repository"]
+        output_image = metadata["image"]
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
@@ -91,14 +91,14 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
         )
     else:
         # build application as slug
-        cache_path = '%s/home/%s/cache' % (app.region, app.name)
+        cache_path = "%s/home/%s/cache" % (app.region, app.name)
         env_vars.update(
             # Path of source tarball
-            TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
+            TAR_PATH="%s/%s" % (bucket, bp.source_tar_path),
             # Path to store compiled slug package
-            PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
+            PUT_PATH="%s/%s" % (bucket, generate_slug_path(bp)),
             # Path to store cache to speed up build process
-            CACHE_PATH='%s/%s' % (bucket, cache_path),
+            CACHE_PATH="%s/%s" % (bucket, cache_path),
             # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
             # TODO: 将 slug.tgz 抽成常量
             SLUG_SET_URL=store.generate_presigned_url(
@@ -114,7 +114,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
                 key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
             ),
             # 设置 slug-pilot 中 build 过程的超时时间(精确到分钟)
-            PILOT_BUILDER_TIMEOUT=f'{settings.BUILD_PROCESS_TIMEOUT // 60}m',
+            PILOT_BUILDER_TIMEOUT=f"{settings.BUILD_PROCESS_TIMEOUT // 60}m",
         )
 
     env_vars.update(AppConfigVarManager(app=app).get_envs())
@@ -136,9 +136,9 @@ def generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
     store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
     object_key = os.path.join(slug_path, "slug.tgz")
     return {
-        'SLUG_URL': os.path.join(settings.BLOBSTORE_BUCKET_APP_SOURCE, object_key),
+        "SLUG_URL": os.path.join(settings.BLOBSTORE_BUCKET_APP_SOURCE, object_key),
         # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
-        'SLUG_GET_URL': store.generate_presigned_url(
+        "SLUG_GET_URL": store.generate_presigned_url(
             # slug get url 签发尽可能长的时间, 避免应用长期不部署, 重新调度后无法运行。
             key=object_key,
             expires_in=60 * 60 * 24 * 365 * 20,
@@ -154,8 +154,8 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
     :param metadata: metadata dict
     :return:
     """
-    if 'extra_envs' in metadata:
-        env_vars.update(metadata['extra_envs'])
+    if "extra_envs" in metadata:
+        env_vars.update(metadata["extra_envs"])
 
     buildpacks = metadata.get("buildpacks")
     if buildpacks:
@@ -164,7 +164,7 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
 
 
 def prepare_slugbuilder_template(
-    app: 'WlApp', env_vars: Dict, builder_image: Optional[str] = None
+    app: "WlApp", env_vars: Dict, builder_image: Optional[str] = None
 ) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
@@ -194,4 +194,4 @@ def get_envs_from_pypi_url(index_url: str) -> Dict[str, str]:
     PIP_INDEX_HOST: pypi.douban.com
     """
     parsed = urllib.parse.urlparse(index_url)
-    return {'PIP_INDEX_URL': index_url, 'PIP_INDEX_HOST': parsed.netloc}
+    return {"PIP_INDEX_URL": index_url, "PIP_INDEX_HOST": parsed.netloc}

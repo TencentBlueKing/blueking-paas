@@ -38,7 +38,7 @@ class EnhancedTemplateCommand:
     :param force_executable_files: Always make these files executable
     """
 
-    IGNORE_PATTERNS = ('*.pyc', '*.pyo', 'CVS', 'tmp', '.git', '.svn')
+    IGNORE_PATTERNS = ("*.pyc", "*.pyo", "CVS", "tmp", ".git", ".svn")
     default_options: Dict[str, Any] = {}
 
     def __init__(self, force_executable_files: Optional[List] = None):
@@ -51,7 +51,7 @@ class EnhancedTemplateCommand:
         return any(fnmatch.fnmatch(name, p) for p in self.IGNORE_PATTERNS)
 
     def render(self, filename, context) -> str:
-        with open(filename, 'r', encoding="utf-8", errors="strict") as f:
+        with open(filename, "r", encoding="utf-8", errors="strict") as f:
             source = f.read()
         return Template(source).render(context)
 
@@ -79,7 +79,7 @@ class EnhancedTemplateCommand:
                 dst_file = dst_path / filename
                 if filename.endswith("-tpl"):
                     dst_file = Path(str(dst_file)[: -len("-tpl")])
-                    with open(dst_file, 'w', encoding="utf-8") as f:
+                    with open(dst_file, "w", encoding="utf-8") as f:
                         f.write(self.render(src_file, context))
                 else:
                     shutil.copyfile(src_file, dst_file, follow_symlinks=False)

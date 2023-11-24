@@ -22,23 +22,23 @@ from typing import TYPE_CHECKING
 from django.dispatch import receiver
 from django.utils import timezone
 
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
-from paasng.platform.applications.models import ModuleEnvironment
 
 from .signals import post_appenv_deploy, post_phase_end, pre_appenv_deploy, pre_phase_start
 
 if TYPE_CHECKING:
+    from paasng.platform.applications.models import ApplicationEnvironment
     from paasng.platform.engine.models import Deployment
     from paasng.platform.engine.workflow import DeployStep as DeployStepMemObj
-    from paasng.platform.applications.models import ApplicationEnvironment
 
 logger = logging.getLogger(__name__)
 
 
 @receiver(pre_phase_start)
-def start_phase(sender: 'DeployStepMemObj', phase: DeployPhaseTypes, **kwargs):
+def start_phase(sender: "DeployStepMemObj", phase: DeployPhaseTypes, **kwargs):
     """开启 阶段"""
     phase_obj = sender.deployment.deployphase_set.get(type=phase)
     phase_obj.mark_and_write_to_stream(sender.stream, JobStatus.PENDING)
@@ -59,7 +59,7 @@ def end_phase(sender, status: JobStatus, phase: DeployPhaseTypes, **kwargs):
 
 
 @receiver(pre_appenv_deploy)
-def attach_all_phases(sender: 'ApplicationEnvironment', deployment: 'Deployment', **kwargs):
+def attach_all_phases(sender: "ApplicationEnvironment", deployment: "Deployment", **kwargs):
     """部署开始，为所有阶段做关联"""
     manager = DeployPhaseManager(deployment.app_environment)
     phases = manager.get_or_create_all()
@@ -75,7 +75,7 @@ def attach_all_phases(sender: 'ApplicationEnvironment', deployment: 'Deployment'
 
 
 @receiver(post_appenv_deploy)
-def update_last_deployed_date(sender, deployment: 'Deployment', **kwargs):
+def update_last_deployed_date(sender, deployment: "Deployment", **kwargs):
     """Update module and application's `last_deployed_date` field when a deployment has been finished.
 
     :param deployment: deployment object.
@@ -83,7 +83,7 @@ def update_last_deployed_date(sender, deployment: 'Deployment', **kwargs):
     env: ModuleEnvironment = deployment.app_environment
     now = timezone.now()
     env.module.last_deployed_date = now
-    env.module.save(update_fields=['last_deployed_date'])
+    env.module.save(update_fields=["last_deployed_date"])
 
     env.application.last_deployed_date = now
-    env.application.save(update_fields=['last_deployed_date'])
+    env.application.save(update_fields=["last_deployed_date"])

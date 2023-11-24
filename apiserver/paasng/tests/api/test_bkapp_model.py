@@ -23,7 +23,7 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnv
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModuleProcessSpecViewSet:
@@ -62,10 +62,10 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["command"] == ["python"]
         assert proc_specs[0]["args"] == ["-m", "http.server"]
         assert proc_specs[0]["env_overlay"]["stag"]["scaling_config"] == {
-            'min_replicas': 1,
-            'max_replicas': 1,
-            'metrics': [{'type': 'Resource', 'metric': 'cpuUtilization', 'value': '85'}],
-            'policy': 'default',
+            "min_replicas": 1,
+            "max_replicas": 1,
+            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
+            "policy": "default",
         }
 
         assert proc_specs[1]["name"] == "worker"
@@ -107,7 +107,7 @@ class TestModuleProcessSpecViewSet:
             scaling_config={
                 "min_replicas": 1,
                 "max_replicas": 5,
-                'policy': 'default',
+                "policy": "default",
             },
         )
         assert web.get_autoscaling("stag")

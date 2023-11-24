@@ -26,7 +26,7 @@ from django.core.management.base import BaseCommand
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AuthenticatedAppAsUser, User, UserProfile
 
-logger = logging.getLogger('commands')
+logger = logging.getLogger("commands")
 
 ROLE_CHOICES = [
     SiteRole.SYSTEM_API_BASIC_READER.value,
@@ -63,23 +63,23 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        bk_app_code = options['bk_app_code']
-        username = options['username'] or self._get_default_username(bk_app_code)
+        bk_app_code = options["bk_app_code"]
+        username = options["username"] or self._get_default_username(bk_app_code)
         # Create user
         user_db, _ = User.objects.get_or_create(username=username)
-        logger.info(f'user: {user_db.username} created.')
+        logger.info(f"user: {user_db.username} created.")
 
         # Create profile with role
         user = DatabaseUser.from_db_obj(user_db)
-        UserProfile.objects.update_or_create(user=user.pk, defaults={'role': options['role']})
-        logger.info(f'profile: {user.pk}({user.username}) created.')
+        UserProfile.objects.update_or_create(user=user.pk, defaults={"role": options["role"]})
+        logger.info(f"profile: {user.pk}({user.username}) created.")
 
         # Create relationship
         AuthenticatedAppAsUser.objects.update_or_create(
-            bk_app_code=bk_app_code, defaults={'user': user_db, 'is_active': True}
+            bk_app_code=bk_app_code, defaults={"user": user_db, "is_active": True}
         )
-        logger.info(f'app-user relation: {bk_app_code}-{user.username} created.')
+        logger.info(f"app-user relation: {bk_app_code}-{user.username} created.")
 
     @staticmethod
     def _get_default_username(bk_app_code: str) -> str:
-        return f'authed-app-{bk_app_code}'
+        return f"authed-app-{bk_app_code}"

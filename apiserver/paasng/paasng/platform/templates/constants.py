@@ -23,9 +23,9 @@ from django.utils.translation import gettext_lazy as _
 class TemplateType(str, StructuredEnum):
     """模板类型"""
 
-    NORMAL = EnumField('normal', _('普通应用'))
-    SCENE = EnumField('scene', _('场景模板'))
-    PLUGIN = EnumField('plugin', _('插件模板'))
+    NORMAL = EnumField("normal", _("普通应用"))
+    SCENE = EnumField("scene", _("场景模板"))
+    PLUGIN = EnumField("plugin", _("插件模板"))
 
     @classmethod
     def normal_app_types(cls):

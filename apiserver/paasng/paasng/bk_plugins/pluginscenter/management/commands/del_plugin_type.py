@@ -33,7 +33,7 @@ class Command(BaseCommand):
             type=str,
             help=("插件类型ID"),
         )
-        parser.add_argument('--no-dry-run', dest="dry_run", help="dry run", action="store_false")
+        parser.add_argument("--no-dry-run", dest="dry_run", help="dry run", action="store_false")
 
     def handle(self, identifier, dry_run=True, *args, **options):
         if not PluginDefinition.objects.filter(identifier=identifier).exists():
@@ -42,9 +42,13 @@ class Command(BaseCommand):
 
         del_plugin_count = PluginInstance.objects.filter(pd__identifier=identifier).count()
         if dry_run:
-            self.stdout.write(self.style.SUCCESS(f"DRY-RUN: 删除插件类型：{identifier}， 关联的 {del_plugin_count} 个插件一起被删除"))
+            self.stdout.write(
+                self.style.SUCCESS(f"DRY-RUN: 删除插件类型：{identifier}， 关联的 {del_plugin_count} 个插件一起被删除")
+            )
             return
 
         PluginDefinition.objects.filter(identifier=identifier).delete()
-        self.stdout.write(self.style.SUCCESS(f"DRY-RUN: 删除插件类型：{identifier}， 关联的 {del_plugin_count} 个插件一起被删除"))
+        self.stdout.write(
+            self.style.SUCCESS(f"DRY-RUN: 删除插件类型：{identifier}， 关联的 {del_plugin_count} 个插件一起被删除")
+        )
         return

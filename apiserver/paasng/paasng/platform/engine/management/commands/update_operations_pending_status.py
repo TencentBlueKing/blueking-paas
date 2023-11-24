@@ -35,12 +35,12 @@ class Command(BaseCommand):
     help = "refresh operation(Deployment & Offline) pending status"
 
     def add_arguments(self, parser):
-        parser.add_argument('--dry_run', action='store_true')
-        parser.add_argument('--timeout', type=str, default="1h")
+        parser.add_argument("--dry_run", action="store_true")
+        parser.add_argument("--timeout", type=str, default="1h")
 
     def handle(self, *args, **options):
-        self.dry_run = options['dry_run']
-        self.timeout = options['timeout']
+        self.dry_run = options["dry_run"]
+        self.timeout = options["timeout"]
 
         # 从脚本执行时往前算过期时间点
         self.now = timezone.now()

@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import cattrs
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.bk_app.monitoring.bklog.models import LabelSelector, LogFilterCondition
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.monitoring.bklog.models import LabelSelector, LogFilterCondition
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
-    api_version = 'bk.tencent.com/v1alpha1'
+    api_version = "bk.tencent.com/v1alpha1"
 
     def serialize(self, obj: "BkAppLogConfig", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         metadata = {
@@ -65,7 +65,7 @@ class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
 
 
 class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig"]):
-    api_version = 'bk.tencent.com/v1alpha1'
+    api_version = "bk.tencent.com/v1alpha1"
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "BkAppLogConfig":
         from paas_wl.bk_app.monitoring.bklog.entities import BkAppLogConfig

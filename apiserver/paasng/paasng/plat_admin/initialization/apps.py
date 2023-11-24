@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class InitializationConfig(AppConfig):
-    name = 'paasng.plat_admin.initialization'
+    name = "paasng.plat_admin.initialization"

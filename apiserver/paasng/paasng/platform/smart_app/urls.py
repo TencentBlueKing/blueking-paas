@@ -23,47 +23,47 @@ from . import views
 urlpatterns = [
     # 创建 S-Mart 应用(旧接口)
     url(
-        r'^api/sourcectl/smart_packages/$',
-        views.SMartPackageCreatorViewSet.as_view({'post': 'upload'}),
-        name='api.sourcectl.smart_packages',
+        r"^api/sourcectl/smart_packages/$",
+        views.SMartPackageCreatorViewSet.as_view({"post": "upload"}),
+        name="api.sourcectl.smart_packages",
     ),
     url(
-        r'^api/sourcectl/smart_packages/prepared/$',
-        views.SMartPackageCreatorViewSet.as_view({'post': 'create_prepared'}),
-        name='api.sourcectl.smart_packages.prepared',
+        r"^api/sourcectl/smart_packages/prepared/$",
+        views.SMartPackageCreatorViewSet.as_view({"post": "create_prepared"}),
+        name="api.sourcectl.smart_packages.prepared",
     ),
     # 创建 S-Mart 应用
     url(
-        r'^api/bkapps/s-mart/$',
-        views.SMartPackageCreatorViewSet.as_view({'post': 'upload'}),
-        name='api.applications.create.smart_packages.upload',
+        r"^api/bkapps/s-mart/$",
+        views.SMartPackageCreatorViewSet.as_view({"post": "upload"}),
+        name="api.applications.create.smart_packages.upload",
     ),
     url(
-        r'^api/bkapps/s-mart/confirm/$',
-        views.SMartPackageCreatorViewSet.as_view({'post': 'create_prepared'}),
-        name='api.applications.create.smart_packages.confirm',
+        r"^api/bkapps/s-mart/confirm/$",
+        views.SMartPackageCreatorViewSet.as_view({"post": "create_prepared"}),
+        name="api.applications.create.smart_packages.confirm",
     ),
     # 查询 S-Mart 包列表
     url(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/$",
-        views.SMartPackageManagerViewSet.as_view({'get': 'list'}),
-        name='api.sourcectl.source_package.s-mart.list',
+        views.SMartPackageManagerViewSet.as_view({"get": "list"}),
+        name="api.sourcectl.source_package.s-mart.list",
     ),
     # 暂存一个 S-Mart 应用包
     url(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/stash/$",
-        views.SMartPackageManagerViewSet.as_view({'post': 'stash'}),
-        name='api.sourcectl.source_package.s-mart.stash',
+        views.SMartPackageManagerViewSet.as_view({"post": "stash"}),
+        name="api.sourcectl.source_package.s-mart.stash",
     ),
     # 确认上传一个 S-Mart 应用包
     url(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/commit/(?P<signature>[^/]+)/$",
-        views.SMartPackageManagerViewSet.as_view({'post': 'commit'}),
-        name='api.sourcectl.source_package.s-mart.commit',
+        views.SMartPackageManagerViewSet.as_view({"post": "commit"}),
+        name="api.sourcectl.source_package.s-mart.commit",
     ),
     url(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/(?P<pk>[^/]+)/$",
-        views.SMartPackageManagerViewSet.as_view({'get': 'retrieve'}),
-        name='api.sourcectl.source_package.s-mart.detail',
+        views.SMartPackageManagerViewSet.as_view({"get": "retrieve"}),
+        name="api.sourcectl.source_package.s-mart.detail",
     ),
 ]

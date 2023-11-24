@@ -40,7 +40,7 @@ class _APIGWOperationStub(Protocol):
         timeout: Optional[float] = None,
         proxies: Optional[Dict[str, Any]] = None,
         verify: Optional[bool] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict:
         ...
 

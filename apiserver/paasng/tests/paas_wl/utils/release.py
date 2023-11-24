@@ -36,6 +36,6 @@ def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
         failed=failed,
         config=wl_app.latest_config,
         version=version,
-        summary='',
+        summary="",
         procfile={},
     )

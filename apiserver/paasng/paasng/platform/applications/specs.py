@@ -105,11 +105,11 @@ class AppSpecs:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'engine_enabled': self.engine_enabled,
-            'can_create_extra_modules': self.can_create_extra_modules,
-            'require_templated_source': self.require_templated_source,
-            'confirm_required_when_publish': self.confirm_required_when_publish,
-            'market_published': self.market_published,
+            "engine_enabled": self.engine_enabled,
+            "can_create_extra_modules": self.can_create_extra_modules,
+            "require_templated_source": self.require_templated_source,
+            "confirm_required_when_publish": self.confirm_required_when_publish,
+            "market_published": self.market_published,
         }
 
 
@@ -128,9 +128,9 @@ class AppTypeSpecs(ABC):
     require_templated_source: bool = True
 
     # When user hasn't provided any source template, use this language by default
-    language_by_default: str = ''
+    language_by_default: str = ""
 
-    _spec_types: Dict[ApplicationType, Type['AppTypeSpecs']] = {}
+    _spec_types: Dict[ApplicationType, Type["AppTypeSpecs"]] = {}
 
     @classmethod
     def __init_subclass__(cls) -> None:
@@ -140,12 +140,12 @@ class AppTypeSpecs(ABC):
             cls._spec_types[cls.type_] = cls
 
     @classmethod
-    def get_by_type(cls, type_: ApplicationType) -> 'AppTypeSpecs':
+    def get_by_type(cls, type_: ApplicationType) -> "AppTypeSpecs":
         """Get Spec type by application type"""
         try:
             return cls._spec_types[type_]()
         except KeyError:
-            raise RuntimeError(f'{type_} is not a valid application type, no TypeSpecs can be found!')
+            raise RuntimeError(f"{type_} is not a valid application type, no TypeSpecs can be found!")
 
     @property
     def preset_services(self) -> Dict[str, Dict]:
@@ -179,7 +179,7 @@ class BkPluginTypeSpecs(AppTypeSpecs):
     engine_enabled = True
     can_create_extra_modules = False
     require_templated_source = False
-    language_by_default = 'Python'
+    language_by_default = "Python"
 
 
 class CloudNativeTypeSpecs(AppTypeSpecs):

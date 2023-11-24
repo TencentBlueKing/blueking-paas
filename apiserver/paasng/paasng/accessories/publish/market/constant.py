@@ -41,7 +41,7 @@ class AppType(Enum):
     PAAS_APP = 1  # 基于BK PAAS服务构建的应用
     THIRD_PARTY = 2  # 以独立链接的形式展示在桌面
 
-    _choices_labels = ((PAAS_APP, u'蓝鲸应用'), (THIRD_PARTY, u'第三方应用'))
+    _choices_labels = ((PAAS_APP, "蓝鲸应用"), (THIRD_PARTY, "第三方应用"))
 
     @classmethod
     def get_choices(cls):
@@ -55,21 +55,21 @@ class AppState(Enum):
     RELEASED = 2  # 已发布
     OFFLINE = 3  # 市场下架
 
-    _choices_labels = ((DEVELOPING, u'开发中'), (RELEASED, u'已发布'), (OFFLINE, u'市场下架'))
+    _choices_labels = ((DEVELOPING, "开发中"), (RELEASED, "已发布"), (OFFLINE, "市场下架"))
 
     @classmethod
     def get_choices(cls):
         return cls._choices_labels.value
 
 
-TAG_REGION_CHOICES = list(RegionType.get_choices()) + [('all', u"所有版本")]
+TAG_REGION_CHOICES = list(RegionType.get_choices()) + [("all", "所有版本")]
 
 
 class OpenMode(str, StructuredEnum):
     """应用在桌面的打开方式"""
 
-    DESKTOP = EnumField(real_value='desktop', label="桌面")
-    NEW_TAB = EnumField(real_value='new_tab', label="新标签页")
+    DESKTOP = EnumField(real_value="desktop", label="桌面")
+    NEW_TAB = EnumField(real_value="new_tab", label="新标签页")
 
 
 class TagName(str, StructuredEnum):

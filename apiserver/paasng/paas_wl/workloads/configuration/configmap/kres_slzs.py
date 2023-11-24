@@ -27,23 +27,23 @@ if TYPE_CHECKING:
     from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap
 
 
-class ConfigMapSerializer(AppEntitySerializer['ConfigMap']):
-    api_version = 'v1'
+class ConfigMapSerializer(AppEntitySerializer["ConfigMap"]):
+    api_version = "v1"
 
-    def serialize(self, obj: 'ConfigMap', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: "ConfigMap", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         return {
-            'apiVersion': self.api_version,
-            'kind': 'ConfigMap',
-            'metadata': {
-                'name': obj.name,
-                'namespace': obj.app.namespace,
+            "apiVersion": self.api_version,
+            "kind": "ConfigMap",
+            "metadata": {
+                "name": obj.name,
+                "namespace": obj.app.namespace,
             },
-            'data': obj.data,
+            "data": obj.data,
         }
 
 
-class ConfigMapDeserializer(AppEntityDeserializer['ConfigMap']):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ConfigMap':
+class ConfigMapDeserializer(AppEntityDeserializer["ConfigMap"]):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ConfigMap":
         return self.entity_type(
             app=app,
             name=kube_data.metadata.name,

@@ -26,10 +26,10 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.utils.translation import gettext as _
 
-from paasng.platform.applications.constants import AppLanguage, ApplicationRole
-from paasng.platform.mgrlegacy.constants import AppMember, LegacyAppState
 from paasng.accessories.publish.market.constant import AppType
 from paasng.accessories.publish.sync_market.managers import AppEnvVarManger, AppSecureInfoManger
+from paasng.platform.applications.constants import AppLanguage, ApplicationRole
+from paasng.platform.mgrlegacy.constants import AppMember, LegacyAppState
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,8 @@ class LegacyAppProxy:
     def legacy_url(self) -> str:
         """PaaS2.0 上应用的访问地址"""
         if self.is_smart():
-            return f'{settings.BK_PAAS2_URL}/saas/info/{self.legacy_app.code}/'
-        return f'{settings.BK_PAAS2_URL}/app/info/{self.legacy_app.code}/'
+            return f"{settings.BK_PAAS2_URL}/saas/info/{self.legacy_app.code}/"
+        return f"{settings.BK_PAAS2_URL}/app/info/{self.legacy_app.code}/"
 
     def is_third_app(self) -> bool:
         return self.legacy_app.is_third
@@ -76,15 +76,15 @@ class LegacyAppProxy:
             return []
 
         # 轻应用暂不支持迁移
-        if self._get_app_type() == 'qingyingyong':
-            return [_('暂不支持轻应用迁移')]
+        if self._get_app_type() == "qingyingyong":
+            return [_("暂不支持轻应用迁移")]
 
         # 非普通应用
         if self._get_app_type() not in ["common_application"]:
-            return [_('暂不支持该类型应用迁移')]
+            return [_("暂不支持该类型应用迁移")]
 
         if self.get_language() != AppLanguage.PYTHON.value:
-            return [_('目前仅支持Python应用迁移')]
+            return [_("目前仅支持Python应用迁移")]
         return []
 
     def is_celery_enabled(self):
@@ -97,25 +97,25 @@ class LegacyAppProxy:
         """初始化模板类型"""
         # 第三方应用不需要设置
         if self.is_third_app():
-            return ''
+            return ""
 
         if self.get_language() == AppLanguage.PYTHON.value:
-            return 'django_legacy'
+            return "django_legacy"
         else:
             raise ValueError(self.legacy_app.language)
 
     def get_language(self) -> str:
         # 第三方应用不需要设置
         if self.is_third_app():
-            return ''
+            return ""
 
         if not self.legacy_app.language:
-            return ''
+            return ""
 
         language_lower = self.legacy_app.language.lower()
-        if language_lower in ['python']:
+        if language_lower in ["python"]:
             return AppLanguage.PYTHON.value
-        elif language_lower in ['java']:
+        elif language_lower in ["java"]:
             return AppLanguage.JAVA.value
         else:
             raise ValueError(language_lower)
@@ -127,7 +127,7 @@ class LegacyAppProxy:
     def get_unified_password(self):
         """app数据库密码（rabbitmq密码）"""
         obj = AppSecureInfoManger(self.session).get(self.legacy_app.code)
-        assert obj, 'No AppSecureInfo found'
+        assert obj, "No AppSecureInfo found"
 
         return obj.db_password
 
@@ -137,7 +137,7 @@ class LegacyAppProxy:
         return variables
 
     def get_logo_url(self):
-        return f'{settings.BK_PAAS2_URL}/media/applogo/{self.legacy_app.code}.png'
+        return f"{settings.BK_PAAS2_URL}/media/applogo/{self.legacy_app.code}.png"
 
     def get_logo_filename(self):
         return "%s.png" % self.legacy_app.code
@@ -183,9 +183,9 @@ class LegacyAppProxy:
         """应用下架页面链接"""
         # smart 应用
         if self.legacy_app.is_saas:
-            return f'{settings.BK_PAAS2_URL}/saas/release/offline/{self.legacy_app.code}/'
+            return f"{settings.BK_PAAS2_URL}/saas/release/offline/{self.legacy_app.code}/"
         else:
-            return f'{settings.BK_PAAS2_URL}/release/{self.legacy_app.code}/'
+            return f"{settings.BK_PAAS2_URL}/release/{self.legacy_app.code}/"
 
     def get_app_members(self, migration_owner: str) -> List[AppMember]:
         """应用成员列表
@@ -206,7 +206,7 @@ class LegacyAppProxy:
         return user_id_encoder.encode(username=self.legacy_app.creater, provider_type=settings.USER_TYPE)
 
     def get_app_description(self) -> str:
-        return ''
+        return ""
 
     def get_app_type(self) -> int:
         return AppType.THIRD_PARTY.value if self.legacy_app.is_third else AppType.PAAS_APP.value

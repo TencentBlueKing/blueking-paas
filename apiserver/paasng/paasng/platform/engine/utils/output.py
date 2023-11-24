@@ -24,8 +24,8 @@ from typing import TYPE_CHECKING, Optional, Protocol
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.conf import settings
 
-from paasng.platform.engine.models import Deployment
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.engine.models import Deployment
 from paasng.utils import termcolors
 
 if TYPE_CHECKING:
@@ -55,25 +55,25 @@ class Style:
         'bold', 'underscore', 'blink', 'reverse', 'conceal', 'noreset'
     """
 
-    Title = make_style(fg='#c4c6cc', opts=('bold',))
-    Error = make_style(fg='#e82f2f', opts=('bold',))
-    Warning = make_style(fg='#ff9c01', opts=('bold',))
-    Comment = make_style(fg='#3a84ff', opts=('bold',))
+    Title = make_style(fg="#c4c6cc", opts=("bold",))
+    Error = make_style(fg="#e82f2f", opts=("bold",))
+    Warning = make_style(fg="#ff9c01", opts=("bold",))
+    Comment = make_style(fg="#3a84ff", opts=("bold",))
     NoColor = termcolors.no_color
 
-    Black = make_style(fg='black', opts=('bold',))
-    Red = make_style(fg='red', opts=('bold',))
-    Green = make_style(fg='green', opts=('bold',))
-    Yellow = make_style(fg='yellow', opts=('bold',))
-    Blue = make_style(fg='blue', opts=('bold',))
-    Magenta = make_style(fg='magenta', opts=('bold',))
-    Cyan = make_style(fg='cyan', opts=('bold',))
-    White = make_style(fg='white', opts=('bold',))
+    Black = make_style(fg="black", opts=("bold",))
+    Red = make_style(fg="red", opts=("bold",))
+    Green = make_style(fg="green", opts=("bold",))
+    Yellow = make_style(fg="yellow", opts=("bold",))
+    Blue = make_style(fg="blue", opts=("bold",))
+    Magenta = make_style(fg="magenta", opts=("bold",))
+    Cyan = make_style(fg="cyan", opts=("bold",))
+    White = make_style(fg="white", opts=("bold",))
 
 
 class StreamType(str, Enum):
-    STDOUT = 'STDOUT'
-    STDERR = 'STDERR'
+    STDOUT = "STDOUT"
+    STDERR = "STDERR"
 
 
 class DeployStream(metaclass=abc.ABCMeta):
@@ -108,10 +108,10 @@ class RedisChannelStream(DeployStream):
         self.channel = channel
 
     def write_title(self, title):
-        return self.channel.publish(event='title', data=title)
+        return self.channel.publish(event="title", data=title)
 
     def write_message(self, message, stream=StreamType.STDOUT):
-        return self.channel.publish_msg(message=json.dumps({'line': message, 'stream': str(stream)}))
+        return self.channel.publish_msg(message=json.dumps({"line": message, "stream": str(stream)}))
 
     def write_event(self, event_name: str, data: dict):
         return self.channel.publish(event=event_name, data=json.dumps(data))
@@ -120,7 +120,7 @@ class RedisChannelStream(DeployStream):
         return self.channel.close()
 
     @classmethod
-    def from_deployment_id(cls, deployment_id: str) -> 'RedisChannelStream':
+    def from_deployment_id(cls, deployment_id: str) -> "RedisChannelStream":
         stream_channel = StreamChannel(deployment_id, redis_db=get_default_redis())
         stream_channel.initialize()
         return cls(stream_channel)
@@ -130,14 +130,14 @@ class ConsoleStream(DeployStream):
     """Stream using console, useful for unit tests"""
 
     def write_title(self, title):
-        print(f'[TITLE]: {title}')
+        print(f"[TITLE]: {title}")
 
     def write_message(self, message, stream=StreamType.STDOUT):
         f = sys.stderr if stream == StreamType.STDERR else sys.stdout
         print(message, file=f)
 
     def write_event(self, event_name: str, data: dict):
-        return print(f'[{event_name}: {data}')
+        return print(f"[{event_name}: {data}")
 
     def close(self):
         pass
@@ -150,7 +150,7 @@ class ConsoleStream(DeployStream):
 class MessageWriter(Protocol):
     """A protocol for types which has output_stream field"""
 
-    output_stream: 'OutputStream'
+    output_stream: "OutputStream"
 
 
 class ModelStream:
@@ -159,7 +159,7 @@ class ModelStream:
     def __init__(self, model: MessageWriter):
         self.model = model
 
-    def write_message(self, message, stream='STDOUT'):
+    def write_message(self, message, stream="STDOUT"):
         """Write message to output stream"""
         message = self.cleanup_message(message)
         self.model.output_stream.write(line=message, stream=stream)
@@ -169,7 +169,7 @@ class ModelStream:
         # Remove bad characters output by slugbuilder
         # NOTE: Only `ModelStream` use this method to cleanup message at this moment,
         # consider to make other stream classes to use this method if needed.
-        return message.replace('\x1b[1G', '')
+        return message.replace("\x1b[1G", "")
 
 
 class RedisWithModelStream(RedisChannelStream):
@@ -184,7 +184,7 @@ class RedisWithModelStream(RedisChannelStream):
         self.model_stream = ModelStream(model)
         super().__init__(stream_channel)
 
-    def write_message(self, message, stream='STDOUT'):
+    def write_message(self, message, stream="STDOUT"):
         self.model_stream.write_message(message, stream)
         super().write_message(message, stream)
 

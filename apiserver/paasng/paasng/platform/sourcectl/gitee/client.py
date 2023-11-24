@@ -43,15 +43,15 @@ class GiteeApiClient(BaseGitApiClient):
         """从 Gitee API 获取用户的所有仓库
         https://gitee.com/api/v5/swagger#/getV5UserRepos
         """
-        return list(self._fetch_all_items(urljoin(self.api_url, 'user/repos')))
+        return list(self._fetch_all_items(urljoin(self.api_url, "user/repos")))
 
     def repo_get_raw_file(self, project: GitProject, filepath: str, ref=DEFAULT_REPO_REF, **kwargs) -> bytes:
         """从远程仓库下载 filepath 的文件
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoContents(Path)
         """
-        url = urljoin(self.api_url, f'repos/{project.path_with_namespace}/contents/{filepath}')
+        url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/contents/{filepath}")
         resp = self._request_with_retry(url, params={"ref": ref})
-        if resp['encoding'] != "base64":
+        if resp["encoding"] != "base64":
             raise exceptions.UnsupportedGitRepoEncode(_("当前仅支持 base64 编码格式"))
         return base64.b64decode(resp["content"])
 
@@ -59,14 +59,14 @@ class GiteeApiClient(BaseGitApiClient):
         """获取指定仓库所有的 branch
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoBranches
         """
-        url = urljoin(self.api_url, f'repos/{project.path_with_namespace}/branches')
+        url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/branches")
         return list(self._request_with_retry(url))
 
     def repo_list_tags(self, project: GitProject, **kwargs) -> List[Dict]:
         """获取指定仓库所有 tags
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoTags
         """
-        url = urljoin(self.api_url, f'repos/{project.path_with_namespace}/tags')
+        url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/tags")
         return list(self._request_with_retry(url))
 
     def repo_last_commit(self, project: GitProject, branch_or_hash: Optional[str] = None) -> Dict:
@@ -78,50 +78,50 @@ class GiteeApiClient(BaseGitApiClient):
         if branch_or_hash:
             url = urljoin(self.api_url, f"repos/{owner_repo}/commits/{branch_or_hash}")
             return self._request_with_retry(url)
-        url = urljoin(self.api_url, f'repos/{owner_repo}/commits')
+        url = urljoin(self.api_url, f"repos/{owner_repo}/commits")
         return self._request_with_retry(url)[0]
 
     def get_current_user(self) -> Dict:
         """获取当前认证的用户信息
         https://gitee.com/api/v5/swagger#/getV5User"""
-        return self._request_with_retry(urljoin(self.api_url, 'user'))
+        return self._request_with_retry(urljoin(self.api_url, "user"))
 
     def get_user_info(self, username: str) -> Dict:
         """根据用户名查询用户信息
         https://gitee.com/api/v5/swagger#/getV5UsersUsername
         """
-        return self._request_with_retry(urljoin(self.api_url, f'users/{username}'))
+        return self._request_with_retry(urljoin(self.api_url, f"users/{username}"))
 
     def get_project_info(self, project: GitProject) -> Dict:
         """获取项目详细信息
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepo
         """
-        url = urljoin(self.api_url, f'repos/{project.path_with_namespace}')
+        url = urljoin(self.api_url, f"repos/{project.path_with_namespace}")
         return self._request_with_retry(url)
 
     def list_all_commit_logs(self, project: GitProject) -> Generator[Dict, None, None]:
         """获取全量 commit 信息
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoCommits
         """
-        url = urljoin(self.api_url, f'repos/{project.path_with_namespace}/commits')
+        url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/commits")
         for c in self._fetch_all_items(url):
             yield {
-                'id': c['sha'],
+                "id": c["sha"],
                 # Gitee commit 信息无 short_id && title，使用 hash，message 替换
-                'short_id': c['sha'],
-                'title': c['commit']['message'],
-                'author_name': c['commit']['author']['name'],
-                'author_email': c['commit']['author']['email'],
+                "short_id": c["sha"],
+                "title": c["commit"]["message"],
+                "author_name": c["commit"]["author"]["name"],
+                "author_email": c["commit"]["author"]["email"],
                 # 类型转换, 从字符串转为 datetime
-                "committed_date": arrow.get(c['commit']['author']['date']).datetime,
-                'message': c['commit']['message'],
+                "committed_date": arrow.get(c["commit"]["author"]["date"]).datetime,
+                "message": c["commit"]["message"],
             }
 
     def calculate_user_contribution(self, **kwargs) -> Dict:
         """Gitee 暂不支持统计贡献"""
         return {
-            'project_total_lines': 'unsupported',
-            'user_total_lines': 'unsupported',
-            'project_commit_nums': 'unsupported',
-            'user_commit_nums': 'unsupported',
+            "project_total_lines": "unsupported",
+            "user_total_lines": "unsupported",
+            "project_commit_nums": "unsupported",
+            "user_commit_nums": "unsupported",
         }

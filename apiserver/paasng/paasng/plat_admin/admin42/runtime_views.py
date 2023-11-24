@@ -29,7 +29,7 @@ from .forms import AppBuildPackForm, AppSlugBuilderForm, AppSlugRunnerForm
 
 
 class ViewBuilder:
-    error_template = 'admin42/error.html'
+    error_template = "admin42/error.html"
 
     def __init__(
         self,
@@ -58,13 +58,13 @@ class ViewBuilder:
             template = self.list_template
 
             def get_context_data(self, **kwargs):
-                if 'view' not in kwargs:
-                    kwargs['view'] = self
+                if "view" not in kwargs:
+                    kwargs["view"] = self
 
                 if self.serializer_class:
-                    kwargs['data'] = self.get_serializer(self.get_queryset(), many=True).data
+                    kwargs["data"] = self.get_serializer(self.get_queryset(), many=True).data
                 else:
-                    kwargs['data'] = self.get_queryset()
+                    kwargs["data"] = self.get_queryset()
 
                 return kwargs
 
@@ -79,7 +79,7 @@ class ViewBuilder:
             list_path = self.list_path
 
             def get(self, request):
-                return render(request, self.template, {'form': self.form_cls(), 'view': self})
+                return render(request, self.template, {"form": self.form_cls(), "view": self})
 
             def perform_create(self, form):
                 instance = form.save()
@@ -96,8 +96,8 @@ class ViewBuilder:
                             request,
                             self.error_template,
                             {
-                                'message': _("创建失败: %s") % e,
-                                'error': e,
+                                "message": _("创建失败: %s") % e,
+                                "error": e,
                             },
                         )
                     return redirect(reverse_lazy(self.list_path), args=[])
@@ -106,7 +106,7 @@ class ViewBuilder:
                         request,
                         self.template,
                         {
-                            'form': form,
+                            "form": form,
                         },
                     )
 
@@ -127,7 +127,7 @@ class ViewBuilder:
             def get(self, request):
                 instance = self.get_object(request)
                 return render(
-                    request, self.template, {'form': self.form_cls(instance=instance), 'id': instance.pk, 'view': self}
+                    request, self.template, {"form": self.form_cls(instance=instance), "id": instance.pk, "view": self}
                 )
 
             def perform_update(self, form):
@@ -146,8 +146,8 @@ class ViewBuilder:
                             request,
                             self.error_template,
                             {
-                                'message': _("更新失败: %s") % e,
-                                'error': e,
+                                "message": _("更新失败: %s") % e,
+                                "error": e,
                             },
                         )
                     return redirect(reverse_lazy(self.list_path), args=[])
@@ -156,8 +156,8 @@ class ViewBuilder:
                         request,
                         self.template,
                         {
-                            'form': form,
-                            'id': instance.pk,
+                            "form": form,
+                            "id": instance.pk,
                         },
                     )
 
@@ -181,8 +181,8 @@ class ViewBuilder:
                         request,
                         self.error_template,
                         {
-                            'message': _("删除失败: %s") % e,
-                            'error': e,
+                            "message": _("删除失败: %s") % e,
+                            "error": e,
                         },
                     )
                 return redirect(reverse_lazy(self.list_path), args=[])
@@ -193,9 +193,9 @@ class ViewBuilder:
 slugbuilder_viewbuilder = ViewBuilder(
     name="SlugBuilder管理",
     query_set=AppSlugBuilder.objects.order_by("region"),
-    list_template='admin42/platformmgr/runtime/slugbuilder_list.html',
-    list_path='admin.slugbuilder.list',
-    form_template='admin42/platformmgr/runtime/bootstrap_form.html',
+    list_template="admin42/platformmgr/runtime/slugbuilder_list.html",
+    list_path="admin.slugbuilder.list",
+    form_template="admin42/platformmgr/runtime/bootstrap_form.html",
     form_cls=AppSlugBuilderForm,
     serializer_class=AppSlugBuilderSLZ,
 )
@@ -207,9 +207,9 @@ SlugBuilderDeleteView = slugbuilder_viewbuilder.delete_view()
 slugrunner_viewbuilder = ViewBuilder(
     name="SlugRunner管理",
     query_set=AppSlugRunner.objects.order_by("region"),
-    list_template='admin42/platformmgr/runtime/slugrunner_list.html',
-    list_path='admin.slugrunner.list',
-    form_template='admin42/platformmgr/runtime/bootstrap_form.html',
+    list_template="admin42/platformmgr/runtime/slugrunner_list.html",
+    list_path="admin.slugrunner.list",
+    form_template="admin42/platformmgr/runtime/bootstrap_form.html",
     form_cls=AppSlugRunnerForm,
     serializer_class=AppSlugRunnerSLZ,
 )
@@ -221,9 +221,9 @@ SlugRunnerDeleteView = slugrunner_viewbuilder.delete_view()
 buildpack_viewbuilder = ViewBuilder(
     name="BuildPack管理",
     query_set=AppBuildPack.objects.order_by("region"),
-    list_template='admin42/platformmgr/runtime/buildpack_list.html',
-    list_path='admin.buildpack.list',
-    form_template='admin42/platformmgr/runtime/bootstrap_form.html',
+    list_template="admin42/platformmgr/runtime/buildpack_list.html",
+    list_path="admin.buildpack.list",
+    form_template="admin42/platformmgr/runtime/bootstrap_form.html",
     form_cls=AppBuildPackForm,
     serializer_class=AppBuildPackSLZ,
 )

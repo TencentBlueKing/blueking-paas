@@ -22,8 +22,8 @@ import logging
 from collections import Callable, OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.utils.basic import make_subdict
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 
 def _make_id(target):
-    if hasattr(target, '__func__'):
+    if hasattr(target, "__func__"):
         return (id(target.__self__), id(target.__func__))
     return id(target)
 
@@ -73,7 +73,7 @@ class LabelTolerationProviders:
 label_toleration_providers = LabelTolerationProviders()
 
 
-def get_full_node_selector(app: WlApp, config: Optional['Config'] = None) -> Dict:
+def get_full_node_selector(app: WlApp, config: Optional["Config"] = None) -> Dict:
     """An app's node_selector was constituted by many parts.
 
     1. "node_selector" field in Config object
@@ -93,7 +93,7 @@ def get_full_node_selector(app: WlApp, config: Optional['Config'] = None) -> Dic
     return result
 
 
-def get_full_tolerations(app: WlApp, config: Optional['Config'] = None) -> List:
+def get_full_tolerations(app: WlApp, config: Optional["Config"] = None) -> List:
     """An app's tolerations was constituted by many parts.
 
     1. "tolerations" field in Config object
@@ -117,7 +117,7 @@ def get_client_by_app(app: WlApp) -> EnhancedApiClient:
 
 
 # ref: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
-_VALID_TOLERATION_KEYS = {'key', 'effect', 'operator', 'value', 'tolerationSeconds'}
+_VALID_TOLERATION_KEYS = {"key", "effect", "operator", "value", "tolerationSeconds"}
 
 
 def standardize_tolerations(data) -> List:

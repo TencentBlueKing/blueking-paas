@@ -24,8 +24,8 @@ from .base import GaugeMetric
 
 
 class RedisAvailableMetric(GaugeMetric):
-    name = 'redis_service'
-    description = 'redis service available'
+    name = "redis_service"
+    description = "redis service available"
 
     @classmethod
     def calc_value(cls) -> bool:

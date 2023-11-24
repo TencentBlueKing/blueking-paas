@@ -31,21 +31,21 @@ class TestCNative:
     @pytest.fixture(autouse=True)
     def mock_dependencies(self):
         with mock.patch(
-            'paasng.platform.bkapp_model.views.mixed_service_mgr.list_binded',
+            "paasng.platform.bkapp_model.views.mixed_service_mgr.list_binded",
             new=lambda *args, **kwargs: [
-                ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid='xxx', name='mysql', logo='', is_visible=True),
-                ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid='xxx', name='redis', logo='', is_visible=True),
+                ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid="xxx", name="mysql", logo="", is_visible=True),
+                ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid="xxx", name="redis", logo="", is_visible=True),
             ],
         ):
             yield
 
     def test_retrieve(self, api_client, bk_stag_env):
         url = reverse(
-            'api.cnative.retrieve_manifest_ext',
+            "api.cnative.retrieve_manifest_ext",
             kwargs={
-                'code': bk_stag_env.application.code,
-                'environment': bk_stag_env.environment,
+                "code": bk_stag_env.application.code,
+                "environment": bk_stag_env.environment,
             },
         )
         response = api_client.get(url)
-        assert response.data == {'metadata': {'annotations': {BKPAAS_ADDONS_ANNO_KEY: '["mysql", "redis"]'}}}
+        assert response.data == {"metadata": {"annotations": {BKPAAS_ADDONS_ANNO_KEY: '["mysql", "redis"]'}}}

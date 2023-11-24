@@ -100,7 +100,9 @@ class DateHistogramSLZ(serializers.Serializer):
     """插件日志基于时间分布的直方图"""
 
     series = serializers.ListField(child=serializers.IntegerField(), help_text="按时间排序的值(文档数)")
-    timestamps = serializers.ListField(child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳")
+    timestamps = serializers.ListField(
+        child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳"
+    )
     dsl = serializers.CharField(help_text="日志查询语句")
 
 
@@ -170,7 +172,9 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
     name_en = serializers.CharField(help_text="自定义采集项名称")
     collector_config_id = serializers.IntegerField(help_text="日志平台采集项ID")
 
-    log_paths = serializers.ListField(child=serializers.CharField(help_text="日志文件的绝对路径，可使用 通配符"), default=list)
+    log_paths = serializers.ListField(
+        child=serializers.CharField(help_text="日志文件的绝对路径，可使用 通配符"), default=list
+    )
     log_type = serializers.ChoiceField(help_text="日志类型", choices=BkLogType.get_choices())
     is_builtin = serializers.SerializerMethodField(help_text="是否平台内置采集项")
     url = serializers.SerializerMethodField(help_text="日志平台链接")

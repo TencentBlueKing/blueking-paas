@@ -31,11 +31,11 @@ class ApplicationListPagination(LimitOffsetPagination):
         return Response(
             OrderedDict(
                 [
-                    ('count', self.count),
-                    ('next', self.get_next_link()),
-                    ('previous', self.get_previous_link()),
-                    ('extra_data', extra_data),
-                    ('results', data),
+                    ("count", self.count),
+                    ("next", self.get_next_link()),
+                    ("previous", self.get_previous_link()),
+                    ("extra_data", extra_data),
+                    ("results", data),
                 ]
             )
         )

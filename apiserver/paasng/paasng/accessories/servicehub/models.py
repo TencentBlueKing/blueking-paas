@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class ServiceModuleAttachment(OwnerTimestampedModel):
     """Module <-> Local Service relationship"""
 
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
+    module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
 
     class Meta:
@@ -51,11 +51,11 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
     engine app bind to service instance and plan
     """
 
-    engine_app = models.ForeignKey('engine.EngineApp', on_delete=models.CASCADE, related_name='service_attachment')
+    engine_app = models.ForeignKey("engine.EngineApp", on_delete=models.CASCADE, related_name="service_attachment")
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     service_instance = models.ForeignKey(
-        ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, related_name='service_attachment'
+        ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, related_name="service_attachment"
     )
 
     class Meta:
@@ -68,10 +68,10 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
 
         application_environment = ApplicationEnvironment.objects.get(engine_app=self.engine_app)
         params = {
-            'engine_app_name': self.engine_app.name,
-            'region': self.engine_app.region,
-            'application_code': application_environment.application.code,
-            'application_id': application_environment.application.id,
+            "engine_app_name": self.engine_app.name,
+            "region": self.engine_app.region,
+            "application_code": application_environment.application.code,
+            "application_id": application_environment.application.id,
         }
 
         service_instance = self.service.create_service_instance_by_plan(self.plan, params=params)
@@ -126,7 +126,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
 class RemoteServiceModuleAttachment(OwnerTimestampedModel):
     """Binding relationship of module <-> remote service"""
 
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
+    module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
 
     class Meta:
@@ -140,7 +140,7 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     """Binding relationship of engine app <-> remote service plan"""
 
     engine_app = models.ForeignKey(
-        'engine.EngineApp', on_delete=models.CASCADE, related_name='remote_service_attachment'
+        "engine.EngineApp", on_delete=models.CASCADE, related_name="remote_service_attachment"
     )
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
     plan_id = models.UUIDField(verbose_name="远程增强服务 Plan ID")
@@ -153,7 +153,7 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 class ServiceDBProperties:
     """Storing service related database properties"""
 
-    col_service_type: str = ''
+    col_service_type: str = ""
     model_module_rel: models.Model
 
 
@@ -170,7 +170,7 @@ class RemoteServiceDBProperties(ServiceDBProperties):
 class SharedServiceAttachmentManager(models.Manager):
     """Custom manager for SharedServiceAttachment model"""
 
-    def list_by_ref_module(self, service: ServiceObj, module: Module) -> 'Collection[SharedServiceAttachment]':
+    def list_by_ref_module(self, service: ServiceObj, module: Module) -> "Collection[SharedServiceAttachment]":
         """Get SharedServiceAttachment objects which reference given module and service object"""
         from paasng.accessories.servicehub.manager import get_db_properties
 
@@ -191,7 +191,7 @@ class SharedServiceAttachmentManager(models.Manager):
 class SharedServiceAttachment(TimestampedModel):
     """Share a service binding relationship from other modules"""
 
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, verbose_name="发起共享的应用模块")
+    module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="发起共享的应用模块")
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16)
     service_id = models.UUIDField(verbose_name="增强服务 ID")
     ref_attachment_pk = models.IntegerField(verbose_name="被共享的服务绑定关系主键")
@@ -199,7 +199,7 @@ class SharedServiceAttachment(TimestampedModel):
     objects = SharedServiceAttachmentManager()
 
     class Meta:
-        unique_together = ('module', 'service_type', 'service_id')
+        unique_together = ("module", "service_type", "service_id")
 
 
 @dataclass

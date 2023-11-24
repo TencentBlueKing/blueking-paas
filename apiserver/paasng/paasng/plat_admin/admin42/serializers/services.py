@@ -79,7 +79,7 @@ class ServiceObjSLZ(serializers.Serializer):
         data = super().to_internal_value(data)
         language_code = get_language()
         # 国际化相关的字段需要按当前用户的语言来确定字段
-        i18n_fields = ['display_name', 'description', 'long_description', 'instance_tutorial']
+        i18n_fields = ["display_name", "description", "long_description", "instance_tutorial"]
         for _field in i18n_fields:
             # 需要将语言中的连字符转为下划线，如 zh-cn 转为: zh_cn
             _translated_field = to_translated_field(_field, language_code)
@@ -108,7 +108,7 @@ class PlanSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Plan
-        fields = '__all__'
+        fields = "__all__"
 
 
 class PreCreatedInstanceSLZ(serializers.ModelSerializer):
@@ -116,7 +116,7 @@ class PreCreatedInstanceSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = PreCreatedInstance
-        fields = '__all__'
+        fields = "__all__"
 
 
 class PlanWithPreCreatedInstanceSLZ(PlanSLZ):

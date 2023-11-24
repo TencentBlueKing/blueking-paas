@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class MonitorConfig(AppConfig):
-    name = 'paasng.misc.monitoring.monitor'
+    name = "paasng.misc.monitoring.monitor"
 
     def ready(self):
         from .alert_rules import handlers  # noqa

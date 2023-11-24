@@ -27,7 +27,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts import serializers
 from paasng.infras.accounts.models import AccountFeatureFlag, Oauth2TokenHolder, UserProfile, make_verifier
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
@@ -36,9 +35,10 @@ from paasng.infras.accounts.oauth.utils import get_available_backends, get_backe
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 from paasng.utils.notifier import get_notification_backend
 
@@ -84,12 +84,14 @@ class UserVerificationGenerationView(APIView):
         if not PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
             raise error_codes.FEATURE_FLAG_DISABLED
 
-        verifier = make_verifier(request.session, request.data.get('func'))
+        verifier = make_verifier(request.session, request.data.get("func"))
         noti_backend = get_notification_backend()
 
-        message = _("您的蓝鲸验证码是：{verification_code}，请妥善保管。").format(verification_code=verifier.set_current_code())
+        message = _("您的蓝鲸验证码是：{verification_code}，请妥善保管。").format(
+            verification_code=verifier.set_current_code()
+        )
 
-        result = noti_backend.wecom.send([request.user.username], message, _('蓝鲸平台'))
+        result = noti_backend.wecom.send([request.user.username], message, _("蓝鲸平台"))
 
         if not result:
             raise error_codes.ERROR_SENDING_NOTIFICATION
@@ -236,14 +238,16 @@ class Oauth2BackendsViewSet(viewsets.ViewSet):
         scope = token_params.pop("scope", None)
         try:
             Oauth2TokenHolder.objects.update_or_create(
-                provider=backend_name, user=user_profile, region='ieod', scope=scope, defaults=token_params
+                provider=backend_name, user=user_profile, region="ieod", scope=scope, defaults=token_params
             )
         except Exception:
             msg = f"failed to save access token(from {backend}) to {user_profile.username}"
             logger.exception(msg)
             return Response(data={"message": msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return HttpResponse(b"<script>setTimeout(window.close, 2000)</script>" + _("授权成功, 2秒后自动关闭该页面").encode())
+        return HttpResponse(
+            b"<script>setTimeout(window.close, 2000)</script>" + _("授权成功, 2秒后自动关闭该页面").encode()
+        )
 
     def disconnect(self, request, backend, pk):
         """delete access token which is bind to user where pk={pk}"""

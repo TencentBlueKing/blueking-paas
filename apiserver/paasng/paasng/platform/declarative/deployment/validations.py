@@ -20,9 +20,9 @@ import cattr
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.serializers import field_env_var_key
 
 
@@ -35,15 +35,20 @@ class EnvVariableSLZ(serializers.Serializer):
         choices=ConfigVarEnvName.get_choices(), default=ConfigVarEnvName.GLOBAL.value
     )
     description = serializers.CharField(
-        allow_blank=True, allow_null=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        required=False,
+        default="",
+        help_text="变量描述，不超过 200 个字符",
     )
 
 
 class SvcBkSaaSSLZ(serializers.Serializer):
     """Serializer for describing SaaS item in service discovery"""
 
-    bk_app_code = serializers.CharField(help_text='蓝鲸 App Code')
-    module_name = serializers.CharField(required=False, help_text='需要获取服务地址的模块名')
+    bk_app_code = serializers.CharField(help_text="蓝鲸 App Code")
+    module_name = serializers.CharField(required=False, help_text="需要获取服务地址的模块名")
 
     def to_internal_value(self, data):
         # Note: 兼容只传递 app-code 的格式
@@ -93,7 +98,7 @@ class ProbeSLZ(serializers.Serializer):
 
     def validate(self, data):
         # 根据实际需求进行校验
-        if not any([data.get('exec'), data.get('http_get'), data.get('tcp_socket')]):
+        if not any([data.get("exec"), data.get("http_get"), data.get("tcp_socket")]):
             raise serializers.ValidationError(_("至少需要指定一个有效的探活检测机制"))
 
         return super().validate(data)

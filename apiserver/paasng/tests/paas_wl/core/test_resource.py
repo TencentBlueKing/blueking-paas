@@ -24,6 +24,6 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_get_process_selector(wl_app, wl_release):
-    selectors = get_process_selector(wl_app, 'web')
+    selectors = get_process_selector(wl_app, "web")
     assert isinstance(selectors, dict)
     assert selectors != {}

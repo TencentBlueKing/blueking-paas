@@ -23,7 +23,7 @@ from .setup import setup_by_settings
 
 
 class TracingConfig(AppConfig):
-    name = 'paas_wl.workloads.tracing'
+    name = "paas_wl.workloads.tracing"
 
     def ready(self):
         setup_by_settings()

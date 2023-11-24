@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessesConfig(AppConfig):
-    name = 'paas_wl.bk_app.processes'
+    name = "paas_wl.bk_app.processes"
 
     def ready(self):
         # Run initialization jobs
@@ -33,4 +33,4 @@ class ProcessesConfig(AppConfig):
         try:
             initialize_default_proc_spec_plans()
         except Exception as e:
-            logger.warning('Can not initialize process spec plans: %s', e)
+            logger.warning("Can not initialize process spec plans: %s", e)

@@ -22,8 +22,8 @@ from paasng.utils.error_codes import error_codes
 
 
 def get_user_auth_type(region: str) -> str:
-    region_map = getattr(settings, 'REGION_TO_USER_AUTH_TYPE_MAP', {})
+    region_map = getattr(settings, "REGION_TO_USER_AUTH_TYPE_MAP", {})
     if region in region_map:
         return region_map[region]
 
-    raise error_codes.CLOUDAPI_REGION_NOT_FOUND.format(f'region={region}')
+    raise error_codes.CLOUDAPI_REGION_NOT_FOUND.format(f"region={region}")

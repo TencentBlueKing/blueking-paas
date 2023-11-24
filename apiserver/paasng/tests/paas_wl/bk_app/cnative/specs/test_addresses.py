@@ -19,9 +19,8 @@ to the current version of the project delivered to anyone in the future.
 
 import pytest
 
-from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager
+from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager, save_addresses, to_domain, to_shared_tls_domain
 from paas_wl.bk_app.cnative.specs.addresses import Domain as MappingDomain
-from paas_wl.bk_app.cnative.specs.addresses import save_addresses, to_domain, to_shared_tls_domain
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
 from paasng.platform.modules.constants import ExposedURLType
@@ -41,8 +40,8 @@ def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
 
     with replace_cluster_service(
         replaced_ingress_config={
-            'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}],
-            'app_root_domains': [{"name": 'bkapps.example.com'}, {"name": 'bkapps.example2.com'}],
+            "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
+            "app_root_domains": [{"name": "bkapps.example.com"}, {"name": "bkapps.example2.com"}],
         }
     ), override_region_configs(bk_prod_wl_app.region, set_exposed_url_type):
         save_addresses(bk_prod_env)
@@ -55,11 +54,11 @@ def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
 @pytest.mark.auto_create_ns
 class TestToDomain:
     @pytest.mark.parametrize(
-        'host,https_enabled,secret_name_has_value',
+        "host,https_enabled,secret_name_has_value",
         [
-            ('x-foo.example.com', False, False),
-            ('not-match.example.com', True, False),
-            ('x-foo.example.com', True, True),
+            ("x-foo.example.com", False, False),
+            ("not-match.example.com", True, False),
+            ("x-foo.example.com", True, True),
         ],
     )
     def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_wl_app):
@@ -85,7 +84,7 @@ class TestToDomain:
 @pytest.mark.auto_create_ns
 class TestToSharedTLSDomain:
     def test_normal(self, bk_stag_wl_app):
-        d = MappingDomain(host='x-foo.example.com', pathPrefixList=['/'])
+        d = MappingDomain(host="x-foo.example.com", pathPrefixList=["/"])
         d = to_shared_tls_domain(d, bk_stag_wl_app)
         assert d.tlsSecretName is None
 
@@ -102,12 +101,12 @@ class TestAddrResourceManager:
     def test_integrated(self, bk_module, bk_stag_env, bk_stag_wl_app):
         # Create all types of domains
         # source type: subdomain
-        AppDomain.objects.create(app=bk_stag_wl_app, host='foo-subdomain.example.com', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=bk_stag_wl_app, host="foo-subdomain.example.com", source=AppDomainSource.AUTO_GEN)
         # source type: subpath
-        AppSubpath.objects.create(app=bk_stag_wl_app, subpath='/foo-subpath/', source=AppSubpathSource.DEFAULT)
+        AppSubpath.objects.create(app=bk_stag_wl_app, subpath="/foo-subpath/", source=AppSubpathSource.DEFAULT)
         # source type: custom
         Domain.objects.create(
-            name='foo-custom.example.com', path_prefix='/', module_id=bk_module.id, environment_id=bk_stag_env.id
+            name="foo-custom.example.com", path_prefix="/", module_id=bk_module.id, environment_id=bk_stag_env.id
         )
 
         addr_mgr = AddrResourceManager(bk_stag_env)

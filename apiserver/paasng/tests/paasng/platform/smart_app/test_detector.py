@@ -208,11 +208,11 @@ class TestSourcePackageStatReader:
     @pytest.mark.parametrize(
         "contents, meta_info, version",
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, EXAMPLE_APP_YAML, EXAMPLE_APP_YAML['version']),
+            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, EXAMPLE_APP_YAML, EXAMPLE_APP_YAML["version"]),
             (
                 {"app.yaml": yaml.dump(EXAMPLE_APP_YAML), "logo.png": "dummy"},
                 {"logo_b64data": "base64,ZHVtbXk=", **EXAMPLE_APP_YAML},
-                EXAMPLE_APP_YAML['version'],
+                EXAMPLE_APP_YAML["version"],
             ),
         ],
     )

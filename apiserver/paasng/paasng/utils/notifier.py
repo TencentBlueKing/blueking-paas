@@ -43,7 +43,7 @@ class DummyUserNotificationPlugin(UserNotificationPlugin):
     """A dummy implementation of user notification plugin"""
 
     def send(self, receivers: List[str], content: str, title: Optional[str] = None) -> bool:
-        logger.warning('Dummy notification backend invoked, receivers: %s', receivers)
+        logger.warning("Dummy notification backend invoked, receivers: %s", receivers)
         return True
 
 

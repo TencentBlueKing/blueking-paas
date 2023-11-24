@@ -67,7 +67,7 @@ class TestCommand:
             default_connect_timeout=settings.K8S_DEFAULT_CONNECT_TIMEOUT,
             default_request_timeout=settings.K8S_DEFAULT_CONNECT_TIMEOUT + settings.K8S_DEFAULT_READ_TIMEOUT,
             mapper_version=get_mapper_version(
-                target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={'client': k8s_client}
+                target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={"client": k8s_client}
             ),
         )
 

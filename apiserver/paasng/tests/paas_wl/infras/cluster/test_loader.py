@@ -87,19 +87,19 @@ class TestLoader:
 
 class TestLoaderNoInitialClusters:
     @pytest.mark.parametrize(
-        'token_value,auth_header_value',
+        "token_value,auth_header_value",
         [
             (None, None),
-            ('foo_token', 'Bearer foo_token'),
+            ("foo_token", "Bearer foo_token"),
         ],
     )
     def test_auth_types(self, token_value, auth_header_value, cluster_creator):
         Cluster.objects.all().delete()
-        api_servers = [{'host': 'https://hostname-of-foo:6553'}]
-        cluster_creator('default-cluster', api_servers, token_value=token_value)
+        api_servers = [{"host": "https://hostname-of-foo:6553"}]
+        cluster_creator("default-cluster", api_servers, token_value=token_value)
 
-        config = list(DBConfigLoader().list_configurations_by_name('default-cluster'))[0]
-        assert config.api_key.get('authorization') == auth_header_value
+        config = list(DBConfigLoader().list_configurations_by_name("default-cluster"))[0]
+        assert config.api_key.get("authorization") == auth_header_value
 
 
 class TestEnhancedKubeConfigLoader:

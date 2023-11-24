@@ -45,68 +45,68 @@ class TestMixedMgr:
         pass
 
     def test_list_by_category(self):
-        services = list(mixed_service_mgr.list_by_category('r1', category_id=Category.DATA_STORAGE))
+        services = list(mixed_service_mgr.list_by_category("r1", category_id=Category.DATA_STORAGE))
         assert len(services) == 1
 
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        G(Service, category=category, region='r1', logo_b64="dummy")
-        G(Service, category=category, region='r2', logo_b64="dummy")
+        G(Service, category=category, region="r1", logo_b64="dummy")
+        G(Service, category=category, region="r2", logo_b64="dummy")
 
-        services = list(mixed_service_mgr.list_by_category('r1', category_id=Category.DATA_STORAGE))
+        services = list(mixed_service_mgr.list_by_category("r1", category_id=Category.DATA_STORAGE))
         assert len(services) == 2
 
     def test_list_by_region(self):
-        services = list(mixed_service_mgr.list_by_region('r1'))
+        services = list(mixed_service_mgr.list_by_region("r1"))
         assert len(services) == 2
 
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        G(Service, category=category, region='r1', logo_b64="dummy")
-        G(Service, category=category, region='r2', logo_b64="dummy")
+        G(Service, category=category, region="r1", logo_b64="dummy")
+        G(Service, category=category, region="r2", logo_b64="dummy")
 
-        services = list(mixed_service_mgr.list_by_region('r1'))
+        services = list(mixed_service_mgr.list_by_region("r1"))
         assert len(services) == 3
 
     def test_get_remote_found(self):
-        obj = mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]['uuid'], region='r1')
+        obj = mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region="r1")
         assert obj is not None
 
     def test_get_local_found(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, category=category, region='r1', logo_b64="dummy")
+        svc = G(Service, category=category, region="r1", logo_b64="dummy")
 
-        obj = mixed_service_mgr.get(str(svc.uuid), region='r1')
+        obj = mixed_service_mgr.get(str(svc.uuid), region="r1")
         assert obj is not None
 
     def test_get_not_found(self):
         with pytest.raises(ServiceObjNotFound):
-            mixed_service_mgr.get(uuid='f' * 64, region='r1')
+            mixed_service_mgr.get(uuid="f" * 64, region="r1")
 
     def test_find_by_name_local_found(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, category=category, region='r1', logo_b64="dummy")
+        svc = G(Service, category=category, region="r1", logo_b64="dummy")
 
-        obj = mixed_service_mgr.find_by_name(str(svc.name), region='r1')
+        obj = mixed_service_mgr.find_by_name(str(svc.name), region="r1")
         assert obj is not None
         assert isinstance(obj, LocalServiceObj)
         assert not isinstance(obj, RemoteServiceObj)
 
     def test_find_by_name_remote_found(self):
-        obj = mixed_service_mgr.find_by_name(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]['name'], region='r1')
+        obj = mixed_service_mgr.find_by_name(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["name"], region="r1")
         assert obj is not None
         assert not isinstance(obj, LocalServiceObj)
         assert isinstance(obj, RemoteServiceObj)
 
     def test_find_by_name_not_found(self):
         with pytest.raises(ServiceObjNotFound):
-            mixed_service_mgr.find_by_name('non-exists-name', region='r1')
+            mixed_service_mgr.find_by_name("non-exists-name", region="r1")
 
-    @mock.patch('paasng.accessories.servicehub.manager.MixedServiceMgr.list_provisioned_rels')
+    @mock.patch("paasng.accessories.servicehub.manager.MixedServiceMgr.list_provisioned_rels")
     def test_get_env_vars_ordering(self, mock_list_provisioned_rels):
-        def create_mock_rel(create_time: 'datetime.datetime', **credentials):
+        def create_mock_rel(create_time: "datetime.datetime", **credentials):
             rel = mock.MagicMock()
             rel.get_instance.return_value = ServiceInstanceObj(
                 uuid="", credentials=credentials, config={}, create_time=create_time
@@ -124,7 +124,7 @@ class TestMixedMgr:
 
 
 class TestLocalMgr(BaseTestCaseWithApp):
-    app_region = 'r1'
+    app_region = "r1"
 
     def setUp(self):
         super().setUp()
@@ -133,10 +133,10 @@ class TestLocalMgr(BaseTestCaseWithApp):
     def _create_service(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        self.svc = G(Service, name='mysql', category=category, region='r1', logo_b64="dummy")
+        self.svc = G(Service, name="mysql", category=category, region="r1", logo_b64="dummy")
         # Create default plans
-        self.plan_default = G(Plan, name='no-ha', service=self.svc, config='{}')
-        self.plan_ha = G(Plan, name='ha', service=self.svc, config='{}')
+        self.plan_default = G(Plan, name="no-ha", service=self.svc, config="{}")
+        self.plan_ha = G(Plan, name="ha", service=self.svc, config="{}")
 
     def test_bind_service(self):
         mgr = LocalServiceMgr()
@@ -162,11 +162,11 @@ class TestLocalMgr(BaseTestCaseWithApp):
             ServiceInstance,
             service=self.svc,
             plan=self.plan_default,
-            config='{}',
-            credentials=dumps({'MYSQL_USERNAME': 'foo', 'MYSQL_PASSWORD': 'bar'}),
+            config="{}",
+            credentials=dumps({"MYSQL_USERNAME": "foo", "MYSQL_PASSWORD": "bar"}),
         )
 
-    @mock.patch('paasng.accessories.services.models.Service.create_service_instance_by_plan')
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
     def test_provision(self, mocked_method):
         """Test service instance provision"""
         mocked_method.side_effect = [self._create_instance(), self._create_instance()]
@@ -180,7 +180,7 @@ class TestLocalMgr(BaseTestCaseWithApp):
                 rel.provision()
                 assert rel.is_provisioned() is True
 
-    @mock.patch('paasng.accessories.services.models.Service.create_service_instance_by_plan')
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
     def test_instance_has_create_time_attr(self, mocked_method):
         mocked_method.side_effect = [self._create_instance()]
         mgr = LocalServiceMgr()
@@ -192,8 +192,8 @@ class TestLocalMgr(BaseTestCaseWithApp):
             instance = rel.get_instance()
             assert isinstance(instance.create_time, datetime.datetime)
 
-    @mock.patch('paasng.accessories.servicehub.constants.SERVICE_SENSITIVE_FIELDS', {'mysql': ['MYSQL_PASSWORD']})
-    @mock.patch('paasng.accessories.services.models.Service.create_service_instance_by_plan')
+    @mock.patch("paasng.accessories.servicehub.constants.SERVICE_SENSITIVE_FIELDS", {"mysql": ["MYSQL_PASSWORD"]})
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
     def test_get_instance(self, mocked_method):
         mocked_method.side_effect = [self._create_instance(), self._create_instance()]
         mgr = LocalServiceMgr()
@@ -205,23 +205,23 @@ class TestLocalMgr(BaseTestCaseWithApp):
                 instance = rel.get_instance()
 
                 assert len(instance.credentials) == 2
-                assert instance.credentials['MYSQL_PASSWORD'] == 'bar'
+                assert instance.credentials["MYSQL_PASSWORD"] == "bar"
 
                 assert len(instance.credentials_insensitive) == 1
-                assert instance.credentials_insensitive['MYSQL_USERNAME'] == 'foo'
+                assert instance.credentials_insensitive["MYSQL_USERNAME"] == "foo"
 
                 assert instance.get_hidden_credentials() == {}
-                assert instance.should_remove_fields == ['MYSQL_PASSWORD']
+                assert instance.should_remove_fields == ["MYSQL_PASSWORD"]
             break
 
     def test_find_by_name_not_found(self):
         mgr = LocalServiceMgr()
         with pytest.raises(ServiceObjNotFound):
-            mgr.find_by_name(name='foo_name', region=self.module.region)
+            mgr.find_by_name(name="foo_name", region=self.module.region)
 
     def test_find_by_name_normal(self):
         mgr = LocalServiceMgr()
-        service = mgr.find_by_name(name='mysql', region=self.module.region)
+        service = mgr.find_by_name(name="mysql", region=self.module.region)
         assert service is not None
 
     def test_module_is_bound_with(self):
@@ -236,7 +236,7 @@ class TestLocalMgr(BaseTestCaseWithApp):
         expect_obj: Dict[UUID, ServiceEngineAppAttachment] = {}
 
         mgr = LocalServiceMgr()
-        svc = mgr.find_by_name(name='mysql', region=self.module.region)
+        svc = mgr.find_by_name(name="mysql", region=self.module.region)
 
         # 绑定服务并创建服务实例
         mgr.bind_service(svc, self.module)
@@ -252,15 +252,15 @@ class TestLocalMgr(BaseTestCaseWithApp):
 
 
 class TestLocalRabbitMQMgr(BaseTestCaseWithApp):
-    app_region = 'r1'
+    app_region = "r1"
 
     def setUp(self):
         super().setUp()
         self.category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        self.svc = G(Service, name='rabbitmq', category=self.category, region=self.app_region, logo_b64="dummy")
+        self.svc = G(Service, name="rabbitmq", category=self.category, region=self.app_region, logo_b64="dummy")
         # Create default plans
-        self.plan_default = G(Plan, name='no-ha', service=self.svc, config='{}', is_active=False)
-        self.plan_ha = G(Plan, name='ha', service=self.svc, config='{}', is_active=False)
+        self.plan_default = G(Plan, name="no-ha", service=self.svc, config="{}", is_active=False)
+        self.plan_ha = G(Plan, name="ha", service=self.svc, config="{}", is_active=False)
 
     def test_bind_service(self):
         mgr = LocalServiceMgr()

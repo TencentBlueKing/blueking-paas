@@ -42,7 +42,7 @@ class ExportToDjangoView(APIView):
     permission_classes = ()
 
     def get(self, request):
-        if 'prometheus_multiproc_dir' in os.environ:
+        if "prometheus_multiproc_dir" in os.environ:
             logger.info("enable prometheus using multi processes mode")
             registry = prometheus_client.CollectorRegistry()
             multiprocess.MultiProcessCollector(registry)

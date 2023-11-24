@@ -22,8 +22,8 @@ from . import views
 
 urlpatterns = [
     url(
-        r'^api/bkapps/lesscode/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/$',
-        views.LesscodeModuleViewSet.as_view({'get': 'retrieve'}),
+        r"^api/bkapps/lesscode/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/$",
+        views.LesscodeModuleViewSet.as_view({"get": "retrieve"}),
         name="api.lesscode.info",
     ),
 ]

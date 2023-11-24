@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class BkCIClient:
     """蓝盾通过 APIGW 提供的应用态 API"""
 
-    def __init__(self, user_oauth: 'BkUserOAuth'):
+    def __init__(self, user_oauth: "BkUserOAuth"):
         self.user_oauth = user_oauth
         # 蓝盾只提供了正式环境的 API
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage="prod")
@@ -58,13 +58,13 @@ class BkCIClient:
         try:
             resp = self.client.app_codecc_custom_pipeline_new(data=trigger_params)
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f'trigger codecc pipeline error, detail: {e}')
+            raise BKCIGatewayServiceError(f"trigger codecc pipeline error, detail: {e}")
 
         # API 返回示例，code 是字符串格式
         # {u'status': 200, u'message': u'The system is busy inside. Please try again later', u'code': u'2300001'}
-        if resp.get('code') != '0':
+        if resp.get("code") != "0":
             logger.exception(f"trigger codecc pipeline error, resp:{resp}")
-            raise BKCIApiError(resp['message'], resp['code'])
+            raise BKCIApiError(resp["message"], resp["code"])
 
         return resp
 
@@ -73,23 +73,23 @@ class BkCIClient:
         try:
             resp = self.client.app_codecc_tool_defect_count(data={"taskId": task_id})
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f'get codecc defect tool counts error, detail: {e}')
+            raise BKCIGatewayServiceError(f"get codecc defect tool counts error, detail: {e}")
 
-        if resp.get('code') != '0':
+        if resp.get("code") != "0":
             logger.exception(f"get codecc defect tool counts error, resp:{resp}")
-            raise BKCIApiError(resp['message'], resp['code'])
+            raise BKCIApiError(resp["message"], resp["code"])
 
-        return resp.get('data')
+        return resp.get("data")
 
     def get_codecc_taskinfo_by_build_id(self, build_id: str):
         """[应用态]根据codeccBuildId查询buildId映射"""
         try:
             resp = self.client.app_codecc_build_id_mapping(data={"codeccbuildId": build_id})
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f'get codecc task info by build({build_id}) error, detail: {e}')
+            raise BKCIGatewayServiceError(f"get codecc task info by build({build_id}) error, detail: {e}")
 
-        if resp.get('code') != '0':
+        if resp.get("code") != "0":
             logger.exception(f"get codecc task info, resp:{resp}")
-            raise BKCIApiError(resp['message'], resp['code'])
+            raise BKCIApiError(resp["message"], resp["code"])
 
-        return resp.get('data', {}).get('task_id')
+        return resp.get("data", {}).get("task_id")

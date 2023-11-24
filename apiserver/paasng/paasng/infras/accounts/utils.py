@@ -22,8 +22,8 @@ from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
 
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
-from paasng.platform.applications.models import Application
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.platform.applications.models import Application
 
 
 def get_user_avatar(username):
@@ -33,7 +33,7 @@ def get_user_avatar(username):
 
         return get_user_avatar_ext(username)
     except ImportError:
-        return ''
+        return ""
 
 
 def id_to_username(user_id: str) -> str:

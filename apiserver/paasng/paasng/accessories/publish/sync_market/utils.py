@@ -21,8 +21,8 @@ from functools import partial, wraps
 
 from django.conf import settings
 
-from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.accessories.publish.sync_market.managers import AppManger
+from paasng.core.core.storages.sqlalchemy import console_db
 
 logger = logging.getLogger(__name__)
 
@@ -45,5 +45,5 @@ def run_required_db_console_config(func):
 def set_migrated_state(code, is_migrated):
     """this is a tool function for legacy migration"""
     with console_db.session_scope() as session:
-        count = AppManger(session).update(code, {'migrated_to_paasv3': is_migrated})
+        count = AppManger(session).update(code, {"migrated_to_paasv3": is_migrated})
         logger.info("成功更新应用%s的迁移状态为: %s, 影响记录%s条" % (code, is_migrated, count))

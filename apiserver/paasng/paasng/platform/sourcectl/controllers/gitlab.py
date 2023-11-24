@@ -66,7 +66,7 @@ class GitlabRepoController(BaseGitRepoController):
     def __init__(self, api_url: str, repo_url: Optional[str] = None, user_credentials: Optional[Dict] = None):
         super().__init__(api_url, repo_url, user_credentials)
         self.api_client = GitLabApiClient(api_url=api_url, **(user_credentials or {}))
-        self.repo_url = repo_url or ''
+        self.repo_url = repo_url or ""
 
     def get_client(self):
         return self.api_client
@@ -126,14 +126,14 @@ class GitlabRepoController(BaseGitRepoController):
         pri_version_names = {"trunk": -1, "master": -1}
         result = []
         for branch in self.api_client.repo_list_branches(self.project):
-            result.append(self._branch_data_to_version('branch', branch))
+            result.append(self._branch_data_to_version("branch", branch))
         for tag in self.api_client.repo_list_tags(self.project):
-            result.append(self._branch_data_to_version('tag', tag))
+            result.append(self._branch_data_to_version("tag", tag))
         return sorted(result, key=lambda item: (pri_version_names.get(item.name, 0), item.last_update), reverse=True)
 
     @error_converter
     def extract_smart_revision(self, smart_revision: str) -> str:
-        if ':' not in smart_revision:
+        if ":" not in smart_revision:
             return smart_revision
         version_type, version_name = smart_revision.split(":")
         try:
@@ -165,7 +165,7 @@ class GitlabRepoController(BaseGitRepoController):
     def get_diff_commit_logs(self, from_revision, to_revision=None, rel_filepath=None) -> List[CommitLog]:
         to_revision = to_revision or from_revision
         compare = self.api_client.repo_compare(self.project, from_revision, to_revision)
-        d = arrow.get(compare["commit"]["committed_date"]).to('utc').datetime
+        d = arrow.get(compare["commit"]["committed_date"]).to("utc").datetime
         return (
             [
                 CommitLog(
@@ -192,8 +192,8 @@ class GitlabRepoController(BaseGitRepoController):
         :param data_source: tag or branch
         :param data: JSON data returned from gitlab api
         """
-        if data_source not in ('tag', 'branch'):
-            raise ValueError('type must be tag or branch')
+        if data_source not in ("tag", "branch"):
+            raise ValueError("type must be tag or branch")
         try:
             message = data["message"]
         except KeyError:
@@ -201,7 +201,7 @@ class GitlabRepoController(BaseGitRepoController):
 
         date_str = data["commit"]["committed_date"]
         # Convert local time to utc datetime
-        commit_date = arrow.get(date_str).to('utc').datetime
+        commit_date = arrow.get(date_str).to("utc").datetime
         return AlternativeVersion(
             name=data["name"],
             type=data_source,

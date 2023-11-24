@@ -21,8 +21,8 @@ from typing import Dict, List, Optional
 import cattr
 from attrs import define, field, validators
 
-from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
@@ -116,7 +116,7 @@ class Probe:
     failure_threshold: Optional[int] = 3
 
     def get_probe_handler(self) -> ProbeHandler:
-        """返回 ProbeHandler 对象 """
+        """返回 ProbeHandler 对象"""
         return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
 
 

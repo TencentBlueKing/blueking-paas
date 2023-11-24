@@ -38,15 +38,15 @@ class App(UuidAuditedModel):
     name = models.SlugField(max_length=64, validators=[validate_app_name])
     # deprecated field
     structure = JSONField(default={}, blank=True, validators=[validate_app_structure])
-    type = models.CharField(verbose_name='应用类型', max_length=16, default=WlAppType.DEFAULT.value, db_index=True)
+    type = models.CharField(verbose_name="应用类型", max_length=16, default=WlAppType.DEFAULT.value, db_index=True)
 
     class Meta:
-        unique_together = ('region', 'name')
+        unique_together = ("region", "name")
 
     @property
     def scheduler_safe_name(self):
         """app name in scheduler backend"""
-        return self.name.replace('_', '0us0')
+        return self.name.replace("_", "0us0")
 
     @property
     def scheduler_safe_name_with_region(self):
@@ -62,8 +62,8 @@ class App(UuidAuditedModel):
             from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX
 
             module_env = EngineApp.objects.get(region=self.region, name=self.name).env
-            cnative_ns = f'{DEFAULT_ENGINE_APP_PREFIX}-{module_env.application.code}-{module_env.environment}'
-            return cnative_ns.replace('_', '0us0')
+            cnative_ns = f"{DEFAULT_ENGINE_APP_PREFIX}-{module_env.application.code}-{module_env.environment}"
+            return cnative_ns.replace("_", "0us0")
 
         return self.scheduler_safe_name
 
@@ -78,7 +78,7 @@ class App(UuidAuditedModel):
         return self.config_set.latest()
 
     def __str__(self) -> str:
-        return f'<{self.name}, region: {self.region}, type: {self.type}>'
+        return f"<{self.name}, region: {self.region}, type: {self.type}>"
 
 
 # Alias names to distinguish from Platform's App(Application/BluekingApplication) model

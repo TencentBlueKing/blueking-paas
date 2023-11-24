@@ -67,7 +67,7 @@ class AppLogConfigController:
             if existed_config != bklog_config:
                 # DynamicClient 默认使用 strategic-merge-patch, CRD 不支持, 因此需要使用 merge-patch
                 bklog_config_kmodel.update(
-                    bklog_config, update_method='patch', content_type="application/merge-patch+json"
+                    bklog_config, update_method="patch", content_type="application/merge-patch+json"
                 )
 
     def remove(self):

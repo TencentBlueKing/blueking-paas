@@ -54,8 +54,8 @@ class Test__import_env_overlays:
         ret = import_env_overlays(
             bk_module,
             [
-                ReplicasOverlay(envName='prod', process='web', count='2'),
-                ReplicasOverlay(envName='prod', process='worker', count='2'),
+                ReplicasOverlay(envName="prod", process="web", count="2"),
+                ReplicasOverlay(envName="prod", process="worker", count="2"),
             ],
             [],
             [],
@@ -129,7 +129,7 @@ class Test__import_env_overlays:
 
         ret = import_env_overlays(
             bk_module,
-            [ReplicasOverlay(envName='prod', process='web', count='5')],
+            [ReplicasOverlay(envName="prod", process="web", count="5")],
             [ResQuotaOverlay(envName="prod", process="web", plan=ResQuotaPlan.P_4C4G)],
             [AutoscalingOverlay(envName="prod", process="worker", minReplicas=1, maxReplicas=2, policy="default")],
         )

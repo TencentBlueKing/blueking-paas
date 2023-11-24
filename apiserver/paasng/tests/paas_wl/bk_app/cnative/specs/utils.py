@@ -31,7 +31,7 @@ def create_cnative_deploy(
     user: User,
     status: DeployStatus = DeployStatus.READY,
     resource: Optional[BkAppResource] = None,
-    name: str = 'default-deploy-1',
+    name: str = "default-deploy-1",
 ) -> AppModelDeploy:
     """Initialize an app's model resource and create a deployment instance under
     given environment.
@@ -45,7 +45,7 @@ def create_cnative_deploy(
     app = env.application
     module = env.module
     if not resource:
-        resource = create_app_resource(app.name, 'nginx:latest')
+        resource = create_app_resource(app.name, "nginx:latest")
 
     if not AppModelResource.objects.filter(module_id=str(module.id)).exists():
         model_res = AppModelResource.objects.create_from_resource(app.region, str(app.id), str(module.id), resource)
@@ -68,8 +68,8 @@ def create_cnative_deploy(
 def create_condition(
     type_: MResConditionType,
     status: Literal["True", "False", "Unknown"] = "Unknown",
-    reason: str = '',
-    message: str = '',
+    reason: str = "",
+    message: str = "",
 ) -> MetaV1Condition:
     return MetaV1Condition(
         type=type_,

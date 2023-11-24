@@ -78,13 +78,13 @@ class BKMonitorSpaceManager:
         try:
             resp = self.client.metadata_create_space(data=data)
         except APIGatewayResponseError as e:
-            raise BkMonitorGatewayServiceError('Failed to create space on BK Monitor') from e
+            raise BkMonitorGatewayServiceError("Failed to create space on BK Monitor") from e
 
-        if not resp.get('result'):
-            logger.error('Failed to create space on BK Monitor, resp:%s \ndata: %s', resp, data)
-            raise BkMonitorApiError(resp['message'])
+        if not resp.get("result"):
+            logger.error("Failed to create space on BK Monitor, resp:%s \ndata: %s", resp, data)
+            raise BkMonitorApiError(resp["message"])
 
-        resp_data = resp.get('data', {})
+        resp_data = resp.get("data", {})
         return BkMonitorSpace(
             space_type_id=resp_data["space_type_id"],
             space_id=resp_data["space_id"],
@@ -108,13 +108,13 @@ class BKMonitorSpaceManager:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise BkMonitorGatewayServiceError('Failed to update app space on BK Monitor') from e
+            raise BkMonitorGatewayServiceError("Failed to update app space on BK Monitor") from e
 
-        if not resp.get('result'):
-            logger.info(f'Failed to update app space on BK Monitor, resp:{resp} \ndata: {data}')
-            raise BkMonitorApiError(resp['message'])
+        if not resp.get("result"):
+            logger.info(f"Failed to update app space on BK Monitor, resp:{resp} \ndata: {data}")
+            raise BkMonitorApiError(resp["message"])
 
-        resp_data = resp.get('data', {})
+        resp_data = resp.get("data", {})
         return BkMonitorSpace(
             space_type_id=resp_data["space_type_id"],
             space_id=resp_data["space_id"],
@@ -131,15 +131,15 @@ class BKMonitorSpaceManager:
         try:
             resp = self.client.metadata_get_space_detail(data=data)
         except APIGatewayResponseError as e:
-            raise BkMonitorGatewayServiceError('Failed to get app space detail on BK Monitor') from e
+            raise BkMonitorGatewayServiceError("Failed to get app space detail on BK Monitor") from e
 
         # 目前监控的API返回值只有 true 和 false，没有更详细的错误码来确定是否空间已经存在
         # 监控侧暂时也没有规划添加错误码来标识空间是否已经存在
-        if not resp.get('result'):
-            logger.info('Failed to get space detail of %s on BK Monitor, resp: %s', space, resp)
-            raise BkMonitorSpaceDoesNotExist(resp['message'])
+        if not resp.get("result"):
+            logger.info("Failed to get space detail of %s on BK Monitor, resp: %s", space, resp)
+            raise BkMonitorSpaceDoesNotExist(resp["message"])
 
-        resp_data = resp.get('data', {})
+        resp_data = resp.get("data", {})
         return BkMonitorSpace(
             space_type_id=resp_data["space_type_id"],
             space_id=resp_data["space_id"],
@@ -169,11 +169,11 @@ class BkMonitorClient:
             resp = self.client.search_alert(json=query_params.to_dict())
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
-            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+            raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
 
-        if not resp.get('result'):
-            raise BkMonitorApiError(resp['message'])
-        return resp.get('data', {}).get('alerts', [])
+        if not resp.get("result"):
+            raise BkMonitorApiError(resp["message"])
+        return resp.get("data", {}).get("alerts", [])
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略
@@ -185,13 +185,13 @@ class BkMonitorClient:
             resp = self.client.search_alarm_strategy_v3(json=query_params_dict)
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
-            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+            raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
 
-        if not resp.get('result'):
-            raise BkMonitorApiError(resp['message'])
-        data = resp.get('data', {})
+        if not resp.get("result"):
+            raise BkMonitorApiError(resp["message"])
+        data = resp.get("data", {})
         data[
-            'strategy_config_link'
+            "strategy_config_link"
         ] = f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
         return data
 
@@ -207,25 +207,25 @@ class BkMonitorClient:
         :returns: 时序数据 Series
         """
         params: Dict[str, Union[str, int, None]] = {
-            'promql': promql,
-            'start_time': start,
-            'end_time': end,
-            'step': step,
-            'bk_biz_id': bk_biz_id,
+            "promql": promql,
+            "start_time": start,
+            "end_time": end,
+            "step": step,
+            "bk_biz_id": bk_biz_id,
         }
 
         # TODO: 监控功能对接蓝鲸应用空间时需要将参数修改成传递 space_uid
-        headers = {'X-Bk-Scope-Space-Uid': f'bkcc__{bk_biz_id}'}
+        headers = {"X-Bk-Scope-Space-Uid": f"bkcc__{bk_biz_id}"}
         try:
             resp = self.client.promql_query(headers=headers, data=params)
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
-            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+            raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
 
-        if resp.get('error'):
-            raise BkMonitorApiError(resp['error'])
+        if resp.get("error"):
+            raise BkMonitorApiError(resp["error"])
 
-        return resp.get('data', {}).get('series', [])
+        return resp.get("data", {}).get("series", [])
 
     def as_code_import_config(
         self, configs: Dict, biz_or_space_id: int, config_group: str, overwrite: bool = False, incremental: bool = True
@@ -248,10 +248,10 @@ class BkMonitorClient:
                 }
             )
         except APIGatewayResponseError:
-            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+            raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
 
-        if not resp.get('result'):
-            raise BkMonitorApiError(resp['message'])
+        if not resp.get("result"):
+            raise BkMonitorApiError(resp["message"])
 
 
 def _make_bk_minotor_backend() -> BkMonitorBackend:

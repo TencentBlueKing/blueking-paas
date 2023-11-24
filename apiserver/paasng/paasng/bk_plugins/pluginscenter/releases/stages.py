@@ -150,7 +150,7 @@ class ItsmStage(BaseStageController):
         basic_info = super().render_to_view()
         assert self.stage.itsm_detail
         ticket_info = get_ticket_status(self.stage.itsm_detail.sn)
-        ticket_info['fields'] = self.stage.itsm_detail.fields
+        ticket_info["fields"] = self.stage.itsm_detail.fields
         self.stage.refresh_from_db()
         return {
             **basic_info,
@@ -266,7 +266,7 @@ class PipelineStage(BaseStageController):
                 "pipeline_id": self.build.pipelineId,
                 "build_id": self.build.buildId,
                 "version": self.release.version,
-                "version_with_underscores": self.release.version.replace('.', '_'),
+                "version_with_underscores": self.release.version.replace(".", "_"),
                 "bk_username": "admin",
             }
         )

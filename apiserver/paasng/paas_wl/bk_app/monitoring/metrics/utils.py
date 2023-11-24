@@ -35,13 +35,13 @@ class MetricSmartTimeRange:
     """
 
     # start & end will be formatted as unix timestamp
-    start: str = ''
-    end: str = ''
+    start: str = ""
+    end: str = ""
     # prometheus default interval
-    step: str = '15s'
+    step: str = "15s"
     # if time_range_str, override start & end
     # timedelta or time phase both support
-    time_range_str: Union[datetime.timedelta, str] = ''
+    time_range_str: Union[datetime.timedelta, str] = ""
     time_format = "%Y-%m-%d %H:%M:%S"
 
     def __hash__(self):
@@ -50,10 +50,10 @@ class MetricSmartTimeRange:
     @classmethod
     def from_request_data(cls, data):
         # transfer 1s/2m/3h to timedelta
-        if data.get('time_range_str'):
-            return cls(time_range_str=data['time_range_str'], step=data['step'])
+        if data.get("time_range_str"):
+            return cls(time_range_str=data["time_range_str"], step=data["step"])
         else:
-            return cls(start=data['start_time'], end=data['end_time'], step=data['step'])
+            return cls(start=data["start_time"], end=data["end_time"], step=data["step"])
 
     @staticmethod
     def _bake_timestamp(timestamp):
@@ -92,4 +92,4 @@ class MetricSmartTimeRange:
                 raise ValueError("start should earlier than end")
 
     def to_dict(self):
-        return {'start': self.start, 'end': self.end, 'step': self.step}
+        return {"start": self.start, "end": self.end, "step": self.step}

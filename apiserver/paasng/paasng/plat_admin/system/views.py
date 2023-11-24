@@ -64,7 +64,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
     """System universal application view sets"""
 
     @swagger_auto_schema(
-        tags=['SYSTEMAPI'], responses={200: UniversalAppSLZ(many=True)}, query_serializer=QueryUniApplicationsByID
+        tags=["SYSTEMAPI"], responses={200: UniversalAppSLZ(many=True)}, query_serializer=QueryUniApplicationsByID
     )
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_by_id(self, request):
@@ -72,11 +72,11 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         serializer = QueryUniApplicationsByID(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        include_deploy_info = data['include_deploy_info']
+        include_deploy_info = data["include_deploy_info"]
 
-        results = query_uni_apps_by_ids(ids=data['id'], include_inactive_apps=data['include_inactive_apps'])
+        results = query_uni_apps_by_ids(ids=data["id"], include_inactive_apps=data["include_inactive_apps"])
         json_apps: List[Union[None, Dict]] = []
-        for app_id in data['id']:
+        for app_id in data["id"]:
             app = results.get(app_id)
             if not app:
                 json_apps.append(None)
@@ -95,15 +95,15 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
                 if include_deploy_info:
                     deploy_info = get_exposed_links(app._db_object)
 
-            basic_info['contact_info'] = contact_info
+            basic_info["contact_info"] = contact_info
             if include_deploy_info:
-                basic_info['deploy_info'] = deploy_info
+                basic_info["deploy_info"] = deploy_info
 
             json_apps.append(basic_info)
         return Response(json_apps)
 
     @swagger_auto_schema(
-        tags=['SYSTEMAPI'],
+        tags=["SYSTEMAPI"],
         responses={200: UniversalAppSLZ(many=True)},
         query_serializer=QueryUniApplicationsByUserName,
     )
@@ -114,12 +114,12 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        username = data['username']
+        username = data["username"]
         uni_apps = query_uni_apps_by_username(username)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
 
     @swagger_auto_schema(
-        tags=['SYSTEMAPI'], responses={200: MinimalAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
+        tags=["SYSTEMAPI"], responses={200: MinimalAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
     )
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_minimal_app(self, request):
@@ -132,8 +132,8 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         offset = paginator.get_offset(request)
         limit = paginator.get_limit(request)
 
-        keyword = data.get('keyword')
-        include_inactive_apps = data.get('include_inactive_apps')
+        keyword = data.get("keyword")
+        include_inactive_apps = data.get("include_inactive_apps")
         applications = query_uni_apps_by_keyword(keyword, offset, limit, include_inactive_apps)
 
         # Paginate results
@@ -179,9 +179,9 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             mixed_service_mgr.get_module_rel(service_id=svc.uuid, module_id=module.id)
         except SvcAttachmentDoesNotExist:
             # 如果未启用增强服务, 则静默启用
-            serializer = AddonSpecsSLZ(data=request.data, context={'svc': svc})
+            serializer = AddonSpecsSLZ(data=request.data, context={"svc": svc})
             serializer.is_valid(raise_exception=True)
-            specs = serializer.validated_data['specs'] or self._get_pub_recommended_specs(svc)
+            specs = serializer.validated_data["specs"] or self._get_pub_recommended_specs(svc)
             try:
                 mixed_service_mgr.bind_service(svc, module, specs)
             except Exception as e:
@@ -191,17 +191,17 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         # 如果未分配增强服务实例, 则进行分配
         rel = next(mixed_service_mgr.list_unprovisioned_rels(engine_app, service=svc), None)
         if not rel:
-            return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
+            return Response(data={"service_id": svc.uuid}, status=status.HTTP_200_OK)
 
         rel.provision()
-        return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
+        return Response(data={"service_id": svc.uuid}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def list_services(self, request, code, module_name, environment):
         """查询增强服务启用/实例分配情况"""
         engine_app = self.get_engine_app_via_path()
-        service_info = ServicesInfo.get_detail(engine_app)['services_info']
+        service_info = ServicesInfo.get_detail(engine_app)["services_info"]
         return Response(data=service_info)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
@@ -228,7 +228,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         spec_data: Dict[str, Optional[str]] = {
             definition.name: specs.get(definition.name) for definition in service.specifications
         }
-        return Response({'results': spec_data})
+        return Response({"results": spec_data})
 
     @staticmethod
     def _get_pub_recommended_specs(svc: ServiceObj) -> Optional[dict]:
@@ -296,9 +296,9 @@ class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
         namespace_cluster_map: Dict[str, str] = {}
         for wl_app in wl_apps:
             if (ns := wl_app.namespace) not in namespace_cluster_map:
-                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).bcs_cluster_id or ''
+                namespace_cluster_map[ns] = get_cluster_by_app(wl_app).bcs_cluster_id or ""
 
         data = [
-            {'namespace': ns, 'bcs_cluster_id': bcs_cluster_id} for ns, bcs_cluster_id in namespace_cluster_map.items()
+            {"namespace": ns, "bcs_cluster_id": bcs_cluster_id} for ns, bcs_cluster_id in namespace_cluster_map.items()
         ]
         return Response(ClusterNamespaceSLZ(data, many=True).data)

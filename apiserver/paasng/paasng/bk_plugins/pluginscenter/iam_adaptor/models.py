@@ -41,12 +41,12 @@ class PluginGradeManager(AuditedModel):
 
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)
     plugin_id = models.CharField(help_text="插件标识", max_length=32)
-    grade_manager_id = models.IntegerField(help_text='分级管理员 ID')
+    grade_manager_id = models.IntegerField(help_text="分级管理员 ID")
 
     objects = PluginRelativeManager()
 
     class Meta:
-        unique_together = ('pd_id', 'plugin_id', 'grade_manager_id')
+        unique_together = ("pd_id", "plugin_id", "grade_manager_id")
 
 
 class PluginUserGroup(AuditedModel):
@@ -59,9 +59,9 @@ class PluginUserGroup(AuditedModel):
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)
     plugin_id = models.CharField(help_text="插件标识", max_length=32)
     role = models.IntegerField(default=PluginRole.DEVELOPER.value)
-    user_group_id = models.IntegerField(help_text='权限中心用户组 ID')
+    user_group_id = models.IntegerField(help_text="权限中心用户组 ID")
 
     objects = PluginRelativeManager()
 
     class Meta:
-        unique_together = ('pd_id', 'plugin_id', 'role')
+        unique_together = ("pd_id", "plugin_id", "role")

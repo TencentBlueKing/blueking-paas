@@ -62,7 +62,7 @@ class VersionType:
 class SvnVersionTypes:
     """All supported svn version types"""
 
-    RE_SMART_REVISION = re.compile(r'^(\w+):(.+)$')
+    RE_SMART_REVISION = re.compile(r"^(\w+):(.+)$")
 
     def __init__(self):
         self.versions = (
@@ -103,11 +103,11 @@ svn_version_types = SvnVersionTypes()
 class RepoProvider:
     """Provider for svn repository"""
 
-    default_init_repo_message = 'Init repo for name: %s'
+    default_init_repo_message = "Init repo for name: %s"
 
     def __init__(self, base_url, username, password, with_branches_and_tags=True):
-        if not base_url.endswith('/'):
-            base_url = base_url + '/'
+        if not base_url.endswith("/"):
+            base_url = base_url + "/"
         self.base_url = force_text(base_url)
         self.username = username
         self.password = password
@@ -123,8 +123,8 @@ class RepoProvider:
             except AlreadyInitializedSvnRepo:
                 already_initialized = True
         return {
-            'already_initialized': already_initialized,
-            'repo_url': urllib.parse.urljoin(self.base_url, force_text(desired_name)),
+            "already_initialized": already_initialized,
+            "repo_url": urllib.parse.urljoin(self.base_url, force_text(desired_name)),
         }
 
     def initialize_repo(self, working_dir: pathlib.Path, desired_name, message=None):
@@ -134,13 +134,13 @@ class RepoProvider:
         :param str message: override default commit message
         """
         # First, checkout an empty directory to disk
-        self.rclient.checkout(str(working_dir), depth='empty')
+        self.rclient.checkout(str(working_dir), depth="empty")
 
         try:
             list(self.rclient.list(rel_path=desired_name))
 
-            logger.info('Skip init, %s already exists in svn server.' % desired_name)
-            raise AlreadyInitializedSvnRepo('Repo %s has already been initialized!' % desired_name)
+            logger.info("Skip init, %s already exists in svn server." % desired_name)
+            raise AlreadyInitializedSvnRepo("Repo %s has already been initialized!" % desired_name)
         except SvnException as e:
             # Will raise svn: E200009 is directory does not exists
             # Only continue if direcoty does not exists
@@ -154,7 +154,7 @@ class RepoProvider:
         # Create an empty repo if subdir directory does not exists
         repo_path.mkdir(parents=True, exist_ok=True)
         if self.with_branches_and_tags:
-            for subdir in ['trunk', 'branches', 'tags']:
+            for subdir in ["trunk", "branches", "tags"]:
                 (repo_path / subdir).mkdir(parents=True, exist_ok=True)
 
         # Commit to server
@@ -171,8 +171,8 @@ class RepoProvider:
     def make_tag_from_trunk(self, repo_path, tag_name, comment=None):
         if comment is None:
             comment = tag_name
-        origin_path = os.path.join(repo_path, 'trunk')
-        target_path = os.path.join(repo_path, 'tags', tag_name)
+        origin_path = os.path.join(repo_path, "trunk")
+        target_path = os.path.join(repo_path, "tags", tag_name)
         return self.rclient.run_command("copy", [origin_path, target_path, "-m %s" % comment])
 
 
@@ -186,25 +186,25 @@ class SvnRepositoryClient:
     """Client for SVN Repository"""
 
     default_ignores = [
-        '.svn',
+        ".svn",
     ]
 
     def __init__(self, repo_url, username, password):
-        if not repo_url.endswith('/'):
-            repo_url = repo_url + '/'
+        if not repo_url.endswith("/"):
+            repo_url = repo_url + "/"
         self.repo_url = force_text(repo_url)
         self.username = username
         self.password = password
-        self.svn_credentials = {'username': self.username, 'password': self.password}
+        self.svn_credentials = {"username": self.username, "password": self.password}
         self.rclient = RemoteClient(self.repo_url, **self.svn_credentials)
 
-    def sync_dir(self, local_path, remote_path, commit_message=''):
+    def sync_dir(self, local_path, remote_path, commit_message=""):
         """Sync a local dir to remote, usaully used for templating new repo"""
         remote_url = urllib.parse.urljoin(self.repo_url, force_text(remote_path))
         rclient = RemoteClient(remote_url, **self.svn_credentials)
 
         if list(rclient.list()):
-            raise CannotInitNonEmptyTrunk('URL %s is not empty and can not be synced!' % remote_url)
+            raise CannotInitNonEmptyTrunk("URL %s is not empty and can not be synced!" % remote_url)
 
         with generate_temp_dir() as working_dir:
             lclient = LocalClient(str(working_dir), **self.svn_credentials)
@@ -218,7 +218,7 @@ class SvnRepositoryClient:
                 lclient.add(str(d))
 
             lclient.commit(
-                commit_message or 'Init with template',
+                commit_message or "Init with template",
                 [
                     str(working_dir),
                 ],
@@ -249,20 +249,20 @@ class SvnRepositoryClient:
         from paasng.platform.sourcectl.models import AlternativeVersion
 
         pri_results, results = [], []
-        for item in self.rclient.list(extended=True, rel_path='.'):
-            ver = svn_version_types.get_version_by_dirname(item['name'])
+        for item in self.rclient.list(extended=True, rel_path="."):
+            ver = svn_version_types.get_version_by_dirname(item["name"])
             if not ver:
                 continue
             # "trunk"
             if not ver.include_subdirs:
-                url = urllib.parse.urljoin(self.repo_url, force_text(item['name']))
+                url = urllib.parse.urljoin(self.repo_url, force_text(item["name"]))
                 pri_results.append(
                     AlternativeVersion(item["name"], ver.name, item["commit_revision"], url, item["date"])
                 )
                 continue
 
             for sub_item in self.rclient.list(extended=True, rel_path=ver.dirname):
-                url = urllib.parse.urljoin(self.repo_url, force_text(ver.dirname + "/" + sub_item['name']))
+                url = urllib.parse.urljoin(self.repo_url, force_text(ver.dirname + "/" + sub_item["name"]))
                 results.append(
                     AlternativeVersion(sub_item["name"], ver.name, sub_item["commit_revision"], url, sub_item["date"])
                 )
@@ -275,9 +275,9 @@ class SvnRepositoryClient:
         """Get latest changed revision info"""
         info = self.rclient.info()
         return {
-            'commit_revision': info['commit_revision'],
-            'commit_author': info['commit/author'],
-            'commit_date': info['commit/date'],
+            "commit_revision": info["commit_revision"],
+            "commit_author": info["commit/author"],
+            "commit_date": info["commit/date"],
         }
 
     def get_commit_logs(self, from_revision, to_revision=None, rel_filepath=None):
@@ -289,11 +289,11 @@ class SvnRepositoryClient:
         # SVN 的 log_default 总是返回当前 from_revision 的 commit 记录
         return [
             {
-                'message': item.msg,
-                'revision': item.revision,
-                'date': item.date,
-                'author': item.author,
-                'changelist': item.changelist,
+                "message": item.msg,
+                "revision": item.revision,
+                "date": item.date,
+                "author": item.author,
+                "changelist": item.changelist,
             }
             for item in result
         ]
@@ -321,11 +321,11 @@ class SvnRepositoryClient:
         """
         rclient = RemoteClient(self.repo_url, **self.svn_credentials)
         if not list(rclient.list()):
-            raise RuntimeError('Fetch remote client failed')
+            raise RuntimeError("Fetch remote client failed")
 
         with generate_temp_dir() as working_dir:
             # 0. checkout
-            rclient.checkout(str(working_dir), depth='empty')
+            rclient.checkout(str(working_dir), depth="empty")
 
             lclient = LocalClient(str(working_dir), **self.svn_credentials)
 
@@ -379,7 +379,7 @@ class SvnRepositoryClient:
         return result
 
     def __str__(self):
-        return 'SvnRepositoryClient: %s' % self.repo_url
+        return "SvnRepositoryClient: %s" % self.repo_url
 
 
 class RemoteClient(OrigRemoteClient):
@@ -388,22 +388,22 @@ class RemoteClient(OrigRemoteClient):
     def checkout(self, path, revision=None, depth=None):
         cmd = []
         if revision is not None:
-            cmd += ['-r', str(revision)]
+            cmd += ["-r", str(revision)]
         if depth is not None:
-            cmd += ['--depth', depth]
+            cmd += ["--depth", depth]
 
         cmd += [self.url, path]
-        self.run_command('checkout', cmd)
+        self.run_command("checkout", cmd)
 
     def delete(self, rel_path):
         self.run_command(
-            'delete',
+            "delete",
             [rel_path],
             # wd=self.path
         )
 
     def tag_trunk(self, tag_name):
-        self.run_command('copy', [])
+        self.run_command("copy", [])
 
     def calculate_user_contribution(self, username: str):
         """
@@ -450,7 +450,7 @@ class LocalClient(OrigLocalClient):
     def add(self, rel_path: str, silent: bool = False):
         try:
             self.run_command(
-                'add',
+                "add",
                 [rel_path],
                 # wd=self.path
             )
@@ -462,7 +462,7 @@ class LocalClient(OrigLocalClient):
     def update(self, rel_path: str, silent: bool = False):
         try:
             self.run_command(
-                'update',
+                "update",
                 [rel_path],
                 # wd=self.path
             )
@@ -474,10 +474,10 @@ class LocalClient(OrigLocalClient):
     def commit(self, message: str, rel_filepaths=None):
         if rel_filepaths is None:
             rel_filepaths = []
-        args = ['-m', message] + rel_filepaths
+        args = ["-m", message] + rel_filepaths
 
         self.run_command(
-            'commit',
+            "commit",
             args,
             # wd=self.path
         )
@@ -485,7 +485,7 @@ class LocalClient(OrigLocalClient):
     def delete(self, rel_path: str, silent: bool = False):
         try:
             self.run_command(
-                'delete',
+                "delete",
                 [rel_path],
                 # wd=self.path
             )

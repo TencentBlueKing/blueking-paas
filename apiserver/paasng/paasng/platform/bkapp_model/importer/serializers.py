@@ -55,7 +55,7 @@ class BaseMountFields(serializers.Serializer):
 
         configMap = ConfigMapInputSLZ()
 
-    name = serializers.RegexField(regex=r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', max_length=63)
+    name = serializers.RegexField(regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63)
     mountPath = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$")
     source = SourceInputSLZ()
 

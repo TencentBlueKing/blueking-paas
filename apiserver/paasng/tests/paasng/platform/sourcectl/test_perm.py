@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 class TestUserSourceProviders:
     @pytest.mark.parametrize(
-        'flag,provider_in_results',
+        "flag,provider_in_results",
         [
             (True, True),
             (False, False),
@@ -39,13 +39,13 @@ class TestUserSourceProviders:
         user_providers = UserSourceProviders(bk_user)
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ENABLE_DFT_BK_SVN, flag)  # type: ignore
         providers = user_providers.list_available()
-        assert ('dft_bk_svn' in providers) == provider_in_results
+        assert ("dft_bk_svn" in providers) == provider_in_results
 
     def test_list_module_availables(self, bk_user, init_tmpls, bk_module_full):
         user_providers = UserSourceProviders(bk_user)
         source_obj = bk_module_full.get_source_obj()
 
-        with mock.patch.object(user_providers, 'list_available') as mocked_func:
+        with mock.patch.object(user_providers, "list_available") as mocked_func:
             mocked_func.return_value = []
             assert user_providers.list_available() == []
 
@@ -55,6 +55,6 @@ class TestUserSourceProviders:
 
 
 def test_render_providers():
-    results = render_providers(['dft_bk_svn'])
+    results = render_providers(["dft_bk_svn"])
     assert isinstance(results, list)
     assert len(results) > 0

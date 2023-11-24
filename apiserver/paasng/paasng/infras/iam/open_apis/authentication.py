@@ -53,4 +53,4 @@ class IAMBasicAuthentication(BasicAuthentication):
         if password != token:
             raise AuthenticationFailed("password in basic_auth not equals to system token")
 
-        return ({'username': userid, 'password': password}, None)
+        return ({"username": userid, "password": password}, None)

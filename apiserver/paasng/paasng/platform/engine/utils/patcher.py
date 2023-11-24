@@ -33,7 +33,7 @@ from paasng.platform.modules.specs import ModuleSpecs
 class SourceCodePatcherWithDBDriver:
     """基于数据库记录驱动的源码 Patcher"""
 
-    def __init__(self, module: 'Module', source_dir: Path, deployment: Deployment):
+    def __init__(self, module: "Module", source_dir: Path, deployment: Deployment):
         """
         :param module: 模块
         :param source_dir: 源码根路径
@@ -92,7 +92,7 @@ class SourceCodePatcherWithDBDriver:
         """当前模块代码的路径"""
         user_dir = Path(self.get_user_source_dir())
         if user_dir.is_absolute():
-            user_dir = Path(user_dir).relative_to('/')
+            user_dir = Path(user_dir).relative_to("/")
         return self.source_dir / str(user_dir)
 
     def get_user_source_dir(self) -> str:

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceHubConfig(AppConfig):
-    name = 'paasng.accessories.servicehub'
+    name = "paasng.accessories.servicehub"
 
     def ready(self):
         from .remote.collector import initialize_remote_services

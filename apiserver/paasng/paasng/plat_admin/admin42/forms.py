@@ -21,8 +21,8 @@ from typing import Dict
 
 from django.forms import CharField, ChoiceField, ModelChoiceField, ModelForm, Textarea
 
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.core.region.states import RegionType
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 
 
 class ModelNameChoiceField(ModelChoiceField):
@@ -38,10 +38,10 @@ class ModelNameChoiceField(ModelChoiceField):
         widget=None,
         label=None,
         initial=None,
-        help_text='',
+        help_text="",
         limit_choices_to=None,
         blank=False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             queryset,
@@ -54,7 +54,7 @@ class ModelNameChoiceField(ModelChoiceField):
             to_field_name="name",
             limit_choices_to=limit_choices_to,
             blank=blank,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -71,7 +71,7 @@ class AppSlugBuilderForm(ModelForm, JSONEnvironmentFieldMixin):
 
     class Meta:
         model = AppSlugBuilder
-        exclude = ('updated', 'created', 'modules', 'buildpacks')
+        exclude = ("updated", "created", "modules", "buildpacks")
 
 
 class AppSlugRunnerForm(ModelForm, JSONEnvironmentFieldMixin):
@@ -80,7 +80,7 @@ class AppSlugRunnerForm(ModelForm, JSONEnvironmentFieldMixin):
 
     class Meta:
         model = AppSlugRunner
-        exclude = ('updated', 'created', 'modules')
+        exclude = ("updated", "created", "modules")
 
 
 class AppBuildPackForm(ModelForm, JSONEnvironmentFieldMixin):
@@ -88,4 +88,4 @@ class AppBuildPackForm(ModelForm, JSONEnvironmentFieldMixin):
 
     class Meta:
         model = AppBuildPack
-        exclude = ('updated', 'created', 'modules')
+        exclude = ("updated", "created", "modules")

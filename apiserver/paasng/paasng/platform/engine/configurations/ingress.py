@@ -6,9 +6,9 @@ from django.conf import settings
 from paas_wl.workloads.networking.entrance.allocator.domains import Domain, ModuleEnvDomains
 from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, Subpath
 from paas_wl.workloads.networking.ingress.shim import sync_subdomains, sync_subpaths
+from paasng.core.region.models import get_region
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.core.region.models import get_region
 
 
 class AppDefaultDomains:
@@ -35,7 +35,7 @@ class AppDefaultDomains:
 
     def as_env_vars(self) -> Dict:
         """Return current subdomains as env vars"""
-        domains_str = ';'.join(d.host for d in self.domains)
+        domains_str = ";".join(d.host for d in self.domains)
 
         if not domains_str:
             # only if domain exist, would add ENGINE_APP_DEFAULT_SUBDOMAINS key

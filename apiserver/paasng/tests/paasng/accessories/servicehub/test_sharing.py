@@ -37,7 +37,7 @@ from . import data_mocks
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
-_region_name = 'r1'
+_region_name = "r1"
 
 
 def create_module(bk_app):
@@ -49,10 +49,10 @@ def create_module(bk_app):
 @pytest.fixture(autouse=True)
 def setup_data(bk_app, bk_module):
     bk_app.region = _region_name
-    bk_app.save(update_fields=['region'])
+    bk_app.save(update_fields=["region"])
 
     bk_module.region = _region_name
-    bk_module.save(update_fields=['region'])
+    bk_module.save(update_fields=["region"])
 
 
 @pytest.fixture
@@ -62,9 +62,9 @@ def local_service(request):
     else:
         param = request._parent_request.param
 
-    service = G(Service, name='mysql', category=G(ServiceCategory), region=_region_name, logo_b64="dummy")
+    service = G(Service, name="mysql", category=G(ServiceCategory), region=_region_name, logo_b64="dummy")
     if param == "legacy-local":
-        G(Plan, name='no-ha', service=service)
+        G(Plan, name="no-ha", service=service)
         G(Plan, name="ha", service=service)
     else:
         G(Plan, name=generate_random_string(), service=service)
@@ -73,7 +73,7 @@ def local_service(request):
 
 @pytest.fixture
 def remote_service(faked_remote_services):
-    return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]['uuid'], region=_region_name)
+    return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region=_region_name)
 
 
 def pick_different_category(service_obj: ServiceObj) -> int:
@@ -81,20 +81,20 @@ def pick_different_category(service_obj: ServiceObj) -> int:
     for category in Category:
         if category != service_obj.category_id:
             return category
-    raise RuntimeError('Can not found a wrong category')
+    raise RuntimeError("Can not found a wrong category")
 
 
-@pytest.fixture(params=['legacy-local', 'newly-local', 'remote'])
+@pytest.fixture(params=["legacy-local", "newly-local", "remote"])
 def service_obj(request, local_service, remote_service):
     """
     Service object for testing, this fixture will yield both a remote and a local service
     """
-    if request.param == 'remote':
+    if request.param == "remote":
         return request.getfixturevalue("remote_service")
     elif request.param in ["legacy-local", "newly-local"]:
         return request.getfixturevalue("local_service")
     else:
-        raise ValueError('Invalid type_ parameter')
+        raise ValueError("Invalid type_ parameter")
 
 
 @pytest.fixture
@@ -181,7 +181,7 @@ class TestSharingReferencesManager:
         assert len(sharing_mgr.list_shared_info(service_obj.category_id)) == 0
 
 
-@pytest.mark.parametrize("local_service", ['legacy-local', 'newly-local'], indirect=["local_service"])
+@pytest.mark.parametrize("local_service", ["legacy-local", "newly-local"], indirect=["local_service"])
 class TestGetEnvVariables:
     def test_local_integrated(self, bk_app, bk_module, local_service):
         def _create_instance():
@@ -191,8 +191,8 @@ class TestGetEnvVariables:
                 ServiceInstance,
                 service=svc,
                 plan=Plan.objects.filter(service=svc)[0],
-                config='{}',
-                credentials=json.dumps({'FOO': '1'}),
+                config="{}",
+                credentials=json.dumps({"FOO": "1"}),
             )
 
         # Bind source module with a remote service
@@ -200,20 +200,20 @@ class TestGetEnvVariables:
         mixed_service_mgr.bind_service(local_service, ref_module)
 
         # Create real service instance data for ref_module
-        with mock.patch('paasng.accessories.services.models.Service.create_service_instance_by_plan') as mocker:
+        with mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan") as mocker:
             mocker.side_effect = [_create_instance(), _create_instance()]
             for env in ref_module.envs.all():
                 for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app):
                     rel.provision()
 
         # Get shared env variables
-        env = bk_module.get_envs('prod')
+        env = bk_module.get_envs("prod")
         ret = ServiceSharingManager(bk_module).get_env_variables(env)
         assert ret == {}
 
         ServiceSharingManager(bk_module).create(local_service, ref_module)
         ret = ServiceSharingManager(bk_module).get_env_variables(env)
-        assert ret == {'FOO': '1'}
+        assert ret == {"FOO": "1"}
 
         ServiceSharingManager(bk_module).destroy(local_service)
         ret = ServiceSharingManager(bk_module).get_env_variables(env)

@@ -76,6 +76,7 @@ class PluginBackendAPI(BaseModel):
     read: Optional[PluginBackendAPIResource]
     update: Optional[PluginBackendAPIResource]
     delete: Optional[PluginBackendAPIResource]
+    reactivate: Optional[PluginBackendAPIResource]
 
 
 @register

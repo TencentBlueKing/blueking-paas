@@ -115,6 +115,10 @@ class PluginInstance(UuidAuditedModel):
             overview_page.bottomUrl = overview_page.bottomUrl.format(plugin_id=self.id)
         return overview_page
 
+    @property
+    def can_reactivate(self) -> bool:
+        return self.pd.basic_info_definition.api.reactivate is not None
+
     class Meta:
         unique_together = ("pd", "id")
 
@@ -224,7 +228,7 @@ class PluginRelease(AuditedModel):
 
         if self.all_stages.count() != 0:
             if not force_refresh:
-                raise Exception("Release 不能重复初始化")
+                raise Exception("Release 不能重复初始化")  # noqa: TRY002
             self.all_stages.all().delete()
 
         stages_shortcut = []

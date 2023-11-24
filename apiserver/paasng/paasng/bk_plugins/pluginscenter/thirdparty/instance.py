@@ -57,3 +57,19 @@ def archive_instance(pd: PluginDefinition, instance: PluginInstance, operator: s
     instance.status = PluginStatus.ARCHIVED
     instance.save(update_fields=["status", "updated"])
     return True
+
+
+def reactivate_instance(pd: PluginDefinition, instance: PluginInstance, operator: str) -> bool:
+    if not pd.basic_info_definition.api.reactivate:
+        return True
+
+    resp = utils.make_client(pd.basic_info_definition.api.reactivate).call(
+        path_params={"plugin_id": instance.id}, data={"operator": operator}
+    )
+    if not resp.get("result"):
+        logger.error(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
+        return False
+
+    instance.status = PluginStatus.DEVELOPING
+    instance.save(update_fields=["status", "updated"])
+    return True

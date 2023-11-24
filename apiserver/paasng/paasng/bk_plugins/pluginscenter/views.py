@@ -367,6 +367,29 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @atomic
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
+    )
+    def reactivate(self, request, pd_id, plugin_id):
+        """插件重新上架"""
+        plugin = self.get_plugin_instance()
+        if not plugin.can_reactivate:
+            raise error_codes.NOT_SUPPORT_REACTIVATE
+
+        api_call_success = instance_api.reactivate_instance(plugin.pd, plugin, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 插件下架
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.REACTIVATE,
+            subject=constants.SubjectTypes.PLUGIN,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def get_filter_params(self, request):
         """Get plug-in list filtering parameters, such as plug-in type, development language, etc."""
         pds = PluginDefinition.objects.all()

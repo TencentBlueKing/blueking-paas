@@ -28,6 +28,7 @@ from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -117,9 +118,10 @@ class TestCreateCloudNativeModule:
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
-    def test_create_with_manifest(self, bk_cnative_app, api_client):
-        """托管方式：仅镜像（提供 manifest）"""
+    def test_create_with_image(self, bk_cnative_app, api_client):
+        """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)
+        image_repository = "strm/helloworld-http"
         response = api_client.post(
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
@@ -128,22 +130,18 @@ class TestCreateCloudNativeModule:
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
-                "build_config": {
-                    "build_method": "custom_image",
-                },
-                "manifest": {
-                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
-                    "kind": "BkApp",
-                    "metadata": {
-                        "name": f"{bk_cnative_app.code}-m-uta-{random_suffix}",
-                        "generation": 0,
-                        "annotations": {},
-                    },
-                    "spec": {
-                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
-                        "processes": [{"name": "web", "replicas": 1}],
-                        "configuration": {"env": []},
-                    },
+                "bkapp_spec": {
+                    "build_config": {"build_method": "custom_image", "image_repository": image_repository},
+                    "processes": [
+                        {
+                            "name": "web",
+                            "command": ["bash", "/app/start_web.sh"],
+                            "env_overlay": {
+                                'stag': {'environment_name': 'stag', 'target_replicas': 1, 'plan_name': '2C1G'},
+                                'prod': {'environment_name': 'prod', 'target_replicas': 2, 'plan_name': '2C1G'},
+                            },
+                        }
+                    ],
                 },
             },
         )
@@ -151,6 +149,15 @@ class TestCreateCloudNativeModule:
         module_data = response.json()['module']
         assert module_data['web_config']['build_method'] == 'custom_image'
         assert module_data['web_config']['artifact_type'] == 'none'
+        module = Module.objects.get(id=module_data['id'])
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        assert cfg.image_repository == image_repository
+        process_spec = ModuleProcessSpec.objects.get(module=module, name='web')
+        assert process_spec.image is None
+        assert process_spec.image_credential_name is None
+        assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.get_target_replicas('stag') == 1
+        assert process_spec.get_target_replicas('prod') == 2
 
     @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
     @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')
@@ -168,9 +175,7 @@ class TestCreateCloudNativeModule:
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
                 "name": f'uta-{random_suffix}',
-                "build_config": {
-                    "build_method": "buildpack",
-                },
+                'bkapp_spec': {"build_config": {"build_method": "buildpack"}},
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -191,9 +196,11 @@ class TestCreateCloudNativeModule:
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
                 "name": f'uta-{random_suffix}',
-                "build_config": {
-                    "build_method": "dockerfile",
-                    'dockerfile_path': 'Dockerfile',
+                "bkapp_spec": {
+                    "build_config": {
+                        "build_method": "dockerfile",
+                        'dockerfile_path': 'Dockerfile',
+                    }
                 },
                 "source_config": {
                     "source_init_template": "docker",

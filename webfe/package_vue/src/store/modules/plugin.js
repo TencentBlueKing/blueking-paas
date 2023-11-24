@@ -259,6 +259,15 @@ export default {
     },
 
     /**
+         * 保存基本信息-更多信息
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    updatePluginMoreInfo({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/extra_fields/`;
+      return http.post(url, data, config);
+    },
+
+    /**
          * 保存市场信息
          * @param {Object} params 请求参数：pdId, pluginId, releaseId, data
          */

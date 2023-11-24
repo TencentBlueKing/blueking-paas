@@ -60,7 +60,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 
 // 需要控制的菜单项
 const PLUGIN_NAV_MAP = {
@@ -77,6 +77,7 @@ export default {
         'pluginVersionRelease',
         'pluginVersionEditor',
         'marketInfoEdit',
+        'moreInfoEdit',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -181,7 +182,7 @@ export default {
         'pluginVersionRelease',
         'pluginVersionEditor',
         'marketInfoEdit',
-
+        'moreInfoEdit',
       ];
 
       this.navTree.forEach((nav) => {

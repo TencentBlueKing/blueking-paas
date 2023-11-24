@@ -1,106 +1,78 @@
-const pluginCenterPage = () => import(/* webpackChunkName: 'plugin-center-index' */'@/views/plugin-center/index').then(module => {
-  return module;
-}).catch(error => {
+import i18n from '@/language/i18n.js';
+
+const pluginCenterPage = () => import(/* webpackChunkName: 'plugin-center-index' */'@/views/plugin-center/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const createPlugin = () => import(/* webpackChunkName: 'create-plugin' */'@/views/plugin-center/create-plugin/index').then(module => {
-  return module;
-}).catch(error => {
+const createPlugin = () => import(/* webpackChunkName: 'create-plugin' */'@/views/plugin-center/create-plugin/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginIndex = () => import(/* webpackChunkName: 'plugin-index' */'@/views/plugin-center/plugin/index').then(module => {
-  return module;
-}).catch(error => {
+const pluginIndex = () => import(/* webpackChunkName: 'plugin-index' */'@/views/plugin-center/plugin/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
 // Plugin: summary
-const pluginSummary = () => import(/* webpackChunkName: 'plugin-sumary' */'@/views/plugin-center/plugin/summary/index').then(module => {
-  return module;
-}).catch(error => {
+const pluginSummary = () => import(/* webpackChunkName: 'plugin-sumary' */'@/views/plugin-center/plugin/summary/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginVersionManager = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/index').then(module => {
-  return module;
-}).catch(error => {
+const pluginVersionManager = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginVersionRelease = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/version-release').then(module => {
-  return module;
-}).catch(error => {
+const pluginVersionRelease = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/version-release').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginVersionEditor = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/editor-version').then(module => {
-  return module;
-}).catch(error => {
+const pluginVersionEditor = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/editor-version').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginLog = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/log/index').then(module => {
-  return module;
-}).catch(error => {
+const pluginLog = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/log/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginBaseInfo = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/base-info.vue').then(module => {
-  return module;
-}).catch(error => {
+const pluginBaseInfo = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/base-info.vue').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginVisibleRange = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/visible-range.vue').then(module => {
-  return module;
-}).catch(error => {
+const pluginVisibleRange = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/visible-range.vue').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginRoles = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/members.vue').then(module => {
-  return module;
-}).catch(error => {
+const pluginRoles = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/members.vue').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/deploy-env/index').then(module => {
-  return module;
-}).catch(error => {
+const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/deploy-env/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const marketInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/market-info-edit.vue').then(module => {
-  return module;
-}).catch(error => {
+const marketInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/market-info-edit.vue').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/cloud-api').then(module => {
-  return module;
-}).catch(error => {
+const moreInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/more-info-edit.vue').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const pluginProcess = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/plugin-center/plugin/process/index').then(module => {
-  return module;
-}).catch(error => {
+const pluginCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/cloud-api').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-const plugin403 = () => import(/* webpackChunkName: 'permission403' */'@/views/error-pages/403').then(module => {
-  return module;
-}).catch(error => {
+const pluginProcess = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/plugin-center/plugin/process/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
-import i18n from '@/language/i18n.js';
+const plugin403 = () => import(/* webpackChunkName: 'permission403' */'@/views/error-pages/403').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
 export const pluginRouter = [
   {
     path: '/plugin-center/',
     name: 'plugin',
-    component: pluginCenterPage
+    component: pluginCenterPage,
   },
   {
     path: '/plugin-center/create',
@@ -108,30 +80,30 @@ export const pluginRouter = [
     component: createPlugin,
     meta: {
       pathName: i18n.t('创建插件'),
-      supportBack: true
-    }
+      supportBack: true,
+    },
   },
   {
     path: '/plugin-centerr/plugin/:pluginTypeId/:id/403',
     name: 'plugin403',
     component: plugin403,
     meta: {
-      plugin: true
-    }
+      plugin: true,
+    },
   },
   {
     path: '/plugin-center/plugin/',
     name: '插件概览',
     component: pluginIndex,
     meta: {
-      capture403Error: false
+      capture403Error: false,
     },
     children: [
       {
         path: ':id',
         redirect: {
-          name: 'pluginSummary'
-        }
+          name: 'pluginSummary',
+        },
       },
       {
         path: ':pluginTypeId/:id/summary',
@@ -139,8 +111,8 @@ export const pluginRouter = [
         name: 'pluginSummary',
         meta: {
           pathName: i18n.t('概览'),
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/version-manage',
@@ -148,8 +120,8 @@ export const pluginRouter = [
         name: 'pluginVersionManager',
         meta: {
           pathName: i18n.t('版本管理'),
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/deploy-env',
@@ -157,8 +129,8 @@ export const pluginRouter = [
         name: 'pluginDeployEnv',
         meta: {
           pathName: i18n.t('配置管理'),
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/version-release',
@@ -166,8 +138,8 @@ export const pluginRouter = [
         name: 'pluginVersionRelease',
         meta: {
           pathName: i18n.t('发布'),
-          supportBack: true
-        }
+          supportBack: true,
+        },
       },
       {
         path: ':pluginTypeId/:id/version-edit',
@@ -176,8 +148,8 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('新建版本'),
           capture403Error: false,
-          supportBack: true
-        }
+          supportBack: true,
+        },
       },
       {
         path: ':pluginTypeId/:id/log',
@@ -185,8 +157,8 @@ export const pluginRouter = [
         name: 'pluginLog',
         meta: {
           pathName: i18n.t('日志查询'),
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/process',
@@ -195,8 +167,8 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('进程管理'),
           capture403Error: false,
-          isGetAppInfo: true
-        }
+          isGetAppInfo: true,
+        },
       },
       {
         path: ':pluginTypeId/:id/cloudapi',
@@ -205,8 +177,8 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('云 API 权限'),
           capture403Error: false,
-          isGetAppInfo: true
-        }
+          isGetAppInfo: true,
+        },
       },
       {
         path: ':pluginTypeId/:id/base-info',
@@ -214,8 +186,8 @@ export const pluginRouter = [
         name: 'pluginBaseInfo',
         meta: {
           pathName: i18n.t('基本信息'),
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/market-info-edit',
@@ -224,8 +196,18 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('编辑市场信息'),
           supportBack: true,
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/more-info-edit',
+        component: moreInfoEdit,
+        name: 'moreInfoEdit',
+        meta: {
+          pathName: i18n.t('编辑更多信息'),
+          supportBack: true,
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/visible-range',
@@ -233,8 +215,8 @@ export const pluginRouter = [
         name: 'pluginVisibleRange',
         meta: {
           pathName: i18n.t('可见范围'),
-          capture403Error: false
-        }
+          capture403Error: false,
+        },
       },
       {
         path: ':pluginTypeId/:id/roles',
@@ -243,9 +225,9 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('成员管理'),
           capture403Error: false,
-          isPlugin: true
-        }
-      }
-    ]
-  }
+          isPlugin: true,
+        },
+      },
+    ],
+  },
 ];

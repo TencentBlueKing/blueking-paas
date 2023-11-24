@@ -809,7 +809,8 @@ export const PAAS_STATIC_CONFIG = {
                         },
                         "matchRouters": [
                             "pluginBaseInfo",
-                            "marketInfoEdit"
+                            "marketInfoEdit",
+                            "moreInfoEdit"
                         ]
                     },
                     {

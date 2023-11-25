@@ -666,7 +666,6 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 "version_no": release_revision.versionNo,
                 "version_type": release_revision.revisionType,
                 "extra_fields": cattr.unstructure(release_revision.extraFields),
-                "extra_fields_order": cattr.unstructure(release_revision.extraFieldsOrder),
                 "source_versions": cattr.unstructure(versions),
                 "allow_duplicate_source_version": release_revision.allowDuplicateSourVersion,
                 "released_source_versions": released_source_versions,

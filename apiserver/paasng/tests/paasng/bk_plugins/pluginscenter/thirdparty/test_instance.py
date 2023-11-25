@@ -50,7 +50,7 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
 def test_instance_delete_api(thirdparty_client_session, pd, plugin):
     response = requests.Response()
     response.status_code = 200
-    response._content = b'{"result": true}'
+    response._content = b"{}"
     thirdparty_client_session.return_value = response
     instance.archive_instance(pd, plugin, "")
     assert thirdparty_client_session.called

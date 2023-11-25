@@ -25,6 +25,7 @@ import cattr
 from attrs import define
 from bkpaas_auth import get_user_by_user_id
 from bkstorages.backends.bkrepo import RequestError
+from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.db import models
 from pilkit.processors import ResizeToFill
@@ -95,7 +96,8 @@ class PluginInstance(UuidAuditedModel):
     )
 
     def get_logo_url(self) -> str:
-        default_url = self.pd.logo
+        # 插件应用的默认 Logo 用平台统一的 Logo
+        default_url = settings.PLUGIN_APP_DEFAULT_LOGO
         if self.logo:
             try:
                 return self.logo.url

@@ -57,6 +57,7 @@ class PluginDefinition(UuidAuditedModel):
     name = TranslatedFieldWithFallback(models.CharField(max_length=64))
     description = TranslatedFieldWithFallback(models.TextField())
     docs = models.CharField(max_length=255)
+    # 插件类型的 LOGO，仅用在创建插件页面辅助插件类型的选择
     logo = models.CharField(max_length=255)
 
     administrator = models.JSONField()

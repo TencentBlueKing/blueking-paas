@@ -1197,7 +1197,12 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 PLUGIN_CENTER_PROJECT_ID = settings.get("PLUGIN_CENTER_PROJECT_ID", default="bkplugins")
 
 # 插件开发者中心访问地址
-PLUGIN_CENTER_URL = settings.get("PLUGIN_CENTER_URL", default=f'{BKPAAS_URL}/plugin-center')
+PLUGIN_CENTER_URL = settings.get("PLUGIN_CENTER_URL", default=f"{BKPAAS_URL}/plugin-center")
+
+# 插件应用的默认 LOGO
+PLUGIN_APP_DEFAULT_LOGO = settings.get(
+    "PLUGIN_APP_DEFAULT_LOGO", default=f"{BKPAAS_URL}/static/images/plugin-default.svg"
+)
 
 # -----------------
 # 蓝鲸监控配置项

@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, Optional, Type, Union
+from typing import Dict, List, Optional, Type, Union
 
 import cattrs
 import jinja2
@@ -226,6 +226,33 @@ class PipelineStage(BaseStageController):
         else:
             self.build = cattrs.structure(stage.pipeline_detail, devops_definitions.PipelineBuild)
 
+    def _update_pipline_status(
+        self, status: str, stage_status: Optional[List[devops_definitions.BuildStageStatus]] = None
+    ):
+        if stage_status is None:
+            stage_status = []
+
+        if status == PipelineBuildStatus.SUCCEED:
+            # 部分插件需要在构建成功后，回调第三方API来获取构建产物等
+            is_success = self.execute_post_command()
+            if not is_success:
+                self.stage.update_status(
+                    constants.PluginReleaseStatus.FAILED,
+                    next((i.showMsg for i in stage_status if i.showMsg), _("构建回调失败")),
+                )
+            else:
+                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        elif status == PipelineBuildStatus.FAILED:
+            self.stage.update_status(
+                constants.PluginReleaseStatus.FAILED,
+                next((i.showMsg for i in stage_status if i.showMsg), _("构建失败")),
+            )
+        elif status == PipelineBuildStatus.CANCELED:
+            self.stage.update_status(
+                constants.PluginReleaseStatus.INTERRUPTED,
+                next((i.showMsg for i in stage_status if i.showMsg), _("构建失败")),
+            )
+
     def render_to_view(self) -> Dict:
         if self.build is None:
             raise error_codes.STAGE_RENDER_ERROR.f(_("当前步骤状态异常"))
@@ -233,7 +260,7 @@ class PipelineStage(BaseStageController):
         build_detail = self.ctl.retrieve_build_detail(self.build)
         # 如果已经构建完成，则主动更新当前步骤状态
         if build_detail.status not in constants.PluginReleaseStatus.running_status():
-            self.async_check_status()
+            self._update_pipline_status(build_detail.status)
             self.stage.refresh_from_db()
 
         logs = self.ctl.retrieve_full_log(build=self.build).dict()
@@ -243,26 +270,7 @@ class PipelineStage(BaseStageController):
         if self.build is None:
             return False
         status = self.ctl.retrieve_build_status(build=self.build)
-        if status.status == PipelineBuildStatus.SUCCEED:
-            # 部分插件需要在构建成功后，回调第三方API来获取构建产物等
-            is_success = self.execute_post_command()
-            if not is_success:
-                self.stage.update_status(
-                    constants.PluginReleaseStatus.FAILED,
-                    next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建回调失败")),
-                )
-            else:
-                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
-        elif status.status == PipelineBuildStatus.FAILED:
-            self.stage.update_status(
-                constants.PluginReleaseStatus.FAILED,
-                next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建失败")),
-            )
-        elif status.status == PipelineBuildStatus.CANCELED:
-            self.stage.update_status(
-                constants.PluginReleaseStatus.INTERRUPTED,
-                next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建失败")),
-            )
+        self._update_pipline_status(status.status, status.stageStatus)
         return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
     def execute(self, operator: str):

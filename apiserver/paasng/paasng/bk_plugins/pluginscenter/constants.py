@@ -133,6 +133,7 @@ class ActionTypes(str, StructuredEnum):
     MODIFY = EnumField("modify", label=_("修改"))
     DELETE = EnumField("delete", label=_("删除"))
     ARCHIVE = EnumField("archive", label=_("下架"))
+    REACTIVATE = EnumField("reactivate", label=_("重新上架"))
 
 
 class SubjectTypes(str, StructuredEnum):

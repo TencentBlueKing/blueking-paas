@@ -30,6 +30,7 @@ from paasng.bk_plugins.pluginscenter.definitions import (
     PluginCreateApproval,
     PluginFeature,
     PluginLogConfig,
+    PluginoverviewPage,
     ReleaseRevisionDefinition,
     ReleaseStageDefinition,
 )
@@ -48,6 +49,7 @@ PluginConfigColumnDefinitionField = make_json_field(
     "PluginConfigColumnDefinitionField", List[PluginConfigColumnDefinition]
 )
 PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
+PluginoverviewPageField = make_json_field("PluginoverviewPageField", PluginoverviewPage)
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -78,6 +80,7 @@ class PluginBasicInfoDefinition(AuditedModel):
     api: PluginBackendAPI = PluginBackendAPIField()
     sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    overview_page = PluginoverviewPageField(null=True)
 
     @classmethod
     def get_languages(cls) -> List[str]:

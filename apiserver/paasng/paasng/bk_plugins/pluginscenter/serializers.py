@@ -187,6 +187,11 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
         exclude = ("plugin", "stages_shortcut")
 
 
+class overviewPageSLZ(serializers.Serializer):
+    top_url = serializers.CharField(default=None, source="topUrl")
+    bottom_url = serializers.CharField(default=None, source="bottomUrl")
+
+
 class PluginInstanceSLZ(serializers.ModelSerializer):
     pd_id = serializers.CharField(source="pd.identifier", help_text="插件类型标识")
     pd_name = serializers.CharField(source="pd.name", help_text="插件类型名称")
@@ -200,10 +205,12 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     logo = serializers.CharField(source="get_logo_url", help_text="插件logo", allow_null=True)
     itsm_detail = ItsmDetailSLZ()
     role = PluginRoleSLZ(required=False)
+    overview_page = overviewPageSLZ(source="get_overview_page")
+    can_reactivate = serializers.ReadOnlyField()
 
     def to_representation(self, instance):
         # 注入当前用户的角色信息
-        if request := self.context.get("request"):
+        if request := self.context.get("request"):  # noqa: SIM102
             if request.user.is_authenticated:
                 setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
         return super().to_representation(instance)
@@ -245,15 +252,23 @@ class TemplateChoiceField(serializers.ChoiceField):
         return self.choices[super().to_internal_value(data)]
 
 
-def make_string_field(field_schema: FieldSchema) -> serializers.Field:
-    """Generate a Field for verifying a string according to the given field_schema"""
+def _get_init_kwargs(field_schema: FieldSchema) -> dict:
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
         "max_length": field_schema.maxlength,
     }
+    if (not field_schema.uiRules) or ("required" not in field_schema.uiRules):
+        init_kwargs["allow_null"] = True
+        init_kwargs["allow_blank"] = True
     if field_schema.default:
         init_kwargs["default"] = field_schema.default
+    return init_kwargs
+
+
+def make_string_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate a Field for verifying a string according to the given field_schema"""
+    init_kwargs = _get_init_kwargs(field_schema)
     if field_schema.pattern:
         return serializers.RegexField(regex=field_schema.pattern, **init_kwargs)
     return serializers.CharField(**init_kwargs)
@@ -261,9 +276,10 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
 
 def make_array_field(field_schema: FieldSchema) -> serializers.Field:
     """Generate a Field for verifying a array according to the given field_schema"""
+    init_kwargs = _get_init_kwargs(field_schema)
     # 如果没有定义 items，则默认为：List[str]
     if not field_schema.items:
-        return serializers.ListField(child=serializers.CharField(), default=field_schema.default)
+        return serializers.ListField(child=serializers.CharField(**init_kwargs))
     child_field_schema = cattr.structure(field_schema.items, FieldSchema)
     child_field = make_json_schema_field(child_field_schema)
     return serializers.ListField(child=child_field)
@@ -321,6 +337,13 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
     return i18n(type("DynamicPluginSerializer", (serializers.Serializer,), fields))
 
 
+def make_extra_fields_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
+    fields = {
+        "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
+    }
+    return i18n(type("DynamicPluginMarketInfoSerializer", (serializers.Serializer,), fields))
+
+
 class StubCreatePluginSLZ(serializers.Serializer):
     """A stub Serializer for create `Plugin`, just be used to generate docs
 
@@ -375,7 +398,7 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
         elif version_rule == PluginReleaseVersionRule.REVISION:
             if version != attrs["source_version_name"]:
                 raise ValidationError(_("版本号必须与代码分支一致"))
-        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:
+        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:  # noqa: SIM102
             if version != self.context["source_hash"]:
                 raise ValidationError(_("版本号必须与提交哈希一致"))
         return attrs
@@ -614,12 +637,15 @@ def make_config_column_field(column_definition: PluginConfigColumnDefinition) ->
 def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
     """generate a SLZ for verifying the creation/update of "Plugin Config"
     according to the PluginConfigDefinition definition"""
-    config_definition = pd.config_definition
-    fields = {
-        column_definition.name: make_config_column_field(column_definition)
-        for column_definition in config_definition.columns
-    }
-    fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
+    fields = {}
+    # 部分插件未定义配置管理
+    if hasattr(pd, "config_definition"):
+        config_definition = pd.config_definition
+        fields = {
+            column_definition.name: make_config_column_field(column_definition)
+            for column_definition in config_definition.columns
+        }
+        fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
     return type("DynamicPluginConfigSerializer", (serializers.Serializer,), fields)
 
 

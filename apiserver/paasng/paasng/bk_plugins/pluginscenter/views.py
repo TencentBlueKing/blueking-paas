@@ -132,12 +132,16 @@ class SchemaViewSet(ViewSet):
     def get_config_schema(self, request, pd_id):
         """get config schema for given PluginType"""
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        # 部分插件未定义配置管理
+        if not hasattr(pd, "config_definition"):
+            return Response(data={})
+
         config_definition = pd.config_definition
         return Response(data=serializers.PluginConfigSchemaSLZ(config_definition).data)
 
 
 class PluginInstanceMixin:
-    """PluginInstanceMixin provide a shortcut method to get a plugin instance
+    """PluginInstanceMixin provide a shortcut method to get a plugin instance`
 
     IF request.user DOES NOT have object permissions, will raise PermissionDeny exception
     """
@@ -241,16 +245,55 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     def update(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
-        slz = serializers.make_plugin_slz_class(pd, creation=False)(data=request.data, context={"pd": pd})
+        slz = serializers.make_plugin_slz_class(pd, creation=False)(
+            plugin, data=request.data, partial=True, context={"pd": pd}
+        )
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
-        # TODO: editable
-        plugin.name = validated_data[to_translated_field("name")]
+        if to_translated_field("name") in validated_data:
+            plugin.name = validated_data[to_translated_field("name")]
+        if "extra_fields" in validated_data:
+            plugin.extra_fields = validated_data["extra_fields"]
+        plugin.save()
+
+        if pd.basic_info_definition.api.update:
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 修改基本信息
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.BASIC_INFO,
+        )
+        return Response(data=self.get_serializer(plugin).data)
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.StubUpdatePluginSLZ)
+    @_permission_classes(
+        [
+            IsAuthenticated,
+            PluginCenterFeaturePermission,
+            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
+        ]
+    )
+    def update_extra_fields(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        slz = serializers.make_extra_fields_class(pd)(data=request.data, context={"pd": pd})
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
         plugin.extra_fields = validated_data["extra_fields"]
         plugin.save()
+
         if pd.basic_info_definition.api.update:
-            update_instance(pd, plugin, operator=request.user.pk)
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
 
         # 操作记录: 修改基本信息
         OperationRecord.objects.create(
@@ -276,8 +319,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         slz = serializers.PluginInstanceLogoSLZ(data=request.data, instance=plugin)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         if pd.basic_info_definition.api.update:
-            update_instance(pd, plugin, operator=request.user.pk)
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
 
         # 操作记录: 修改 logo
         OperationRecord.objects.create(
@@ -301,18 +347,51 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         logger.error(f"plugin(id: {plugin_id}) is deleted by {request.user.username}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @atomic
     @_permission_classes(
         [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
     )
     def archive(self, request, pd_id, plugin_id):
         """插件下架"""
         plugin = self.get_plugin_instance()
-        instance_api.archive_instance(plugin.pd, plugin, operator=request.user.username)
+        if plugin.status == constants.PluginStatus.ARCHIVED:
+            raise error_codes.CANNOT_ARCHIVED.f(_("插件已下架，不能再执行下架操作"))
+
+        api_call_success = instance_api.archive_instance(plugin.pd, plugin, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
         # 操作记录: 插件下架
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
             action=constants.ActionTypes.ARCHIVE,
+            subject=constants.SubjectTypes.PLUGIN,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @atomic
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
+    )
+    def reactivate(self, request, pd_id, plugin_id):
+        """插件重新上架"""
+        plugin = self.get_plugin_instance()
+        if not plugin.can_reactivate:
+            raise error_codes.NOT_SUPPORT_REACTIVATE
+
+        if plugin.status != constants.PluginStatus.ARCHIVED:
+            raise error_codes.CANNOT_REACTIVATE.f(_("插件未下架，不能重新上架"))
+
+        api_call_success = instance_api.reactivate_instance(plugin.pd, plugin, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 插件下架
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.REACTIVATE,
             subject=constants.SubjectTypes.PLUGIN,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -450,9 +529,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         # 如果插件定义了不允许发布已经发布过的代码分支
         release_revision = plugin.pd.release_revision
-        if not release_revision.allowDuplicateSourVersion:
-            if PluginRelease.objects.filter(plugin=plugin, source_version_name=data["source_version_name"]).exists():
-                raise error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION
+        is_source_version_exists = PluginRelease.objects.filter(
+            plugin=plugin, source_version_name=data["source_version_name"]
+        ).exists()
+        if not release_revision.allowDuplicateSourVersion and is_source_version_exists:
+            raise error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION
 
         release = PluginRelease.objects.create(
             plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
@@ -666,7 +747,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
             else:
                 market_api.update_market_info(pd, plugin, market_info, operator=request.user.pk)
         # 如果当前插件正处于完善市场信息的发布阶段, 则设置该阶段的状态为 successful(允许进入下一阶段)
-        if release := plugin.all_versions.get_ongoing_release():
+        if release := plugin.all_versions.get_ongoing_release():  # noqa: SIM102
             if release.current_stage and release.current_stage.stage_id == "market":
                 release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
 

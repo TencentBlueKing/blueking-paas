@@ -65,6 +65,59 @@ class BaseStageController:
     ) -> Type["BaseStageController"]:
         return cls._stage_types[constants.ReleaseStageInvokeMethod(invoke_method)]
 
+    def execute_post_command(self) -> bool:
+        """后置命令，当前阶段的状态更新为 SUCCESS 时执行"""
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        if stage_definition is None:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
+
+        if not stage_definition.api or not stage_definition.api.postCommand:
+            return True
+
+        resp = utils.make_client(stage_definition.api.postCommand).call(
+            data={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+            },
+            path_params={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+            },
+        )
+        # 部分系统遵循老的蓝鲸 AP I规范，status_code 永远返回 200，需要通过返回数据的 result 来判断调用是否成功
+        if not (result := resp.get("result", True)):
+            logger.error(
+                f"execute post command [plugin_id: {self.plugin.id}, version:{self.release.version}], error: {resp}"
+            )
+        return result
+
+    def execute_pre_command(self, operator: str) -> bool:
+        """前置命令，进入该阶段前先执行"""
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        if stage_definition is None:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
+
+        if not stage_definition.api or not stage_definition.api.preCommand:
+            return True
+
+        resp = utils.make_client(stage_definition.api.preCommand).call(
+            data={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+                "bk_username": operator,
+            },
+            path_params={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+            },
+        )
+        # 部分系统遵循老的蓝鲸 AP I规范，status_code 永远返回 200，需要通过返回数据的 result 来判断调用是否成功
+        if not (result := resp.get("result", True)):
+            logger.error(
+                f"execute pre command [plugin_id: {self.plugin.id}, version:{self.release.version}], error: {resp}"
+            )
+        return result
+
     def execute(self, operator: str):
         """执行步骤"""
         raise NotImplementedError
@@ -144,6 +197,10 @@ class ItsmStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.ITSM
 
     def execute(self, operator: str):
+        api_call_success = self.execute_pre_command(operator)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
+
         submit_online_approval_ticket(self.pd, self.plugin, self.release, operator)
 
     def render_to_view(self) -> Dict:
@@ -288,8 +345,10 @@ class SubPageStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.SUBPAGE
 
     def execute(self, operator: str):
-        # 内嵌页面，不需要做任何处理
-        return
+        # 内嵌页面，不需要做任何处理, 仅执行部署前置命令
+        api_call_success = self.execute_pre_command(operator)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
@@ -322,6 +381,10 @@ class BuiltinStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.BUILTIN
 
     def execute(self, operator: str):
+        api_call_success = self.execute_pre_command(operator)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
+
         if (
             self.stage.stage_id == "market"
             and self.pd.market_info_definition.storage == constants.MarketInfoStorageType.THIRD_PARTY

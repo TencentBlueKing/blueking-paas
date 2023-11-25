@@ -86,7 +86,9 @@ class PluginReleaseAPI(BaseModel):
     release: Optional[PluginBackendAPIResource] = Field(description="部署/构建操作")
     result: Optional[PluginBackendAPIResource] = Field(description="查询是否可进入下一步")
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
-    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令")
+    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令，当前阶段状态为成功即会执行")
+    # 例如测试阶段完成进入到下一个阶段的时候，希望能先回收测试阶段的资源
+    preCommand: Optional[PluginBackendAPIResource] = Field(description="前置命令，进入当前阶段后会先执行")
 
 
 @register

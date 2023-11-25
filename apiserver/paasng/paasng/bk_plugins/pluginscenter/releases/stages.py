@@ -258,10 +258,6 @@ class PipelineStage(BaseStageController):
             raise error_codes.STAGE_RENDER_ERROR.f(_("当前步骤状态异常"))
         basic_info = super().render_to_view()
         build_detail = self.ctl.retrieve_build_detail(self.build)
-        # 如果已经构建完成，则主动更新当前步骤状态
-        if build_detail.status not in constants.PluginReleaseStatus.running_status():
-            self._update_pipline_status(build_detail.status)
-            self.stage.refresh_from_db()
 
         logs = self.ctl.retrieve_full_log(build=self.build).dict()
         return {**basic_info, "detail": build_detail.dict(), "logs": logs}

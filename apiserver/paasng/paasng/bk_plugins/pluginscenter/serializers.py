@@ -155,6 +155,7 @@ class PlainReleaseStageSLZ(serializers.Serializer):
 
 class PluginReleaseStageSLZ(serializers.ModelSerializer):
     itsm_detail = ItsmDetailSLZ()
+    has_post_command = serializers.ReadOnlyField()
 
     class Meta:
         model = PluginReleaseStage

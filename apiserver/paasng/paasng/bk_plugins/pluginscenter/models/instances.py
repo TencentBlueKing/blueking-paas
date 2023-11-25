@@ -28,11 +28,12 @@ from bkstorages.backends.bkrepo import RequestError
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.db import models
+from django.utils.functional import cached_property
 from pilkit.processors import ResizeToFill
 from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
-from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage
+from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -291,6 +292,13 @@ class PluginReleaseStage(AuditedModel):
         if fail_message:
             self.fail_message = fail_message
         self.save(update_fields=["status", "fail_message", "updated"])
+
+    @cached_property
+    def has_post_command(self):
+        stage_definition = find_stage_by_id(self.release.plugin.pd.release_stages, self.stage_id)
+        if stage_definition and stage_definition.api and stage_definition.api.postCommand:
+            return True
+        return False
 
 
 class ApprovalService(UuidAuditedModel):

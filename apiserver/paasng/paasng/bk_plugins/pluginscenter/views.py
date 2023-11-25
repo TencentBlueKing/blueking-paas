@@ -93,6 +93,7 @@ class SchemaViewSet(ViewSet):
                         "repository_group": basic_info_definition.repository_group,
                         "repository_template": shim.build_repository_template(basic_info_definition.repository_group),
                         "extra_fields": cattr.unstructure(basic_info_definition.extra_fields),
+                        "extra_fields_order": cattr.unstructure(basic_info_definition.extra_fields_order),
                     },
                 }
             )
@@ -110,6 +111,7 @@ class SchemaViewSet(ViewSet):
                 "category": market_api.list_category(pd) if not readonly else [],
                 "schema": {
                     "extra_fields": cattr.unstructure(market_info_definition.extra_fields),
+                    "extra_fields_order": cattr.unstructure(market_info_definition.extra_fields_order),
                 },
                 "readonly": readonly,
             }
@@ -125,6 +127,7 @@ class SchemaViewSet(ViewSet):
                 "id": basic_info_definition.id_schema.dict(exclude_unset=True),
                 "name": basic_info_definition.name_schema.dict(exclude_unset=True),
                 "extra_fields": cattr.unstructure(basic_info_definition.extra_fields),
+                "extra_fields_order": cattr.unstructure(basic_info_definition.extra_fields_order),
             }
         )
 
@@ -663,6 +666,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 "version_no": release_revision.versionNo,
                 "version_type": release_revision.revisionType,
                 "extra_fields": cattr.unstructure(release_revision.extraFields),
+                "extra_fields_order": cattr.unstructure(release_revision.extraFieldsOrder),
                 "source_versions": cattr.unstructure(versions),
                 "allow_duplicate_source_version": release_revision.allowDuplicateSourVersion,
                 "released_source_versions": released_source_versions,

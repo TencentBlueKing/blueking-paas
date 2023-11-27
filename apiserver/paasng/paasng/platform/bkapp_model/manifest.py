@@ -190,7 +190,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
             autoscaling_spec = None
             if process_spec.autoscaling and (_c := process_spec.scaling_config):
                 autoscaling_spec = AutoscalingSpec(
-                    minReplicas=_c["min_replicas"], maxReplicas=_c["max_replicas"], policy=_c["policy"]
+                    minReplicas=_c.min_replicas, maxReplicas=_c.max_replicas, policy=_c.policy
                 )
 
             processes.append(
@@ -247,9 +247,9 @@ class ProcessesManifestConstructor(ManifestConstructor):
                         AutoscalingOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
-                            minReplicas=item.scaling_config["min_replicas"],
-                            maxReplicas=item.scaling_config["max_replicas"],
-                            policy=item.scaling_config["policy"],
+                            minReplicas=item.scaling_config.min_replicas,
+                            maxReplicas=item.scaling_config.max_replicas,
+                            policy=item.scaling_config.policy,
                         ),
                     )
                 if item.plan_name and item.plan_name != proc_spec.plan_name:

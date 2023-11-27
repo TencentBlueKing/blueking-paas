@@ -41,6 +41,7 @@ from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.bkapp_model.services import initialize_simple
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.handlers import setup_module_log_model
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.specs import ModuleSpecs
@@ -85,6 +86,10 @@ def initialize_module(module, repo_type=None, repo_url="", additional_modules=No
         mock.patch("paasng.platform.modules.manager.make_app_metadata"),
         mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient"),
         contextmanager(_mock_wl_services_in_creation)(),
+        mock.patch(
+            "paasng.platform.modules.handlers.apply_async_on_commit",
+            side_effect=lambda callback, args: callback(*args),
+        ),
     ]
     # 通过 Mock 被跳过的应用流程（性能原因）
     optional_mockers = {
@@ -118,8 +123,7 @@ def initialize_module(module, repo_type=None, repo_url="", additional_modules=No
 
         module.save()
         module_initializer.initialize_vcs_with_template(repo_type, repo_url)
-
-        module_initializer.initialize_log_config()
+        setup_module_log_model(module_id=module.pk)
 
 
 class BaseTestCaseWithApp(TestCase):
@@ -570,7 +574,6 @@ def create_cnative_app(
         module.source_init_template = settings.DUMMY_TEMPLATE_NAME
         module.save()
         module_initializer.initialize_vcs_with_template(sourcectl_name, default_repo_url)
-        module_initializer.initialize_log_config()
 
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)

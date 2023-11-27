@@ -103,7 +103,11 @@ export default {
       }
     },
     handlerSave() {
-      this.updatePluginBaseInfo();
+      this.$refs.bkForm?.validate().then(() => {
+        this.updatePluginBaseInfo();
+      }, (validator) => {
+        console.warn(validator);
+      });
     },
     goBack() {
       this.$router.go(-1);
@@ -117,6 +121,14 @@ export default {
   .action-button-group{
     margin-left: 170px;
     margin-top: 20px;
+  }
+}
+.bk-form-warp /deep/ .bk-schema-form-item--error {
+  [error] {
+    border-color: #f5222d !important;
+  }
+  .bk-schema-form-item__error-tips{
+    color: #f5222d;
   }
 }
 </style>

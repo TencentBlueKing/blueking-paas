@@ -396,7 +396,7 @@ export default {
         // 根据 extra_fields_order 字段排序
         const extraFieldsOrder = res[0]?.schema.extra_fields_order || [];
         const sortdProperties = this.sortdSchema(extraFieldsOrder, properties);
-        this.schema = { type: 'object', properties: sortdProperties };
+        this.schema = { type: 'object', required: this.getRequiredFields(sortdProperties), properties: sortdProperties };
         this.addRules();
         this.changePlaceholder();
       } catch (e) {
@@ -425,6 +425,19 @@ export default {
         return sortdProperties;
       }
       return properties;
+    },
+    // 获取必填项字段列表
+    getRequiredFields(properties) {
+      if (!Object.keys(properties).length) {
+        return;
+      }
+      const requiredFields = [];
+      for (const key in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules')) {
+          requiredFields.push(key);
+        }
+      }
+      return requiredFields;
     },
     // 添加校验规则
     addRules() {
@@ -480,7 +493,8 @@ export default {
       // schema 排序
       const extraFieldsOrder = this.pluginTypeData.schema?.extra_fields_order || [];
       const properties = this.sortdSchema(extraFieldsOrder, this.pluginTypeData.properties);
-      this.schema = { type: 'object', properties };
+      // 根据数据添加必填字段
+      this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
     },
     // 选中具体插件开发语言
     changePluginLanguage(value) {
@@ -495,12 +509,17 @@ export default {
     },
 
     submitPluginForm() {
-      this.$refs.pluginForm.validate().then(() => {
+      const formArray = [this.$refs.pluginForm.validate()];
+      if (this.$refs.bkForm) {
+        formArray.push(this.$refs.bkForm.validate());
+      }
+      Promise.all(formArray).then(() => {
         this.buttonLoading = true;
         this.save();
       })
-        .catch(() => {
+        .catch((validator) => {
           this.buttonLoading = false;
+          console.warn(validator);
         });
     },
 
@@ -630,6 +649,14 @@ export default {
 }
 .plugin-top-title {
   margin: 12px 0 14px;
+}
+.bk-form-warp /deep/ .bk-schema-form-item--error {
+  [error] {
+    border-color: #f5222d !important;
+  }
+  .bk-schema-form-item__error-tips{
+    color: #f5222d;
+  }
 }
 </style>
 <style lang="scss">

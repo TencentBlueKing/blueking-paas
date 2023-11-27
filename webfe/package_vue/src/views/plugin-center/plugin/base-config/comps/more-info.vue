@@ -72,7 +72,7 @@ export default {
           this.viewData.push({ title: extraFields[key].title, default: extraFields[key].default });
         }
 
-        this.$emit('set-schema', { type: 'object', properties: extraFields });
+        this.$emit('set-schema', { type: 'object', required: this.getRequiredFields(extraFields), properties: extraFields });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -94,6 +94,19 @@ export default {
         return sortdProperties;
       }
       return properties;
+    },
+    // 获取必填项字段列表
+    getRequiredFields(properties) {
+      if (!Object.keys(properties).length) {
+        return;
+      }
+      const requiredFields = [];
+      for (const key in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules')) {
+          requiredFields.push(key);
+        }
+      }
+      return requiredFields;
     },
   },
 };

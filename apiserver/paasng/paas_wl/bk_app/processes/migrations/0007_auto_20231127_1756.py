@@ -30,7 +30,7 @@ def fix_invalid_scaling_config_data(apps, schema_editor):
                 item["raw_scaling_config"],
                 item["id"],
             )
-            ProcessSpec.objects.filter(id=item["id"]).update(scaling_config=None)
+            ProcessSpec.objects.using(schema_editor.connection.alias).filter(id=item["id"]).update(scaling_config=None)
 
 
 class Migration(migrations.Migration):

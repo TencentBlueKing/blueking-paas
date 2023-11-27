@@ -330,7 +330,9 @@ export default {
       pluginTypeList: [],
       pluginTypeData: { plugin_type: {}, schema: {} },
       pluginLanguage: [],
-      languageData: {},
+      languageData: {
+        languageData: '',
+      },
       applicableLanguageList: [],
       pluginTemplateList: [],
       extraFields: {},
@@ -483,6 +485,7 @@ export default {
     },
     // 选中具体插件类型
     changePluginType(value) {
+      this.resetPluinParams();
       this.form.pd_id = value;
       this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);
       this.form.repositoryTemplateUrl = this.form.plugin_id
@@ -496,9 +499,14 @@ export default {
       // 根据数据添加必填字段
       this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
     },
+    // 切换插件重置参数
+    resetPluinParams() {
+      this.form.language = '';
+      this.form.templateName = '';
+    },
     // 选中具体插件开发语言
     changePluginLanguage(value) {
-      this.languageData = this.pluginLanguage.find(e => e.id === value);
+      this.languageData = this.pluginLanguage.find(e => e.id === value) || {};
       // 初始化模板
       this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
       this.form.templateName = '';

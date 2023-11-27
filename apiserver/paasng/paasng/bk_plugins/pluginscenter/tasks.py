@@ -39,6 +39,12 @@ class ReleaseStatusPoller(TaskPoller):
         ctrl = init_stage_controller(release.current_stage)
         if not ctrl.async_check_status():
             return PollingResult.doing()
+
+        # 当前步骤执行结束后，执行后置命令
+        is_success = ctrl.execute_post_command()
+        if not is_success:
+            ctrl.stage.update_status(PluginReleaseStatus.FAILED, "execute post command error")
+
         return PollingResult.done()
 
 

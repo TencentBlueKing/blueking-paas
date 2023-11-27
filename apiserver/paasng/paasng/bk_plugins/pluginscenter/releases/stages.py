@@ -197,10 +197,6 @@ class ItsmStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.ITSM
 
     def execute(self, operator: str):
-        api_call_success = self.execute_pre_command(operator)
-        if not api_call_success:
-            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
-
         submit_online_approval_ticket(self.pd, self.plugin, self.release, operator)
 
     def render_to_view(self) -> Dict:
@@ -226,22 +222,12 @@ class PipelineStage(BaseStageController):
         else:
             self.build = cattrs.structure(stage.pipeline_detail, devops_definitions.PipelineBuild)
 
-    def _update_pipline_status(
-        self, status: str, stage_status: Optional[List[devops_definitions.BuildStageStatus]] = None
-    ):
+    def _update_pipline_status(self, status: str, stage_status: List[devops_definitions.BuildStageStatus]):
         if stage_status is None:
             stage_status = []
 
         if status == PipelineBuildStatus.SUCCEED:
-            # 部分插件需要在构建成功后，回调第三方API来获取构建产物等
-            is_success = self.execute_post_command()
-            if not is_success:
-                self.stage.update_status(
-                    constants.PluginReleaseStatus.FAILED,
-                    next((i.showMsg for i in stage_status if i.showMsg), _("构建回调失败")),
-                )
-            else:
-                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         elif status == PipelineBuildStatus.FAILED:
             self.stage.update_status(
                 constants.PluginReleaseStatus.FAILED,
@@ -350,9 +336,7 @@ class SubPageStage(BaseStageController):
 
     def execute(self, operator: str):
         # 内嵌页面，不需要做任何处理, 仅执行部署前置命令
-        api_call_success = self.execute_pre_command(operator)
-        if not api_call_success:
-            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
+        return
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
@@ -385,10 +369,6 @@ class BuiltinStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.BUILTIN
 
     def execute(self, operator: str):
-        api_call_success = self.execute_pre_command(operator)
-        if not api_call_success:
-            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
-
         if (
             self.stage.stage_id == "market"
             and self.pd.market_info_definition.storage == constants.MarketInfoStorageType.THIRD_PARTY

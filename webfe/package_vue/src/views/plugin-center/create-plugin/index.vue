@@ -391,8 +391,12 @@ export default {
         // 参数指定插件类型，没有指定默认为第一项
         this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
 
+        // 默认为第一项
         const properties = res[0]?.schema.extra_fields;
-        this.schema = { type: 'object', properties };
+        // 根据 extra_fields_order 字段排序
+        const extraFieldsOrder = res[0]?.schema.extra_fields_order || [];
+        const sortdProperties = this.sortdSchema(extraFieldsOrder, properties);
+        this.schema = { type: 'object', properties: sortdProperties };
         this.addRules();
         this.changePlaceholder();
       } catch (e) {
@@ -406,6 +410,21 @@ export default {
           this.isLoading = false;
         }, 200);
       }
+    },
+    /**
+     * 根据 fieldsOrder 字段排序 schema
+     * @param  {Array} fieldsOrder 排序字段列表
+     * @param  {Object} properties 数据
+     */
+    sortdSchema(fieldsOrder = [], properties) {
+      const sortdProperties = {};
+      if (fieldsOrder.length) {
+        fieldsOrder.map((key) => {
+          sortdProperties[key] = properties[key];
+        });
+        return sortdProperties;
+      }
+      return properties;
     },
     // 添加校验规则
     addRules() {
@@ -458,7 +477,10 @@ export default {
         : this.pluginTypeData.schema.repository_template;
       this.pluginLanguage = this.pluginTypeData.schema.init_templates;
       this.extraFields = this.pluginTypeData.schema.extra_fields;
-      this.schema = { type: 'object', properties: this.pluginTypeData.properties };
+      // schema 排序
+      const extraFieldsOrder = this.pluginTypeData.schema?.extra_fields_order || [];
+      const properties = this.sortdSchema(extraFieldsOrder, this.pluginTypeData.properties);
+      this.schema = { type: 'object', properties };
     },
     // 选中具体插件开发语言
     changePluginLanguage(value) {

@@ -17,7 +17,7 @@
           class="value"
           v-else
         >
-          {{ item.default }}
+          {{ item.default || '--' }}
         </div>
       </li>
     </ul>
@@ -51,8 +51,11 @@ export default {
       try {
         const results = await this.$store.dispatch('plugin/getPluginsTypeList');
         const curPluginType = results.find(v => v.plugin_type?.id === this.curPluginInfo.pd_id);
-        // 当前插件类型
-        const extraFields = curPluginType.schema?.extra_fields;
+        // 根据 extra_fields_order 字段排序
+        const extraFields = this.sortdSchema(
+          curPluginType.schema?.extra_fields_order || [],
+          curPluginType.schema?.extra_fields,
+        );
         this.viewData = [];
         // 对数据进行填充
         // eslint-disable-next-line no-restricted-syntax
@@ -76,6 +79,21 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+    /**
+     * 根据 fieldsOrder 字段排序 schema
+     * @param  {Array} fieldsOrder 排序字段列表
+     * @param  {Object} properties 数据
+     */
+    sortdSchema(fieldsOrder = [], properties) {
+      const sortdProperties = {};
+      if (fieldsOrder.length) {
+        fieldsOrder.map((key) => {
+          sortdProperties[key] = properties[key];
+        });
+        return sortdProperties;
+      }
+      return properties;
     },
   },
 };

@@ -16,8 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.bk_plugins.pluginscenter.thirdparty import utils
+
+logger = logging.getLogger(__name__)
 
 
 def sync_config(pd: PluginDefinition, instance: PluginInstance):
@@ -25,4 +29,8 @@ def sync_config(pd: PluginDefinition, instance: PluginInstance):
     if pd.config_definition is None:
         raise ValueError("this plugin does not support configuration feature")
     data = [config.row for config in instance.configs.all()]
-    utils.make_client(pd.config_definition.sync_api).call(data=data, path_params={"plugin_id": instance.id})
+    resp = utils.make_client(pd.config_definition.sync_api).call(data=data, path_params={"plugin_id": instance.id})
+
+    if not (result := resp.get("result", True)):
+        logger.error(f"sync config error [plugin_id: {instance.id}, data:{data}], error: {resp}")
+    return result

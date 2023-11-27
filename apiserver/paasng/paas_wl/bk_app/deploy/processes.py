@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 # TODO: Add Tests for both controller classes
 import logging
-from dataclasses import asdict
 from typing import Optional
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
@@ -132,7 +131,9 @@ class AppProcessesController:
             raise ScaleProcessError(f"max_replicas in scaling config can't more than {proc_spec.plan.max_replicas}")
 
         proc_spec.autoscaling = True
-        proc_spec.scaling_config = asdict(scaling.spec)
+        proc_spec.scaling_config = AutoscalingConfig(
+            min_replicas=scaling.spec.max_replicas, max_replicas=scaling.spec.max_replicas, policy="default"
+        )
         proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
 
         self.client.deploy_autoscaling(scaling)
@@ -142,8 +143,7 @@ class AppProcessesController:
         proc_spec = self._get_spec(scaling.name)
 
         proc_spec.autoscaling = False
-        proc_spec.scaling_config = {}
-        proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
+        proc_spec.save(update_fields=["autoscaling", "updated"])
 
         self.client.disable_autoscaling(scaling)
 
@@ -251,10 +251,9 @@ class CNativeProcController:
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
         # Use the old config value when the scaling config is not provided.
+        scaling_config = scaling_config or spec_updater.spec_object.scaling_config
         if not scaling_config:
-            _config_dict = spec_updater.spec_object.scaling_config
-            assert _config_dict, "The config must not be None when turning on autoscaling."
-            scaling_config = AutoscalingConfig(**_config_dict)
+            raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
 
         spec_updater.set_autoscaling(True, scaling_config)
         ModuleProcessSpecManager(self.env.module).set_autoscaling(
@@ -307,7 +306,7 @@ class ProcSpecUpdater:
         proc_spec = self.spec_object
         proc_spec.autoscaling = enabled
         if config is not None:
-            proc_spec.scaling_config = asdict(config)
+            proc_spec.scaling_config = config
         proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
 
     @property

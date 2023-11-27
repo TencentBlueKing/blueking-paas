@@ -173,9 +173,14 @@ class PipelineStage(BaseStageController):
         if self.build is None:
             raise error_codes.STAGE_RENDER_ERROR.f(_("当前步骤状态异常"))
         basic_info = super().render_to_view()
-        build_detail = self.ctl.retrieve_build_detail(self.build).dict()
+        build_detail = self.ctl.retrieve_build_detail(self.build)
+        # 如果已经构建完成，则主动更新当前步骤状态
+        if build_detail.status not in constants.PluginReleaseStatus.running_status():
+            self.async_check_status()
+            self.stage.refresh_from_db()
+
         logs = self.ctl.retrieve_full_log(build=self.build).dict()
-        return {**basic_info, "detail": build_detail, "logs": logs}
+        return {**basic_info, "detail": build_detail.dict(), "logs": logs}
 
     def async_check_status(self) -> bool:
         if self.build is None:
@@ -267,9 +272,14 @@ class PipelineStage(BaseStageController):
         )
         data = slz.data
         resp = utils.make_client(stage_definition.api.postCommand).call(
-            data=data, path_params={"plugin_id": self.plugin.id}
+            data=data,
+            path_params={
+                "plugin_id": self.plugin.id,
+                "pipeline_id": self.build.pipelineId,
+                "build_id": self.build.buildId,
+            },
         )
-        if not (result := resp.get("result")):
+        if not (result := resp.get("result", True)):
             logger.error(f"execute post command [plugin_id: {self.plugin.id}, data:{data}], error: {resp}")
         return result
 
@@ -290,7 +300,7 @@ class SubPageStage(BaseStageController):
         page_url = self.format_page_url(stage_def)
 
         # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
-        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release)
+        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release, self.stage)
         if can_proceed:
             self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         return {

@@ -54,7 +54,9 @@ class TestArchived:
     def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client, setup_bk_user):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.get(url)
+        data = resp.json()
         assert resp.status_code == 200
+        assert data['overview_page']['top_url'].find(str(plugin.id)) > 0
 
     def test_update_api(self, api_client, pd, plugin, release, iam_policy_client, setup_bk_user):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"

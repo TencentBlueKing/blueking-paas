@@ -23,11 +23,12 @@ from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.models.deployment import AutoscalingConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def base_manifest(bk_app):
     """A very basic manifest that can pass the validation."""
     return {
@@ -58,11 +59,7 @@ def test_import_with_enum_type(bk_module, base_manifest):
     import_manifest(bk_module, base_manifest)
     proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
     assert proc_spec.plan_name == ResQuotaPlan.P_DEFAULT.value
-    assert proc_spec.scaling_config == {
-        "min_replicas": 1,
-        "max_replicas": 2,
-        "policy": ScalingPolicy.DEFAULT.value,
-    }
+    assert proc_spec.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=2, policy=ScalingPolicy.DEFAULT)
 
 
 class TestEnvVars:
@@ -160,7 +157,9 @@ class TestAutoscaling:
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_autoscaling("stag")
-        assert proc_spec.get_scaling_config("stag") == {"policy": "default", "max_replicas": 1, "min_replicas": 1}
+        assert proc_spec.get_scaling_config("stag") == AutoscalingConfig(
+            min_replicas=1, max_replicas=1, policy=ScalingPolicy.DEFAULT
+        )
 
     def test_missing_policy(self, bk_module, base_manifest):
         base_manifest["spec"]["envOverlay"] = {
@@ -177,4 +176,6 @@ class TestAutoscaling:
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_autoscaling("stag")
-        assert proc_spec.get_scaling_config("stag") == {"policy": "default", "max_replicas": 1, "min_replicas": 1}
+        assert proc_spec.get_scaling_config("stag") == AutoscalingConfig(
+            min_replicas=1, max_replicas=1, policy=ScalingPolicy.DEFAULT
+        )

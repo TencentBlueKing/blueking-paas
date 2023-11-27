@@ -34,7 +34,7 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def web_proc_factory(bk_module, bk_stag_wl_app):
     G(ModuleProcessSpec, module=bk_module, name="web")
     plan = G(ProcessSpecPlan, max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS)
@@ -80,36 +80,38 @@ class TestProcSpecUpdater:
         updater = ProcSpecUpdater(bk_stag_env, "web")
         updater.set_autoscaling(True, AutoscalingConfig(min_replicas=1, max_replicas=3, policy="default"))
         assert updater.spec_object.autoscaling is True
-        assert updater.spec_object.scaling_config == {"min_replicas": 1, "max_replicas": 3, "policy": "default"}
+        assert updater.spec_object.scaling_config == AutoscalingConfig(
+            min_replicas=1, max_replicas=3, policy="default"
+        )
 
         # Update autoscaling
         updater.set_autoscaling(True, AutoscalingConfig(min_replicas=1, max_replicas=4, policy="default"))
         assert updater.spec_object.autoscaling is True
-        assert updater.spec_object.scaling_config == {"min_replicas": 1, "max_replicas": 4, "policy": "default"}
+        assert updater.spec_object.scaling_config == AutoscalingConfig(
+            min_replicas=1, max_replicas=4, policy="default"
+        )
 
         # Disable autoscaling
         updater.set_autoscaling(False)
         assert updater.spec_object.autoscaling is False
-        assert updater.spec_object.scaling_config == {
-            "min_replicas": 1,
-            "max_replicas": 4,
-            "policy": "default",
-        }, "The config should remain as it is."
+        assert updater.spec_object.scaling_config == AutoscalingConfig(
+            min_replicas=1, max_replicas=4, policy="default"
+        ), "The config should remain as it is."
 
 
 # TODO: Remove duplicated fixture called the same name
-@pytest.fixture
-def deploy_stag_env(bk_stag_env, bk_stag_wl_app, namespace_maker):
+@pytest.fixture()
+def _deploy_stag_env(bk_stag_env, bk_stag_wl_app, namespace_maker):
     """Deploy a default payload to cluster for stag environment"""
     namespace_maker.make(bk_stag_wl_app.namespace)
     resource = create_app_resource(generate_bkapp_name(bk_stag_env), "nginx:latest")
     deploy(bk_stag_env, resource.to_deployable())
-    yield
 
 
-@pytest.mark.skip_when_no_crds
+@pytest.mark.skip_when_no_crds()
 class TestCNativeProcController:
-    def test_scale_static_integrated(self, bk_stag_env, deploy_stag_env, web_proc_factory):
+    @pytest.mark.usefixtures("_deploy_stag_env")
+    def test_scale_static_integrated(self, bk_stag_env, web_proc_factory):
         web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
 
         assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 1
@@ -125,7 +127,8 @@ class TestCNativeProcController:
         CNativeProcController(bk_stag_env).start("web")
         assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 2
 
-    def test_autoscaling_integrated(self, bk_stag_env, bk_stag_wl_app, deploy_stag_env, web_proc_factory):
+    @pytest.mark.usefixtures("_deploy_stag_env")
+    def test_autoscaling_integrated(self, bk_stag_env, bk_stag_wl_app, web_proc_factory):
         web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
         # Turn on the feature flag
         cluster = get_cluster_by_app(bk_stag_wl_app)

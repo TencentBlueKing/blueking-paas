@@ -50,6 +50,7 @@ class FieldSchema(BaseModel):
     default: Optional[Any] = Field(description="默认值")
     maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
+    uiRules: Optional[List] = Field(alias="ui:rules")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
     uiReactions: Optional[List] = Field(alias="ui:reactions")
@@ -75,6 +76,7 @@ class PluginBackendAPI(BaseModel):
     read: Optional[PluginBackendAPIResource]
     update: Optional[PluginBackendAPIResource]
     delete: Optional[PluginBackendAPIResource]
+    reactivate: Optional[PluginBackendAPIResource]
 
 
 @register
@@ -105,6 +107,12 @@ class PluginCodeTemplate(BaseModel):
 
 
 @register
+class PluginoverviewPage(BaseModel):
+    topUrl: Optional[str] = Field(default=None, description="概览页面顶部嵌入地址")
+    bottomUrl: Optional[str] = Field(default=None, description="概览页面底部嵌入地址")
+
+
+@register
 class PluginFeature(BaseModel):
     name: str = Field(description="功能特性名称")
     value: bool = Field(default=False, description="功能特性开关")
@@ -122,6 +130,7 @@ class PluginBasicInfoDefinition(BaseModel):
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
+    overviewPage: Optional[PluginoverviewPage] = Field(description="概览页面嵌入地址")
 
 
 @register

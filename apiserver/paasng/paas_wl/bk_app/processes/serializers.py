@@ -290,44 +290,6 @@ class WatchEventSLZ(serializers.Serializer):
         return super().to_representation(data)
 
 
-class ProcessSpecSLZ(serializers.Serializer):
-    """Serializer for representing process packages
-
-    Need to convert the resource limit to a number:
-    "resource_limit": {
-        "cpu": "100m",
-        "memory": "64Mi"
-    }
-    "resource_limit_quota": {
-        "cpu": 100,
-        "memory": 64
-    }
-    """
-
-    name = serializers.CharField()
-    target_replicas = serializers.IntegerField()
-    target_status = serializers.CharField()
-    max_replicas = serializers.IntegerField(source="plan.max_replicas")
-    resource_limit = serializers.JSONField(source="plan.limits")
-    resource_requests = serializers.JSONField(source="plan.requests")
-    plan_name = serializers.CharField(source="plan.name")
-    resource_limit_quota = serializers.SerializerMethodField(read_only=True)
-    autoscaling = serializers.BooleanField()
-    scaling_config = serializers.JSONField()
-
-    # deprecated: 兼容旧的 CNativeProcSpecSLZ, 待前端替换取值字段后移除
-    cpu_limit = serializers.CharField(source="plan.limits.cpu")
-    memory_limit = serializers.CharField(source="plan.limits.memory")
-
-    def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
-        limits = obj.plan.limits
-        # 内存的单位为 Mi
-        memory_quota = int(parse_quantity(limits["memory"]) / (1024 * 1024))
-        # CPU 的单位为 m
-        cpu_quota = int(parse_quantity(limits["cpu"]) * 1000)
-        return {"cpu": cpu_quota, "memory": memory_quota}
-
-
 class ScalingObjectRefSLZ(serializers.Serializer):
     """资源引用"""
 
@@ -356,6 +318,44 @@ class ScalingConfigSLZ(serializers.Serializer):
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_("最大副本数"))
     policy = serializers.CharField(required=False, default="default", help_text=_("扩缩容策略"))
     metrics = serializers.ListField(child=MetricSpecSLZ(), required=True, min_length=1, help_text=_("扩缩容指标"))
+
+
+class ProcessSpecSLZ(serializers.Serializer):
+    """Serializer for representing process packages
+
+    Need to convert the resource limit to a number:
+    "resource_limit": {
+        "cpu": "100m",
+        "memory": "64Mi"
+    }
+    "resource_limit_quota": {
+        "cpu": 100,
+        "memory": 64
+    }
+    """
+
+    name = serializers.CharField()
+    target_replicas = serializers.IntegerField()
+    target_status = serializers.CharField()
+    max_replicas = serializers.IntegerField(source="plan.max_replicas")
+    resource_limit = serializers.JSONField(source="plan.limits")
+    resource_requests = serializers.JSONField(source="plan.requests")
+    plan_name = serializers.CharField(source="plan.name")
+    resource_limit_quota = serializers.SerializerMethodField(read_only=True)
+    autoscaling = serializers.BooleanField()
+    scaling_config = ScalingConfigSLZ()
+
+    # deprecated: 兼容旧的 CNativeProcSpecSLZ, 待前端替换取值字段后移除
+    cpu_limit = serializers.CharField(source="plan.limits.cpu")
+    memory_limit = serializers.CharField(source="plan.limits.memory")
+
+    def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
+        limits = obj.plan.limits
+        # 内存的单位为 Mi
+        memory_quota = int(parse_quantity(limits["memory"]) / (1024 * 1024))
+        # CPU 的单位为 m
+        cpu_quota = int(parse_quantity(limits["cpu"]) * 1000)
+        return {"cpu": cpu_quota, "memory": memory_quota}
 
 
 class UpdateProcessSLZ(serializers.Serializer):

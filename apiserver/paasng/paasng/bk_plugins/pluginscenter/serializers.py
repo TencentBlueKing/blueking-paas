@@ -235,7 +235,7 @@ class PluginMarketInfoSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = PluginMarketInfo
-        fields = ("category", "description", "introduction", "contact", "extra_fields", "extra_fields_order")
+        fields = ("category", "description", "introduction", "contact", "extra_fields")
 
 
 class TemplateChoiceField(serializers.ChoiceField):

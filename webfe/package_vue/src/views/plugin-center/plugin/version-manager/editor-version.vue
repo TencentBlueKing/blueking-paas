@@ -419,10 +419,11 @@ export default {
 
     bkInfoRander() {
       const h = this.$createElement;
+      const typeLabel = this.curVersionData.version_type === 'tag' ? this.$t('代码 Tag') : this.$t('代码分支');
       return h('div', {
         class: 'version-info-wrapper',
       }, [
-        h('div', {}, `${this.$t('代码分支：')}${this.curVersionData.source_versions[0]?.name || '--'}`),
+        h('div', {}, `${typeLabel}：${this.curVersion.source_versions || '--'}`),
         h('div', {}, `${this.$t('代码更新时间：')}${this.formatTime(this.curVersionData.source_versions[0]?.last_update) || '--'}`),
         h('div', {}, `Commit Message: ${this.curVersionData.source_versions[0]?.message || '--'}`),
       ]);

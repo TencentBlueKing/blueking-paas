@@ -19,12 +19,12 @@ def fix_invalid_scaling_config_data(apps, schema_editor):
         .all()
         .extra({"raw_scaling_config": "scaling_config"})
         .values("id", "raw_scaling_config")
-    )
+    ).iterator()
 
     for item in qs:
         try:
             _ = AutoscalingConfig(**json.loads(item["raw_scaling_config"]))
-        except Exception:
+        except (json.JSONDecodeError, TypeError):
             logger.warning(
                 "scaling_config(%s) of obj<%s> is invalid, set it to None",
                 item["raw_scaling_config"],

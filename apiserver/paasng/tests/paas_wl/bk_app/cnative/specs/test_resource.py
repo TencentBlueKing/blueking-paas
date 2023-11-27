@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class TestMresConditionDetector:
     @pytest.mark.parametrize(
-        "mres, expected_status",
+        ("mres", "expected_status"),
         [
             (create_res_with_conds([]), DeployStatus.PENDING),
             (
@@ -76,7 +76,7 @@ class TestMresConditionDetector:
         assert s.status == expected_status
 
 
-@pytest.mark.skip_when_no_crds
+@pytest.mark.skip_when_no_crds()
 class TestBkAppClusterOperator:
     """测试在集群中操作 bkapp 资源"""
 

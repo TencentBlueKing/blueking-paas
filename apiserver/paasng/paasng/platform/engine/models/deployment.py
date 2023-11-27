@@ -70,6 +70,20 @@ class AdvancedOptions:
 
 
 @dataclass
+class AutoscalingConfig:
+    """This class is a duplication of paas_wl.workloads.autoscaling.entities.AutoscalingConfig, it
+    avoids a circular import problem.
+    """
+
+    # 最小副本数量
+    min_replicas: int
+    # 最大副本数量
+    max_replicas: int
+    # 扩缩容策略
+    policy: str
+
+
+@dataclass
 class ProcessTmpl:
     """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
     avoids a circular import problem.
@@ -79,6 +93,8 @@ class ProcessTmpl:
     command: str
     replicas: Optional[int] = None
     plan: Optional[str] = None
+    autoscaling: bool = False
+    scaling_config: Optional[AutoscalingConfig] = None
 
     def __post_init__(self):
         self.name = self.name.lower()
@@ -277,7 +293,7 @@ class Deployment(OperationVersionBase):
         if self.processes:
             return list(self.processes.values())
         # 兼容旧字段 procfile
-        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas
+        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas,scaling_config
         elif self.procfile:
             return cattr.structure(
                 [{"name": name, "command": command} for name, command in self.procfile.items()],

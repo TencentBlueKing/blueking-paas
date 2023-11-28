@@ -105,10 +105,8 @@ export default {
         if (this.isPostCommand) {
           let postCommandStatus = '';
           const { status } = this.stageData;
-          if (status === 'pending') {
-            postCommandStatus = 'RUNNING';
-          } else if (status === 'successful' && this.isNext) {
-            postCommandStatus = 'SUCCEED';
+          if (status === 'successful') {
+            postCommandStatus = this.isNext ? 'SUCCEED' : 'RUNNING';
           } else {
             postCommandStatus = 'SKIP';
           }

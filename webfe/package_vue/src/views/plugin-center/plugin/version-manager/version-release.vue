@@ -260,6 +260,12 @@ export default {
     this.stepAllStages = this.curAllStages;
     this.getReleaseStageDetail();
     bus.$emit('release-stage-changes', this.stageId);
+
+    // 组件销毁前
+    this.$once('hook:beforeDestroy', () => {
+      // 关闭基本信息编辑态
+      bus.$emit('release-stage-changes', 'leave');
+    });
   },
   methods: {
     async pollingReleaseStageDetail() {

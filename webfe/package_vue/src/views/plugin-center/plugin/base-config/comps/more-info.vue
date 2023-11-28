@@ -60,6 +60,12 @@ export default {
         // 对数据进行填充
         // eslint-disable-next-line no-restricted-syntax
         for (const key in extraFields) {
+          const uiComponent = extraFields[key]['ui:component'];
+          // 单选框处理
+          if (uiComponent?.name === 'radio') {
+            extraFields[key].default = uiComponent.props.datasource[0].label;
+            continue;
+          }
           if (this.moreInfoFields[key]) {
             extraFields[key].default = this.moreInfoFields[key];
           } else {

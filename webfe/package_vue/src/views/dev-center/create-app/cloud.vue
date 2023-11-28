@@ -425,7 +425,7 @@
         collapse-item-name="process"
         :title="$t('进程配置')"
       >
-        <deploy-process ref="processRef" :cloud-app-data="initCloudAppData" :is-create="isCreate"></deploy-process>
+        <deploy-process ref="processRef" :image-url="formData.url" :is-create="isCreate"></deploy-process>
       </collapseContent>
 
       <collapseContent
@@ -434,7 +434,7 @@
         :title="$t('钩子命令')"
         class="mt20"
       >
-        <deploy-hook ref="hookRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
+        <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
       </collapseContent>
     </div>
 
@@ -511,8 +511,8 @@ import _ from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
-import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
-import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
+import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
+import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 export default {
   components: {
@@ -955,7 +955,7 @@ export default {
           }
         }
         this.repoData = this.$refs?.repoInfo?.getData();
-        this.initCloudAppDataFunc();   // 初始化应用编排数据
+        // this.initCloudAppDataFunc();   // 初始化应用编排数据
         this.curStep = 2;
         this.$nextTick(() => {
           // 默认编辑态
@@ -1015,9 +1015,11 @@ export default {
           source_origin: this.sourceOrigin,
           source_dir: this.formData.buildDir || '',
         },
-        // 构建方式
-        build_config: {
-          build_method: this.formData.buildMethod,
+        bkapp_spec: {
+          // 构建方式
+          build_config: {
+            build_method: this.formData.buildMethod,
+          },
         },
       };
 
@@ -1031,7 +1033,7 @@ export default {
         if (this.dockerfileData.dockerfilePath === '') {
           this.dockerfileData.dockerfilePath = null;
         }
-        params.build_config = {
+        params.bkapp_spec.build_config = {
           build_method: 'dockerfile',
           dockerfile_path: this.dockerfileData.dockerfilePath,
           docker_build_args: dockerBuild,
@@ -1041,8 +1043,9 @@ export default {
 
       // 仅镜像
       if (this.formData.sourceOrigin === 'image') {
-        params.build_config = {
+        params.bkapp_spec.build_config = {
           build_method: 'custom_image',
+          image_repository: this.formData.url,
         };
       }
 
@@ -1069,32 +1072,40 @@ export default {
         // 镜像凭证任意有一个值都需要image_credentials字段，如果都没有这不需要此字段
         if (this.formData.imageCredentialName || this.formData.imageCredentialUserName
         || this.formData.imageCredentialPassWord) {
-          params.image_credentials = {};
+          params.bkapp_spec.build_config.image_credential = {};
         }
         // 仅镜像需要镜像凭证信息
         if (this.formData.imageCredentialName) {
-          params.image_credentials.name = this.formData.imageCredentialName;
+          params.bkapp_spec.build_config.image_credential.name = this.formData.imageCredentialName;
         }
         if (this.formData.imageCredentialUserName) {
-          params.image_credentials.username = this.formData.imageCredentialUserName;
+          params.bkapp_spec.build_config.image_credential.username = this.formData.imageCredentialUserName;
         }
         if (this.formData.imageCredentialPassWord) {
-          params.image_credentials.password = this.formData.imageCredentialPassWord;
+          params.bkapp_spec.build_config.image_credential.password = this.formData.imageCredentialPassWord;
         }
-        params.manifest = {
-          ...this.cloudAppData,
-        };
+        // params.manifest = {
+        //   ...this.cloudAppData,
+        // };
         params.source_config.source_repo_url = this.formData.url;   // 镜像
       }
 
       // 过滤空值容器端口
-      if (params.manifest?.spec) {
-        params.manifest.spec.processes = params.manifest.spec.processes.map((process) => {
-          const { targetPort, ...processValue } = process;
-          return (targetPort === '' || targetPort === null) ? processValue : process;
-        });
-      }
+      // if (params.manifest?.spec) {
+      //   params.manifest.spec.processes = params.manifest.spec.processes.map((process) => {
+      //     const { targetPort, ...processValue } = process;
+      //     return (targetPort === '' || targetPort === null) ? processValue : process;
+      //   });
+      // }
 
+
+      const processData = await this.$refs?.processRef.handleSave();
+      const hookData = await this.$refs?.hookRef.handleSave();
+      hookData.type = 'pre-release-hook';
+      console.log('params', params, processData, hookData);
+      params.bkapp_spec.processes = processData;
+      params.bkapp_spec.hook = hookData;
+      debugger;
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
           appCode: this.appCode,
@@ -1110,7 +1121,7 @@ export default {
         this.$router.push({
           path,
           query: {
-            method: params.build_config.build_method,
+            method: params.bkapp_spec.build_config.build_method,
             objectKey,
           },
         });

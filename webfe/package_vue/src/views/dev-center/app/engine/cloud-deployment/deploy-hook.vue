@@ -232,7 +232,7 @@ export default {
       },
       allowCreate: true,
       hasDeleteIcon: true,
-      isLoading: true,
+      isLoading: false,
       hooks: null,
       cloudInfoTip: i18n.t('web进程的容器镜像地址'),
       rawData: {},
@@ -276,15 +276,15 @@ export default {
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
+      this.init();
     }
-
-    this.init();
   },
 
   methods: {
     // 获取hooks信息
     async init() {
       try {
+        this.isLoading = true;
         const res = await this.$store.dispatch('deploy/getAppReleaseHook', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -375,6 +375,10 @@ export default {
     async handleSave() {
       if (this.$refs.commandRef) {
         await this.$refs.commandRef.validate();
+      }
+      // 如果是创建
+      if (this.isCreate) {
+        return { ...this.preFormData };
       }
       try {
         await this.$store.dispatch('deploy/saveAppReleaseHook', {

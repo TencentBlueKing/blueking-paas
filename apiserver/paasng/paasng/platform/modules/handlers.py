@@ -16,13 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.addons import PlugableAppConfig
+from blue_krill.async_utils.django_utils import apply_async_on_commit
+from django.dispatch import Signal, receiver
+
+from paasng.accessories.log.tasks import setup_module_log_model
+from paasng.platform.modules.models import Module
+
+on_module_initialized = Signal()
 
 
-class ModulesConfig(PlugableAppConfig):
-    name = "paasng.platform.modules"
-
-    def ready(self):
-        super().ready()
-
-        from . import handlers  # noqa
+@receiver(on_module_initialized)
+def async_setup_module_log_model(sender, module: Module, **kwargs):
+    apply_async_on_commit(setup_module_log_model, args=(module.pk,))

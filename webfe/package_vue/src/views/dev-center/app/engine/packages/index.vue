@@ -26,7 +26,7 @@
         >
           <bk-alert
             type="info"
-            :title="$t('该模块部署版本包由“蓝鲸可视化开发平台”提供')"
+            :title="$t('该模块部署版本包由“蓝鲸运维开发平台”提供')"
           />
           <a
             v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
@@ -39,7 +39,7 @@
         <!-- <div class="bk-alert bk-alert-info mb10" v-if="isLesscodeApp">
                     <i class="bk-icon icon-info"></i>
                     <div class="bk-alert-content">
-                        <div class="bk-alert-title">该模块部署版本包由“蓝鲸可视化开发平台”提供</div>
+                        <div class="bk-alert-title">该模块部署版本包由“蓝鲸运维开发平台”提供</div>
                         <div class="bk-alert-description"></div>
                     </div>
                     <a :href="GLOBAL.LINK.LESSCODE_INDEX" target="_blank"> {{ $t('点击前往') }} <i class="paasng-icon paasng-jump-link"></i></a>

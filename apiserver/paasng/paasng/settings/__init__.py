@@ -803,7 +803,7 @@ DEFAULT_REGION_TEMPLATE = {
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,
-    # 是否允许部署“蓝鲸可视化开发平台提供源码包”
+    # 是否允许部署“蓝鲸运维开发平台提供源码包”
     "allow_deploy_app_by_lesscode": True,
 }
 

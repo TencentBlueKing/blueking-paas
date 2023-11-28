@@ -3006,7 +3006,7 @@ msgid "场景模板应用描述文件异常"
 msgstr "Analyzing APP Description File Exceptions"
 
 #: paasng/utils/error_codes.py:138
-msgid "创建蓝鲸可视化开发平台应用错误"
+msgid "创建蓝鲸运维开发平台应用错误"
 msgstr ""
 
 #: paasng/utils/error_codes.py:141

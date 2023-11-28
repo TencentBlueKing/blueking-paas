@@ -87,7 +87,7 @@
                     {{ $t('蓝鲸 S-mart 源码包') }}
                   </template>
                   <div v-else>
-                    {{ curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸可视化开发平台提供源码包') }}
+                    {{ curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸运维开发平台提供源码包') }}
                     <a
                       v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
                       :href="lessCodeData.address_in_lesscode || 'javascript:;'"

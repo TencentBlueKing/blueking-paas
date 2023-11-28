@@ -16,8 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+import cattrs
 from django.core.management.base import BaseCommand
 from moby_distribution.registry.utils import parse_image
 
@@ -25,13 +26,16 @@ from paas_wl.infras.cluster.shim import get_application_cluster
 from paasng.core.region.models import get_region
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.entities import BuildConfig
 from paasng.platform.modules.manager import initialize_module
+from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.models.module import Module
-from paasng.utils.validators import str2bool
+
+ACTION_MIGRATE = "migrate"
+ACTION_CLEAN = "clean"
 
 
 class Command(BaseCommand):
@@ -40,26 +44,25 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--app-code", dest="app_code", required=True, help="应用code")
         parser.add_argument(
-            "--clean-dirty-data",
-            dest="clean_dirty_data",
-            type=str2bool,
-            help="清理 v1alpha1 dirty data",
-            default=False,
+            "--action", choices=[ACTION_MIGRATE, ACTION_CLEAN], required=True, type=str, help="Name of action"
         )
 
-    def handle(self, app_code: str, clean_dirty_data: bool, *args, **options):
+    def handle(self, app_code: str, *args, **options):
+        if options["action"] == ACTION_MIGRATE:
+            return self.handle_migrate(app_code)
+        elif options["action"] == ACTION_CLEAN:
+            return self.handle_clean(app_code)
+        else:
+            raise RuntimeError("Invalid action")
+
+    def handle_migrate(self, app_code: str):
         """迁移策略: web 进程保留在 default 模块, 其他进程根据进程名单独创建模块"""
         default_module = Module.objects.get(application__code=app_code, name="default")
 
-        if clean_dirty_data:
-            ModuleProcessSpec.objects.filter(module=default_module).exclude(image__isnull=True).delete()
-            return
-
         proc_specs = ModuleProcessSpec.objects.filter(module=default_module)
-        images = {proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None}
-        image_repository, _ = get_image_info(default_module)
+        images = [proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None]
 
-        if len(images) == 0 or image_repository:
+        if len(images) <= 1:
             self.stdout.write(f"{app_code} has no multi images in default module, skip migration")
             return
 
@@ -81,6 +84,11 @@ class Command(BaseCommand):
 
         self.stdout.write(f"{app_code} migrate multi images success")
 
+    def handle_clean(self, app_code: str):
+        default_module = Module.objects.get(application__code=app_code, name="default")
+        ModuleProcessSpec.objects.filter(module=default_module).exclude(image__isnull=True).delete()
+        self.stdout.write("clean dirty data success")
+
     def _get_conflict_module_names(self, app_code: str, new_module_names: List[str]) -> List[str]:
         return list(
             Module.objects.filter(application__code=app_code, name__in=new_module_names).values_list("name", flat=True)
@@ -100,12 +108,17 @@ class Command(BaseCommand):
             exposed_url_type=get_region(application.region).entrance_config.exposed_url_type,
             source_origin=SourceOrigin(SourceOrigin.CNATIVE_IMAGE.value),
         )
+        self.stdout.write(f"create module {module.name} success")
 
-        parsed = parse_image(proc_spec.image)
+        parsed = parse_image(proc_spec.image, default_registry="registry.hub.docker.com")
         image_repository = f"{parsed.domain}/{parsed.name}"
-
         bkapp_spec = {
-            "build_config": {"build_method": RuntimeType.CUSTOM_IMAGE, "image_repository": image_repository},
+            "build_config": BuildConfig(
+                build_method=RuntimeType.CUSTOM_IMAGE,
+                image_repository=image_repository,
+                tag_options=ImageTagOptions(),
+                image_credential={"name": proc_spec.image_credential_name},
+            ),
             "processes": [self._build_process(process_name, proc_spec)],
         }
 
@@ -118,9 +131,11 @@ class Command(BaseCommand):
             cluster_name=cluster_name,
             bkapp_spec=bkapp_spec,
         )
+        self.stdout.write(f"initialize module {module.name} success")
 
         # 复制环境变量到新模块
-        self._clone_config_vars(module)
+        self._clone_config_vars(application, module)
+        self.stdout.write(f"clone config vars success for module {module.name}")
 
     def _build_process(self, process_name: str, proc_spec: ModuleProcessSpec) -> Dict:
         env_overlay = {
@@ -129,7 +144,7 @@ class Command(BaseCommand):
                 "plan_name": proc_spec.get_plan_name(env_name),
                 "target_replicas": proc_spec.get_target_replicas(env_name),
                 "autoscaling": proc_spec.get_autoscaling(env_name),
-                "scaling_config": proc_spec.get_scaling_config(env_name),
+                "scaling_config": self._get_scaling_config(proc_spec, env_name),
             }
             for env_name in ["stag", "prod"]
         }
@@ -142,6 +157,14 @@ class Command(BaseCommand):
             "env_overlay": env_overlay,
         }
 
-    def _clone_config_vars(self, module: Module):
-        config_vars = [v.clone_to(module) for v in ConfigVar.objects.filter(module=module)]
+    def _clone_config_vars(self, application: Application, dest_module: Module):
+        default_module = Module.objects.get(application=application, name="default")
+        config_vars = [v.clone_to(dest_module) for v in ConfigVar.objects.filter(module=default_module)]
         ConfigVar.objects.bulk_create(config_vars)
+
+    def _get_scaling_config(self, proc_spec: ModuleProcessSpec, env_name: str) -> Optional[Dict]:
+        scaling_config = proc_spec.get_scaling_config(env_name)
+        if not scaling_config:
+            return None
+
+        return cattrs.unstructure(scaling_config)

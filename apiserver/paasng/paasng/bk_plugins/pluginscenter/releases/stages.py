@@ -227,7 +227,12 @@ class PipelineStage(BaseStageController):
             stage_status = []
 
         if status == PipelineBuildStatus.SUCCEED:
-            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+            # 执行后置命令
+            is_success = self.execute_post_command()
+            if not is_success:
+                self.stage.update_status(constants.PluginReleaseStatus.FAILED, "execute post command error")
+            else:
+                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         elif status == PipelineBuildStatus.FAILED:
             self.stage.update_status(
                 constants.PluginReleaseStatus.FAILED,

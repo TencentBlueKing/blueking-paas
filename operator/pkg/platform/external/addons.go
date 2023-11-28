@@ -26,10 +26,10 @@ import (
 	"io"
 	"time"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 )
 
 // AddonInstance define the structure return from QueryAddonInstance API
@@ -95,7 +95,7 @@ func (c *Client) QueryAddonInstance(
 // QueryAddonSpecs 调用 bkpaas 对应的接口, 查询应用的增强服务规格
 func (c *Client) QueryAddonSpecs(ctx context.Context, appCode, moduleName, svcID string) (*AddonSpecsResult, error) {
 	st := time.Now()
-	defer metric.ReportQueryAddonSpecsDuration(appCode, moduleName, svcID, st)
+	defer metrics.ObserveQueryAddonSpecsDuration(appCode, moduleName, svcID, st)
 
 	result := &AddonSpecsResult{}
 	path := fmt.Sprintf(

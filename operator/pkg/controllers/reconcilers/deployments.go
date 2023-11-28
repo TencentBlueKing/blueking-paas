@@ -22,6 +22,8 @@ import (
 	"context"
 	"fmt"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +35,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
@@ -66,14 +67,14 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
 			if err = r.Client.Delete(ctx, deploy); err != nil {
-				metric.ReportDeleteOutdatedDeployErrors(bkapp, deploy.Name)
+				metrics.IncDeleteOutdatedDeployFailures(bkapp, deploy.Name)
 				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
 		if err = r.deploy(ctx, deploy); err != nil {
-			metric.ReportDeployExpectedDeployErrors(bkapp, deploy.Name)
+			metrics.IncDeployExpectedDeployFailures(bkapp, deploy.Name)
 			return r.Result.WithError(err)
 		}
 	}

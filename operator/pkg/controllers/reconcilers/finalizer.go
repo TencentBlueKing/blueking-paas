@@ -21,6 +21,8 @@ package reconcilers
 import (
 	"context"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -30,7 +32,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 )
 
 // NewBkappFinalizer will return a BkappFinalizer with given k8s client
@@ -56,7 +57,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	// our finalizer is present, so lets handle any external dependency
 	finished, err := r.hooksFinished(ctx, bkapp)
 	if err != nil {
-		metric.ReportHooksFinishedErrors(bkapp)
+		metrics.IncHooksFinishedFailures(bkapp)
 		return r.Result.WithError(errors.Wrap(err, "failed to check hook status"))
 	}
 	if !finished {
@@ -70,7 +71,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	if err = r.deleteResources(ctx, bkapp); err != nil {
-		metric.ReportDeleteResourcesErrors(bkapp)
+		metrics.IncDeleteResourcesFailures(bkapp)
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
 		return r.Result.WithError(errors.Wrap(err, "failed to delete external resources"))

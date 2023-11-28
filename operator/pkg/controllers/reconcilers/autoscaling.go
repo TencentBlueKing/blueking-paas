@@ -21,6 +21,8 @@ package reconcilers
 import (
 	"context"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -30,7 +32,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -62,20 +63,20 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alph
 	if len(outdated) != 0 {
 		for _, gpa := range outdated {
 			if err = r.Client.Delete(ctx, gpa); err != nil {
-				metric.ReportDeleteOutdatedGpaErrors(bkapp, gpa.Name)
+				metrics.IncDeleteOutdatedGpaFailures(bkapp, gpa.Name)
 				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, gpa := range expected {
 		if err = r.deploy(ctx, gpa); err != nil {
-			metric.ReportDeployExpectedGpaErrors(bkapp, gpa.Name)
+			metrics.IncDeployExpectedGpaFailures(bkapp, gpa.Name)
 			return r.Result.WithError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
-		metric.ReportAutoscaleUpdateBkappStatusErrors(bkapp)
+		metrics.IncAutoscaleUpdateBkappStatusFailures(bkapp)
 		return r.Result.WithError(err)
 	}
 	return r.Result

@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"time"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
 	"github.com/pkg/errors"
@@ -42,8 +44,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
-
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
@@ -95,7 +95,7 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	st := time.Now()
-	defer metric.ReportBkappReconcileDuration(req.NamespacedName.String(), st)
+	defer metrics.ObserveBkappReconcileDuration(req.NamespacedName.String(), st)
 
 	log := logf.FromContext(ctx)
 
@@ -103,7 +103,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	err := r.client.Get(ctx, req.NamespacedName, app)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
-		metric.ReportGetBkappErrors(req.NamespacedName.String())
+		metrics.IncGetBkappFailures(req.NamespacedName.String())
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -114,7 +114,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		if !controllerutil.ContainsFinalizer(app, paasv1alpha2.BkAppFinalizerName) {
 			controllerutil.AddFinalizer(app, paasv1alpha2.BkAppFinalizerName)
 			if err = r.client.Update(ctx, app); err != nil {
-				metric.ReportAddFinalizerErrors(app)
+				metrics.IncAddFinalizerFailures(app)
 				return reconcile.Result{}, err
 			}
 		}

@@ -23,6 +23,8 @@ package reconcilers
 import (
 	"context"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +33,6 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 )
 
 // NewDeployActionReconciler returns a DeployActionReconciler.
@@ -89,7 +90,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	SetDefaultConditions(bkapp)
 
 	if err = r.Client.Status().Update(ctx, bkapp); err != nil {
-		metric.ReportDeployActionUpdateBkappStatusErrors(bkapp)
+		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
 		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
 		return r.Result.WithError(err)
 	}

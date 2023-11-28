@@ -22,6 +22,8 @@ import (
 	"context"
 	"fmt"
 
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
+
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +31,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/metric"
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 )
@@ -101,7 +102,7 @@ func (r *AddonReconciler) doReconcile(
 
 	appInfo, err := applications.GetBkAppInfo(bkapp)
 	if err != nil {
-		metric.ReportGetBkappInfoErrors(bkapp)
+		metrics.IncGetBkappInfoFailures(bkapp)
 		log.Error(err, "failed to get bkapp info, skip addons reconcile")
 		return nil, errors.Wrap(err, "InvalidAnnotations: missing bkapp info, detail")
 	}
@@ -111,7 +112,7 @@ func (r *AddonReconciler) doReconcile(
 		status, err := r.provisionAddon(ctx, appInfo, addon)
 		statuses = append(statuses, status)
 		if err != nil {
-			metric.ReportProvisionAddonInstanceErrors(bkapp)
+			metrics.IncProvisionAddonInstanceFailures(bkapp)
 			log.Error(err, "failed to provision addon instance", "appInfo", appInfo, "addon", addon.Name)
 			return statuses, err
 		}
@@ -159,7 +160,7 @@ func (r *AddonReconciler) provisionAddon(
 	// 将增强服务 Specs 添加到 .status.addonStatuses.specs
 	specResult, err := r.ExternalClient.QueryAddonSpecs(timeoutCtx, appInfo.AppCode, appInfo.ModuleName, svcID)
 	if err != nil {
-		metric.ReportQueryAddonSpecsErrors(appInfo.AppCode, appInfo.ModuleName, svcID)
+		metrics.IncQueryAddonSpecsFailures(appInfo.AppCode, appInfo.ModuleName, svcID)
 		return addonStatus, errors.Wrapf(err, "QueryAddonSpecs failed, detail")
 	}
 

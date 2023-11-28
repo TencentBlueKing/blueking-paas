@@ -241,8 +241,9 @@ func getSerializedBkApp(bkapp *paasv1alpha2.BkApp) (string, error) {
 		return "", err
 	}
 
-	// Remove status field because it's not part of the specification
+	// Remove some field because it's not part of the specification
 	data := string(bkAppJson)
 	data, _ = sjson.Delete(data, "status")
+	data, _ = sjson.Delete(data, "metadata.managedFields")
 	return data, nil
 }

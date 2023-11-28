@@ -178,10 +178,25 @@ func (r *DeploymentReconciler) findNewDeployments(
 		// Remove unrelated content before comparing
 		delete(givenBkApp.Annotations, paasv1alpha2.DeployIDAnnoKey)
 		delete(syncedBkApp.Annotations, paasv1alpha2.DeployIDAnnoKey)
+
+		// Compare the given and the synced BkApp
 		if apiequality.Semantic.DeepEqual(givenBkApp.Spec, syncedBkApp.Spec) &&
 			apiequality.Semantic.DeepEqual(givenBkApp.Annotations, syncedBkApp.Annotations) {
 			procName := d.Labels[paasv1alpha2.ProcessNameKey]
 			results[procName] = d
+			continue
+		}
+		// Also compare with the synced BkApp whose "nil" values have been set to default values, this can
+		// handle the situation when BkApp's schema has been updated and the given app has been mutated by
+		// the webhook. In this case, the former comparison will fail because new fields in the synced bkapp have
+		// not been set to the default values but the given bkapp has.
+		syncedBkAppWithDefaults := syncedBkApp.DeepCopy()
+		syncedBkAppWithDefaults.Default()
+		if apiequality.Semantic.DeepEqual(givenBkApp.Spec, syncedBkAppWithDefaults.Spec) &&
+			apiequality.Semantic.DeepEqual(givenBkApp.Annotations, syncedBkAppWithDefaults.Annotations) {
+			procName := d.Labels[paasv1alpha2.ProcessNameKey]
+			results[procName] = d
+			continue
 		}
 	}
 	return results

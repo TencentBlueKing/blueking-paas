@@ -19,7 +19,8 @@
             <div
               :class="['overview-fright-plugin',
                        { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
-                       { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' }]"
+                       { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' },
+                       { 'plugiun-test-stage': isTestStage }]"
               @click="hideQuickNav"
             >
               <router-view
@@ -107,6 +108,8 @@ export default {
       subNavIds: [10, 12, 13, 14],
       type: 'default',
       routeNameMap: ROUTE_NAME,
+      // 是否为发布的测试阶段
+      isTestStage: false,
     };
   },
   computed: {
@@ -212,6 +215,12 @@ export default {
       this.userVisitEnable = false;
       this.errorMessage = error.detail || this.$t('平台功能异常: 请联系平台负责人检查服务配置');
     });
+
+    // 解决测试阶段iframe嵌入，高度无法撑满问题
+    bus.$on('release-stage-changes', (data) => {
+      this.isTestStage = data === 'test';
+    });
+
     await this.initNavInfo();
   },
   mounted() {

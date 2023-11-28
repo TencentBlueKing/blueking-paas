@@ -62,7 +62,8 @@
         />
       </template>
 
-      <div class="footer-btn-warp">
+      <!-- 手动预览与发布完成不展示 -->
+      <div class="footer-btn-warp" v-if="isShowButtonGroup && !isPostedSuccessfully">
         <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
           <bk-button
             v-if="!isFirstStage"
@@ -105,6 +106,7 @@
   </div>
 </template>
 <script>import paasPluginTitle from '@/components/pass-plugin-title';
+import { bus } from '@/common/bus';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import deployStage from './release-stages/deploy';
 import marketStage from './release-stages/market';
@@ -241,9 +243,15 @@ export default {
       deep: true,
       immediate: true,
     },
-    'stageData.stage_id'() {
+    'stageData.stage_id'(value) {
       if (!Object.keys(this.pluginDetailedData).length) {
         this.getReleaseDetail();
+        bus.$emit('release-stage-changes', value);
+      }
+    },
+    clickStageId(value) {
+      if (value) {
+        bus.$emit('release-stage-changes', value);
       }
     },
   },
@@ -251,6 +259,7 @@ export default {
     await this.getReleaseDetail();
     this.stepAllStages = this.curAllStages;
     this.getReleaseStageDetail();
+    bus.$emit('release-stage-changes', this.stageId);
   },
   methods: {
     async pollingReleaseStageDetail() {

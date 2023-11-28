@@ -1,5 +1,5 @@
 <template>
-  <div class="testing-container">
+  <div :class="['testing-container', { 'hide-button-group': !isBottomActionBar }]">
     <!-- scrolling 是否显示滚动条 -->
     <!-- frameborder 是否显示边框 -->
     <iframe
@@ -10,8 +10,7 @@
     />
   </div>
 </template>
-<script>
-import stageBaseMixin from './stage-base-mixin';
+<script>import stageBaseMixin from './stage-base-mixin';
 
 export default {
   mixins: [stageBaseMixin],
@@ -30,19 +29,28 @@ export default {
     testPageUrl() {
       return this.stageData.detail?.page_url;
     },
+    // 是否存在底部操作栏
+    isBottomActionBar() {
+      return document.querySelector('.footer-btn-warp');
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .testing-container {
-  height: calc(100vh - 194px);
+  transform: translateY(-12px);
+  height: calc(100vh - 147px);
 
   /* resize and min-height are optional, allows user to resize viewable area */
   -webkit-resize: vertical;
   -moz-resize: vertical;
   resize: vertical;
   min-height: 317px;
+
+  &.hide-button-group {
+    height: calc(100vh - 98px);
+  }
 }
 
 iframe#embed {

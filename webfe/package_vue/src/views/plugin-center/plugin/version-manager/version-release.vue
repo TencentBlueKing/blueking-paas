@@ -1,11 +1,12 @@
 <template>
   <div class="container visible-range-release right-main-release">
+    <!-- 测试阶段宽度占满 -->
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-inner-loading"
       :offset-top="20"
       :offset-left="20"
-      class="deploy-action-box"
+      :class="curStageComponmentType === 'test' ? 'test-phase-container' : 'deploy-action-box'"
     >
       <!-- 部署信息概览 -->
       <div
@@ -17,9 +18,11 @@
             <div class="bg-content">
               <div class="title-warp flex-row align-items-center justify-content-between">
                 <paas-plugin-title :version="curVersion" />
+                <!-- 结束发布流程禁用终止发布 -->
                 <bk-button
                   v-if="pluginFeatureFlags.CANCEL_RELEASE"
                   class="discontinued"
+                  :disabled="isPostedSuccessfully"
                   @click="showInfoCancelRelease"
                 >
                   <i class="paasng-icon paasng-stop-2" />
@@ -49,6 +52,7 @@
         ref="curStageComponment"
         :stage-data="stageData"
         :plugin-data="pluginDetailedData"
+        :is-next="isAllowNext"
         @rerunStage="rerunStage"
       />
       <template v-else-if="!finalStageIsOnline">
@@ -58,7 +62,7 @@
         />
       </template>
 
-      <div class="footer-btn-warp" v-if="isShowButtonGroup">
+      <div class="footer-btn-warp">
         <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
           <bk-button
             v-if="!isFirstStage"
@@ -219,6 +223,11 @@ export default {
       }
       return config;
     },
+    // 是否发布成功
+    isPostedSuccessfully() {
+      const curStageData = this.pluginDetailedData.current_stage || {};
+      return curStageData.stage_id === 'online' && curStageData.status === 'successful';
+    },
   },
   watch: {
     stageData: {
@@ -351,6 +360,9 @@ export default {
             // 手动点击切换步骤不显示底部操作
             this.isShowButtonGroup = false;
             this.clickStageId = clickStageId;
+
+            // 获取当前基本信息
+            this.getReleaseDetail();
             // 获取当前步骤信息
             this.getReleaseStageDetail();
 
@@ -549,6 +561,12 @@ export default {
 .deploy-action-box {
     max-width: calc(100% - 100px);
     margin: 0 auto;
+}
+.test-phase-container {
+    max-width: 100%;
+    .plugin-release-top .father-wrapper {
+      padding-bottom: 0px;
+    }
 }
 .plugin-release-top {
     height: 117px;

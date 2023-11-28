@@ -24,7 +24,7 @@
         :class="item.status"
       />
 
-      <div class="paas-timeline-section">
+      <div class="paas-timeline-section" :title="item.tag">
         <div
           v-if="item.tag !== ''"
           :class="[
@@ -32,6 +32,7 @@
             { 'is-weight': !!item.stage },
             { 'is-default': item.status === 'default' && !item.stage },
           ]"
+          v-bk-tooltips="{ content: $t('忽略的步骤'), disabled: !hideTime.includes(item.status) }"
         >
           {{ item.tag }}
         </div>
@@ -313,6 +314,17 @@
         &::after {
           border-color: #3fc06d;
           background: #e5f6ea;
+        }
+      }
+
+      &.SKIP,
+      &.UNEXEC {
+        & + .paas-timeline-section {
+          .paas-timeline-title {
+            color: #c4cdd6;
+          }
+          color: #c4cdd6;
+          text-decoration: line-through;
         }
       }
 

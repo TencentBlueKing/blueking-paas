@@ -44,6 +44,11 @@ export default {
       type: Object,
       default: () => {},
     },
+    // 是否可执行下一步
+    isNext: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -55,6 +60,10 @@ export default {
   computed: {
     curStages() {
       return this.stageData.detail.model.stages;
+    },
+    // 是否存在后置阶段 (前端添加后置阶段)
+    isPostCommand() {
+      return this.pluginData.current_stage.has_post_command;
     },
   },
   watch: {
@@ -92,6 +101,24 @@ export default {
             tag: v.name,
           });
         });
+        // 是否添加后置命令阶段
+        if (this.isPostCommand) {
+          let postCommandStatus = '';
+          const { status } = this.stageData;
+          if (status === 'pending') {
+            postCommandStatus = 'RUNNING';
+          } else if (status === 'successful' && this.isNext) {
+            postCommandStatus = 'SUCCEED';
+          } else {
+            postCommandStatus = 'SKIP';
+          }
+          this.timeLineList.push({
+            content: '',
+            stage: '',
+            status: postCommandStatus,
+            tag: this.$t('执行后置命令'),
+          });
+        }
       }
     },
     formatLogs() {

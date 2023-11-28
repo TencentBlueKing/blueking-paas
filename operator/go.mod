@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler v0.0.0-20230419100919-e7fc943fe8ef
+	github.com/davecgh/go-spew v1.1.1
 	github.com/getsentry/sentry-go v0.15.0
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
@@ -13,7 +14,9 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.13.0
 	github.com/samber/lo v1.25.0
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af
 	gopkg.in/inf.v0 v0.9.1

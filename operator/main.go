@@ -27,7 +27,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/spf13/pflag"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -172,9 +174,15 @@ func main() {
 	}
 
 	// start metric server
-	var metricsServer metrics.PrometheusMetricServer
-	addr := metricServerAddress + ":" + strconv.Itoa(int(metricPort))
-	go metricsServer.NewServer(addr, "/metrics")
+	go func() {
+		setupLog.Info("starting metrics server", "address", metricServerAddress)
+		http.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{}))
+		addr := metricServerAddress + ":" + strconv.Itoa(int(metricPort))
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			setupLog.Error(err, "error starting metrics server")
+			os.Exit(1)
+		}
+	}()
 
 	//+kubebuilder:scaffold:builder
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

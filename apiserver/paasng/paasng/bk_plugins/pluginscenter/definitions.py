@@ -86,7 +86,9 @@ class PluginReleaseAPI(BaseModel):
     release: Optional[PluginBackendAPIResource] = Field(description="部署/构建操作")
     result: Optional[PluginBackendAPIResource] = Field(description="查询是否可进入下一步")
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
-    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令")
+    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令，当前阶段状态为成功即会执行")
+    # 例如测试阶段完成进入到下一个阶段的时候，希望能先回收测试阶段的资源
+    preCommand: Optional[PluginBackendAPIResource] = Field(description="前置命令，进入当前阶段后会先执行")
 
 
 @register
@@ -128,6 +130,9 @@ class PluginBasicInfoDefinition(BaseModel):
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsOrder: List[str] = Field(
+        default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
+    )
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
     overviewPage: Optional[PluginoverviewPage] = Field(description="概览页面嵌入地址")
@@ -165,6 +170,9 @@ class PluginMarketInfoDefinition(BaseModel):
     category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsOrder: List[str] = Field(
+        default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
+    )
     # TODO: visibleRange
 
 

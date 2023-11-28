@@ -22,6 +22,7 @@ from django.conf import settings
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.modules.constants import SourceOrigin
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -77,3 +78,4 @@ class TestApiInAPIGW:
         )
         assert response.status_code == 201
         assert response.json()["module"]["language"] == language
+        assert response.json()["module"]["source_origin"] == SourceOrigin.BK_LESS_CODE

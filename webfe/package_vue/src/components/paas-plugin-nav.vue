@@ -67,6 +67,7 @@ const PLUGIN_NAV_MAP = {
   API_GATEWAY: 'pluginCloudAPI',
   PROCESS_MANAGE: 'pluginProcess',
   STRUCTURE_LOG: 'pluginLog',
+  CONFIGURATION_MANAGE: 'pluginDeployEnv',
 };
 
 export default {

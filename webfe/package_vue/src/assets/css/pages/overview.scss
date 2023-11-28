@@ -140,6 +140,14 @@
     margin-left: 240px;
 }
 
+// 嵌入插件iframe样式
+.plugiun-iframe-summary {
+    padding-bottom: 0;
+    .right-main-plugin {
+        height: 100%;
+    }
+}
+
 .overview-fright-plugin h2 {
     font-size: 14px;
     font-weight: normal;

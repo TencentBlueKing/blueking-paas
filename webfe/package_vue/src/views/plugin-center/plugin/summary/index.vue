@@ -671,7 +671,8 @@ export default {
         }
       .information-container {
           width: 280px;
-          min-height: 741px;
+          max-height: calc(100vh - 143px);
+          min-height: 827px;
           padding-left: 20px;
           margin-left: 24px;
           background: #FAFBFD;
@@ -725,7 +726,8 @@ export default {
     }
     .dynamic-list {
         height: 100%;
-        max-height: 600px;
+        max-height: calc(100vh - 360px);
+        min-height: 610px;
         padding-right: 15px;
         overflow-y: auto;
         font-size: 12px;
@@ -959,7 +961,8 @@ export default {
     }
 
     .iframe-container {
-        margin-top: -53px;
+        transform: translateY(2px);
+        margin-top: -55px;
         // margin-top: -52px;
         /* resize and min-height are optional, allows user to resize viewable area */
         -webkit-resize: vertical;
@@ -970,6 +973,7 @@ export default {
         iframe#iframe-embed {
             width: 100%;
             min-height: 795px;
+            height: calc(100vh - 175px);
 
             /* resize seems to inherit in at least Firefox */
             -webkit-resize: none;

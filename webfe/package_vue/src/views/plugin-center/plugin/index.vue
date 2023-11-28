@@ -20,7 +20,8 @@
               :class="['overview-fright-plugin',
                        { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
                        { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' },
-                       { 'plugiun-test-stage': isTestStage }]"
+                       { 'plugiun-test-stage': isTestStage },
+                       { 'plugiun-iframe-summary': isSummaryIframe }]"
               @click="hideQuickNav"
             >
               <router-view
@@ -115,6 +116,10 @@ export default {
   computed: {
     routeName() {
       return this.$route.name;
+    },
+    // 概览是否嵌入Iframe
+    isSummaryIframe() {
+      return this.curPluginInfo.overview_page?.bottom_url && this.$route.name === 'pluginSummary';
     },
   },
   watch: {

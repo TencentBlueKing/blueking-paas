@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -97,7 +98,6 @@ var _ = Describe("Test DeploymentReconciler", func() {
 				UpdatedReplicas: 1,
 			},
 		}
-		fakeDeploy.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = resources.ComputeDeploymentHash(&fakeDeploy)
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
@@ -107,7 +107,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 		builder.WithScheme(scheme)
 	})
 
-	It("test Reconcile", func() {
+	It("test reconcile", func() {
 		ctx := context.Background()
 		outdated := fakeDeploy.DeepCopy()
 		// make web deployment look like ready
@@ -117,77 +117,127 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			Status: corev1.ConditionTrue,
 			Type:   appsv1.DeploymentAvailable,
 		})
-		// Skip the update of deployment when reconciling
+		// Skip the update of deployment when reconciling, otherwise the status of the web deployment will be reset
+		// to "pending" and fail the test case.
 		web.Annotations[paasv1alpha2.DeploySkipUpdateAnnoKey] = "true"
 
 		cli := builder.WithObjects(bkapp, outdated, web).Build()
 		r := NewDeploymentReconciler(cli)
 
 		result := r.Reconcile(ctx, bkapp)
+		outdatedKey := types.NamespacedName{Name: outdated.Name, Namespace: outdated.Namespace}
+		webKey := types.NamespacedName{Name: web.Name, Namespace: web.Namespace}
+
 		Expect(result.ShouldAbort()).To(BeFalse())
 		// after reconcile, the app phase should be Running
 		Expect(bkapp.Status.Phase).To(Equal(paasv1alpha2.AppRunning))
-		// And the outdated deployment should be removed
-		Expect(
-			apierrors.IsNotFound(
-				cli.Get(ctx, types.NamespacedName{Name: outdated.Name, Namespace: outdated.Namespace}, outdated),
-			),
-		).To(BeTrue())
+		Expect(apierrors.IsNotFound(cli.Get(ctx, outdatedKey, &appsv1.Deployment{}))).To(BeTrue())
+		Expect(cli.Get(ctx, webKey, &appsv1.Deployment{})).To(Not(HaveOccurred()))
+
+		By("Reconcile and check the deployments again")
+		result = r.Reconcile(ctx, bkapp)
+		Expect(result.ShouldAbort()).To(BeFalse())
+		Expect(apierrors.IsNotFound(cli.Get(ctx, outdatedKey, &appsv1.Deployment{}))).To(BeTrue())
+		Expect(cli.Get(ctx, webKey, &appsv1.Deployment{})).To(Not(HaveOccurred()))
 	})
 
-	Context("test get current state", func() {
-		It("not any deployment exists", func() {
+	Context("test get old deployments", func() {
+		It("no deployment", func() {
 			r := NewDeploymentReconciler(builder.Build())
-			deployList, err := r.getCurrentState(context.Background(), bkapp)
+			deployList, err := r.getOldDeployments(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deployList)).To(Equal(0))
 		})
 
-		It("with a deployment", func() {
+		It("one deployment", func() {
 			client := builder.WithObjects(&fakeDeploy).Build()
 			r := NewDeploymentReconciler(client)
-			deployList, err := r.getCurrentState(context.Background(), bkapp)
+			deployList, err := r.getOldDeployments(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deployList)).To(Equal(1))
 		})
 	})
 
-	Context("test deploy", func() {
-		It("without namesake deployment", func() {
-			ctx := context.Background()
-			client := builder.Build()
-			r := NewDeploymentReconciler(client)
-			want := resources.GetWantedDeploys(bkapp)
-			Expect(len(want)).To(Equal(1))
+	Context("test getNewDeployments", func() {
+		var ctx context.Context
+		var client client.Client
+		var r *DeploymentReconciler
 
-			objKey := types.NamespacedName{Name: want[0].Name, Namespace: want[0].Namespace}
-			Expect(
-				apierrors.IsNotFound(client.Get(ctx, objKey, &appsv1.Deployment{})),
-			).To(Equal(true))
-
-			By("update deploy")
-			Expect(r.deploy(ctx, want[0])).NotTo(HaveOccurred())
-
-			Expect(
-				apierrors.IsNotFound(client.Get(ctx, objKey, &appsv1.Deployment{})),
-			).To(Equal(false))
+		BeforeEach(func() {
+			ctx = context.Background()
+			client = builder.Build()
+			r = NewDeploymentReconciler(client)
 		})
 
-		It("test update", func() {
-			ctx := context.Background()
-			current := fakeDeploy.DeepCopy()
-			client := builder.WithObjects(bkapp, current).Build()
+		// A shortcut function to get the old deployments
+		oldDeployments := func() []*appsv1.Deployment {
+			deployList, _ := r.getOldDeployments(ctx, bkapp)
+			return deployList
+		}
 
-			// Increase the replicas and update the content hash
-			*current.Spec.Replicas = *current.Spec.Replicas + 1
-			current.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = resources.ComputeDeploymentHash(current)
-			Expect(NewDeploymentReconciler(client).deploy(ctx, current)).NotTo(HaveOccurred())
+		It("without any deployments", func() {
+			r := NewDeploymentReconciler(client)
+			want, _ := resources.BuildProcDeployment(bkapp, "web")
 
-			// Check the deployment resource has been updated
-			newObj := appsv1.Deployment{}
-			objKey := types.NamespacedName{Name: current.Name, Namespace: current.Namespace}
-			_ = client.Get(ctx, objKey, &newObj)
-			Expect(newObj.Spec.Replicas).To(Equal(current.Spec.Replicas))
+			By("The web deployment should not exists")
+			objKey := types.NamespacedName{Name: want.Name, Namespace: want.Namespace}
+			Expect(apierrors.IsNotFound(client.Get(ctx, objKey, &appsv1.Deployment{}))).To(BeTrue())
+
+			By("Call getNewDeployments with an empty old deployment list to create the resources")
+			newDeployMap, err := r.getNewDeployments(ctx, bkapp, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(newDeployMap)).To(Equal(1))
+			Expect(client.Get(ctx, objKey, &appsv1.Deployment{})).To(Not(HaveOccurred()))
+		})
+
+		It("update existing deployment, integrated", func() {
+			// Create the deployment first
+			_, _ = r.getNewDeployments(ctx, bkapp, oldDeployments())
+
+			By("Validate the replicas of the deployment")
+			d := appsv1.Deployment{}
+			want, _ := resources.BuildProcDeployment(bkapp, "web")
+			objKey := types.NamespacedName{Name: want.Name, Namespace: want.Namespace}
+			_ = client.Get(ctx, objKey, &d)
+			Expect(*d.Spec.Replicas).To(Equal(int32(2)))
+			lastRV := d.ResourceVersion
+
+			By("Increase the replicas and get new deployments")
+			*bkapp.Spec.Processes[0].Replicas = 3
+			_, _ = r.getNewDeployments(ctx, bkapp, oldDeployments())
+			_ = client.Get(ctx, objKey, &d)
+			Expect(*d.Spec.Replicas).To(Equal(int32(3)))
+			// The resourceVersion should be updated
+			Expect(d.ResourceVersion > lastRV).To(BeTrue())
+			lastRV = d.ResourceVersion
+
+			By("Get new deployments without any changes on the bkapp")
+			_, _ = r.getNewDeployments(ctx, bkapp, oldDeployments())
+			_ = client.Get(ctx, objKey, &d)
+			// The resourceVersion should remains the same because no updates happened
+			Expect(d.ResourceVersion == lastRV).To(BeTrue())
+		})
+
+		It("update existing deployment that has no serialized bkapp", func() {
+			// Create the deployment, update it to remove the annotation
+			_, _ = r.getNewDeployments(ctx, bkapp, oldDeployments())
+			d := appsv1.Deployment{}
+			want, _ := resources.BuildProcDeployment(bkapp, "web")
+			objKey := types.NamespacedName{Name: want.Name, Namespace: want.Namespace}
+			_ = client.Get(ctx, objKey, &d)
+			Expect(d.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]).NotTo(BeEmpty())
+
+			// Remove the annotation
+			delete(d.Annotations, paasv1alpha2.LastSyncedSerializedBkAppAnnoKey)
+			_ = client.Update(ctx, &d)
+			updatedDeploy := appsv1.Deployment{}
+			_ = client.Get(ctx, objKey, &updatedDeploy)
+			Expect(updatedDeploy.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]).To(BeEmpty())
+
+			By("Get new deployments should set the annotation back")
+			_, _ = r.getNewDeployments(ctx, bkapp, oldDeployments())
+			_ = client.Get(ctx, objKey, &d)
+			Expect(d.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]).NotTo(BeEmpty())
 		})
 	})
 })

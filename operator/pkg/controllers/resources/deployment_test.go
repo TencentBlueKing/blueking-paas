@@ -21,7 +21,6 @@ package resources
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,17 +96,14 @@ var _ = Describe("Test build deployments from BkApp", func() {
 	})
 
 	Context("basic fields checks", func() {
-		It("no processes", func() {
-			bkapp.Spec.Processes = []paasv1alpha2.Process{}
-			deploys := GetWantedDeploys(bkapp)
-			Expect(len(deploys)).To(Equal(0))
+		It("invalid process name", func() {
+			deploy, err := BuildProcDeployment(bkapp, "invalid-name")
+			Expect(deploy).To(BeNil())
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("common base fields", func() {
-			deploys := GetWantedDeploys(bkapp)
-			Expect(len(deploys)).To(Equal(2))
-
-			webDeploy := deploys[0]
+			webDeploy, _ := BuildProcDeployment(bkapp, "web")
 			Expect(webDeploy.APIVersion).To(Equal("apps/v1"))
 			Expect(webDeploy.Kind).To(Equal("Deployment"))
 			Expect(webDeploy.Name).To(Equal("bkapp-sample--web"))
@@ -115,11 +111,11 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(webDeploy.Labels).To(Equal(labels.Deployment(bkapp, "web")))
 			Expect(webDeploy.OwnerReferences[0].Kind).To(Equal(bkapp.Kind))
 			Expect(webDeploy.OwnerReferences[0].Name).To(Equal(bkapp.Name))
-			Expect(webDeploy.Annotations[paasv1alpha2.DeployContentHashAnnoKey]).To(Not(BeEmpty()))
+			Expect(webDeploy.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]).To(Not(BeEmpty()))
 			Expect(len(webDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
 			Expect(*webDeploy.Spec.Template.Spec.AutomountServiceAccountToken).To(Equal(false))
 
-			hiDeploy := deploys[1]
+			hiDeploy, _ := BuildProcDeployment(bkapp, "hi")
 			Expect(hiDeploy.Name).To(Equal("bkapp-sample--hi"))
 			Expect(hiDeploy.Spec.Selector.MatchLabels).To(Equal(labels.PodSelector(bkapp, "hi")))
 			Expect(*hiDeploy.Spec.RevisionHistoryLimit).To(Equal(int32(0)))
@@ -140,7 +136,8 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				TargetPort: 8081,
 			}}
 
-			c := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
+			d, _ := BuildProcDeployment(bkapp, "web")
+			c := d.Spec.Template.Spec.Containers[0]
 			Expect(len(c.Command)).To(Equal(1))
 			By("Check the env variables in the args have been replaced")
 			Expect(c.Args).To(Equal([]string{"start", "-l", "example.com:$(PORT)"}))
@@ -164,12 +161,14 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				},
 			}
 
-			cWeb := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
+			webDeploy, _ := BuildProcDeployment(bkapp, "web")
+			cWeb := webDeploy.Spec.Template.Spec.Containers[0]
 			Expect(cWeb.Name).To(Equal("web"))
 			Expect(cWeb.Image).To(Equal("busybox:latest"))
 			Expect(cWeb.ImagePullPolicy).To(Equal(corev1.PullAlways))
 
-			cWorker := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0]
+			workerDeploy, _ := BuildProcDeployment(bkapp, "worker")
+			cWorker := workerDeploy.Spec.Template.Spec.Containers[0]
 			Expect(cWorker.Name).To(Equal("worker"))
 			Expect(cWorker.Image).To(Equal(cWeb.Image))
 			Expect(cWorker.ImagePullPolicy).To(Equal(cWeb.ImagePullPolicy))
@@ -191,11 +190,13 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				},
 			}
 
-			cWeb := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
+			webDeploy, _ := BuildProcDeployment(bkapp, "web")
+			cWeb := webDeploy.Spec.Template.Spec.Containers[0]
 			Expect(cWeb.Image).To(Equal("busybox:1.0.0"))
 			Expect(cWeb.ImagePullPolicy).To(Equal(corev1.PullNever))
 
-			cWorker := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0]
+			workerDeploy, _ := BuildProcDeployment(bkapp, "worker")
+			cWorker := workerDeploy.Spec.Template.Spec.Containers[0]
 			Expect(cWorker.Image).To(Equal("busybox:2.0.0"))
 			Expect(cWorker.ImagePullPolicy).To(Equal(corev1.PullAlways))
 		})
@@ -221,8 +222,10 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				},
 			}
 
-			cWebRes := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0].Resources
-			cWorkerRes := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0].Resources
+			webDeploy, _ := BuildProcDeployment(bkapp, "web")
+			workerDeploy, _ := BuildProcDeployment(bkapp, "worker")
+			cWebRes := webDeploy.Spec.Template.Spec.Containers[0].Resources
+			cWorkerRes := workerDeploy.Spec.Template.Spec.Containers[0].Resources
 			// The processes should share the same resource requirements
 			Expect(cWebRes.Requests).To(Equal(cWorkerRes.Requests))
 			Expect(cWebRes.Limits).To(Equal(cWorkerRes.Limits))
@@ -249,14 +252,16 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			}
 
 			// Check resource requirements for "web"
-			cWebRes := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0].Resources
+			webDeploy, _ := BuildProcDeployment(bkapp, "web")
+			cWebRes := webDeploy.Spec.Template.Spec.Containers[0].Resources
 			Expect(cWebRes.Requests.Cpu().String()).To(Equal("200m"))
 			Expect(cWebRes.Limits.Cpu().String()).To(Equal("1"))
 			Expect(cWebRes.Requests.Memory().String()).To(Equal("256Mi"))
 			Expect(cWebRes.Limits.Memory().String()).To(Equal("1Gi"))
 
 			// Check resource requirements for "worker"
-			cWorkerRes := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0].Resources
+			workerDeploy, _ := BuildProcDeployment(bkapp, "worker")
+			cWorkerRes := workerDeploy.Spec.Template.Spec.Containers[0].Resources
 			Expect(cWorkerRes.Requests.Cpu().String()).To(Equal("200m"))
 			Expect(cWorkerRes.Limits.Cpu().String()).To(Equal("2"))
 			Expect(cWorkerRes.Requests.Memory().String()).To(Equal("1Gi"))
@@ -267,9 +272,10 @@ var _ = Describe("Test build deployments from BkApp", func() {
 	Context("environment related fields", func() {
 		It("stag env related fields", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
-			deploys := GetWantedDeploys(bkapp)
-			web, hi := deploys[0], deploys[1]
+
 			// Value overwritten by overlay config
+			web, _ := BuildProcDeployment(bkapp, "web")
+			hi, _ := BuildProcDeployment(bkapp, "hi")
 			Expect(*web.Spec.Replicas).To(Equal(int32(10)))
 			Expect(*hi.Spec.Replicas).To(Equal(int32(2)))
 			Expect(web.Spec.Template.Spec.Containers[0].Env).To(Equal(
@@ -283,8 +289,8 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 		It("prod env related fields", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "prod"})
-			deploys := GetWantedDeploys(bkapp)
-			web, hi := deploys[0], deploys[1]
+			web, _ := BuildProcDeployment(bkapp, "web")
+			hi, _ := BuildProcDeployment(bkapp, "hi")
 			Expect(*web.Spec.Replicas).To(Equal(int32(2)))
 			Expect(*hi.Spec.Replicas).To(Equal(int32(2)))
 			Expect(web.Spec.Template.Spec.Containers[0].Env).To(Equal(
@@ -310,15 +316,16 @@ var _ = Describe("Test build deployments from BkApp", func() {
 					},
 				},
 			}
-			deploys := GetWantedDeploys(bkapp)
+			webDeploy, _ := BuildProcDeployment(bkapp, "web")
+			hiDeploy, _ := BuildProcDeployment(bkapp, "hi")
 
-			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
-			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal("nginx-conf"))
-			Expect(deploys[0].Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/etc/nginx"))
-			Expect(deploys[0].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
+			Expect(webDeploy.Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(webDeploy.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal("nginx-conf"))
+			Expect(webDeploy.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/etc/nginx"))
+			Expect(webDeploy.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
 
-			Expect(deploys[1].Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
-			Expect(deploys[1].Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
+			Expect(hiDeploy.Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(hiDeploy.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal(configMapName))
 		})
 	})
 
@@ -326,7 +333,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		It("with empty values", func() {
 			bkapp.Spec.DomainResolution = nil
 
-			web := GetWantedDeploys(bkapp)[0]
+			web, _ := BuildProcDeployment(bkapp, "web")
 			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
 			Expect(web.Spec.Template.Spec.DNSConfig).To(BeNil())
 		})
@@ -338,7 +345,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				},
 			}
 
-			web := GetWantedDeploys(bkapp)[0]
+			web, _ := BuildProcDeployment(bkapp, "web")
 			Expect(len(web.Spec.Template.Spec.HostAliases)).To(Equal(2))
 			Expect(web.Spec.Template.Spec.HostAliases[1].IP).To(Equal("192.168.1.1"))
 			Expect(web.Spec.Template.Spec.HostAliases[1].Hostnames).To(Equal([]string{"foobar.local"}))
@@ -347,7 +354,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		It("with non-empty Nameservers", func() {
 			bkapp.Spec.DomainResolution = &paasv1alpha2.DomainResConfig{Nameservers: []string{"8.8.8.8"}}
 
-			web := GetWantedDeploys(bkapp)[0]
+			web, _ := BuildProcDeployment(bkapp, "web")
 			Expect(web.Spec.Template.Spec.DNSConfig.Nameservers).To(Equal([]string{"8.8.8.8"}))
 			Expect(web.Spec.Template.Spec.HostAliases).To(BeEmpty())
 		})
@@ -355,29 +362,18 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 	It("test build deployment for cnb runtime image", func() {
 		bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
-		for _, item := range lo.Zip2(bkapp.Spec.Processes, GetWantedDeploys(bkapp)) {
-			proc := item.A
-			deployment := item.B
+		for _, proc := range bkapp.Spec.Processes {
+			deployment, _ := BuildProcDeployment(bkapp, proc.Name)
+
 			Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(1))
 			c := deployment.Spec.Template.Spec.Containers[0]
+
 			By("test Command should be override by '${proc.Name}'")
 			Expect(c.Command).To(Equal([]string{proc.Name}))
-			By("test Args shoulde be clear")
+
+			By("test Args should be clear")
 			Expect(c.Args).To(BeNil())
 		}
-	})
-
-	Context("Test ComputeDeploymentHash", func() {
-		It("Test normal", func() {
-			deployment := GetWantedDeploys(bkapp)[0]
-			value := ComputeDeploymentHash(deployment)
-			Expect(value).To(Not(BeEmpty()))
-
-			// Change a field and the hash value should change
-			*deployment.Spec.Replicas = *deployment.Spec.Replicas + 1
-			newHash := ComputeDeploymentHash(deployment)
-			Expect(newHash).To(Not(Equal(value)))
-		})
 	})
 
 	DescribeTable(
@@ -394,4 +390,12 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		Entry("legacy", "true", []corev1.LocalObjectReference{{Name: paasv1alpha2.LegacyImagePullSecretName}}),
 		Entry("custom", "image-pull-secret", []corev1.LocalObjectReference{{Name: "image-pull-secret"}}),
 	)
+
+	Context("Test getSerializedBkApp", func() {
+		It("normal case", func() {
+			bkapp = &paasv1alpha2.BkApp{}
+			_, err := getSerializedBkApp(bkapp)
+			Expect(err).To(Not(HaveOccurred()))
+		})
+	})
 })

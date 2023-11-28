@@ -2452,4 +2452,10 @@ export default {
   当前应用不允许创建其他模块: 'The current application does not allow the creation of other modules.',
   '格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符': 'The format is incorrect and can only contain: Chinese characters, English letters, numbers, hyphens (-), and the length is less than 20 characters',
   不能选择已发布过的代码分支: 'Cannot select a code branch that has already been released',
+  '插件上架后，可在插件市场重新查看该插件的信息': 'After the plug-in is put on the shelves, you can re-check the plug-in information in the plug-in market',
+  上架插件: 'Publish plugin',
+  确认上架插件: 'Confirm Publish Plugin',
+  忽略的步骤: 'Ignored steps',
+  执行后置命令: 'Execute Post-Command',
+  '上架成功！': 'Publish Successful!',
 };

@@ -346,7 +346,26 @@
         <!-- 鉴权信息 -->
         <authentication-info v-if="pluginFeatureFlags.APP_SECRETS" />
 
-        <div class="basic-info-item">
+        <!-- archivedStatus为 true && can_reactivate 为 true 展示上架 -->
+        <div class="basic-info-item" v-if="isArchivedStatus && offlineStatus">
+          <div class="title">
+            {{ $t('上架插件') }}
+          </div>
+          <div class="info">
+            {{ $t('插件上架后，可在插件市场重新查看该插件的信息') }}
+          </div>
+          <div class="content no-border">
+            <bk-button
+              theme="primary"
+              @click="handleShowPublishPopup"
+            >
+              {{ $t('上架插件') }}
+            </bk-button>
+          </div>
+        </div>
+
+        <!-- archivedStatus为 true && can_reactivate 为 false 下架操作禁止用 -->
+        <div class="basic-info-item" v-else>
           <div class="title">
             {{ $t('下架插件') }}
           </div>
@@ -356,10 +375,15 @@
           <div class="content no-border">
             <bk-button
               theme="danger"
+              :disabled="isArchivedStatus && !offlineStatus"
               @click="showRemovePlugin"
             >
               {{ $t('下架插件') }}
             </bk-button>
+            <span
+              v-if="isArchivedStatus && !offlineStatus"
+              class="offline-tip"
+            >{{ $t('插件已下架') }}</span>
           </div>
         </div>
       </section>
@@ -508,6 +532,12 @@ export default {
     // 更多信息
     moreInfoFields() {
       return this.curPluginInfo.extra_fields;
+    },
+    isArchivedStatus() {
+      return this.curPluginInfo.status === 'archived';
+    },
+    offlineStatus() {
+      return this.curPluginInfo.can_reactivate;
     },
   },
   async created() {
@@ -809,7 +839,7 @@ export default {
         } catch (e) {
           this.$paasMessage({
             theme: 'error',
-            message: e.detail,
+            message: e.detail || e.message || this.$t('接口异常'),
           });
         }
       } else {
@@ -853,6 +883,35 @@ export default {
     // 刷新更多信息数据
     refreshMoreInfo() {
       this.$refs.moreInfoRef?.fetchPluginTypeList();
+    },
+
+    // 上架插件操作
+    handleShowPublishPopup() {
+      this.$bkInfo({
+        confirmLoading: true,
+        title: `${this.$t('确认上架插件')} ${this.pluginInfo.id}`,
+        subTitle: `${this.$t('插件上架后，可在插件市场重新查看该插件')}`,
+        confirmFn: async () => {
+          try {
+            await this.$store.dispatch('plugin/publishPlugin', {
+              pluginId: this.pluginId,
+            });
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('上架成功！'),
+            });
+            // 获取当前插件基本信息
+            await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pdId });
+            return true;
+          } catch (e) {
+            this.$paasMessage({
+              theme: 'error',
+              message: e.detail || e.message || this.$t('接口异常'),
+            });
+            return false;
+          }
+        },
+      });
     },
   },
 };
@@ -1266,6 +1325,11 @@ export default {
     line-height: 1.5em;
     color: #979ba5;
   }
+}
+.offline-tip {
+  font-size: 12px;
+  color: #979ba5;
+  margin-left: 10px;
 }
 </style>
 <style lang="scss">

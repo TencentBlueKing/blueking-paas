@@ -533,5 +533,13 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${pluginId}/modules/default/envs/prod/released_state/`;
       return http.get(url, config);
     },
+
+    /**
+         * 上架插件
+         */
+    publishPlugin({ commit, state }, { pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/bk-udc/plugins/${pluginId}/reactivate/`;
+      return http.post(url, data, config);
+    },
   },
 };

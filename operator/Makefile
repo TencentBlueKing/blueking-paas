@@ -100,7 +100,6 @@ lint: golangci-lint ## 执行 golangci-lint run
 update-helm-chart: manifests ## 根据 kustomize 渲染出的 manifest，更新 helm-charts
 	rm -rf ./bkpaas-app-operator
 	$(KUSTOMIZE) build config/default | $(HELMIFY) bkpaas-app-operator
-	mkdir ${HELM_CHART_TARGET_DIR}/templates/{crds,controller,webhooks,certificate,metrics}
 	python3 ./scripts/update_helm_chart.py -d ${HELM_CHART_TARGET_DIR}
 
 ##@ 构建命令

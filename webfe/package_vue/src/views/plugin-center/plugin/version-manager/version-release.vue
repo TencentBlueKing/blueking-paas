@@ -53,6 +53,7 @@
         :stage-data="stageData"
         :plugin-data="pluginDetailedData"
         :is-next="isAllowNext"
+        :manual-preview="isManualPreview"
         @rerunStage="rerunStage"
       />
       <template v-else-if="!finalStageIsOnline">
@@ -151,6 +152,8 @@ export default {
       curStepIndex: null,
       // 点击，切换后的步骤状态
       stepAllStages: [],
+      // 当前获取详情id
+      currentStepId: null,
     };
   },
   computed: {
@@ -230,6 +233,10 @@ export default {
       const curStageData = this.pluginDetailedData.current_stage || {};
       return curStageData.stage_id === 'online' && curStageData.status === 'successful';
     },
+    // 是否为手动切换预览步骤
+    isManualPreview() {
+      return this.currentStepId !== this.stageId;
+    },
   },
   watch: {
     stageData: {
@@ -293,6 +300,7 @@ export default {
           releaseId: this.releaseId,
           stageId: this.clickStageId || this.stageId,
         };
+        this.currentStepId = params.stageId;
         if (Object.values(params).some(value => value === undefined)) {
           return;
         }

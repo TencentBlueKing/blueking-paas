@@ -19,6 +19,10 @@ export default {
       type: Object,
       default: () => {},
     },
+    manualPreview: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -27,6 +31,10 @@ export default {
   },
   computed: {
     testPageUrl() {
+      // 手动预览 mode=read
+      if (this.manualPreview) {
+        return this.stageData.detail?.page_url.replace(/mode=edit/, 'mode=read');
+      }
       return this.stageData.detail?.page_url;
     },
     // 是否存在底部操作栏

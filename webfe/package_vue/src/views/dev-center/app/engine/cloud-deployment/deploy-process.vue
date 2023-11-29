@@ -1114,7 +1114,6 @@ export default {
         // 创建应用且没有镜像凭证值 则设置
         if (this.isCreate && !this.formData.image_credential_name) {
           this.$nextTick(() => {
-            console.log('vvvvv', v);
             this.$set(this.formData, 'image_credential_name', v);
           });
         }

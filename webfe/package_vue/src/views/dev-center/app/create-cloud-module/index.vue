@@ -469,7 +469,10 @@
               active-name="process"
               collapse-item-name="process"
               :title="$t('进程配置')">
-              <deploy-process ref="processRef" :image-url="mirrorData.url" :is-create="isCreate"></deploy-process>
+              <deploy-process
+                ref="processRef" :image-url="mirrorData.url"
+                :image-credential-name="imageCredentialsData.name"
+                :is-create="isCreate"></deploy-process>
             </collapseContent>
 
             <collapseContent
@@ -1083,6 +1086,13 @@ export default {
           build_method: 'custom_image',
           image_repository: this.mirrorData.url,
         };
+        // 镜像凭证
+        if (this.imageCredentialsData.name) {
+          if (!params.bkapp_spec.build_config.image_credential) {
+            params.bkapp_spec.build_config.image_credential = {};
+          }
+          params.bkapp_spec.build_config.image_credential.name = this.imageCredentialsData.name;
+        }
         const processData = await this.$refs?.processRef?.handleSave();
         const hookData = await this.$refs?.hookRef?.handleSave();
         if (!processData || !hookData) return;
@@ -1120,7 +1130,6 @@ export default {
       //     }
       //   });
       // }
-      debugger;
       try {
         this.formLoading = true;
 

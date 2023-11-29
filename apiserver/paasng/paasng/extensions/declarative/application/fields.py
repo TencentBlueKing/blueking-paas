@@ -21,6 +21,7 @@ import logging
 from paasng.extensions.declarative.application.validations import ApplicationDesc
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.signals import prepare_change_application_name
 
 logger = logging.getLogger(__name__)
 
@@ -37,21 +38,24 @@ class AppField:
 
 class AppNameField(AppField):
     def handle_desc(self, desc: ApplicationDesc):
+        update_field_dict = {}
+        app_code = self.application.name.code
         if self.application.name != desc.name_zh_cn:
             # 修改中文名
-            logger.warning(
-                "应用<%s> 的英文名将从 '%s' 修改成 '%s'", self.application.code, self.application.name, desc.name_zh_cn
-            )
+            logger.warning("应用<%s> 的英文名将从 '%s' 修改成 '%s'", app_code, self.application.name, desc.name_zh_cn)
+            update_field_dict["name"] = desc.name_zh_cn
             self.application.name = desc.name_zh_cn
             self.application.save(update_fields=["name", "updated"])
 
         if self.application.name_en != desc.name_en:
             # 修改英文名
-            logger.warning(
-                "应用<%s> 的英文名将从 '%s' 修改成 '%s'", self.application.code, self.application.name_en, desc.name_en
-            )
+            logger.warning("应用<%s> 的英文名将从 '%s' 修改成 '%s'", app_code, self.application.name_en, desc.name_en)
+            update_field_dict["name_en"] = desc.name_en
             self.application.name_en = desc.name_en
             self.application.save(update_fields=["name_en", "updated"])
+
+        # 应用名称修改后需要同步给桌面
+        prepare_change_application_name.send(sender="", code=app_code, **update_field_dict)
 
 
 class AppRegionField(AppField):

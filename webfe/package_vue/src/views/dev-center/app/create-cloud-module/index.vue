@@ -1014,7 +1014,6 @@ export default {
         }
       }
 
-      this.formLoading = true;
       // Remove all serverError error messages
       this.globalErrorMessage = '';
 
@@ -1028,7 +1027,6 @@ export default {
             const config = this.gitExtendConfig[this.sourceControlType];
             sourceRepoUrl = config.selectedRepoUrl;
             if (!sourceRepoUrl) {
-              this.formLoading = false;
               this.$paasMessage({
                 theme: 'error',
                 message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号'),
@@ -1087,6 +1085,7 @@ export default {
         };
         const processData = await this.$refs?.processRef?.handleSave();
         const hookData = await this.$refs?.hookRef?.handleSave();
+        if (!processData || !hookData) return;
         hookData.type = 'pre-release-hook';
         params.bkapp_spec.processes = processData;
         params.bkapp_spec.hook = hookData;
@@ -1110,7 +1109,7 @@ export default {
           source_repo_url: this.mirrorData.url,
           source_origin: this.sourceOrigin,
         };
-        params.manifest = { ...this.createCloudAppData };
+        // params.manifest = { ...this.createCloudAppData };
       }
 
       // // 空值端口过滤

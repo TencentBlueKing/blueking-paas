@@ -1051,6 +1051,7 @@ export default {
         };
         const processData = await this.$refs?.processRef?.handleSave();
         const hookData = await this.$refs?.hookRef?.handleSave();
+        if (!processData || !hookData) return;
         hookData.type = 'pre-release-hook';
         params.bkapp_spec.processes = processData;
         params.bkapp_spec.hook = hookData;

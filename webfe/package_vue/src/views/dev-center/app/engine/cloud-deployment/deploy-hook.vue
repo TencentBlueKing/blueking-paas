@@ -374,7 +374,11 @@ export default {
     // 保存
     async handleSave() {
       if (this.$refs.commandRef) {
-        await this.$refs.commandRef.validate();
+        try {
+          await this.$refs.commandRef.validate();
+        } catch (error) {
+          return false;
+        }
       }
       // 如果是创建
       if (this.isCreate) {

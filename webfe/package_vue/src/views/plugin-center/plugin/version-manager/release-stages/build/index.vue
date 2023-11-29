@@ -108,7 +108,8 @@ export default {
           if (status === 'successful') {
             postCommandStatus = this.isNext ? 'SUCCEED' : 'RUNNING';
           } else {
-            postCommandStatus = 'SKIP';
+            // 执行后置命令
+            postCommandStatus = 'POSTCOMMAND';
           }
           this.timeLineList.push({
             content: '',
